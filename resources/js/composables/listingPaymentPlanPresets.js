@@ -20,6 +20,7 @@ export const paymentPlanOptions = [
   { label: '30/1% Monthly', initial_percent: 30, handover_percent: 70 },
   { label: '85/15', initial_percent: 85, handover_percent: 15 },
   { label: '90/10', initial_percent: 90, handover_percent: 10 },
+  { label: '100%', initial_percent: 100, handover_percent: 0 },
   { label: '10% down payment, 8-year installments', initial_percent: null, handover_percent: null, invalid: true },
 ];
 

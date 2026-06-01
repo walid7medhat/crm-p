@@ -243,7 +243,7 @@
             <p class="dh-empty-text">No events scheduled for today.</p>
           </div>
         </div>
-        <router-link to="/calendar" class="dh-schedule-add">
+        <router-link to="/my-viewings" class="dh-schedule-add">
           <iconify-icon icon="lucide:plus" width="16" height="16" />
           Add New Schedule
         </router-link>

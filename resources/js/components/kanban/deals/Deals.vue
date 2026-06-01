@@ -63,7 +63,7 @@
                   <!-- Column Header with editing capability -->
                   <div 
                     class="column-header d-flex align-items-center justify-content-between cursor-move flex-shrink-0" 
-                    :style="getDealColumnHeaderStyle(column, activeTypeTab)"
+                    :style="{ background: column.headerBg }"
                   >
                     <div class="d-flex align-items-center gap-2">
                       <!-- <div class="stage-circle">

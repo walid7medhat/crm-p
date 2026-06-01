@@ -5854,7 +5854,7 @@ const createPaymentDetailsSlide = () => {
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Upcoming';
   const premiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0)
-    ? `<tr style="background:#f1f5f9;">
+    ? `<tr style="background:#f8fafc;">
         <td style="padding:2mm 1.5mm;font-size:2.6mm;">Premium</td>
         <td style="padding:2mm 1.5mm;font-size:2.6mm;">—</td>
         <td style="padding:2mm 1.5mm;font-size:2.6mm;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
@@ -5912,7 +5912,7 @@ const createPaymentDetailsSlide = () => {
   const expensesBlock = expenses.length > 0 ? `
     <div style="margin-top:3mm;">
       <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Assignment deal costs</div>
-      <div style="background:#fff;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
+      <div style="background:#ffffff;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
         <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
           <thead>
             <tr>
@@ -5938,7 +5938,7 @@ const createPaymentDetailsSlide = () => {
   ` : '';
 
   const nocStrip = nocPct > 0 ? `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 5mm;background:#fff;border-radius:3mm;padding:1.6mm 2mm;margin-bottom:2mm;font-size:2.6mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 5mm;background:#ffffff;border-radius:3mm;padding:1.6mm 2mm;margin-bottom:2mm;font-size:2.6mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
       <span>NOC <strong>${nocPct}%</strong> · Required <strong>${fmtAed(nocRequired)}</strong></span>
       <span>Paid <strong>${fmtAed(paidAed)}</strong></span>
       <span>Remaining <strong>${fmtAed(nocRemaining)}</strong></span>
@@ -5949,15 +5949,15 @@ const createPaymentDetailsSlide = () => {
   const installmentTable = (installmentRows || premiumRow || handoverRow) ? `
     <div style="margin-bottom:2.5mm;">
       <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Installment breakdown</div>
-      <div style="background:#fff !important;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
+      <div style="background:#ffffff !important;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
         <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
           <thead>
             <tr>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Payment type</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Percentage</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Date</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Status</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Payment type</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Percentage</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Date</span></th>
+              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Status</span></th>
             </tr>
           </thead>
           <tbody>

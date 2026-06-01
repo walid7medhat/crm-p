@@ -34,7 +34,7 @@
     <!-- Menu -->
     <div class="sidebar-menu-area">
       <ul class="sidebar-menu">
-        <!-- <li>
+        <li>
           <router-link
             :to="isShowOnlyListing ? '/alllisting' : '/'"
             :class="{ active: activeLayoutModule === 'dashboard' || isActive(isShowOnlyListing ? '/alllisting' : '/') }"
@@ -42,7 +42,7 @@
             <img :src="dashboardIcon" class="imgicon" alt="" />
             <span>Dashboard</span>
           </router-link>
-        </li> -->
+        </li>
 
         <li v-if="isAdmin">
           <router-link to="/kanban" :class="{ active: activeLayoutModule === 'crm' }">
