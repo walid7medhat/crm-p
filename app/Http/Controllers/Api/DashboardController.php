@@ -20,6 +20,8 @@ use Auth;
 use App\Models\HotDealRequest;
 use App\Models\Stage;
 use Spatie\Activitylog\Models\Activity;
+use Illuminate\Support\Str;
+
 class DashboardController extends Controller
 {
     /**
@@ -1038,9 +1040,10 @@ public function getPropertyTypesWithListings(Request $request)
 
         $pick = function (array $needles) use ($stages) {
             foreach ($stages as $stage) {
-                $name = strtolower((string) $stage->name);
+                $name = Str::of($stage->name)->lower();
+
                 foreach ($needles as $needle) {
-                    if (str_contains($name, $needle)) {
+                    if ($name->contains(Str::lower($needle))) {
                         return (int) $stage->leads_count;
                     }
                 }
@@ -1048,7 +1051,6 @@ public function getPropertyTypesWithListings(Request $request)
 
             return 0;
         };
-
         return response()->json([
             'success' => true,
             'data' => [
