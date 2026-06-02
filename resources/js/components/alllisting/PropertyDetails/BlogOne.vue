@@ -2152,6 +2152,7 @@ import html2pdf from 'html2pdf.js';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
+import { LISTING_FEATURE_LABELS } from '@/config/listingFeatures';
 
   const starIcon = '/assets/images/star.png';
 
@@ -2585,64 +2586,25 @@ const formatRejectionDate = (dateString) => {
     const canEditOrDelete = computed(() => {
       return canEditProperty.value || canDeleteProperty.value;
     });
-const featureMap = {
-  maid: 'Maid Room',
-  storage: 'Storage Room',
-  study: 'Study Room',
-  laundry: 'Laundry Room',
-  driver: 'Driver Room',
-
-  // New features
-  swimming_pool: 'Swimming Pool',
-  gym: 'Fully Equipped Gymnasium',
-  kids_play_area: 'Kids Play Area',
-  garden: 'Landscaped Gardens',
-  bbq: 'BBQ Area',
-  jogging: 'Jogging & Cycling Tracks',
-  sauna: 'Sauna & Steam Room',
-  jacuzzi: 'Jacuzzi',
-  parks: 'Community Parks',
-  courts: 'Multi-Purpose Courts',
-  community_center: 'Community Center',
-  cafes: 'Cafés & Restaurants',
-  retail: 'Retail Shops & Supermarkets',
-  mosque: 'Mosque',
-  daycare: 'Day Care Center',
-
-  balcony: 'Balcony / Terrace',
-  living: 'Spacious Living Areas',
-  wardrobes: 'Built-in Wardrobes',
-  finishes: 'High-Quality Finishes',
-  ac: 'Central Air Conditioning',
-  windows: 'Double-Glazed Windows',
-  elevators: 'High-Speed Elevators',
-  lobby: 'Elegant Lobby & Reception Area',
-  parking: 'Covered Parking',
-
-  internet: 'Broadband Internet Ready',
-  tv: 'Satellite/Cable TV Connection',
-  intercom: 'Intercom System',
-
-  security: '24/7 Security',
-  cctv: 'CCTV Surveillance',
-  concierge: 'Concierge Services',
-  maintenance: 'Maintenance Services',
-  waste: 'Waste Disposal Facilities',
-
-  pet: 'Pet-Friendly Community',
-  family: 'Family-Oriented Environment',
-  roads: 'Easy Access to Major Roads',
-  location: 'Close to Schools, Hospitals & Shopping Malls',
-  visitor_parking: 'Visitor Parking Available'
-};
- const additionalFeaturesList = computed(() => {
+// Single source of truth — see resources/js/config/listingFeatures.js.
+// Reading `additional_features_labels` off the API takes priority so any
+// new key added to ListingResource::FEATURE_LABELS shows up here without
+// the frontend needing a code change.
+const additionalFeaturesList = computed(() => {
   const data = property.value?.additional_features;
-
   if (!data) return [];
 
-  return Object.keys(featureMap)
-    .filter(key => data[key] === true)
-    .map(key => featureMap[key]);
+  const labels = property.value?.additional_features_labels || LISTING_FEATURE_LABELS;
+  const isTruthy = (v) => v === true || v === 1 || v === '1';
+
+  // Render order: keys present in the shared list first (preserves grouping),
+  // then any extra keys the backend sent that we don't have a label for.
+  const orderedKeys = Object.keys(labels);
+  const extraKeys = Object.keys(data).filter((k) => !orderedKeys.includes(k));
+
+  return [...orderedKeys, ...extraKeys]
+    .filter((key) => isTruthy(data[key]))
+    .map((key) => labels[key] || key);
 });
 
 const hasAdditionalFeatures = computed(() => {
@@ -9744,7 +9706,9 @@ margin: 0 2px;
   color: #16a34a;
   font-size: 0.9rem;
 }
-
+.info-item .full-width{
+  flex-direction: column !important;
+}
 </style>
 <style>
 .property-show-inner{
