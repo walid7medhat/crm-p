@@ -31717,6 +31717,9 @@ main.dashboard-main .card-body input::placeholder {
 .card.card-main.p-0.radius-12.overflow-hidden  .detailed-info-section.mb-16 .info-grid .info-item {
     flex-direction: row  !important;
 }
+.card.card-main.p-0.radius-12.overflow-hidden  .detailed-info-section.mb-16 .info-grid .info-item.flex-column {
+    flex-direction: column  !important;
+}
 .card.card-main.p-0.radius-12.overflow-hidden  .detailed-info-section.mb-16 .info-grid .info-item span.info-label {
     font-size: 12px !important;
     text-transform: capitalize !important;
