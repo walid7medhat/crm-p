@@ -130,6 +130,32 @@ class Bitrix24LeadImporter
             ->orderBy('order', 'asc')
             ->value('id')
             ?? Stage::orderBy('order', 'asc')->value('id');
+
+        // Seed the "endpoint unsupported" flags from the shared cache. On portals
+        // that lack these timeline endpoints, this stops every lead's job from
+        // re-discovering it via 3 guaranteed-failing (throttled) API calls.
+        $this->timelineItemListUnsupported     = (bool) Cache::get('bitrix_timeline_item_unsupported', false);
+        $this->timelineBindingsUnsupported     = (bool) Cache::get('bitrix_timeline_bindings_unsupported', false);
+        $this->timelineLogMessagesUnsupported  = (bool) Cache::get('bitrix_timeline_logmsg_unsupported', false);
+    }
+
+    /** Remember (process-wide + cache) that a timeline endpoint is unsupported. */
+    private function markTimelineUnsupported(string $which): void
+    {
+        switch ($which) {
+            case 'item':
+                $this->timelineItemListUnsupported = true;
+                Cache::put('bitrix_timeline_item_unsupported', true, 3600);
+                break;
+            case 'bindings':
+                $this->timelineBindingsUnsupported = true;
+                Cache::put('bitrix_timeline_bindings_unsupported', true, 3600);
+                break;
+            case 'logmsg':
+                $this->timelineLogMessagesUnsupported = true;
+                Cache::put('bitrix_timeline_logmsg_unsupported', true, 3600);
+                break;
+        }
     }
 
     /**
@@ -223,7 +249,7 @@ class Bitrix24LeadImporter
             if (str_contains($msg, 'Could not find description')
                 || str_contains($msg, 'Method not found')
             ) {
-                $this->timelineLogMessagesUnsupported = true;
+                $this->markTimelineUnsupported('logmsg');
                 Log::info('Bitrix24 timeline.logmessage.list is not available on this portal — skipping.');
                 return;
             }
@@ -290,7 +316,7 @@ class Bitrix24LeadImporter
             if (str_contains($msg, 'Could not find description')
                 || str_contains($msg, 'Method not found')
             ) {
-                $this->timelineBindingsUnsupported = true;
+                $this->markTimelineUnsupported('bindings');
                 Log::info('Bitrix24 timeline.bindings.list is not available on this portal — skipping.');
                 return;
             }
@@ -477,7 +503,7 @@ class Bitrix24LeadImporter
             if (str_contains($msg, 'Could not find description')
                 || str_contains($msg, 'Method not found')
             ) {
-                $this->timelineItemListUnsupported = true;
+                $this->markTimelineUnsupported('item');
                 Log::info('Bitrix24 timeline.item.list is not available on this portal — skipping for remaining leads. Stage history is still captured via syncStageForExistingLead on re-imports.');
                 return;
             }
@@ -488,10 +514,8 @@ class Bitrix24LeadImporter
         foreach ($items as $item) {
             $b24ItemId = (int) ($item['id'] ?? $item['ID'] ?? 0);
             
-            // للتصحيح: سجل نوع العنصر
             $typeId = $this->normalizeCode($item['type'] ?? $item['TYPE_ID'] ?? null);
-            Log::info("Processing timeline item {$b24ItemId} with type: {$typeId}", ['item' => json_encode($item)]);
-            
+
             if ($b24ItemId <= 0) {
                 continue;
             }
@@ -502,7 +526,6 @@ class Bitrix24LeadImporter
             // تأكد من أننا لا نتخطى تغييرات STATUS_ID
             // فقط نتخطى التعليقات والنشاطات الواضحة
             if (in_array($typeLc, ['comment', 'activity'], true)) {
-                Log::info("Skipping comment/activity item {$b24ItemId}");
                 continue;
             }
 
@@ -511,7 +534,6 @@ class Bitrix24LeadImporter
                 ->where('bitrix24_id', $b24ItemId)
                 ->exists()
             ) {
-                Log::info("Timeline item {$b24ItemId} already imported");
                 continue;
             }
 
@@ -520,9 +542,6 @@ class Bitrix24LeadImporter
             $title = trim((string) ($item['title'] ?? $item['TITLE'] ?? $typeId ?? 'Bitrix24 event'));
 
             $changes = $this->classifyTimelineItem($item, $typeId, $title);
-            
-            // للتصحيح: سجل التغييرات المصنفة
-            Log::info("Classified changes for item {$b24ItemId}: " . json_encode($changes));
 
             LeadHistory::create([
                 'lead_id'     => $lead->id,
@@ -619,9 +638,6 @@ class Bitrix24LeadImporter
                 $from = $from ?? $this->pickFirst($bag, ['from', 'oldValue', 'FROM', 'OLD_VALUE', 'old']);
                 $to   = $to ?? $this->pickFirst($bag, ['to', 'newValue', 'TO', 'NEW_VALUE', 'new']);
             }
-            
-            // للتصحيح: سجل ما وجدناه
-            Log::info("Extracted field change - field: {$field}, from: {$from}, to: {$to}");
 
             return [$field, $from === null ? null : (string) $from, $to === null ? null : (string) $to];
         }
@@ -1146,33 +1162,46 @@ class Bitrix24LeadImporter
             return;
         }
 
-        // Primary: one call returns both enums inline.
-        try {
-            $r = $this->client->call('crm.lead.fields', []);
-            $fields = $r['result'] ?? [];
-            if ($this->statusMap === null) {
+        // Cache the STATUS/SOURCE enum maps globally for an hour. Without this
+        // every lead's job (a fresh importer instance) re-fetched crm.lead.fields
+        // over the throttled REST API — one wasted call per lead across the sync.
+        $maps = Cache::get('bitrix_lead_field_maps');
+
+        if (!is_array($maps)) {
+            $statusMap = null;
+            $sourceMap = null;
+
+            // Primary: one call returns both enums inline.
+            try {
+                $r = $this->client->call('crm.lead.fields', []);
+                $fields = $r['result'] ?? [];
                 $items = $fields['STATUS_ID']['items'] ?? [];
                 if (is_array($items) && count($items) > 0) {
-                    $this->statusMap = $this->extractEnumItems($items);
+                    $statusMap = $this->extractEnumItems($items);
                 }
-            }
-            if ($this->sourceMap === null) {
                 $items = $fields['SOURCE_ID']['items'] ?? [];
                 if (is_array($items) && count($items) > 0) {
-                    $this->sourceMap = $this->extractEnumItems($items);
+                    $sourceMap = $this->extractEnumItems($items);
                 }
+            } catch (\Throwable $e) {
+                Log::warning('Bitrix24 crm.lead.fields failed: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            Log::warning('Bitrix24 crm.lead.fields failed: ' . $e->getMessage());
+
+            // Fallback: query crm.status.list per missing entity.
+            $statusMap ??= $this->loadStatusMap('STATUS');
+            $sourceMap ??= $this->loadStatusMap('SOURCE');
+
+            $maps = ['status' => $statusMap, 'source' => $sourceMap];
+
+            // Only persist a successful (non-empty) status map — otherwise a
+            // transient API failure would poison stage resolution for a full hour.
+            if (!empty($statusMap)) {
+                Cache::put('bitrix_lead_field_maps', $maps, 3600);
+            }
         }
 
-        // Fallback: query crm.status.list per missing entity.
-        if ($this->statusMap === null) {
-            $this->statusMap = $this->loadStatusMap('STATUS');
-        }
-        if ($this->sourceMap === null) {
-            $this->sourceMap = $this->loadStatusMap('SOURCE');
-        }
+        $this->statusMap = $maps['status'] ?? [];
+        $this->sourceMap = $maps['source'] ?? [];
     }
 
     private function loadStatusMap(string $entityId): array
@@ -1641,18 +1670,14 @@ public function debugTimeline(int $b24LeadId): void
 }
   public function importFullTimeline(Lead $lead, int $b24LeadId): void
     {
-        Log::info("Starting full timeline import for lead {$b24LeadId}");
-        
         // 1. جلب التايم لاين من bindings
         $this->importTimelineFromBindings($lead, $b24LeadId);
-        
+
         // 2. جلب التايم لاين من log messages
         $this->importTimelineFromLogMessages($lead, $b24LeadId);
-        
+
         // 3. جلب التايم لاين من synthetic data (MOVED_TIME, DATE_MODIFY, etc.)
         $this->importTimelineFromSyntheticData($lead, $b24LeadId);
-        
-        Log::info("Completed full timeline import for lead {$b24LeadId}");
     }
 
     /**
@@ -1676,7 +1701,7 @@ public function debugTimeline(int $b24LeadId): void
         } catch (\Throwable $e) {
             $msg = $e->getMessage();
             if (str_contains($msg, 'Could not find description') || str_contains($msg, 'Method not found')) {
-                $this->timelineBindingsUnsupported = true;
+                $this->markTimelineUnsupported('bindings');
                 Log::info("Timeline bindings API not available on this portal");
             } else {
                 Log::warning("Failed to fetch timeline bindings for lead {$b24LeadId}: " . $msg);
@@ -1717,8 +1742,6 @@ public function debugTimeline(int $b24LeadId): void
             'created_at'  => $createdAt,
             'updated_at'  => $createdAt,
         ]);
-        
-        Log::info("Stored timeline binding as history for lead {$lead->id}, type: {$typeCode}");
     }
 
     /**
@@ -1789,7 +1812,7 @@ public function debugTimeline(int $b24LeadId): void
         } catch (\Throwable $e) {
             $msg = $e->getMessage();
             if (str_contains($msg, 'Could not find description') || str_contains($msg, 'Method not found')) {
-                $this->timelineLogMessagesUnsupported = true;
+                $this->markTimelineUnsupported('logmsg');
                 Log::info("Timeline log messages API not available on this portal");
             } else {
                 Log::warning("Failed to fetch timeline log messages for lead {$b24LeadId}: " . $msg);

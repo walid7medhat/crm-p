@@ -3,6 +3,7 @@
 namespace App\Services\Bitrix24;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -439,11 +440,24 @@ class Bitrix24Client
 
     public function getUser(int $id): ?array
     {
+        // Cache globally (shared across queue jobs) so a 30k-lead sync resolves
+        // each Bitrix24 user via the throttled REST API at most once per hour
+        // instead of once per lead. `false` is the "known-missing" sentinel —
+        // Cache::remember would treat a cached null as a miss and re-fetch.
+        $key = "bitrix_user_{$id}";
+        $cached = Cache::get($key);
+        if ($cached !== null) {
+            return $cached === false ? null : $cached;
+        }
+
         try {
             $r = $this->call('user.get', ['ID' => $id]);
-            return $r['result'][0] ?? null;
+            $user = $r['result'][0] ?? null;
         } catch (\Throwable) {
-            return null;
+            $user = null;
         }
+
+        Cache::put($key, $user ?? false, 3600);
+        return $user;
     }
 }

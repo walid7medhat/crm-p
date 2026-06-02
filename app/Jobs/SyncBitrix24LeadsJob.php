@@ -102,10 +102,13 @@ ProcessBitrixLeadJob::dispatch($b24, $this->userId)
             return;
         }
 
-        // 🔥 chain next page
-        self::dispatch($this->userId, $this->skipExisting)
-            ->delay(now()->addSeconds(2));
-            
+        // 🔥 chain next page. No artificial delay — the Bitrix24 client already
+        // throttles/back-offs on 429. Stays on the default queue (NOT 'bitrix')
+        // so page-walking isn't stuck behind the thousands of per-lead jobs;
+        // the two queues drain in parallel. A fixed 2s/page delay just added
+        // ~20 min of idle over a full 30k-lead (≈600-page) sync.
+        self::dispatch($this->userId, $this->skipExisting);
+
     }
 
     public function failed(\Throwable $e): void
