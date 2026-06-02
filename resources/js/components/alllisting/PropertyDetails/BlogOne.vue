@@ -5751,7 +5751,7 @@ const createPaymentDetailsSlide = () => {
   //   3) a real original_price is set (selling-price fallback doesn't count).
   const completionStr = String(p.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
   const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
-  const hasInstallments = installments.length > 0;
+  const hasInstallments = installments.length > 2;
   const hasOriginalPrice = rawOriginalPrice > 0;
   if (!(hasInstallments && isUnderConstruction && hasOriginalPrice)) {
     return '';
