@@ -3428,6 +3428,24 @@ fetchProjects()
   top: calc(100% + 8px) !important;
   transform: none !important;
   margin-top: 0 !important;
+      height: 465px;
+    overflow-y: scroll;
+}
+.listing-filter-wrap .listing-more-filter-popover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.listing-filter-wrap .listing-more-filter-popover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.listing-filter-wrap .listing-more-filter-popover::-webkit-scrollbar-thumb {
+  background: #9364a4;
+  border-radius: 10px;
+}
+
+.listing-filter-wrap .listing-more-filter-popover::-webkit-scrollbar-thumb:hover {
+  background: #733e87;
 }
 
 :deep(.listing-pill-select .vs__dropdown-menu),

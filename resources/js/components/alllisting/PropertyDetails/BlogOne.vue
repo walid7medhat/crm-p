@@ -7383,6 +7383,18 @@ margin-top: 20px;
   border: 1px solid #e9ecef;
 }
 
+/* When .flex-column is added, neutralise the row-mode justify/align so the
+   stacked layout actually looks vertical (label on top, value/pills below). */
+.info-item.flex-column {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 8px;
+}
+.info-item.flex-column .info-value {
+  width: 100%;
+}
+
 .info-label {
   font-weight: 600;
   color: #555;
@@ -9754,6 +9766,10 @@ margin: 0 2px;
 }
 .info-item .full-width{
   flex-direction: column !important;
+}
+:deep(.flex-column){
+  flex-direction: column !important;
+
 }
 </style>
 <style>
