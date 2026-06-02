@@ -226,18 +226,33 @@ const stopPolling = () => {
 const startQueue = async () => {
   if (isRunning.value) return
   loading.value = true
+  // Resume from the saved cursor by default — cancelled/failed/paused (and any
+  // manual DB cursor edit) continue from where they stopped. A fresh restart
+  // (cursor 0, re-import everything) only happens when the user explicitly
+  // confirms it on a finished sync; cancelling the prompt resumes instead.
+  let restart = false
+  if (queue.status === 'done') {
+    restart = window.confirm(
+      `This sync already finished. Click OK to restart from the beginning (re-import everything), ` +
+      `or Cancel to resume from the saved cursor (${queue.cursor}).`
+    )
+  }
   try {
     await axios.post('/api/leads/bitrix24/start-queue', {
       skip_existing: skipExisting.value,
+      restart,
     })
-    // Optimistic UI; the next poll will reflect the real state.
+    // Optimistic UI; the next poll will reflect the real state. On resume we
+    // keep the existing counters so the bar doesn't flash back to 0.
     queue.status = 'running'
-    queue.progress = 0
-    queue.processed = 0
-    queue.new = 0
-    queue.existing = 0
-    queue.errors = 0
     queue.last_error = null
+    if (restart) {
+      queue.progress = 0
+      queue.processed = 0
+      queue.new = 0
+      queue.existing = 0
+      queue.errors = 0
+    }
     startPolling()
     await fetchStatus()
   } catch (e) {

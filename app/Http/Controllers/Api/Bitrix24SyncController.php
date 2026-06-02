@@ -168,6 +168,7 @@ class Bitrix24SyncController extends Controller
 
         $request->validate([
             'skip_existing' => 'nullable|boolean',
+            'restart'       => 'nullable|boolean',
         ]);
         $skipExisting = (bool) $request->input('skip_existing', false);
 
@@ -180,13 +181,15 @@ class Bitrix24SyncController extends Controller
             return ApiResponse::error('A sync is already running. Wait for it to finish (or cancel it first).', 409);
         }
 
-        // Decide: resume (keep cursor + counters) vs fresh start (reset everything).
-        //   done   → fresh start, the previous sync already completed.
-        //   cancelled / failed / paused → resume from saved cursor + counters.
-        //   idle (never run, or just reset) → starts from cursor 0 anyway.
-        $resume = in_array($state->status, ['cancelled', 'failed', 'paused'], true);
+        // Resume from the saved cursor by DEFAULT — the sync continues from where
+        // it stopped (done / cancelled / failed / paused / idle all keep their
+        // cursor + counters), and a manual cursor edit in the DB is honoured.
+        // Only an explicit `restart` flag wipes progress back to 0. (First-ever
+        // run resumes too, but its cursor is already 0, so it starts from the top.)
+        $restart = (bool) $request->input('restart', false);
+        $resume  = !$restart;
 
-        if (!$resume) {
+        if ($restart) {
             $state->forceFill([
                 'cursor'         => 0,
                 'total'          => 0,
