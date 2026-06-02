@@ -5477,7 +5477,7 @@ const createSlide2 = () => {
   const completionStatus = property.value?.completion_status || 'Under Construction';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
     <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:12mm 16mm 10mm 16mm !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important;">
@@ -5589,8 +5589,8 @@ const createSlide4 = () => {
   const aboutLimited = limitText(projectAbout, 800);
 
   return `
-  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#0B0736 !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
-    <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:5mm !important; overflow:hidden !important; display:flex !important;">
+  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#0B0736 !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
+    <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
         <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
         
