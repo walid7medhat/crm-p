@@ -1,309 +1,214 @@
 <template>
-  <div class="dashboard-main-body-inner">
-    <div class="row gy-4">
-      <!-- Main Content -->
-      <div class="col-lg-8">
-        <div class="card card-main p-0 radius-12 overflow-hidden">
-          <div class="card-body p-0">
-            <!-- Images Section -->
-            <div class="property-gallery" v-if="project">
-              <div class="gallery-container">
-                <div class="main-image-section" @click="openLightbox(0)">
-                  <img :src="getMainImage()" alt="Project main image" class="main-image" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Project Details Section -->
-            <div class="property-content" v-if="project">
-              
-              <!-- Basic Info -->
-              <div class="property-main-info mb-16">
-                <div class="property-actions mb-16">
-                  <button class="btn btn-primary">
-                    {{ project.status_label || "Not specified" }}
-                  </button>
-                </div>
-                
-                <div class="price-main">
-                  <!--<h3 class="property-price">{{ formatPrice(project.from_price) }} - {{ formatPrice(project.to_price) }}</h3>-->
-                  <h4 class="property-title">{{ project.title || 'Project Title' }}</h4>
-                </div>
-
-                <div class="specs-grid-main">
-                  <!--<div class="spec-main-item">-->
-                  <!--  <div class="spec-main-info">-->
-                  <!--    <span class="spec-main-value">-->
-                  <!--      <img :src="areaIcon" class="imgicon"/>-->
-                  <!--      {{ project.from_sqft }} - {{ project.to_sqft }} sqft-->
-                  <!--    </span>-->
-                  <!--  </div>-->
-                  <!--</div>-->
-                  
-                  <div class="spec-main-item" v-if="project.developer">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                        <img :src=" project.developer.avatar " class="imgicon"/>
-                        {{ project.developer.name }}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div class="spec-main-item" v-if="project.area">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                        <i class="ri-map-pin-line"></i>
-                        {{ project.area.name || project.area.area_parents_title }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Project Details -->
-              <div class="detailed-info-section mb-16">
-                <div class="info-section">
-                  <h3 class="section-title mb-20">Project Details</h3>
-                  <div class="info-grid">
-                    <div class="info-item">
-                      <span class="info-label">Title</span>
-                      <span class="info-value">{{ project.title || "Not specified" }}</span>
-                    </div>
-                    
-                    <div class="info-item">
-                      <span class="info-label">Status</span>
-                      <span class="info-value">{{ project.status_label || "Not specified" }}</span>
-                    </div>
-                    
-                    <!--<div class="info-item">-->
-                    <!--  <span class="info-label">Price Range</span>-->
-                    <!--  <span class="info-value">{{ formatPrice(project.from_price) }} - {{ formatPrice(project.to_price) }}</span>-->
-                    <!--</div>-->
-                    
-                    <!--<div class="info-item">-->
-                    <!--  <span class="info-label">Area Range</span>-->
-                    <!--  <span class="info-value">{{ project.from_sqft }} - {{ project.to_sqft }} sqft</span>-->
-                    <!--</div>-->
-                    
-                    <div class="info-item" v-if="project.developer">
-                      <span class="info-label">Developer</span>
-                      <span class="info-value">{{ project.developer.name }}</span>
-                    </div>
-                    
-                    <div class="info-item" v-if="project.area">
-                      <span class="info-label">Area</span>
-                      <span class="info-value">{{ project.area.name || project.area.area_parents_title }}</span>
-                    </div>
-                    
-                    <div class="info-item">
-                      <span class="info-label">Created Date</span>
-                      <span class="info-value">{{ formatDate(project.created_at) }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- About Project -->
-              <div class="detailed-info-section mb-16" v-if="project.about && project.about.trim()">
-                <div class="info-section">
-                  <h3 class="section-title mb-20">About Project</h3>
-                  <div class="description-content">
-                    <p class="description-text">{{ project.about }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Features -->
-              <div class="detailed-info-section mb-16" v-if="project.features && project.features.length > 0">
-                <div class="info-section">
-                  <h3 class="section-title mb-20">Features</h3>
-                  <div class="row g-3">
-                    <div v-for="feature in project.features" 
-                         :key="feature.id" 
-                         class="col-md-3 col-sm-6">
-                      <div class="d-flex align-items-center p-3 border rounded">
-                        <img v-if="feature.img" 
-                             :src="feature.img" 
-                             alt="Feature Icon"
-                             class="me-3"
-                             width="24"
-                             height="24"
-                             style="object-fit: contain;">
-                        <div>
-                          <p class="mb-0" style="font-size: 13px;">{{ feature.name }}</p>
-                          <small class="text-muted" style="font-size: 11px;">{{ feature.category }}</small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-     
-              <div class="detailed-info-section mb-16" v-if="project.floor_plan_images && project.floor_plan_images.length > 0">
-                <div class="info-section">
-                  <h3 class="section-title mb-20">Floor Plans</h3>
-                  <div class="row g-3">
-                    <div v-for="(image, index) in project.floor_plan_images" 
-                         :key="image.id" 
-                         class="col-md-4 col-sm-6">
-                      <div class="floor-plan-card border rounded overflow-hidden">
-                        <div class="floor-plan-image" @click="openFloorPlanLightbox(index)">
-                          <img :src="image.image_url" 
-                               :alt="image.name || 'Floor Plan'"
-                               class="img-fluid w-100"
-                               style="height: 200px; object-fit: cover; cursor: pointer;">
-                        </div>
-                        <div class="floor-plan-info p-3">
-                          <h6 class="floor-plan-name mb-1">
-                            {{ image.name || `Floor Plan ${index + 1}` }}
-                          </h6>
-                          <small class="text-muted d-block">
-                            <i class="ri-calendar-line me-1"></i>
-                            {{ formatDate(image.created_at) }}
-                          </small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-  
-            </div>
-
-            <!-- Loading State -->
-            <div v-else-if="loading" class="property-content">
-              <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3" style="font-size: 14px;">Loading project details...</p>
-              </div>
-            </div>
-
-            <!-- Error State -->
-            <div v-else-if="error" class="property-content">
-              <div class="text-center py-5">
-                <i class="ri-error-warning-line text-danger mb-3" style="font-size: 48px;"></i>
-                <h5>Failed to Load Project</h5>
-                <p class="text-muted" style="font-size: 14px;">{{ error }}</p>
-                <button class="btn btn-primary" @click="fetchProject">
-                  <i class="ri-refresh-line me-2"></i>
-                  Try Again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+  <div class="project-show-page">
+    <div v-if="loading" class="state-box">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
       </div>
-
-      <!-- Sidebar -->
-      <div class="col-lg-4">
-        <div class="sidebar-sticky-container">
-          <div class="agent-sidebar-card">
-            
-            <!-- Developer Info -->
-            <div class="agent-profile" v-if="project && project.developer">
-              <img 
-                :src="project.developer.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" 
-                alt="Developer" 
-                class="agent-sidebar-avatar" 
-              />
-              <div class="agent-sidebar-info">
-                <h5 class="agent-sidebar-name">{{ project.developer.name || 'Developer Name' }}</h5>
-                <small class="agent-sidebar-company">Developer</small>
-              </div>
-            </div>
-
-            <!-- Area Info -->
-            <div class="sidebar-section" v-if="project && project.area">
-              <h6 class="sidebar-title">Area Information</h6>
-              <div class="quick-info-grid">
-                <div class="quick-info-item">
-                  <i class="ri-map-pin-line"></i>
-                  <div>
-                    <span class="quick-info-label">Area</span>
-                    <span class="quick-info-value">{{ project.area.name || project.area.area_parents_title }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Project Actions -->
-            <div class="sidebar-section">
-              <div class="property-actions-dropdown-wrapper">
-                <div class="property-actions-dropdown">
-                  <button 
-                    class="dropdown-toggle"
-                    @click="toggleActionsDropdown"
-                  >
-                    Project Actions
-                  </button>
-                  
-                  <div class="dropdown-container" :class="{ expanded: showActionsDropdown }">
-                    <div class="dropdown-menu" :class="{ show: showActionsDropdown }">
-                      
-                      <!-- Edit Project -->
-                      <button 
-                        v-if="canEditProject" 
-                        class="dropdown-item"
-                        @click="editProject"
-                      >
-                        <i class="ri-edit-line"></i>
-                        Edit Project
-                      </button>
-
-                      <!-- Delete Project -->
-                      <button 
-                        v-if="canDeleteProject"
-                        class="dropdown-item"
-                        @click="deleteProject"
-                      >
-                        <i class="ri-delete-bin-line"></i>
-                        Delete Project
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-      
+      <p class="mb-0">Loading project details...</p>
     </div>
 
-    <!-- Lightbox Modal -->
-    <div v-if="showLightbox && project && project.images" class="lightbox-overlay" @click="closeLightbox">
-      <div class="lightbox-content" @click.stop>
-        <div class="lightbox-header">
-          <div class="lightbox-header-right">
-            <button class="lightbox-close" @click="closeLightbox">
-              <i class="ri-close-line"></i>
+    <div v-else-if="error" class="state-box state-box--error">
+      <i class="ri-error-warning-line"></i>
+      <h5>Failed to Load Project</h5>
+      <p class="mb-0">{{ error }}</p>
+      <button class="project-btn" @click="fetchProject">
+        <i class="ri-refresh-line"></i>
+        Try Again
+      </button>
+    </div>
+
+    <div v-else-if="project" class="project-shell">
+      <header class="project-hero">
+        <button class="hero-back-link" @click="router.push('/projects')">
+          <i class="ri-arrow-left-s-line"></i>
+          Back To Projects Lists
+        </button>
+
+        <div class="hero-title-row">
+          <div>
+            <div class="hero-name-wrap">
+              <h1 class="hero-title">{{ project.title || 'Project Title' }}</h1>
+              <span class="hero-status">{{ project.status_label || 'Not specified' }}</span>
+            </div>
+            <div class="hero-location" v-if="project.area">
+              <i class="ri-map-pin-line"></i>
+              {{ project.area.name || project.area.area_parents_title }}
+            </div>
+          </div>
+
+          <div class="hero-actions">
+            <button class="hero-action-btn" @click="shareProject">
+              <i class="ri-share-line"></i>
+              Share
+            </button>
+            <button class="hero-action-btn hero-action-btn--icon" v-if="canEditProject" @click="editProject">
+              <i class="ri-pencil-line"></i>
+            </button>
+            <button class="hero-action-btn hero-action-btn--icon" v-if="canDeleteProject" @click="deleteProject">
+              <i class="ri-delete-bin-line"></i>
             </button>
           </div>
         </div>
 
-        <div class="lightbox-main">
-          <div class="lightbox-image-container">
-            <img 
-              :src="getImageUrl(project.images[currentImageIndex]?.url || project.images[currentImageIndex])" 
-              :alt="'Project image ' + (currentImageIndex + 1)" 
-              class="lightbox-image" 
-            />
+        <div class="hero-gallery-wrap" :class="{ 'hero-gallery-wrap--single': heroThumbTiles.length === 0 }">
+          <div class="hero-main-image" @click="openImageLightbox(0)">
+            <img :src="mainImage" alt="Project main image" @error="onImageError" />
+            <button
+              class="gallery-nav gallery-nav--prev"
+              v-if="galleryImages.length > 1"
+              @click.stop="prevHeroImage"
+            >
+              <i class="ri-arrow-left-s-line"></i>
+            </button>
+            <button
+              class="gallery-nav gallery-nav--next"
+              v-if="galleryImages.length > 1"
+              @click.stop="nextHeroImage"
+            >
+              <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+
+          <div class="hero-thumbs" v-if="heroThumbTiles.length">
+            <button
+              v-for="(tile, index) in heroThumbTiles"
+              :key="`gallery-${index}`"
+              class="hero-thumb"
+              :class="{ active: activeHeroIndex === tile.index }"
+              @click="setHeroImage(tile.index)"
+            >
+              <img :src="tile.src" :alt="`Project image ${tile.index + 1}`" @error="onImageError" />
+              <span v-if="tile.moreCount > 0" class="hero-thumb-more-overlay">+{{ tile.moreCount }}</span>
+            </button>
           </div>
         </div>
+      </header>
 
-        <div class="lightbox-thumbnails">
-          <div 
-            v-for="(image, index) in project.images" 
-            :key="index" 
-            class="lightbox-thumbnail"
-            :class="{ active: currentImageIndex === index }"
-            @click="setCurrentImage(index)"
-          >
-            <img :src="getImageUrl(image.url || image)" :alt="'Thumbnail ' + (index + 1)" />
-          </div>
+      <div class="project-content-grid">
+        <div class="project-main-col">
+          <section class="info-card">
+            <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">Project Information</h3>
+            <div class="info-divider"></div>
+
+            <div class="project-meta-row">
+              <div>
+                <p class="meta-label" style="font-size:10px !important;">Title</p>
+                <p class="meta-value" style="font-size:13px !important;">{{ project.title || 'Not specified' }}</p>
+              </div>
+              <div class="meta-date-pill" style="font-size:10px !important;">Created Date : {{ formatDate(project.created_at) }}</div>
+            </div>
+
+            <div class="project-meta-row project-meta-row--status">
+              <div>
+                <p class="meta-label" style="font-size:10px !important;">Status</p>
+                <p class="meta-value" style="font-size:13px !important;">{{ project.status_label || 'Not specified' }}</p>
+              </div>
+            </div>
+
+            <div class="text-block" v-if="project.about && project.about.trim()">
+              <h4 style="font-size:13px !important;">Overview</h4>
+              <p style="font-size:12px !important; line-height:1.5 !important;">{{ project.about }}</p>
+            </div>
+
+            <div class="text-block" v-if="project.features && project.features.length">
+              <h4 style="font-size:13px !important;">Highlights</h4>
+              <div class="highlight-chips">
+                <span class="highlight-chip" style="font-size:11px !important;" v-for="feature in project.features" :key="feature.id || feature.name">
+                  <img v-if="feature.img" :src="feature.img" alt="" />
+                  <i v-else class="ri-award-line"></i>
+                  {{ feature.name }}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section class="info-card floor-card" v-if="filteredFloorPlans.length">
+            <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">Floor Plans</h3>
+            <div class="info-divider"></div>
+
+            <div class="floor-tabs">
+              <button
+                v-for="tab in floorTabs"
+                :key="tab"
+                class="floor-tab"
+                :class="{ active: activeFloorTab === tab }"
+                @click="activeFloorTab = tab"
+                style="font-size:11px !important;"
+              >
+                {{ tab }}
+              </button>
+            </div>
+
+            <div class="floor-plan-item" v-if="activeFloorPlan">
+              <div class="floor-plan-preview" @click="openFloorPlanLightbox(0)">
+                <div class="floor-plan-side" :class="{ 'floor-plan-side--fallback': !hasFloorCover(activeFloorPlan) }">
+                  <img
+                    v-if="hasFloorCover(activeFloorPlan)"
+                    :src="getFloorCover(activeFloorPlan, 0)"
+                    alt=""
+                    @error="onImageError"
+                  />
+                  <div v-else class="floor-plan-side-fallback">
+                    <span class="floor-plan-side-number">{{ getFloorBadge(activeFloorPlan) }}</span>
+                    <span class="floor-plan-side-label">BEDROOM</span>
+                  </div>
+                </div>
+                <img class="floor-plan-main" :src="getImageUrl(activeFloorPlan.image_url)" :alt="activeFloorPlan.name || 'Floor Plan'" @error="onImageError" />
+              </div>
+              <div class="floor-plan-footer">
+                <span>{{ activeFloorPlan.name || 'Floor Plan' }}</span>
+                <small><i class="ri-calendar-line"></i> Posted : {{ formatDate(activeFloorPlan.created_at) }}</small>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="project-side-col">
+          <section class="side-card" v-if="project.developer">
+            <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">Developer Information</h3>
+            <div class="info-divider"></div>
+            <div class="developer-row">
+              <img
+                :src="project.developer.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                alt="Developer"
+                @error="onImageError"
+              />
+              <div>
+                <h4 style="font-size:13px !important;">{{ project.developer.name || 'Developer Name' }}</h4>
+                <p style="font-size:10px !important;">Developer</p>
+              </div>
+            </div>
+            <button class="side-action-btn" style="font-size:10px !important;">View Developer Details</button>
+          </section>
+
+          <section class="side-card" v-if="project.area">
+            <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">Location Information</h3>
+            <div class="info-divider"></div>
+            <div class="location-icon">
+              <i class="ri-map-pin-2-fill"></i>
+            </div>
+            <h4 class="location-title" style="font-size:13px !important;">{{ project.area.name || project.area.area_parents_title }}</h4>
+            <p class="location-sub" style="font-size:10px !important;">Area</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <div v-if="showLightbox && lightboxImages.length" class="lightbox-overlay" @click="closeLightbox">
+      <div class="lightbox-content" @click.stop>
+        <div class="lightbox-header">
+          <button class="lightbox-close" @click="closeLightbox">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+        <div class="lightbox-main">
+          <button class="lightbox-nav" @click="prevImage" :disabled="currentImageIndex === 0">
+            <i class="ri-arrow-left-s-line"></i>
+          </button>
+          <img :src="lightboxImages[currentImageIndex]" class="lightbox-image" alt="" @error="onImageError" />
+          <button class="lightbox-nav" @click="nextImage" :disabled="currentImageIndex >= lightboxImages.length - 1">
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -311,7 +216,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
@@ -327,40 +232,99 @@ export default {
     const error = ref(null);
     const showLightbox = ref(false);
     const currentImageIndex = ref(0);
-    const showActionsDropdown = ref(false);
-    
-    // Icons
-    const areaIcon = '/assets/icons/area-size.svg';
-    const buildingIcon = '/assets/icons/building-icon.svg';
-    const developerIcon = '/assets/icons/developer-icon.svg';
-
     const canEditProject = ref(true);
     const canDeleteProject = ref(true);
-  const openFloorPlanLightbox = (index) => {
-      if (!project.value?.floor_plan_images || project.value.floor_plan_images.length === 0) {
-        Swal.fire({
-          title: 'No Floor Plans',
-          text: 'No floor plan images available.',
-          icon: 'warning',
-          confirmButtonColor: '#0B0736'
-        });
-        return;
+    const activeHeroIndex = ref(0);
+    const activeFloorTab = ref('1 Bedroom');
+    const lightboxImages = ref([]);
+
+    const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=1600&q=80';
+
+    const resolveMediaPath = (input) => {
+      if (!input) return '';
+      if (typeof input === 'string') return input;
+      if (typeof input === 'object') {
+        return input.url || input.image_url || input.path || input.src || '';
       }
-      currentImageIndex.value = index;
-      showLightbox.value = true;
-      document.body.style.overflow = 'hidden';
+      return String(input);
     };
+
+    const getImageUrl = (pathLike) => {
+      const path = resolveMediaPath(pathLike);
+      if (!path) return FALLBACK_IMAGE;
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      if (path.includes('/storage/http://') || path.includes('/storage/https://')) {
+        const urlParts = path.split('/storage/');
+        return urlParts[1] || urlParts[0];
+      }
+      if (path.startsWith('/storage/')) return path;
+      return `/storage/${path}`;
+    };
+
+    const galleryImages = computed(() => {
+      const images = Array.isArray(project.value?.images) ? project.value.images : [];
+      if (!images.length && project.value?.main_image) {
+        return [getImageUrl(project.value.main_image)];
+      }
+      if (!images.length) {
+        return [FALLBACK_IMAGE];
+      }
+      return images.map((img) => getImageUrl(img)).filter(Boolean);
+    });
+
+    const mainImage = computed(() => galleryImages.value[activeHeroIndex.value] || FALLBACK_IMAGE);
+    const heroThumbTiles = computed(() => {
+      const images = galleryImages.value.slice(1);
+      if (!images.length) return [];
+      const tiles = images.slice(0, 3).map((src, i) => ({
+        index: i + 1,
+        src,
+        moreCount: 0,
+      }));
+      if (images.length > 3 && tiles.length) {
+        tiles[tiles.length - 1].moreCount = images.length - 3;
+      }
+      return tiles;
+    });
+
+    const floorPlans = computed(() => (Array.isArray(project.value?.floor_plan_images) ? project.value.floor_plan_images : []));
+    const floorTabs = computed(() => {
+      const tabs = ['All'];
+      floorPlans.value.forEach((item) => {
+        const name = (item.name || '').toLowerCase();
+        const match = name.match(/(\d+)\s*bed(room)?/);
+        if (match) {
+          const label = `${match[1]} Bedroom`;
+          if (!tabs.includes(label)) tabs.push(label);
+        }
+      });
+      if (tabs.length === 1) {
+        tabs.push('1 Bedroom', '2 Bedroom', '3 Bedroom', '4 Bedroom', '5 Bedroom');
+      }
+      return tabs;
+    });
+
+    const filteredFloorPlans = computed(() => {
+      if (activeFloorTab.value === 'All') return floorPlans.value;
+      return floorPlans.value.filter((item) =>
+        (item.name || '').toLowerCase().includes(activeFloorTab.value.toLowerCase())
+      );
+    });
+
+    const activeFloorPlan = computed(() => filteredFloorPlans.value[0] || null);
+
     const fetchProject = async () => {
       try {
         loading.value = true;
         error.value = null;
-        
-        // طلب المشروع مع تضمين بيانات Area
+
         const response = await api.get(`/listings/projects/${route.params.id}?include=area,developer,features`);
-        
+
         if (response.data.status) {
           project.value = response.data.data;
-          console.log('Project data with area:', project.value);
+          activeHeroIndex.value = 0;
+          const tabs = floorTabs.value;
+          activeFloorTab.value = tabs.includes('1 Bedroom') ? '1 Bedroom' : (tabs[0] || 'All');
         } else {
           throw new Error(response.data.message || 'Failed to fetch project');
         }
@@ -372,37 +336,33 @@ export default {
       }
     };
 
-    const getMainImage = () => {
-      if (project.value?.main_image) {
-        return getImageUrl(project.value.main_image);
-      } else if (project.value?.images && project.value.images.length > 0) {
-        return getImageUrl(project.value.images[0].url || project.value.images[0]);
-      }
-      return '/default-project.jpg';
+    const prevHeroImage = () => {
+      if (!galleryImages.value.length) return;
+      activeHeroIndex.value = activeHeroIndex.value > 0 ? activeHeroIndex.value - 1 : galleryImages.value.length - 1;
     };
 
-    const getImageUrl = (path) => {
-      if (!path) return '/default-project.jpg';
-      if (path.startsWith('http://') || path.startsWith('https://')) return path;
-      if (path.includes('/storage/http://') || path.includes('/storage/https://')) {
-        const urlParts = path.split('/storage/');
-        return urlParts[1] || urlParts[0];
-      }
-      if (path.startsWith('/storage/')) return path;
-      return `/storage/${path}`;
+    const nextHeroImage = () => {
+      if (!galleryImages.value.length) return;
+      activeHeroIndex.value = activeHeroIndex.value < galleryImages.value.length - 1 ? activeHeroIndex.value + 1 : 0;
     };
 
-    // Lightbox functions
-    const openLightbox = (index) => {
-      if (!project.value?.images || project.value.images.length === 0) {
+    const setHeroImage = (index) => {
+      if (!galleryImages.value.length) return;
+      if (index < 0 || index >= galleryImages.value.length) return;
+      activeHeroIndex.value = index;
+    };
+
+    const openLightbox = (images, index) => {
+      if (!images.length) {
         Swal.fire({
           title: 'No Images',
-          text: 'No images available for this project.',
+          text: 'No images available.',
           icon: 'warning',
           confirmButtonColor: '#0B0736'
         });
         return;
       }
+      lightboxImages.value = images;
       currentImageIndex.value = index;
       showLightbox.value = true;
       document.body.style.overflow = 'hidden';
@@ -414,7 +374,7 @@ export default {
     };
 
     const nextImage = () => {
-      if (project.value?.images && currentImageIndex.value < project.value.images.length - 1) {
+      if (currentImageIndex.value < lightboxImages.value.length - 1) {
         currentImageIndex.value++;
       }
     };
@@ -425,17 +385,13 @@ export default {
       }
     };
 
-    const setCurrentImage = (index) => {
-      currentImageIndex.value = index;
+    const openImageLightbox = (index) => {
+      openLightbox(galleryImages.value, index);
     };
 
-    // Actions
-    const toggleActionsDropdown = () => {
-      showActionsDropdown.value = !showActionsDropdown.value;
-    };
-
-    const closeActionsDropdown = () => {
-      showActionsDropdown.value = false;
+    const openFloorPlanLightbox = (index) => {
+      const images = filteredFloorPlans.value.map((item) => getImageUrl(item.image_url));
+      openLightbox(images, index);
     };
 
     const editProject = () => {
@@ -481,14 +437,14 @@ export default {
       }
     };
 
-    const formatPrice = (price) => {
-      if (!price) return 'N/A';
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'AED',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(price);
+    const shareProject = async () => {
+      const url = window.location.href;
+      try {
+        await navigator.clipboard.writeText(url);
+        window.$showNotification?.('Project link copied', 'success');
+      } catch (_e) {
+        window.open(url, '_blank');
+      }
     };
 
     const formatDate = (dateString) => {
@@ -500,9 +456,33 @@ export default {
       });
     };
 
+    const getFloorCover = (image, index) => {
+      const fromMedia = getImageUrl(image.cover_url || image.thumbnail || image.image_url || '');
+      if (fromMedia !== FALLBACK_IMAGE) return fromMedia;
+      return galleryImages.value[index % Math.max(galleryImages.value.length, 1)] || FALLBACK_IMAGE;
+    };
+
+    const hasFloorCover = (image) => {
+      const raw = resolveMediaPath(image?.cover_url || image?.thumbnail);
+      return Boolean(raw);
+    };
+
+    const getFloorBadge = (image) => {
+      const name = String(image?.name || '').toLowerCase();
+      const match = name.match(/(\d+)/);
+      return match ? match[1] : '1';
+    };
+
+    const onImageError = (event) => {
+      if (!event?.target) return;
+      if (event.target.src !== FALLBACK_IMAGE) {
+        event.target.src = FALLBACK_IMAGE;
+      }
+    };
+
     const handleKeydown = (event) => {
       if (!showLightbox.value) return;
-      switch(event.key) {
+      switch (event.key) {
         case 'Escape': closeLightbox(); break;
         case 'ArrowLeft': prevImage(); break;
         case 'ArrowRight': nextImage(); break;
@@ -513,11 +493,6 @@ export default {
       fetchProject();
       document.addEventListener('keydown', handleKeydown);
       
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.property-actions-dropdown')) {
-          closeActionsDropdown();
-        }
-      });
     });
 
     const cleanup = () => {
@@ -530,26 +505,34 @@ export default {
       error,
       showLightbox,
       currentImageIndex,
-      showActionsDropdown,
-      areaIcon,
-      buildingIcon,
-      developerIcon,
+      lightboxImages,
       canEditProject,
       canDeleteProject,
+      router,
+      mainImage,
+      galleryImages,
+      heroThumbTiles,
+      floorTabs,
+      activeFloorTab,
+      filteredFloorPlans,
+      activeFloorPlan,
       fetchProject,
-      getMainImage,
       getImageUrl,
-      openLightbox,
+      openImageLightbox,
       closeLightbox,
       nextImage,
       prevImage,
-      setCurrentImage,
-      toggleActionsDropdown,
-      closeActionsDropdown,
+      prevHeroImage,
+      nextHeroImage,
+      setHeroImage,
       editProject,
       deleteProject,
-      formatPrice,
+      shareProject,
       formatDate,
+      getFloorCover,
+      hasFloorCover,
+      getFloorBadge,
+      onImageError,
       cleanup,
       openFloorPlanLightbox
     };
@@ -562,388 +545,463 @@ export default {
 </script>
 
 <style scoped>
-.property-gallery {
-  position: relative;
-  margin-bottom: 20px;
+.project-show-page {
+  padding: 8px 6px 16px;
 }
 
-.gallery-container {
-  display: grid;
-  gap: 12px;
-  height: 400px;
-}
-
-.main-image-section {
-  border-radius: 12px;
+.project-shell {
+  border-radius: 16px;
   overflow: hidden;
-  position: relative;
-  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background:
+    linear-gradient(180deg, rgba(92, 86, 176, 0.9), rgba(100, 83, 170, 0.95)),
+    url("https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=1400&q=80") center / cover;
 }
 
-.main-image {
-  width: 100%;
-  height: 100%;
-  transition: transform 0.3s ease;
+.project-hero {
+  padding: 8px 10px 10px;
 }
 
-.main-image-section:hover .main-image {
-  transform: scale(1.05);
-}
-
-/* Property Content */
-.property-content {
-  /* background: white; */
-}
-
-.property-main-info {
-  padding: 30px;
-  margin-bottom: 20px;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
-  background-color: #ffffff;
-}
-
-.price-main {
-  margin-bottom: 8px;
-}
-
-.property-price {
-  font-size: 24px !important;
-  font-weight: 800;
-  color: #0B0736;
-  margin: 0 0 15px 0 !important;
-  line-height: 1;
-}
-
-.property-title {
-  font-size: 16px !important;
-  font-weight: 600;
-  color: #6c757d;
-  margin: 0 !important;
-  line-height: 1.2;
-}
-
-.specs-grid-main {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-start;
-  margin-top: 12px;
-}
-
-.spec-main-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  min-width: 100px;
-}
-
-.spec-main-info {
-  display: flex;
-  flex-direction: column;
-  text-align: center;
-  gap: 2px;
-}
-
-.spec-main-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0B0736;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.hero-back-link {
+  border: none;
+  background: transparent;
+  color: #ede9fe;
+  font-size: 11px;
+  display: inline-flex;
   gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+  opacity: 0.9;
 }
 
-.spec-main-value i {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.spec-main-label {
-  font-size: 11px;
-  color: #6c757d;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.detailed-info-section {
-  padding: 16px;
-  margin-bottom: 16px;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
-  background-color: #ffffff;
-}
-
-.info-section {
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-size: 20px !important;
-  font-weight: 600;
-  color: #0B0736;
-  padding: 10px 12px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px 24px;
-  margin-bottom: 16px;
-}
-
-.info-item {
+.hero-title-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.info-label {
-  font-weight: 600;
-  color: #555;
-  font-size: 13px;
-}
-
-.info-value {
-  font-weight: 800;
-  color: #0B0736;
-  font-size: 13px;
-}
-
-.description-content {
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.description-text {
-  line-height: 1.6;
-  color: #555;
-  font-size: 14px;
-  margin: 0;
-}
-
-/* Sidebar */
-.sidebar-sticky-container {
-  position: sticky;
-  top: 90px;
-  height: fit-content;
-  border-radius: 20px;
-}
-
-.agent-sidebar-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(40px);
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
-  position: sticky;
-  top: 100px;
-}
-
-.agent-sidebar-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:  0%, rgba(5, 10, 40, 0.95) 100%);
-  border-radius: 20px;
-}
-
-.agent-profile {
-  display: flex;
-  align-items: start;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e9ecef;
-  text-align: left;
-}
-
-.agent-sidebar-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #0B0736;
-}
-
-.agent-sidebar-info {
-  width: 100%;
-}
-
-.agent-sidebar-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 6px 0;
-  line-height: 1.3;
-}
-
-.agent-sidebar-company {
-  font-size: 13px;
-  color: #ffffff;
-  margin: 0 0 10px 0;
-  line-height: 1.4;
-}
-
-/* Sidebar Sections */
-.sidebar-section {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-}
-
-.sidebar-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 10px;
-  padding-bottom: 6px;
 }
 
-/* Quick Info */
-.quick-info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.quick-info-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.quick-info-item i {
-  font-size: 18px;
-  color: #ffffff;
-  width: 24px;
-}
-
-.quick-info-label {
-  display: block;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 2px;
-}
-
-.quick-info-value {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #ffffff;
-}
-
-/* Dropdown Actions */
-.property-actions-dropdown-wrapper {
-  position: relative;
-  margin-bottom: 0;
-}
-
-.property-actions-dropdown {
-  position: relative;
-  display: block;
-}
-
-.dropdown-toggle {
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px;
-  background: #733E87;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.dropdown-toggle:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(11, 7, 54, 0.3);
-}
-
-.dropdown-container {
-  position: relative;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  opacity: 0;
-  visibility: hidden;
-  max-height: 0;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  margin: 0;
-  border: none;
-  box-shadow: none;
-  transform: none;
-  z-index: 1000;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.dropdown-menu.show {
-  opacity: 1;
-  visibility: visible;
-  max-height: 400px;
-  margin-top: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.dropdown-item {
-  width: 100%;
+.hero-name-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
-  background: none;
+}
+
+.hero-title {
+  color: #e5e7eb;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  margin: 0;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.hero-status {
+  background: #f8b133;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 4px 11px;
+  color: #201a2a;
+  font-weight: 700;
+}
+
+.hero-location {
+  margin-top: 5px;
+  color: #d1d5db;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.hero-action-btn {
   border: none;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
+  border-radius: 999px;
+  background: #fff;
+  min-height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.hero-action-btn--icon {
+  width: 28px;
+  justify-content: center;
+  padding: 0;
+}
+
+.hero-gallery-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(210px, 0.22fr);
+  gap: 10px;
+}
+
+.hero-gallery-wrap--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hero-main-image {
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  height: 360px;
+  min-height: 360px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid #f8f9fa;
 }
 
-.dropdown-item:last-child {
-  border-bottom: none;
+.hero-main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.dropdown-item:hover {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
 }
 
-.dropdown-item i {
-  font-size: 16px;
-  width: 20px;
+.gallery-nav--prev {
+  left: 10px;
+}
+
+.gallery-nav--next {
+  right: 10px;
+}
+
+.hero-thumbs {
+  display: grid;
+  grid-template-rows: repeat(3, 113px);
+  gap: 10px;
+  align-content: start;
+}
+
+.hero-thumb {
+  border: none;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+  background: #d1d5db;
+}
+
+.hero-thumb.active {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.hero-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-thumb--more {
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.hero-thumb-more-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 24, 39, 0.45);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.project-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.info-card,
+.side-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.info-card-title {
+  font-size: 14px;
+  margin: 0;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.info-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 10px 0;
+}
+
+.project-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.project-meta-row--status {
+  margin-top: 8px;
+}
+
+.meta-label {
+  margin: 0;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.meta-value {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.meta-date-pill {
+  margin-top: 10px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  height: fit-content;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: #111827;
+}
+
+.text-block {
+  margin-top: 14px;
+}
+
+.text-block h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.text-block p {
+  margin: 0;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.highlight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.highlight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.highlight-chip img {
+  width: 11px;
+  height: 11px;
+  object-fit: contain;
+}
+
+.floor-card {
+  margin-top: 12px;
+}
+
+.floor-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.floor-tab {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.floor-tab.active {
+  background: #02054e;
+  color: #fff;
+}
+
+.floor-plan-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  max-width: 720px;
+}
+
+.floor-plan-preview {
+  background: #f8fafc;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  height: 120px;
+  min-height: 120px;
+  max-height: 120px;
+  cursor: pointer;
+}
+
+.floor-plan-side {
+  width: 100%;
+  height: 100%;
+  background: #0b1f4d;
+}
+
+.floor-plan-side img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.floor-plan-side--fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #06265d 0%, #041437 100%);
+}
+
+.floor-plan-side-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #fff;
+  line-height: 1;
+}
+
+.floor-plan-side-number {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.floor-plan-side-label {
+  margin-top: 4px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.floor-plan-main {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px 6px;
+}
+
+.floor-plan-footer {
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.floor-plan-footer small {
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.project-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.developer-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.developer-row img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #d1d5db;
+}
+
+.developer-row h4 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.developer-row p {
+  margin: 3px 0 0;
+  color: #9ca3af;
+  font-size: 10px;
+}
+
+.side-action-btn {
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  border-radius: 999px;
+  background: #f3f4f6;
+  padding: 7px 10px;
+  font-size: 10px;
+}
+
+.location-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 8px auto 10px;
+  border: 1px solid #d8b4fe;
+  color: #7e22ce;
+  font-size: 18px;
+  background: #faf5ff;
+}
+
+.location-title {
   text-align: center;
+  margin: 0;
+  font-size: 13px;
+  color: #111827;
 }
 
-/* Lightbox */
+.location-sub {
+  margin: 4px 0 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 10px;
+}
+
 .lightbox-overlay {
   position: fixed;
   top: 0;
@@ -954,340 +1012,139 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 5000;
   padding: 20px;
 }
 
 .lightbox-content {
-  background: none;
+  background: #0f172a;
   border-radius: 12px;
   width: 100%;
-  max-width: 1200px;
-  height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  max-width: 1100px;
 }
 
 .lightbox-header {
-  display: flex;
-  justify-content: end;
-  align-items: center;
-  padding: 16px 24px;
-  background: none;
+  padding: 10px;
+  text-align: right;
 }
 
 .lightbox-close {
-  background: none;
+  background: #1e293b;
   border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #ffffff;
+  color: #fff;
+  border-radius: 8px;
   padding: 8px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.lightbox-close:hover {
-  background: #e9ecef;
-  color: #0B0736;
 }
 
 .lightbox-main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  position: relative;
-  height: 400px;
-}
-
-.lightbox-nav {
-  background: rgba(255, 255, 255, 0.9);
-  color: #0B0736;
-  border: none;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  z-index: 2;
-  font-weight: 700;
-}
-
-.lightbox-nav:hover:not(:disabled) {
-  background: #0B0736;
-  color: white;
-}
-
-.lightbox-nav:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.lightbox-image-container {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
+  gap: 16px;
+  min-height: 70vh;
+  padding: 16px;
 }
 
 .lightbox-image {
-  max-width: 100%;
-  max-height: 100%;
+  max-width: calc(100% - 140px);
+  max-height: 78vh;
   border-radius: 8px;
+  object-fit: contain;
 }
 
-.lightbox-thumbnails {
-  display: none;
+.lightbox-nav {
+  border: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.state-box {
+  min-height: 220px;
+  border-radius: 14px;
+  background: #fff;
+  display: grid;
+  place-items: center;
   gap: 8px;
-  padding: 16px 24px;
-  overflow-x: auto;
+  text-align: center;
+  border: 1px solid #e2e8f0;
 }
 
-.lightbox-thumbnail {
-  width: 80px;
-  height: 60px;
-  border-radius: 6px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
+.state-box--error i {
+  font-size: 42px;
+  color: #dc2626;
 }
 
-.lightbox-thumbnail.active {
-  border-color: #0B0736;
+.project-btn {
+  border: none;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
 }
 
-.lightbox-thumbnail:hover {
-  transform: scale(1.05);
+@media (max-width: 1399.98px) {
+  .hero-title {
+    font-size: 23px !important;
+  }
+
+  .hero-location {
+    font-size: 11px;
+  }
 }
 
-.lightbox-thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Property Actions */
-.property-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-  justify-content: space-between;
-}
-
-.btn {
-  font-weight: 500;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .property-content {
-    padding: 0px !important;
-  }
-  
-  .gallery-container {
-    height: 300px;
-  }
-  
-  .property-main-info {
-    padding: 20px;
-  }
-  
-  .property-price {
-    font-size: 20px !important;
-  }
-  
-  .property-title {
-    font-size: 14px !important;
-  }
-  
-  .specs-grid-main {
-    gap: 6px;
-  }
-  
-  .spec-main-item {
-    padding: 6px 8px;
-    min-width: 80px;
-  }
-  
-  .spec-main-value {
-    font-size: 14px;
-  }
-  
-  .detailed-info-section {
-    padding: 12px;
-  }
-  
-  .section-title {
-    font-size: 18px !important;
-  }
-  
-  .info-grid {
+@media (max-width: 1199.98px) {
+  .project-content-grid {
     grid-template-columns: 1fr;
   }
-  
-  .agent-sidebar-card {
-    position: relative;
-    top: 0;
-    margin-bottom: 16px;
-  }
-  
-  .lightbox-main {
-    padding: 10px;
-  }
-  
-  .lightbox-nav {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
+
+  .project-side-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
-@media (max-width: 576px) {
-  .gallery-container {
-    height: 250px;
+@media (max-width: 991.98px) {
+  .hero-title-row {
+    flex-direction: column;
   }
-  
-  .property-price {
-    font-size: 18px !important;
+
+  .hero-gallery-wrap {
+    grid-template-columns: 1fr;
   }
-  
-  .specs-grid-main {
-    flex-wrap: wrap;
-    justify-content: center;
+
+  .hero-thumbs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: unset;
   }
-  
-  .spec-main-item {
-    min-width: 70px;
+
+  .hero-main-image {
+    height: 260px;
+    min-height: 260px;
   }
-  
-  .spec-main-value {
-    font-size: 13px;
+
+  .hero-gallery-wrap {
+    gap: 6px;
   }
-}
 
-@media (min-width: 992px) {
-  .info-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .hero-thumb {
+    border-radius: 10px;
   }
-}
 
-.imgicon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-.card-main {
-  background: none !important;
-}
-
-.btn-primary {
-  background-color: #0B0736;
-  border-color: #0B0736;
-}
-
-.btn-primary:hover, .btn-primary:active, .btn-primary:focus {
-  background-color: #733E87 !important;
-  border-color: #733E87 !important;
-}
-.floor-plan-card {
-  background: white;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  height: 100%;
-}
-
-.floor-plan-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-}
-
-.floor-plan-image {
-  position: relative;
-  overflow: hidden;
-}
-
-.floor-plan-image img {
-  transition: transform 0.3s ease;
-}
-
-.floor-plan-card:hover .floor-plan-image img {
-  transform: scale(1.05);
-}
-
-.floor-plan-info {
-  border-top: 1px solid #e9ecef;
-  background: #f8f9fa;
-}
-
-.floor-plan-name {
-  font-size: 14px !important;
-  font-weight: 600;
-  color: #0B0736;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.floor-plan-name:empty::before {
-  content: "Unnamed Floor Plan";
-  color: #6c757d;
-  font-style: italic;
-}
-
-.floor-plan-lightbox .lightbox-content {
-  max-width: 800px;
-}
-
-.floor-plan-lightbox .lightbox-image {
-  max-height: 70vh;
-  object-fit: contain;
-  background: #f8f9fa;
-  padding: 20px;
-}
-
-.floor-plan-lightbox .lightbox-header {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-}
-
-.floor-plan-lightbox-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: white;
-}
-
-.floor-plan-lightbox .lightbox-close {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.floor-plan-lightbox .lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-@media (max-width: 768px) {
-  .floor-plan-card {
-    margin-bottom: 15px;
+  .hero-title {
+    font-size: 20px !important;
   }
-  
-  .floor-plan-name {
-    font-size: 13px;
+
+  .hero-location {
+    font-size: 10px;
   }
-  
-  .floor-plan-info {
-    padding: 12px;
+
+  .project-side-col {
+    grid-template-columns: 1fr;
   }
 }
 </style>
