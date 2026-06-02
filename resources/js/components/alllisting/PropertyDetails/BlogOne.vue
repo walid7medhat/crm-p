@@ -5589,7 +5589,7 @@ const createSlide4 = () => {
   const aboutLimited = limitText(projectAbout, 800);
 
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#0B0736 !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
+  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important;">
     <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
         <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
