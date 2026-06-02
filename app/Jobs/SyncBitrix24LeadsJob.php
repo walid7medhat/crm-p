@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 class SyncBitrix24LeadsJob implements ShouldQueue
 {
@@ -24,6 +25,10 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 
     public function handle(): void
     {
+        // The page-walker chains itself for the whole sync; keep its footprint
+        // flat by not retaining the query log across the run.
+        DB::connection()->disableQueryLog();
+
         $state = BitrixSyncState::firstOrCreate(
             ['key' => 'global_sync'],
             ['status' => 'idle', 'cursor' => 0],
