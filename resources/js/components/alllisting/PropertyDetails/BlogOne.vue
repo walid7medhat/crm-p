@@ -5408,7 +5408,7 @@ const createGallerySlide = (imagesChunk) => {
     : 'placeholder.png';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
     
     <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
       
@@ -5440,7 +5440,7 @@ const createSlide1 = (currentUser) => {
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.40) !important;"></div>
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
@@ -5477,7 +5477,7 @@ const createSlide2 = () => {
   const completionStatus = property.value?.completion_status || 'Under Construction';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
     <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:12mm 16mm 10mm 16mm !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important;">
@@ -5557,7 +5557,7 @@ const createSlide3 = () => {
     `;
   };
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
       <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 8mm 10mm 8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important;">
         <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 10mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Amenities &amp;<br>Features</h1>
@@ -5589,7 +5589,7 @@ const createSlide4 = () => {
   const aboutLimited = limitText(projectAbout, 800);
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#0B0736 !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#0B0736 !important; position:relative !important; display:flex !important; align-items:center !important; justify-content:center !important;">
     <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:5mm !important; overflow:hidden !important; display:flex !important;">
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
         <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
@@ -5613,7 +5613,7 @@ const createSlide5 = () => {
   const floorPlan2 = floorPlans.length > 1 ? getImageUrl(floorPlans[1].image_url) : null;
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
     <div style="width:100% !important; height:90% !important; padding:10mm 14mm 7mm 14mm !important; box-sizing:border-box !important;">
       <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:8mm !important;">
         <h1 style="color:#0B0736 !important;  font-size:6mm !important; font-weight:700 !important;  margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Floor Plan</h1>
@@ -5638,7 +5638,7 @@ const createSlide6 = () => {
   const img3 = images.length > 2 ? getImageUrl(images[2].image_url) : 'placeholder.png';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img1}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
@@ -5663,7 +5663,7 @@ const createSlide7 = () => {
   const img3 = images.length > 5 ? getImageUrl(images[5].image_url) : 'placeholder.png';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img1}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
@@ -5682,7 +5682,7 @@ const createSlide7 = () => {
 
 const createSlide9 = (currentUser) => {
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <img src="${LastSlide_bg}" crossorigin="anonymous" style="position:absolute !important; top:0 !important; left:0 !important; width:130% !important; height:100% !important; object-fit:cover !important; display:block !important;" />
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.65) !important;"></div>
      <div style="position:relative !important; z-index:5 !important; width:100% !important; height:100% !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:flex-start !important; padding-top:15mm !important;">      
@@ -5953,7 +5953,7 @@ const createPaymentDetailsSlide = () => {
   ` : '';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
+  <div style="width:210mm !important; height:148mm !important; border-radius:12px !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
