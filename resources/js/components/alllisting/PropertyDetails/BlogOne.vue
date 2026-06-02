@@ -8,7 +8,10 @@
          
             <!-- Carousel Section -->
             <div class="property-gallery" v-if="property && property.gallery_images">
-              <div class="gallery-container">
+              <div
+                class="gallery-container"
+                :class="{ 'is-single': property.gallery_images.length === 1 }"
+              >
                 <div class="main-image-section" @click="openLightbox(0)">
                   <img :src="getFirstGalleryImage()" alt="Property main image" class="main-image" />
                   <!-- <div class="image-overlay">
@@ -239,9 +242,7 @@
                         </div>
                       </div>
                     </div>
-                   <!-- Each additional feature gets its own row, like the other info items. -->
-                    
-                    <div class="info-item full-width" v-if="hasAdditionalFeatures">
+                    <div class="info-item full-width flex-column" v-if="hasAdditionalFeatures">
                       <span class="info-label">Features</span>
                       <div class="info-value">
                         <div class="payment-plans-container">
@@ -6883,6 +6884,18 @@ margin-bottom: 20px;
   height: 400px;
 }
 
+/* Only one image → main section takes the full width and the empty
+   side-panel column is collapsed. */
+.gallery-container.is-single {
+  grid-template-columns: 1fr;
+}
+.gallery-container.is-single .side-images {
+  display: none;
+}
+.gallery-container.is-single .main-image {
+  object-fit: cover;
+}
+
 .main-image-section {
   border-radius: 12px ;
   overflow: hidden;
@@ -9638,6 +9651,7 @@ margin: 0 2px;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
 }
+
 .floor-plan-card {
   background: #fff;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -9706,6 +9720,38 @@ margin: 0 2px;
   color: #16a34a;
   font-size: 0.9rem;
 }
+
+/* Features section: the "Features" title runs left, and selected amenity
+   pills wrap to fill the same line, dropping to extra rows as needed. */
+.features-section-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.features-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 4px;
+}
+.feature-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #eef2ff;
+  color: #1e3a8a;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.feature-pill i {
+  color: #16a34a;
+  font-size: 0.8rem;
+}
 .info-item .full-width{
   flex-direction: column !important;
 }
@@ -9713,5 +9759,9 @@ margin: 0 2px;
 <style>
 .property-show-inner{
   padding:0 1rem 1rem 0 !important;
+}
+.flex-column{
+  flex-direction: column !important;
+
 }
 </style>
