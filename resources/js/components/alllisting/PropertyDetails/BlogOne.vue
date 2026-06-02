@@ -9042,6 +9042,13 @@ margin-top: 20px;
   .modal-section-title {
     font-size: 14px;
   }
+  body.app-has-video-bg .dashboard-main-body, body.app-has-video-bg .dashboard-main-body-inner{
+    padding-right: 0px !important;
+  }
+  .card .card-body{
+    padding-right: 0px !important;
+    
+  }
 }
 
 /* Additional Mobile Optimizations */
