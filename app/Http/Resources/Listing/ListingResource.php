@@ -9,6 +9,66 @@ use App\Models\ListingAccessRequest;
 use App\Helpers\ImageHelper;
 class ListingResource extends JsonResource
 {
+    /**
+     * Central list of listing amenities / features (key => human label).
+     * Keep this in sync with resources/js/config/listingFeatures.js.
+     * Used to surface every known feature on the API as a boolean map, so the
+     * frontend (PropertyDetails / search / forms) can iterate over them without
+     * hardcoding the keys.
+     */
+    public const FEATURE_LABELS = [
+        // Rooms
+        'maid'                 => "Maid's Room",
+        'storage'              => 'Storage Areas',
+        'study'                => 'Study Room',
+        'laundry'              => 'Laundry Room',
+        'driver'               => 'Driver Room',
+        // Amenities
+        'swimming_pool'        => 'Swimming Pool',
+        'gym'                  => 'Fully Equipped Gymnasium',
+        'kids_play_area'       => 'Kids Play Area',
+        'garden'               => 'Landscaped Gardens',
+        'bbq'                  => 'BBQ Area',
+        'jogging'              => 'Jogging & Cycling Tracks',
+        'sauna'                => 'Sauna & Steam Room',
+        'jacuzzi'              => 'Jacuzzi',
+        // Community
+        'community_parks'      => 'Community Parks',
+        'multi_purpose_courts' => 'Multi-Purpose Courts',
+        'community_center'     => 'Community Center',
+        'pet_friendly'         => 'Pet-Friendly Community',
+        'family_oriented'      => 'Family-Oriented Environment',
+        // Convenience / nearby
+        'cafes_restaurants'    => 'Cafés & Restaurants',
+        'retail_shops'         => 'Retail Shops & Supermarkets',
+        'mosque'               => 'Mosque',
+        'day_care'             => 'Day Care Center',
+        'easy_access_roads'    => 'Easy Access to Major Roads',
+        'close_to_essentials'  => 'Close to Schools, Hospitals & Shopping Malls',
+        // Interior
+        'balcony'              => 'Balcony / Terrace',
+        'spacious_living'      => 'Spacious Living Areas',
+        'wardrobes'            => 'Built-in Wardrobes',
+        'high_quality_finishes'=> 'High-Quality Finishes',
+        'central_ac'           => 'Central Air Conditioning',
+        'double_glazed_windows'=> 'Double-Glazed Windows',
+        // Building
+        'elevators'            => 'High-Speed Elevators',
+        'lobby'                => 'Elegant Lobby & Reception Area',
+        'covered_parking'      => 'Covered Parking',
+        'visitor_parking'      => 'Visitor Parking Available',
+        // Tech
+        'broadband'            => 'Broadband Internet Ready',
+        'satellite_tv'         => 'Satellite/Cable TV Connection',
+        'intercom'             => 'Intercom System',
+        // Services / security
+        'security_24_7'        => '24/7 Security',
+        'cctv'                 => 'CCTV Surveillance',
+        'concierge'            => 'Concierge Services',
+        'maintenance'          => 'Maintenance Services',
+        'waste_disposal'       => 'Waste Disposal Facilities',
+    ];
+
     /** Per-request memo: "{listingId}:{userId}" => list of approved request_type strings. */
     protected static array $accessRequestCache = [];
 
@@ -352,14 +412,14 @@ $allowedAgentIds = [];
             'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
-             'additional_features' => [
-                'maid' => (bool) ($this->additional_features['maid'] ?? false),
-                'storage' => (bool) ($this->additional_features['storage'] ?? false),
-                'study' => (bool) ($this->additional_features['study'] ?? false),
-                'store' => (bool) ($this->additional_features['store'] ?? false),
-                'laundry' => (bool) ($this->additional_features['laundry'] ?? false),
-                'driver' => (bool) ($this->additional_features['driver'] ?? false),
-            ],
+            // Boolean map for every known feature; the frontend iterates over keys.
+            'additional_features' => collect(self::FEATURE_LABELS)
+                ->mapWithKeys(function ($label, $key) {
+                    return [
+                        $key => (bool) ($this->additional_features[$key] ?? false),
+                    ];
+                }),
+            'additional_features_labels' => self::FEATURE_LABELS,
             'sold_by_company_name' => $this->sold_by_company_name,
             'sold_by_agent_name' => $this->sold_by_agent_name,
             'sold_by_agent_phone' => $this->sold_by_agent_phone,

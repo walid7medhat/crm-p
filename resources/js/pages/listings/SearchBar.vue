@@ -623,6 +623,7 @@
 </template>
 
 <script>
+import { LISTING_FEATURE_OPTIONS } from '@/config/listingFeatures';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import { ref, onMounted, computed, getCurrentInstance, onUnmounted, watch } from 'vue';
@@ -725,14 +726,9 @@ const bathsOptions = ["1", "2", "3", "4", "5", "6+"];
       { label: "Vacant", value: "Vacant" },
     ];
     const selectedOccupancyStatus = ref(null);
-    const listingFeatureOptions = [
-      { key: 'maid', label: 'Maid Room' },
-      { key: 'storage', label: 'Storage Room' },
-      { key: 'study', label: 'Study Room' },
-      { key: 'store', label: 'Store Room' },
-      { key: 'laundry', label: 'Laundry Room' },
-      { key: 'driver', label: 'Driver Room' },
-    ];
+// Shared list — single source of truth for listings features.
+// Keep ListingResource::FEATURE_LABELS in sync.
+const listingFeatureOptions = LISTING_FEATURE_OPTIONS;
 const typeOptions = [
   { label: "All", value: "All" },
   { label: "Sale", value: "Sale" },

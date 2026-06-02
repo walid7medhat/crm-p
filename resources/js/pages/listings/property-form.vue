@@ -1898,6 +1898,7 @@
 import { ref, watch, onMounted, computed, getCurrentInstance } from "vue";
 import api from "@/plugins/axios";
 import vSelect from "vue-select";
+import { LISTING_FEATURE_OPTIONS, LISTING_FEATURE_KEYS } from "@/config/listingFeatures";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
@@ -2050,7 +2051,8 @@ const form = ref({
   rented_until: "", payment_plan: "", payment_plans: null, driveLink: "", is_hot_deal: "",
   handover_date: "",
   noc_percentage: 0,
-  maid: false, storage: false, study: false, store: false, laundry: false, driver: false,
+  // Boolean for every known feature (from the shared LISTING_FEATURE_KEYS list).
+  ...LISTING_FEATURE_KEYS.reduce((acc, k) => { acc[k] = false; return acc; }, {}),
     spa_document: null, desk_document: null, other_document: null,
   additionalDocuments: [],
 });
@@ -2899,14 +2901,9 @@ const removeBreakdownInstallment = (entryId) => {
   breakdownInstallments.value = breakdownInstallments.value.filter((entry) => entry.id !== entryId);
 };
 
-const listingFeatureOptions = [
-  { key: 'maid', label: 'Maid Room' },
-  { key: 'storage', label: 'Storage Room' },
-  { key: 'study', label: 'Study Room' },
-  { key: 'store', label: 'Store Room' },
-  { key: 'laundry', label: 'Laundry Room' },
-  { key: 'driver', label: 'Driver Room' },
-];
+// Shared source of truth — see resources/js/config/listingFeatures.js and
+// ListingResource::FEATURE_LABELS for the matching backend list.
+const listingFeatureOptions = LISTING_FEATURE_OPTIONS;
 
 const isLoadingUnitNumber = ref(false);
 const unitNumberError = ref("");
@@ -4055,13 +4052,12 @@ const handleSubmit = async (action = 'draft') => {
     formData.append('area_id', form.value.area.id);
     formData.append('unit_view_id', form.value.unit_view?.id ?? "");
     formData.append('layout_type_id', form.value.layout_type?.id ?? "");
-
-  formData.append('additional_features[maid]', form.value.maid ? 1 : 0);
-  formData.append('additional_features[storage]', form.value.storage ? 1 : 0);
-  formData.append('additional_features[study]', form.value.study ? 1 : 0);
-  formData.append('additional_features[store]', form.value.store ? 1 : 0);
-  formData.append('additional_features[laundry]', form.value.laundry ? 1 : 0);
-  formData.append('additional_features[driver]', form.value.driver ? 1 : 0);
+    listingFeatureOptions.forEach(feature => {
+      formData.append(
+        `additional_features[${feature.key}]`,
+        form.value[feature.key] ? 1 : 0
+      );
+    });
 
     if (form.value.rented_status) formData.append('rented_status', form.value.rented_status);
     if (form.value.rented_until) formData.append('rented_until', form.value.rented_until);
@@ -4203,7 +4199,8 @@ const resetForm = () => {
     rentExpiryDate: "", rentAmount: "", mortgageComment: "", projectAreas: [],
     rented_status: "", rented_until: "", payment_plan: "", payment_plans: null, driveLink: "", is_hot_deal: "",
     handover_date: "", noc_percentage: 0,
-    maid: false, storage: false, study: false, store: false, laundry: false, driver: false,
+    // Boolean for every known feature (from the shared LISTING_FEATURE_KEYS list).
+  ...LISTING_FEATURE_KEYS.reduce((acc, k) => { acc[k] = false; return acc; }, {}),
     spa_document: null, desk_document: null, other_document: null,
     additionalDocuments: [],
   };

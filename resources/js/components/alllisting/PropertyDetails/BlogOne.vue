@@ -2585,51 +2585,65 @@ const formatRejectionDate = (dateString) => {
     const canEditOrDelete = computed(() => {
       return canEditProperty.value || canDeleteProperty.value;
     });
+const featureMap = {
+  maid: 'Maid Room',
+  storage: 'Storage Room',
+  study: 'Study Room',
+  laundry: 'Laundry Room',
+  driver: 'Driver Room',
 
-  const additionalFeaturesList = computed(() => {
-    console.log('🔍 Computing features...');
-    console.log('📦 property.value?.additional_features:', property.value?.additional_features);
-    
-    if (!property.value?.additional_features) {
-      console.log('❌ No additional_features found');
-      return [];
-    }
-    
-    const features = [];
-    const data = property.value.additional_features;
-    
-    // Debug
-    console.log('📊 Data type:', typeof data);
-    console.log('📊 Data:', data);
-    
-    if (data.maid === true) {
-      features.push('Maid Room');
-      console.log('✅ Added Maid');
-    }
-    if (data.storage === true) {
-      features.push('Storage Room');
-      console.log('✅ Added Storage');
-    }
-    if (data.study === true) {
-      features.push('Study Room');
-      console.log('✅ Added Study');
-    }
-    if (data.store === true) {
-      features.push('Store Room');
-      console.log('✅ Added Store');
-    }
-    if (data.laundry === true) {
-      features.push('Laundry Room');
-      console.log('✅ Added Laundry');
-    }
-    if (data.driver === true) {
-      features.push('Driver Room');
-      console.log('✅ Added Driver');
-    }
-    
-    console.log('🎯 Final features:', features);
-    return features;
-  });
+  // New features
+  swimming_pool: 'Swimming Pool',
+  gym: 'Fully Equipped Gymnasium',
+  kids_play_area: 'Kids Play Area',
+  garden: 'Landscaped Gardens',
+  bbq: 'BBQ Area',
+  jogging: 'Jogging & Cycling Tracks',
+  sauna: 'Sauna & Steam Room',
+  jacuzzi: 'Jacuzzi',
+  parks: 'Community Parks',
+  courts: 'Multi-Purpose Courts',
+  community_center: 'Community Center',
+  cafes: 'Cafés & Restaurants',
+  retail: 'Retail Shops & Supermarkets',
+  mosque: 'Mosque',
+  daycare: 'Day Care Center',
+
+  balcony: 'Balcony / Terrace',
+  living: 'Spacious Living Areas',
+  wardrobes: 'Built-in Wardrobes',
+  finishes: 'High-Quality Finishes',
+  ac: 'Central Air Conditioning',
+  windows: 'Double-Glazed Windows',
+  elevators: 'High-Speed Elevators',
+  lobby: 'Elegant Lobby & Reception Area',
+  parking: 'Covered Parking',
+
+  internet: 'Broadband Internet Ready',
+  tv: 'Satellite/Cable TV Connection',
+  intercom: 'Intercom System',
+
+  security: '24/7 Security',
+  cctv: 'CCTV Surveillance',
+  concierge: 'Concierge Services',
+  maintenance: 'Maintenance Services',
+  waste: 'Waste Disposal Facilities',
+
+  pet: 'Pet-Friendly Community',
+  family: 'Family-Oriented Environment',
+  roads: 'Easy Access to Major Roads',
+  location: 'Close to Schools, Hospitals & Shopping Malls',
+  visitor_parking: 'Visitor Parking Available'
+};
+ const additionalFeaturesList = computed(() => {
+  const data = property.value?.additional_features;
+
+  if (!data) return [];
+
+  return Object.keys(featureMap)
+    .filter(key => data[key] === true)
+    .map(key => featureMap[key]);
+});
 
 const hasAdditionalFeatures = computed(() => {
   const result = additionalFeaturesList.value.length > 0;
@@ -8528,6 +8542,8 @@ margin-top: 20px;
 
 .full-width {
   grid-column: 1 / -1;
+  flex-direction: column !important;
+  align-items: left;
 }
 
 /* Comments Section Styles */

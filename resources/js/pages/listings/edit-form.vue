@@ -1597,6 +1597,7 @@ import { ref, watch, onMounted, onUnmounted, computed, getCurrentInstance } from
 import { useRoute, useRouter } from "vue-router";
 import api from "@/plugins/axios";
 import vSelect from "vue-select";
+import { LISTING_FEATURE_OPTIONS, LISTING_FEATURE_KEYS } from "@/config/listingFeatures";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
@@ -1841,14 +1842,9 @@ const nocPercentageOptions = [
 const selectedProjectFloorPlan = ref(null);
 const uploadedFloorPlan = ref(null);
 
-const listingFeatureOptions = [
-  { key: 'maid', label: 'Maid Room' },
-  { key: 'storage', label: 'Storage Room' },
-  { key: 'study', label: 'Study Room' },
-  { key: 'store', label: 'Store Room' },
-  { key: 'laundry', label: 'Laundry Room' },
-  { key: 'driver', label: 'Driver Room' },
-];
+// Shared source of truth — see resources/js/config/listingFeatures.js and
+// ListingResource::FEATURE_LABELS for the matching backend list.
+const listingFeatureOptions = LISTING_FEATURE_OPTIONS;
 const form = ref({
   title: "",
   unit_number: "",
@@ -1881,12 +1877,8 @@ const form = ref({
   payment_plans: null,
   payment_plan: "",
    is_hot_deal: "",
-    maid: false,
-  storage: false,
-  study: false,
-  store: false,
-  laundry: false,
-  driver: false,
+  // Boolean for every known feature (from the shared LISTING_FEATURE_KEYS list).
+  ...LISTING_FEATURE_KEYS.reduce((acc, k) => { acc[k] = false; return acc; }, {}),
   project_id: null,
   original_price: "",
   handover_date: "",
@@ -2502,43 +2494,14 @@ const fetchPropertyData = async (id) => {
         ? Number(propertyData.noc_percentage) : 0,
     };
     
-    // 🔧 Fix: Load additional features from API
-if (propertyData.additional_features) {
-  console.log('🎯 Loading additional features:', propertyData.additional_features);
-  
-  form.value.maid = propertyData.additional_features.maid === true || 
-                    propertyData.additional_features.maid === 1 || 
-                    propertyData.additional_features.maid === '1';
-  
-  form.value.storage = propertyData.additional_features.storage === true || 
-                       propertyData.additional_features.storage === 1 || 
-                       propertyData.additional_features.storage === '1';
-  
-  form.value.study = propertyData.additional_features.study === true || 
-                     propertyData.additional_features.study === 1 || 
-                     propertyData.additional_features.study === '1';
-  
-  form.value.store = propertyData.additional_features.store === true || 
-                     propertyData.additional_features.store === 1 || 
-                     propertyData.additional_features.store === '1';
-  
-  form.value.laundry = propertyData.additional_features.laundry === true || 
-                       propertyData.additional_features.laundry === 1 || 
-                       propertyData.additional_features.laundry === '1';
-  
-  form.value.driver = propertyData.additional_features.driver === true || 
-                      propertyData.additional_features.driver === 1 || 
-                      propertyData.additional_features.driver === '1';
-  
-        console.log('✅ Additional features loaded:', {
-          maid: form.value.maid,
-          storage: form.value.storage,
-          study: form.value.study,
-          store: form.value.store,
-          laundry: form.value.laundry,
-          driver: form.value.driver
-        });
-      }
+    // Load additional features generically — walks the shared key list so any
+    // new feature added to LISTING_FEATURE_KEYS shows up here automatically.
+    if (propertyData.additional_features) {
+      const isTruthy = (v) => v === true || v === 1 || v === '1';
+      LISTING_FEATURE_KEYS.forEach((k) => {
+        form.value[k] = isTruthy(propertyData.additional_features[k]);
+      });
+    }
           
     existingFloorPlans.value = propertyData.floor_plans || [];
     existingGalleryImages.value = propertyData.gallery_images || [];
@@ -3991,12 +3954,12 @@ const handleSubmit = async (action = 'draft') => {
       });
     }
     formData.append('is_hot_deal', form.value.is_hot_deal || 'No');
-    formData.append('additional_features[maid]', form.value.maid ? 1 : 0);
-    formData.append('additional_features[storage]', form.value.storage ? 1 : 0);
-    formData.append('additional_features[study]', form.value.study ? 1 : 0);
-    formData.append('additional_features[store]', form.value.store ? 1 : 0);
-    formData.append('additional_features[laundry]', form.value.laundry ? 1 : 0);
-    formData.append('additional_features[driver]', form.value.driver ? 1 : 0);
+      listingFeatureOptions.forEach(feature => {
+      formData.append(
+        `additional_features[${feature.key}]`,
+        form.value[feature.key] ? 1 : 0
+      );
+    });
     const textFields = {
       'unit_number': form.value.unit_number,
       'ownership_type': form.value.ownership_type,
