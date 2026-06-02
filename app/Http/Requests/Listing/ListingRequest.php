@@ -94,12 +94,8 @@ $listingId = $this->route('property');
             
             'floor_plans_source' => 'nullable|array',
               'additional_features' => 'sometimes|array',
-            'additional_features.maid' => 'sometimes|boolean',
-            'additional_features.storage' => 'sometimes|boolean',
-            'additional_features.study' => 'sometimes|boolean',
-            'additional_features.store' => 'sometimes|boolean',
-            'additional_features.laundry' => 'sometimes|boolean',
-            'additional_features.driver' => 'sometimes|boolean',
+            // Accept any feature key the resource recognises. Anything else is dropped.
+            'additional_features.*' => 'sometimes|boolean',
         ];
 
         // File upload rules - always nullable for updates

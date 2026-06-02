@@ -5035,28 +5035,31 @@ body.swal2-toast-shown  {
   }
 }
 .listing-feature-grid {
+  /* wrap onto multiple rows, each pill sized to its text */
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 4px;
-  overflow-x: auto;
-  padding-bottom: 2px;
 }
 
 .listing-feature-item {
+  /* width = text content, no stretching, no forced min-width */
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #e2e8f0;
   border-radius: 999px;
-  height: 30px;
-  padding: 0 10px;
+  min-height: 30px;
+  padding: 5px 14px;
   box-sizing: border-box;
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-width: 96px;
 }
 
 .listing-feature-item:hover {

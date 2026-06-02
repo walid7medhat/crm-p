@@ -4339,14 +4339,20 @@ fetchProjects()
 }
 
 .listing-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
 .listing-feature-pill {
-  min-height: 42px;
+  /* width = text width, no grid stretching */
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  white-space: nowrap;
+
+  min-height: 32px;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
   background: #fff;
@@ -4358,9 +4364,16 @@ fetchProjects()
   justify-content: center;
   text-align: center;
   line-height: 1;
-  padding: 0 12px;
+  padding: 6px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+/* Long labels still wrap inside the pill instead of overflowing the popover */
+.listing-feature-pill .listing-feature-label {
+  white-space: normal;
+  word-break: break-word;
+  display: inline-block;
 }
 
 .listing-feature-pill.active {
@@ -4376,14 +4389,13 @@ fetchProjects()
 
 @media (max-width: 768px) {
   .listing-feature-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 6px;
   }
-  
+
   .listing-feature-pill {
-    min-height: 34px;
+    min-height: 28px;
     font-size: 11px;
-    padding: 0 10px;
+    padding: 5px 10px;
   }
   
   .listing-features-popover {
