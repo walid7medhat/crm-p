@@ -2640,15 +2640,17 @@ const hasAdditionalFeatures = computed(() => {
 
     const hasPaymentDetails = computed(() => {
       if (!property.value) return false;
+      // Show Payment Details only when:
+      //   1) the breakdown has more than 2 installments,
+      //   2) completion_status is Under Construction (or Off Plan), and
+      //   3) a real original_price is set on the listing.
       const pb = parseListArray(property.value.payment_breakdown);
-      const ae = parseListArray(property.value.assignment_expense_lines);
-      return (
-        pb.length > 0 ||
-        ae.length > 0 ||
-        Number(property.value.original_price || 0) > 0 ||
-        !!property.value.payment_plan ||
-        !!property.value.handover_date
-      );
+      const completionStr = String(property.value.completion_status ?? '')
+        .trim().toLowerCase().replace(/_/g, ' ');
+      const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
+      const hasInstallments = pb.length > 2;
+      const hasOriginalPrice = Number(property.value.original_price || 0) > 0;
+      return hasInstallments && isUnderConstruction && hasOriginalPrice;
     });
 
     const canRequestUnitNumber = computed(() => {
