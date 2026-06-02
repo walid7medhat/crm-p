@@ -1169,7 +1169,7 @@ public function getOffices()
     }
     private function applyLeadSourceFilter($query, Request $request): void
 {
-    if (! $request->filled('source')) {
+    if (! $request->filled('source') && !$request->filled('search')) {
         return;
     }
 
@@ -1182,7 +1182,7 @@ public function getOffices()
         return [$value];
     };
 
-    $src = $request->source;
+    $src = $request->source??$request->search;
 
     if (is_array($src)) {
         $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
