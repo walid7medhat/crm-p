@@ -5740,17 +5740,20 @@ const createPaymentDetailsSlide = () => {
   const installments = parseList(p.payment_breakdown);
   const expenses = parseList(p.assignment_expense_lines);
   const sellingPrice = toNum(p.price ?? p.selling_price);
-  const originalPrice = toNum(p.original_price) || sellingPrice;
+  const rawOriginalPrice = toNum(p.original_price);
+  const originalPrice = rawOriginalPrice || sellingPrice;
   const premium = sellingPrice - originalPrice;
   const nocPct = Math.max(0, Math.min(100, toNum(p.noc_percentage)));
 
-  if (
-    installments.length === 0 &&
-    expenses.length === 0 &&
-    originalPrice <= 0 &&
-    !p.payment_plan &&
-    !p.handover_date
-  ) {
+  // Only render the breakdown slide when ALL of the following hold:
+  //   1) the listing has at least one installment in its payment breakdown,
+  //   2) the completion status is Under Construction (case-insensitive),
+  //   3) a real original_price is set (selling-price fallback doesn't count).
+  const completionStr = String(p.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
+  const hasInstallments = installments.length > 0;
+  const hasOriginalPrice = rawOriginalPrice > 0;
+  if (!(hasInstallments && isUnderConstruction && hasOriginalPrice)) {
     return '';
   }
 
