@@ -5589,16 +5589,17 @@ const createSlide4 = () => {
   const aboutLimited = limitText(projectAbout, 800);
 
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important;">
-    <div style="width:95% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important;">
+    <div style="width:100% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
-        <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
+        <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
         
-        <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#0B0736 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
+        <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
         <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
       <div style="width:50% !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     </div>
+    ${createFooter()}
   </div>
   `;
 };
