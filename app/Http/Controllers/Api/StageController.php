@@ -500,15 +500,13 @@ class StageController extends Controller
                 $this->kanbanActivityUsersForLeads($allLeadsForMeta)
             );
 
-            try {
-                foreach ($stagesWithLeads as &$stageRow) {
-                    $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads']);
-                }
-                unset($stageRow);
-            } finally {
-                KanbanLeadCardResource::clearKanbanMeta();
-                KanbanLeadCardResource::clearKanbanActivityUsers();
+            foreach ($stagesWithLeads as &$stageRow) {
+                $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads'])->resolve();
             }
+            unset($stageRow);
+
+            KanbanLeadCardResource::clearKanbanMeta();
+            KanbanLeadCardResource::clearKanbanActivityUsers();
 
             return ApiResponse::success([
                 'stages' => $stagesWithLeads,
@@ -803,12 +801,10 @@ class StageController extends Controller
                 $this->kanbanActivityUsersForLeads($leadsCollection)
             );
 
-            try {
-                $leadsPayload = KanbanLeadCardResource::collection($paginatedLeads);
-            } finally {
-                KanbanLeadCardResource::clearKanbanMeta();
-                KanbanLeadCardResource::clearKanbanActivityUsers();
-            }
+            $leadsPayload = KanbanLeadCardResource::collection($leadsCollection)->resolve();
+
+            KanbanLeadCardResource::clearKanbanMeta();
+            KanbanLeadCardResource::clearKanbanActivityUsers();
 
             return ApiResponse::success([
                 'stage_id' => $stage->id,

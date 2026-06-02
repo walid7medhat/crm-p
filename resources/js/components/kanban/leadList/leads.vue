@@ -132,7 +132,7 @@
                                                             Black List
                                                         </span>
                                                         <div
-                                                            v-if="isFieldEnabled('duplicate_count') && isAdminOrSuperAdmin && task.duplicate_no > 0"
+                                                            v-if="Number(task.duplicate_no) > 0"
                                                             class="duplicate-badge position-relative cursor-pointer"
                                                             @click.stop="openDuplicateLeadsModal(task.id, $event)"
                                                         >

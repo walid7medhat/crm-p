@@ -1271,13 +1271,17 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     public function getDuplicate($lead_id): JsonResponse
         {
             try {
-              $lead=Lead::find($lead_id);
-              $leads=DuplicateLeadResource::collection($lead->duplicate_leads);
+                $lead = Lead::with(['responsiblePerson:id,name,avatar', 'stage:id,name,order,color'])
+                    ->find($lead_id);
+
+                if (! $lead) {
+                    return ApiResponse::error('Lead not found', 404);
+                }
+
                 return ApiResponse::success(
-                    $leads,
+                    DuplicateLeadResource::collection($lead->duplicate_leads)->resolve(),
                     'Duplicated Leads retrieved successfully'
                 );
-        
             } catch (\Exception $e) {
                 return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
             }
