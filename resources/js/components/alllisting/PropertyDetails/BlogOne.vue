@@ -8869,6 +8869,7 @@ margin-top: 20px;
   .gallery-container {
     grid-template-columns: 1fr;
     grid-template-rows: 250px 70px;
+    min-height: 300px;
     height: auto;
   }
   
