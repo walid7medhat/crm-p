@@ -15,7 +15,7 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 120;
+    public int $timeout = 300;
     public int $tries = 2;
 
     public function __construct(
