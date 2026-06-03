@@ -2184,7 +2184,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     let propertySidebarScrollRoot = null;
     let propertySidebarSyncRaf = null;
 
-    const SIDEBAR_TOP_GAP = 10;
+    const SIDEBAR_TOP_GAP = 30;
 
     const getSidebarTopOffset = () => {
       const nav = document.querySelector('#app main.dashboard-main > .navbar-header');
