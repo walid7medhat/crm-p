@@ -7036,7 +7036,7 @@ margin-bottom: 20px;
 }
 
 .view-all-content span {
-  font-size: 12px;
+  font-size: 30px;
   font-weight: 600;
   display: block;
 }
