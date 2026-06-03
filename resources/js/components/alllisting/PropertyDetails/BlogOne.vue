@@ -243,11 +243,11 @@
                     <div class="info-item full-width flex-column" v-if="hasAdditionalFeatures">
                       <span class="info-label">Features</span>
                       <div class="info-value">
-                        <div class="payment-plans-container feature">
+                        <div class="payment-plans-container ">
                           <span
                             v-for="(feature, index) in additionalFeaturesList"
                             :key="index"
-                            class="badge bg-primary me-1 mb-1"
+                            class="badge bg-primary feature me-1 mb-1"
                           >
                             {{ feature }}
                           </span>
@@ -2184,7 +2184,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     let propertySidebarScrollRoot = null;
     let propertySidebarSyncRaf = null;
 
-    const SIDEBAR_TOP_GAP = 30;
+    const SIDEBAR_TOP_GAP = 10;
 
     const getSidebarTopOffset = () => {
       const nav = document.querySelector('#app main.dashboard-main > .navbar-header');
@@ -7448,7 +7448,7 @@ margin-top: 20px;
 
 .sidebar-sticky-container {
   position: sticky;
-  top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 1.75rem);
+  top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.75rem);
   z-index: 40;
   width: 100%;
   flex: 0 0 auto;
@@ -7487,6 +7487,7 @@ margin-top: 20px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 transparent;
+  margin-top: 20px;
 }
 .agent-sidebar-card::before {
     content: "";
