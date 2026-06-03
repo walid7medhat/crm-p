@@ -9790,7 +9790,8 @@ margin: 0 2px;
 
 }
 .badge.feature{
-  background: transparent;
+      background-color: transparent !important;
+    color: #0b0736;
       font-weight: bold !important;
     font-size: 12px !important;
     text-transform: capitalize !important;
