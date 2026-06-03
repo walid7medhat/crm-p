@@ -15,7 +15,7 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 300;
+    public int $timeout = 3600;
     public int $tries = 2;
 
     public function __construct(
@@ -25,6 +25,9 @@ class SyncBitrix24LeadsJob implements ShouldQueue
 
     public function handle(): void
     {
+          ini_set('memory_limit', '1024M');
+        ini_set('max_execution_time', '3600');
+        
         // The page-walker chains itself for the whole sync; keep its footprint
         // flat by not retaining the query log across the run.
         DB::connection()->disableQueryLog();
