@@ -215,7 +215,9 @@ class LeadController extends Controller
                     });
                 }
                 if ($request->filled('search')) {
+                    
                     $search = $request->search;
+                      if ($user->hasRole(['admin', 'super_admin'])) {
                     $leadsQuery->where(function ($s) use ($search) {
                         $s->where('lead_name', 'like', "%{$search}%")
                           ->orWhere('lead_number', 'like', "%{$search}%")
@@ -258,6 +260,17 @@ class LeadController extends Controller
                               $cm->where('comment', 'like', "%{$search}%");
                           });
                     });
+                      }else{
+                         $leadsQuery->where('lead_name', 'like', "%{$search}%")
+                        ->orWhere('lead_source', 'like', "%{$search}%") // source
+                        // ->orWhere('lead_type', 'like', "%{$search}%")   // type
+                        ->orWhereHas('comments', function ($cm) use ($search) {
+                            $cm->where('comment', 'like', "%{$search}%");
+                        }) ->orWhereHas('propertyType', function ($pt) use ($search) {
+                              $pt->where('name', 'like', "%{$search}%");
+                          });
+
+                      }
                 }
         
                 // Apply permission scope to the query (without consuming it with ->get()) so
