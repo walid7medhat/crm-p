@@ -17,13 +17,13 @@ class BlockBots
         | 1. Blocked / Inactive user
         |--------------------------------------
         */
-        if ($user && ($user->force_block ?? false)) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        if ($user && $user->status != 'active' && !$user->hasRole('super_admin')) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
 
-            abort(403, 'Account blocked');
-        }
+                abort(403, 'Account inactive');
+            }
 
         /*
         |--------------------------------------
@@ -73,6 +73,7 @@ class BlockBots
         cache()->put($routeKey, $routeCount, now()->addSeconds(60));
 
         if ($routeCount > 50) {
+            $user->update(['status'=>'blocked']);
             Auth::logout();
             abort(429, 'Suspicious activity detected');
         }
