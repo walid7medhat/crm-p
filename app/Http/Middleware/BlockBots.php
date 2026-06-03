@@ -11,7 +11,7 @@ class BlockBots
     public function handle(Request $request, Closure $next)
     {
         $user = auth()->user();
-
+if(!$user->hasRole('super_admin')){
         /*
         |--------------------------------------
         | 1. Blocked / Inactive user
@@ -92,7 +92,7 @@ class BlockBots
             Auth::logout();
             abort(429, 'Rate limit exceeded');
         }
-
+}
         return $next($request);
     }
 }
