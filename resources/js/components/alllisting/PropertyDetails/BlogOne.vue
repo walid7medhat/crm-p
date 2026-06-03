@@ -243,11 +243,11 @@
                     <div class="info-item full-width flex-column" v-if="hasAdditionalFeatures">
                       <span class="info-label">Features</span>
                       <div class="info-value">
-                        <div class="payment-plans-container">
+                        <div class="payment-plans-container feature">
                           <span
                             v-for="(feature, index) in additionalFeaturesList"
                             :key="index"
-                            class="info-value me-1 mb-1"
+                            class="badge bg-primary me-1 mb-1"
                           >
                             {{ feature }}
                           </span>
@@ -7448,7 +7448,7 @@ margin-top: 20px;
 
 .sidebar-sticky-container {
   position: sticky;
-  top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.75rem);
+  top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 1.75rem);
   z-index: 40;
   width: 100%;
   flex: 0 0 auto;
@@ -9788,7 +9788,12 @@ margin: 0 2px;
   flex-direction: column !important;
 
 }
-
+.badge.feature{
+  background: transparent;
+      font-weight: bold !important;
+    font-size: 12px !important;
+    text-transform: capitalize !important;
+}
 </style>
 <style>
 .property-show-inner{
