@@ -114,7 +114,7 @@
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
                                                 :class="{ 'kanban-card--mobile': kanbanIsMobile }"
-                                                v-show="leadMatchesShortcutFilter(task, column) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
+                                                v-show="leadMatchesShortcutFilter(task) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
@@ -1010,63 +1010,9 @@ const totalLeadsCount = computed(() => {
 
 const activeShortcutFilter = ref(null)
 
-function normalizeStageTitle(title) {
-    return String(title || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function isQualifiedStageTitle(title) {
-    const n = normalizeStageTitle(title)
-    return n.includes('qualified') && !n.includes('unqualified')
-}
-
-function isFollowUpStageTitle(title) {
-    const n = normalizeStageTitle(title)
-    return n.includes('followup') || n.includes('follow') || (n.includes('contacted') && !n.includes('uncontacted'))
-}
-
-function isNewStageTitle(title) {
-    const n = normalizeStageTitle(title)
-    return n.includes('new') || n.includes('incoming') || n.includes('unassigned')
-}
-
 function isLeadUnassigned(lead) {
     if (lead?.responsible_person_id != null && lead.responsible_person_id !== '') return false
     return !lead?.responsible_person?.name
-}
-
-function parseLeadDate(value) {
-    if (!value) return null
-    const d = new Date(value)
-    return Number.isNaN(d.getTime()) ? null : d
-}
-
-function isColdLead(lead) {
-    const updated = parseLeadDate(lead?.updated_at)
-    if (!updated) return false
-    return Date.now() - updated.getTime() > 48 * 60 * 60 * 1000
-}
-
-function isFollowUpTodayLead(lead) {
-    const action = String(lead?.next_action || '').toLowerCase()
-    if (action.includes('follow') && action.includes('today')) return true
-    const updated = parseLeadDate(lead?.updated_at)
-    if (!updated) return false
-    const now = new Date()
-    return (
-        updated.getFullYear() === now.getFullYear() &&
-        updated.getMonth() === now.getMonth() &&
-        updated.getDate() === now.getDate()
-    )
-}
-
-function countStageTotalsByTitle(matcher) {
-    let sum = 0
-    for (const col of columns.value) {
-        if (!matcher(col.title)) continue
-        const t = stagePagination.value[col.status]?.total
-        sum += typeof t === 'number' ? t : (col.leads?.length || 0)
-    }
-    return sum
 }
 
 function countLoadedLeads(matcher) {
@@ -1079,30 +1025,85 @@ function countLoadedLeads(matcher) {
     return count
 }
 
+function normalizeLeadHeat(lead) {
+    const status = String(lead?.status_lead || '').toLowerCase()
+    const priority = String(lead?.priority || '').toLowerCase()
+    if (status.includes('hot') || priority.includes('hot')) return 'hot'
+    if (status.includes('warm') || priority.includes('warm')) return 'warm'
+    if (status.includes('cold') || priority === 'cold') return 'cold'
+    return null
+}
+
+function normalizeLeadPurpose(lead) {
+    const raw = String(lead?.purpose_buying || '').toLowerCase()
+    if (raw.includes('live')) return 'live_in'
+    if (raw.includes('short')) return 'short_term'
+    if (raw.includes('long')) return 'long_term'
+    return null
+}
+
+function normalizeLeadInteraction(lead) {
+    const r = String(lead?.interaction_result || '').toLowerCase()
+    if (r === 'answered') return 'answered'
+    if (r === 'no_answer') return 'no_answer'
+    return null
+}
+
+function normalizeLeadType(lead) {
+    const t = String(lead?.lead_type || '').toLowerCase()
+    if (t === 'rent') return 'rent'
+    if (t === 'sale') return 'sale'
+    return null
+}
+
+function isHighScoreLead(lead) {
+    const score = Number(lead?.score)
+    return Number.isFinite(score) && score >= 70
+}
+
 const leadAnalyticsMetrics = computed(() => ({
-    total: totalLeadsCount.value,
-    newUnassigned: countLoadedLeads((lead, col) => isLeadUnassigned(lead) || isNewStageTitle(col.title)),
-    qualified: countStageTotalsByTitle(isQualifiedStageTitle),
-    followUpsToday:
-        countStageTotalsByTitle(isFollowUpStageTitle) ||
-        countLoadedLeads((lead, col) => isFollowUpStageTitle(col.title) || isFollowUpTodayLead(lead)),
-    cold: countLoadedLeads((lead) => isColdLead(lead)),
+    tempCold: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'cold'),
+    tempWarm: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'warm'),
+    tempHot: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'hot'),
+    callAnswered: countLoadedLeads((lead) => normalizeLeadInteraction(lead) === 'answered'),
+    callNoAnswer: countLoadedLeads((lead) => normalizeLeadInteraction(lead) === 'no_answer'),
+    purposeLiveIn: countLoadedLeads((lead) => normalizeLeadPurpose(lead) === 'live_in'),
+    purposeShortTerm: countLoadedLeads((lead) => normalizeLeadPurpose(lead) === 'short_term'),
+    purposeLongTerm: countLoadedLeads((lead) => normalizeLeadPurpose(lead) === 'long_term'),
+    salesUnassigned: countLoadedLeads((lead) => isLeadUnassigned(lead)),
+    salesHighScore: countLoadedLeads((lead) => isHighScoreLead(lead)),
+    salesRent: countLoadedLeads((lead) => normalizeLeadType(lead) === 'rent'),
+    salesSale: countLoadedLeads((lead) => normalizeLeadType(lead) === 'sale'),
 }))
 
-function leadMatchesShortcutFilter(lead, column) {
+function leadMatchesShortcutFilter(lead) {
     if (!activeShortcutFilter.value) return true
 
     switch (activeShortcutFilter.value) {
-        case 'total':
-            return true
-        case 'new_unassigned':
-            return isLeadUnassigned(lead) || isNewStageTitle(column?.title)
-        case 'qualified':
-            return isQualifiedStageTitle(column?.title)
-        case 'follow_today':
-            return isFollowUpStageTitle(column?.title) || isFollowUpTodayLead(lead)
-        case 'cold':
-            return isColdLead(lead)
+        case 'temp_cold':
+            return normalizeLeadHeat(lead) === 'cold'
+        case 'temp_warm':
+            return normalizeLeadHeat(lead) === 'warm'
+        case 'temp_hot':
+            return normalizeLeadHeat(lead) === 'hot'
+        case 'call_answered':
+            return normalizeLeadInteraction(lead) === 'answered'
+        case 'call_no_answer':
+            return normalizeLeadInteraction(lead) === 'no_answer'
+        case 'purpose_live_in':
+            return normalizeLeadPurpose(lead) === 'live_in'
+        case 'purpose_short_term':
+            return normalizeLeadPurpose(lead) === 'short_term'
+        case 'purpose_long_term':
+            return normalizeLeadPurpose(lead) === 'long_term'
+        case 'sales_unassigned':
+            return isLeadUnassigned(lead)
+        case 'sales_high_score':
+            return isHighScoreLead(lead)
+        case 'sales_rent':
+            return normalizeLeadType(lead) === 'rent'
+        case 'sales_sale':
+            return normalizeLeadType(lead) === 'sale'
         default:
             return true
     }
@@ -4248,8 +4249,9 @@ const $showNotification = (message, type = 'info') => {
 
 /* duplicate selector block below may exist — ensure analytics doesn't steal column height */
 .kanban-outer > .lead-analytics-row {
-    padding-left: 6px;
-    padding-right: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    flex-shrink: 0;
 }
 
 .kanban-outer--mobile .kanban-nav-zone {

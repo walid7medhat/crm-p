@@ -107,7 +107,7 @@
           </div>
         </article>
         </div>
-        <div v-if="isMobileViewport || isStackedHomeLayout" class="dh-metrics-dots" aria-hidden="true">
+        <div v-if="showMetricCarouselDots" class="dh-metrics-dots" aria-hidden="true">
           <button
             v-for="(_, idx) in metricSlideCount"
             :key="idx"
@@ -372,11 +372,23 @@ const MOBILE_CHART_HEIGHT = 200
 const STACKED_CHART_HEIGHT = 240
 
 const isStackedHomeLayout = ref(false)
+const isMetricCarouselLayout = ref(false)
+
+const showMetricCarouselDots = computed(
+  () => isMobileViewport.value || (isStackedHomeLayout.value && isMetricCarouselLayout.value)
+)
 
 function updateStackedHomeLayout() {
   if (typeof window === 'undefined') return
   isStackedHomeLayout.value =
     isMobileViewport.value || window.matchMedia('(max-width: 1540px)').matches
+  isMetricCarouselLayout.value =
+    isMobileViewport.value || window.matchMedia('(max-width: 899px)').matches
+}
+
+function onDashboardHomeResize() {
+  updateStackedHomeLayout()
+  resizeCharts()
 }
 
 const chartHeightFrom = (el, fallback = 200) => {
@@ -596,6 +608,13 @@ watch(isMobileViewport, async () => {
   }
 })
 
+watch(isMetricCarouselLayout, async () => {
+  if (!loading.value) {
+    await nextTick()
+    requestAnimationFrame(resizeCharts)
+  }
+})
+
 function updateMetricSlideFromScroll() {
   const el = metricsSectionRef.value?.querySelector('.dh-metrics-carousel')
   if (!el) return
@@ -620,7 +639,7 @@ function scrollToMetric(index) {
 onMounted(() => {
   loadAll()
   updateStackedHomeLayout()
-  window.addEventListener('resize', updateStackedHomeLayout, { passive: true })
+  window.addEventListener('resize', onDashboardHomeResize, { passive: true })
   const metricsEl = metricsSectionRef.value?.querySelector('.dh-metrics-carousel')
   metricsEl?.addEventListener('scroll', updateMetricSlideFromScroll, { passive: true })
   if (typeof ResizeObserver === 'undefined') return
@@ -630,7 +649,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateStackedHomeLayout)
+  window.removeEventListener('resize', onDashboardHomeResize)
   const metricsEl = metricsSectionRef.value?.querySelector('.dh-metrics-carousel')
   metricsEl?.removeEventListener('scroll', updateMetricSlideFromScroll)
   layoutResizeObserver?.disconnect()

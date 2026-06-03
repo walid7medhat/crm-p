@@ -1,58 +1,69 @@
 <template>
-  <div class="lead-analytics-row" role="toolbar" aria-label="Lead analytics and shortcuts">
-    <div class="lead-analytics-track">
-      <button
-        v-for="card in cardDefs"
-        :key="card.key"
-        type="button"
-        class="lead-kpi-card"
-        :class="[
-          `lead-kpi-card--${card.tone}`,
-          {
-            'is-active': activeFilter === card.key || (card.key === 'total' && !activeFilter),
-            'is-zero': !metrics[card.metricKey],
-          },
-        ]"
-        :style="{ '--kpi-accent': card.accent }"
-        :aria-pressed="card.key === 'total' ? !activeFilter : activeFilter === card.key"
-        :title="card.label"
-        @click="onCardClick(card.key)"
+  <section class="lead-analytics-row lfs" role="toolbar" aria-label="Lead quick filters">
+    <div class="lfs-bar">
+      <div
+        v-for="(group, groupIndex) in filterGroups"
+        :key="group.id"
+        class="lfs-segment"
+        :class="`lfs-segment--${group.id}`"
       >
-        <span class="lead-kpi-card__glow" aria-hidden="true" />
-        <span class="lead-kpi-card__accent" aria-hidden="true" />
+        <span v-if="groupIndex > 0" class="lfs-divider" aria-hidden="true" />
 
-        <span class="lead-kpi-card__icon" aria-hidden="true">
-          <img
-            :src="card.iconSrc"
-            alt=""
-            class="lead-kpi-card__img"
-            width="20"
-            height="20"
-            loading="lazy"
-            decoding="async"
-          />
-        </span>
+        <span class="lfs-segment__label">{{ group.label }}</span>
 
-        <span class="lead-kpi-card__content">
-          <span class="lead-kpi-card__label">{{ card.shortLabel }}</span>
-          <span class="lead-kpi-card__value">{{ formatValue(metrics[card.metricKey]) }}</span>
-        </span>
+        <div
+          class="lfs-pills"
+          :class="{ 'lfs-pills--segmented': group.segmented }"
+        >
+          <button
+            v-for="chip in group.chips"
+            :key="chip.key"
+            type="button"
+            class="lfs-pill"
+            :class="[
+              `lfs-pill--${chip.tone}`,
+              {
+                'is-active': activeFilter === chip.key,
+                'is-zero': !metrics[chip.metricKey],
+              },
+            ]"
+            :aria-pressed="activeFilter === chip.key"
+            :title="chip.hint || chip.label"
+            @click="onChipClick(chip.key)"
+          >
+            <iconify-icon
+              v-if="chip.icon"
+              :icon="chip.icon"
+              class="lfs-pill__icon"
+              width="13"
+              height="13"
+              aria-hidden="true"
+            />
+            <span class="lfs-pill__label">{{ chip.label }}</span>
+            <span class="lfs-pill__count">{{ formatValue(metrics[chip.metricKey]) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <button
+        v-if="activeFilter"
+        type="button"
+        class="lfs-pill lfs-pill--clear"
+        aria-label="Clear active filter"
+        @click="onChipClick(null)"
+      >
+        <iconify-icon icon="lucide:x" width="13" height="13" aria-hidden="true" />
+        Clear
       </button>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
 const props = defineProps({
   metrics: {
     type: Object,
-    default: () => ({
-      total: 0,
-      newUnassigned: 0,
-      qualified: 0,
-      followUpsToday: 0,
-      cold: 0,
-    }),
+    default: () => ({}),
   },
   activeFilter: {
     type: String,
@@ -62,53 +73,46 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-filter'])
 
-const LEAD_SHORTCUT_ICONS = '/assets/images/kanban/lead-shortcuts'
-
-const cardDefs = [
+const filterGroups = [
   {
-    key: 'total',
-    metricKey: 'total',
-    label: 'Total Leads',
-    shortLabel: 'Total Leads',
-    iconSrc: `${LEAD_SHORTCUT_ICONS}/total-leads.svg`,
-    tone: 'primary',
-    accent: '#00A7FA',
+    id: 'temperature',
+    label: 'Temp',
+    segmented: true,
+    chips: [
+      { key: 'temp_cold', metricKey: 'tempCold', label: 'Cold', tone: 'cold', icon: 'lucide:snowflake', hint: 'Cold leads' },
+      { key: 'temp_warm', metricKey: 'tempWarm', label: 'Warm', tone: 'warm', icon: 'lucide:thermometer', hint: 'Warm leads' },
+      { key: 'temp_hot', metricKey: 'tempHot', label: 'Hot', tone: 'hot', icon: 'lucide:flame', hint: 'Hot leads' },
+    ],
   },
   {
-    key: 'new_unassigned',
-    metricKey: 'newUnassigned',
-    label: 'New / Unassigned',
-    shortLabel: 'New Leads',
-    iconSrc: `${LEAD_SHORTCUT_ICONS}/new-leads.svg`,
-    tone: 'new',
-    accent: '#17C3B2',
+    id: 'calls',
+    label: 'Calls',
+    segmented: true,
+    chips: [
+      { key: 'call_answered', metricKey: 'callAnswered', label: 'Answered', tone: 'answered', icon: 'lucide:phone-call', hint: 'Call answered' },
+      { key: 'call_no_answer', metricKey: 'callNoAnswer', label: 'No answer', tone: 'no-answer', icon: 'lucide:phone-off', hint: 'No answer' },
+    ],
   },
   {
-    key: 'qualified',
-    metricKey: 'qualified',
-    label: 'Total Qualified',
-    shortLabel: 'Qualified',
-    iconSrc: `${LEAD_SHORTCUT_ICONS}/qualified.svg`,
-    tone: 'qualified',
-    accent: '#A5E835',
+    id: 'purpose',
+    label: 'Purpose',
+    segmented: false,
+    chips: [
+      { key: 'purpose_live_in', metricKey: 'purposeLiveIn', label: 'Live in', tone: 'live-in', icon: 'lucide:home', hint: 'Live in' },
+      { key: 'purpose_short_term', metricKey: 'purposeShortTerm', label: 'Short-term', tone: 'short-term', icon: null, hint: 'Short-term investment' },
+      { key: 'purpose_long_term', metricKey: 'purposeLongTerm', label: 'Long-term', tone: 'long-term', icon: null, hint: 'Long-term investment' },
+    ],
   },
   {
-    key: 'follow_today',
-    metricKey: 'followUpsToday',
-    label: 'Follow-ups Today',
-    shortLabel: 'Follow-ups',
-    iconSrc: `${LEAD_SHORTCUT_ICONS}/follow-ups.svg`,
-    tone: 'follow',
-    accent: '#22C55E',
-  },
-  {
-    key: 'cold',
-    metricKey: 'cold',
-    label: 'Cold Leads (No Action > 48h)',
-    shortLabel: 'Cold Leads',
-    iconSrc: `${LEAD_SHORTCUT_ICONS}/cold-leads.svg`,
-    tone: 'cold',
-    accent: '#F97316',
+    id: 'sales',
+    label: 'Sales',
+    segmented: false,
+    chips: [
+      { key: 'sales_unassigned', metricKey: 'salesUnassigned', label: 'Unassigned', tone: 'unassigned', icon: null, hint: 'No agent' },
+      { key: 'sales_high_score', metricKey: 'salesHighScore', label: 'High score', tone: 'high-score', icon: 'lucide:sparkles', hint: 'Score 70+' },
+      { key: 'sales_rent', metricKey: 'salesRent', label: 'Rent', tone: 'rent', icon: null, hint: 'Rent' },
+      { key: 'sales_sale', metricKey: 'salesSale', label: 'Sale', tone: 'sale', icon: null, hint: 'Sale' },
+    ],
   },
 ]
 
@@ -118,8 +122,8 @@ function formatValue(value) {
   return n.toLocaleString()
 }
 
-function onCardClick(key) {
-  if (key === 'total') {
+function onChipClick(key) {
+  if (!key) {
     emit('toggle-filter', null)
     return
   }
@@ -128,266 +132,233 @@ function onCardClick(key) {
 </script>
 
 <style scoped>
-.lead-analytics-row {
+.lfs {
   flex-shrink: 0;
-  padding: 0 4px 4px;
-  margin-bottom: 10px;
   width: 100%;
+  margin-bottom: 10px;
+  padding: 0 4px;
   box-sizing: border-box;
+  font-family: Montserrat, Inter, system-ui, sans-serif;
 }
 
-.lead-analytics-track {
+.lfs-bar {
   display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 4px;
   width: 100%;
   min-width: 0;
 }
 
-.lead-kpi-card {
-  --kpi-accent: #733e87;
-  position: relative;
-  flex: 1 1 0;
-  min-width: 118px;
-  max-width: 200px;
-  display: grid;
-  grid-template-columns: auto 1fr;
+.lfs-segment {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 72px;
-  margin: 0;
-  padding: 10px 12px 10px 14px;
-  border-radius: 12px;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.lfs-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.lfs-segment__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lfs-pills {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.lfs-pills--segmented {
+  gap: 0;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(11, 7, 54, 0.55) 48%,
-    rgba(115, 62, 135, 0.42) 100%
-  );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    0 1px 2px rgba(11, 7, 54, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  color: #fff;
-  cursor: pointer;
   overflow: hidden;
-  text-align: left;
-  font-family: Montserrat, Inter, system-ui, sans-serif;
+}
+
+.lfs-pills--segmented .lfs-pill {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lfs-pills--segmented .lfs-pill:last-child {
+  border-right: none;
+}
+
+.lfs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 6px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
   transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
   -webkit-appearance: none;
   appearance: none;
 }
 
-.lead-kpi-card__glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    120px 80px at 0% 100%,
-    color-mix(in srgb, var(--kpi-accent) 35%, transparent),
-    transparent 70%
-  );
-  opacity: 0.55;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-
-.lead-kpi-card__accent {
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 0 4px 4px 0;
-  background: var(--kpi-accent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--kpi-accent) 65%, transparent);
-}
-
-.lead-kpi-card__icon {
-  position: relative;
-  z-index: 1;
+.lfs-pill__icon {
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--kpi-accent) 22%, rgba(255, 255, 255, 0.06));
-  border: 1px solid color-mix(in srgb, var(--kpi-accent) 40%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  opacity: 0.9;
 }
 
-.lead-kpi-card__img {
-  display: block;
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  pointer-events: none;
+.lfs-pill__label {
+  color: rgba(255, 255, 255, 0.82);
 }
 
-.lead-kpi-card__content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.lead-kpi-card__label {
+.lfs-pill__count {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.lead-kpi-card__value {
-  font-size: 22px;
   font-weight: 700;
-  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  line-height: 1;
+  min-width: 1.25em;
+  text-align: center;
 }
 
-.lead-kpi-card.is-zero .lead-kpi-card__value {
-  color: rgba(255, 255, 255, 0.55);
+.lfs-pill.is-zero .lfs-pill__count {
+  opacity: 0.5;
 }
 
-.lead-kpi-card:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--kpi-accent) 45%, rgba(255, 255, 255, 0.2));
-  box-shadow:
-    0 4px 14px rgba(11, 7, 54, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+.lfs-pill:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
 }
 
-.lead-kpi-card:hover .lead-kpi-card__glow {
-  opacity: 0.85;
+.lfs-pills--segmented .lfs-pill:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.lead-kpi-card:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--kpi-accent) 70%, #fff);
+.lfs-pill:focus-visible {
+  outline: 2px solid rgba(245, 158, 11, 0.8);
   outline-offset: 2px;
 }
 
-.lead-kpi-card.is-active {
-  border-color: color-mix(in srgb, var(--kpi-accent) 55%, rgba(255, 255, 255, 0.35));
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.18) 0%,
-    rgba(11, 7, 54, 0.62) 45%,
-    color-mix(in srgb, var(--kpi-accent) 28%, rgba(115, 62, 135, 0.5)) 100%
-  );
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--kpi-accent) 40%, transparent),
-    0 6px 18px rgba(11, 7, 54, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+/* Active states */
+.lfs-pill--cold.is-active {
+  background: rgba(148, 163, 184, 0.25);
+  border-color: #94a3b8;
+  color: #e2e8f0;
 }
-
-.lead-kpi-card.is-active .lead-kpi-card__glow {
-  opacity: 1;
+.lfs-pill--warm.is-active {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: #fbbf24;
+  color: #fde68a;
 }
-
-.lead-kpi-card.is-active .lead-kpi-card__label {
-  color: rgba(255, 255, 255, 0.92);
+.lfs-pill--hot.is-active {
+  background: rgba(248, 113, 113, 0.22);
+  border-color: #f87171;
+  color: #fecaca;
 }
-
-.lead-kpi-card.is-active .lead-kpi-card__value {
+.lfs-pill--answered.is-active {
+  background: rgba(74, 222, 128, 0.18);
+  border-color: #4ade80;
+  color: #bbf7d0;
+}
+.lfs-pill--no-answer.is-active {
+  background: rgba(251, 146, 60, 0.2);
+  border-color: #fb923c;
+  color: #fed7aa;
+}
+.lfs-pill--live-in.is-active,
+.lfs-pill--short-term.is-active,
+.lfs-pill--long-term.is-active,
+.lfs-pill--unassigned.is-active,
+.lfs-pill--high-score.is-active,
+.lfs-pill--rent.is-active,
+.lfs-pill--sale.is-active {
+  background: rgba(124, 92, 191, 0.28);
+  border-color: rgba(196, 181, 253, 0.65);
   color: #fff;
 }
 
-@media (max-width: 1024px) and (min-width: 769px) {
-  .lead-analytics-track {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+.lfs-pills--segmented .lfs-pill.is-active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.lfs-pill--clear {
+  margin-left: auto;
+  border-style: dashed;
+  border-color: rgba(252, 211, 77, 0.45);
+  color: #fcd34d;
+  gap: 4px;
+}
+
+.lfs-pill--clear:hover {
+  border-color: rgba(252, 211, 77, 0.75);
+  color: #fff;
+}
+
+@media (max-width: 1200px) {
+  .lfs-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
   }
 
-  .lead-kpi-card {
-    max-width: none;
-    width: 100%;
+  .lfs-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lfs-segment {
+    flex-shrink: 0;
+  }
+
+  .lfs-pill--clear {
+    margin-left: 0;
+    flex-shrink: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .lead-analytics-row {
-    padding: 2px 6px 4px;
+  .lfs {
     margin-bottom: 8px;
-    overflow: hidden;
   }
 
-  .lead-analytics-track {
-    flex-wrap: nowrap;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
+  .lfs-segment {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 
-  .lead-analytics-track::-webkit-scrollbar {
+  .lfs-divider {
     display: none;
   }
 
-  .lead-kpi-card {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-    min-width: 128px;
-    max-width: 148px;
-    min-height: 68px;
-    padding: 8px 10px 8px 12px;
-  }
-
-  .lead-kpi-card__icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-  }
-
-  .lead-kpi-card__img {
-    width: 18px;
-    height: 18px;
-  }
-
-  .lead-kpi-card__value {
-    font-size: 20px;
-  }
-
-  .lead-kpi-card__label {
-    font-size: 10px;
-  }
-}
-
-@media (max-width: 380px) {
-  .lead-analytics-track {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .lfs-bar {
+    flex-wrap: wrap;
     overflow-x: visible;
-    scroll-snap-type: none;
-  }
-
-  .lead-kpi-card {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
   }
 }
 </style>
