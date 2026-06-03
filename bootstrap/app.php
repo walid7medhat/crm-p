@@ -120,8 +120,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ->everyMinute()
         ->timezone('Asia/Dubai');
         
-            $schedule->command('bitrix:sync-leads')
-                ->everyFifteenMinutes();
+            // $schedule->command('bitrix:sync-leads')
+            //     ->everyFifteenMinutes();
                 // ->withoutOverlapping();
                 // ->withoutOverlapping()
                 // ->runInBackground();
