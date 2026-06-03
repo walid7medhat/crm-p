@@ -196,7 +196,7 @@
           >
             <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon" />
           </button>
-          <nav
+          <!-- <nav
             v-if="showTopModuleNav && topModuleNavItems.length"
             class="top-module-nav"
             aria-label="Main modules"
@@ -210,7 +210,7 @@
             >
               {{ item.label }}
             </router-link>
-          </nav>
+          </nav> -->
           <select
             v-if="isMobileViewport && moduleHeaderTabs.length"
             class="module-tab-select"
