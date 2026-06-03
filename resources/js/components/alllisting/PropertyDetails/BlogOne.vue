@@ -44,9 +44,7 @@
                       class="view-all-overlay"
                     >
                       <div class="view-all-content">
-                        <i class="ri-gallery-view-2"></i>
-                        <span>View All</span>
-                        <small>{{ property.gallery_images?.length || 0 }} photos</small>
+                        <span>+{{ property.gallery_images?.length || 0 }}</span>
                       </div>
                     </div>
                   </div>
@@ -249,7 +247,7 @@
                           <span
                             v-for="(feature, index) in additionalFeaturesList"
                             :key="index"
-                            class="badge bg-primary me-1 mb-1"
+                            class="info-value me-1 mb-1"
                           >
                             {{ feature }}
                           </span>
@@ -2241,7 +2239,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
 
       sticky.classList.add('is-sidebar-fixed');
       sticky.classList.remove('is-sidebar-at-bottom');
-      sticky.style.top = `${topOffset}px`;
+      sticky.style.top = `${topOffset}px !important`;
       sticky.style.bottom = 'auto';
       sticky.style.left = `${colRect.left}px`;
       sticky.style.width = `${colRect.width}px`;
@@ -7024,14 +7022,15 @@ margin-bottom: 20px;
 .view-all-content {
   text-align: center;
   padding: 10px;
-  background: #0b0736a6;
-  backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+  background: transparent;
+  /* backdrop-filter: blur(2px); */
+    /* -webkit-backdrop-filter: blur(2px); */
   border-radius: 10px;
 }
 
 .view-all-content i {
   font-size: 20px;
+  font-weight: 700;
   display: block;
   margin-bottom: 4px;
 }
@@ -9789,6 +9788,7 @@ margin: 0 2px;
   flex-direction: column !important;
 
 }
+
 </style>
 <style>
 .property-show-inner{
