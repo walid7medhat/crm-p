@@ -146,6 +146,7 @@ Route::get('/test-server', function() {
         'storage_working' => class_exists('Illuminate\Support\Facades\Storage'),
     ]);
 });
+Route::middleware(['throttle:60,1','block.bots'])->group(function () {
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
@@ -790,4 +791,4 @@ Route::middleware('auth:api')->group(function () {
 // Public routes for invitation registration
 Route::get('/invitation/{token}', [UserInvitationController::class, 'validateInvitation']);
 Route::post('/register', [UserInvitationController::class, 'registerWithInvitation']);
-
+});

@@ -24,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         'permission' => PermissionMiddleware::class,
         'role_or_permission' => RoleOrPermissionMiddleware::class,
         'jwt.auth' => JwtAuthMiddleware::class,
+                'block.bots' => BlockBots::class,
+
     ]);
        // Exclude broadcasting/auth from CSRF since we use JWT auth
        $middleware->validateCsrfTokens(except: [

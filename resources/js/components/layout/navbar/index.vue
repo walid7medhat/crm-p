@@ -784,12 +784,31 @@ watch(search, () => {
     }, SEARCH_DEBOUNCE_MS)
 })
 
-watch(activeKanbanTab, () => {
-    // Reset search when tab changes
+watch(activeKanbanTab, (newTab) => {
+    // Reset search when tab changes so the previous tab's filter (typed text + pills + query)
+    // doesn't bleed into the new tab. E.g. searching "John" in Lead Pool and switching to Leads
+    // must NOT carry "John" over — Leads should load unfiltered.
     search.value = ''
     activeFilters.value = []
     lastQuery.value = null
     activeFilter.value = null
+
+    // Cancel any pending debounced applySearchToApi from the previous tab so it can't fire late
+    // and re-apply the old search term to the new tab.
+    if (searchDebounceTimer.value) {
+        clearTimeout(searchDebounceTimer.value)
+        searchDebounceTimer.value = null
+    }
+
+    // Tell the underlying boards to actively clear their applied query — clearing only the
+    // navbar's local refs leaves leads.vue / LeadPool.vue still rendering filtered results
+    // until the next user action. kanban listens for null payload and resets the active board.
+    const clearPayload = { query: null, activeFilters: [] }
+    if (newTab === 'deals') {
+        window.dispatchEvent(new CustomEvent('kanban-deal-search', { detail: clearPayload }))
+    } else if (newTab === 'leads' || newTab === 'lead-pool') {
+        window.dispatchEvent(new CustomEvent('kanban-lead-search', { detail: clearPayload }))
+    }
 })
 const isKanbanRoute = computed(() => activeLayoutModule.value === 'crm');
 const isListingsRoute = computed(() => activeLayoutModule.value === 'listings');
