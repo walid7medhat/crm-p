@@ -675,7 +675,7 @@ const moduleHeaderTabs = computed(() =>
 );
 
 const showTopModuleNav = computed(() => {
-  if (isDashboardHome.value) return true;
+  if (route.path === '/') return true;
   return !isMobileViewport.value;
 });
 const topModuleNavItems = computed(() =>
