@@ -39,6 +39,18 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         // Prefers B24's LAST_ACTIVITY_TIME / LAST_ACTIVITY_BY mirror columns;
         // falls back to the most recent history row for non-B24 leads.
         [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity(includeHistoryFallback: true);
+        $finalLastActivityUser = $lastActivityUser;
+        $finalLastActivityAt = $lastActivityAt;
+
+        if (empty($finalLastActivityUser) && ($assignmentHistory && $assignmentHistory->user)) {
+            // استخدام الـ assigned_by كبديل
+            $finalLastActivityUser = $assignmentHistory->user;
+            $finalLastActivityAt = $assignmentHistory->created_at;
+        } elseif (empty($finalLastActivityUser) && $assignedBy) {
+            // استخدام الـ added_by كبديل أخير
+            $finalLastActivityUser = $assignedBy;
+            $finalLastActivityAt = $this->created_at;
+        }
         return [
             'id' => $this->id,
             'added_by' => $this->added_by,
