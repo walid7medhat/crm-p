@@ -28,6 +28,7 @@
               },
             ]"
             :aria-pressed="activeFilter === chip.key"
+            :aria-label="`${chip.label}, ${formatValue(metrics[chip.metricKey])} leads${activeFilter === chip.key ? ', selected' : ''}`"
             :title="chip.hint || chip.label"
             @click="onChipClick(chip.key)"
           >
@@ -35,31 +36,46 @@
               v-if="chip.icon"
               :icon="chip.icon"
               class="lfs-pill__icon"
-              width="13"
-              height="13"
+              width="15"
+              height="15"
               aria-hidden="true"
             />
             <span class="lfs-pill__label">{{ chip.label }}</span>
             <span class="lfs-pill__count">{{ formatValue(metrics[chip.metricKey]) }}</span>
+            <iconify-icon
+              v-if="activeFilter === chip.key"
+              icon="lucide:check-circle-2"
+              class="lfs-pill__check"
+              width="14"
+              height="14"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>
 
-      <button
-        v-if="activeFilter"
-        type="button"
-        class="lfs-pill lfs-pill--clear"
-        aria-label="Clear active filter"
-        @click="onChipClick(null)"
-      >
-        <iconify-icon icon="lucide:x" width="13" height="13" aria-hidden="true" />
-        Clear
-      </button>
+      <div v-if="activeFilter" class="lfs-active-banner">
+        <span class="lfs-active-banner__text">
+          Filtering:
+          <strong>{{ activeFilterLabel }}</strong>
+        </span>
+        <button
+          type="button"
+          class="lfs-pill lfs-pill--clear"
+          aria-label="Clear active filter"
+          @click="onChipClick(null)"
+        >
+          <iconify-icon icon="lucide:x" width="14" height="14" aria-hidden="true" />
+          Clear
+        </button>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   metrics: {
     type: Object,
@@ -72,6 +88,21 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['toggle-filter'])
+
+const filterLabelByKey = Object.fromEntries(
+  [
+    { key: 'temp_cold', label: 'Cold' },
+    { key: 'temp_warm', label: 'Warm' },
+    { key: 'temp_hot', label: 'Hot' },
+    { key: 'call_answered', label: 'Answered' },
+    { key: 'call_no_answer', label: 'No answer' },
+  ].map((item) => [item.key, item.label])
+)
+
+const activeFilterLabel = computed(() => {
+  if (!props.activeFilter) return ''
+  return filterLabelByKey[props.activeFilter] || props.activeFilter
+})
 
 const filterGroups = [
   {
@@ -114,8 +145,8 @@ function onChipClick(key) {
 .lfs {
   flex-shrink: 0;
   width: 100%;
-  margin-bottom: 10px;
-  padding: 0 4px;
+  margin-bottom: 12px;
+  padding: 0 6px;
   box-sizing: border-box;
   font-family: Montserrat, Inter, system-ui, sans-serif;
 }
@@ -124,56 +155,63 @@ function onChipClick(key) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 4px;
+  gap: 12px 16px;
   width: 100%;
   min-width: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(11, 7, 54, 0.42);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
 }
 
 .lfs-segment {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   flex-shrink: 0;
 }
 
 .lfs-divider {
   width: 1px;
-  height: 22px;
-  background: rgba(255, 255, 255, 0.18);
+  height: 32px;
+  background: rgba(255, 255, 255, 0.22);
   flex-shrink: 0;
-  margin: 0 4px;
+  margin: 0 6px;
 }
 
 .lfs-segment__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.75);
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 42px;
 }
 
 .lfs-pills {
   display: inline-flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
 }
 
 .lfs-pills--segmented {
   gap: 0;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .lfs-pills--segmented .lfs-pill {
   border-radius: 0;
   border: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .lfs-pills--segmented .lfs-pill:last-child {
@@ -181,119 +219,198 @@ function onChipClick(key) {
 }
 
 .lfs-pill {
+  --pill-accent: #a78bfa;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
   margin: 0;
-  padding: 6px 11px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 11px;
-  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 11px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
   transition:
+    transform 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease,
-    background 0.15s ease;
+    background 0.15s ease,
+    box-shadow 0.15s ease;
   -webkit-appearance: none;
   appearance: none;
 }
 
 .lfs-pill__icon {
   flex-shrink: 0;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .lfs-pill__label {
-  color: rgba(255, 255, 255, 0.82);
+  color: #fff;
 }
 
 .lfs-pill__count {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  padding: 1px 6px;
+  padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
   color: #fff;
-  min-width: 1.25em;
+  min-width: 1.6em;
   text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .lfs-pill.is-zero .lfs-pill__count {
-  opacity: 0.5;
+  opacity: 0.65;
+}
+
+.lfs-pill__check {
+  flex-shrink: 0;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+/* Default tinted states (visible before click) */
+.lfs-pill--cold {
+  --pill-accent: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.45);
+  background: rgba(148, 163, 184, 0.18);
+}
+.lfs-pill--cold .lfs-pill__icon {
+  color: #cbd5e1;
+}
+
+.lfs-pill--warm {
+  --pill-accent: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.16);
+}
+.lfs-pill--warm .lfs-pill__icon {
+  color: #fde68a;
+}
+
+.lfs-pill--hot {
+  --pill-accent: #f87171;
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.16);
+}
+.lfs-pill--hot .lfs-pill__icon {
+  color: #fecaca;
+}
+
+.lfs-pill--answered {
+  --pill-accent: #4ade80;
+  border-color: rgba(74, 222, 128, 0.5);
+  background: rgba(74, 222, 128, 0.14);
+}
+.lfs-pill--answered .lfs-pill__icon {
+  color: #bbf7d0;
+}
+
+.lfs-pill--no-answer {
+  --pill-accent: #fb923c;
+  border-color: rgba(251, 146, 60, 0.5);
+  background: rgba(251, 146, 60, 0.16);
+}
+.lfs-pill--no-answer .lfs-pill__icon {
+  color: #fed7aa;
 }
 
 .lfs-pill:hover {
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
-}
-
-.lfs-pills--segmented .lfs-pill:hover {
-  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .lfs-pill:focus-visible {
-  outline: 2px solid rgba(245, 158, 11, 0.8);
+  outline: 2px solid #fbbf24;
   outline-offset: 2px;
 }
 
-/* Active states */
-.lfs-pill--cold.is-active {
-  background: rgba(148, 163, 184, 0.25);
-  border-color: #94a3b8;
-  color: #e2e8f0;
-}
-.lfs-pill--warm.is-active {
-  background: rgba(251, 191, 36, 0.2);
-  border-color: #fbbf24;
-  color: #fde68a;
-}
-.lfs-pill--hot.is-active {
-  background: rgba(248, 113, 113, 0.22);
-  border-color: #f87171;
-  color: #fecaca;
-}
-.lfs-pill--answered.is-active {
-  background: rgba(74, 222, 128, 0.18);
-  border-color: #4ade80;
-  color: #bbf7d0;
-}
-.lfs-pill--no-answer.is-active {
-  background: rgba(251, 146, 60, 0.2);
-  border-color: #fb923c;
-  color: #fed7aa;
-}
-.lfs-pill--live-in.is-active,
-.lfs-pill--short-term.is-active,
-.lfs-pill--long-term.is-active,
-.lfs-pill--unassigned.is-active,
-.lfs-pill--high-score.is-active,
-.lfs-pill--rent.is-active,
-.lfs-pill--sale.is-active {
-  background: rgba(124, 92, 191, 0.28);
-  border-color: rgba(196, 181, 253, 0.65);
-  color: #fff;
+/* Selected — strong ring + fill */
+.lfs-pill.is-active {
+  transform: translateY(-1px);
+  border-width: 2px;
+  border-color: var(--pill-accent) !important;
+  color: #fff !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.25),
+    0 0 0 4px color-mix(in srgb, var(--pill-accent) 45%, transparent),
+    0 6px 16px rgba(0, 0, 0, 0.28);
 }
 
-.lfs-pills--segmented .lfs-pill.is-active {
-  background: rgba(255, 255, 255, 0.12);
+.lfs-pill--cold.is-active {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.55) 0%, rgba(71, 85, 105, 0.65) 100%) !important;
+}
+.lfs-pill--warm.is-active {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.5) 0%, rgba(180, 83, 9, 0.55) 100%) !important;
+}
+.lfs-pill--hot.is-active {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.55) 0%, rgba(185, 28, 28, 0.6) 100%) !important;
+}
+.lfs-pill--answered.is-active {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.45) 0%, rgba(21, 128, 61, 0.55) 100%) !important;
+}
+.lfs-pill--no-answer.is-active {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.5) 0%, rgba(194, 65, 12, 0.55) 100%) !important;
+}
+
+.lfs-pill.is-active .lfs-pill__label {
+  color: #fff;
+  font-weight: 800;
+}
+
+.lfs-pill.is-active .lfs-pill__count {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  opacity: 1;
+}
+
+.lfs-active-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding: 6px 10px 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(251, 191, 36, 0.55);
+  background: rgba(251, 191, 36, 0.15);
+  flex-shrink: 0;
+}
+
+.lfs-active-banner__text {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.lfs-active-banner__text strong {
+  color: #fde68a;
+  font-weight: 800;
 }
 
 .lfs-pill--clear {
-  margin-left: auto;
-  border-style: dashed;
-  border-color: rgba(252, 211, 77, 0.45);
-  color: #fcd34d;
-  gap: 4px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  gap: 5px;
+  padding: 7px 12px;
+  font-size: 12px;
 }
 
 .lfs-pill--clear:hover {
-  border-color: rgba(252, 211, 77, 0.75);
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
 }
 
