@@ -260,6 +260,14 @@ $allowedAgentIds = [];
                     'image' => $projectMainImage ? asset('storage/' . $projectMainImage->image_path) : null,
                     'image2' => $projectSecondImage ? asset('storage/' . $projectSecondImage->image_path) : null,
                     'floor_plan_images' => FloorPlanImageResource::collection($this->project->floorPlanImages),
+                    'gallery_images'=>$this->project->images->map(function ($image) {
+                        return [
+                            'id' => $image->id,
+                            'image_url' => asset('storage/' . $image->image_path),
+                            'is_main' => $image->is_main,
+                            'sort_order' => $image->sort_order
+                        ];
+                    }),
                 ];
             }),
             

@@ -5434,15 +5434,36 @@ const createGallerySlide = (imagesChunk) => {
   </div>
   `;
 };
+/**
+ * Pick a project gallery image whose `sort_order` matches the requested
+ * 1-based slot. Falls back, in order, to:
+ *   1) the gallery image at array index (slot - 1),
+ *   2) the project's main image (`project.image`),
+ *   3) the listing's current main image (`getMainImage()`).
+ */
+const getProjectImageBySlot = (slot) => {
+  const project = property.value?.project || {};
+  const list = Array.isArray(project.images) ? project.gallery_images : [];
+  if (list.length > 0) {
+    const byOrder = list.find((img) => Number(img?.sort_order) === Number(slot));
+    if (byOrder?.image_url) return getImageUrl(byOrder.image_url);
+    const byIndex = list[slot - 1];
+    if (byIndex?.image_url) return getImageUrl(byIndex.image_url);
+  }
+  if (project?.image) return getImageUrl(project.image);
+  return getMainImage();
+};
+
 const createSlide1 = (currentUser) => {
   const bedroomsText = property.value?.number_of_bedrooms === 0 ? 'Studio' : `${property.value?.number_of_bedrooms || ''} Bedrooms`;
   const propertyTypeName = property.value?.property_type?.name || '';
   const location = property.value?.area?.title || property.value?.area?.area_title || 'Abu Dhabi, UAE';
   const price = formatPrice(property.value?.price) || '';
   const listingStatus = property.value?.listing_status || 'Sale';
-  const bgImage = getMainImage();
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
-
+  const project = property.value?.project;
+  // Slide 1 uses the project's main image (fallback to current listing image).
+  const bgImage = project?.image ? getImageUrl(project.image) : getMainImage();
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
@@ -5467,12 +5488,8 @@ const createSlide1 = (currentUser) => {
 };
 
 const createSlide2 = () => {
-  const galleryImages = property.value?.gallery_images || [];
-  const bgImage = galleryImages.length > 1
-    ? getImageUrl(galleryImages[1].image_url)
-    : galleryImages.length > 0
-      ? getImageUrl(galleryImages[0].image_url)
-      : getMainImage();
+  // Slide 2 uses the project's multi-image at order 1 (fallback to current image).
+  const bgImage = getProjectImageBySlot(1);
   const propertyType = property.value?.property_type?.name || 'N/A';
   const furnitureStatus = property.value?.furnished_status || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
@@ -5536,7 +5553,8 @@ const createSlide3 = () => {
   const half = Math.ceil(features.length / 2);
   const col1 = features.slice(0, half);
   const col2 = features.slice(half);
-  const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
+  const projectImage = getProjectImageBySlot(3);
   const renderItem = (feature) => {
       console.log(feature);
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
@@ -5588,8 +5606,8 @@ const createSlide4 = () => {
   const project = property.value?.project;
   const projectTitle    = project?.title || project?.name || '';
   const projectAbout = project?.about || '';
-  // const projectImage = project?.image2 ? getImageUrl(project.image2) : getMainImage();
-  const projectImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  // Slide 4 uses the project's multi-image at order 2 (fallback to current image).
+  const projectImage = getProjectImageBySlot(2);
   const aboutLimited = limitText(projectAbout, 800);
 
   return `
