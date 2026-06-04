@@ -2584,8 +2584,7 @@ const formatRejectionDate = (dateString) => {
       //   approved = true
       const p = property.value;
       if (!p) return false;
-      const permitted = !!p.user_permissions?.genertae_offers;
-      if (!permitted) return false;
+
 
       const blockedStatuses = [ 'draft'];
       return !!p.is_active
