@@ -24,9 +24,10 @@
           @scroll.passive="onCardsScroll"
         >
           <article
-            v-for="(card, index) in featureCards"
-            :key="card.id"
+            v-for="(card, index) in loopedCards"
+            :key="card.loopKey"
             class="auth-landing__feature-card"
+            :data-slide-index="index % slideCount"
           >
             <h6 class="auth-landing__feature-title">{{ card.title }}</h6>
             <div class="auth-landing__feature-media">
@@ -37,7 +38,7 @@
 
         <div class="auth-landing__dots" role="tablist" aria-label="Feature highlights">
           <button
-            v-for="(_, index) in carouselDots"
+            v-for="(_, index) in slideCount"
             :key="index"
             type="button"
             class="auth-landing__dot"
@@ -56,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 
 const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
 const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
@@ -79,61 +80,117 @@ const featureCards = [
   },
 ];
 
-const carouselDots = [0, 1, 2, 3, 4];
+const LOOP_SETS = 2;
+const slideCount = featureCards.length;
+const AUTOPLAY_MS = 4500;
+
+const loopedCards = computed(() => {
+  const items = [];
+  for (let set = 0; set < LOOP_SETS; set += 1) {
+    featureCards.forEach((card, index) => {
+      items.push({
+        ...card,
+        loopKey: `${card.id}-set${set}-i${index}`,
+      });
+    });
+  }
+  return items;
+});
+
 const cardsTrackRef = ref(null);
 const activeCardIndex = ref(0);
 let carouselTimer = null;
+let isResettingScroll = false;
 
-function scrollToCard(index) {
-  activeCardIndex.value = index;
+function getPhysicalIndex(logicalIndex) {
+  return logicalIndex + slideCount;
+}
+
+function getCardScrollLeft(physicalIndex) {
+  const track = cardsTrackRef.value;
+  if (!track?.children?.length) return 0;
+  const child = track.children[physicalIndex];
+  if (!child) return 0;
+  return Math.max(0, child.offsetLeft - 12);
+}
+
+function scrollToPhysical(physicalIndex, behavior = 'smooth') {
   const track = cardsTrackRef.value;
   if (!track) return;
+  track.scrollTo({ left: getCardScrollLeft(physicalIndex), behavior });
+}
 
-  if (index >= featureCards.length) {
-    track.scrollTo({ left: 0, behavior: 'smooth' });
+function scrollToCard(logicalIndex, behavior = 'smooth') {
+  const normalized =
+    ((logicalIndex % slideCount) + slideCount) % slideCount;
+  activeCardIndex.value = normalized;
+  scrollToPhysical(getPhysicalIndex(normalized), behavior);
+}
+
+function normalizeInfiniteScroll() {
+  if (isResettingScroll) return;
+  const track = cardsTrackRef.value;
+  if (!track?.children?.length) return;
+
+  const scrollLeft = track.scrollLeft;
+  let nearestPhysical = 0;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  Array.from(track.children).forEach((child, index) => {
+    const distance = Math.abs(child.offsetLeft - 12 - scrollLeft);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestPhysical = index;
+    }
+  });
+
+  const logical = nearestPhysical % slideCount;
+  activeCardIndex.value = logical;
+
+  if (nearestPhysical < slideCount) {
+    isResettingScroll = true;
+    scrollToPhysical(nearestPhysical + slideCount, 'auto');
+    isResettingScroll = false;
     return;
   }
 
-  const card = track.children[index];
-  if (card) {
-    track.scrollTo({ left: card.offsetLeft - 12, behavior: 'smooth' });
+  if (nearestPhysical >= slideCount * LOOP_SETS) {
+    isResettingScroll = true;
+    scrollToPhysical(nearestPhysical - slideCount, 'auto');
+    isResettingScroll = false;
   }
 }
 
 function onCardsScroll() {
-  const track = cardsTrackRef.value;
-  if (!track || !track.children.length) return;
+  if (isResettingScroll) return;
+  normalizeInfiniteScroll();
+}
 
-  const scrollLeft = track.scrollLeft;
-  let nearest = 0;
-  let nearestDistance = Number.POSITIVE_INFINITY;
-
-  Array.from(track.children).forEach((child, index) => {
-    const distance = Math.abs(child.offsetLeft - scrollLeft - 12);
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearest = index;
-    }
-  });
-
-  activeCardIndex.value = nearest;
+function advanceCarousel() {
+  const next = (activeCardIndex.value + 1) % slideCount;
+  scrollToCard(next);
 }
 
 function startCarouselAutoplay() {
-  carouselTimer = window.setInterval(() => {
-    const next = (activeCardIndex.value + 1) % carouselDots.length;
-    scrollToCard(next);
-  }, 6000);
+  stopCarouselAutoplay();
+  carouselTimer = window.setInterval(advanceCarousel, AUTOPLAY_MS);
 }
 
-onMounted(() => {
+function stopCarouselAutoplay() {
+  if (carouselTimer) {
+    clearInterval(carouselTimer);
+    carouselTimer = null;
+  }
+}
+
+onMounted(async () => {
+  await nextTick();
+  scrollToCard(0, 'auto');
   startCarouselAutoplay();
 });
 
 onUnmounted(() => {
-  if (carouselTimer) {
-    clearInterval(carouselTimer);
-  }
+  stopCarouselAutoplay();
 });
 </script>
 
@@ -222,7 +279,7 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 44vw);
+  grid-template-columns: minmax(0, 1.2fr) 529px;
   gap: clamp(28px, 5vw, 72px);
   align-items: center;
   width: 100%;
@@ -289,15 +346,25 @@ onUnmounted(() => {
 }
 
 .auth-landing__cards-track {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(10px, 1.2vw, 14px);
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
   min-width: 0;
   min-height: 0;
   width: 100%;
   flex: 1 1 auto;
   align-items: stretch;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 2px 4px;
+}
+
+.auth-landing__cards-track::-webkit-scrollbar {
+  display: none;
 }
 
 .auth-landing__feature-card {
@@ -313,7 +380,9 @@ onUnmounted(() => {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
-  min-width: 0;
+  flex: 0 0 calc((100% - 28px) / 3);
+  min-width: calc((100% - 28px) / 3);
+  scroll-snap-align: start;
 }
 
 .auth-landing__feature-title {
@@ -379,14 +448,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-width: 0;
-  align-self: stretch;
+  width: 529px;
+  min-width: 529px;
+  max-width: 529px;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .auth-landing__auth-panel > * {
-  width: 100%;
-  max-width: min(560px, 100%);
+  width: 529px;
+  max-width: 529px;
   height: auto;
   flex: 0 0 auto;
 }
@@ -419,26 +490,20 @@ onUnmounted(() => {
   .auth-landing__auth-panel {
     justify-content: center;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
-  .auth-landing__cards-track {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .auth-landing__cards-track::-webkit-scrollbar {
-    display: none;
+  .auth-landing__auth-panel > * {
+    width: 100%;
+    max-width: min(529px, 100%);
   }
 
   .auth-landing__feature-card {
     flex: 0 0 min(72vw, 260px);
+    min-width: min(72vw, 260px);
     min-height: 0;
     max-height: 200px;
-    scroll-snap-align: start;
   }
 
   .auth-landing__feature-title {

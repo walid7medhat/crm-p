@@ -274,8 +274,85 @@
   margin-bottom: clamp(10px, 1.5vh, 14px);
 }
 
+/* Sign-in — 529px wide, balanced height (between compact and full 824) */
+.auth-glass-card--signin {
+  width: 529px;
+  max-width: 529px;
+  min-width: 529px;
+  min-height: 700px;
+  height: auto;
+  max-height: min(760px, calc(100dvh - 48px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 40px 44px 36px;
+  box-sizing: border-box;
+}
+
+.auth-glass-card--signin .auth-glass-card__eyebrow {
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.auth-glass-card--signin .auth-glass-card__title {
+  margin-bottom: 32px;
+  font-size: 1.65rem;
+}
+
+.auth-glass-card--signin .auth-glass-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 480px;
+}
+
+.auth-glass-card--signin .auth-glass-field {
+  margin-bottom: 18px;
+}
+
+.auth-glass-card--signin .auth-glass-input {
+  height: 52px;
+  font-size: 1rem;
+}
+
+.auth-glass-card--signin .auth-glass-actions {
+  margin-top: 24px;
+}
+
+.auth-glass-card--signin .auth-glass-btn {
+  height: 52px;
+  font-size: 1rem;
+}
+
+.auth-glass-card--signin .auth-glass-pill-link {
+  height: 52px;
+  font-size: 0.92rem;
+}
+
+.auth-glass-card--signin .auth-glass-divider {
+  margin: 22px 0 20px;
+}
+
+.auth-glass-card--signin .auth-glass-footer-link {
+  margin-top: 20px;
+}
+
+@media (max-width: 560px) {
+  .auth-glass-card--signin {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    max-height: none;
+  }
+}
+
 @media (max-width: 639px) {
-  .auth-glass-card {
+  .auth-glass-card:not(.auth-glass-card--signin) {
     padding: 22px 20px 18px;
+  }
+
+  .auth-glass-card--signin {
+    padding: 28px 24px 22px;
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <AuthLandingShell>
-    <div class="auth-glass-card">
+    <div class="auth-glass-card auth-glass-card--signin">
       <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
       <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
 
