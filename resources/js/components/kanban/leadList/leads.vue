@@ -1010,11 +1010,6 @@ const totalLeadsCount = computed(() => {
 
 const activeShortcutFilter = ref(null)
 
-function isLeadUnassigned(lead) {
-    if (lead?.responsible_person_id != null && lead.responsible_person_id !== '') return false
-    return !lead?.responsible_person?.name
-}
-
 function countLoadedLeads(matcher) {
     let count = 0
     for (const col of columns.value) {
@@ -1034,31 +1029,11 @@ function normalizeLeadHeat(lead) {
     return null
 }
 
-function normalizeLeadPurpose(lead) {
-    const raw = String(lead?.purpose_buying || '').toLowerCase()
-    if (raw.includes('live')) return 'live_in'
-    if (raw.includes('short')) return 'short_term'
-    if (raw.includes('long')) return 'long_term'
-    return null
-}
-
 function normalizeLeadInteraction(lead) {
     const r = String(lead?.interaction_result || '').toLowerCase()
     if (r === 'answered') return 'answered'
     if (r === 'no_answer') return 'no_answer'
     return null
-}
-
-function normalizeLeadType(lead) {
-    const t = String(lead?.lead_type || '').toLowerCase()
-    if (t === 'rent') return 'rent'
-    if (t === 'sale') return 'sale'
-    return null
-}
-
-function isHighScoreLead(lead) {
-    const score = Number(lead?.score)
-    return Number.isFinite(score) && score >= 70
 }
 
 const leadAnalyticsMetrics = computed(() => ({
@@ -1067,13 +1042,6 @@ const leadAnalyticsMetrics = computed(() => ({
     tempHot: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'hot'),
     callAnswered: countLoadedLeads((lead) => normalizeLeadInteraction(lead) === 'answered'),
     callNoAnswer: countLoadedLeads((lead) => normalizeLeadInteraction(lead) === 'no_answer'),
-    purposeLiveIn: countLoadedLeads((lead) => normalizeLeadPurpose(lead) === 'live_in'),
-    purposeShortTerm: countLoadedLeads((lead) => normalizeLeadPurpose(lead) === 'short_term'),
-    purposeLongTerm: countLoadedLeads((lead) => normalizeLeadPurpose(lead) === 'long_term'),
-    salesUnassigned: countLoadedLeads((lead) => isLeadUnassigned(lead)),
-    salesHighScore: countLoadedLeads((lead) => isHighScoreLead(lead)),
-    salesRent: countLoadedLeads((lead) => normalizeLeadType(lead) === 'rent'),
-    salesSale: countLoadedLeads((lead) => normalizeLeadType(lead) === 'sale'),
 }))
 
 function leadMatchesShortcutFilter(lead) {
@@ -1090,20 +1058,6 @@ function leadMatchesShortcutFilter(lead) {
             return normalizeLeadInteraction(lead) === 'answered'
         case 'call_no_answer':
             return normalizeLeadInteraction(lead) === 'no_answer'
-        case 'purpose_live_in':
-            return normalizeLeadPurpose(lead) === 'live_in'
-        case 'purpose_short_term':
-            return normalizeLeadPurpose(lead) === 'short_term'
-        case 'purpose_long_term':
-            return normalizeLeadPurpose(lead) === 'long_term'
-        case 'sales_unassigned':
-            return isLeadUnassigned(lead)
-        case 'sales_high_score':
-            return isHighScoreLead(lead)
-        case 'sales_rent':
-            return normalizeLeadType(lead) === 'rent'
-        case 'sales_sale':
-            return normalizeLeadType(lead) === 'sale'
         default:
             return true
     }

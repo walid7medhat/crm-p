@@ -93,27 +93,6 @@ const filterGroups = [
       { key: 'call_no_answer', metricKey: 'callNoAnswer', label: 'No answer', tone: 'no-answer', icon: 'lucide:phone-off', hint: 'No answer' },
     ],
   },
-  {
-    id: 'purpose',
-    label: 'Purpose',
-    segmented: false,
-    chips: [
-      { key: 'purpose_live_in', metricKey: 'purposeLiveIn', label: 'Live in', tone: 'live-in', icon: 'lucide:home', hint: 'Live in' },
-      { key: 'purpose_short_term', metricKey: 'purposeShortTerm', label: 'Short-term', tone: 'short-term', icon: null, hint: 'Short-term investment' },
-      { key: 'purpose_long_term', metricKey: 'purposeLongTerm', label: 'Long-term', tone: 'long-term', icon: null, hint: 'Long-term investment' },
-    ],
-  },
-  {
-    id: 'sales',
-    label: 'Sales',
-    segmented: false,
-    chips: [
-      { key: 'sales_unassigned', metricKey: 'salesUnassigned', label: 'Unassigned', tone: 'unassigned', icon: null, hint: 'No agent' },
-      { key: 'sales_high_score', metricKey: 'salesHighScore', label: 'High score', tone: 'high-score', icon: 'lucide:sparkles', hint: 'Score 70+' },
-      { key: 'sales_rent', metricKey: 'salesRent', label: 'Rent', tone: 'rent', icon: null, hint: 'Rent' },
-      { key: 'sales_sale', metricKey: 'salesSale', label: 'Sale', tone: 'sale', icon: null, hint: 'Sale' },
-    ],
-  },
 ]
 
 function formatValue(value) {
