@@ -4981,8 +4981,12 @@ ${owner.address ? `Address: ${owner.address}` : ''}
     };
 
     const getGalleryThumbnails = () => {
+      // gallery_images[0] is already shown as the big main image on the left,
+      // so the side thumbnails start from index 1. With 2 images we render
+      // just the second one; with 3+ we show indices 1 and 2 (and the
+      // "View All" overlay on the last when length > 3).
       if (!property.value?.gallery_images) return [];
-      return property.value.gallery_images.slice(0, 2);
+      return property.value.gallery_images.slice(1, 3);
     };
 
     // Gallery methods

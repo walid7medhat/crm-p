@@ -877,13 +877,26 @@
               </div>
             </div>
 
-            <!-- Gallery Preview -->
+            <!-- Gallery Preview (drag tiles to reorder; the first tile is the hero) -->
             <div class="col-12" v-if="form.gallery.length > 0">
-              <label class="form-label mb-3">Gallery Preview</label>
-              <div class="row g-3">
-                <div 
-                  v-for="(item, index) in form.gallery" 
-                  :key="index"
+              <label class="form-label mb-3">
+                Gallery Preview
+                <small class="text-muted ms-2">Drag images to reorder — the first one is the hero.</small>
+              </label>
+              <draggable
+                v-model="form.gallery"
+                tag="div"
+                class="row g-3 listing-gallery-draggable"
+                item-key="_uid"
+                ghost-class="listing-gallery-ghost"
+                chosen-class="listing-gallery-chosen"
+                drag-class="listing-gallery-drag"
+                :animation="180"
+                filter=".no-drag"
+                :prevent-on-filter="true"
+              >
+                <template #item="{ element: item, index }">
+                <div
                   class="col-xl-3 col-lg-4 col-md-6"
                 >
                   <div class="gallery-item position-relative" :class="{ 'hero-image': index === 0 }">
@@ -902,9 +915,9 @@
                         <p class="card-text small text-truncate mb-1">{{ item.name || item.file?.name }}</p>
                         <p class="card-text small text-muted">{{ formatFileSize(item.size || item.file?.size) }}</p>
                       </div>
-                      <button 
-                        type="button" 
-                        class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
+                      <button
+                        type="button"
+                        class="btn-close no-drag position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
                         @click="removeGalleryImage(index)"
                         style="--bs-bg-opacity: 0.8;"
                       ></button>
@@ -922,9 +935,9 @@
                         <p class="card-text small text-truncate mb-1">{{ item.name || item.file?.name }}</p>
                         <p class="card-text small text-muted">{{ formatFileSize(item.size || item.file?.size) }}</p>
                         <div class="d-flex gap-1 mt-2">
-                          <button 
-                            type="button" 
-                            class="btn btn-sm btn-outline-primary"
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary no-drag"
                             @click="setAsHeroImage(index)"
                             title="Set as hero image"
                           >
@@ -932,16 +945,17 @@
                           </button>
                         </div>
                       </div>
-                      <button 
-                        type="button" 
-                        class="btn-close position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
+                      <button
+                        type="button"
+                        class="btn-close no-drag position-absolute top-0 end-0 m-2 bg-danger rounded-circle p-1"
                         @click="removeGalleryImage(index)"
                         style="--bs-bg-opacity: 0.8;"
                       ></button>
                     </div>
                   </div>
                 </div>
-              </div>
+                </template>
+              </draggable>
             </div>
 
             <!-- Empty State -->
@@ -1899,6 +1913,7 @@ import { ref, watch, onMounted, computed, getCurrentInstance } from "vue";
 import api from "@/plugins/axios";
 import vSelect from "vue-select";
 import { LISTING_FEATURE_OPTIONS, LISTING_FEATURE_KEYS } from "@/config/listingFeatures";
+import draggable from "vuedraggable";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
@@ -3782,6 +3797,8 @@ const handleGalleryUpload = (e) => {
 
     if (validFiles.length > 0) {
       const filesWithPreview = validFiles.map(file => ({
+        // _uid gives vuedraggable a stable item-key across reorders
+        _uid: `g-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         file: file, name: file.name, size: file.size, type: file.type,
         preview: URL.createObjectURL(file)
       }));
@@ -4133,9 +4150,15 @@ const handleSubmit = async (action = 'draft') => {
         }
 
     if (form.value.gallery.length > 0) {
+      // form.value.gallery is now ordered by the user's drag-and-drop.
+      // Send each file in display order and a parallel `new_gallery_order[i]=N`
+      // so the backend writes the chosen `order` on each gallery_images row.
       form.value.gallery.forEach((item, index) => {
         const file = item.file || item;
-        if (file instanceof File) formData.append(`gallery[${index}]`, file);
+        if (file instanceof File) {
+          formData.append(`gallery[${index}]`, file);
+          formData.append(`new_gallery_order[${index}]`, index + 1);
+        }
       });
     }
     if (selectedProjectFloorPlans.value.length > 0) {
@@ -5825,6 +5848,25 @@ body.swal2-toast-shown  {
   .viewer-controls .btn {
     flex: 1;
   }
+}
+
+/* Drag & drop cues for the gallery preview tiles */
+.listing-gallery-draggable .gallery-item {
+  cursor: grab;
+  user-select: none;
+}
+.listing-gallery-draggable .gallery-item:active {
+  cursor: grabbing;
+}
+.listing-gallery-ghost {
+  opacity: 0.45;
+  background: #f1f5f9;
+}
+.listing-gallery-chosen {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+}
+.listing-gallery-drag {
+  transform: rotate(2deg);
 }
 </style>
 

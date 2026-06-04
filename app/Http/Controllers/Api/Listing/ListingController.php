@@ -1065,11 +1065,17 @@ public function getMatchingListings(Request $request)
                     }
                 }
 
-                // Handle gallery images upload with compression
+                // Handle gallery images upload with compression.
+                // The frontend can pass `new_gallery_order[i]` parallel to `gallery[i]`
+                // to control the display order; falls back to file index otherwise.
                 if ($request->hasFile('gallery')) {
                     \Log::info('Processing gallery images', ['count' => count($request->file('gallery'))]);
+                    $newOrder = $request->input('new_gallery_order', []);
+                    if (!is_array($newOrder)) {
+                        $newOrder = [];
+                    }
                     foreach ($request->file('gallery') as $index => $galleryFile) {
-                      
+
                          $compressionResult = ImageHelper::compressAndConvertToWebP(
                                 $galleryFile,
                                 "listings/gallery",
@@ -1084,11 +1090,11 @@ public function getMatchingListings(Request $request)
                                     ]
                                 ]
                             );
-                        
+
                         $listing->galleryImages()->create([
                             'name' => $galleryFile->getClientOriginalName(),
                             'image_path' => $compressionResult['path'],
-                            'order' => $index
+                            'order' => isset($newOrder[$index]) ? (int) $newOrder[$index] : $index,
                         ]);
                     }
                     \Log::info('Gallery images processed');
@@ -1665,10 +1671,30 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             }
         }
      
+        // Apply the user's chosen order to existing gallery rows before adding new ones.
+        // Frontend sends `gallery_orders[ID]=N` for each kept existing image.
+        if ($request->has('gallery_orders')) {
+            $galleryOrders = $request->input('gallery_orders', []);
+            if (is_array($galleryOrders)) {
+                foreach ($galleryOrders as $galleryId => $orderValue) {
+                    $listing->galleryImages()
+                        ->where('id', (int) $galleryId)
+                        ->update(['order' => (int) $orderValue]);
+                }
+            }
+        }
+
         if ($request->hasFile('gallery')) {
             $maxOrder = $listing->galleryImages()->max('order') ?? -1;
             $setFirstAsHero = $request->has('hero_image_from_gallery') && $request->input('hero_image_from_gallery') === 'first_new_image';
-            
+
+            // `new_gallery_order[i]` (parallel to `gallery[i]`) carries the final
+            // sort position for each newly-uploaded file. Falls back to append order.
+            $newOrder = $request->input('new_gallery_order', []);
+            if (!is_array($newOrder)) {
+                $newOrder = [];
+            }
+
             foreach ($request->file('gallery') as $index => $galleryFile) {
                 $compressionResult = ImageHelper::compressAndConvertToWebP(
                     $galleryFile,
@@ -1687,9 +1713,9 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 $galleryImage = $listing->galleryImages()->create([
                     'name' => $galleryFile->getClientOriginalName(),
                     'image_path' => $compressionResult['path'],
-                    'order' => $maxOrder + $index + 1
+                    'order' => isset($newOrder[$index]) ? (int) $newOrder[$index] : $maxOrder + $index + 1,
                 ]);
-                
+
                 if ($setFirstAsHero && $index === 0 && !$heroImageProcessed) {
                     $listing->update([
                         'hero_image_path' => $compressionResult['path']
