@@ -850,10 +850,23 @@ const openPersonProfile = async (task, type, event) => {
     activePersonHover.value = null
 
     let userId = resolveKanbanProfileUserId(task, type)
+    
+    // إذا كان المستخدم من Bitrix24 فقط (id = null) لا نفتح الملف الشخصي
+    if (isActivityPersonType(type) && userId === null) {
+        console.log('External Bitrix24 user - no profile to open')
+        // يمكن إظهار رسالة للمستخدم
+        $showNotification('This user is from external system and has no profile', 'info')
+        return
+    }
+    
     if (!userId && isActivityPersonType(type)) {
         userId = await lookupActivityUserIdByName(activityPerson(task)?.name)
     }
-    if (!userId) return
+    
+    if (!userId) {
+        $showNotification('User profile not available', 'warning')
+        return
+    }
 
     profileUserId.value = userId
     profileTriggerType.value = type

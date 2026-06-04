@@ -161,7 +161,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // a stub with id=null so the avatar/name still render but the
             // click won't try to open a non-existent profile).
             'last_activity_at'   => $lastActivityAt,
-            'last_activity_user' => $this->formatActivityUser($lastActivityUser),
+            'last_activity_user' => $this->formatActivityUser($finalLastActivityUser), 
+
             // Bitrix24 ID of the user who did the last activity, in case the
             // local mapping (by email) didn't resolve.
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,

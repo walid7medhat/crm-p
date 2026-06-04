@@ -15,6 +15,7 @@ use App\Models\Stage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Lead;
+use App\Models\LeadHistory;
 use App\Models\User;
 use DB;
 use Illuminate\Support\Facades\Schema;
@@ -496,8 +497,8 @@ class StageController extends Controller
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-            KanbanLeadCardResource::setKanbanActivityUsers(
-                $this->kanbanActivityUsersForLeads($allLeadsForMeta)
+            KanbanLeadCardResource::setKanbanDbActivity(
+                $this->kanbanDbActivityForLeads($allLeadsForMeta)
             );
 
             foreach ($stagesWithLeads as &$stageRow) {
@@ -797,8 +798,8 @@ class StageController extends Controller
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($leadsCollection);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($leadsCollection);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-            KanbanLeadCardResource::setKanbanActivityUsers(
-                $this->kanbanActivityUsersForLeads($leadsCollection)
+            KanbanLeadCardResource::setKanbanDbActivity(
+                $this->kanbanDbActivityForLeads($leadsCollection)
             );
 
             $leadsPayload = KanbanLeadCardResource::collection($leadsCollection)->resolve();
@@ -1226,55 +1227,62 @@ public function getOffices()
      * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
      * @return \Illuminate\Support\Collection<int, User>
      */
-    private function kanbanActivityUsersForLeads($leads)
+    /**
+     * Batch-resolve the "Activity" person + time for Kanban cards from the local
+     * database (lead_histories), so each card doesn't run its own history query.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<int, array{user: \App\Models\User|null, at: mixed}>
+     */
+    private function kanbanDbActivityForLeads($leads): array
     {
-        $localUserIds = [];
-        $bitrixToLocal = [];
-        $activityNames = [];
-        foreach ($leads as $lead) {
-            $data = is_string($lead->bitrix24_data)
-                ? json_decode($lead->bitrix24_data, true)
-                : $lead->bitrix24_data;
-            $localId = data_get($data, '_users.last_activity.local_user_id');
-            $b24Id = $lead->bitrix24_last_activity_by_id ? (int) $lead->bitrix24_last_activity_by_id : null;
-            $activityName = data_get($data, '_users.last_activity.name');
-            if (is_string($activityName) && trim($activityName) !== '') {
-                $activityNames[] = trim($activityName);
-            }
-            if ($localId) {
-                $localId = (int) $localId;
-                $localUserIds[] = $localId;
-                if ($b24Id) {
-                    $bitrixToLocal[$b24Id] = $localId;
-                }
+        $leadIds = collect($leads)->pluck('id')->filter()->unique()->values()->all();
+        if ($leadIds === []) {
+            return [];
+        }
+
+        // Most recent history row per lead that was performed by a real user.
+        $histories = LeadHistory::query()
+            ->whereIn('lead_id', $leadIds)
+            ->whereNotNull('user_id')
+            ->orderBy('created_at', 'desc')
+            ->get(['id', 'lead_id', 'user_id', 'created_at']);
+
+        $latestByLead = [];
+        foreach ($histories as $history) {
+            $leadId = (int) $history->lead_id;
+            if (! isset($latestByLead[$leadId])) {
+                $latestByLead[$leadId] = $history;
             }
         }
 
-        $activityNames = array_values(array_unique($activityNames));
-        if ($activityNames !== []) {
-            $idsByName = User::query()
-                ->whereIn('name', $activityNames)
-                ->pluck('id')
-                ->all();
-            $localUserIds = array_merge($localUserIds, $idsByName);
+        $userIds = array_values(array_unique(array_map(
+            static fn ($history) => (int) $history->user_id,
+            $latestByLead
+        )));
+
+        $users = $userIds === []
+            ? collect()
+            : User::query()
+                ->whereIn('id', $userIds)
+                ->with([
+                    'parent:id,name,avatar',
+                    'roles:id,name',
+                    'employeeProfile.companyBranch:id,name',
+                    'employeeProfile.designation:id,name',
+                ])
+                ->get(['id', 'name', 'avatar', 'email', 'parent_id'])
+                ->keyBy('id');
+
+        $map = [];
+        foreach ($latestByLead as $leadId => $history) {
+            $map[$leadId] = [
+                'user' => $users->get((int) $history->user_id),
+                'at' => $history->created_at,
+            ];
         }
 
-        KanbanLeadCardResource::setKanbanBitrixActivityUserMap($bitrixToLocal);
-
-        $localUserIds = array_values(array_unique(array_filter($localUserIds)));
-        if ($localUserIds === []) {
-            return collect();
-        }
-
-        return User::query()
-            ->whereIn('id', $localUserIds)
-            ->with([
-                'parent:id,name',
-                'roles:id,name',
-                'employeeProfile.companyBranch:id,name',
-                'employeeProfile.designation:id,name',
-            ])
-            ->get(['id', 'name', 'avatar', 'email', 'parent_id']);
+        return $map;
     }
 
     /**

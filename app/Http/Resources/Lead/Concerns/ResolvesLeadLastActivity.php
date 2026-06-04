@@ -6,151 +6,91 @@ use App\Http\Resources\User\UserResource;
 use App\Models\User;
 
 /**
- * Bitrix24 LAST_ACTIVITY_TIME / LAST_ACTIVITY_BY for lead card "Activity" tile.
+ * "Last activity" person + time for the lead card "Activity" tile.
+ *
+ * The activity person is resolved from the local database (lead_histories →
+ * the user who performed the most recent action), NOT from the Bitrix24 mirror
+ * columns. For the Kanban board the controller batch-resolves these once
+ * (setKanbanDbActivity) so each card doesn't run its own history query.
  */
 trait ResolvesLeadLastActivity
 {
-    /** @var array<int, User> */
-    protected static array $kanbanActivityUsersById = [];
-
-    /** @var array<int, int> bitrix24 user id => local user id */
-    protected static array $kanbanBitrixToLocalUserId = [];
-
-    /** @var array<string, User> normalized display name => user */
-    protected static array $kanbanActivityUsersByName = [];
-
-    public static function setKanbanActivityUsers(iterable $users): void
-    {
-        static::$kanbanActivityUsersById = [];
-        static::$kanbanActivityUsersByName = [];
-        foreach ($users as $user) {
-            if ($user instanceof User) {
-                static::$kanbanActivityUsersById[(int) $user->id] = $user;
-                $nameKey = mb_strtolower(trim((string) $user->name));
-                if ($nameKey !== '') {
-                    static::$kanbanActivityUsersByName[$nameKey] = $user;
-                }
-            }
-        }
-    }
+    /** @var array<int, array{user: User|null, at: mixed}> lead id => resolved activity */
+    protected static array $kanbanDbActivityByLeadId = [];
 
     /**
-     * @param  array<int, int>  $map
+     * Pre-resolved per-lead activity for the Kanban board (avoids per-card queries).
+     *
+     * @param  array<int, array{user: User|null, at: mixed}>  $map
      */
-    public static function setKanbanBitrixActivityUserMap(array $map): void
+    public static function setKanbanDbActivity(array $map): void
     {
-        static::$kanbanBitrixToLocalUserId = [];
-        foreach ($map as $b24Id => $localId) {
-            if ($b24Id && $localId) {
-                static::$kanbanBitrixToLocalUserId[(int) $b24Id] = (int) $localId;
-            }
-        }
+        static::$kanbanDbActivityByLeadId = $map;
     }
 
     public static function clearKanbanActivityUsers(): void
     {
-        static::$kanbanActivityUsersById = [];
-        static::$kanbanBitrixToLocalUserId = [];
-        static::$kanbanActivityUsersByName = [];
+        static::$kanbanDbActivityByLeadId = [];
     }
 
     /**
-     * @return array{0: mixed, 1: User|array<string, mixed>|null}
+     * @return array{0: mixed, 1: User|null}
      */
     protected function resolveLastActivity(bool $includeHistoryFallback = true): array
     {
-        $lastActivityAt = $this->bitrix24_last_activity_at;
-        $lastActivityUser = null;
-        $b24UserStub = null;
+        // Kanban board: use the batch-resolved map so we don't query per card.
+        if (array_key_exists((int) $this->id, static::$kanbanDbActivityByLeadId)) {
+            $entry = static::$kanbanDbActivityByLeadId[(int) $this->id];
 
-        if ($this->bitrix24_last_activity_by_id) {
-            $data = is_string($this->bitrix24_data)
-                ? json_decode($this->bitrix24_data, true)
-                : $this->bitrix24_data;
-            $localId = data_get($data, '_users.last_activity.local_user_id');
-            $b24Name = data_get($data, '_users.last_activity.name');
-
-            if ($localId) {
-                $localId = (int) $localId;
-                $lastActivityUser = static::$kanbanActivityUsersById[$localId]
-                    ?? User::find($localId);
-            } elseif ($this->bitrix24_last_activity_by_id) {
-                $b24Id = (int) $this->bitrix24_last_activity_by_id;
-                $mappedLocalId = static::$kanbanBitrixToLocalUserId[$b24Id] ?? null;
-                if ($mappedLocalId) {
-                    $lastActivityUser = static::$kanbanActivityUsersById[$mappedLocalId]
-                        ?? User::find($mappedLocalId);
-                }
-            }
-
-            if (! $lastActivityUser && is_string($b24Name) && trim($b24Name) !== '') {
-                $nameKey = mb_strtolower(trim($b24Name));
-                $lastActivityUser = static::$kanbanActivityUsersByName[$nameKey] ?? null;
-            }
-
-            if (! $lastActivityUser) {
-                $b24UserStub = [
-                    'name' => $b24Name ?: ('Bitrix24 #'.$this->bitrix24_last_activity_by_id),
-                    'bitrix24_id' => (int) $this->bitrix24_last_activity_by_id,
-                    'photo_url' => data_get($data, '_users.last_activity.photo_url'),
-                ];
-            }
+            return [
+                $entry['at'] ?? $this->updated_at,
+                $entry['user'] ?? null,
+            ];
         }
 
-        if ($includeHistoryFallback && (! $lastActivityUser || ! $lastActivityAt)) {
-            $latest = $this->histories()
-                ->orderBy('created_at', 'desc')
-                ->first();
-            if ($latest) {
-                $lastActivityAt = $lastActivityAt ?? $latest->created_at;
-                if (! $lastActivityUser && $latest->user_id && $latest->user) {
-                    $lastActivityUser = $latest->user;
-                }
-            }
+        // Detail path: resolve straight from the database history — the most
+        // recent action performed by a real local user.
+        $latestWithUser = $this->histories()
+            ->whereNotNull('user_id')
+            ->whereHas('user')
+            ->first();
+
+        $lastActivityUser = $latestWithUser?->user;
+        $lastActivityAt = $latestWithUser?->created_at;
+
+        if (! $lastActivityAt && $includeHistoryFallback) {
+            $lastActivityAt = $this->histories()->first()?->created_at;
         }
 
         return [
             $lastActivityAt ?? $this->updated_at,
-            $lastActivityUser ?? $b24UserStub,
+            $lastActivityUser,
         ];
     }
 
     /**
-     * @param  User|array<string, mixed>|null  $user
      * @return array<string, mixed>|null
      */
-    protected function formatActivityUser($user): ?array
+    protected function formatActivityUser(?User $user): ?array
     {
-        if ($user instanceof User) {
-            $user->loadMissing([
-                'parent:id,name,avatar',
-                'roles:id,name',
-                'employeeProfile.companyBranch:id,name',
-                'employeeProfile.designation:id,name',
-            ]);
-
-            $payload = (new UserResource($user))->resolve(request());
-
-            return array_merge($payload, [
-                'is_external' => false,
-                'bitrix24_id' => null,
-                'branch_name' => $payload['branch'] ?? $user->employeeProfile?->companyBranch?->name,
-                'parent_name' => $payload['parent_name'] ?? $user->parent?->name,
-            ]);
-        }
-        if (is_array($user) && ! empty($user['name'])) {
-            $photo = $user['photo_url'] ?? null;
-
-            return [
-                'id' => null,
-                'name' => $user['name'],
-                'avatar' => is_string($photo) && $photo !== '' ? $photo : null,
-                'email' => null,
-                'is_external' => true,
-                'bitrix24_id' => $user['bitrix24_id'] ?? null,
-            ];
+        if (! $user instanceof User) {
+            return null;
         }
 
-        return null;
+        $user->loadMissing([
+            'parent:id,name,avatar',
+            'roles:id,name',
+            'employeeProfile.companyBranch:id,name',
+            'employeeProfile.designation:id,name',
+        ]);
+
+        $payload = (new UserResource($user))->resolve(request());
+
+        return array_merge($payload, [
+            'is_external' => false,
+            'bitrix24_id' => null,
+            'branch_name' => $payload['branch'] ?? $user->employeeProfile?->companyBranch?->name,
+            'parent_name' => $payload['parent_name'] ?? $user->parent?->name,
+        ]);
     }
 }
