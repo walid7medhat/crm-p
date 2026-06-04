@@ -607,7 +607,7 @@
                                                     class="gallery-img"
                                                 />
 
-                                                <span class="order-badge">#{{ idx + 1 }}</span>
+                                                <span class="order-badge">#{{ idx + 2 }}</span>
                                                 <span v-if="item._kind === 'new'" class="new-badge">New</span>
 
                                                 <span class="drag-hint" title="Drag to reorder">

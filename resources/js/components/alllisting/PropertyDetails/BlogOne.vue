@@ -2575,7 +2575,23 @@ const formatRejectionDate = (dateString) => {
       return property.value?.user_permissions?.show_offers || false;
     });
       const canGenerateOffer = computed(() => {
-      return property.value?.user_permissions?.genertae_offers || false;
+      // Backend permission must allow it, AND the listing must be in the
+      // fully "active + published" state — same gate used by the backend
+      // listings query:
+      //   is_active = true
+      //   status NOT IN ( 'draft')
+      //   is_archived = false
+      //   approved = true
+      const p = property.value;
+      if (!p) return false;
+      const permitted = !!p.user_permissions?.genertae_offers;
+      if (!permitted) return false;
+
+      const blockedStatuses = [ 'draft'];
+      return !!p.is_active
+        && !blockedStatuses.includes(p.status)
+        && !p.is_archived
+        && !!p.approved;
     });
 
     const canDeleteProperty = computed(() => {
