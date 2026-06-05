@@ -146,6 +146,8 @@ Route::get('/test-server', function() {
         'storage_working' => class_exists('Illuminate\Support\Facades\Storage'),
     ]);
 });
+    Route::post('register', [AuthController::class, 'register'])->prefix('auth');
+    Route::post('login', [AuthController::class, 'login'])->prefix('auth');
 Route::middleware(['throttle:60,1','block.bots'])->group(function () {
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
@@ -153,8 +155,7 @@ Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']
 Route::post('/website-lead', [IntegrationController::class, 'store_website']);
 Route::post('/website-lead/wordpress', [IntegrationController::class, 'store_wordpress']);
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
+
     Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);
     Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
     Route::get('users/role/{role}', [UserController::class, 'getByRole']);
