@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Listing;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -65,7 +66,7 @@ class ListingAccessRequestResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'converted_at' => $this->converted_at,
-            'converted_by' => $this->convertedBy?$this->convertedBy->name:'oia',
+            'converted_by' => $this->convertedBy ? User::shortName($this->convertedBy->name) : 'oia',
             'conversion_notes' => $this->conversion_notes,
             'show_all_column'=>$user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('team_lead') || $user->hasRole('manager'),
              // Listing details
@@ -77,9 +78,7 @@ class ListingAccessRequestResource extends JsonResource
                     'price' => $this->listing->price,
                     'size_sqft' => $this->listing->size_sqft,
                     'size_sqmt' => $this->listing->size_sqmt,
-                    'agent' => collect(explode(' ', $this->listing?->agent?->name))
-                        ->take(2)
-                        ->implode(' '),
+                    'agent' => User::shortName($this->listing?->agent?->name),
                       'agent_avatar' => $this->listing->agent && $this->listing->agent->avatar?asset('storage/'. $this->listing->agent->avatar):'',
                 ];
             }),
@@ -88,9 +87,7 @@ class ListingAccessRequestResource extends JsonResource
             'requested_by' =>
                  [
                     'id' => $this->requestedBy?->id,
-                    'name' => collect(explode(' ', $this->requestedBy?->name))
-                        ->take(2)
-                        ->implode(' '),
+                    'name' => User::shortName($this->requestedBy?->name),
                     'email' => $this->requestedBy?->email,
                     'phone' => $this->requestedBy?->phone,
                     'avatar' => $this->requestedBy && $this->requestedBy->avatar ?  asset('storage/'. $this->requestedBy->avatar) : null,
@@ -145,16 +142,12 @@ class ListingAccessRequestResource extends JsonResource
             'has_review' => !empty($this->review),
             'reviewed_by' => $this->reviewer ? [
                 'id' => $this->reviewer->id,
-                'name' =>  collect(explode(' ', $this->reviewer?->name))
-                        ->take(2)
-                        ->implode(' '),
+                'name' => User::shortName($this->reviewer?->name),
                 'avatar' => $this->reviewer->avatar
             ] : null,
             'handled_by' => $this->handledBy ? [
                 'id' => $this->handledBy->id,
-                'name' => collect(explode(' ', $this->handledBy?->name))
-                        ->take(2)
-                        ->implode(' '),
+                'name' => User::shortName($this->handledBy?->name),
                 'avatar' => $this->handledBy->avatar
                     ? asset('storage/' . $this->handledBy->avatar)
                     : null,

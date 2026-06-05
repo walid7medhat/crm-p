@@ -303,7 +303,7 @@ private function getTopListingPerformanceChart($currentUser, $user_hierarchy, ?C
             'x' => $x,
             'agents_label' => $x,
             'listings' => (int) $agent->listings_count,
-            'agent_name' => $agent->name,
+            'agent_name' => User::shortName($agent->name),
         ];
         $idx++;
     }
@@ -669,7 +669,7 @@ public function getMyLatestOrders()
                             'name' => $request->listing->propertyType->name ?? 'N/A'
                         ],
                         'agent' => [
-                            'name' => $request->listing->agent->name ?? 'N/A',
+                            'name' => User::shortName($request->listing->agent?->name) ?? 'N/A',
                             'avatar' => $request->listing->agent ?  asset('storage/'. $request->listing->agent->avatar) : null,
                         ]
                     ]
@@ -709,13 +709,13 @@ public function getMyLatestRequests()
             'status' => $request->status,
             'created_at' => $request->created_at,
             'request_from' => [
-                'name' => $request->requestedBy->name ?? 'N/A',
+                'name' => User::shortName($request->requestedBy?->name) ?? 'N/A',
                 'email' => $request->requestedBy->email ?? 'N/A',
                 'avatar' => $request->requestedBy->avatar ? asset('storage/'. $request->requestedBy->avatar) : 'N/A',
           
             ],
             'request_to' => [
-                'name' => $request->listing->agent->name ?? 'N/A',
+                'name' => User::shortName($request->listing->agent?->name) ?? 'N/A',
                 'email' => $request->listing->agent->email ?? 'N/A',
                   'avatar' => $request->listing->agent ?  asset('storage/'. $request->listing->agent->avatar) : null,
                 
@@ -789,7 +789,7 @@ public function getTopAgentPerformance(Request $request)
     ->map(function ($user) use ($currentUser) {
         return [
             'id' => $user->id,
-            'name' => $user->name,
+            'name' => User::shortName($user->name),
             'email' => $user->email,
             'avatar' => $user->avatar ?  asset('storage/'. $user->avatar) : null,
             'role' => $user->roles->first()->name ?? 'Agent',
@@ -860,13 +860,13 @@ public function getAdminLatestRequests()
             'status' => $request->status,
             'created_at' => $request->created_at,
             'request_from' => [
-                'name' => $request->requestedBy->name ?? 'N/A',
+                'name' => User::shortName($request->requestedBy?->name) ?? 'N/A',
                 'email' => $request->requestedBy->email ?? 'N/A',
                                 'avatar' => $request->requestedBy->avatar ? asset('storage/'. $request->requestedBy->avatar) : 'N/A',
 
             ],
             'request_to' => [
-                'name' => $request->listing->agent->name ?? 'N/A',
+                'name' => User::shortName($request->listing->agent?->name) ?? 'N/A',
                 'email' => $request->listing->agent->email ?? 'N/A',
                 
                                 'avatar' => $request->listing->agent->avatar ? asset('storage/'. $request->listing->agent->avatar) : 'N/A',
@@ -1090,7 +1090,7 @@ public function getPropertyTypesWithListings(Request $request)
                     'time' => $item->created_at?->format('g:i A'),
                     'title' => $item->listing?->title ?? 'Listing request',
                     'user' => [
-                        'name' => $item->requestedBy?->name,
+                        'name' => User::shortName($item->requestedBy?->name),
                         'avatar' => $item->requestedBy?->avatar
                             ? asset('storage/'.$item->requestedBy->getRawOriginal('avatar'))
                             : null,
