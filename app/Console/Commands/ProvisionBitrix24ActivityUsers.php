@@ -10,31 +10,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-/**
- * Provision Bitrix24 users into the local users table.
- *
- * Pulls the full user list from Bitrix24 (user.get) and, for each user not
- * already in our DB (matched by users.bitrix24_id, then by email), INSERTs them
- * and downloads their profile photo. Existing/linked users are left in place
- * (the photo is only backfilled when missing). New accounts are created
- * `in_active` with a default password. Every step is logged to the
- * `bitrix_users` channel and echoed to the console so insert progress is
- * visible.
- *
- * The provisioned users.bitrix24_id is what the lead "Activity" tile uses to
- * resolve LAST_ACTIVITY_BY to a real local user (see ResolvesLeadLastActivity).
- */
 class ProvisionBitrix24ActivityUsers extends Command
 {
     protected $signature = 'bitrix24:provision-users
         {--dry-run : Show what would happen without writing anything}
         {--limit=0 : Only process the first N Bitrix24 users (0 = all)}
-        {--active-only : Only fetch active Bitrix24 users (default also includes inactive)}
+        {--active-only : Only fetch active Bitrix24 users}
         {--no-photo : Skip downloading profile photos}';
 
-    protected $description = 'Insert all Bitrix24 users into the local DB (with photo) so the lead Activity person shows from saved data';
+    protected $description = 'Sync Bitrix24 users into local DB';
 
-    /** Default password for provisioned Bitrix24 accounts (created as in_active). */
     private const DEFAULT_PASSWORD = '123123123';
 
     public function handle(): int
@@ -44,94 +29,59 @@ class ProvisionBitrix24ActivityUsers extends Command
         $withPhoto = ! $this->option('no-photo');
         $activeOnly = (bool) $this->option('active-only');
 
-        $this->logBoth('info', 'START provisioning Bitrix24 users', [
-            'dry_run' => $dryRun,
-            'limit' => $limit ?: 'all',
-            'with_photo' => $withPhoto,
-            'active_only' => $activeOnly,
-        ]);
+        $client = new Bitrix24Client();
 
-        try {
-            $client = new Bitrix24Client();
-        } catch (\Throwable $e) {
-            $this->logBoth('error', 'Cannot build Bitrix24 client', ['error' => $e->getMessage()]);
-            $this->error('Bitrix24 is not configured: '.$e->getMessage());
-            return self::FAILURE;
-        }
-
-        $this->info('Fetching users from Bitrix24...');
-        try {
-            $remoteUsers = $this->fetchAllBitrixUsers($client, $activeOnly);
-        } catch (\Throwable $e) {
-            $this->logBoth('error', 'Failed to list Bitrix24 users', ['error' => $e->getMessage()]);
-            $this->error('Failed to fetch users from Bitrix24: '.$e->getMessage());
-            return self::FAILURE;
-        }
+        $remoteUsers = $this->fetchAllBitrixUsers($client, $activeOnly);
 
         if ($limit > 0) {
             $remoteUsers = array_slice($remoteUsers, 0, $limit);
         }
 
-        $total = count($remoteUsers);
-        if ($total === 0) {
-            $this->warn('Bitrix24 returned no users — nothing to do.');
-            return self::SUCCESS;
-        }
+        $stats = [
+            'created' => 0,
+            'linked' => 0,
+            'exists' => 0,
+            'photo' => 0,
+            'skipped' => 0,
+        ];
 
-        $stats = ['created' => 0, 'linked' => 0, 'exists' => 0, 'photo' => 0, 'skipped' => 0, 'errors' => 0];
-        $this->info("Processing {$total} Bitrix24 user(s).");
+        foreach ($remoteUsers as $i => $remote) {
 
-        foreach (array_values($remoteUsers) as $i => $remote) {
-            $position = $i + 1;
-            $b24Id = (int) ($remote['ID'] ?? 0);
-            if ($b24Id <= 0) {
+            $b24Id = (int)($remote['ID'] ?? 0);
+            if (!$b24Id) {
                 $stats['skipped']++;
                 continue;
             }
 
-            try {
-                $stats = $this->provisionUser($remote, $b24Id, $dryRun, $withPhoto, $position, $total, $stats);
-            } catch (\Throwable $e) {
-                $stats['errors']++;
-                $this->logBoth('error', 'Failed provisioning user', [
-                    'bitrix24_id' => $b24Id,
-                    'error' => $e->getMessage(),
-                ]);
-                $this->line("  [{$position}/{$total}] b24#{$b24Id} ❌ error: {$e->getMessage()}");
-            }
+            $stats = $this->provisionUser(
+                $remote,
+                $b24Id,
+                $dryRun,
+                $withPhoto,
+                $stats,
+                $i + 1,
+                count($remoteUsers)
+            );
         }
 
-        $this->logBoth('info', 'FINISHED provisioning Bitrix24 users', $stats);
-        $this->newLine();
-        $this->info(sprintf(
-            'Done. created=%d linked=%d already=%d photos=%d skipped=%d errors=%d%s',
-            $stats['created'], $stats['linked'], $stats['exists'], $stats['photo'],
-            $stats['skipped'], $stats['errors'], $dryRun ? ' (dry-run, nothing written)' : ''
-        ));
+        $this->info(json_encode($stats));
 
         return self::SUCCESS;
     }
 
-    /**
-     * Fetch every Bitrix24 user. By default merges active + inactive users
-     * (deduped by ID); --active-only restricts to active.
-     *
-     * @return array<int, array<string, mixed>>
-     */
     private function fetchAllBitrixUsers(Bitrix24Client $client, bool $activeOnly): array
     {
         $byId = [];
+
         foreach ($client->listUsers(['ACTIVE' => true]) as $user) {
-            $id = (int) ($user['ID'] ?? 0);
-            if ($id > 0) {
-                $byId[$id] = $user;
-            }
+            $id = (int)($user['ID'] ?? 0);
+            if ($id) $byId[$id] = $user;
         }
 
-        if (! $activeOnly) {
+        if (!$activeOnly) {
             foreach ($client->listUsers(['ACTIVE' => false]) as $user) {
-                $id = (int) ($user['ID'] ?? 0);
-                if ($id > 0 && ! isset($byId[$id])) {
+                $id = (int)($user['ID'] ?? 0);
+                if ($id && !isset($byId[$id])) {
                     $byId[$id] = $user;
                 }
             }
@@ -140,306 +90,167 @@ class ProvisionBitrix24ActivityUsers extends Command
         return array_values($byId);
     }
 
-    /**
-     * @param  array<string, mixed>  $remote
-     * @param  array<string, int>  $stats
-     * @return array<string, int>
-     */
     private function provisionUser(
-            array $remote,
-            int $b24Id,
-            bool $dryRun,
-            bool $withPhoto,
-            int $position,
-            int $total,
-            array $stats
-        ): array {
+        array $remote,
+        int $b24Id,
+        bool $dryRun,
+        bool $withPhoto,
+        array $stats,
+        int $pos,
+        int $total
+    ): array {
 
-            $prefix = "  [{$position}/{$total}] b24#{$b24Id}";
+        $prefix = "[{$pos}/{$total}] b24#{$b24Id}";
 
-            $name = $this->remoteName($remote, $b24Id);
-            $email = $this->remoteEmail($remote);
-            $photoUrl = $this->remotePhotoUrl($remote);
-            $matchName = $this->remoteRealName($remote);
+        $name = $this->remoteName($remote, $b24Id);
+        $email = $this->remoteEmail($remote);
+        $photoUrl = $this->remotePhotoUrl($remote);
 
-            /*
-            |--------------------------------------
-            | 1) Already linked by bitrix id
-            |--------------------------------------
-            */
-            $existing = User::where('bitrix24_id', $b24Id)->first();
+        /*
+        |--------------------------------------
+        | 1) MATCH BY BITRIX ID
+        |--------------------------------------
+        */
+        $user = User::where('bitrix24_id', $b24Id)->first();
 
-            if ($existing) {
-                $stats['exists']++;
+        if ($user) {
+            $stats['exists']++;
 
-                $this->line("{$prefix} ✓ exists (user #{$existing->id})");
+            $this->line("$prefix exists");
 
-                if (
-                    $withPhoto &&
-                    $this->avatarIsEmpty($existing) &&
-                    $photoUrl
-                ) {
-                    if ($this->applyPhoto($existing, $photoUrl, $b24Id, $dryRun)) {
-                        $stats['photo']++;
-                        $this->line("{$prefix} ↳ photo backfilled");
-                    }
-                }
-
-                return $stats;
-            }
-
-            /*
-            |--------------------------------------
-            | 2) HARD GUARD: email already exists
-            | (THIS FIXES YOUR ERROR)
-            |--------------------------------------
-            */
-            if ($email) {
-                $emailUser = User::where('email', $email)->first();
-
-                if ($emailUser) {
-                    $this->line("{$prefix} ⚠️ email exists → linking instead of creating");
-
-                    if (! $dryRun) {
-                        $emailUser->bitrix24_id = $b24Id;
-                        $emailUser->save();
-                    }
-
-                    $stats['linked']++;
-                    return $stats;
-                }
-            }
-
-            /*
-            |--------------------------------------
-            | 3) FUZZY MATCH (safe linking only)
-            |--------------------------------------
-            */
-            $bestMatch = null;
-            $bestScore = 0;
-
-            $users = User::query()
-                ->when($email, fn($q) => $q->orWhere('email', $email))
-                ->orWhereNotNull('name')
-                ->get();
-
-            $normalize = fn($s) =>
-                strtolower(trim(preg_replace('/\s+/', ' ', $s)));
-
-            foreach ($users as $user) {
-                $score = 0;
-
-                if ($email && $user->email === $email) {
-                    $score += 100;
-                }
-
-                if ($matchName && $user->name === $matchName) {
-                    $score += 50;
-                }
-
-                if ($matchName && str_contains(strtolower($user->name), strtolower($matchName))) {
-                    $score += 20;
-                }
-
-                if ($matchName) {
-                    $dist = levenshtein(
-                        $normalize($user->name),
-                        $normalize($matchName)
-                    );
-
-                    if ($dist <= 3) {
-                        $score += 10;
-                    }
-                }
-
-                if ($score > $bestScore) {
-                    $bestScore = $score;
-                    $bestMatch = $user;
-                }
-            }
-
-            if ($bestMatch && $bestScore >= 50) {
-
-                $this->line("🔗 fuzzy matched user #{$bestMatch->id} score={$bestScore}");
-
-                if (! $dryRun) {
-                    $bestMatch->bitrix24_id = $b24Id;
-                    $bestMatch->save();
-                }
-
-                $stats['linked']++;
-                return $stats;
-            }
-
-            /*
-            |--------------------------------------
-            | 4) FINAL SAFETY CHECK BEFORE CREATE
-            | (extra protection)
-            |--------------------------------------
-            */
-            if ($email && User::where('email', $email)->exists()) {
-                $this->line("{$prefix} ❌ skipped create (email already exists)");
-                $stats['skipped']++;
-                return $stats;
-            }
-
-            /*
-            |--------------------------------------
-            | 5) CREATE USER
-            |--------------------------------------
-            */
-            $avatarPath = ($withPhoto && $photoUrl)
-                ? $this->downloadPhoto($photoUrl, $b24Id, $dryRun)
-                : null;
-
-            $this->logBoth('info', 'Creating local user from Bitrix24', [
-                'bitrix24_id' => $b24Id,
-                'name' => $name,
-                'email' => $email,
-                'has_photo' => (bool) $avatarPath,
-            ]);
-
-            if (! $dryRun) {
-                $user = new User();
-                $user->name = $name;
-                $user->email = $email ?: $this->placeholderEmail($b24Id);
-                $user->password = self::DEFAULT_PASSWORD;
-                $user->status = 'in_active';
-                $user->bitrix24_id = $b24Id;
-
-                if ($avatarPath) {
-                    $user->avatar = $avatarPath;
-                }
-
-                $user->save();
-
-                $this->line("{$prefix} ➕ created user #{$user->id}");
-            } else {
-                $this->line("{$prefix} ➕ would create user ({$name})");
-            }
-
-            $stats['created']++;
-
-            if ($avatarPath) {
+            if ($withPhoto && $photoUrl && $this->avatarIsEmpty($user)) {
+                $this->applyPhoto($user, $photoUrl, $b24Id, $dryRun);
                 $stats['photo']++;
             }
 
             return $stats;
         }
 
-    /**
-     * @param  array<string, mixed>  $remote
-     */
-    private function remoteName(array $remote, int $b24Id): string
-    {
-        return $this->remoteRealName($remote)
-            ?? $this->remoteEmail($remote)
-            ?? "Bitrix24 user #{$b24Id}";
+        /*
+        |--------------------------------------
+        | 2) MATCH BY EMAIL OR NAME
+        |--------------------------------------
+        */
+
+        $normalizedName = $this->normalize($name);
+
+        $existingByEmail = $email
+            ? User::where('email', $email)->first()
+            : null;
+
+        $existingByName = User::whereRaw(
+            'LOWER(TRIM(name)) = ?',
+            [$normalizedName]
+        )->first();
+
+        $existingUser = $existingByEmail ?? $existingByName;
+
+        if ($existingUser) {
+
+            $this->line("$prefix update existing user");
+
+            if (!$dryRun) {
+
+                $existingUser->bitrix24_id = $b24Id;
+
+                if (empty($existingUser->name)) {
+                    $existingUser->name = $name;
+                }
+
+                $existingUser->save();
+
+                if ($withPhoto && $photoUrl) {
+                    $this->applyPhoto($existingUser, $photoUrl, $b24Id, $dryRun);
+                }
+            }
+
+            $stats['linked']++;
+            return $stats;
+        }
+
+        /*
+        |--------------------------------------
+        | 3) CREATE NEW USER
+        |--------------------------------------
+        */
+
+        $avatarPath = ($withPhoto && $photoUrl)
+            ? $this->downloadPhoto($photoUrl, $b24Id, $dryRun)
+            : null;
+
+        if (!$dryRun) {
+
+            $user = new User();
+            $user->name = $name;
+            $user->email = $email ?: $this->placeholderEmail($b24Id);
+            $user->password = self::DEFAULT_PASSWORD;
+            $user->status = 'in_active';
+            $user->bitrix24_id = $b24Id;
+
+            if ($avatarPath) {
+                $user->avatar = $avatarPath;
+            }
+
+            $user->save();
+
+            $this->line("$prefix created user #{$user->id}");
+        }
+
+        $stats['created']++;
+
+        if ($avatarPath) {
+            $stats['photo']++;
+        }
+
+        return $stats;
     }
 
-    /**
-     * The real Bitrix24 display name (NAME + LAST_NAME), or null if absent.
-     * Used for matching — never returns the "Bitrix24 user #id" placeholder.
-     *
-     * @param  array<string, mixed>  $remote
-     */
-    private function remoteRealName(array $remote): ?string
+    private function remoteName($remote, $id)
     {
-        $name = trim(($remote['NAME'] ?? '').' '.($remote['LAST_NAME'] ?? ''));
-        return $name !== '' ? $name : null;
+        return trim(($remote['NAME'] ?? '').' '.($remote['LAST_NAME'] ?? ''))
+            ?: ($remote['EMAIL'] ?? "Bitrix #$id");
     }
 
-    /**
-     * @param  array<string, mixed>  $remote
-     */
-    private function remoteEmail(array $remote): ?string
+    private function remoteEmail($remote)
     {
-        $email = $remote['EMAIL'] ?? null;
-        return is_string($email) && trim($email) !== '' ? trim($email) : null;
+        return $remote['EMAIL'] ?? null;
     }
 
-    /**
-     * @param  array<string, mixed>  $remote
-     */
-    private function remotePhotoUrl(array $remote): ?string
+    private function remotePhotoUrl($remote)
     {
-        $photo = $remote['PERSONAL_PHOTO'] ?? $remote['personal_photo'] ?? null;
-        return is_string($photo) && trim($photo) !== '' ? trim($photo) : null;
+        return $remote['PERSONAL_PHOTO'] ?? null;
     }
 
-    private function placeholderEmail(int $b24Id): string
+    private function normalize(string $s): string
     {
-        return "bitrix24.user.{$b24Id}@bitrix.local";
+        return strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+    }
+
+    private function placeholderEmail(int $id): string
+    {
+        return "bitrix24.user.$id@local.test";
     }
 
     private function avatarIsEmpty(User $user): bool
     {
-        $raw = $user->getRawOriginal('avatar');
-        return $raw === null || $raw === '' || $raw === 'users/user.png';
+        return empty($user->avatar);
     }
 
-    private function applyPhoto(User $user, string $photoUrl, int $b24Id, bool $dryRun): bool
+    private function applyPhoto(User $user, string $url, int $id, bool $dryRun): bool
     {
-        $path = $this->downloadPhoto($photoUrl, $b24Id, $dryRun);
-        if (! $path) {
-            return false;
-        }
-        if (! $dryRun) {
-            $user->avatar = $path;
-            $user->save();
-        }
+        if ($dryRun) return false;
+
+        $response = Http::get($url);
+
+        if (!$response->ok()) return false;
+
+        $path = "users/avatars/b24-$id-" . Str::random(6) . ".jpg";
+
+        Storage::disk('public')->put($path, $response->body());
+
+        $user->avatar = $path;
+        $user->save();
+
         return true;
-    }
-
-    /**
-     * Download a Bitrix24 personal photo to the public disk under users/avatars.
-     * Returns the stored relative path, or null on failure.
-     */
-    private function downloadPhoto(string $url, int $b24Id, bool $dryRun = false): ?string
-    {
-        if ($dryRun) {
-            return null;
-        }
-        try {
-            $response = Http::timeout(30)->get($url);
-            if (! $response->ok() || $response->body() === '') {
-                $this->logBoth('warning', 'Photo download failed', ['bitrix24_id' => $b24Id, 'status' => $response->status()]);
-                return null;
-            }
-
-            $extension = $this->guessExtension($response->header('Content-Type'), $url);
-            $path = 'users/avatars/bitrix24-'.$b24Id.'-'.Str::random(8).'.'.$extension;
-            Storage::disk('public')->put($path, $response->body());
-
-            return $path;
-        } catch (\Throwable $e) {
-            $this->logBoth('warning', 'Photo download error', ['bitrix24_id' => $b24Id, 'error' => $e->getMessage()]);
-            return null;
-        }
-    }
-
-    private function guessExtension(?string $contentType, string $url): string
-    {
-        $map = [
-            'image/jpeg' => 'jpg',
-            'image/jpg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-        ];
-        $type = explode(';', strtolower(trim((string) $contentType)))[0];
-        if (isset($map[$type])) {
-            return $map[$type];
-        }
-        $ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION));
-        return in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? ($ext === 'jpeg' ? 'jpg' : $ext) : 'jpg';
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
-    private function logBoth(string $level, string $message, array $context = []): void
-    {
-        Log::channel('bitrix_users')->{$level}($message, $context);
     }
 }
