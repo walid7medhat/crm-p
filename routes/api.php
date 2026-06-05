@@ -146,8 +146,8 @@ Route::get('/test-server', function() {
         'storage_working' => class_exists('Illuminate\Support\Facades\Storage'),
     ]);
 });
-    Route::post('register', [AuthController::class, 'register'])->prefix('auth');
-    Route::post('login', [AuthController::class, 'login'])->prefix('auth');
+    Route::post('auth/register', [AuthController::class, 'register']);
+    Route::post('auth/login', [AuthController::class, 'login']);
 Route::middleware(['throttle:60,1','block.bots'])->group(function () {
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
