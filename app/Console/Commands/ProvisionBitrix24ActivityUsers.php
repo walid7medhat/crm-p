@@ -173,32 +173,65 @@ class ProvisionBitrix24ActivityUsers extends Command
         }
 
         // 2) Match an existing local user by email OR name → link (set bitrix24_id).
-        $matchName = $this->remoteRealName($remote); // real name only, never the placeholder
-        $match = ($email || $matchName)
-            ? User::query()
-                ->where(function ($q) use ($email, $matchName) {
-                    if ($email) {
-                        $q->orWhere('email', $email);
-                    }
-                    if ($matchName) {
-                        $q->orWhere('name', $matchName);
-                    }
-                })
-                ->first()
-            : null;
-        if ($match) {
-            $by = ($email && strcasecmp((string) $match->email, $email) === 0) ? "email {$email}" : "name {$match->name}";
-            $this->logBoth('info', 'Linking existing local user to Bitrix24 id', [
-                'bitrix24_id' => $b24Id, 'user_id' => $match->id, 'matched_by' => $by,
-            ]);
-            $this->line("{$prefix} 🔗 linked to existing user #{$match->id} (by {$by})");
-            if (! $dryRun) {
-                $match->bitrix24_id = $b24Id;
-                if ($withPhoto && $this->avatarIsEmpty($match) && $photoUrl) {
-                    $match->avatar = $this->downloadPhoto($photoUrl, $b24Id);
-                }
-                $match->save();
+        $matchName = $this->remoteRealName($remote);
+        $email = $this->remoteEmail($remote);
+
+        $bestMatch = null;
+        $bestScore = 0;
+
+        $users = User::query()
+            ->when($email, fn($q) => $q->orWhere('email', $email))
+            ->orWhereNotNull('name')
+            ->get();
+
+        $normalize = fn($s) => strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+
+        foreach ($users as $user) {
+            $score = 0;
+
+            // 1) Email exact match (strong)
+            if ($email && $user->email === $email) {
+                $score += 100;
             }
+
+            // 2) Exact name match
+            if ($matchName && $user->name === $matchName) {
+                $score += 50;
+            }
+
+            // 3) LIKE match
+            if ($matchName && str_contains(strtolower($user->name), strtolower($matchName))) {
+                $score += 20;
+            }
+
+            // 4) fuzzy match (levenshtein)
+            if ($matchName) {
+                $dist = levenshtein(
+                    $normalize($user->name),
+                    $normalize($matchName)
+                );
+
+                if ($dist <= 3) {
+                    $score += 10;
+                }
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestMatch = $user;
+            }
+        }
+
+        // threshold عشان ما نعملش linking غلط
+        if ($bestMatch && $bestScore >= 50) {
+
+            $this->line("🔗 matched user #{$bestMatch->id} score={$bestScore}");
+
+            if (! $dryRun) {
+                $bestMatch->bitrix24_id = $b24Id;
+                $bestMatch->save();
+            }
+
             $stats['linked']++;
             return $stats;
         }
