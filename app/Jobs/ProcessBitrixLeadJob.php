@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\BitrixSyncState;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Bus\Queueable;
@@ -41,7 +42,14 @@ class ProcessBitrixLeadJob implements ShouldQueue
             $client   = new Bitrix24Client();
             $importer = new Bitrix24LeadImporter($client, $this->userId);
 
-            $importer->importOne($this->b24);
+            $result = $importer->importOne($this->b24);
+
+            // Tally the live counters the UI reads. The page-walker only bumps
+            // `processed` (leads dispatched); the actual new-vs-existing outcome is
+            // only known here, after importOne runs. Atomic SQL increments avoid
+            // races between the parallel 'bitrix' queue workers.
+            $column = ($result['created'] ?? false) ? 'new_count' : 'existing_count';
+            BitrixSyncState::where('key', 'global_sync')->increment($column);
 
         } catch (\Throwable $e) {
             Log::error('Process lead failed', [
@@ -55,5 +63,15 @@ class ProcessBitrixLeadJob implements ShouldQueue
             // payload + per-instance caches) so it's freed before the next job.
             unset($importer, $client);
         }
+    }
+
+    /**
+     * Runs once after all retries are exhausted — count the lead as a hard error
+     * so the UI's "Errors" tile reflects leads that genuinely failed to import
+     * (incrementing in handle()'s catch would over-count every retry attempt).
+     */
+    public function failed(\Throwable $e): void
+    {
+        BitrixSyncState::where('key', 'global_sync')->increment('error_count');
     }
 }
