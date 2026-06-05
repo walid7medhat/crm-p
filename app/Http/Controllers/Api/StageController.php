@@ -404,6 +404,17 @@ class StageController extends Controller
                 }
                 if ($request->filled('search')) {
                     $search = $request->search;
+                        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
+                        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
+                    
+                        if ($search === 'website') {
+                            $expanded = $websitePartials;
+                        } elseif ($search === 'portal') {
+                            $expanded = $portalPartials;
+                        } else {
+                            $expanded = [$search];
+                        }
+
                     $q->where(function ($s) use ($search) {
                         $s->where('lead_name', 'like', "%{$search}%")
                           ->orWhere('lead_number', 'like', "%{$search}%")
@@ -442,6 +453,14 @@ class StageController extends Controller
                           ->orWhereHas('integration', function ($st) use ($search) {
                               $st->where('track_keyword', 'like', "%{$search}%");
                           });
+                          if (!empty($expanded)) {
+                                $s->orWhere(function ($exp) use ($expanded) {
+                                    foreach ($expanded as $term) {
+                                        $exp->orWhere('lead_source', 'like', "%{$term}%")
+                                            ->orWhere('more_information', 'like', "%{$term}%");
+                                    }
+                                });
+                            }
                     });
                 }
             });
@@ -733,6 +752,18 @@ class StageController extends Controller
                 }
                 if ($request->filled('search')) {
                     $search = $request->search;
+                    
+                        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
+                        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
+                    
+                        if ($search === 'website') {
+                            $expanded = $websitePartials;
+                        } elseif ($search === 'portal') {
+                            $expanded = $portalPartials;
+                        } else {
+                            $expanded = [$search];
+                        }
+
                     $leadsQuery->where(function ($s) use ($search) {
                         $s->where('lead_name', 'like', "%{$search}%")
                           ->orWhere('lead_number', 'like', "%{$search}%")
@@ -771,6 +802,14 @@ class StageController extends Controller
                           ->orWhereHas('integration', function ($st) use ($search) {
                               $st->where('track_keyword', 'like', "%{$search}%");
                           });
+                          if (!empty($expanded)) {
+                                $s->orWhere(function ($exp) use ($expanded) {
+                                    foreach ($expanded as $term) {
+                                        $exp->orWhere('lead_source', 'like', "%{$term}%")
+                                            ->orWhere('more_information', 'like', "%{$term}%");
+                                    }
+                                });
+                            }
                     });
                 }
                  // ================= pagination =================
@@ -1166,7 +1205,7 @@ public function getOffices()
     }
     private function applyLeadSourceFilter($query, Request $request): void
 {
-    if (! $request->filled('source') && !$request->filled('search')) {
+    if (! $request->filled('source') ) {
         return;
     }
 
@@ -1179,7 +1218,7 @@ public function getOffices()
         return [$value];
     };
 
-    $src = $request->source??$request->search;
+    $src = $request->source;
 
     if (is_array($src)) {
         $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
