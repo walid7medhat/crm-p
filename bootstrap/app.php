@@ -58,10 +58,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
-            $schedule->command('leads:check-revert')
-                    ->everyMinute()
-                    ->withoutOverlapping()
-                    ->appendOutputTo(storage_path('logs/lead-revert.log'));
+            // $schedule->command('leads:check-revert')
+            //         ->everyMinute()
+            //         ->withoutOverlapping()
+            //         ->appendOutputTo(storage_path('logs/lead-revert.log'));
                     
                     
         $schedule->command('activities:send-reminders')->everyMinute();
