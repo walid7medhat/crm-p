@@ -253,4 +253,105 @@ class ProvisionBitrix24ActivityUsers extends Command
 
         return true;
     }
+        /**
+
+     * Download a Bitrix24 personal photo to the public disk under users/avatars.
+
+     * Returns the stored relative path, or null on failure.
+
+     */
+
+    private function downloadPhoto(string $url, int $b24Id, bool $dryRun = false): ?string
+
+    {
+
+        if ($dryRun) {
+
+            return null;
+
+        }
+
+        try {
+
+            $response = Http::timeout(30)->get($url);
+
+            if (! $response->ok() || $response->body() === '') {
+
+                $this->logBoth('warning', 'Photo download failed', ['bitrix24_id' => $b24Id, 'status' => $response->status()]);
+
+                return null;
+
+            }
+
+
+
+            $extension = $this->guessExtension($response->header('Content-Type'), $url);
+
+            $path = 'users/avatars/bitrix24-'.$b24Id.'-'.Str::random(8).'.'.$extension;
+
+            Storage::disk('public')->put($path, $response->body());
+
+
+
+            return $path;
+
+        } catch (\Throwable $e) {
+
+            $this->logBoth('warning', 'Photo download error', ['bitrix24_id' => $b24Id, 'error' => $e->getMessage()]);
+
+            return null;
+
+        }
+
+    }
+
+
+
+    private function guessExtension(?string $contentType, string $url): string
+
+    {
+
+        $map = [
+
+            'image/jpeg' => 'jpg',
+
+            'image/jpg' => 'jpg',
+
+            'image/png' => 'png',
+
+            'image/gif' => 'gif',
+
+            'image/webp' => 'webp',
+
+        ];
+
+        $type = explode(';', strtolower(trim((string) $contentType)))[0];
+
+        if (isset($map[$type])) {
+
+            return $map[$type];
+
+        }
+
+        $ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION));
+
+        return in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? ($ext === 'jpeg' ? 'jpg' : $ext) : 'jpg';
+
+    }
+
+
+
+    /**
+
+     * @param  array<string, mixed>  $context
+
+     */
+
+    private function logBoth(string $level, string $message, array $context = []): void
+
+    {
+
+        Log::channel('bitrix_users')->{$level}($message, $context);
+
+    }
 }
