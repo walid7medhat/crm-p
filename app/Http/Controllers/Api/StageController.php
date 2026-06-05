@@ -15,7 +15,6 @@ use App\Models\Stage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Lead;
-use App\Models\LeadHistory;
 use App\Models\User;
 use DB;
 use Illuminate\Support\Facades\Schema;
@@ -516,8 +515,8 @@ class StageController extends Controller
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-            KanbanLeadCardResource::setKanbanDbActivity(
-                $this->kanbanDbActivityForLeads($allLeadsForMeta)
+            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
+                $this->kanbanActivityUsersForLeads($allLeadsForMeta)
             );
 
             foreach ($stagesWithLeads as &$stageRow) {
@@ -837,8 +836,8 @@ class StageController extends Controller
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($leadsCollection);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($leadsCollection);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-            KanbanLeadCardResource::setKanbanDbActivity(
-                $this->kanbanDbActivityForLeads($leadsCollection)
+            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
+                $this->kanbanActivityUsersForLeads($leadsCollection)
             );
 
             $leadsPayload = KanbanLeadCardResource::collection($leadsCollection)->resolve();
@@ -1273,52 +1272,43 @@ public function getOffices()
      * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
      * @return array<int, array{user: \App\Models\User|null, at: mixed}>
      */
-    private function kanbanDbActivityForLeads($leads): array
+    /**
+     * Batch-resolve the "Activity" person for Kanban cards: the local users
+     * provisioned from Bitrix24 (users.bitrix24_id), keyed by Bitrix24 user id.
+     * Every referenced Bitrix24 id is present as a key (null when not yet
+     * provisioned) so the resource never falls back to a per-card query.
+     *
+     * @param  iterable<int, \App\Models\Lead>  $leads
+     * @return array<int, \App\Models\User|null>
+     */
+    private function kanbanActivityUsersForLeads($leads): array
     {
-        $leadIds = collect($leads)->pluck('id')->filter()->unique()->values()->all();
-        if ($leadIds === []) {
+        $b24Ids = collect($leads)
+            ->pluck('bitrix24_last_activity_by_id')
+            ->filter()
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($b24Ids === []) {
             return [];
         }
 
-        // Most recent history row per lead that was performed by a real user.
-        $histories = LeadHistory::query()
-            ->whereIn('lead_id', $leadIds)
-            ->whereNotNull('user_id')
-            ->orderBy('created_at', 'desc')
-            ->get(['id', 'lead_id', 'user_id', 'created_at']);
+        $map = array_fill_keys($b24Ids, null);
 
-        $latestByLead = [];
-        foreach ($histories as $history) {
-            $leadId = (int) $history->lead_id;
-            if (! isset($latestByLead[$leadId])) {
-                $latestByLead[$leadId] = $history;
-            }
-        }
+        $users = User::query()
+            ->whereIn('bitrix24_id', $b24Ids)
+            ->with([
+                'parent:id,name,avatar',
+                'roles:id,name',
+                'employeeProfile.companyBranch:id,name',
+                'employeeProfile.designation:id,name',
+            ])
+            ->get(['id', 'bitrix24_id', 'name', 'avatar', 'email', 'parent_id']);
 
-        $userIds = array_values(array_unique(array_map(
-            static fn ($history) => (int) $history->user_id,
-            $latestByLead
-        )));
-
-        $users = $userIds === []
-            ? collect()
-            : User::query()
-                ->whereIn('id', $userIds)
-                ->with([
-                    'parent:id,name,avatar',
-                    'roles:id,name',
-                    'employeeProfile.companyBranch:id,name',
-                    'employeeProfile.designation:id,name',
-                ])
-                ->get(['id', 'name', 'avatar', 'email', 'parent_id'])
-                ->keyBy('id');
-
-        $map = [];
-        foreach ($latestByLead as $leadId => $history) {
-            $map[$leadId] = [
-                'user' => $users->get((int) $history->user_id),
-                'at' => $history->created_at,
-            ];
+        foreach ($users as $user) {
+            $map[(int) $user->bitrix24_id] = $user;
         }
 
         return $map;

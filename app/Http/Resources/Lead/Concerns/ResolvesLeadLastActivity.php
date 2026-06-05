@@ -8,29 +8,31 @@ use App\Models\User;
 /**
  * "Last activity" person + time for the lead card "Activity" tile.
  *
- * The activity person is resolved from the local database (lead_histories →
- * the user who performed the most recent action), NOT from the Bitrix24 mirror
- * columns. For the Kanban board the controller batch-resolves these once
- * (setKanbanDbActivity) so each card doesn't run its own history query.
+ * The activity person is the Bitrix24 LAST_ACTIVITY_BY user, resolved to a
+ * LOCAL database user via users.bitrix24_id. Those local users are provisioned
+ * (created + photo downloaded) from Bitrix24 by the
+ * `bitrix24:provision-activity-users` command, so the card always renders a
+ * real saved DB user — we never call Bitrix24 here on the read path.
+ *
+ * For the Kanban board the controller batch-loads these users once
+ * (setKanbanActivityUsersByBitrixId) to avoid a per-card query.
  */
 trait ResolvesLeadLastActivity
 {
-    /** @var array<int, array{user: User|null, at: mixed}> lead id => resolved activity */
-    protected static array $kanbanDbActivityByLeadId = [];
+    /** @var array<int, User|null> bitrix24 user id => local user (null = resolved, none found) */
+    protected static array $kanbanActivityUsersByBitrixId = [];
 
     /**
-     * Pre-resolved per-lead activity for the Kanban board (avoids per-card queries).
-     *
-     * @param  array<int, array{user: User|null, at: mixed}>  $map
+     * @param  array<int, User|null>  $map
      */
-    public static function setKanbanDbActivity(array $map): void
+    public static function setKanbanActivityUsersByBitrixId(array $map): void
     {
-        static::$kanbanDbActivityByLeadId = $map;
+        static::$kanbanActivityUsersByBitrixId = $map;
     }
 
     public static function clearKanbanActivityUsers(): void
     {
-        static::$kanbanDbActivityByLeadId = [];
+        static::$kanbanActivityUsersByBitrixId = [];
     }
 
     /**
@@ -38,34 +40,47 @@ trait ResolvesLeadLastActivity
      */
     protected function resolveLastActivity(bool $includeHistoryFallback = true): array
     {
-        // Kanban board: use the batch-resolved map so we don't query per card.
-        if (array_key_exists((int) $this->id, static::$kanbanDbActivityByLeadId)) {
-            $entry = static::$kanbanDbActivityByLeadId[(int) $this->id];
+        $lastActivityAt = $this->bitrix24_last_activity_at;
+        $lastActivityUser = $this->resolveBitrixActivityUser();
 
-            return [
-                $entry['at'] ?? $this->updated_at,
-                $entry['user'] ?? null,
-            ];
-        }
+        // Non-Bitrix leads (or Bitrix users not yet provisioned) fall back to the
+        // most recent local history row performed by a real user.
+        if ($includeHistoryFallback && (! $lastActivityUser || ! $lastActivityAt)) {
+            $latest = $this->histories()
+                ->whereNotNull('user_id')
+                ->whereHas('user')
+                ->first();
 
-        // Detail path: resolve straight from the database history — the most
-        // recent action performed by a real local user.
-        $latestWithUser = $this->histories()
-            ->whereNotNull('user_id')
-            ->whereHas('user')
-            ->first();
-
-        $lastActivityUser = $latestWithUser?->user;
-        $lastActivityAt = $latestWithUser?->created_at;
-
-        if (! $lastActivityAt && $includeHistoryFallback) {
-            $lastActivityAt = $this->histories()->first()?->created_at;
+            if ($latest) {
+                $lastActivityAt = $lastActivityAt ?? $latest->created_at;
+                $lastActivityUser = $lastActivityUser ?? $latest->user;
+            }
         }
 
         return [
             $lastActivityAt ?? $this->updated_at,
             $lastActivityUser,
         ];
+    }
+
+    /** Local user provisioned from the lead's Bitrix24 LAST_ACTIVITY_BY id. */
+    protected function resolveBitrixActivityUser(): ?User
+    {
+        $b24Id = $this->bitrix24_last_activity_by_id
+            ? (int) $this->bitrix24_last_activity_by_id
+            : null;
+
+        if (! $b24Id) {
+            return null;
+        }
+
+        // Kanban board: served from the batch map (key is present even when null,
+        // so we never fall through to a per-card query).
+        if (array_key_exists($b24Id, static::$kanbanActivityUsersByBitrixId)) {
+            return static::$kanbanActivityUsersByBitrixId[$b24Id];
+        }
+
+        return User::where('bitrix24_id', $b24Id)->first();
     }
 
     /**
@@ -88,7 +103,7 @@ trait ResolvesLeadLastActivity
 
         return array_merge($payload, [
             'is_external' => false,
-            'bitrix24_id' => null,
+            'bitrix24_id' => $user->bitrix24_id,
             'branch_name' => $payload['branch'] ?? $user->employeeProfile?->companyBranch?->name,
             'parent_name' => $payload['parent_name'] ?? $user->parent?->name,
         ]);

@@ -131,6 +131,11 @@ return [
         'path' => storage_path('logs/bitrix-resolve.log'),
         'level' => 'debug',
     ],
+    'bitrix_users' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/bitrix-users.log'),
+        'level' => 'debug',
+    ],
     ],
 
 ];

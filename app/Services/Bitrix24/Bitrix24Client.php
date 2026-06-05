@@ -460,4 +460,29 @@ class Bitrix24Client
         Cache::put($key, $user ?? false, 3600);
         return $user;
     }
+
+    /**
+     * Fetch every Bitrix24 user, paging through user.get (50 rows per page).
+     * Pass a FILTER (e.g. ['ACTIVE' => false]) to scope the result.
+     *
+     * @param  array<string, mixed>  $filter
+     * @return array<int, array<string, mixed>>
+     */
+    public function listUsers(array $filter = []): array
+    {
+        $all = [];
+        $start = 0;
+        do {
+            $params = ['start' => $start];
+            if ($filter !== []) {
+                $params['FILTER'] = $filter;
+            }
+            $r = $this->call('user.get', $params);
+            $page = $r['result'] ?? [];
+            $all = array_merge($all, $page);
+            $start = isset($r['next']) ? (int) $r['next'] : null;
+        } while ($start !== null && $page !== []);
+
+        return $all;
+    }
 }
