@@ -63,6 +63,29 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             'lead_assign_daily_count' => 'integer',
         ];
     }
+    /**
+     * Trim a user's name down to its first two words (e.g. first + last name).
+     * Returns null when the name is empty.
+     */
+    public static function shortName(?string $name): ?string
+{
+    if ($name === null || trim($name) === '') {
+        return null;
+    }
+
+    // normalize spaces
+    $clean = trim(preg_replace('/\s+/', ' ', $name));
+
+    $parts = explode(' ', $clean);
+
+    if (count($parts) === 1) {
+        return $parts[0]; // اسم واحد بس
+    }
+
+    // first + last
+    return $parts[0] . ' ' . end($parts);
+}
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

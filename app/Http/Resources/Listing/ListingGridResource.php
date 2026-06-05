@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Helpers\ImageHelper;
 use App\Models\ListingAccessRequest;
+use App\Models\User;
 
 class ListingGridResource extends JsonResource
 {
@@ -73,13 +74,13 @@ class ListingGridResource extends JsonResource
                 'approved_by' => $this->whenLoaded('approvedBy', function() {
                     return [
                         'id' => $this->approvedBy->id,
-                        'name' => $this->approvedBy->name,
+                        'name' => User::shortName($this->approvedBy->name),
                     ];
                 }),
                 'approval_status' => $this->approved ? 'approved' : 'pending',
                    'rejection_reason'=>$this->rejection_reason,
             'rejected_by'=>$this->rejected_by,
-            'rejected_by_name'=>$this->rejectedBy?->name,
+            'rejected_by_name'=>User::shortName($this->rejectedBy?->name),
             'is_active'=>(bool)$this->is_active,
             'is_archived'=>(bool)$this->is_archived,
             'is_hot_deal'=>$this->is_hot_deal =='Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at ? $this->is_hot_deal :'No',
@@ -121,7 +122,7 @@ class ListingGridResource extends JsonResource
           'agent' => $this->whenLoaded('agent', function () {
                 return [
                     'id' => $this->agent->id,
-                    'name' => $this->agent->name,
+                    'name' => User::shortName($this->agent->name),
                     'email' => $this->agent->email,
                 'avatar' => $this->avatar ?  $this->avatar : null,
                 ];

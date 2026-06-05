@@ -273,7 +273,7 @@ public function show(User $user): JsonResponse
         ]);
 
         return ApiResponse::success(
-            new UserResource($user),
+            (new UserResource($user))->withFullName(),
             'User retrieved successfully'
         );
     } catch (\Exception $e) {
@@ -338,7 +338,7 @@ public function show(User $user): JsonResponse
             $user->load(['roles', 'parent']);
 
             return ApiResponse::success(
-                new UserResource($user),
+                (new UserResource($user))->withFullName(),
                 'User updated successfully'
             );
         } catch (\Exception $e) {

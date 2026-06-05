@@ -969,20 +969,20 @@ public function getTeamsWithLeads(Request $request): JsonResponse
                 
                 return [
                     'id' => $user->id,
-                   'name' => implode(' ', array_slice(explode(' ', $user->name), 0, 2)),
+                   'name' =>User::shortName($user->name),
                     'email' => $user->email,
                     'team_size' => $teamSize,
                     'role' => $user->roles->pluck('name')->first(),
                     'parent_id' => $user->parent_id,
                     'admin_parent_id' => $adminParent ? $adminParent->id : null,
-                    'admin_parent_name' => $adminParent ? $adminParent?->name : null,
+                    'admin_parent_name' => $adminParent ? User::shortName($adminParent?->name) : null,
                     'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                     'role_name' => $user->roles()->first()?->name,
                        'team_id'=>$user->parent?->id,
-                       'parent_name' => implode(' ', array_slice(explode(' ', $user->parent?->name), 0, 2)),
+                       'parent_name' => User::shortName($user->parent?->name),
                         'branch_id' => $user->office?->id,
 
-                        'branch_name' => $user->office?->name
+                        'branch_name' => User::shortName($user->office?->name)
                 ];
             });
 

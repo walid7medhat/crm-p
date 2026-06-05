@@ -23,7 +23,7 @@ class ProfileController extends Controller
             
             return response()->json([
                 'success' => true,
-                'data' => new UserResource($user),
+                'data' => (new UserResource($user))->withFullName(),
                 'message' => 'Profile retrieved successfully'
             ]);
             
@@ -69,7 +69,7 @@ class ProfileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => new UserResource($user),
+                'data' => (new UserResource($user))->withFullName(),
                 'message' => 'Profile updated successfully'
             ]);
 

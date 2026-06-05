@@ -105,7 +105,7 @@ trait ResolvesLeadLastActivity
             'is_external' => false,
             'bitrix24_id' => $user->bitrix24_id,
             'branch_name' => $payload['branch'] ?? $user->employeeProfile?->companyBranch?->name,
-            'parent_name' => $payload['parent_name'] ?? $user->parent?->name,
+            'parent_name' => $payload['parent_name'] ?? User::shortName($user->parent?->name),
         ]);
     }
 }
