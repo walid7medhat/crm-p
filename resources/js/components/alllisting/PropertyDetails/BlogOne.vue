@@ -5458,7 +5458,7 @@ const createGallerySlide = (imagesChunk) => {
  */
 const getProjectImageBySlot = (slot) => {
   const project = property.value?.project || {};
-  const list = Array.isArray(project.images) ? project.gallery_images : [];
+  const list = Array.isArray(project.gallery_images) ? project.gallery_images : [];
   if (list.length > 0) {
     const byOrder = list.find((img) => Number(img?.sort_order) === Number(slot));
     if (byOrder?.image_url) return getImageUrl(byOrder.image_url);
