@@ -146,126 +146,186 @@ class ProvisionBitrix24ActivityUsers extends Command
      * @return array<string, int>
      */
     private function provisionUser(
-        array $remote,
-        int $b24Id,
-        bool $dryRun,
-        bool $withPhoto,
-        int $position,
-        int $total,
-        array $stats
-    ): array {
-        $prefix = "  [{$position}/{$total}] b24#{$b24Id}";
+            array $remote,
+            int $b24Id,
+            bool $dryRun,
+            bool $withPhoto,
+            int $position,
+            int $total,
+            array $stats
+        ): array {
 
-        $name = $this->remoteName($remote, $b24Id);
-        $email = $this->remoteEmail($remote);
-        $photoUrl = $this->remotePhotoUrl($remote);
+            $prefix = "  [{$position}/{$total}] b24#{$b24Id}";
 
-        // 1) Already provisioned by Bitrix24 id → only backfill a missing photo.
-        $existing = User::where('bitrix24_id', $b24Id)->first();
-        if ($existing) {
-            $stats['exists']++;
-            $this->line("{$prefix} ✓ exists (user #{$existing->id} {$existing->name})");
-            if ($withPhoto && $this->avatarIsEmpty($existing) && $photoUrl && $this->applyPhoto($existing, $photoUrl, $b24Id, $dryRun)) {
-                $stats['photo']++;
-                $this->line("{$prefix}    ↳ photo backfilled");
-            }
-            return $stats;
-        }
+            $name = $this->remoteName($remote, $b24Id);
+            $email = $this->remoteEmail($remote);
+            $photoUrl = $this->remotePhotoUrl($remote);
+            $matchName = $this->remoteRealName($remote);
 
-        // 2) Match an existing local user by email OR name → link (set bitrix24_id).
-        $matchName = $this->remoteRealName($remote);
-        $email = $this->remoteEmail($remote);
+            /*
+            |--------------------------------------
+            | 1) Already linked by bitrix id
+            |--------------------------------------
+            */
+            $existing = User::where('bitrix24_id', $b24Id)->first();
 
-        $bestMatch = null;
-        $bestScore = 0;
+            if ($existing) {
+                $stats['exists']++;
 
-        $users = User::query()
-            ->when($email, fn($q) => $q->orWhere('email', $email))
-            ->orWhereNotNull('name')
-            ->get();
+                $this->line("{$prefix} ✓ exists (user #{$existing->id})");
 
-        $normalize = fn($s) => strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+                if (
+                    $withPhoto &&
+                    $this->avatarIsEmpty($existing) &&
+                    $photoUrl
+                ) {
+                    if ($this->applyPhoto($existing, $photoUrl, $b24Id, $dryRun)) {
+                        $stats['photo']++;
+                        $this->line("{$prefix} ↳ photo backfilled");
+                    }
+                }
 
-        foreach ($users as $user) {
-            $score = 0;
-
-            // 1) Email exact match (strong)
-            if ($email && $user->email === $email) {
-                $score += 100;
+                return $stats;
             }
 
-            // 2) Exact name match
-            if ($matchName && $user->name === $matchName) {
-                $score += 50;
-            }
+            /*
+            |--------------------------------------
+            | 2) HARD GUARD: email already exists
+            | (THIS FIXES YOUR ERROR)
+            |--------------------------------------
+            */
+            if ($email) {
+                $emailUser = User::where('email', $email)->first();
 
-            // 3) LIKE match
-            if ($matchName && str_contains(strtolower($user->name), strtolower($matchName))) {
-                $score += 20;
-            }
+                if ($emailUser) {
+                    $this->line("{$prefix} ⚠️ email exists → linking instead of creating");
 
-            // 4) fuzzy match (levenshtein)
-            if ($matchName) {
-                $dist = levenshtein(
-                    $normalize($user->name),
-                    $normalize($matchName)
-                );
+                    if (! $dryRun) {
+                        $emailUser->bitrix24_id = $b24Id;
+                        $emailUser->save();
+                    }
 
-                if ($dist <= 3) {
-                    $score += 10;
+                    $stats['linked']++;
+                    return $stats;
                 }
             }
 
-            if ($score > $bestScore) {
-                $bestScore = $score;
-                $bestMatch = $user;
+            /*
+            |--------------------------------------
+            | 3) FUZZY MATCH (safe linking only)
+            |--------------------------------------
+            */
+            $bestMatch = null;
+            $bestScore = 0;
+
+            $users = User::query()
+                ->when($email, fn($q) => $q->orWhere('email', $email))
+                ->orWhereNotNull('name')
+                ->get();
+
+            $normalize = fn($s) =>
+                strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+
+            foreach ($users as $user) {
+                $score = 0;
+
+                if ($email && $user->email === $email) {
+                    $score += 100;
+                }
+
+                if ($matchName && $user->name === $matchName) {
+                    $score += 50;
+                }
+
+                if ($matchName && str_contains(strtolower($user->name), strtolower($matchName))) {
+                    $score += 20;
+                }
+
+                if ($matchName) {
+                    $dist = levenshtein(
+                        $normalize($user->name),
+                        $normalize($matchName)
+                    );
+
+                    if ($dist <= 3) {
+                        $score += 10;
+                    }
+                }
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = $user;
+                }
             }
-        }
 
-        // threshold عشان ما نعملش linking غلط
-        if ($bestMatch && $bestScore >= 50) {
+            if ($bestMatch && $bestScore >= 50) {
 
-            $this->line("🔗 matched user #{$bestMatch->id} score={$bestScore}");
+                $this->line("🔗 fuzzy matched user #{$bestMatch->id} score={$bestScore}");
+
+                if (! $dryRun) {
+                    $bestMatch->bitrix24_id = $b24Id;
+                    $bestMatch->save();
+                }
+
+                $stats['linked']++;
+                return $stats;
+            }
+
+            /*
+            |--------------------------------------
+            | 4) FINAL SAFETY CHECK BEFORE CREATE
+            | (extra protection)
+            |--------------------------------------
+            */
+            if ($email && User::where('email', $email)->exists()) {
+                $this->line("{$prefix} ❌ skipped create (email already exists)");
+                $stats['skipped']++;
+                return $stats;
+            }
+
+            /*
+            |--------------------------------------
+            | 5) CREATE USER
+            |--------------------------------------
+            */
+            $avatarPath = ($withPhoto && $photoUrl)
+                ? $this->downloadPhoto($photoUrl, $b24Id, $dryRun)
+                : null;
+
+            $this->logBoth('info', 'Creating local user from Bitrix24', [
+                'bitrix24_id' => $b24Id,
+                'name' => $name,
+                'email' => $email,
+                'has_photo' => (bool) $avatarPath,
+            ]);
 
             if (! $dryRun) {
-                $bestMatch->bitrix24_id = $b24Id;
-                $bestMatch->save();
+                $user = new User();
+                $user->name = $name;
+                $user->email = $email ?: $this->placeholderEmail($b24Id);
+                $user->password = self::DEFAULT_PASSWORD;
+                $user->status = 'in_active';
+                $user->bitrix24_id = $b24Id;
+
+                if ($avatarPath) {
+                    $user->avatar = $avatarPath;
+                }
+
+                $user->save();
+
+                $this->line("{$prefix} ➕ created user #{$user->id}");
+            } else {
+                $this->line("{$prefix} ➕ would create user ({$name})");
             }
 
-            $stats['linked']++;
+            $stats['created']++;
+
+            if ($avatarPath) {
+                $stats['photo']++;
+            }
+
             return $stats;
         }
-
-        // 3) Create a new (in_active) local user from the Bitrix24 profile.
-        $avatarPath = ($withPhoto && $photoUrl) ? $this->downloadPhoto($photoUrl, $b24Id, $dryRun) : null;
-
-        $this->logBoth('info', 'Creating local user from Bitrix24', [
-            'bitrix24_id' => $b24Id, 'name' => $name, 'email' => $email, 'has_photo' => (bool) $avatarPath,
-        ]);
-
-        if (! $dryRun) {
-            $user = new User();
-            $user->name = $name;
-            $user->email = $email ?: $this->placeholderEmail($b24Id);
-            $user->password = self::DEFAULT_PASSWORD; // hashed via the model cast
-            $user->status = 'in_active';
-            $user->bitrix24_id = $b24Id;
-            if ($avatarPath) {
-                $user->avatar = $avatarPath;
-            }
-            $user->save();
-            $this->line("{$prefix} ➕ created user #{$user->id} ({$user->name})".($avatarPath ? ' +photo' : ''));
-        } else {
-            $this->line("{$prefix} ➕ would create user ({$name})".($photoUrl ? ' +photo' : ''));
-        }
-
-        $stats['created']++;
-        if ($avatarPath) {
-            $stats['photo']++;
-        }
-
-        return $stats;
-    }
 
     /**
      * @param  array<string, mixed>  $remote
