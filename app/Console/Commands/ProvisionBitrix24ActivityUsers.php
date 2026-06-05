@@ -172,19 +172,32 @@ class ProvisionBitrix24ActivityUsers extends Command
             return $stats;
         }
 
-        // 2) Match an existing local user by email → link (set bitrix24_id).
-        $byEmail = $email ? User::where('email', $email)->first() : null;
-        if ($byEmail) {
+        // 2) Match an existing local user by email OR name → link (set bitrix24_id).
+        $matchName = $this->remoteRealName($remote); // real name only, never the placeholder
+        $match = ($email || $matchName)
+            ? User::query()
+                ->where(function ($q) use ($email, $matchName) {
+                    if ($email) {
+                        $q->orWhere('email', $email);
+                    }
+                    if ($matchName) {
+                        $q->orWhere('name', $matchName);
+                    }
+                })
+                ->first()
+            : null;
+        if ($match) {
+            $by = ($email && strcasecmp((string) $match->email, $email) === 0) ? "email {$email}" : "name {$match->name}";
             $this->logBoth('info', 'Linking existing local user to Bitrix24 id', [
-                'bitrix24_id' => $b24Id, 'user_id' => $byEmail->id, 'email' => $email,
+                'bitrix24_id' => $b24Id, 'user_id' => $match->id, 'matched_by' => $by,
             ]);
-            $this->line("{$prefix} 🔗 linked to existing user #{$byEmail->id} ({$email})");
+            $this->line("{$prefix} 🔗 linked to existing user #{$match->id} (by {$by})");
             if (! $dryRun) {
-                $byEmail->bitrix24_id = $b24Id;
-                if ($withPhoto && $this->avatarIsEmpty($byEmail) && $photoUrl) {
-                    $byEmail->avatar = $this->downloadPhoto($photoUrl, $b24Id);
+                $match->bitrix24_id = $b24Id;
+                if ($withPhoto && $this->avatarIsEmpty($match) && $photoUrl) {
+                    $match->avatar = $this->downloadPhoto($photoUrl, $b24Id);
                 }
-                $byEmail->save();
+                $match->save();
             }
             $stats['linked']++;
             return $stats;
@@ -226,12 +239,21 @@ class ProvisionBitrix24ActivityUsers extends Command
      */
     private function remoteName(array $remote, int $b24Id): string
     {
+        return $this->remoteRealName($remote)
+            ?? $this->remoteEmail($remote)
+            ?? "Bitrix24 user #{$b24Id}";
+    }
+
+    /**
+     * The real Bitrix24 display name (NAME + LAST_NAME), or null if absent.
+     * Used for matching — never returns the "Bitrix24 user #id" placeholder.
+     *
+     * @param  array<string, mixed>  $remote
+     */
+    private function remoteRealName(array $remote): ?string
+    {
         $name = trim(($remote['NAME'] ?? '').' '.($remote['LAST_NAME'] ?? ''));
-        if ($name !== '') {
-            return $name;
-        }
-        $email = $remote['EMAIL'] ?? null;
-        return is_string($email) && $email !== '' ? $email : "Bitrix24 user #{$b24Id}";
+        return $name !== '' ? $name : null;
     }
 
     /**
