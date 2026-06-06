@@ -155,13 +155,13 @@ $allowedAgentIds = [];
             'approved_by' => $this->whenLoaded('approvedBy', function() {
                 return [
                     'id' => $this->approvedBy->id,
-                    'name' => User::shortName($this->approvedBy->name),
+                    'name' => User::resolveDisplayName($this->approvedBy),
                 ];
             }),
             'approval_status' => $this->approved ? 'approved' : 'pending',
             'rejection_reason'=>$this->rejection_reason,
             'rejected_by'=>$this->rejected_by,
-            'rejected_by_name'=>User::shortName($this->rejectedBy?->name),
+            'rejected_by_name'=>User::resolveDisplayName($this->rejectedBy),
             'rejected_at'=>$this->rejected_at,
                 'is_archived' => (bool)$this->is_archived,
             'title' => $this->area?->name,
@@ -294,7 +294,7 @@ $allowedAgentIds = [];
             'converted_by' => $this->whenLoaded('convertedBy', function () {
                 return [
                     'id' => $this->convertedBy->id,
-                    'name' => User::shortName($this->convertedBy->name),
+                    'name' => User::resolveDisplayName($this->convertedBy),
                 ];
             }),
             'assignment_notes' => $this->assignment_notes,
@@ -302,7 +302,7 @@ $allowedAgentIds = [];
             'assigned_by' => $this->whenLoaded('assignedBy', function () {
                 return [
                     'id' => $this->assignedBy->id,
-                    'name' => User::shortName($this->assignedBy->name),
+                    'name' => User::resolveDisplayName($this->assignedBy),
                 ];
             }),
 
@@ -379,7 +379,7 @@ $allowedAgentIds = [];
             'agent' => $this->whenLoaded('agent', function () {
                 return [
                     'id' => $this->agent->id,
-                    'name' => User::shortName($this->agent->name),
+                    'name' => User::resolveDisplayName($this->agent),
                     'email' => $this->agent->email,
                     'avatar' => $this->agent->avatar ? asset('storage/'. $this->agent->avatar)   : null,
                 ];
@@ -394,7 +394,7 @@ $allowedAgentIds = [];
                 if (!$this->vacationHolder) return null;
                 return [
                     'id' => $this->vacationHolder->id,
-                    'name' => User::shortName($this->vacationHolder->name),
+                    'name' => User::resolveDisplayName($this->vacationHolder),
                     'email' => $this->vacationHolder->email,
                     'avatar' => $this->vacationHolder->avatar ? asset('storage/' . $this->vacationHolder->avatar) : null,
                 ];
@@ -413,7 +413,7 @@ $allowedAgentIds = [];
             'added_by' => $this->whenLoaded('addedBy', function () {
                 return [
                     'id' => $this->addedBy->id,
-                    'name' => User::shortName($this->addedBy->name),
+                    'name' => User::resolveDisplayName($this->addedBy),
                 ];
             }),
             'drive_link' => $this->drive_link,

@@ -86,6 +86,30 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     return $parts[0] . ' ' . end($parts);
 }
 
+    /**
+     * Resolve the name to display for a user: the custom display_name when set,
+     * otherwise the two-word short version of the real name.
+     * Note: display_name must be loaded on the model (include it in partial selects).
+     */
+    public static function resolveDisplayName(?User $user): ?string
+    {
+        if (! $user instanceof self) {
+            return null;
+        }
+
+        return filled($user->display_name)
+            ? $user->display_name
+            : static::shortName($user->name);
+    }
+
+    /**
+     * Instance helper: this user's display name (display_name ?: short name).
+     */
+    public function displayName(): ?string
+    {
+        return static::resolveDisplayName($this);
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

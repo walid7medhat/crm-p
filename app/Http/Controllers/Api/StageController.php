@@ -193,8 +193,8 @@ class StageController extends Controller
             // ================= leads query with permissions =================
             $baseLeadsQuery = Lead::query();
             $kanbanEagerLoads = [
-                'addedBy:id,name,avatar',
-                'responsiblePerson:id,name,avatar',
+                'addedBy:id,name,display_name,avatar',
+                'responsiblePerson:id,name,display_name,avatar',
                 'propertyType:id,name',
                 'area:id,name',
             ];
@@ -552,8 +552,8 @@ class StageController extends Controller
             $page = $request->get('page', 1);
 
             $leadsQuery = $stage->leads()->with([
-                'addedBy:id,name,avatar',
-                'responsiblePerson:id,name,avatar',
+                'addedBy:id,name,display_name,avatar',
+                'responsiblePerson:id,name,display_name,avatar',
                 'propertyType:id,name',
                 'area:id,name',
             ]);
@@ -959,7 +959,7 @@ public function getTeamsWithLeads(Request $request): JsonResponse
         }
         
         $teams = $query->withCount('children')
-            ->get(['id', 'name', 'email', 'parent_id'])
+            ->get(['id', 'name', 'display_name', 'email', 'parent_id'])
             ->map(function($user) {
                 $allSubordinates = $user->getAllSubordinatesIds();
                 $teamSize = count($allSubordinates) - 1;
@@ -969,20 +969,20 @@ public function getTeamsWithLeads(Request $request): JsonResponse
                 
                 return [
                     'id' => $user->id,
-                   'name' =>User::shortName($user->name),
+                   'name' =>User::resolveDisplayName($user),
                     'email' => $user->email,
                     'team_size' => $teamSize,
                     'role' => $user->roles->pluck('name')->first(),
                     'parent_id' => $user->parent_id,
                     'admin_parent_id' => $adminParent ? $adminParent->id : null,
-                    'admin_parent_name' => $adminParent ? User::shortName($adminParent?->name) : null,
+                    'admin_parent_name' => $adminParent ? User::resolveDisplayName($adminParent) : null,
                     'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                     'role_name' => $user->roles()->first()?->name,
                        'team_id'=>$user->parent?->id,
-                       'parent_name' => User::shortName($user->parent?->name),
+                       'parent_name' => User::resolveDisplayName($user->parent),
                         'branch_id' => $user->office?->id,
 
-                        'branch_name' => User::shortName($user->office?->name)
+                        'branch_name' => User::resolveDisplayName($user->office)
                 ];
             });
 
@@ -1058,7 +1058,7 @@ public function getOffices()
         try {
             $user = auth()->user();
             
-            $leadsQuery = $stage->leads()->with(['responsiblePerson:id,name,email', 'addedBy:id,name']);
+            $leadsQuery = $stage->leads()->with(['responsiblePerson:id,name,display_name,email', 'addedBy:id,name,display_name']);
             
             // Apply lead visibility based on user role
             if (!($user->hasRole('super_admin') || $user->hasRole('admin'))) {
@@ -1300,12 +1300,12 @@ public function getOffices()
         $users = User::query()
             ->whereIn('bitrix24_id', $b24Ids)
             ->with([
-                'parent:id,name,avatar',
+                'parent:id,name,display_name,avatar',
                 'roles:id,name',
                 'employeeProfile.companyBranch:id,name',
                 'employeeProfile.designation:id,name',
             ])
-            ->get(['id', 'bitrix24_id', 'name', 'avatar', 'email', 'parent_id']);
+            ->get(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id']);
 
         foreach ($users as $user) {
             $map[(int) $user->bitrix24_id] = $user;

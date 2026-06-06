@@ -23,7 +23,7 @@ class ProfileController extends Controller
             
             return response()->json([
                 'success' => true,
-                'data' => (new UserResource($user))->withFullName(),
+                'data' => new UserResource($user),
                 'message' => 'Profile retrieved successfully'
             ]);
             
@@ -58,9 +58,9 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            // Update user data
+            // Update only the display name — the real `name` is left unchanged.
             $user->update([
-                'name' => $request->name,
+                'display_name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
             ]);
@@ -69,7 +69,7 @@ class ProfileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => (new UserResource($user))->withFullName(),
+                'data' => new UserResource($user),
                 'message' => 'Profile updated successfully'
             ]);
 

@@ -292,7 +292,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
         $query = Listing::with([
             'propertyType:id,name', 
             'area:id,name,parent_id',
-            'agent:id,name',
+            'agent:id,name,display_name',
             'galleryImages',
         ]);
  $isManagerWithListingTeam = $user->hasRole('manager') && $user->listing_team;
@@ -3100,8 +3100,8 @@ public function getPendingApprovals(Request $request): JsonResponse
         $query = Listing::with([
             'propertyType:id,name',
             'area:id,name,parent_id',
-            'agent:id,name,email',
-            'addedBy:id,name,email',
+            'agent:id,name,display_name,email',
+            'addedBy:id,name,display_name,email',
             'galleryImages',
         ])
         ->where('approved', false)

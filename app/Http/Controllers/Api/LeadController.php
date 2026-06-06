@@ -838,19 +838,19 @@ class LeadController extends Controller
                     // Filter by multiple office IDs
                     $qq->whereIn('id', $officeAndDescendants); 
                 })
-                ->get(['id', 'name', 'email', 'avatar','parent_id'])
+                ->get(['id', 'name', 'display_name', 'email', 'avatar','parent_id'])
                 ->map(function($user) {
                     return [
                         'id'     => $user->id,
-                       'name' => User::shortName($user->name),
+                       'name' => User::resolveDisplayName($user),
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                         'role_name' => $user->roles()->first()->name,
                         'team_id'=>$user->parent?->id,
-                       'parent_name' => User::shortName($user->parent?->name),
+                       'parent_name' => User::resolveDisplayName($user->parent),
                        'branch_id' => $user->office?->id,
 
-                        'branch_name' => User::shortName($user->office?->name)
+                        'branch_name' => User::resolveDisplayName($user->office)
                     ];
                 });
         } else {
@@ -861,18 +861,18 @@ class LeadController extends Controller
                     // Filter by multiple office IDs
                     $qq->whereIn('id', $officeAndDescendants); 
                 })
-                ->get(['id', 'name', 'email','avatar','parent_id'])
+                ->get(['id', 'name', 'display_name', 'email','avatar','parent_id'])
                 ->map(function($user) {
                     return [
                         'id'     => $user->id,
-                        'name' => User::shortName($user->name),
+                        'name' => User::resolveDisplayName($user),
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                         'team_id'=>$user->parent?->id,
-                       'parent_name' => User::shortName($user->parent?->name),
+                       'parent_name' => User::resolveDisplayName($user->parent),
                        'branch_id' => $user->office?->id,
 
-                        'branch_name' => User::shortName($user->office?->name)
+                        'branch_name' => User::resolveDisplayName($user->office)
                     ];
                 });
         }

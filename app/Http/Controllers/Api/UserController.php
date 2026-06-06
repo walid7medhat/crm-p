@@ -273,7 +273,7 @@ public function show(User $user): JsonResponse
         ]);
 
         return ApiResponse::success(
-            (new UserResource($user))->withFullName(),
+            new UserResource($user),
             'User retrieved successfully'
         );
     } catch (\Exception $e) {
@@ -298,8 +298,15 @@ public function show(User $user): JsonResponse
             $data = $request->validated();
                 if (!$currentUser->hasRole(['super_admin', 'admin'])) {
                         unset($data['status']);
-                
+
                 }
+
+            // On update, the submitted name is stored as the display name only;
+            // the real `name` column is never changed here.
+            if (array_key_exists('name', $data)) {
+                $data['display_name'] = $data['name'];
+                unset($data['name']);
+            }
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
@@ -338,7 +345,7 @@ public function show(User $user): JsonResponse
             $user->load(['roles', 'parent']);
 
             return ApiResponse::success(
-                (new UserResource($user))->withFullName(),
+                new UserResource($user),
                 'User updated successfully'
             );
         } catch (\Exception $e) {

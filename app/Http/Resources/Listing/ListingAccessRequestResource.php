@@ -66,7 +66,7 @@ class ListingAccessRequestResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'converted_at' => $this->converted_at,
-            'converted_by' => $this->convertedBy ? User::shortName($this->convertedBy->name) : 'oia',
+            'converted_by' => $this->convertedBy ? User::resolveDisplayName($this->convertedBy) : 'oia',
             'conversion_notes' => $this->conversion_notes,
             'show_all_column'=>$user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('team_lead') || $user->hasRole('manager'),
              // Listing details
@@ -78,7 +78,7 @@ class ListingAccessRequestResource extends JsonResource
                     'price' => $this->listing->price,
                     'size_sqft' => $this->listing->size_sqft,
                     'size_sqmt' => $this->listing->size_sqmt,
-                    'agent' => User::shortName($this->listing?->agent?->name),
+                    'agent' => User::resolveDisplayName($this->listing?->agent),
                       'agent_avatar' => $this->listing->agent && $this->listing->agent->avatar?asset('storage/'. $this->listing->agent->avatar):'',
                 ];
             }),
@@ -87,7 +87,7 @@ class ListingAccessRequestResource extends JsonResource
             'requested_by' =>
                  [
                     'id' => $this->requestedBy?->id,
-                    'name' => User::shortName($this->requestedBy?->name),
+                    'name' => User::resolveDisplayName($this->requestedBy),
                     'email' => $this->requestedBy?->email,
                     'phone' => $this->requestedBy?->phone,
                     'avatar' => $this->requestedBy && $this->requestedBy->avatar ?  asset('storage/'. $this->requestedBy->avatar) : null,
@@ -142,12 +142,12 @@ class ListingAccessRequestResource extends JsonResource
             'has_review' => !empty($this->review),
             'reviewed_by' => $this->reviewer ? [
                 'id' => $this->reviewer->id,
-                'name' => User::shortName($this->reviewer?->name),
+                'name' => User::resolveDisplayName($this->reviewer),
                 'avatar' => $this->reviewer->avatar
             ] : null,
             'handled_by' => $this->handledBy ? [
                 'id' => $this->handledBy->id,
-                'name' => User::shortName($this->handledBy?->name),
+                'name' => User::resolveDisplayName($this->handledBy),
                 'avatar' => $this->handledBy->avatar
                     ? asset('storage/' . $this->handledBy->avatar)
                     : null,
