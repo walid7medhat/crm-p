@@ -277,7 +277,7 @@ const today = new Date()
       return dates
     },
     workingDatesInRange() {
-      return this.calendarDatesInRange.filter((date) => date.getDay() >= 1 && date.getDay() <= 5)
+      return this.calendarDatesInRange.filter((date) => date.getDay() >= 1 && date.getDay() <= 6)
     },
     workingDaysCountInRange() {
       return this.workingDatesInRange.length
