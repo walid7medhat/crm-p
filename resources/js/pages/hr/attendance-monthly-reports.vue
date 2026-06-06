@@ -407,8 +407,8 @@ const today = new Date()
           const minutes = record?.checkInMinutes
           const checkOutMinutes = record?.checkOutMinutes ?? null
 
-          // Weekend is handled separately and never counted as absent.
-          if (dayIndex === 0 || dayIndex === 6) {
+          // Weekend is handled separately and never counted as absent.|| dayIndex === 6
+          if (dayIndex === 0 ) {
             weekendDays += 1
             dailyBreakdown.push({
               date: dateKey,
