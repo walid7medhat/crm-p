@@ -565,7 +565,8 @@ private function getWorkingDaysCount(Carbon $startDate, Carbon $endDate): int
     $current = $startDate->copy();
     
     while ($current <= $endDate) {
-        if (!$current->isSaturday() && !$current->isSunday()) {
+        // !$current->isSaturday() &&
+        if ( !$current->isSunday()) {
             $workingDays++;
         }
         $current->addDay();
@@ -584,7 +585,8 @@ private function getWorkingDaysInRange(Carbon $startDate, Carbon $endDate): arra
 
     while ($current <= $endDate) {
         // Monday (1) to Friday (5) only, skip Saturday (6) and Sunday (0)
-        if (!$current->isSaturday() && !$current->isSunday()) {
+        // !$current->isSaturday() &&
+        if ( !$current->isSunday()) {
             $days[] = $current->format('Y-m-d');
         }
         $current->addDay();
