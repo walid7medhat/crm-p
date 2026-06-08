@@ -37,12 +37,20 @@ class BackgroundController extends Controller
     }
 
     /**
-     * Superadmin: upload a new background image.
+     * Superadmin: upload one or more background images at once.
+     * Accepts `images[]` (multi-upload) and still supports a single `image`.
      */
     public function store(Request $request)
     {
+        // Normalise a single `image` into the `images` array for uniform handling.
+        if ($request->hasFile('image') && ! $request->hasFile('images')) {
+            $request->merge([]);
+            $request->files->set('images', [$request->file('image')]);
+        }
+
         $validator = Validator::make($request->all(), [
-            'image'      => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'images'     => 'required|array|min:1',
+            'images.*'   => 'image|mimes:jpeg,png,jpg,webp|max:5120',
             'name'       => 'nullable|string|max:255',
             'is_default' => 'nullable|boolean',
         ]);
@@ -51,25 +59,35 @@ class BackgroundController extends Controller
             return ApiResponse::error('Validation error', 422, $validator->errors());
         }
 
-        $path = $request->file('image')->store('backgrounds', 'public');
-
-        $background = DB::transaction(function () use ($request, $path) {
+        $created = DB::transaction(function () use ($request) {
             $makeDefault = $request->boolean('is_default');
 
+            // Only the first uploaded image can become the default.
             if ($makeDefault) {
                 Background::where('is_default', true)->update(['is_default' => false]);
             }
 
-            return Background::create([
-                'name'        => $request->input('name'),
-                'path'        => $path,
-                'is_default'  => $makeDefault,
-                'is_active'   => true,
-                'uploaded_by' => $request->user()->id,
-            ]);
+            $items = [];
+            foreach (array_values($request->file('images')) as $index => $file) {
+                $path = $file->store('backgrounds', 'public');
+
+                $items[] = Background::create([
+                    'name'        => $request->input('name'),
+                    'path'        => $path,
+                    'is_default'  => $makeDefault && $index === 0,
+                    'is_active'   => true,
+                    'uploaded_by' => $request->user()->id,
+                ]);
+            }
+
+            return $items;
         });
 
-        return ApiResponse::success($background, 'Background uploaded successfully', 201);
+        return ApiResponse::success(
+            $created,
+            count($created) . ' background' . (count($created) === 1 ? '' : 's') . ' uploaded successfully',
+            201
+        );
     }
 
     /**
