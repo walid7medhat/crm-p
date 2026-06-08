@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Lead;
+use App\Models\Stage;
 use App\Models\User;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
@@ -44,7 +45,13 @@ class SyncBitrix24LeadsProgress extends Command
     private ?string $startedAt = null;
     private ?string $lastError = null;
 
-    /** @var array<int, array{at: string, type: string, message: string}> rolling feed (oldest→newest). */
+    /** @var array<int, string> stage id => name */
+    private array $stageNames = [];
+
+    /** @var array<int, string> user id => name */
+    private array $userNameCache = [];
+
+    /** @var array<int, array{at: string, type: string, message: string, b24: int|null}> rolling feed (oldest→newest). */
     private array $events = [];
 
     /** @var array<string, int> */
@@ -76,6 +83,7 @@ class SyncBitrix24LeadsProgress extends Command
         }
 
         $importer = new Bitrix24LeadImporter($client, $fallbackUserId);
+        $this->stageNames = Stage::pluck('name', 'id')->toArray();
 
         $this->logBoth('info', 'START sync-leads', [
             'skip_existing' => $skipExisting, 'limit' => $limit ?: 'all', 'start_cursor' => $cursor,
@@ -128,7 +136,7 @@ class SyncBitrix24LeadsProgress extends Command
                 $pos = $this->counts['processed'];
 
                 $before = Lead::where('bitrix24_id', $b24Id)
-                    ->first(['id', 'bitrix24_id', 'stage_id', 'lead_source', 'bitrix24_last_activity_by_id']);
+                    ->first(['id', 'bitrix24_id', 'stage_id', 'status_lead', 'lead_source', 'responsible_person_id', 'bitrix24_last_activity_by_id']);
 
                 if ($skipExisting && $before) {
                     $this->counts['skipped']++;
@@ -144,23 +152,24 @@ class SyncBitrix24LeadsProgress extends Command
 
                     if ($result['created']) {
                         $this->counts['created']++;
-                        $msg = "Created “{$lead->lead_name}” · stage {$lead->status_lead} · owner {$who}";
-                        $this->line("[{$pos}] b24#{$b24Id} ➕ created #{$lead->id} \"{$lead->lead_name}\" stage={$lead->status_lead} · owner: {$who}");
-                        $this->pushEvent('created', $msg);
-                        $this->logBoth('info', 'created', ['b24' => $b24Id, 'lead' => $lead->id, 'stage' => $lead->status_lead, 'owner' => $who]);
+                        $stageName = $this->stageName($lead->stage_id);
+                        $msg = "Created “{$lead->lead_name}” · stage {$stageName} · status {$lead->status_lead} · owner {$who}";
+                        $this->line("[{$pos}] b24#{$b24Id} ➕ created #{$lead->id} \"{$lead->lead_name}\" stage={$stageName} status={$lead->status_lead} · owner: {$who}");
+                        $this->pushEvent('created', $msg, $b24Id);
+                        $this->logBoth('info', 'created', ['b24' => $b24Id, 'lead' => $lead->id, 'stage' => $stageName, 'status' => $lead->status_lead, 'owner' => $who]);
                     } else {
                         $this->counts['updated']++;
                         $changed = $this->detectChanges($before, $lead);
-                        $tag = $changed ? implode(', ', $changed) : 'no field change';
-                        $msg = "Updated “{$lead->lead_name}” · {$tag} · owner {$who}";
-                        $this->line("[{$pos}] b24#{$b24Id} ♻ updated #{$lead->id} \"{$lead->lead_name}\" [{$tag}] · owner: {$who}");
-                        $this->pushEvent('updated', $msg);
+                        $tag = $changed ? implode(' · ', $changed) : 'no field change (comments/activity refreshed)';
+                        $msg = "Updated “{$lead->lead_name}” · {$tag}";
+                        $this->line("[{$pos}] b24#{$b24Id} ♻ updated #{$lead->id} \"{$lead->lead_name}\" — {$tag}");
+                        $this->pushEvent('updated', $msg, $b24Id);
                         $this->logBoth('info', 'updated', ['b24' => $b24Id, 'lead' => $lead->id, 'changed' => $changed, 'owner' => $who]);
                     }
                 } catch (\Throwable $e) {
                     $this->counts['errors']++;
                     $this->line("[{$pos}] b24#{$b24Id} ❌ {$e->getMessage()}");
-                    $this->pushEvent('error', "b24#{$b24Id}: {$e->getMessage()}");
+                    $this->pushEvent('error', "b24#{$b24Id}: {$e->getMessage()}", $b24Id);
                     $this->logBoth('error', 'failed', ['b24' => $b24Id, 'error' => $e->getMessage()]);
                 }
 
@@ -189,7 +198,7 @@ class SyncBitrix24LeadsProgress extends Command
     }
 
     /**
-     * Compare the lead's pre/post state and tally which fields changed.
+     * Compare the lead's pre/post state and return human "from → to" change lines.
      *
      * @return array<int, string>
      */
@@ -200,20 +209,54 @@ class SyncBitrix24LeadsProgress extends Command
         }
 
         $changed = [];
+
         if ((int) $before->stage_id !== (int) $lead->stage_id) {
-            $changed[] = 'stage';
             $this->counts['stage_changed']++;
+            $changed[] = 'stage: '.$this->stageName($before->stage_id).' → '.$this->stageName($lead->stage_id);
+        }
+        if ((string) $before->status_lead !== (string) $lead->status_lead) {
+            $changed[] = 'status: '.($before->status_lead ?: '—').' → '.($lead->status_lead ?: '—');
+        }
+        if ((int) $before->responsible_person_id !== (int) $lead->responsible_person_id) {
+            $changed[] = 'owner: '.$this->userNameById($before->responsible_person_id).' → '.$this->userNameById($lead->responsible_person_id);
         }
         if ((string) $before->lead_source !== (string) $lead->lead_source) {
-            $changed[] = 'source';
             $this->counts['source_changed']++;
+            $changed[] = 'source: '.($before->lead_source ?: '—').' → '.($lead->lead_source ?: '—');
         }
         if ((int) $before->bitrix24_last_activity_by_id !== (int) $lead->bitrix24_last_activity_by_id) {
-            $changed[] = 'activity-person';
             $this->counts['activity_changed']++;
+            $changed[] = 'activity-person: '.$this->userNameByBitrixId($before->bitrix24_last_activity_by_id).' → '.$this->userNameByBitrixId($lead->bitrix24_last_activity_by_id);
         }
 
         return $changed;
+    }
+
+    private function stageName($id): string
+    {
+        $id = (int) $id;
+        return $id > 0 ? ($this->stageNames[$id] ?? "#{$id}") : '—';
+    }
+
+    private function userNameById($id): string
+    {
+        $id = (int) $id;
+        if ($id <= 0) {
+            return '—';
+        }
+        if (! array_key_exists($id, $this->userNameCache)) {
+            $this->userNameCache[$id] = User::where('id', $id)->value('name') ?? "#{$id}";
+        }
+        return $this->userNameCache[$id];
+    }
+
+    private function userNameByBitrixId($b24Id): string
+    {
+        $b24Id = (int) $b24Id;
+        if ($b24Id <= 0) {
+            return '—';
+        }
+        return User::where('bitrix24_id', $b24Id)->value('name') ?? "b24#{$b24Id}";
     }
 
     private function ownerName(Lead $lead): string
@@ -234,9 +277,9 @@ class SyncBitrix24LeadsProgress extends Command
         return 'Unknown';
     }
 
-    private function pushEvent(string $type, string $message): void
+    private function pushEvent(string $type, string $message, ?int $b24Id = null): void
     {
-        $this->events[] = ['at' => now()->toIso8601String(), 'type' => $type, 'message' => $message];
+        $this->events[] = ['at' => now()->toIso8601String(), 'type' => $type, 'message' => $message, 'b24' => $b24Id];
         if (count($this->events) > 40) {
             array_shift($this->events);
         }

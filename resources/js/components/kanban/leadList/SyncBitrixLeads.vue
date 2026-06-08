@@ -141,7 +141,8 @@
               <span class="event-feed__icon">
                 <i :class="eventIcon(ev.type)"></i>
               </span>
-              <span class="event-feed__msg">{{ ev.message }}</span>
+              <span v-if="ev.b24" class="event-feed__b24" title="Bitrix24 ID">#{{ ev.b24 }}</span>
+              <span class="event-feed__msg" :title="ev.message">{{ ev.message }}</span>
               <span class="event-feed__time">{{ formatTime(ev.at) }}</span>
             </li>
             <li v-if="!state.events.length" class="event-feed__empty text-muted small">
@@ -409,6 +410,17 @@ onUnmounted(stopPolling)
 }
 .event-feed__item:last-child { border-bottom: none; }
 .event-feed__icon { flex: 0 0 auto; width: 18px; text-align: center; }
+.event-feed__b24 {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
 .event-feed__msg { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-feed__time { flex: 0 0 auto; color: #94a3b8; font-size: 11px; font-variant-numeric: tabular-nums; }
 .event-feed__item--created .event-feed__icon { color: #16a34a; }
