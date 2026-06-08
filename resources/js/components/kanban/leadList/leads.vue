@@ -1076,8 +1076,31 @@ function leadMatchesShortcutFilter(lead) {
     }
 }
 
+// Maps a shortcut chip key to the API filter params the backend understands,
+// so the kanban refetches with the filter applied (instead of only hiding loaded cards).
+function shortcutFilterApiParams(filterKey) {
+    switch (filterKey) {
+        case 'temp_cold': return { status_lead: 'cold' }
+        case 'temp_warm': return { status_lead: 'warm' }
+        case 'temp_hot': return { status_lead: 'hot' }
+        case 'call_answered': return { interaction_result: 'answered' }
+        case 'call_no_answer': return { interaction_result: 'no_answer' }
+        default: return {}
+    }
+}
+
+// Merge of the search-modal query and the active shortcut chip — used by every
+// /stages/kanban request so column counts and pagination reflect the filter.
+const effectiveSearchParams = computed(() => ({
+    ...(appliedSearchParams.value || {}),
+    ...shortcutFilterApiParams(activeShortcutFilter.value),
+}))
+
 function onShortcutFilterToggle(filterKey) {
-    activeShortcutFilter.value = filterKey || null
+    const next = filterKey || null
+    if (activeShortcutFilter.value === next) return
+    activeShortcutFilter.value = next
+    fetchLeads(true)
 }
 
 watch(appliedSearchParams, () => {
@@ -1428,7 +1451,7 @@ const executeFetchLeads = async () => {
     }
     
     try {
-        const q = appliedSearchParams.value || {}
+        const q = effectiveSearchParams.value
 
         const params = {
             per_page: leadsPerPage.value,
@@ -1596,10 +1619,10 @@ async function fetchMoreLeadsFromApi(stageId) {
     
     try {
         const nextPage = (stage.pagination?.current_page || 1) + 1
-        
+
         // جمع معاملات الفلترة الحالية
-        const q = appliedSearchParams.value || {}
-        
+        const q = effectiveSearchParams.value
+
         const params = {
             page: nextPage,
             per_page: leadsPerPage.value,
