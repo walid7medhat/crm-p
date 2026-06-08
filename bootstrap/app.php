@@ -134,8 +134,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // no heavy timeline). withoutOverlapping so a long pass isn't stacked on the next tick.
         $schedule->command('bitrix24:sync-leads-fast')
             ->everyFifteenMinutes()
-            ->withoutOverlapping()
-            ->runInBackground()
+            ->withoutOverlapping(10)
+            // ->runInBackground()
             ->appendOutputTo(storage_path('logs/bitrix-sync-leads.log'));
 
         // ==================== TEST COMMANDS ====================
