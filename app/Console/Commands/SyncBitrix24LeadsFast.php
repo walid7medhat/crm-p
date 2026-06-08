@@ -32,6 +32,8 @@ class SyncBitrix24LeadsFast extends Command
     protected $description = 'FAST Bitrix24 lead sync (stage/source/activity only, no comments/timeline) with live progress';
 
     private int $total = 0;
+    /** Bitrix24 offset we resumed from = leads already walked in previous runs. */
+    private int $startCursor = 0;
     private ?string $startedAt = null;
     private ?string $lastError = null;
 
@@ -71,6 +73,9 @@ class SyncBitrix24LeadsFast extends Command
         } else {
             $cursor = SyncBitrix24LeadsProgress::loadSavedCursor();
         }
+
+        // Resume continues the displayed count: startCursor + this run's processed.
+        $this->startCursor = $cursor;
 
         $this->startedAt = now()->toIso8601String();
         Cache::forget(SyncBitrix24LeadsProgress::CANCEL_KEY);
@@ -139,7 +144,7 @@ class SyncBitrix24LeadsFast extends Command
                 }
 
                 $this->counts['processed']++;
-                $pos = $this->counts['processed'];
+                $pos = $this->startCursor + $this->counts['processed'];
 
                 $before = Lead::where('bitrix24_id', $b24Id)
                     ->first(['id', 'bitrix24_id', 'stage_id', 'status_lead', 'lead_source', 'responsible_person_id', 'bitrix24_last_activity_by_id']);
@@ -297,7 +302,8 @@ class SyncBitrix24LeadsFast extends Command
 
     private function publish(string $status): void
     {
-        $processed = $this->counts['processed'];
+        // Absolute position = where we resumed from + what this run has done.
+        $processed = $this->startCursor + $this->counts['processed'];
         $progress = $this->total > 0
             ? (int) min(100, floor(($processed / $this->total) * 100))
             : ($status === 'done' ? 100 : 0);
@@ -307,6 +313,7 @@ class SyncBitrix24LeadsFast extends Command
             'mode' => 'fast',
             'total' => $this->total,
             'progress' => $progress,
+            'processed' => $processed,
             'last_error' => $this->lastError,
             'started_at' => $this->startedAt,
             'updated_at' => now()->toIso8601String(),
