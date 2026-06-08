@@ -1080,9 +1080,11 @@ function leadMatchesShortcutFilter(lead) {
 // so the kanban refetches with the filter applied (instead of only hiding loaded cards).
 function shortcutFilterApiParams(filterKey) {
     switch (filterKey) {
-        case 'temp_cold': return { status_lead: 'cold' }
-        case 'temp_warm': return { status_lead: 'warm' }
-        case 'temp_hot': return { status_lead: 'hot' }
+        // `heat` is a dedicated server-side filter that OR-matches status_lead/priority,
+        // mirroring `normalizeLeadHeat` so the chip count and the filtered list agree.
+        case 'temp_cold': return { heat: 'cold' }
+        case 'temp_warm': return { heat: 'warm' }
+        case 'temp_hot': return { heat: 'hot' }
         case 'call_answered': return { interaction_result: 'answered' }
         case 'call_no_answer': return { interaction_result: 'no_answer' }
         default: return {}
@@ -1370,6 +1372,7 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
         ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
         ...(q.why_lost_lead != null && q.why_lost_lead !== '' && { status_lead: q.why_lost_lead }),
+        ...(q.heat != null && q.heat !== '' && { heat: q.heat }),
     }
 
     if (q.office_branch != null && q.office_branch !== '') {

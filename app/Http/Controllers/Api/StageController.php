@@ -339,13 +339,24 @@ class StageController extends Controller
                if ($request->filled('why_lost_lead')) {
                     $q->where('why_lost_lead', $request->why_lost_lead);
                 }
-                
-               
+
+                // Temperature shortcut chip (Cold/Warm/Hot): match either the user-set
+                // status_lead OR the AI-computed priority — same OR logic the kanban
+                // counter uses, otherwise the chip count and the filtered list diverge.
+                if ($request->filled('heat')) {
+                    $heat = $request->heat;
+                    $q->where(function ($qq) use ($heat) {
+                        $qq->where('status_lead', $heat)
+                           ->orWhere('priority', $heat);
+                    });
+                }
+
+
                 // Lead Type
                 if ($request->filled('lead_type') && $request->lead_type !='both') {
                     $q->where(function($q) use ($request) {
                         $q->where('lead_type', $request->lead_type)
-                        ->orWhere('lead_type', 'both'); 
+                        ->orWhere('lead_type', 'both');
                     });
                 }
 
@@ -353,7 +364,7 @@ class StageController extends Controller
                 if ($request->filled('property_status') && $request->property_status !='both') {
                     $q->where(function($q) use ($request) {
                         $q->where('property_status', $request->property_status)
-                        ->orWhere('property_status', 'both'); 
+                        ->orWhere('property_status', 'both');
                     });
                 }
                 
@@ -688,6 +699,15 @@ class StageController extends Controller
                 }
                if ($request->filled('why_lost_lead')) {
                     $leadsQuery->where('why_lost_lead', $request->why_lost_lead);
+                }
+
+                // Temperature shortcut chip — match status_lead OR priority (see note above).
+                if ($request->filled('heat')) {
+                    $heat = $request->heat;
+                    $leadsQuery->where(function ($qq) use ($heat) {
+                        $qq->where('status_lead', $heat)
+                           ->orWhere('priority', $heat);
+                    });
                 }
                 
                
