@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Listing\UnitViewController;
 use App\Http\Controllers\Api\Listing\LayoutTypeController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\BackgroundController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\Listing\FeatureController;
 use App\Http\Controllers\Api\UserInvitationController;
@@ -555,6 +556,18 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
+
+    // Background images: any authenticated user can list & pick one for themselves.
+    Route::get('/backgrounds', [BackgroundController::class, 'index']);
+    Route::post('/profile/background', [ProfileController::class, 'updateBackground']);
+
+    // Superadmin manages the pool of backgrounds users can choose from.
+    Route::middleware('role:super_admin')->group(function () {
+        Route::post('/backgrounds', [BackgroundController::class, 'store']);
+        Route::put('/backgrounds/{background}', [BackgroundController::class, 'update']);
+        Route::post('/backgrounds/{background}/default', [BackgroundController::class, 'setDefault']);
+        Route::delete('/backgrounds/{background}', [BackgroundController::class, 'destroy']);
+    });
 
 
      Route::get('/team/hierarchy', [TeamController::class, 'getTeamHierarchy']);

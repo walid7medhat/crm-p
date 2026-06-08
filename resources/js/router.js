@@ -144,6 +144,9 @@ const baseRoutes = [
 
   { path: '/settings/stage-visibility', component: StageVisibility, meta: { requiresAuth: true } },
 
+  // Background picker: any user can choose their own; superadmin manages the pool (handled in-page).
+  { path: '/settings/background', component: () => import('./pages/settings/background.vue'), meta: { requiresAuth: true } },
+
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)

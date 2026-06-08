@@ -129,6 +129,26 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 }
 
 
+    public function background()
+    {
+        return $this->belongsTo(Background::class, 'background_id');
+    }
+
+    /**
+     * Resolve the background to actually show this user: their chosen one if it is
+     * still set and active, otherwise the system default, otherwise null (no override).
+     */
+    public function getBackgroundUrlAttribute(): ?string
+    {
+        $chosen = $this->background;
+
+        if ($chosen && $chosen->is_active) {
+            return $chosen->url;
+        }
+
+        return Background::default()?->url;
+    }
+
     public function addedBy()
     {
         return $this->belongsTo(User::class, 'added_by');

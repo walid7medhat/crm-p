@@ -133,6 +133,62 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update the background the user has chosen. Pass background_id = null to
+     * reset back to the system default. Only active backgrounds can be selected.
+     */
+    public function updateBackground(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            $validator = Validator::make($request->all(), [
+                'background_id' => 'nullable|integer|exists:backgrounds,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $backgroundId = $request->input('background_id');
+
+            // Don't let users pin a background that the superadmin has deactivated.
+            if ($backgroundId !== null) {
+                $isActive = \App\Models\Background::where('id', $backgroundId)
+                    ->where('is_active', true)
+                    ->exists();
+
+                if (! $isActive) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'This background is not available',
+                    ], 422);
+                }
+            }
+
+            $user->update(['background_id' => $backgroundId]);
+
+            $user->load(['roles', 'permissions', 'parent', 'addedBy', 'children']);
+
+            return response()->json([
+                'success' => true,
+                'data' => new UserResource($user),
+                'message' => 'Background updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update background',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Change user password
      */
     public function changePassword(Request $request)

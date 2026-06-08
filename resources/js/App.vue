@@ -43,6 +43,7 @@ import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
 import { useAppLoader } from './composables/useAppLoader.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
+import { useBackground } from './composables/useBackground.js'
 
 export default {
   name: 'App',
@@ -57,6 +58,7 @@ export default {
   setup() {
     const route = useRoute()
     const { isAppLoading, onLoaderHidden } = useAppLoader()
+    const { loadFromCache: loadBackgroundFromCache } = useBackground()
     const showLayout = computed(() => route.meta.layout !== false)
     const isDashboardHome = computed(() => !!route.meta?.dashboardHome)
     const chatOpen = ref(false)
@@ -104,6 +106,7 @@ export default {
 
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
+      loadBackgroundFromCache()
       syncVideoBgClass()
       if (!showLayout.value) {
         resetSidebarLayout()

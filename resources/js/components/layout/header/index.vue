@@ -594,8 +594,11 @@ const settingsSidebarSections = computed(() => {
     : [];
 
   const other = !isShowOnlyListing.value
-    ? [{ path: '/suggestion', label: 'Suggestions', icon: 'lucide:lightbulb' }]
-    : [];
+    ? [
+        { path: '/suggestion', label: 'Suggestions', icon: 'lucide:lightbulb' },
+        { path: '/settings/background', label: 'Background', icon: 'lucide:image' },
+      ]
+    : [{ path: '/settings/background', label: 'Background', icon: 'lucide:image' }];
 
   return buildSettingsSidebarSections({
     system,
