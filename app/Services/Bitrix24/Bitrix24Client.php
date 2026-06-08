@@ -333,6 +333,20 @@ class Bitrix24Client
         return $r['result'] ?? null;
     }
 
+    /** Single activity (used to resolve its owner lead from a webhook event). */
+    public function getActivity(int $id): ?array
+    {
+        $r = $this->call('crm.activity.get', ['id' => $id]);
+        return $r['result'] ?? null;
+    }
+
+    /** Single timeline comment (used to resolve its lead from a webhook event). */
+    public function getTimelineComment(int $id): ?array
+    {
+        $r = $this->call('crm.timeline.comment.get', ['id' => $id]);
+        return $r['result'] ?? null;
+    }
+
     public function listTimelineComments(int $leadId): array
     {
         $all = [];

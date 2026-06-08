@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\AdminEmailController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
 use App\Http\Controllers\Api\Bitrix24SyncController;
+use App\Http\Controllers\Api\Bitrix24WebhookController;
 use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
@@ -149,6 +150,9 @@ Route::get('/test-server', function() {
 });
     Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
+    // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
+    Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
+        ->middleware('throttle:600,1');
 Route::middleware(['throttle:300,1','block.bots'])->group(function () {
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);

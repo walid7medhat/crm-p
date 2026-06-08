@@ -27,6 +27,9 @@ class SyncBitrix24LeadsFast extends Command
         {--limit=0 : Stop after processing N leads (0 = all)}
         {--start=0 : Bitrix24 list cursor to start from (overrides saved resume cursor)}
         {--restart : Ignore the saved cursor and start from the beginning}
+        {--light : Fastest: stage/source/activity-person only, skip comments + activities (no per-lead API calls)}
+        {--no-comments : Skip importing new comments}
+        {--no-activities : Skip importing new activities}
         {--fallback-user=1 : Local user id used when a Bitrix24 user has no local match}';
 
     protected $description = 'FAST Bitrix24 lead sync (stage/source/activity only, no comments/timeline) with live progress';
@@ -62,6 +65,9 @@ class SyncBitrix24LeadsFast extends Command
         $limit = (int) $this->option('limit');
         $startOpt = (int) $this->option('start');
         $restart = (bool) $this->option('restart');
+        $light = (bool) $this->option('light');
+        $withComments = ! $light && ! $this->option('no-comments');
+        $withActivities = ! $light && ! $this->option('no-activities');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
 
         // Atomic single-run lock (shared with bitrix24:sync-leads) so two
@@ -105,7 +111,8 @@ class SyncBitrix24LeadsFast extends Command
         $this->logBoth('info', 'START sync-leads-fast', [
             'skip_existing' => $skipExisting, 'limit' => $limit ?: 'all', 'start_cursor' => $cursor,
         ]);
-        $this->pushEvent('info', ($cursor > 0 ? "Resuming from cursor {$cursor}" : 'Fast sync started').($skipExisting ? ' (skip existing)' : '').($limit ? ", limit {$limit}" : ''));
+        $mode = $light ? ' [light: stage/source/owner only]' : (! $withComments || ! $withActivities ? ' [partial: '.($withComments ? 'comments' : '').($withActivities ? ' activities' : '').']' : '');
+        $this->pushEvent('info', ($cursor > 0 ? "Resuming from cursor {$cursor}" : 'Fast sync started').$mode.($skipExisting ? ' (skip existing)' : '').($limit ? ", limit {$limit}" : ''));
         $this->publish('running');
 
         $next = null;
@@ -167,7 +174,7 @@ class SyncBitrix24LeadsFast extends Command
                 }
 
                 try {
-                    $result = $importer->importOneFast($b24);
+                    $result = $importer->importOneFast($b24, $withComments, $withActivities);
                     $lead = $result['lead'];
                     $who = $this->ownerName($lead);
 

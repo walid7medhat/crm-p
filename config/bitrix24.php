@@ -7,6 +7,13 @@ if (is_string($webhook) && $webhook !== '') {
 
 return [
     'webhook_url' => $webhook ?: null,
+
+    /** Shared secret for inbound Bitrix24 outbound-webhook (event) calls. */
+    'event_token' => env('BITRIX24_EVENT_TOKEN'),
+
+    /** Local user id used when a Bitrix24 user has no local match. */
+    'fallback_user_id' => (int) env('BITRIX24_FALLBACK_USER_ID', 1),
+
     'http_timeout' => (int) env('BITRIX24_HTTP_TIMEOUT', 60),
     'api_max_retries' => max(1, min(10, (int) env('BITRIX24_API_MAX_RETRIES', 8))),
     'api_retry_base_ms' => max(200, (int) env('BITRIX24_API_RETRY_BASE_MS', 500)),

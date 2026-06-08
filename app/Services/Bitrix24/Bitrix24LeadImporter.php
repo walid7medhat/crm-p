@@ -244,7 +244,7 @@ class Bitrix24LeadImporter
      * Returns the same shape as importOne:
      *   ['lead' => Lead, 'created' => bool, 'bitrix24_id' => int]
      */
-    public function importOneFast(array $b24Lead): array
+    public function importOneFast(array $b24Lead, bool $withComments = true, bool $withActivities = true): array
     {
         $b24Id = (int) ($b24Lead['ID'] ?? 0);
 
@@ -268,8 +268,13 @@ class Bitrix24LeadImporter
 
                 $this->syncStageForExistingLead($existing, $b24Lead);
                 // Bring across new comments + activities (skip the heavy timeline).
-                $this->importComments($existing, $b24Id);
-                $this->importActivities($existing, $b24Id);
+                // Each is one extra Bitrix API call — disable for max speed.
+                if ($withComments) {
+                    $this->importComments($existing, $b24Id);
+                }
+                if ($withActivities) {
+                    $this->importActivities($existing, $b24Id);
+                }
 
                 return [
                     'lead'        => $existing,
@@ -290,8 +295,12 @@ class Bitrix24LeadImporter
         ]);
 
         // New lead → import its comments + activities (skip the heavy timeline).
-        $this->importComments($lead, $b24Id);
-        $this->importActivities($lead, $b24Id);
+        if ($withComments) {
+            $this->importComments($lead, $b24Id);
+        }
+        if ($withActivities) {
+            $this->importActivities($lead, $b24Id);
+        }
 
         return [
             'lead'        => $lead,
