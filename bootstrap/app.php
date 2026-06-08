@@ -130,6 +130,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 // ->withoutOverlapping()
                 // ->runInBackground();
 
+        // Bitrix24 → CRM lead sync (fast: stage/source/activity + new comments/activities,
+        // no heavy timeline). withoutOverlapping so a long pass isn't stacked on the next tick.
+        $schedule->command('bitrix24:sync-leads-fast')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->appendOutputTo(storage_path('logs/bitrix-sync-leads.log'));
+
         // ==================== TEST COMMANDS ====================
         // $schedule->command('activities:send-reminders --timeframe=today --test')
         //     ->dailyAt('10:00')
