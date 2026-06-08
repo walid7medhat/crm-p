@@ -64,11 +64,15 @@ class SyncBitrix24LeadsFast extends Command
         $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
 
-        // Don't run two syncs at once (overlapping scheduler ticks / double clicks).
-        if (SyncBitrix24LeadsProgress::anotherRunActive()) {
+        // Atomic single-run lock (shared with bitrix24:sync-leads) so two
+        // processes never sync the same leads at once.
+        $lock = Cache::lock(SyncBitrix24LeadsProgress::LOCK_KEY, 6 * 3600);
+        if (! $lock->get()) {
             $this->warn('Another lead sync is already running — skipping this run.');
             return self::SUCCESS;
         }
+
+        try {
 
         // Resume from the saved cursor by default (shared with bitrix24:sync-leads).
         if ($startOpt > 0) {
@@ -213,7 +217,10 @@ class SyncBitrix24LeadsFast extends Command
             $this->counts['owner_changed'], $this->counts['source_changed'], $this->counts['activity_changed']
         ));
 
-        return self::SUCCESS;
+            return self::SUCCESS;
+        } finally {
+            optional($lock)->release();
+        }
     }
 
     /**

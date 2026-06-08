@@ -43,6 +43,9 @@ class SyncBitrix24LeadsProgress extends Command
     /** Cache flag the UI sets to request cancellation. */
     public const CANCEL_KEY = 'bitrix24_sync_leads_cancel';
 
+    /** Atomic lock so only one sync process runs at a time. */
+    public const LOCK_KEY = 'bitrix24_sync_leads_lock';
+
     /** BitrixSyncState row key holding the saved resume cursor (durable in DB). */
     public const STATE_KEY = 'sync_leads';
 
@@ -119,13 +122,17 @@ class SyncBitrix24LeadsProgress extends Command
         $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
 
-        // Guard: never let two runs write to the same progress key at once
-        // (overlapping scheduler ticks / double UI clicks) — the counters would
-        // bounce between each process's state. Skip if another run is alive.
-        if (self::anotherRunActive()) {
+        // Atomic single-run lock: prevents two processes (overlapping scheduler
+        // ticks, a queue retry_after re-dispatch, or double clicks) from
+        // processing the same leads at once — which would also make the counters
+        // bounce. Held for the whole run, released in finally.
+        $lock = Cache::lock(self::LOCK_KEY, 6 * 3600);
+        if (! $lock->get()) {
             $this->warn('Another lead sync is already running — skipping this run.');
             return self::SUCCESS;
         }
+
+        try {
 
         // Resume from the saved cursor by default, so re-running continues instead
         // of starting over. --start=N overrides; --restart forces the beginning.
@@ -281,7 +288,10 @@ class SyncBitrix24LeadsProgress extends Command
             $this->counts['source_changed'], $this->counts['activity_changed']
         ));
 
-        return self::SUCCESS;
+            return self::SUCCESS;
+        } finally {
+            optional($lock)->release();
+        }
     }
 
     /**
