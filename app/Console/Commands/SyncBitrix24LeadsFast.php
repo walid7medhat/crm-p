@@ -25,7 +25,8 @@ class SyncBitrix24LeadsFast extends Command
     protected $signature = 'bitrix24:sync-leads-fast
         {--skip-existing : Only insert new leads; do not re-sync existing ones}
         {--limit=0 : Stop after processing N leads (0 = all)}
-        {--start=0 : Bitrix24 list cursor to start from}
+        {--start=0 : Bitrix24 list cursor to start from (overrides saved resume cursor)}
+        {--restart : Ignore the saved cursor and start from the beginning}
         {--fallback-user=1 : Local user id used when a Bitrix24 user has no local match}';
 
     protected $description = 'FAST Bitrix24 lead sync (stage/source/activity only, no comments/timeline) with live progress';
@@ -56,8 +57,19 @@ class SyncBitrix24LeadsFast extends Command
 
         $skipExisting = (bool) $this->option('skip-existing');
         $limit = (int) $this->option('limit');
-        $cursor = (int) $this->option('start');
+        $startOpt = (int) $this->option('start');
+        $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
+
+        // Resume from the saved cursor by default (shared with bitrix24:sync-leads).
+        if ($startOpt > 0) {
+            $cursor = $startOpt;
+        } elseif ($restart) {
+            $cursor = 0;
+            Cache::forget(SyncBitrix24LeadsProgress::CURSOR_KEY);
+        } else {
+            $cursor = (int) Cache::get(SyncBitrix24LeadsProgress::CURSOR_KEY, 0);
+        }
 
         $this->startedAt = now()->toIso8601String();
         Cache::forget(SyncBitrix24LeadsProgress::CANCEL_KEY);
@@ -77,16 +89,19 @@ class SyncBitrix24LeadsFast extends Command
         $this->logBoth('info', 'START sync-leads-fast', [
             'skip_existing' => $skipExisting, 'limit' => $limit ?: 'all', 'start_cursor' => $cursor,
         ]);
-        $this->pushEvent('info', 'Fast sync started'.($skipExisting ? ' (skip existing)' : '').($limit ? ", limit {$limit}" : ''));
+        $this->pushEvent('info', ($cursor > 0 ? "Resuming from cursor {$cursor}" : 'Fast sync started').($skipExisting ? ' (skip existing)' : '').($limit ? ", limit {$limit}" : ''));
         $this->publish('running');
 
         $next = null;
         $stop = false;
 
         do {
+            $pageCursor = $cursor;
             try {
                 $page = $client->listLeads($cursor);
             } catch (\Throwable $e) {
+                // Save where we were so the next run resumes from this page.
+                Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $pageCursor, now()->addDays(7));
                 $this->lastError = $e->getMessage();
                 $this->publish('failed');
                 $this->logBoth('error', 'Failed to list leads', ['cursor' => $cursor, 'error' => $e->getMessage()]);
@@ -110,6 +125,7 @@ class SyncBitrix24LeadsFast extends Command
 
                 if (Cache::get(SyncBitrix24LeadsProgress::CANCEL_KEY)) {
                     Cache::forget(SyncBitrix24LeadsProgress::CANCEL_KEY);
+                    Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $pageCursor, now()->addDays(7));
                     $this->pushEvent('info', 'Cancelled by user');
                     $this->publish('cancelled');
                     $this->warn('Sync cancelled.');
@@ -159,6 +175,15 @@ class SyncBitrix24LeadsFast extends Command
                 }
 
                 $this->publish('running');
+            }
+
+            // Persist resume point (shared cursor with bitrix24:sync-leads).
+            if ($stop) {
+                Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $pageCursor, now()->addDays(7));
+            } elseif ($next === null) {
+                Cache::forget(SyncBitrix24LeadsProgress::CURSOR_KEY);
+            } else {
+                Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $next, now()->addDays(7));
             }
 
             $cursor = $next ?? $cursor;

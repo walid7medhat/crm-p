@@ -30,7 +30,8 @@ class SyncBitrix24LeadsProgress extends Command
     protected $signature = 'bitrix24:sync-leads
         {--skip-existing : Only insert new leads; do not re-sync existing ones}
         {--limit=0 : Stop after processing N leads (0 = all)}
-        {--start=0 : Bitrix24 list cursor to start from}
+        {--start=0 : Bitrix24 list cursor to start from (overrides saved resume cursor)}
+        {--restart : Ignore the saved cursor and start from the beginning}
         {--fallback-user=1 : Local user id used when a Bitrix24 user has no local match}';
 
     protected $description = 'Sync Bitrix24 leads (create new, update stage/source/activity for existing) with live progress and counts';
@@ -40,6 +41,9 @@ class SyncBitrix24LeadsProgress extends Command
 
     /** Cache flag the UI sets to request cancellation. */
     public const CANCEL_KEY = 'bitrix24_sync_leads_cancel';
+
+    /** Saved Bitrix24 list cursor so a re-run resumes instead of restarting. */
+    public const CURSOR_KEY = 'bitrix24_sync_leads_cursor';
 
     private int $total = 0;
     private ?string $startedAt = null;
@@ -67,8 +71,20 @@ class SyncBitrix24LeadsProgress extends Command
 
         $skipExisting = (bool) $this->option('skip-existing');
         $limit = (int) $this->option('limit');
-        $cursor = (int) $this->option('start');
+        $startOpt = (int) $this->option('start');
+        $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
+
+        // Resume from the saved cursor by default, so re-running continues instead
+        // of starting over. --start=N overrides; --restart forces the beginning.
+        if ($startOpt > 0) {
+            $cursor = $startOpt;
+        } elseif ($restart) {
+            $cursor = 0;
+            Cache::forget(self::CURSOR_KEY);
+        } else {
+            $cursor = (int) Cache::get(self::CURSOR_KEY, 0);
+        }
 
         $this->startedAt = now()->toIso8601String();
         Cache::forget(self::CANCEL_KEY);
@@ -88,16 +104,19 @@ class SyncBitrix24LeadsProgress extends Command
         $this->logBoth('info', 'START sync-leads', [
             'skip_existing' => $skipExisting, 'limit' => $limit ?: 'all', 'start_cursor' => $cursor,
         ]);
-        $this->pushEvent('info', 'Sync started'.($skipExisting ? ' (skip existing)' : '').($limit ? ", limit {$limit}" : ''));
+        $this->pushEvent('info', ($cursor > 0 ? "Resuming from cursor {$cursor}" : 'Sync started').($skipExisting ? ' (skip existing)' : '').($limit ? ", limit {$limit}" : ''));
         $this->publish('running');
 
         $next = null;
         $stop = false;
 
         do {
+            $pageCursor = $cursor;
             try {
                 $page = $client->listLeads($cursor);
             } catch (\Throwable $e) {
+                // Save where we were so the next run resumes from this page.
+                Cache::put(self::CURSOR_KEY, $pageCursor, now()->addDays(7));
                 $this->lastError = $e->getMessage();
                 $this->publish('failed');
                 $this->logBoth('error', 'Failed to list leads', ['cursor' => $cursor, 'error' => $e->getMessage()]);
@@ -121,6 +140,7 @@ class SyncBitrix24LeadsProgress extends Command
 
                 if (Cache::get(self::CANCEL_KEY)) {
                     Cache::forget(self::CANCEL_KEY);
+                    Cache::put(self::CURSOR_KEY, $pageCursor, now()->addDays(7)); // resume here next run
                     $this->pushEvent('info', 'Cancelled by user');
                     $this->publish('cancelled');
                     $this->warn('Sync cancelled.');
@@ -174,6 +194,16 @@ class SyncBitrix24LeadsProgress extends Command
                 }
 
                 $this->publish('running');
+            }
+
+            // Persist the resume point: re-do this page if we stopped mid-way (limit),
+            // advance to next page otherwise, or clear it when the walk is finished.
+            if ($stop) {
+                Cache::put(self::CURSOR_KEY, $pageCursor, now()->addDays(7));
+            } elseif ($next === null) {
+                Cache::forget(self::CURSOR_KEY);
+            } else {
+                Cache::put(self::CURSOR_KEY, $next, now()->addDays(7));
             }
 
             $cursor = $next ?? $cursor;
