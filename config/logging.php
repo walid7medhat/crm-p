@@ -136,6 +136,11 @@ return [
         'path' => storage_path('logs/bitrix-users.log'),
         'level' => 'debug',
     ],
+    'bitrix_leads' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/bitrix-leads.log'),
+        'level' => 'debug',
+    ],
     ],
 
 ];

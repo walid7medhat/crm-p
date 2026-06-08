@@ -102,6 +102,7 @@ import SalesIntelligence from './pages/sales-intelligence/index.vue'
 
 
 import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
+import SyncBitrixLeads from './components/kanban/leadList/SyncBitrixLeads.vue'
 
 
 import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
@@ -112,6 +113,7 @@ import SystemOverview from './pages/system-overview/SystemOverview.vue'
 import AttendanceMonthlyReport   from './pages/hr/attendance-monthly-reports.vue'
 const baseRoutes = [
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/sync-bitrix-leads', component: SyncBitrixLeads, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
       { path: '/logs', component: Logs, meta: { requiresAuth: true, requiresSuperAdmin: true } },
       {

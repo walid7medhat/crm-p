@@ -463,6 +463,10 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/leads/bitrix24/cancel-queue', [Bitrix24SyncController::class, 'cancel']);
     Route::post('/leads/bitrix24/reset-queue', [Bitrix24SyncController::class, 'reset']);
     Route::get('/bitrix24/queue-status', [Bitrix24SyncController::class, 'status']);
+    // === Bitrix24 lead sync (bitrix24:sync-leads command) — live progress ===
+    Route::post('/leads/bitrix24/sync-leads/start', [Bitrix24SyncController::class, 'startLeadsSync']);
+    Route::post('/leads/bitrix24/sync-leads/cancel', [Bitrix24SyncController::class, 'cancelLeadsSync']);
+    Route::get('/bitrix24/sync-leads/progress', [Bitrix24SyncController::class, 'leadsSyncProgress']);
     // === Deals API ===
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);

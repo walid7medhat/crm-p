@@ -483,9 +483,11 @@ class StageController extends Controller
                     ->with($kanbanEagerLoads)
                     ->where('stage_id', $stage->id);
 
-                if ($stage->order == 1) {
+                if (mb_strtolower(trim((string) $stage->name)) === 'new') {
+                    // "New" stage → newest created lead first
                     $stageLeadsQuery->orderBy('created_at', 'desc');
                 } else {
+                    // Other stages → most recently updated lead first
                     $stageLeadsQuery->orderBy('updated_at', 'desc');
                 }
 
@@ -812,11 +814,11 @@ class StageController extends Controller
                     });
                 }
                  // ================= pagination =================
-                        if ($stage->order == 1) {
-                            // Stage 1 → ترتيب بالكريت
+                        if (mb_strtolower(trim((string) $stage->name)) === 'new') {
+                            // "New" stage → newest created lead first
                             $leadsQuery->orderBy('created_at', 'desc');
                         } else {
-                            // باقي الـ stages → ترتيب بالـ updated
+                            // Other stages → most recently updated lead first
                             $leadsQuery->orderBy('updated_at', 'desc');
                         }
                     

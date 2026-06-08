@@ -234,6 +234,73 @@ class Bitrix24LeadImporter
     }
 
     /**
+     * Lighter variant of importOne for fast bulk syncs: creates new leads and
+     * refreshes existing ones (stage / source / activity-person / updated_at via
+     * syncStageForExistingLead), AND pulls NEW comments + activities (cheap,
+     * insert-with-dedup), but SKIPS the heavy timeline import (timeline items /
+     * bindings / logmessages / synthetic). So: 2 list calls per lead instead of
+     * 5+, while still bringing across new comments and activities.
+     *
+     * Returns the same shape as importOne:
+     *   ['lead' => Lead, 'created' => bool, 'bitrix24_id' => int]
+     */
+    public function importOneFast(array $b24Lead): array
+    {
+        $b24Id = (int) ($b24Lead['ID'] ?? 0);
+
+        if ($b24Id > 0) {
+            $existing = Lead::where('bitrix24_id', $b24Id)->first();
+            if ($existing) {
+                $oldStatus = $existing->status_lead;
+                $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
+
+                if ($oldStatus !== $newStatus && $newStatus !== null) {
+                    LeadHistoryHelper::log($existing->id, [
+                        'action'       => 'stage_changed',
+                        'old_stage'    => $oldStatus,
+                        'new_stage'    => $newStatus,
+                        'old_stage_id' => $existing->stage_id,
+                        'new_stage_id' => $this->resolveStageId($b24Lead['STATUS_ID'] ?? null),
+                        'source'       => 'bitrix24',
+                        'note'         => "Status changed from {$oldStatus} to {$newStatus} via Bitrix24 fast sync",
+                    ]);
+                }
+
+                $this->syncStageForExistingLead($existing, $b24Lead);
+                // Bring across new comments + activities (skip the heavy timeline).
+                $this->importComments($existing, $b24Id);
+                $this->importActivities($existing, $b24Id);
+
+                return [
+                    'lead'        => $existing,
+                    'created'     => false,
+                    'bitrix24_id' => $b24Id,
+                ];
+            }
+        }
+
+        $attributes = $this->prepareLeadRow($b24Lead, $b24Id);
+        $lead = Lead::withoutEvents(fn () => Lead::create($attributes));
+
+        LeadHistoryHelper::log($lead->id, [
+            'action'      => 'created',
+            'name'        => $lead->lead_name,
+            'source'      => 'bitrix24',
+            'bitrix24_id' => $b24Id,
+        ]);
+
+        // New lead → import its comments + activities (skip the heavy timeline).
+        $this->importComments($lead, $b24Id);
+        $this->importActivities($lead, $b24Id);
+
+        return [
+            'lead'        => $lead,
+            'created'     => true,
+            'bitrix24_id' => $b24Id,
+        ];
+    }
+
+    /**
      * crm.timeline.logmessage.list fallback. Empty on most older portals
      * but cheap to try — gives status-change records when supported.
      */
@@ -880,6 +947,8 @@ class Bitrix24LeadImporter
 
         $movedAt          = $this->parseDate($b24Lead['MOVED_TIME'] ?? null);
         $lastActivityAt   = $this->parseDate($b24Lead['LAST_ACTIVITY_TIME'] ?? null);
+        $modifyAt         = $this->parseDate($b24Lead['DATE_MODIFY'] ?? null);
+        $updatedAtValue   = $modifyAt?->format('Y-m-d H:i:s');
         $lastActivityById = isset($b24Lead['LAST_ACTIVITY_BY'])
             ? (int) $b24Lead['LAST_ACTIVITY_BY']
             : null;
@@ -893,6 +962,28 @@ class Bitrix24LeadImporter
         if ($movedAt !== null)          $refresh['bitrix24_moved_at'] = $movedAt;
         if ($lastActivityAt !== null)   $refresh['bitrix24_last_activity_at'] = $lastActivityAt;
         if ($lastActivityById !== null) $refresh['bitrix24_last_activity_by_id'] = $lastActivityById;
+
+        // Mirror Bitrix24's last-modify time onto updated_at so the kanban
+        // "most recently updated first" ordering reflects Bitrix activity.
+        if ($updatedAtValue !== null) {
+            $refresh['updated_at'] = $updatedAtValue;
+        }
+
+        // Keep the assigned-user mirror current (used to resolve the activity person).
+        if (isset($b24Lead['ASSIGNED_BY_ID'])) {
+            $refresh['bitrix24_assigned_user_id'] = (int) $b24Lead['ASSIGNED_BY_ID'];
+        }
+
+        // Source can change in Bitrix24 too — keep lead_source / source_information in sync.
+        $newSource = $this->resolveLeadSource($b24Lead['SOURCE_ID'] ?? null) ?? 'Bitrix24';
+        if ($existing->lead_source !== $newSource) {
+            $refresh['lead_source'] = $newSource;
+        }
+        $newSourceInfo = $b24Lead['SOURCE_DESCRIPTION'] ?? null;
+        if ($newSourceInfo !== null && $newSourceInfo !== '' && $existing->source_information !== $newSourceInfo) {
+            $refresh['source_information'] = $newSourceInfo;
+        }
+
         if (!empty($refresh)) {
             Lead::withoutEvents(fn () => $existing->update($refresh));
         }
@@ -904,7 +995,10 @@ class Bitrix24LeadImporter
         if ($newStageId === $oldStageId) {
             // Same stage, but the human label of STATUS_ID may have shifted.
             if ($newStatusName !== null && $existing->status_lead !== $newStatusName) {
-                Lead::withoutEvents(fn () => $existing->update(['status_lead' => $newStatusName]));
+                Lead::withoutEvents(fn () => $existing->update([
+                    'status_lead' => $newStatusName,
+                    'updated_at'  => $updatedAtValue ?? $existing->updated_at,
+                ]));
             }
             return;
         }
@@ -913,6 +1007,7 @@ class Bitrix24LeadImporter
             'stage_id'             => $newStageId,
             'status_lead'          => $newStatusName,
             'last_stage_change_at' => $movedAt ?? now(),
+            'updated_at'           => $updatedAtValue ?? now(),
         ]));
 
         $oldStageName = Stage::query()->whereKey($oldStageId)->value('name');

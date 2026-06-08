@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Console\Commands\SyncBitrix24LeadsProgress;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncBitrix24LeadsJob;
@@ -12,6 +13,8 @@ use App\Services\Bitrix24\Bitrix24Exception;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 
 class Bitrix24SyncController extends Controller
 {
@@ -308,5 +311,86 @@ class Bitrix24SyncController extends Controller
         ])->save();
 
         return ApiResponse::success(null, 'Sync cancellation requested — will stop after the current chunk.');
+    }
+
+    /**
+     * Live progress for the `bitrix24:sync-leads` command (created/updated +
+     * a rolling event feed). Reads the cache snapshot the command publishes.
+     *   GET /api/bitrix24/sync-leads/progress
+     */
+    public function leadsSyncProgress(): JsonResponse
+    {
+        $state = Cache::get(SyncBitrix24LeadsProgress::PROGRESS_KEY);
+
+        if (!is_array($state)) {
+            $state = [
+                'status' => 'idle', 'progress' => 0, 'total' => 0,
+                'processed' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0,
+                'stage_changed' => 0, 'source_changed' => 0, 'activity_changed' => 0, 'errors' => 0,
+                'last_error' => null, 'started_at' => null, 'updated_at' => null, 'finished_at' => null,
+                'events' => [],
+            ];
+        }
+
+        return ApiResponse::success($state, 'Lead sync progress');
+    }
+
+    /**
+     * Queue the `bitrix24:sync-leads` command (runs on the queue worker so the
+     * HTTP request returns immediately; progress is polled separately).
+     *   POST /api/leads/bitrix24/sync-leads/start { skip_existing?: bool, limit?: int }
+     */
+    public function startLeadsSync(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $request->validate([
+            'skip_existing' => 'nullable|boolean',
+            'limit'         => 'nullable|integer|min:0',
+            'fast'          => 'nullable|boolean',
+        ]);
+
+        $current = Cache::get(SyncBitrix24LeadsProgress::PROGRESS_KEY);
+        if (is_array($current) && ($current['status'] ?? null) === 'running') {
+            return ApiResponse::error('A lead sync is already running.', 409);
+        }
+
+        Cache::forget(SyncBitrix24LeadsProgress::CANCEL_KEY);
+
+        $params = ['--fallback-user' => $user->id];
+        if ((bool) $request->input('skip_existing', false)) {
+            $params['--skip-existing'] = true;
+        }
+        if ((int) $request->input('limit', 0) > 0) {
+            $params['--limit'] = (int) $request->input('limit');
+        }
+
+        // Fast mode: stage/source/activity only (no comments/timeline) — much faster.
+        $command = (bool) $request->input('fast', false)
+            ? 'bitrix24:sync-leads-fast'
+            : 'bitrix24:sync-leads';
+
+        Artisan::queue($command, $params);
+
+        return ApiResponse::success(['status' => 'queued', 'mode' => $command], 'Lead sync queued — watch the progress below.');
+    }
+
+    /**
+     * Ask a running `bitrix24:sync-leads` command to stop after the current lead.
+     *   POST /api/leads/bitrix24/sync-leads/cancel
+     */
+    public function cancelLeadsSync(): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        Cache::put(SyncBitrix24LeadsProgress::CANCEL_KEY, true, now()->addHours(6));
+
+        return ApiResponse::success(null, 'Cancellation requested — will stop after the current lead.');
     }
 }
