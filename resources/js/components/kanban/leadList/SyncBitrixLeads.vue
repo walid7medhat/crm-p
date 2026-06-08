@@ -90,21 +90,34 @@
           </div>
         </div>
 
-        <!-- Change breakdown -->
-        <div class="row g-2 mt-1">
-          <div class="col-4">
+        <!-- Change breakdown: what was updated -->
+        <p class="text-muted small text-uppercase mt-3 mb-1">What changed (on updates)</p>
+        <div class="row g-2">
+          <div class="col-6 col-md">
             <div class="stat-tile stat-tile--mini">
-              <div class="stat-tile__label">Stage changed</div>
+              <div class="stat-tile__label">Stage</div>
               <div class="stat-tile__value stat-tile__value--mini">{{ state.stage_changed }}</div>
             </div>
           </div>
-          <div class="col-4">
+          <div class="col-6 col-md">
             <div class="stat-tile stat-tile--mini">
-              <div class="stat-tile__label">Source changed</div>
+              <div class="stat-tile__label">Status</div>
+              <div class="stat-tile__value stat-tile__value--mini">{{ state.status_changed }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md">
+            <div class="stat-tile stat-tile--mini">
+              <div class="stat-tile__label">Owner</div>
+              <div class="stat-tile__value stat-tile__value--mini">{{ state.owner_changed }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md">
+            <div class="stat-tile stat-tile--mini">
+              <div class="stat-tile__label">Source</div>
               <div class="stat-tile__value stat-tile__value--mini">{{ state.source_changed }}</div>
             </div>
           </div>
-          <div class="col-4">
+          <div class="col-6 col-md">
             <div class="stat-tile stat-tile--mini">
               <div class="stat-tile__label">Activity person</div>
               <div class="stat-tile__value stat-tile__value--mini">{{ state.activity_changed }}</div>
@@ -189,6 +202,8 @@ const state = reactive({
   skipped: 0,
   errors: 0,
   stage_changed: 0,
+  status_changed: 0,
+  owner_changed: 0,
   source_changed: 0,
   activity_changed: 0,
   last_error: null,
@@ -261,6 +276,8 @@ const applyState = (q) => {
     skipped: q.skipped || 0,
     errors: q.errors || 0,
     stage_changed: q.stage_changed || 0,
+    status_changed: q.status_changed || 0,
+    owner_changed: q.owner_changed || 0,
     source_changed: q.source_changed || 0,
     activity_changed: q.activity_changed || 0,
     last_error: q.last_error || null,

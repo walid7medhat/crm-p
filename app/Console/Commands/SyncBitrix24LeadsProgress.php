@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\BitrixSyncState;
 use App\Models\Lead;
 use App\Models\Stage;
 use App\Models\User;
@@ -42,8 +43,26 @@ class SyncBitrix24LeadsProgress extends Command
     /** Cache flag the UI sets to request cancellation. */
     public const CANCEL_KEY = 'bitrix24_sync_leads_cancel';
 
-    /** Saved Bitrix24 list cursor so a re-run resumes instead of restarting. */
-    public const CURSOR_KEY = 'bitrix24_sync_leads_cursor';
+    /** BitrixSyncState row key holding the saved resume cursor (durable in DB). */
+    public const STATE_KEY = 'sync_leads';
+
+    /** Read the saved resume cursor from the database (0 if none). */
+    public static function loadSavedCursor(): int
+    {
+        return (int) (BitrixSyncState::where('key', self::STATE_KEY)->value('cursor') ?? 0);
+    }
+
+    /** Persist the resume cursor to the database. */
+    public static function saveCursor(int $cursor): void
+    {
+        BitrixSyncState::updateOrCreate(['key' => self::STATE_KEY], ['cursor' => $cursor]);
+    }
+
+    /** Reset the saved cursor (e.g. when the full walk finishes). */
+    public static function clearSavedCursor(): void
+    {
+        BitrixSyncState::updateOrCreate(['key' => self::STATE_KEY], ['cursor' => 0]);
+    }
 
     private int $total = 0;
     private ?string $startedAt = null;
@@ -61,7 +80,8 @@ class SyncBitrix24LeadsProgress extends Command
     /** @var array<string, int> */
     private array $counts = [
         'processed' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0,
-        'stage_changed' => 0, 'source_changed' => 0, 'activity_changed' => 0, 'errors' => 0,
+        'stage_changed' => 0, 'status_changed' => 0, 'owner_changed' => 0,
+        'source_changed' => 0, 'activity_changed' => 0, 'errors' => 0,
     ];
 
     public function handle(): int
@@ -81,9 +101,9 @@ class SyncBitrix24LeadsProgress extends Command
             $cursor = $startOpt;
         } elseif ($restart) {
             $cursor = 0;
-            Cache::forget(self::CURSOR_KEY);
+            self::clearSavedCursor();
         } else {
-            $cursor = (int) Cache::get(self::CURSOR_KEY, 0);
+            $cursor = self::loadSavedCursor();
         }
 
         $this->startedAt = now()->toIso8601String();
@@ -116,7 +136,7 @@ class SyncBitrix24LeadsProgress extends Command
                 $page = $client->listLeads($cursor);
             } catch (\Throwable $e) {
                 // Save where we were so the next run resumes from this page.
-                Cache::put(self::CURSOR_KEY, $pageCursor, now()->addDays(7));
+                self::saveCursor($pageCursor);
                 $this->lastError = $e->getMessage();
                 $this->publish('failed');
                 $this->logBoth('error', 'Failed to list leads', ['cursor' => $cursor, 'error' => $e->getMessage()]);
@@ -140,7 +160,7 @@ class SyncBitrix24LeadsProgress extends Command
 
                 if (Cache::get(self::CANCEL_KEY)) {
                     Cache::forget(self::CANCEL_KEY);
-                    Cache::put(self::CURSOR_KEY, $pageCursor, now()->addDays(7)); // resume here next run
+                    self::saveCursor($pageCursor); // resume here next run
                     $this->pushEvent('info', 'Cancelled by user');
                     $this->publish('cancelled');
                     $this->warn('Sync cancelled.');
@@ -199,11 +219,11 @@ class SyncBitrix24LeadsProgress extends Command
             // Persist the resume point: re-do this page if we stopped mid-way (limit),
             // advance to next page otherwise, or clear it when the walk is finished.
             if ($stop) {
-                Cache::put(self::CURSOR_KEY, $pageCursor, now()->addDays(7));
+                self::saveCursor($pageCursor);
             } elseif ($next === null) {
-                Cache::forget(self::CURSOR_KEY);
+                self::clearSavedCursor();
             } else {
-                Cache::put(self::CURSOR_KEY, $next, now()->addDays(7));
+                self::saveCursor((int) $next);
             }
 
             $cursor = $next ?? $cursor;
@@ -220,8 +240,9 @@ class SyncBitrix24LeadsProgress extends Command
             $this->counts['skipped'], $this->counts['errors']
         ));
         $this->info(sprintf(
-            'Changes on updates → stage=%d, source=%d, activity-person=%d',
-            $this->counts['stage_changed'], $this->counts['source_changed'], $this->counts['activity_changed']
+            'Changes on updates → stage=%d, status=%d, owner=%d, source=%d, activity-person=%d',
+            $this->counts['stage_changed'], $this->counts['status_changed'], $this->counts['owner_changed'],
+            $this->counts['source_changed'], $this->counts['activity_changed']
         ));
 
         return self::SUCCESS;
@@ -245,9 +266,11 @@ class SyncBitrix24LeadsProgress extends Command
             $changed[] = 'stage: '.$this->stageName($before->stage_id).' → '.$this->stageName($lead->stage_id);
         }
         if ((string) $before->status_lead !== (string) $lead->status_lead) {
+            $this->counts['status_changed']++;
             $changed[] = 'status: '.($before->status_lead ?: '—').' → '.($lead->status_lead ?: '—');
         }
         if ((int) $before->responsible_person_id !== (int) $lead->responsible_person_id) {
+            $this->counts['owner_changed']++;
             $changed[] = 'owner: '.$this->userNameById($before->responsible_person_id).' → '.$this->userNameById($lead->responsible_person_id);
         }
         if ((string) $before->lead_source !== (string) $lead->lead_source) {

@@ -47,7 +47,8 @@ class SyncBitrix24LeadsFast extends Command
     /** @var array<string, int> */
     private array $counts = [
         'processed' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0,
-        'stage_changed' => 0, 'source_changed' => 0, 'activity_changed' => 0, 'errors' => 0,
+        'stage_changed' => 0, 'status_changed' => 0, 'owner_changed' => 0,
+        'source_changed' => 0, 'activity_changed' => 0, 'errors' => 0,
     ];
 
     public function handle(): int
@@ -66,9 +67,9 @@ class SyncBitrix24LeadsFast extends Command
             $cursor = $startOpt;
         } elseif ($restart) {
             $cursor = 0;
-            Cache::forget(SyncBitrix24LeadsProgress::CURSOR_KEY);
+            SyncBitrix24LeadsProgress::clearSavedCursor();
         } else {
-            $cursor = (int) Cache::get(SyncBitrix24LeadsProgress::CURSOR_KEY, 0);
+            $cursor = SyncBitrix24LeadsProgress::loadSavedCursor();
         }
 
         $this->startedAt = now()->toIso8601String();
@@ -101,7 +102,7 @@ class SyncBitrix24LeadsFast extends Command
                 $page = $client->listLeads($cursor);
             } catch (\Throwable $e) {
                 // Save where we were so the next run resumes from this page.
-                Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $pageCursor, now()->addDays(7));
+                SyncBitrix24LeadsProgress::saveCursor($pageCursor);
                 $this->lastError = $e->getMessage();
                 $this->publish('failed');
                 $this->logBoth('error', 'Failed to list leads', ['cursor' => $cursor, 'error' => $e->getMessage()]);
@@ -125,7 +126,7 @@ class SyncBitrix24LeadsFast extends Command
 
                 if (Cache::get(SyncBitrix24LeadsProgress::CANCEL_KEY)) {
                     Cache::forget(SyncBitrix24LeadsProgress::CANCEL_KEY);
-                    Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $pageCursor, now()->addDays(7));
+                    SyncBitrix24LeadsProgress::saveCursor($pageCursor);
                     $this->pushEvent('info', 'Cancelled by user');
                     $this->publish('cancelled');
                     $this->warn('Sync cancelled.');
@@ -177,13 +178,13 @@ class SyncBitrix24LeadsFast extends Command
                 $this->publish('running');
             }
 
-            // Persist resume point (shared cursor with bitrix24:sync-leads).
+            // Persist resume point in DB (shared cursor with bitrix24:sync-leads).
             if ($stop) {
-                Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $pageCursor, now()->addDays(7));
+                SyncBitrix24LeadsProgress::saveCursor($pageCursor);
             } elseif ($next === null) {
-                Cache::forget(SyncBitrix24LeadsProgress::CURSOR_KEY);
+                SyncBitrix24LeadsProgress::clearSavedCursor();
             } else {
-                Cache::put(SyncBitrix24LeadsProgress::CURSOR_KEY, $next, now()->addDays(7));
+                SyncBitrix24LeadsProgress::saveCursor((int) $next);
             }
 
             $cursor = $next ?? $cursor;
@@ -195,9 +196,10 @@ class SyncBitrix24LeadsFast extends Command
         $this->logBoth('info', 'FINISHED sync-leads-fast', $this->counts);
         $this->newLine();
         $this->info(sprintf(
-            'Done. processed=%d created=%d updated=%d skipped=%d errors=%d (stage=%d, source=%d, activity=%d)',
+            'Done. processed=%d created=%d updated=%d skipped=%d errors=%d (stage=%d, status=%d, owner=%d, source=%d, activity=%d)',
             $this->counts['processed'], $this->counts['created'], $this->counts['updated'], $this->counts['skipped'],
-            $this->counts['errors'], $this->counts['stage_changed'], $this->counts['source_changed'], $this->counts['activity_changed']
+            $this->counts['errors'], $this->counts['stage_changed'], $this->counts['status_changed'],
+            $this->counts['owner_changed'], $this->counts['source_changed'], $this->counts['activity_changed']
         ));
 
         return self::SUCCESS;
@@ -221,9 +223,11 @@ class SyncBitrix24LeadsFast extends Command
             $changed[] = 'stage: '.$this->stageName($before->stage_id).' → '.$this->stageName($lead->stage_id);
         }
         if ((string) $before->status_lead !== (string) $lead->status_lead) {
+            $this->counts['status_changed']++;
             $changed[] = 'status: '.($before->status_lead ?: '—').' → '.($lead->status_lead ?: '—');
         }
         if ((int) $before->responsible_person_id !== (int) $lead->responsible_person_id) {
+            $this->counts['owner_changed']++;
             $changed[] = 'owner: '.$this->userNameById($before->responsible_person_id).' → '.$this->userNameById($lead->responsible_person_id);
         }
         if ((string) $before->lead_source !== (string) $lead->lead_source) {
