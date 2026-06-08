@@ -1023,16 +1023,6 @@ const totalLeadsCount = computed(() => {
 
 const activeShortcutFilter = ref(null)
 
-function countLoadedLeads(matcher) {
-    let count = 0
-    for (const col of columns.value) {
-        for (const lead of col.leads || []) {
-            if (matcher(lead, col)) count++
-        }
-    }
-    return count
-}
-
 function normalizeLeadHeat(lead) {
     const status = String(lead?.status_lead || '').toLowerCase()
     const priority = String(lead?.priority || '').toLowerCase()
@@ -1049,13 +1039,18 @@ function normalizeLeadInteraction(lead) {
     return null
 }
 
-const leadAnalyticsMetrics = computed(() => ({
-    tempCold: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'cold'),
-    tempWarm: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'warm'),
-    tempHot: countLoadedLeads((lead) => normalizeLeadHeat(lead) === 'hot'),
-    callAnswered: countLoadedLeads((lead) => normalizeLeadInteraction(lead) === 'answered'),
-    callNoAnswer: countLoadedLeads((lead) => normalizeLeadInteraction(lead) === 'no_answer'),
-}))
+// Populated from the backend `analytics` field on every /stages-with-leads response.
+// `countLoadedLeads` would only see the first 20 leads per stage that are currently
+// loaded — the chip totals must reflect the whole filtered set, not the visible page.
+const leadAnalyticsServer = ref({
+    tempCold: 0,
+    tempWarm: 0,
+    tempHot: 0,
+    callAnswered: 0,
+    callNoAnswer: 0,
+})
+
+const leadAnalyticsMetrics = computed(() => ({ ...leadAnalyticsServer.value }))
 
 function leadMatchesShortcutFilter(lead) {
     if (!activeShortcutFilter.value) return true
@@ -1468,7 +1463,17 @@ const executeFetchLeads = async () => {
         
         const responseData = response?.data?.data
         const stagesData = responseData?.stages || []
-        
+        const analytics = responseData?.analytics
+        if (analytics && typeof analytics === 'object') {
+            leadAnalyticsServer.value = {
+                tempCold: Number(analytics.tempCold) || 0,
+                tempWarm: Number(analytics.tempWarm) || 0,
+                tempHot: Number(analytics.tempHot) || 0,
+                callAnswered: Number(analytics.callAnswered) || 0,
+                callNoAnswer: Number(analytics.callNoAnswer) || 0,
+            }
+        }
+
         // تحويل البيانات
         const newData = stagesData.map((stage, index) => ({
             title: stage.name,

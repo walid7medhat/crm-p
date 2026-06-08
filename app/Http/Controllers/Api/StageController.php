@@ -340,17 +340,6 @@ class StageController extends Controller
                     $q->where('why_lost_lead', $request->why_lost_lead);
                 }
 
-                // Temperature shortcut chip (Cold/Warm/Hot): match either the user-set
-                // status_lead OR the AI-computed priority — same OR logic the kanban
-                // counter uses, otherwise the chip count and the filtered list diverge.
-                if ($request->filled('heat')) {
-                    $heat = $request->heat;
-                    $q->where(function ($qq) use ($heat) {
-                        $qq->where('status_lead', $heat)
-                           ->orWhere('priority', $heat);
-                    });
-                }
-
 
                 // Lead Type
                 if ($request->filled('lead_type') && $request->lead_type !='both') {
@@ -436,6 +425,10 @@ class StageController extends Controller
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
                           ->orWhere('status_lead', 'like', "%{$search}%")
+                          // Chip vocabulary searchable as plain text — typing "hot"/"cold"/"warm"
+                          // or "answered"/"no_answer" matches the AI priority / call-result columns.
+                          ->orWhere('priority', 'like', "%{$search}%")
+                          ->orWhere('interaction_result', 'like', "%{$search}%")
                           ->orWhere('more_information', 'like', "%{$search}%")
                           ->orWhere(function($q2) use ($search) {
                                 $q2->where('lead_type', 'like', "%{$search}%")
@@ -454,7 +447,7 @@ class StageController extends Controller
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
                           })
-                           ->orWhereHas('propertyType', function ($pt) use ($search) { 
+                           ->orWhereHas('propertyType', function ($pt) use ($search) {
                                   $pt->where('name', 'like', "%{$search}%");
                               })
                           ->orWhereHas('stage', function ($st) use ($search) {
@@ -474,6 +467,40 @@ class StageController extends Controller
                     });
                 }
             });
+
+            // ================= analytics counts (chip totals) =================
+            // Snapshot the query BEFORE the temperature chip filter is applied so the
+            // Cold/Warm/Hot/Answered/No-answer chip counts reflect what's available
+            // across the whole filtered set — not just the currently-loaded page, and
+            // not the subset already narrowed by the active chip. Mirrors the OR logic
+            // of `normalizeLeadHeat` on the frontend.
+            $analyticsBaseQuery = clone $baseLeadsQuery;
+            $heatCounts = (clone $analyticsBaseQuery)
+                ->selectRaw(
+                    "SUM(CASE WHEN status_lead = 'cold' OR priority = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                     SUM(CASE WHEN status_lead = 'warm' OR priority = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
+                     SUM(CASE WHEN status_lead = 'hot'  OR priority = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                     SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                     SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                )
+                ->first();
+            $leadAnalytics = [
+                'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
+                'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
+                'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
+                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
+                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
+            ];
+
+            // Now apply the temperature chip filter — affects stage counts, leads list,
+            // and pagination, but NOT the analytics snapshot taken above.
+            if ($request->filled('heat')) {
+                $heat = $request->heat;
+                $baseLeadsQuery->where(function ($qq) use ($heat) {
+                    $qq->where('status_lead', $heat)
+                       ->orWhere('priority', $heat);
+                });
+            }
 
             // ================= leads per stage (one count query + limit per stage) =================
             $stageIds = $stages->pluck('id')->all();
@@ -542,6 +569,7 @@ class StageController extends Controller
 
             return ApiResponse::success([
                 'stages' => $stagesWithLeads,
+                'analytics' => $leadAnalytics,
                 'pagination' => [
                     'current_page' => $request->get('page', 1),
                     'per_page' => $perPage,
@@ -720,10 +748,10 @@ class StageController extends Controller
                 }
 
                 // Property Status
-                if ($request->filled('property_status') && $request->lead_type !='both') {
+                if ($request->filled('property_status') && $request->property_status !='both') {
                     $leadsQuery->where(function($q) use ($request) {
                         $q->where('property_status', $request->property_status)
-                        ->orWhere('property_status', 'both'); 
+                        ->orWhere('property_status', 'both');
                     });
                 }
                 
@@ -785,7 +813,7 @@ class StageController extends Controller
                             $expanded = [$search];
                         }
 
-                    $leadsQuery->where(function ($s) use ($search) {
+                    $leadsQuery->where(function ($s) use ($search, $expanded) {
                         $s->where('lead_name', 'like', "%{$search}%")
                           ->orWhere('lead_number', 'like', "%{$search}%")
                           ->orWhere('first_name', 'like', "%{$search}%")
@@ -796,6 +824,10 @@ class StageController extends Controller
                           ->orWhere('work_phone_2', 'like', "%{$search}%")
                           ->orWhere('lead_source', 'like', "%{$search}%")
                           ->orWhere('status_lead', 'like', "%{$search}%")
+                          // Chip vocabulary searchable as plain text — typing "hot"/"cold"/"warm"
+                          // or "answered"/"no_answer" matches the AI priority / call-result columns.
+                          ->orWhere('priority', 'like', "%{$search}%")
+                          ->orWhere('interaction_result', 'like', "%{$search}%")
                           ->orWhere('more_information', 'like', "%{$search}%")
                            ->orWhere(function($q2) use ($search) {
                                 $q2->where('lead_type', 'like', "%{$search}%")
@@ -814,7 +846,7 @@ class StageController extends Controller
                           ->orWhereHas('responsiblePerson', function ($r) use ($search) {
                               $r->where('name', 'like', "%{$search}%");
                           })
-                           ->orWhereHas('propertyType', function ($pt) use ($search) { 
+                           ->orWhereHas('propertyType', function ($pt) use ($search) {
                                   $pt->where('name', 'like', "%{$search}%");
                               })
                           ->orWhereHas('stage', function ($st) use ($search) {
