@@ -64,6 +64,28 @@ class SyncBitrix24LeadsProgress extends Command
         BitrixSyncState::updateOrCreate(['key' => self::STATE_KEY], ['cursor' => 0]);
     }
 
+    /**
+     * True when another sync process is actively running (status = running and
+     * its heartbeat — updated_at — is recent). A stale snapshot (crashed run)
+     * is treated as not-active so a new run can take over.
+     */
+    public static function anotherRunActive(int $heartbeatSeconds = 300): bool
+    {
+        $current = Cache::get(self::PROGRESS_KEY);
+        if (! is_array($current) || ($current['status'] ?? null) !== 'running') {
+            return false;
+        }
+        $updatedAt = $current['updated_at'] ?? null;
+        if (! $updatedAt) {
+            return false;
+        }
+        try {
+            return now()->diffInSeconds(\Illuminate\Support\Carbon::parse($updatedAt), true) < $heartbeatSeconds;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     private int $total = 0;
     /** Bitrix24 offset we resumed from = leads already walked in previous runs. */
     private int $startCursor = 0;
@@ -96,6 +118,14 @@ class SyncBitrix24LeadsProgress extends Command
         $startOpt = (int) $this->option('start');
         $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
+
+        // Guard: never let two runs write to the same progress key at once
+        // (overlapping scheduler ticks / double UI clicks) — the counters would
+        // bounce between each process's state. Skip if another run is alive.
+        if (self::anotherRunActive()) {
+            $this->warn('Another lead sync is already running — skipping this run.');
+            return self::SUCCESS;
+        }
 
         // Resume from the saved cursor by default, so re-running continues instead
         // of starting over. --start=N overrides; --restart forces the beginning.

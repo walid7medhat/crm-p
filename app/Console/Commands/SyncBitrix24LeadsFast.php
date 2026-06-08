@@ -64,6 +64,12 @@ class SyncBitrix24LeadsFast extends Command
         $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
 
+        // Don't run two syncs at once (overlapping scheduler ticks / double clicks).
+        if (SyncBitrix24LeadsProgress::anotherRunActive()) {
+            $this->warn('Another lead sync is already running — skipping this run.');
+            return self::SUCCESS;
+        }
+
         // Resume from the saved cursor by default (shared with bitrix24:sync-leads).
         if ($startOpt > 0) {
             $cursor = $startOpt;
