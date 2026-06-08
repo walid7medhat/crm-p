@@ -6,13 +6,19 @@
           <p class="dh-greeting">Hello, {{ greetingName }} 👋</p>
           <p class="dh-greeting-sub">Here's your activity today, take a moment to have a look at this.</p>
         </div>
-        <DashboardDateRangePicker
-          v-model:date-from="dateFrom"
-          v-model:date-to="dateTo"
-          :label="dateRangeLabel"
-          picker-class="dh-header-date"
-          @apply="applyDateRange"
-        />
+        <div class="dh-header-actions">
+          <router-link to="/home" class="dh-header-analytics-link" title="Executive analytics dashboard">
+            <iconify-icon icon="lucide:bar-chart-3" width="16" height="16" />
+            <span>Analytics</span>
+          </router-link>
+          <DashboardDateRangePicker
+            v-model:date-from="dateFrom"
+            v-model:date-to="dateTo"
+            :label="dateRangeLabel"
+            picker-class="dh-header-date"
+            @apply="applyDateRange"
+          />
+        </div>
       </template>
 
       <template v-else>

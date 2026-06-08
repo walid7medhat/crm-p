@@ -424,6 +424,41 @@ const total = ref(0)
 // Filters applied from the navbar search modal — merged into every fetch.
 const currentQuery = ref({})
 
+let fetchInFlight = null
+let fetchDebounceTimer = null
+let lastFetchSignature = ''
+
+const buildFetchParams = () => {
+    const params = {
+        stage_id: 10,
+        paginate: 1,
+        page: currentPage.value,
+        per_page: perPage.value,
+        ...(currentQuery.value || {}),
+    }
+    params.stage_id = 10
+    return params
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const requestLeadPool = async (params, attempt = 0) => {
+    try {
+        return await api.get('/leads', { params })
+    } catch (error) {
+        const status = error?.response?.status
+        if (status === 429 && attempt < 2) {
+            const retryAfter = Number(error?.response?.headers?.['retry-after'])
+            const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+                ? retryAfter * 1000
+                : 1500 * (attempt + 1)
+            await sleep(delayMs)
+            return requestLeadPool(params, attempt + 1)
+        }
+        throw error
+    }
+}
+
 // Numeric pager with ellipsis: always show first/last + a window around current.
 const visiblePages = computed(() => {
     const last = lastPage.value
@@ -453,59 +488,77 @@ const cardFields = ref([
 ])
 
 // Fetch leads with stage_id = 10 (Lead Pool), paginated and filtered.
-const fetchLeadPool = async () => {
+const fetchLeadPool = async ({ force = false } = {}) => {
+    const params = buildFetchParams()
+    const signature = JSON.stringify(params)
+
+    if (!force && fetchInFlight && lastFetchSignature === signature) {
+        return fetchInFlight
+    }
+
+    lastFetchSignature = signature
     loading.value = true
-    try {
-        const params = {
-            stage_id: 10,
-            paginate: 1,
-            page: currentPage.value,
-            per_page: perPage.value,
-            ...(currentQuery.value || {}),
-        }
-        // stage_id is the lead-pool fixed scope — never overridden by the search query.
-        params.stage_id = 10
 
-        const response = await api.get('/leads', { params })
-        const body = response.data || {}
-        const data = body.data || []
+    const run = async () => {
+        try {
+            const response = await requestLeadPool(params)
+            const body = response.data || {}
+            const data = body.data || []
 
-        // Backend returns flat leads array + pagination meta in paginate mode; fall back to
-        // the legacy grouped shape for safety.
-        if (Array.isArray(data) && body.pagination) {
-            leads.value = data
-            lastPage.value = Number(body.pagination.last_page) || 1
-            total.value = Number(body.pagination.total) || data.length
-            perPage.value = Number(body.pagination.per_page) || perPage.value
-            currentPage.value = Number(body.pagination.current_page) || currentPage.value
-        } else if (data && data.length > 0 && data[0]?.leads) {
-            leads.value = data[0].leads
-            lastPage.value = 1
-            total.value = leads.value.length
-        } else if (Array.isArray(data)) {
-            leads.value = data
-            lastPage.value = 1
-            total.value = data.length
-        } else {
+            if (Array.isArray(data) && body.pagination) {
+                leads.value = data
+                lastPage.value = Number(body.pagination.last_page) || 1
+                total.value = Number(body.pagination.total) || data.length
+                perPage.value = Number(body.pagination.per_page) || perPage.value
+                currentPage.value = Number(body.pagination.current_page) || currentPage.value
+            } else if (data && data.length > 0 && data[0]?.leads) {
+                leads.value = data[0].leads
+                lastPage.value = 1
+                total.value = leads.value.length
+            } else if (Array.isArray(data)) {
+                leads.value = data
+                lastPage.value = 1
+                total.value = data.length
+            } else {
+                leads.value = []
+                lastPage.value = 1
+                total.value = 0
+            }
+        } catch (error) {
+            console.error('Error fetching lead pool:', error)
+            const isRateLimited = error?.response?.status === 429
+            Swal.fire({
+                icon: isRateLimited ? 'warning' : 'error',
+                title: isRateLimited ? 'Too many requests' : 'Error',
+                text: isRateLimited
+                    ? 'Lead Pool is loading too quickly. Please wait a moment and try again.'
+                    : 'Failed to load Lead Pool',
+                timer: 4000,
+                showConfirmButton: false,
+            })
             leads.value = []
             lastPage.value = 1
             total.value = 0
+        } finally {
+            loading.value = false
+            if (fetchInFlight === run) {
+                fetchInFlight = null
+            }
         }
-    } catch (error) {
-        console.error('Error fetching lead pool:', error)
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to load Lead Pool',
-            timer: 3000,
-            showConfirmButton: false
-        })
-        leads.value = []
-        lastPage.value = 1
-        total.value = 0
-    } finally {
-        loading.value = false
     }
+
+    fetchInFlight = run()
+    return fetchInFlight
+}
+
+const scheduleFetchLeadPool = (options = {}) => {
+    if (fetchDebounceTimer) {
+        clearTimeout(fetchDebounceTimer)
+    }
+    fetchDebounceTimer = setTimeout(() => {
+        fetchDebounceTimer = null
+        fetchLeadPool(options)
+    }, 250)
 }
 
 const goToPage = (page) => {
@@ -703,20 +756,25 @@ const formatMaskedQuestion = (questionData) => {
 
 onMounted(() => {
     window.addEventListener('keydown', onLeadPoolKeydown)
-    fetchLeadPool()
+    scheduleFetchLeadPool()
 })
 
 onUnmounted(() => {
     window.removeEventListener('keydown', onLeadPoolKeydown)
+    if (fetchDebounceTimer) {
+        clearTimeout(fetchDebounceTimer)
+        fetchDebounceTimer = null
+    }
 })
 
 // Expose refresh + a programmatic search-apply for the parent kanban if needed.
 defineExpose({
-    fetchLeadPool,
+    fetchLeadPool: (options) => fetchLeadPool({ force: true, ...options }),
     setQuery(query) {
         currentQuery.value = query && typeof query === 'object' ? { ...query } : {}
         currentPage.value = 1
-        fetchLeadPool()
+        lastFetchSignature = ''
+        scheduleFetchLeadPool()
     },
 })
 </script>

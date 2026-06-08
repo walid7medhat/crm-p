@@ -3,7 +3,8 @@ import { resetSidebarLayout } from './composables/useSidebar.js'
 
 // DashBoard
 import Ai from './pages/dashboard/ai.vue'
-import HomeAi from  './components/dashboard/home/DashboardHome.vue'
+import HomeAi from './components/dashboard/home/DashboardHome.vue'
+import HomeAnalytics from './pages/dashboard/home-analytics.vue'
 import Crm from './pages/dashboard/crm.vue'
 import AllLsting from './components/alllisting/AllLsting.vue'
 import PropertyShow from './components/alllisting/PropertyShow.vue'
@@ -151,6 +152,7 @@ const baseRoutes = [
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
    { path: '/', component: HomeAi, meta: { requiresAuth: true, dashboardHome: true } },
+   { path: '/home', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
   { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },

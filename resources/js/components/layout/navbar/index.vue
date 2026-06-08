@@ -635,7 +635,7 @@ function goBack() {
 }
 const route = useRoute();
 const isDashboardHome = computed(
-  () => !!route.meta?.dashboardHome || route.path === '/' || route.path === '',
+  () => !!route.meta?.dashboardHome || route.path === '/' || route.path === '/home' || route.path === '',
 );
 const { proxy } = getCurrentInstance();
 const user = ref(null);
@@ -674,11 +674,7 @@ const moduleHeaderTabs = computed(() =>
   }),
 );
 
-const showTopModuleNav = computed(() => {
-  if (route.path === '/') return true;
-  return false
-  // return !isMobileViewport.value;
-});
+const showTopModuleNav = computed(() => isDashboardHome.value && !isMobileViewport.value);
 const topModuleNavItems = computed(() =>
   buildTopModuleNav({
     isAdmin: isAdmin.value,

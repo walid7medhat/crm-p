@@ -43,13 +43,14 @@ class BlockBots
         // --------------------------------------
         // 1. المعدل العام (للصفحات العادية)
         // --------------------------------------
+        $globalLimit = $user ? 400 : 120;
         $key = 'hits_' . ($user?->id ?? $request->ip());
         $count = cache()->get($key, 0);
         $count++;
         cache()->put($key, $count, now()->addSeconds(60));
 
-        if ($count > 120) { // 120 طلب لأي صفحة في الدقيقة (أقل من طلبين في الثانية)
-            if ($user) Auth::logout();
+        if ($count > $globalLimit) {
+            if (!$user) Auth::logout();
             abort(429, 'Too many requests');
         }
 
@@ -61,9 +62,9 @@ class BlockBots
         
         // تحديد حدود مختلفة حسب نوع الـ endpoint
         $limits = [
-            'write' => 20,   // عمليات الكتابة (POST, PUT, DELETE): 20 في الدقيقة
-            'read' => 100,   // عمليات القراءة (GET): 100 في الدقيقة
-            'auth' => 10,    // عمليات تسجيل الدخول: 10 في الدقيقة
+            'write' => $user ? 60 : 20,
+            'read' => $user ? 300 : 100,
+            'auth' => 10,
         ];
         
         // تحديد أي نوع ينتمي إليه هذا الـ endpoint
@@ -87,11 +88,6 @@ class BlockBots
         cache()->put($routeKey, $routeCount, now()->addSeconds($duration));
         
         if ($routeCount > $limit) {
-            // ⚠️ لا تقم بحظر المستخدم نهائياً! فقط ارفض الطلب مؤقتاً
-            // لو تريد حظراً مؤقتاً (مثلاً 5 دقائق):
-            $blockKey = 'temp_block_' . ($user?->id ?? $request->ip());
-            cache()->put($blockKey, true, now()->addMinutes(5));
-            
             abort(429, "Rate limit exceeded for this action. Please wait {$duration} seconds.");
         }
         

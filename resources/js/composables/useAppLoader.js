@@ -6,6 +6,9 @@ import {
   waitForKanbanReady,
 } from './useKanbanReady.js'
 
+/** Set to false to disable splash + navigation loader entirely */
+const APP_LOADER_ENABLED = false
+
 const MIN_DISPLAY_MS = 900
 const NAV_MIN_DISPLAY_MS = 650
 const KANBAN_MIN_DISPLAY_MS = 400
@@ -50,7 +53,21 @@ async function prepareRoute(route) {
  * Initial splash + loader on sidebar / in-app navigation until the route is painted.
  */
 export function useAppLoader() {
-  const isAppLoading = ref(true)
+  const isAppLoading = ref(APP_LOADER_ENABLED)
+
+  function onLoaderHidden() {
+    if (!isAppLoading.value) {
+      document.body.classList.remove('app-loader-active')
+    }
+  }
+
+  if (!APP_LOADER_ENABLED) {
+    return {
+      isAppLoading,
+      onLoaderHidden,
+    }
+  }
+
   const router = useRouter()
   let initialBootstrapDone = false
   let activeLoadId = 0
@@ -121,12 +138,6 @@ export function useAppLoader() {
       await runLoader({ minDisplayMs: resolveNavMinDisplayMs(to), route: to })
     })
   })
-
-  function onLoaderHidden() {
-    if (!isAppLoading.value) {
-      document.body.classList.remove('app-loader-active')
-    }
-  }
 
   return {
     isAppLoading,

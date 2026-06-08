@@ -148,7 +148,7 @@ Route::get('/test-server', function() {
 });
     Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
-Route::middleware(['throttle:60,1','block.bots'])->group(function () {
+Route::middleware(['throttle:300,1','block.bots'])->group(function () {
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
@@ -517,6 +517,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/listings-statistics', [DashboardController::class, 'getListingsStatistics']);
     Route::get('/dashboard/active-agents', [DashboardController::class, 'getActiveAgents']);
     Route::get('/dashboard/leads-overview', [DashboardController::class, 'getLeadsOverview']);
+    Route::get('/dashboard/analytics-overview', [DashboardController::class, 'getAnalyticsOverview']);
     Route::get('/dashboard/my-latest-orders', [DashboardController::class, 'getMyLatestOrders']);
     Route::get('/dashboard/my-latest-requests', [DashboardController::class, 'getMyLatestRequests']);
     Route::get('/dashboard/top-agent-performance', [DashboardController::class, 'getTopAgentPerformance']);

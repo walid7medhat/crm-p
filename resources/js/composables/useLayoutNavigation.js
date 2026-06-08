@@ -74,7 +74,7 @@ function pathMatches(path, prefixes) {
 }
 
 export function resolveActiveModule(path) {
-  if (path === '/' || path === '') return LAYOUT_MODULES.DASHBOARD;
+  if (path === '/' || path === '/home' || path === '') return LAYOUT_MODULES.DASHBOARD;
   if (pathMatches(path, CRM_PREFIXES)) return LAYOUT_MODULES.CRM;
   if (pathMatches(path, HR_PREFIXES)) return LAYOUT_MODULES.HR;
   if (pathMatches(path, AGENTS_PREFIXES)) return LAYOUT_MODULES.AGENTS;
@@ -84,7 +84,7 @@ export function resolveActiveModule(path) {
 }
 
 export function isPathActive(currentPath, targetPath) {
-  if (targetPath === '/') return currentPath === '/';
+  if (targetPath === '/') return currentPath === '/' || currentPath === '/home';
   return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
 }
 

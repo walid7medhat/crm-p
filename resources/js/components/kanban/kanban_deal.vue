@@ -401,15 +401,12 @@ watch(activeTab, async (newTab, oldTab) => {
         lastQuery.value = null
     }
 
-    if (newTab === 'lead-pool' && leadPoolRef.value) {
+    if (newTab === 'lead-pool') {
+        await nextTick()
         try {
             const poolComponent = Array.isArray(leadPoolRef.value) ? leadPoolRef.value[0] : leadPoolRef.value
-            // If we just came from leads with a search applied, reset the pool query so
-            // it doesn't inherit a filter the user thinks they cleared by switching tabs.
-            if (movedAmongLeadTabs && typeof poolComponent?.setQuery === 'function') {
+            if (typeof poolComponent?.setQuery === 'function') {
                 poolComponent.setQuery({})
-            } else if (typeof poolComponent?.fetchLeadPool === 'function') {
-                await poolComponent.fetchLeadPool()
             }
         } catch (error) {
             console.error('Error loading lead pool:', error)
