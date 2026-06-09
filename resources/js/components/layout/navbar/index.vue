@@ -93,14 +93,14 @@
               }"
               @click="canUseLeadSearchModal && openSearchModal()"
             >
-              <button
+              <!-- <button
                 type="button"
                 class="search-icon-btn"
                 aria-label="Search"
                 @click.stop="openSearchModal"
               >
-                <iconify-icon icon="lucide:search" />
-              </button>
+                
+              </button> -->
               <div
                 v-if="resolvedActiveFilters.length"
                 class="search-filters-pills d-flex align-items-center flex-shrink-1"
@@ -269,14 +269,14 @@
                 }"
                 @click="canUseLeadSearchModal && openSearchModal()"
             >
-                <button
+                <!-- <button
                     type="button"
                     class="search-icon-btn"
                     aria-label="Open search filters"
                     @click.stop="openSearchModal"
                 >
                     <iconify-icon icon="lucide:search" />
-                </button>
+                </button> -->
                 <div
                     v-if="resolvedActiveFilters.length"
                     class="search-filters-pills d-flex align-items-center"
@@ -321,7 +321,7 @@
                     aria-label="Add filter"
                     @click.stop="openSearchModal"
                 >
-                    <iconify-icon icon="lucide:plus" />
+                    <iconify-icon icon="lucide:search" />
                 </button>
                 <button
                     v-if="hasAnySearchCriteria"

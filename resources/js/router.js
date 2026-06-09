@@ -156,8 +156,8 @@ const baseRoutes = [
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/roi-calculator', component: RoiCalculatorPage, meta: { requiresAuth: true, requiresAdmin: true } },
-   { path: '/', component: HomeAi, meta: { requiresAuth: true, dashboardHome: true } },
-   { path: '/home', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
+   { path: '/home', component: HomeAi, meta: { requiresAuth: true, dashboardHome: true } },
+   { path: '/', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
   { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },

@@ -427,7 +427,7 @@ class StageController extends Controller
                           ->orWhere('status_lead', 'like', "%{$search}%")
                           // Chip vocabulary searchable as plain text — typing "hot"/"cold"/"warm"
                           // or "answered"/"no_answer" matches the AI priority / call-result columns.
-                          ->orWhere('priority', 'like', "%{$search}%")
+                        //   ->orWhere('priority', 'like', "%{$search}%")
                           ->orWhere('interaction_result', 'like', "%{$search}%")
                           ->orWhere('more_information', 'like', "%{$search}%")
                           ->orWhere(function($q2) use ($search) {
@@ -476,10 +476,11 @@ class StageController extends Controller
             // of `normalizeLeadHeat` on the frontend.
             $analyticsBaseQuery = clone $baseLeadsQuery;
             $heatCounts = (clone $analyticsBaseQuery)
+            // OR priority = 'cold',OR priority = 'warm', OR priority = 'hot' 
                 ->selectRaw(
-                    "SUM(CASE WHEN status_lead = 'cold' OR priority = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                     SUM(CASE WHEN status_lead = 'warm' OR priority = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
-                     SUM(CASE WHEN status_lead = 'hot'  OR priority = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                     SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
+                     SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
                      SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
                      SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
                 )
@@ -497,8 +498,8 @@ class StageController extends Controller
             if ($request->filled('heat')) {
                 $heat = $request->heat;
                 $baseLeadsQuery->where(function ($qq) use ($heat) {
-                    $qq->where('status_lead', $heat)
-                       ->orWhere('priority', $heat);
+                    $qq->where('status_lead', $heat);
+                    //    ->orWhere('priority', $heat);
                 });
             }
 
@@ -729,8 +730,8 @@ class StageController extends Controller
                 if ($request->filled('heat')) {
                     $heat = $request->heat;
                     $leadsQuery->where(function ($qq) use ($heat) {
-                        $qq->where('status_lead', $heat)
-                           ->orWhere('priority', $heat);
+                        $qq->where('status_lead', $heat);
+                        //    ->orWhere('priority', $heat);
                     });
                 }
                 
@@ -822,7 +823,7 @@ class StageController extends Controller
                           ->orWhere('status_lead', 'like', "%{$search}%")
                           // Chip vocabulary searchable as plain text — typing "hot"/"cold"/"warm"
                           // or "answered"/"no_answer" matches the AI priority / call-result columns.
-                          ->orWhere('priority', 'like', "%{$search}%")
+                        //   ->orWhere('priority', 'like', "%{$search}%")
                           ->orWhere('interaction_result', 'like', "%{$search}%")
                           ->orWhere('more_information', 'like', "%{$search}%")
                            ->orWhere(function($q2) use ($search) {
