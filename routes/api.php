@@ -557,6 +557,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     
     
     Route::get('/profile', [ProfileController::class, 'show']);
+    Route::get('/profile/attendance-history', [AttendanceController::class, 'myAttendanceHistory']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
@@ -591,6 +592,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/users/statistics', [UserController::class, 'getStatistics']);
     Route::get('/users/{user}/team-members', [UserController::class, 'getTeamMembers']);
     Route::get('/users/{user}/team-members/recursive', [UserController::class, 'getTeamMembersRecursive']);
+    Route::get('/users/{user}/attendance-history', [AttendanceController::class, 'userAttendanceHistory']);
         Route::get('/users/online/current', [UserController::class, 'getOnlineUsers']);
     Route::get('/users/login-activity', [UserController::class, 'getLoginActivity']);
 // Role Routes

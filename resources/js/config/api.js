@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   // Auth
   LOGIN: `${API_BASE_URL}/auth/login`,
   PROFILE: `${API_BASE_URL}/auth/profile`,
+  PROFILE_ATTENDANCE_HISTORY: `${API_BASE_URL}/profile/attendance-history`,
   
   // Developers
   DEVELOPERS: `${API_BASE_URL}/listings/developers`,
@@ -43,6 +44,7 @@ export const API_ENDPOINTS = {
     USER_MANAGERS: `${API_BASE_URL}/users/managers/available`,
   USER_STATISTICS: `${API_BASE_URL}/users/statistics`,
   USER_TEAM_MEMBERS: (userId) => `${API_BASE_URL}/users/${userId}/team-members`,
+  USER_ATTENDANCE_HISTORY: (userId) => `${API_BASE_URL}/users/${userId}/attendance-history`,
      TEAM_HIERARCHY: `${API_BASE_URL}/team/hierarchy`,
     USERS_WITH_CHILDREN: `${API_BASE_URL}/users/with-children`,
     USER_STATUS: (id) => `${API_BASE_URL}/users/${id}/status`,

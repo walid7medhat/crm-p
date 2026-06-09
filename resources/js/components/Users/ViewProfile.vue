@@ -191,6 +191,13 @@
                  Vacation 
                 </button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link d-flex align-items-center px-24"
+                        :class="{ active: activeTab === 'attendance' }"
+                        @click="activeTab = 'attendance'">
+                  Attendance
+                </button>
+              </li>
             </ul>
   
             <div class="tab-content">
@@ -420,10 +427,12 @@
              </div>
              </div>
              <!--end vacation tab-->
-              
-              
-              
-              
+
+              <!-- Attendance Tab -->
+              <div v-if="activeTab === 'attendance'">
+                <UserAttendanceCarousel />
+              </div>
+
             </div>
           </div>
         </div>
@@ -437,9 +446,13 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
+import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
 
 export default {
   name: 'UserProfile',
+  components: {
+    UserAttendanceCarousel,
+  },
   setup() {
     const instance = getCurrentInstance();
     const router = useRouter();
