@@ -32,8 +32,13 @@ class Bitrix24WebhookController extends Controller
             ?? $request->input('token');
 
         if ($expected && ! hash_equals((string) $expected, (string) $token)) {
+            // Diagnostic: show the token Bitrix actually sent (copy it into
+            // BITRIX24_EVENT_TOKEN) and where it sits in the payload.
             Log::channel('bitrix_leads')->warning('Bitrix24 webhook: bad token', [
-                'event' => $request->input('event'),
+                'event'          => $request->input('event'),
+                'received_token' => $token,
+                'request_keys'   => array_keys($request->all()),
+                'auth'           => $request->input('auth'),
             ]);
             return response()->json(['ok' => false, 'error' => 'forbidden'], 403);
         }
