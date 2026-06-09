@@ -378,109 +378,21 @@ public function generatePeriodReport(Request $request)
     $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now('Asia/Dubai')->startOfMonth();
     $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now('Asia/Dubai')->endOfMonth();
 
-    // Get all active users
     $users = User::whereHas('attendances')->get();
     $reports = [];
 
     foreach ($users as $user) {
-        $attendances = Attendance::where('user_id', $user->id)
-            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->get();
-
-        $present = 0;
-        $late = 0;
-        $absent = 0;
-        $totalDeductionPercent = 0;  // مجموع نسب الخصم لجميع الأيام
-        $daysWithDeduction = 0;      // عدد الأيام التي تم فيها خصم (غياب + تأخير)
-
-        $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
-        $dailyBreakdown = [];
-
-        // map attendance by date
-        $attendanceMap = $attendances->keyBy(function ($a) {
-            return Carbon::parse($a->date)->format('Y-m-d');
-        });
-
-        foreach ($workingDays as $date) {
-            $attendance = $attendanceMap->get($date);
-            
-            $checkIn = null;
-            $checkOut = null;
-            $checkInTime = null;
-            $checkOutTime = null;
-            $dayDeductionPercent = 0;
-            $status = '';
-            
-            if ($attendance) {
-                if ($attendance->check_in) {
-                    $checkIn = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai');
-                    $checkInTime = $checkIn->format('H:i:s');
-                }
-                if ($attendance->check_out) {
-                    $checkOut = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai');
-                    $checkOutTime = $checkOut->format('H:i:s');
-                }
-                
-                // حساب الخصم بناءً على وقت الحضور (لليوم فقط)
-                $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
-                
-                if ($dayDeductionPercent == 0) {
-                    $status = 'Present';
-                    $present++;
-                } else {
-                    $status = 'Late';
-                    $late++;
-                    $totalDeductionPercent += $dayDeductionPercent;
-                    $daysWithDeduction++;
-                }
-            } else {
-                $status = 'Absent';
-                $absent++;
-                $dayDeductionPercent = 100;
-                $totalDeductionPercent += 100;
-                $daysWithDeduction++;
-            }
-
-            // Build daily breakdown
-            $dailyBreakdown[] = [
-                'date' => $date,
-                'check_in' => $checkInTime,
-                'check_out' => $checkOutTime,
-                'status' => $status,
-                'deduction_percent' => $dayDeductionPercent,
-            ];
-        }
-
-        // حساب متوسط الخصم اليومي (على الأيام التي تم خصم منها فقط)
-        $avgDeductionPercent = $daysWithDeduction > 0 
-            ? round($totalDeductionPercent / $daysWithDeduction, 2)
-            : 0;
-        
-        // حساب إجمالي الخصم المئوي (على إجمالي أيام العمل)
-        $totalWorkingDays = count($workingDays);
-        $overallDeductionPercent = $totalWorkingDays > 0
-            ? round(($totalDeductionPercent / $totalWorkingDays), 2)
-            : 0;
-
-        $reports[] = [
+        $report = $this->buildUserPeriodReport($user, $startDate, $endDate);
+        $reports[] = array_merge([
             'user_id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'biometric_code'=>$user?->biometric_code,
-            'department'=>$user?->employeeProfile?->department?->name,
+            'biometric_code' => $user?->biometric_code,
+            'department' => $user?->employeeProfile?->department?->name,
             'employee_id' => $user->employee_id ?? null,
             'period_start' => $startDate->format('Y-m-d'),
             'period_end' => $endDate->format('Y-m-d'),
-            'present' => $present,
-            'late' => $late,
-            'absent' => $absent,
-            'total_working_days' => $totalWorkingDays,
-            'avg_deduction_percent' => $avgDeductionPercent,      // متوسط الخصم في الأيام المخصومة
-            'total_deduction_percent' => $overallDeductionPercent, // إجمالي الخصم على كل أيام العمل
-            'total_deduction_sum' => $totalDeductionPercent,       // مجموع نسب الخصم (قد يتجاوز 100)
-            'days_with_deduction' => $daysWithDeduction,
-            'daily_breakdown' => $dailyBreakdown,
-        ];
+        ], $report);
     }
 
     return response()->json([
@@ -493,6 +405,144 @@ public function generatePeriodReport(Request $request)
             'generated_at' => Carbon::now('Asia/Dubai')->format('Y-m-d H:i:s')
         ]
     ]);
+}
+
+/**
+ * Monthly attendance history for the authenticated user (My Profile).
+ */
+public function myAttendanceHistory(Request $request)
+{
+    $user = $request->user();
+    if (!$user) {
+        return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+    }
+
+    return $this->userAttendanceHistory($request, $user);
+}
+
+/**
+ * Monthly attendance history for a single user (profile carousel).
+ */
+public function userAttendanceHistory(Request $request, User $user)
+{
+    $monthsBack = min(24, max(1, (int) $request->query('months', 12)));
+    $now = Carbon::now('Asia/Dubai');
+    $months = [];
+
+    for ($i = 0; $i < $monthsBack; $i++) {
+        $startDate = $now->copy()->subMonths($i)->startOfMonth();
+        $endDate = $now->copy()->subMonths($i)->endOfMonth();
+        $report = $this->buildUserPeriodReport($user, $startDate, $endDate);
+
+        $months[] = array_merge([
+            'month' => $startDate->format('Y-m'),
+            'label' => $startDate->format('F Y'),
+            'period_start' => $startDate->format('Y-m-d'),
+            'period_end' => $endDate->format('Y-m-d'),
+        ], $report);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => $months,
+        'meta' => [
+            'user_id' => $user->id,
+            'months' => $monthsBack,
+            'generated_at' => Carbon::now('Asia/Dubai')->format('Y-m-d H:i:s'),
+        ],
+    ]);
+}
+
+/**
+ * Build attendance stats and daily breakdown for one user in a date range.
+ */
+private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $endDate): array
+{
+    $attendances = Attendance::where('user_id', $user->id)
+        ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+        ->get();
+
+    $present = 0;
+    $late = 0;
+    $absent = 0;
+    $totalDeductionPercent = 0;
+    $daysWithDeduction = 0;
+
+    $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
+    $dailyBreakdown = [];
+
+    $attendanceMap = $attendances->keyBy(function ($a) {
+        return Carbon::parse($a->date)->format('Y-m-d');
+    });
+
+    foreach ($workingDays as $date) {
+        $attendance = $attendanceMap->get($date);
+
+        $checkIn = null;
+        $checkOut = null;
+        $checkInTime = null;
+        $checkOutTime = null;
+        $dayDeductionPercent = 0;
+        $status = '';
+
+        if ($attendance) {
+            if ($attendance->check_in) {
+                $checkIn = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai');
+                $checkInTime = $checkIn->format('H:i:s');
+            }
+            if ($attendance->check_out) {
+                $checkOut = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai');
+                $checkOutTime = $checkOut->format('H:i:s');
+            }
+
+            $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+
+            if ($dayDeductionPercent == 0) {
+                $status = 'Present';
+                $present++;
+            } else {
+                $status = 'Late';
+                $late++;
+                $totalDeductionPercent += $dayDeductionPercent;
+                $daysWithDeduction++;
+            }
+        } else {
+            $status = 'Absent';
+            $absent++;
+            $dayDeductionPercent = 100;
+            $totalDeductionPercent += 100;
+            $daysWithDeduction++;
+        }
+
+        $dailyBreakdown[] = [
+            'date' => $date,
+            'check_in' => $checkInTime,
+            'check_out' => $checkOutTime,
+            'status' => $status,
+            'deduction_percent' => $dayDeductionPercent,
+        ];
+    }
+
+    $avgDeductionPercent = $daysWithDeduction > 0
+        ? round($totalDeductionPercent / $daysWithDeduction, 2)
+        : 0;
+
+    $totalWorkingDays = count($workingDays);
+    $overallDeductionPercent = $totalWorkingDays > 0
+        ? round(($totalDeductionPercent / $totalWorkingDays), 2)
+        : 0;
+
+    return [
+        'present' => $present,
+        'late' => $late,
+        'absent' => $absent,
+        'total_working_days' => $totalWorkingDays,
+        'avg_deduction_percent' => $avgDeductionPercent,
+        'total_deduction_percent' => $overallDeductionPercent,
+        'total_deduction_sum' => $totalDeductionPercent,
+        'days_with_deduction' => $daysWithDeduction,
+        'daily_breakdown' => $dailyBreakdown,
+    ];
 }
 
 /**
