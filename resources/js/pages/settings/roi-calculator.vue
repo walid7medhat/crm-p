@@ -10,5 +10,5 @@
 
 <script setup>
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
-import RoiCalculator from '@/components/settings/roi/RoiCalculator.vue'
+import RoiCalculator from '@/components/Settings/roi/RoiCalculator.vue'
 </script>
