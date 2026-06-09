@@ -33,8 +33,19 @@
       <span>Loading attendance...</span>
     </div>
 
-    <div v-else-if="error" class="uac-empty">
+    <div v-else-if="error" class="uac-empty uac-empty--error">
       <p>{{ error }}</p>
+      <button type="button" class="btn btn-sm btn-outline-primary mt-2" @click="fetchHistory">
+        Retry
+      </button>
+    </div>
+
+    <div v-else-if="!monthData.length" class="uac-empty">
+      <p>No attendance records found for your account.</p>
+      <p v-if="!hasBiometric" class="uac-empty-hint">
+        Your profile has no biometric code. Ask HR to link your employee ID (same as HR attendance) to your user account.
+      </p>
+      <p v-else class="uac-empty-hint">Records sync from the same biometric system used in HR attendance.</p>
     </div>
 
     <template v-else-if="currentMonth">
@@ -86,7 +97,7 @@
 </template>
 
 <script>
-import { API_ENDPOINTS } from '@/config/api';
+import attendancesApi from '@/services/attendancesApi';
 
 export default {
   name: 'UserAttendanceCarousel',
@@ -102,6 +113,7 @@ export default {
       error: null,
       monthData: [],
       monthIndex: 0,
+      hasBiometric: true,
     };
   },
   computed: {
@@ -130,24 +142,19 @@ export default {
       this.error = null;
 
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const url = `${API_ENDPOINTS.PROFILE_ATTENDANCE_HISTORY}?months=${this.months}`;
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to load attendance');
+        const response = await attendancesApi.profileHistory(this.months);
+        const payload = response.data || {};
+        if (payload.success === false) {
+          throw new Error(payload.message || 'Failed to load attendance');
         }
-
-        const payload = await response.json();
-        this.monthData = payload.data || [];
+        this.monthData = Array.isArray(payload.data) ? payload.data : [];
+        this.hasBiometric = payload.meta?.has_biometric !== false;
         this.monthIndex = 0;
       } catch (e) {
-        this.error = e.message || 'Unable to load attendance';
+        this.error =
+          e?.response?.data?.message
+          || e?.message
+          || 'Unable to load attendance';
         this.monthData = [];
       } finally {
         this.loading = false;
@@ -163,7 +170,11 @@ export default {
       return `status-${String(status || '').toLowerCase()}`;
     },
     toDateTime(date, time) {
-      if (!date || !time) return null;
+      if (!time) return null;
+      if (String(time).includes('T') || String(time).includes(' ')) {
+        return String(time).replace(' ', 'T');
+      }
+      if (!date) return null;
       return `${date}T${time}`;
     },
     formatDate(value) {
@@ -296,12 +307,27 @@ export default {
 .uac-loading,
 .uac-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 120px;
   color: #6b7280;
   font-size: 0.85rem;
+  text-align: center;
+  padding: 12px;
+}
+
+.uac-empty-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  max-width: 320px;
+}
+
+.uac-empty--error p {
+  margin: 0;
+  color: #b91c1c;
 }
 
 .uac-table-wrap {

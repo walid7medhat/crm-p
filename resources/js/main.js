@@ -27,6 +27,7 @@ import '../css/crm-background.css'
 import '../css/dashboard-home.css'
 import '../css/dashboard-ai.css'
 import '../css/roi-calculator.css'
+import '../css/background-settings.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

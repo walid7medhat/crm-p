@@ -427,6 +427,11 @@ public function userAttendanceHistory(Request $request, User $user)
 {
     $monthsBack = min(24, max(1, (int) $request->query('months', 12)));
     $now = Carbon::now('Asia/Dubai');
+
+    // Pull latest biometric attendance for this user (same source as HR).
+    $syncStart = $now->copy()->subMonths($monthsBack - 1)->startOfMonth();
+    $this->syncUserAttendanceFromRemote($user, $syncStart, $now->copy()->endOfMonth());
+
     $months = [];
 
     for ($i = 0; $i < $monthsBack; $i++) {
@@ -448,9 +453,186 @@ public function userAttendanceHistory(Request $request, User $user)
         'meta' => [
             'user_id' => $user->id,
             'months' => $monthsBack,
+            'has_biometric' => !empty($user->biometric_code),
+            'biometric_code' => $user->biometric_code,
             'generated_at' => Carbon::now('Asia/Dubai')->format('Y-m-d H:i:s'),
         ],
     ]);
+}
+
+/**
+ * Normalized employee keys for matching (same rules as HR dashboard).
+ *
+ * @return list<string>
+ */
+private function employeeMatchKeysForUser(User $user): array
+{
+    $keys = [];
+    foreach ([$user->biometric_code, (string) $user->id] as $raw) {
+        if ($raw === null || $raw === '') {
+            continue;
+        }
+        $norm = Attendance::normalizeEmployeeId((string) $raw);
+        if ($norm) {
+            $keys[] = $norm;
+        }
+        $trim = strtoupper(trim((string) $raw));
+        if ($trim !== '') {
+            $keys[] = $trim;
+        }
+    }
+
+    return array_values(array_unique($keys));
+}
+
+private function attendanceMatchesUser(Attendance $attendance, User $user): bool
+{
+    if ((int) $attendance->user_id === (int) $user->id) {
+        return true;
+    }
+
+    $userKeys = $this->employeeMatchKeysForUser($user);
+    if (empty($userKeys)) {
+        return false;
+    }
+
+    $attKey = Attendance::normalizeEmployeeId((string) $attendance->employee_id);
+
+    return $attKey !== null && $attKey !== '' && in_array($attKey, $userKeys, true);
+}
+
+/**
+ * Attendance rows for a user in a date range (user_id and/or biometric employee_id).
+ */
+private function attendancesForUserInRange(User $user, Carbon $startDate, Carbon $endDate)
+{
+    $userKeys = $this->employeeMatchKeysForUser($user);
+
+    $query = Attendance::query()
+        ->whereBetween('date', [
+            $startDate->format('Y-m-d'),
+            $endDate->format('Y-m-d'),
+        ]);
+
+    if (!empty($userKeys) || $user->biometric_code) {
+        $query->where(function ($q) use ($user, $userKeys) {
+            $q->where('user_id', $user->id);
+            if (!empty($userKeys)) {
+                $q->orWhereIn('employee_id', $userKeys);
+            }
+            if ($user->biometric_code) {
+                $q->orWhere('employee_id', trim((string) $user->biometric_code));
+            }
+        });
+    } else {
+        $query->where('user_id', $user->id);
+    }
+
+    return $query->get()
+        ->filter(fn (Attendance $a) => $this->attendanceMatchesUser($a, $user))
+        ->values();
+}
+
+/**
+ * Sync remote biometric attendance for one user across a date range.
+ */
+private function syncUserAttendanceFromRemote(User $user, Carbon $startDate, Carbon $endDate): void
+{
+    $bio = trim((string) ($user->biometric_code ?? ''));
+    if ($bio === '') {
+        return;
+    }
+
+    $userNorm = Attendance::normalizeEmployeeId($bio);
+    if (!$userNorm) {
+        return;
+    }
+
+    try {
+        $baseUrl = rtrim((string) env('ATTENDANCE_BASE_URL', 'https://oiahead.fortidyndns.com/api'), '/');
+        $from = $startDate->format('Y-m-d');
+        $to = $endDate->format('Y-m-d');
+        $url = $baseUrl . "/attendance/range?from={$from}&to={$to}";
+
+        $response = Http::withBasicAuth(
+            (string) env('ATTENDANCE_BASIC_USER', 'admin'),
+            (string) env('ATTENDANCE_BASIC_PASSWORD', 'admin1234')
+        )
+            ->withHeaders([
+                'x-api-key' => (string) env('ATTENDANCE_API_KEY', 'zkbio_secure_2026'),
+                'Accept' => 'application/json',
+            ])
+            ->withoutVerifying()
+            ->timeout(60)
+            ->get($url);
+
+        if (!$response->successful()) {
+            Log::warning('Profile attendance remote sync failed', [
+                'user_id' => $user->id,
+                'status' => $response->status(),
+            ]);
+            return;
+        }
+
+        $rows = $response->json();
+        if (!is_array($rows)) {
+            return;
+        }
+
+        foreach ($rows as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $empCode = (string) ($item['emp_code'] ?? '');
+            if ($empCode === '') {
+                continue;
+            }
+
+            $itemNorm = Attendance::normalizeEmployeeId($empCode);
+            if ($itemNorm !== $userNorm) {
+                continue;
+            }
+
+            $date = $item['attendance_date'] ?? null;
+            if (!$date) {
+                continue;
+            }
+
+            $checkIn = !empty($item['first_checkin'])
+                ? Carbon::parse($item['first_checkin'], 'Asia/Dubai')
+                : null;
+            $checkOut = !empty($item['last_checkout'])
+                ? Carbon::parse($item['last_checkout'], 'Asia/Dubai')
+                : null;
+
+            $status = !empty($item['status'])
+                ? strtolower((string) $item['status'])
+                : $this->resolveStatus([
+                    'status' => null,
+                    'check_in' => $checkIn?->toDateTimeString(),
+                ]);
+
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $itemNorm,
+                    'date' => $date,
+                ],
+                [
+                    'user_id' => $user->id,
+                    'employee_name' => $user->name,
+                    'status' => $status,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                ]
+            );
+        }
+    } catch (\Throwable $e) {
+        Log::warning('Profile attendance remote sync exception', [
+            'user_id' => $user->id,
+            'error' => $e->getMessage(),
+        ]);
+    }
 }
 
 /**
@@ -458,9 +640,7 @@ public function userAttendanceHistory(Request $request, User $user)
  */
 private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $endDate): array
 {
-    $attendances = Attendance::where('user_id', $user->id)
-        ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-        ->get();
+    $attendances = $this->attendancesForUserInRange($user, $startDate, $endDate);
 
     $present = 0;
     $late = 0;
@@ -471,9 +651,12 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
     $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
     $dailyBreakdown = [];
 
-    $attendanceMap = $attendances->keyBy(function ($a) {
-        return Carbon::parse($a->date)->format('Y-m-d');
-    });
+    // If duplicate rows exist for the same day, prefer the one with check-in data.
+    $attendanceMap = $attendances
+        ->sortByDesc(fn (Attendance $a) => $a->check_in ? 1 : 0)
+        ->keyBy(function ($a) {
+            return Carbon::parse($a->date)->timezone('Asia/Dubai')->toDateString();
+        });
 
     foreach ($workingDays as $date) {
         $attendance = $attendanceMap->get($date);
@@ -483,7 +666,7 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
         $checkInTime = null;
         $checkOutTime = null;
         $dayDeductionPercent = 0;
-        $status = '';
+        $status = 'Absent';
 
         if ($attendance) {
             if ($attendance->check_in) {
@@ -495,19 +678,37 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
                 $checkOutTime = $checkOut->format('H:i:s');
             }
 
-            $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+            $storedStatus = strtolower((string) ($attendance->status ?? ''));
 
-            if ($dayDeductionPercent == 0) {
-                $status = 'Present';
-                $present++;
+            if ($checkIn) {
+                $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
+                if ($storedStatus === 'late' || ($storedStatus !== 'present' && $dayDeductionPercent > 0)) {
+                    $status = 'Late';
+                    $late++;
+                    $totalDeductionPercent += $dayDeductionPercent > 0 ? $dayDeductionPercent : 10;
+                    $daysWithDeduction++;
+                } else {
+                    $status = 'Present';
+                    $present++;
+                }
+            } elseif (in_array($storedStatus, ['present', 'late'], true)) {
+                $status = ucfirst($storedStatus);
+                if ($storedStatus === 'late') {
+                    $late++;
+                    $dayDeductionPercent = 10;
+                    $totalDeductionPercent += 10;
+                    $daysWithDeduction++;
+                } else {
+                    $present++;
+                }
             } else {
-                $status = 'Late';
-                $late++;
-                $totalDeductionPercent += $dayDeductionPercent;
+                $status = 'Absent';
+                $absent++;
+                $dayDeductionPercent = 100;
+                $totalDeductionPercent += 100;
                 $daysWithDeduction++;
             }
         } else {
-            $status = 'Absent';
             $absent++;
             $dayDeductionPercent = 100;
             $totalDeductionPercent += 100;
