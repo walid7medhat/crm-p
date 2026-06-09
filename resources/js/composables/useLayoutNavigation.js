@@ -256,7 +256,7 @@ export function buildTopModuleNav(ctx = {}) {
     items.push({
       id: 'crm',
       label: 'CRM',
-      path: '/',
+      path: '/kanban',
       matchModules: [LAYOUT_MODULES.DASHBOARD, LAYOUT_MODULES.CRM],
     });
   }

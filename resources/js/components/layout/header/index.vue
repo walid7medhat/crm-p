@@ -587,6 +587,8 @@ const settingsSidebarSections = computed(() => {
   if (isSuperAdmin.value) {
     system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });
     system.push({ path: '/attendance-monthly-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
+    system.push({ path: '/settings/background', label: 'Background', icon: 'lucide:image' });
+      
   }
 
   const chat = isCustomAdmin.value
@@ -596,9 +598,9 @@ const settingsSidebarSections = computed(() => {
   const other = !isShowOnlyListing.value
     ? [
         { path: '/suggestion', label: 'Suggestions', icon: 'lucide:lightbulb' },
-        { path: '/settings/background', label: 'Background', icon: 'lucide:image' },
+       
       ]
-    : [{ path: '/settings/background', label: 'Background', icon: 'lucide:image' }];
+    : [];
 
   const tools = isAdmin.value
     ? [{ path: '/settings/roi-calculator', label: 'ROI Calculator', icon: 'lucide:calculator' }]

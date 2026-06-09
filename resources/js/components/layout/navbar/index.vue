@@ -677,8 +677,14 @@ const isCustomAdmin = computed(() => {
 
 const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only show listings') ?? false);
 
-const activeLayoutModule = computed(() => resolveActiveModule(route.path));
 
+
+const activeLayoutModule = computed(() => {
+  if (isDashboardHome.value) {
+    return 'dashboard';
+  }
+  return resolveActiveModule(route.path);
+});
 const moduleHeaderTabs = computed(() =>
   buildHeaderTabs(activeLayoutModule.value, {
     isAdmin: isAdmin.value,
@@ -824,7 +830,11 @@ watch(activeKanbanTab, (newTab) => {
         window.dispatchEvent(new CustomEvent('kanban-lead-search', { detail: clearPayload }))
     }
 })
-const isKanbanRoute = computed(() => activeLayoutModule.value === 'crm');
+const isKanbanRoute = computed(() => {
+  // منع ظهور عناصر الكانبان في الداشبورد
+  if (isDashboardHome.value) return false;
+  return activeLayoutModule.value === 'crm';
+});
 const isListingsRoute = computed(() => activeLayoutModule.value === 'listings');
 const showMobileCompactHeader = computed(() => isMobileViewport.value);
 
@@ -1057,6 +1067,13 @@ const canUseLeadSearchModal = computed(() => {
 function onSearchInputUpdate(val) {
     if (resolvedActiveFilters.value.length) {
         clearSearchFilter();
+    }
+    // Typing in the input means the user wants free-text search — collapse the advanced
+    // filter modal so it doesn't sit over the results. The `watch(search)` below picks up
+    // the new value and fires applySearchToApi after the debounce window automatically.
+    if (showSearchModal.value) {
+        showSearchModal.value = false;
+        searchInputFocused.value = false;
     }
     search.value = val;
 }
