@@ -32,6 +32,8 @@ class Attendance extends Model
             return null;
         }
         $s = strtoupper(str_replace('#', '', trim((string) $raw)));
+        // Match frontend normalizeEmployeeId (EMPD-252 → EMP-252)
+        $s = preg_replace('/EMPD/i', 'EMP', $s) ?? $s;
         $s = preg_replace('/(EMP)+/', 'EMP', $s) ?? $s;
         $s = preg_replace('/EMP+/', 'EMP', $s) ?? $s;
         $s = trim((string) $s);

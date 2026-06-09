@@ -1,0 +1,388 @@
+/* Background settings page — global bundle so styles apply after lazy route load */
+.background-settings-page .bg-settings-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.background-settings-page .bg-settings-body {
+  padding: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .background-settings-page .bg-settings-body {
+    padding: 1.75rem;
+  }
+}
+
+.background-settings-page .bg-topline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 11px;
+  line-height: 1;
+  color: #64748b;
+}
+
+.background-settings-page .bg-topline-count {
+  margin-left: auto;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.background-settings-page .bg-toast {
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.background-settings-page .bg-toast--ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.background-settings-page .bg-toast--err {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.background-settings-page .bg-upload-strip {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.background-settings-page .bg-upload-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.background-settings-page .bg-upload-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.background-settings-page .bg-upload-zone:hover,
+.background-settings-page .bg-upload-zone.is-drag {
+  border-color: #2a1548;
+  background: #faf5ff;
+}
+
+.background-settings-page .bg-upload-zone.has-files {
+  border-color: #10b981;
+  border-style: solid;
+}
+
+.background-settings-page .bg-upload-zone-icon {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.background-settings-page .bg-upload-queue-mini {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.background-settings-page .bg-queue-chip {
+  position: relative;
+  width: 36px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.background-settings-page .bg-queue-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.background-settings-page .bg-queue-rm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+
+.background-settings-page .bg-queue-chip:hover .bg-queue-rm {
+  opacity: 1;
+}
+
+.background-settings-page .bg-queue-clear {
+  border: none;
+  background: none;
+  color: #ef4444;
+  padding: 0;
+  cursor: pointer;
+}
+
+.background-settings-page .bg-upload-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.background-settings-page .bg-input {
+  width: 140px;
+  height: 30px;
+  padding: 0 0.5rem;
+  font-size: 11px !important;
+}
+
+.background-settings-page .bg-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  white-space: nowrap;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.background-settings-page .bg-check .form-check-input {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+}
+
+.background-settings-page .bg-grid-wrap {
+  min-height: 120px;
+}
+
+.background-settings-page .bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 0.65rem;
+}
+
+.background-settings-page .bg-grid-empty {
+  padding: 2rem 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.background-settings-page .bg-tile-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.background-settings-page .bg-tile {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e2e8f0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.background-settings-page .bg-tile:hover {
+  border-color: #cbd5e1;
+}
+
+.background-settings-page .bg-tile.is-on {
+  border-color: #2a1548;
+  box-shadow: 0 0 0 1px #2a1548;
+}
+
+.background-settings-page .bg-tile.is-off {
+  opacity: 0.45;
+}
+
+.background-settings-page .bg-tile--reset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.background-settings-page .bg-tile--reset iconify-icon {
+  font-size: 14px;
+}
+
+.background-settings-page .bg-tile--reset.is-on {
+  border-color: #2a1548;
+  border-style: solid;
+  color: #2a1548;
+}
+
+.background-settings-page .bg-tile-mark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #2a1548;
+  color: #fff;
+  font-size: 10px;
+}
+
+.background-settings-page .bg-tile-tag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.background-settings-page .bg-tile-tag--hide {
+  left: auto;
+  right: 4px;
+  background: rgba(71, 85, 105, 0.85);
+}
+
+.background-settings-page .bg-tile-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px !important;
+  line-height: 1.2;
+  opacity: 0.75;
+  color: #64748b;
+  margin: 0;
+}
+
+.background-settings-page .bg-tile-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.background-settings-page .bg-act {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+  color: #64748b;
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.background-settings-page .bg-act:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.background-settings-page .bg-act:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.background-settings-page .bg-act--del:hover:not(:disabled) {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.background-settings-page .bg-tile--skel {
+  background: linear-gradient(110deg, #eceff5 8%, #f5f7fc 18%, #eceff5 33%);
+  background-size: 200% 100%;
+  animation: bg-settings-shimmer 1.4s infinite linear;
+  border: none;
+  cursor: default;
+}
+
+@keyframes bg-settings-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.background-settings-page .bg-savebar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+  z-index: 2;
+}
+
+.background-settings-page .bg-savebar .text-xs {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.background-settings-page .bg-fade-enter-active,
+.background-settings-page .bg-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.background-settings-page .bg-fade-enter-from,
+.background-settings-page .bg-fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 575px) {
+  .background-settings-page .bg-upload-opts {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .background-settings-page .bg-input {
+    flex: 1;
+    min-width: 0;
+  }
+}
