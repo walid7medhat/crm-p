@@ -600,9 +600,14 @@ const settingsSidebarSections = computed(() => {
       ]
     : [{ path: '/settings/background', label: 'Background', icon: 'lucide:image' }];
 
+  const tools = isAdmin.value
+    ? [{ path: '/settings/roi-calculator', label: 'ROI Calculator', icon: 'lucide:calculator' }]
+    : [];
+
   return buildSettingsSidebarSections({
     system,
     roles: filteredRolesItems.value,
+    tools,
     insights: filteredMainMenuItems.value,
     chat,
     other,

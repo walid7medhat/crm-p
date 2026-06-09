@@ -26,6 +26,7 @@ import '../css/kanban-layout.css'
 import '../css/crm-background.css'
 import '../css/dashboard-home.css'
 import '../css/dashboard-ai.css'
+import '../css/roi-calculator.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

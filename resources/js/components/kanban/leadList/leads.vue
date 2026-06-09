@@ -1,5 +1,17 @@
 <template>
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': isSearching }">
+        <div
+            v-if="isSearching"
+            class="kanban-search-overlay"
+            role="status"
+            aria-live="polite"
+            aria-label="Searching leads"
+        >
+            <div class="kanban-search-overlay__card">
+                <div class="kanban-empty-spinner" />
+                <span class="kanban-search-overlay__text">Searching leads…</span>
+            </div>
+        </div>
         <!-- Mobile: pipeline filter (matches design — Current Stage) -->
         <div
             v-if="kanbanIsMobile"
@@ -602,13 +614,6 @@
         :user-id="profileUserId"
         @update:model-value="onProfilePopupUpdate"
     />
-    <!-- View Lead Modal -->
-    <ViewLeadModal
-        v-model="showViewModal"
-        :leadId="selectedLead"
-        @lead-updated="handleLeadUpdatedFromModal"
-    />
-
     <!-- Duplicate Leads Dropdown -->
     <DuplicateLeadsModal 
         v-model="showDuplicateModal" 
@@ -756,7 +761,6 @@ import draggable from 'vuedraggable'
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
-import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
@@ -766,6 +770,7 @@ import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 import api from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
+import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import Swal from 'sweetalert2'
@@ -1124,6 +1129,7 @@ const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v1'
 const KANBAN_LEADS_CACHE_TTL_MS =30000
 const responsiblePersons = ref([])
 const loading = ref(true)
+const isSearching = ref(false)
 const error = ref(null)
 const kanbanContainerRef = ref(null)
 const scrollInterval = ref(null)
@@ -1443,9 +1449,12 @@ const executeFetchLeads = async () => {
     }
     
     abortController.value = new AbortController()
+    const hadColumns = columns.value.length > 0
     isFetching.value = true
-    if (!columns.value.length) {
+    if (!hadColumns) {
         loading.value = true
+    } else {
+        isSearching.value = true
     }
     
     try {
@@ -1480,7 +1489,7 @@ const executeFetchLeads = async () => {
             status: stage.id,
             color: stage.color || getColorByIndex(index),
             order: stage.order ?? index,
-            leads: stage.leads || [],
+            leads: sortLeadsByUpdatedAt([...(stage.leads || [])]),
             pagination: stage.pagination || {
                 current_page: 1,
                 last_page: 1,
@@ -1524,6 +1533,7 @@ const executeFetchLeads = async () => {
         }
     } finally {
         isFetching.value = false
+        isSearching.value = false
         loading.value = false
         abortController.value = null
         markKanbanReady()
@@ -1578,6 +1588,7 @@ function loadCachedColumns() {
 
         columns.value = parsed.columns
         syncStageOrderMapFromColumns(parsed.columns)
+        sortAllColumnLeads()
 
         // Initialize visible counts based on cached data
         const nextCounts = {}
@@ -1648,10 +1659,10 @@ async function fetchMoreLeadsFromApi(stageId) {
         const columnIndex = columns.value.findIndex(c => c.status === stageId)
         if (columnIndex !== -1) {
             // ضيف الـ leads الجديدة تحت القديمة
-            columns.value[columnIndex].leads = [
+            columns.value[columnIndex].leads = sortLeadsByUpdatedAt([
                 ...columns.value[columnIndex].leads,
-                ...newLeads
-            ]
+                ...newLeads,
+            ])
             
             // تحديث الـ pagination
             columns.value[columnIndex].pagination = {
@@ -2200,7 +2211,11 @@ const formatMaskedQuestion = (questionData) => {
 watch(cardFields, () => {
     console.log('Card fields updated:', cardFields.value)
 }, { deep: true })
+let unsubscribeLeadViewUpdated = null
+
 onMounted(async () => {
+    unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
+
     const hadCache = loadCachedColumns()
     if (hadCache) {
         markKanbanReady()
@@ -2223,6 +2238,10 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+    if (typeof unsubscribeLeadViewUpdated === 'function') {
+        unsubscribeLeadViewUpdated()
+        unsubscribeLeadViewUpdated = null
+    }
     onLeadDragEnd()
     stopScroll()
     cancelPersonHoverHide()
@@ -2232,7 +2251,9 @@ onUnmounted(() => {
 
 // Expose fetchLeads so parent can call it
 defineExpose({
-    fetchLeads
+    fetchLeads,
+    isSearching,
+    isFetching,
 })
 
 // Initialize real-time updates with Echo/Pusher
@@ -2384,7 +2405,7 @@ const handleNewLead = (lead) => {
         } else {
             columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
         }
-        // sortColumnLeadsByScore(columnIndex)
+        sortColumnLeadsByUpdatedAt(columnIndex)
     }
 }
 
@@ -2419,24 +2440,41 @@ function getLeadPriorityClass(lead) {
     return 'lead-priority-cold-border'
 }
 
-function sortColumnLeadsByScore(columnIndex) {
-    const leads = columns.value[columnIndex]?.leads
-    if (!Array.isArray(leads)) return
+function leadUpdatedAtMs(lead) {
+    const raw = lead?.updated_at ?? lead?.created_at
+    if (!raw) return 0
+    const t = new Date(raw).getTime()
+    return Number.isFinite(t) ? t : 0
+}
 
-    leads.sort((a, b) => {
-        // const scoreA = Number(a?.score ?? 0)
-        // const scoreB = Number(b?.score ?? 0)
-        // if (scoreB !== scoreA) return scoreB - scoreA
-
-        const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0
-        const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0
-        return bTime - aTime
+function sortLeadsByUpdatedAt(leads) {
+    if (!Array.isArray(leads)) return []
+    return leads.sort((a, b) => {
+        const diff = leadUpdatedAtMs(b) - leadUpdatedAtMs(a)
+        if (diff !== 0) return diff
+        return (Number(b?.id) || 0) - (Number(a?.id) || 0)
     })
+}
+
+function sortColumnLeadsByUpdatedAt(columnIndex) {
+    const col = columns.value[columnIndex]
+    if (!col?.leads) return
+    sortLeadsByUpdatedAt(col.leads)
+}
+
+function sortAllColumnLeads() {
+    columns.value.forEach((_, index) => sortColumnLeadsByUpdatedAt(index))
 }
 
 const handleLeadUpdatedFromModal = (updatedLead) => {
     if (updatedLead?.id) {
-        handleUpdatedLead(updatedLead, 'updated')
+        handleUpdatedLead(
+            {
+                ...updatedLead,
+                updated_at: updatedLead.updated_at || new Date().toISOString(),
+            },
+            'updated',
+        )
     }
 }
 
@@ -2491,11 +2529,11 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                         } else {
                             columns.value[newColumnIndex].leads[existingIndex] = lead
                         }
-                        // sortColumnLeadsByScore(newColumnIndex)
+                        sortColumnLeadsByUpdatedAt(newColumnIndex)
                     }
                 } else {
                     column.leads[index] = lead
-                    // sortColumnLeadsByScore(i)
+                    sortColumnLeadsByUpdatedAt(i)
                 }
                 break
             }
@@ -2520,7 +2558,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                 // Update existing lead
                 columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
             }
-            // sortColumnLeadsByScore(columnIndex)
+            sortColumnLeadsByUpdatedAt(columnIndex)
         } else {
             // Try to add to first available column as fallback
             if (columns.value.length > 0) {
@@ -2535,7 +2573,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                     const leadToAdd = { ...lead, stage_id: firstColumn.status }
                     firstColumn.leads.unshift(leadToAdd)
                 }
-                // sortColumnLeadsByScore(0)
+                sortColumnLeadsByUpdatedAt(0)
             }
         }
     }
@@ -2582,7 +2620,7 @@ const handleStageChanged = (lead, changes) => {
                         
                         const leadToAdd = lead.data || lead
                         columns.value[newColumnIndex].leads.unshift(leadToAdd)
-                        // sortColumnLeadsByScore(newColumnIndex)
+                        sortColumnLeadsByUpdatedAt(newColumnIndex)
                     }
                 }
                 break
@@ -2713,8 +2751,6 @@ const currentTask = ref({
 })
 
 const isEditing = ref(false)
-const showViewModal = ref(false)
-const selectedLead = ref(null)
 const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
@@ -2814,12 +2850,8 @@ function onMobileCardTouchEnd(column, event) {
 }
 
 function viewLead(task) {
-    selectedLead.value = task?.id
-    showViewModal.value = true
     if (task?.id) {
-        // Fire-and-forget: stamp a "view" entry in the lead history so the activity timeline
-        // shows who opened the lead and when. Failures are non-fatal — never block the modal.
-        api.get(`/leads/${task.id}/history/view`).catch(() => {})
+        openLeadView(task.id)
     }
 }
 
@@ -2879,9 +2911,7 @@ function onMobileColumnAddLead() {
 function openViewLeadFromMobileSheet() {
     const id = mobileQuickLead.value?.id
     if (id) {
-        selectedLead.value = id
-        showViewModal.value = true
-        api.get(`/leads/${id}/history/view`).catch(() => {})
+        openLeadView(id)
     }
     closeMobileQuickSheet()
 }
@@ -2915,10 +2945,8 @@ function openDuplicateLeadsModal(leadId, event) {
 }
 
 function handleViewDuplicateLead(leadId) {
-    selectedLead.value = leadId
-    showViewModal.value = true
     if (leadId) {
-        api.get(`/leads/${leadId}/history/view`).catch(() => {})
+        openLeadView(leadId)
     }
 }
 
@@ -3695,6 +3723,45 @@ const $showNotification = (message, type = 'info') => {
 }
 .kanban-error-state .kanban-empty-icon {
     color: #ef4444;
+}
+
+.kanban-outer {
+    position: relative;
+}
+
+.kanban-search-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 72px;
+    background: rgba(248, 250, 252, 0.55);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+}
+
+.kanban-search-overlay__card {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+}
+
+.kanban-search-overlay__text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.kanban-outer--searching .kanban-column {
+    opacity: 0.72;
+    transition: opacity 0.2s ease;
 }
 
 .kanban-container::-webkit-scrollbar {

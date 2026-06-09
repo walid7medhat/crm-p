@@ -198,6 +198,7 @@ export function buildHeaderTabs(module, ctx = {}) {
       '/sales-intelligence',
       '/investment-analysis',
       '/settings/city-investments',
+      '/settings/roi-calculator',
       '/settings/lead-scoring',
       '/settings/kanban',
       '/settings/stage-visibility',
@@ -323,6 +324,7 @@ export function buildSettingsSidebarSections(sections) {
   const order = [
     { key: 'system', title: 'System' },
     { key: 'roles', title: 'Roles & Access' },
+    { key: 'tools', title: 'Investment Tools' },
     { key: 'insights', title: 'Insights' },
     { key: 'chat', title: 'Chat' },
     { key: 'other', title: 'More' },

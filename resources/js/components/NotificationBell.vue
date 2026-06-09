@@ -55,6 +55,7 @@
 
 <script>
 import api from '@/plugins/axios'
+import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 
 function getApiBaseUrl() {
   const base =
@@ -167,6 +168,11 @@ export default {
     handleNotificationClick(notification) {
       if (!notification.read_at) this.markAsRead(notification.id)
       this.showDropdown = false
+
+      if (openLeadFromNotification(notification)) {
+        return
+      }
+
       const type = notification.type || notification?.data?.notification_type
       if (['request', 'approved', 'rejected'].includes(type)) {
         this.$router.push('/my-requests')

@@ -521,13 +521,9 @@ class StageController extends Controller
                     ->with($kanbanEagerLoads)
                     ->where('stage_id', $stage->id);
 
-                if (mb_strtolower(trim((string) $stage->name)) === 'new') {
-                    // "New" stage → newest created lead first
-                    $stageLeadsQuery->orderBy('created_at', 'desc');
-                } else {
-                    // Other stages → most recently updated lead first
-                    $stageLeadsQuery->orderBy('updated_at', 'desc');
-                }
+                $stageLeadsQuery
+                    ->orderBy('updated_at', 'desc')
+                    ->orderBy('id', 'desc');
 
                 $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
                 $leads = $stageLeadsQuery->limit($perPage)->get();
@@ -866,13 +862,9 @@ class StageController extends Controller
                     });
                 }
                  // ================= pagination =================
-                        if (mb_strtolower(trim((string) $stage->name)) === 'new') {
-                            // "New" stage → newest created lead first
-                            $leadsQuery->orderBy('created_at', 'desc');
-                        } else {
-                            // Other stages → most recently updated lead first
-                            $leadsQuery->orderBy('updated_at', 'desc');
-                        }
+                        $leadsQuery
+                            ->orderBy('updated_at', 'desc')
+                            ->orderBy('id', 'desc');
                     
                         $paginatedLeads = $leadsQuery->paginate($perPage, ['*'], 'page', $page);
 
@@ -1133,12 +1125,7 @@ public function getOffices()
             }
             
             $leads = $leadsQuery
-                // ->when(
-                //     Schema::hasColumn('leads', 'score'),
-                //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-                //     fn ($q) => $q->orderBy('created_at', 'desc')
-                // )
-                ->orderBy('created_at', 'desc')
+                ->orderBy('updated_at', 'desc')
                 ->orderBy('id', 'desc')
                 ->get();
 

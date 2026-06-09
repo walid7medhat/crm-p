@@ -29,6 +29,12 @@
       :start-with-context="chatContext"
       @close="closeChat"
     />
+    <ViewLeadModal
+      v-if="showLayout"
+      v-model="showLeadViewModal"
+      :leadId="leadViewModalId"
+      @lead-updated="notifyLeadViewUpdated"
+    />
   </div>
 </template>
 
@@ -41,9 +47,11 @@ import Footer from './components/layout/footer/index.vue'
 import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
+import ViewLeadModal from './components/kanban/viewLead/ViewLeadModal.vue'
 import { useAppLoader } from './composables/useAppLoader.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
+import { useLeadViewModal } from './composables/useLeadViewModal.js'
 
 export default {
   name: 'App',
@@ -54,11 +62,18 @@ export default {
     Footer,
     ChatPopup,
     ChatFloatingButton,
+    ViewLeadModal,
   },
   setup() {
     const route = useRoute()
     const { isAppLoading, onLoaderHidden } = useAppLoader()
     const { loadFromCache: loadBackgroundFromCache } = useBackground()
+    const {
+      showLeadViewModal,
+      leadViewModalId,
+      openLeadView,
+      notifyLeadViewUpdated,
+    } = useLeadViewModal()
     const showLayout = computed(() => route.meta.layout !== false)
     const isDashboardHome = computed(() => !!route.meta?.dashboardHome)
     const chatOpen = ref(false)
@@ -106,6 +121,7 @@ export default {
 
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
+      window.__openLeadView = openLeadView
       loadBackgroundFromCache()
       syncVideoBgClass()
       if (!showLayout.value) {
@@ -114,6 +130,7 @@ export default {
     })
     onUnmounted(() => {
       window.__openPropertyChat = null
+      window.__openLeadView = null
       document.body.classList.remove('app-has-video-bg')
     })
 
@@ -136,6 +153,9 @@ export default {
       canUseChat,
       openChatInbox,
       closeChat,
+      showLeadViewModal,
+      leadViewModalId,
+      notifyLeadViewUpdated,
     }
   }
 }

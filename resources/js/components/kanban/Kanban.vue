@@ -77,9 +77,9 @@
                             class="search-wrapper d-flex align-items-center"
                             :class="{
                                 'search-wrapper-expanded': activeFilters && activeFilters.length,
-                                'search-wrapper-tall': searchInputFocused
+                                'search-wrapper-tall': searchInputFocused,
+                                'search-wrapper--searching': leadsIsSearching,
                             }"
-                               @click="openSearchModal"
                         >
                             <div v-if="activeFilters.length" class="search-filters-pills d-flex align-items-center">
                                 <div
@@ -101,33 +101,56 @@
                             <div
                                 class="search-input-container d-flex align-items-center"
                                 :class="{ 'search-input-container-tall': searchInputFocused }"
-                                @click="showSearchModal = true"
+                                @click.stop="onSearchInputAreaClick"
                             >
-                                <iconify-icon icon="lucide:plus" class="search-plus-icon" style="cursor: pointer;"></iconify-icon>
+                                <iconify-icon
+                                    icon="lucide:plus"
+                                    class="search-plus-icon"
+                                    aria-label="Open filters"
+                                    @click.stop="onPlusIconClick"
+                                />
                                 <b-form-input
                                     :placeholder="isMobileKanban ? 'Search leads and advanced filter' : 'Search'"
                                     v-model="search"
                                     class="search-input"
                                     @focus="onSearchFocus"
                                     @blur="onSearchBlur"
-                                    @input="showSearchModal = false"
+                                    @input="onQuickSearchInput"
+                                    @keydown.enter.prevent="onQuickSearchEnter"
+                                    @click.stop
                                 />
                             </div>
-                            <iconify-icon v-if="hasAnySearchCriteria" icon="lucide:x" class="clear-search-icon" @click="clearSearchFilter" style="cursor: pointer;"></iconify-icon>
                             <iconify-icon
-                                v-if="isMobileKanban && !hasAnySearchCriteria"
-                                icon="lucide:search"
-                                class="search-magnify-mobile"
-                                aria-hidden="true"
-                                @click.stop="openSearchModal"
+                                v-if="leadsIsSearching"
+                                icon="lucide:loader-2"
+                                class="search-status-icon search-status-icon--spin"
+                                aria-label="Searching"
                             />
+                            <iconify-icon
+                                v-else-if="hasAnySearchCriteria"
+                                icon="lucide:x"
+                                class="clear-search-icon"
+                                aria-label="Clear search"
+                                @click.stop="clearSearchFilter"
+                            />
+                            <button
+                                v-if="!leadsIsSearching"
+                                type="button"
+                                class="search-trigger-btn"
+                                aria-label="Search"
+                                @click.stop="onSearchIconClick"
+                            >
+                                <iconify-icon icon="lucide:search" class="search-trigger-icon" />
+                            </button>
                         </div>
                         <div v-if="showSearchModal" class="lead-search-dropdown-outer">
                             <LeadSearchModal
                                     v-if="showSearchModal"
+                                    ref="leadSearchModalRef"
                                     :key="`search-modal-${modalKey}`"
                                     v-model="showSearchModal"
                                     :as-dropdown="true"
+                                    :searching="leadsIsSearching"
                                     :initial-active-pill="activeFilter?.id"
                                     :has-active-filters="(activeFilters && activeFilters.length) > 0"
                                     :current-query="lastQuery"
@@ -191,6 +214,7 @@ const currentDealType = computed(() => {
     return dealsComponent?.currentDealType || 'primary'
 })
 const searchDropdownAnchorRef = ref(null)
+const leadSearchModalRef = ref(null)
 const search = ref(null)
 
 const isMobileKanban = ref(false)
@@ -199,7 +223,22 @@ function updateKanbanMobileBreakpoint() {
 }
 provide('kanbanIsMobile', isMobileKanban)
 const searchDebounceTimer = ref(null)
-const SEARCH_DEBOUNCE_MS = 400
+const SEARCH_DEBOUNCE_MS = 500
+
+function getLeadsComponent() {
+    if (!leadsRef.value) return null
+    return Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+}
+
+const leadsIsSearching = computed(() => {
+    const leadsComponent = getLeadsComponent()
+    return !!(leadsComponent?.isSearching ?? false)
+})
+
+function closeSearchDropdown() {
+    showSearchModal.value = false
+    searchInputFocused.value = false
+}
 
 const echoListeners = ref([])
 const pollingInterval = ref(null)
@@ -278,23 +317,66 @@ function applySearchToApi() {
     const base = lastQuery.value && Object.keys(lastQuery.value).length ? { ...lastQuery.value } : {}
     const term = (search.value || '').trim()
     const query = term ? { ...base, search: term } : base
-    if (!leadsRef.value) return
-    const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+    const leadsComponent = getLeadsComponent()
     if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
         leadsComponent.fetchLeads(true, Object.keys(query).length ? query : null)
     }
 }
 
-watch(search, () => {
+function onQuickSearchInput() {
+    closeSearchDropdown()
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
         searchDebounceTimer.value = null
     }
     searchDebounceTimer.value = setTimeout(() => {
         searchDebounceTimer.value = null
+        closeSearchDropdown()
         applySearchToApi()
     }, SEARCH_DEBOUNCE_MS)
-})
+}
+
+function onQuickSearchEnter() {
+    if (searchDebounceTimer.value) {
+        clearTimeout(searchDebounceTimer.value)
+        searchDebounceTimer.value = null
+    }
+    closeSearchDropdown()
+    applySearchToApi()
+}
+
+function onPlusIconClick() {
+    openSearchModal()
+}
+
+function onSearchInputAreaClick() {
+    openSearchModal()
+}
+
+function runSearchKeepPopupOpen() {
+    showSearchModal.value = true
+    searchInputFocused.value = true
+
+    nextTick(() => {
+        const quickTerm = (search.value || '').trim()
+        if (leadSearchModalRef.value?.applySearch) {
+            leadSearchModalRef.value.applySearch({
+                keepOpen: true,
+                extraSearch: quickTerm || undefined,
+            })
+            return
+        }
+        applySearchToApi()
+    })
+}
+
+function onSearchIconClick() {
+    if (searchDebounceTimer.value) {
+        clearTimeout(searchDebounceTimer.value)
+        searchDebounceTimer.value = null
+    }
+    runSearchKeepPopupOpen()
+}
 
 watch(showSearchModal, (isOpen) => {
     if (!isOpen) {
@@ -502,6 +584,12 @@ const hasAnySearchCriteria = computed(() => {
 })
 
 const onLeadSearch = (payload) => {
+    if (payload?.keepOpen) {
+        showSearchModal.value = true
+        searchInputFocused.value = true
+    } else {
+        closeSearchDropdown()
+    }
     if (payload === null || payload?.query === null) {
         activeFilter.value = null
         activeFilters.value = []
@@ -859,6 +947,25 @@ const $showNotification = (message, type = 'info') => {
     max-width: calc(100vw - 32px);
 }
 
+.search-wrapper--searching {
+    border-color: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.search-status-icon {
+    font-size: 16px;
+    color: #3b82f6;
+    flex-shrink: 0;
+}
+
+.search-status-icon--spin {
+    animation: kanban-search-spin 0.75s linear infinite;
+}
+
+@keyframes kanban-search-spin {
+    to { transform: rotate(360deg); }
+}
+
 .search-wrapper {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(0, 0, 0, 0.08);
@@ -988,13 +1095,31 @@ const $showNotification = (message, type = 'info') => {
     max-width: 100%;
 }
 
-.search-magnify-icon {
-    color: #64748b;
-    font-size: 18px;
+.search-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 2px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #fff;
+    cursor: pointer;
     flex-shrink: 0;
-    margin-right: 4px;
+    transition: background 0.15s ease, transform 0.15s ease;
 }
 
+.search-trigger-btn:hover {
+    background: #1e293b;
+    transform: scale(1.04);
+}
+
+.search-trigger-icon {
+    font-size: 15px;
+}
 
 .search-plus-icon {
     font-size: 18px;
@@ -1002,6 +1127,11 @@ const $showNotification = (message, type = 'info') => {
     margin-right: 6px;
     margin-bottom: 0;
     flex-shrink: 0;
+    cursor: pointer;
+}
+
+.search-plus-icon:hover {
+    color: #334155;
 }
 
 .search-input,

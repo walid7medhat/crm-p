@@ -180,6 +180,8 @@
 </template>
 
 <script>
+import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
+
 export default {
   name: 'AllNotifications',
   data() {
@@ -405,6 +407,11 @@ export default {
 
     handleNotificationClick(notification) {
       if (!notification.read_at) this.markAsRead(notification.id)
+
+      if (openLeadFromNotification(notification)) {
+        return
+      }
+
       const type = notification.type || notification.data?.notification_type
 
       if (['request', 'approved', 'rejected'].includes(type)) {
@@ -419,8 +426,6 @@ export default {
         this.$router.push(`/property-details/${notification.data.listing_id}`)
       } else if (notification.data?.property_id) {
         this.$router.push(`/property-details/${notification.data.property_id}`)
-      } else if (type === 'App\\Notifications\\LeadUpdatedNotification') {
-        this.$router.push('/kanban')
       } else if (type === 'App\\Notifications\\DealUpdatedNotificatio') {
         this.$router.push('/kanban')
       } else if (type === 'App\\Notifications\\NewListingMatchedNotification') {

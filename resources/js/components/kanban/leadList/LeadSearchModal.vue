@@ -349,8 +349,11 @@
                         <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
                     </div>
                     <div class="d-flex gap-3">
-                        <button class="btn-reset" @click="resetForm">Reset</button>
-                        <button class="btn-search" @click="applySearch">Search</button>
+                        <button class="btn-reset" :disabled="searching" @click="resetForm">Reset</button>
+                        <button class="btn-search" :disabled="searching" @click="applySearch">
+                            <iconify-icon v-if="searching" icon="lucide:loader-2" class="btn-search-spinner" />
+                            <span>{{ searching ? 'Searching…' : 'Search' }}</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -681,8 +684,11 @@
                         <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
                     </div>
                     <div class="d-flex gap-3">
-                        <button class="btn-reset" @click="resetForm">Reset</button>
-                        <button class="btn-search" @click="applySearch">Search</button>
+                        <button class="btn-reset" :disabled="searching" @click="resetForm">Reset</button>
+                        <button class="btn-search" :disabled="searching" @click="applySearch">
+                            <iconify-icon v-if="searching" icon="lucide:loader-2" class="btn-search-spinner" />
+                            <span>{{ searching ? 'Searching…' : 'Search' }}</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -796,7 +802,8 @@ const props = defineProps({
     hasActiveFilters: { type: Boolean, default: true },
     currentQuery: { type: Object, default: null },
     showTeamFilter: { type: Boolean, default: false },
-        key: { type: Number, default: 0 }
+    searching: { type: Boolean, default: false },
+    key: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
@@ -2062,7 +2069,7 @@ function normalizeLeadDateRange(from, to, exact) {
     return { from: dateFrom, to: dateTo }
 }
 
-function applySearch() {
+function applySearch(options = {}) {
     let createdFrom = undefined
     let createdTo = undefined
     let createdAt = undefined
@@ -2424,6 +2431,11 @@ function applySearch() {
         
     }
     
+    const quickTerm = options.extraSearch != null ? String(options.extraSearch).trim() : ''
+    if (quickTerm) {
+        query.search = quickTerm
+    }
+
     Object.keys(query).forEach(k => { 
         if (query[k] === '' || query[k] === undefined || (Array.isArray(query[k]) && query[k].length === 0)) delete query[k] 
     })
@@ -2498,9 +2510,15 @@ function applySearch() {
     const pill = sidebarPills.value.find(p => p.id === activePill.value)
     const pillData = pill ? { id: pill.id, label: pill.label } : null
     
-    emit('search', { query, activePill: pillData, activeFilters })
-    show.value = false
+    if (!options.keepOpen) {
+        show.value = false
+    }
+    emit('search', { query, activePill: pillData, activeFilters, keepOpen: !!options.keepOpen })
 }
+
+defineExpose({
+    applySearch,
+})
 
 async function handleSidebarPillClick(pill) {
     console.log('Sidebar pill clicked:', pill)
@@ -3957,6 +3975,25 @@ onBeforeUnmount(() => {
     border-radius: 100px;
     font-size: 14px;
     color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-search:disabled,
+.btn-reset:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.btn-search-spinner {
+    font-size: 16px;
+    animation: lead-search-spin 0.75s linear infinite;
+}
+
+@keyframes lead-search-spin {
+    to { transform: rotate(360deg); }
 }
 
 /* Responsible person select — same info density as ResponsiblePersonSection modal */
