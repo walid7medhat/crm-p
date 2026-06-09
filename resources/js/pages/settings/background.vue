@@ -1,219 +1,192 @@
 <template>
   <div class="dashboard-main-body">
-    <div class="breadcrumb-area mb-24">
-      <div class="d-flex flex-wrap align-items-center justify-content-between">
-        <div>
-          <h1 class="page-title mb-1">Background Studio</h1>
-          <div class="d-flex align-items-center gap-2">
-            <a href="#" class="breadcrumb-link">Settings</a>
-            <i class="fas fa-chevron-right text-secondary" style="font-size: 10px"></i>
-            <span class="breadcrumb-link active" style="color: #1f2937">Background ambiance</span>
+    <div class="card h-100 p-0 radius-12 overflow-hidden bg-settings-card">
+      <div class="card-body p-24 p-md-32">
+        <!-- tiny page line -->
+        <div class="bg-topline">
+          <span class="text-primary-light text-xs">Settings</span>
+          <span class="text-primary-light text-xs opacity-50">/</span>
+          <span class="text-primary-light text-xs fw-medium">Background</span>
+          <span v-if="!loading" class="bg-topline-count">{{ backgrounds.length }}</span>
+        </div>
+
+        <transition name="fade">
+          <div v-if="message" class="bg-toast" :class="messageIsError ? 'bg-toast--err' : 'bg-toast--ok'">
+            {{ message }}
           </div>
-        </div>
-        <div class="text-secondary-light">
-          <i class="fas fa-palette me-1"></i> Personalize your workspace
-        </div>
-      </div>
-    </div>
+        </transition>
 
-    <!-- Inline status message -->
-    <transition name="fade">
-      <div
-        v-if="message"
-        class="alert alert-premium mb-24 d-flex align-items-center gap-2"
-        :class="messageIsError ? 'alert-danger' : 'alert-success'"
-        role="alert"
-      >
-        <i class="fas" :class="messageIsError ? 'fa-circle-exclamation' : 'fa-circle-check'"></i>
-        <span>{{ message }}</span>
-      </div>
-    </transition>
+        <!-- admin upload strip -->
+        <div v-if="canManage" class="bg-upload-strip">
+          <form @submit.prevent="upload" class="bg-upload-form">
+            <div
+              class="bg-upload-zone"
+              :class="{ 'is-drag': isDragging, 'has-files': uploadQueue.length }"
+              @click="openFilePicker"
+              @dragenter.prevent="onDragEnter"
+              @dragover.prevent="onDragOver"
+              @dragleave.prevent="onDragLeave"
+              @drop.prevent="onDrop"
+            >
+              <iconify-icon icon="lucide:plus" class="bg-upload-zone-icon" />
+              <span class="text-xs text-primary-light">
+                {{ uploadQueue.length ? `${uploadQueue.length} selected` : 'Add images' }}
+              </span>
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                class="d-none"
+                multiple
+                @change="onFileChange"
+              />
+            </div>
 
-    <!-- Picker card -->
-    <div class="premium-card mb-24">
-      <div class="card-header-premium d-flex flex-wrap justify-content-between align-items-center">
-        <div>
-          <h6 class="text-lg fw-semibold mb-0" style="font-size: 1.25rem">Curate your canvas</h6>
-          <span class="text-secondary-light">Pick an image that inspires you — saved only for your account.</span>
-        </div>
-        <div class="mt-2 mt-sm-0">
-          <span class="badge bg-light text-dark rounded-pill px-3 py-2">
-            <i class="far fa-image me-1"></i> {{ backgrounds.length }} backgrounds
-          </span>
-        </div>
-      </div>
+            <div v-if="uploadQueue.length" class="bg-upload-queue-mini">
+              <div v-for="(item, index) in uploadQueue" :key="item.id" class="bg-queue-chip">
+                <img :src="item.previewUrl" :alt="item.name" />
+                <button type="button" class="bg-queue-rm" @click.stop="removeQueuedFile(index)">
+                  <iconify-icon icon="lucide:x" />
+                </button>
+              </div>
+              <button type="button" class="bg-queue-clear text-xs" @click.stop="clearUploadQueue">Clear</button>
+            </div>
 
-      <div class="card-body-premium">
-        <div v-if="loading" class="row g-4">
-          <div v-for="n in 6" :key="n" class="col-6 col-sm-4 col-md-3 col-xl-2">
-            <div class="bg-thumb bg-thumb--skeleton w-100"></div>
+            <div class="bg-upload-opts">
+              <input
+                v-model="uploadName"
+                type="text"
+                class="form-control radius-8 text-xs bg-input"
+                placeholder="Name prefix (optional)"
+              />
+              <label class="bg-check text-xs text-primary-light">
+                <input v-model="uploadIsDefault" type="checkbox" class="form-check-input" />
+                Default first
+              </label>
+              <button type="submit" class="btn btn-sm btn-primary radius-8 text-xs px-3" :disabled="!uploadQueue.length || uploading">
+                <span v-if="uploading">{{ uploadProgress }}%</span>
+                <span v-else>Upload</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- wallpaper grid -->
+        <div class="bg-grid-wrap">
+          <div v-if="loading" class="bg-grid">
+            <div v-for="n in 8" :key="n" class="bg-tile bg-tile--skel" />
           </div>
-        </div>
 
-        <div v-else class="row g-4">
-          <!-- Reset to system default -->
-          <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+          <div v-else-if="!backgrounds.length" class="bg-grid-empty text-xs text-primary-light">
+            No wallpapers yet{{ canManage ? ' — add some above' : '' }}.
+          </div>
+
+          <div v-else class="bg-grid">
             <button
               type="button"
-              class="bg-thumb bg-thumb--default w-100"
-              :class="{ 'is-selected': selectedId === null }"
+              class="bg-tile bg-tile--reset"
+              :class="{ 'is-on': selectedId === null }"
               @click="pick(null)"
             >
-              <span class="bg-thumb-default-inner">
-                <i class="fas fa-rotate-left"></i>
-                <span>Default</span>
-              </span>
-              <span v-if="selectedId === null" class="bg-thumb-check"><i class="fas fa-check"></i></span>
-            </button>
-          </div>
-
-          <div v-for="bg in backgrounds" :key="bg.id" class="col-6 col-sm-4 col-md-3 col-xl-2">
-            <button
-              type="button"
-              class="bg-thumb w-100"
-              :class="{ 'is-selected': selectedId === bg.id, 'is-inactive': !bg.is_active }"
-              :style="{ backgroundImage: `url('${thumb(bg.url)}')` }"
-              @click="pick(bg.id)"
-            >
-              <span v-if="bg.is_default" class="bg-thumb-badge"><i class="fas fa-crown me-1"></i>Default</span>
-              <span v-if="!bg.is_active" class="bg-thumb-badge bg-thumb-badge--right">
-                <i class="fas fa-eye-slash me-1"></i>Hidden
-              </span>
-              <span v-if="selectedId === bg.id" class="bg-thumb-check"><i class="fas fa-check"></i></span>
-              <span class="bg-thumb-name">{{ bg.name || 'Background #' + bg.id }}</span>
+              <iconify-icon icon="lucide:rotate-ccw" />
+              <span class="text-xs">Default</span>
             </button>
 
-            <!-- Superadmin per-item controls -->
-            <div v-if="canManage" class="d-flex justify-content-center gap-1 mt-2">
+            <div v-for="bg in backgrounds" :key="bg.id" class="bg-tile-wrap">
               <button
                 type="button"
-                class="small-icon-btn"
-                :title="bg.is_default ? 'Already default' : 'Set as default'"
-                @click="makeDefault(bg)"
-                :disabled="bg.is_default"
+                class="bg-tile"
+                :class="{
+                  'is-on': selectedId === bg.id,
+                  'is-off': !bg.is_active,
+                }"
+                :style="{ backgroundImage: `url('${thumb(bg.url)}')` }"
+                :title="bg.name || `Background ${bg.id}`"
+                @click="pick(bg.id)"
               >
-                <i class="fas fa-star" :class="bg.is_default ? 'text-warning' : 'text-secondary'"></i>
+                <span v-if="selectedId === bg.id" class="bg-tile-mark">
+                  <iconify-icon icon="lucide:check" />
+                </span>
+                <span v-if="bg.is_default" class="bg-tile-tag">def</span>
+                <span v-if="!bg.is_active" class="bg-tile-tag bg-tile-tag--hide">off</span>
               </button>
-              <button type="button" class="small-icon-btn" :title="bg.is_active ? 'Hide from users' : 'Show to users'" @click="toggleActive(bg)">
-                <i :class="bg.is_active ? 'fas fa-eye' : 'fas fa-eye-slash'"></i>
-              </button>
-              <button type="button" class="small-icon-btn text-danger" title="Delete" @click="remove(bg)">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div class="card-footer-premium d-flex justify-content-end align-items-center gap-3">
-        <button type="button" class="btn-premium-outline" :disabled="!dirty || saving" @click="resetPending">
-          Cancel
-        </button>
-        <button type="button" class="btn-premium-primary d-inline-flex align-items-center gap-2" :disabled="!dirty || saving" @click="save">
-          <i v-if="saving" class="fas fa-spinner fa-spin"></i>
-          <i v-else class="fas fa-save"></i>
-          {{ saving ? 'Saving…' : 'Save selection' }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Upload Section (Superadmin only) -->
-    <div v-if="canManage" class="premium-card">
-      <div class="card-header-premium">
-        <h6 class="fw-semibold mb-0" style="font-size: 1.2rem">
-          <i class="fas fa-cloud-upload-alt me-2 text-primary"></i>Enrich the library
-        </h6>
-        <span class="text-secondary-light">Upload HD wallpapers — they become instantly available to every user.</span>
-      </div>
-
-      <form @submit.prevent="upload">
-        <div class="card-body-premium">
-          <div class="bg-dropzone" :class="{ 'has-file': uploadFiles.length }" @click="$refs.fileInput.click()">
-            <i class="fas" :class="uploadFiles.length ? 'fa-images' : 'fa-cloud-arrow-up'"></i>
-            <span class="fw-semibold">
-              {{ uploadFiles.length ? (uploadFiles.length === 1 ? uploadFiles[0].name : uploadFiles.length + ' images selected') : 'Click or drag images' }}
-            </span>
-            <span class="text-secondary-light">PNG, JPG, WEBP · up to 5MB each</span>
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              class="d-none"
-              multiple
-              @change="onFileChange"
-            />
-          </div>
-
-          <!-- Preview chips -->
-          <div v-if="uploadFiles.length" class="d-flex flex-wrap gap-2 mt-4">
-            <div v-for="(f, i) in uploadPreviews" :key="i" class="bg-preview-chip">
-              <img :src="f.url" :alt="f.name" />
-              <button type="button" class="bg-preview-remove" @click.stop="removeSelected(i)">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="row g-3 mt-3 align-items-end">
-            <div class="col-sm-6">
-              <label class="form-label fw-semibold text-secondary">Background name (optional)</label>
-              <input v-model="uploadName" type="text" placeholder="e.g. 'Midnight aurora'" class="form-control form-control-premium" />
-            </div>
-            <div class="col-sm-6">
-              <div class="form-check">
-                <input id="bgSetDefault" type="checkbox" class="form-check-input" v-model="uploadIsDefault" />
-                <label for="bgSetDefault" class="form-check-label fw-medium">🌟 Set first image as global default</label>
+              <div v-if="canManage" class="bg-tile-actions">
+                <button type="button" class="bg-act" :disabled="bg.is_default" title="Set default" @click="makeDefault(bg)">
+                  <iconify-icon icon="lucide:star" />
+                </button>
+                <button type="button" class="bg-act" :title="bg.is_active ? 'Hide' : 'Show'" @click="toggleActive(bg)">
+                  <iconify-icon :icon="bg.is_active ? 'lucide:eye' : 'lucide:eye-off'" />
+                </button>
+                <button type="button" class="bg-act bg-act--del" title="Delete" @click="remove(bg)">
+                  <iconify-icon icon="lucide:trash-2" />
+                </button>
               </div>
+              <p v-if="bg.name" class="bg-tile-label text-xs text-primary-light mb-0">{{ bg.name }}</p>
             </div>
           </div>
         </div>
 
-        <div class="card-footer-premium d-flex justify-content-end">
-          <button type="submit" class="btn-premium-primary d-inline-flex align-items-center gap-2 px-4" :disabled="!uploadFiles.length || uploading">
-            <i v-if="uploading" class="fas fa-spinner fa-spin"></i>
-            <i v-else class="fas fa-upload"></i>
-            {{ uploading ? 'Uploading...' : uploadButtonLabel }}
-          </button>
+        <!-- save bar -->
+        <div v-if="dirty" class="bg-savebar">
+          <span class="text-xs text-primary-light">Unsaved change</span>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary radius-8 text-xs" :disabled="saving" @click="resetPending">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-sm btn-primary radius-8 text-xs px-3" :disabled="saving" @click="save">
+              {{ saving ? 'Saving…' : 'Apply' }}
+            </button>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
-import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import backgroundsApi from '@/services/backgroundsApi'
 import { useBackground } from '@/composables/useBackground'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
 
+const MAX_FILES = 50
+/** Keep under typical PHP post_max_size (8M) so single-file uploads don't 413 */
+const MAX_FILE_BYTES = 8 * 1024 * 1024
+const UPLOAD_ONE_BY_ONE = true
+const ACCEPTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp'])
+
+let uploadItemId = 0
+
+function fileBaseName(filename) {
+  return filename.replace(/\.[^.]+$/, '')
+}
+
 export default {
   name: 'BackgroundSettings',
-  components: { Breadcrumb },
   setup() {
     const { syncFromUser } = useBackground()
 
     const loading = ref(true)
     const backgrounds = ref([])
-    const selectedId = ref(null) // pending pick
-    const savedId = ref(null) // what's actually persisted
+    const selectedId = ref(null)
+    const savedId = ref(null)
     const saving = ref(false)
     const canManage = ref(false)
 
-    const uploadFiles = ref([])
+    const uploadQueue = ref([])
     const uploadName = ref('')
     const uploadIsDefault = ref(false)
     const uploading = ref(false)
+    const uploadProgress = ref(0)
+    const isDragging = ref(false)
     const fileInput = ref(null)
+    let dragDepth = 0
 
     const message = ref('')
     const messageIsError = ref(false)
 
     const dirty = computed(() => selectedId.value !== savedId.value)
-
-    const uploadPreviews = computed(() => uploadFiles.value.map((f) => ({ name: f.name, url: URL.createObjectURL(f) })))
-
-    const uploadButtonLabel = computed(() => (uploadFiles.value.length > 1 ? `Upload ${uploadFiles.value.length} images` : 'Upload background'))
 
     function thumb(url) {
       return normalizePublicStorageUrl(url) || url
@@ -229,6 +202,55 @@ export default {
       }
     }
 
+    function revokeQueuePreviews() {
+      uploadQueue.value.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+    }
+
+    function clearUploadQueue() {
+      revokeQueuePreviews()
+      uploadQueue.value = []
+      if (fileInput.value) fileInput.value.value = ''
+    }
+
+    function addFiles(fileList) {
+      const incoming = Array.from(fileList || [])
+      if (!incoming.length) return
+
+      const valid = []
+      const errors = []
+
+      incoming.forEach((file) => {
+        if (!ACCEPTED_TYPES.has(file.type)) {
+          errors.push(`${file.name}: bad format`)
+          return
+        }
+        if (file.size > MAX_FILE_BYTES) {
+          errors.push(`${file.name}: over 8MB`)
+          return
+        }
+        valid.push(file)
+      })
+
+      const remainingSlots = MAX_FILES - uploadQueue.value.length
+      if (remainingSlots <= 0) {
+        notify(`Max ${MAX_FILES} files`, true)
+        return
+      }
+
+      valid.slice(0, remainingSlots).forEach((file) => {
+        uploadQueue.value.push({
+          id: ++uploadItemId,
+          file,
+          name: fileBaseName(file.name),
+          previewUrl: URL.createObjectURL(file),
+        })
+      })
+
+      if (errors.length) notify(errors.slice(0, 2).join(', '), true)
+    }
+
     async function load() {
       loading.value = true
       try {
@@ -239,7 +261,7 @@ export default {
         selectedId.value = savedId.value
         canManage.value = !!data.can_manage
       } catch (e) {
-        notify(e?.response?.data?.message || 'Failed to load backgrounds', true)
+        notify(e?.response?.data?.message || 'Load failed', true)
       } finally {
         loading.value = false
       }
@@ -260,79 +282,170 @@ export default {
         const res = await backgroundsApi.select(selectedId.value)
         syncFromUser(res.data?.data)
         savedId.value = selectedId.value
-        notify('Background updated ✨')
+        notify('Applied')
       } catch (e) {
-        notify(e?.response?.data?.message || 'Could not save background', true)
+        notify(e?.response?.data?.message || 'Save failed', true)
       } finally {
         saving.value = false
       }
     }
 
-    function onFileChange(e) {
-      uploadFiles.value = Array.from(e.target.files || [])
+    function openFilePicker() {
+      fileInput.value?.click()
     }
 
-    function removeSelected(index) {
-      uploadFiles.value = uploadFiles.value.filter((_, i) => i !== index)
-      if (!uploadFiles.value.length && fileInput.value) fileInput.value.value = ''
+    function onFileChange(e) {
+      addFiles(e.target.files)
+      if (fileInput.value) fileInput.value.value = ''
+    }
+
+    function onDragEnter() {
+      dragDepth += 1
+      isDragging.value = true
+    }
+
+    function onDragOver() {
+      isDragging.value = true
+    }
+
+    function onDragLeave() {
+      dragDepth = Math.max(0, dragDepth - 1)
+      if (dragDepth === 0) isDragging.value = false
+    }
+
+    function onDrop(e) {
+      dragDepth = 0
+      isDragging.value = false
+      addFiles(e.dataTransfer?.files)
+    }
+
+    function removeQueuedFile(index) {
+      const [removed] = uploadQueue.value.splice(index, 1)
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl)
+      if (!uploadQueue.value.length && fileInput.value) fileInput.value.value = ''
+    }
+
+    function uploadErrorMessage(error, fileName = '') {
+      const status = error?.response?.status
+      if (status === 413) {
+        return fileName
+          ? `${fileName} is too large for the server. Use images under 8MB or ask admin to raise upload limits.`
+          : 'Upload too large for the server. Try fewer/smaller images (max 8MB each).'
+      }
+      return (
+        error?.response?.data?.message
+        || error?.response?.data?.errors?.images?.[0]
+        || error?.response?.data?.errors?.['images.0']?.[0]
+        || 'Upload failed'
+      )
+    }
+
+    async function uploadOneItem(item, { index, total, isDefault }) {
+      return backgroundsApi.upload({
+        images: [item.file],
+        names: [item.name],
+        name: uploadName.value || null,
+        isDefault,
+        onUploadProgress: (event) => {
+          if (!event.total) return
+          const fileRatio = event.loaded / event.total
+          uploadProgress.value = Math.min(100, Math.round(((index + fileRatio) / total) * 100))
+        },
+      })
     }
 
     async function upload() {
-      if (!uploadFiles.value.length) return
+      if (!uploadQueue.value.length) return
       uploading.value = true
+      uploadProgress.value = 0
+
+      const queue = [...uploadQueue.value]
+      const setDefaultOnFirst = uploadIsDefault.value
+      let uploaded = 0
+      let lastError = ''
+
       try {
-        const res = await backgroundsApi.upload({
-          images: uploadFiles.value,
-          name: uploadName.value || null,
-          isDefault: uploadIsDefault.value,
-        })
-        uploadFiles.value = []
-        uploadName.value = ''
-        uploadIsDefault.value = false
-        if (fileInput.value) fileInput.value.value = ''
-        notify(res.data?.message || 'Backgrounds uploaded successfully')
-        await load()
+        if (UPLOAD_ONE_BY_ONE) {
+          for (let i = 0; i < queue.length; i += 1) {
+            const item = queue[i]
+            try {
+              await uploadOneItem(item, {
+                index: i,
+                total: queue.length,
+                isDefault: setDefaultOnFirst && i === 0,
+              })
+              uploaded += 1
+            } catch (e) {
+              lastError = uploadErrorMessage(e, item.file.name)
+              notify(lastError, true)
+            }
+          }
+        } else {
+          await backgroundsApi.upload({
+            images: queue.map((item) => item.file),
+            names: queue.map((item) => item.name),
+            name: uploadName.value || null,
+            isDefault: setDefaultOnFirst,
+            onUploadProgress: (event) => {
+              if (!event.total) return
+              uploadProgress.value = Math.min(100, Math.round((event.loaded / event.total) * 100))
+            },
+          })
+          uploaded = queue.length
+        }
+
+        if (uploaded > 0) {
+          clearUploadQueue()
+          uploadName.value = ''
+          uploadIsDefault.value = false
+          const suffix = uploaded < queue.length ? ` (${queue.length - uploaded} skipped)` : ''
+          notify(`Uploaded ${uploaded} wallpaper${uploaded === 1 ? '' : 's'}${suffix}`)
+          await load()
+        } else if (!lastError) {
+          notify('Nothing uploaded', true)
+        }
       } catch (e) {
-        notify(e?.response?.data?.message || 'Upload failed', true)
+        notify(uploadErrorMessage(e), true)
       } finally {
         uploading.value = false
+        uploadProgress.value = 0
       }
     }
 
     async function makeDefault(bg) {
       try {
         await backgroundsApi.setDefault(bg.id)
-        notify('Default background changed')
+        notify('Default set')
         await load()
       } catch (e) {
-        notify(e?.response?.data?.message || 'Failed to set default', true)
+        notify(e?.response?.data?.message || 'Failed', true)
       }
     }
 
     async function toggleActive(bg) {
       try {
         await backgroundsApi.update(bg.id, { is_active: !bg.is_active })
-        notify(bg.is_active ? 'Background hidden' : 'Background shown')
         await load()
       } catch (e) {
-        notify(e?.response?.data?.message || 'Failed to update background', true)
+        notify(e?.response?.data?.message || 'Failed', true)
       }
     }
 
     async function remove(bg) {
-      if (!confirm('Delete this background? Users will see default.')) return
+      if (!confirm('Delete this wallpaper?')) return
       try {
         await backgroundsApi.remove(bg.id)
         if (selectedId.value === bg.id) selectedId.value = savedId.value === bg.id ? null : savedId.value
         if (savedId.value === bg.id) savedId.value = null
-        notify('Background deleted')
+        notify('Deleted')
         await load()
       } catch (e) {
-        notify(e?.response?.data?.message || 'Failed to delete background', true)
+        notify(e?.response?.data?.message || 'Failed', true)
       }
     }
 
     onMounted(load)
+    onBeforeUnmount(revokeQueuePreviews)
 
     return {
       loading,
@@ -341,12 +454,12 @@ export default {
       canManage,
       dirty,
       saving,
-      uploadFiles,
-      uploadPreviews,
-      uploadButtonLabel,
+      uploadQueue,
       uploadName,
       uploadIsDefault,
       uploading,
+      uploadProgress,
+      isDragging,
       fileInput,
       message,
       messageIsError,
@@ -354,8 +467,14 @@ export default {
       pick,
       resetPending,
       save,
+      openFilePicker,
       onFileChange,
-      removeSelected,
+      onDragEnter,
+      onDragOver,
+      onDragLeave,
+      onDrop,
+      removeQueuedFile,
+      clearUploadQueue,
       upload,
       makeDefault,
       toggleActive,
@@ -366,358 +485,370 @@ export default {
 </script>
 
 <style scoped>
-/* Breadcrumb area */
-.breadcrumb-area {
-  margin-bottom: 1.5rem;
+.bg-settings-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #1e2a3e 0%, #0f172a 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  letter-spacing: -0.01em;
+.p-24 {
+  padding: 1.25rem;
 }
 
-.breadcrumb-link {
-  color: #5b6e8c;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.9rem;
+.p-md-32 {
+  padding: 1.5rem;
 }
 
-.text-secondary-light {
-  color: #5b6e8c;
-  font-size: 0.85rem;
-}
-
-/* Alert premium */
-.alert-premium {
-  border-radius: 60px;
-  border: none;
-  padding: 0.9rem 1.2rem;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
-}
-
-/* Premium card */
-.premium-card {
-  background: rgba(255, 255, 255, 0.96);
-  border-radius: 28px;
-  box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-.card-header-premium {
-  background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 1.2rem 1.8rem;
-}
-
-.card-body-premium {
-  padding: 1.8rem;
-}
-
-.card-footer-premium {
-  background: transparent;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 1.2rem 1.8rem;
-}
-
-/* Thumbnail styles */
-.bg-thumb {
-  position: relative;
-  aspect-ratio: 16 / 10;
-  border-radius: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  background-size: cover;
-  background-position: center;
-  background-color: #e9edf4;
-  cursor: pointer;
-  overflow: hidden;
-  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1), box-shadow 0.3s, border-color 0.2s;
-  box-shadow: 0 6px 12px -6px rgba(0, 0, 0, 0.1);
-}
-
-.bg-thumb:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 28px -12px rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.9);
-}
-
-.bg-thumb.is-selected {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 12px 20px -12px rgba(0, 0, 0, 0.2);
-}
-
-.bg-thumb.is-inactive {
-  opacity: 0.65;
-  filter: grayscale(0.2) brightness(0.95);
-}
-
-.bg-thumb--default {
-  background: linear-gradient(145deg, #ffffff, #f3f6fc);
-  border: 2px dashed #cbd5e1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 1px 2px #fff, 0 4px 8px rgba(0, 0, 0, 0.02);
-}
-
-.bg-thumb-default-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.bg-thumb-default-inner i {
-  font-size: 1.6rem;
-  background: linear-gradient(145deg, #3b82f6, #2563eb);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-}
-
-.bg-thumb-name {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0.6rem 0.75rem 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-  backdrop-filter: blur(2px);
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bg-thumb-badge {
-  position: absolute;
-  top: 0.65rem;
-  left: 0.65rem;
-  font-size: 0.6rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 40px;
-  font-weight: 600;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  color: white;
-  border: none;
-}
-
-.bg-thumb-badge--right {
-  left: auto;
-  right: 0.65rem;
-  background: #475569cc;
-}
-
-.bg-thumb-check {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  width: 26px;
-  height: 26px;
-  background: #3b82f6;
-  border-radius: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 0.8rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Skeleton loading */
-.bg-thumb--skeleton {
-  background: linear-gradient(110deg, #eceff5 8%, #f5f7fc 18%, #eceff5 33%);
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite linear;
-  border-radius: 20px;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+@media (min-width: 768px) {
+  .p-md-32 {
+    padding: 1.75rem;
   }
 }
 
-/* Dropzone */
-.bg-dropzone {
+/* tiny breadcrumb line — no big titles */
+.bg-topline {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.bg-topline-count {
+  margin-left: auto;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.bg-toast {
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.bg-toast--ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.bg-toast--err {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* admin upload — one compact row */
+.bg-upload-strip {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bg-upload-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
-  border: 2px dashed #cbd5e6;
-  border-radius: 28px;
-  padding: 2.2rem 1.5rem;
-  background: #fafcff;
-  transition: all 0.2s;
+}
+
+.bg-upload-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
   cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 11px;
+  color: #64748b;
 }
 
-.bg-dropzone:hover {
-  border-color: #3b82f6;
-  background: #f3f9ff;
+.bg-upload-zone:hover,
+.bg-upload-zone.is-drag {
+  border-color: #2a1548;
+  background: #faf5ff;
 }
 
-.bg-dropzone i {
-  font-size: 2.3rem;
-  background: linear-gradient(145deg, #3b82f6, #2563eb);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-}
-
-.has-file {
+.bg-upload-zone.has-files {
   border-color: #10b981;
+  border-style: solid;
 }
 
-/* Preview chips */
-.bg-preview-chip {
+.bg-upload-zone-icon {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.bg-upload-queue-mini {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bg-queue-chip {
   position: relative;
-  width: 84px;
-  height: 56px;
-  border-radius: 14px;
+  width: 36px;
+  height: 24px;
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid #e2e8f0;
 }
 
-.bg-preview-chip img {
+.bg-queue-chip img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.bg-preview-remove {
+.bg-queue-rm {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 50%;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
-  color: white;
   border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
   cursor: pointer;
-  transition: 0.1s;
 }
 
-.bg-preview-remove:hover {
-  background: #ef4444;
-  transform: scale(1.05);
+.bg-queue-chip:hover .bg-queue-rm {
+  opacity: 1;
 }
 
-/* Buttons */
-.btn-premium-primary {
-  background: linear-gradient(105deg, #1e3a8a, #2563eb);
+.bg-queue-clear {
   border: none;
-  padding: 0.55rem 1.5rem;
-  border-radius: 40px;
-  font-weight: 600;
-  color: white;
-  transition: all 0.2s;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+  background: none;
+  color: #ef4444;
+  padding: 0;
+  cursor: pointer;
 }
 
-.btn-premium-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: linear-gradient(105deg, #1e40af, #3b82f6);
-  box-shadow: 0 12px 18px -8px rgba(37, 99, 235, 0.4);
+.bg-upload-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
 }
 
-.btn-premium-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.bg-input {
+  width: 140px;
+  height: 30px;
+  padding: 0 0.5rem;
+  font-size: 11px !important;
 }
 
-.btn-premium-outline {
-  border-radius: 40px;
-  border: 1px solid #cbd5e1;
-  background: white;
-  padding: 0.5rem 1.3rem;
-  font-weight: 500;
-  transition: 0.2s;
+.bg-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  white-space: nowrap;
 }
 
-.btn-premium-outline:hover:not(:disabled) {
-  border-color: #3b82f6;
+.bg-check .form-check-input {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+}
+
+/* wallpaper grid */
+.bg-grid-wrap {
+  min-height: 120px;
+}
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 0.65rem;
+}
+
+.bg-grid-empty {
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.bg-tile-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bg-tile {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e2e8f0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.bg-tile:hover {
+  border-color: #cbd5e1;
+}
+
+.bg-tile.is-on {
+  border-color: #2a1548;
+  box-shadow: 0 0 0 1px #2a1548;
+}
+
+.bg-tile.is-off {
+  opacity: 0.45;
+}
+
+.bg-tile--reset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
   background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 11px;
 }
 
-.btn-premium-outline:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.bg-tile--reset iconify-icon {
+  font-size: 14px;
 }
 
-.small-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 40px;
+.bg-tile--reset.is-on {
+  border-color: #2a1548;
+  border-style: solid;
+  color: #2a1548;
+}
+
+.bg-tile-mark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #2a1548;
+  color: #fff;
+  font-size: 10px;
+}
+
+.bg-tile-tag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.bg-tile-tag--hide {
+  left: auto;
+  right: 4px;
+  background: rgba(71, 85, 105, 0.85);
+}
+
+.bg-tile-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px !important;
+  line-height: 1.2;
+  opacity: 0.75;
+}
+
+.bg-tile-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.bg-act {
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
   border: 1px solid #e2e8f0;
-  transition: all 0.15s;
+  border-radius: 4px;
+  background: #fff;
+  color: #64748b;
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.12s;
 }
 
-.small-icon-btn:hover:not(:disabled) {
-  background: white;
-  border-color: #94a3b8;
-  transform: scale(1.03);
+.bg-act:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #334155;
 }
 
-.small-icon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.bg-act:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
-/* Form controls */
-.form-control-premium {
-  border-radius: 20px;
+.bg-act--del:hover:not(:disabled) {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.bg-tile--skel {
+  background: linear-gradient(110deg, #eceff5 8%, #f5f7fc 18%, #eceff5 33%);
+  background-size: 200% 100%;
+  animation: bg-shimmer 1.4s infinite linear;
+  border: none;
+  cursor: default;
+}
+
+@keyframes bg-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* sticky save */
+.bg-savebar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #fff;
   border: 1px solid #e2e8f0;
-  padding: 0.6rem 1rem;
-  background: #ffffff;
-  transition: 0.2s;
-}
-
-.form-control-premium:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-  outline: none;
-}
-
-/* Utility classes */
-.mb-24 {
-  margin-bottom: 1.5rem;
-}
-
-.mt-24 {
-  margin-top: 1.5rem;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
 }
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,

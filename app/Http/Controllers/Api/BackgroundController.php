@@ -20,10 +20,10 @@ class BackgroundController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $isSuperAdmin = $user->hasRole('super_admin');
+        $canManage = $user->hasRole('super_admin') || $user->hasRole('admin');
 
         $backgrounds = Background::query()
-            ->when(! $isSuperAdmin, fn ($q) => $q->active())
+            ->when(! $canManage, fn ($q) => $q->active())
             ->orderByDesc('is_default')
             ->orderByDesc('id')
             ->get();
@@ -32,7 +32,7 @@ class BackgroundController extends Controller
             'backgrounds'           => $backgrounds,
             'selected_id'           => $user->background_id,
             'effective_background'  => $user->background_url,
-            'can_manage'            => $isSuperAdmin,
+            'can_manage'            => $canManage,
         ], 'Backgrounds retrieved successfully');
     }
 
@@ -49,9 +49,11 @@ class BackgroundController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'images'     => 'required|array|min:1',
-            'images.*'   => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+            'images'     => 'required|array|min:1|max:50',
+            'images.*'   => 'image|mimes:jpeg,png,jpg,webp|max:8192',
             'name'       => 'nullable|string|max:255',
+            'names'      => 'nullable|array',
+            'names.*'    => 'nullable|string|max:255',
             'is_default' => 'nullable|boolean',
         ]);
 
@@ -68,11 +70,21 @@ class BackgroundController extends Controller
             }
 
             $items = [];
+            $customNames = $request->input('names', []);
+            $sharedName = trim((string) $request->input('name', '')) ?: null;
+
             foreach (array_values($request->file('images')) as $index => $file) {
                 $path = $file->store('backgrounds', 'public');
+                $perFileName = isset($customNames[$index]) ? trim((string) $customNames[$index]) : '';
+                $fallbackName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $name = $perFileName !== ''
+                    ? $perFileName
+                    : ($sharedName
+                        ? ($index === 0 ? $sharedName : $sharedName . ' ' . ($index + 1))
+                        : $fallbackName);
 
                 $items[] = Background::create([
-                    'name'        => $request->input('name'),
+                    'name'        => $name,
                     'path'        => $path,
                     'is_default'  => $makeDefault && $index === 0,
                     'is_active'   => true,

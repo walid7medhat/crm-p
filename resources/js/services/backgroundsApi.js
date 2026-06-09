@@ -21,14 +21,18 @@ const backgroundsApi = {
   // --- Superadmin only ---
 
   // Upload one or many images at once. `images` is an array of File objects.
-  upload({ images, name = null, isDefault = false }) {
+  upload({ images, name = null, names = [], isDefault = false, onUploadProgress = null }) {
     const form = new FormData()
     const files = Array.isArray(images) ? images : [images]
     files.forEach((file) => form.append('images[]', file))
+    if (Array.isArray(names)) {
+      names.forEach((entry) => form.append('names[]', entry ?? ''))
+    }
     if (name) form.append('name', name)
     form.append('is_default', isDefault ? 1 : 0)
     return api.post('/backgrounds', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
     })
   },
 

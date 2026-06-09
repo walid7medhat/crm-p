@@ -153,14 +153,26 @@
                 <p v-if="teamMembersList.length === 0 && !profileLoading" class="profile-team-empty">No team members under you.</p>
               </section>
 
-              <div class="profile-panel-actions">
-                <router-link :to="`/users/${userData.id}`" class="profile-action-link" @click="close">
-                  <iconify-icon icon="solar:user-linear" class="icon"></iconify-icon>
-                  View Full Profile
+              <div class="profile-quick-menu">
+                <button v-if="isOwnProfile" type="button" class="profile-quick-menu-item" @click="openThemeModal">
+                  <iconify-icon icon="lucide:palette" class="profile-quick-menu-icon" />
+                  <span class="profile-quick-menu-label">Visual theme</span>
+                  <iconify-icon icon="lucide:chevron-right" class="profile-quick-menu-chevron" />
+                </button>
+                <router-link :to="`/users/${userData.id}`" class="profile-quick-menu-item" @click="close">
+                  <iconify-icon icon="solar:user-linear" class="profile-quick-menu-icon" />
+                  <span class="profile-quick-menu-label">{{ isOwnProfile ? 'My profile' : 'View full profile' }}</span>
+                  <iconify-icon icon="lucide:chevron-right" class="profile-quick-menu-chevron" />
                 </router-link>
-                <button v-if="showLogout" type="button" class="profile-action-link profile-action-logout" @click="handleLogout">
-                  <iconify-icon icon="lucide:power" class="icon"></iconify-icon>
-                  Log out
+                <button
+                  v-if="showLogout || isOwnProfile"
+                  type="button"
+                  class="profile-quick-menu-item profile-quick-menu-item--logout"
+                  @click="handleLogout"
+                >
+                  <iconify-icon icon="lucide:power" class="profile-quick-menu-icon" />
+                  <span class="profile-quick-menu-label">Log out</span>
+                  <iconify-icon icon="lucide:chevron-right" class="profile-quick-menu-chevron" />
                 </button>
               </div>
             </template>
@@ -173,6 +185,8 @@
         </div>
       </div>
     </Transition>
+
+    <ProfileThemeModal v-model="showThemeModal" @saved="onThemeSaved" />
   </Teleport>
 </template>
 
@@ -180,6 +194,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
+import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue'
 
 const props = defineProps({
   modelValue: {
@@ -208,6 +223,24 @@ const profileLoading = ref(false)
 const profileError = ref('')
 const profilePanel = ref(null)
 const avatarInput = ref(null)
+const showThemeModal = ref(false)
+
+function getCurrentUserId() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const id = Number(JSON.parse(raw)?.id)
+    return Number.isFinite(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
+const isOwnProfile = computed(() => {
+  const currentId = getCurrentUserId()
+  const viewedId = Number(props.userId)
+  return !!currentId && !!viewedId && currentId === viewedId
+})
 
 // Edit states
 const isPersonalInfoEditing = ref(false)
@@ -412,6 +445,14 @@ function close() {
   profileError.value = ''
   fetchedTeamMembers.value = []
   emit('update:modelValue', false)
+}
+
+function openThemeModal() {
+  showThemeModal.value = true
+}
+
+function onThemeSaved() {
+  // Background applied globally via useBackground in ProfileThemeModal
 }
 
 function handleLogout() {
@@ -928,44 +969,61 @@ watch(
   text-decoration: underline;
 }
 
-.profile-panel-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 14px;
-  border-top: 1px solid #e5e7eb;
-  margin-top: 6px;
+.profile-quick-menu {
+  margin-top: 10px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e8ecf1;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
-.profile-action-link {
+.profile-quick-menu > :not(:first-child) {
+  border-top: 1px solid #f1f5f9;
+}
+
+.profile-quick-menu-item {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #111827;
-  text-decoration: none;
+  gap: 10px;
+  padding: 10px 12px;
   border: none;
-  background: none;
+  border-radius: 8px;
+  background: transparent;
   cursor: pointer;
   text-align: left;
-  border-radius: 8px;
-  transition: background 0.2s, color 0.2s;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
 }
 
-.profile-action-link:hover {
-  background: #f3f4f6;
-  color: #2563eb;
+.profile-quick-menu-item:hover {
+  background: #f8fafc;
 }
 
-.profile-action-link .icon {
-  font-size: 20px;
+.profile-quick-menu-item--logout:hover .profile-quick-menu-label,
+.profile-quick-menu-item--logout:hover .profile-quick-menu-icon {
+  color: #dc2626;
+}
+
+.profile-quick-menu-icon {
+  font-size: 16px;
+  color: #475569;
   flex-shrink: 0;
 }
 
-.profile-action-logout:hover {
-  color: #dc2626;
+.profile-quick-menu-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.profile-quick-menu-chevron {
+  font-size: 14px;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 .profile-panel-enter-active,

@@ -565,8 +565,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/backgrounds', [BackgroundController::class, 'index']);
     Route::post('/profile/background', [ProfileController::class, 'updateBackground']);
 
-    // Superadmin manages the pool of backgrounds users can choose from.
-    Route::middleware('role:super_admin')->group(function () {
+    // Admins manage the pool of backgrounds users can choose from.
+    Route::middleware('role:super_admin|admin')->group(function () {
         Route::post('/backgrounds', [BackgroundController::class, 'store']);
         Route::put('/backgrounds/{background}', [BackgroundController::class, 'update']);
         Route::post('/backgrounds/{background}/default', [BackgroundController::class, 'setDefault']);
