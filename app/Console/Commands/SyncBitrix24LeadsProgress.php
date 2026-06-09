@@ -43,9 +43,6 @@ class SyncBitrix24LeadsProgress extends Command
     /** Cache flag the UI sets to request cancellation. */
     public const CANCEL_KEY = 'bitrix24_sync_leads_cancel';
 
-    /** Atomic lock so only one sync process runs at a time. */
-    public const LOCK_KEY = 'bitrix24_sync_leads_lock';
-
     /** BitrixSyncState row key holding the saved resume cursor (durable in DB). */
     public const STATE_KEY = 'sync_leads';
 
@@ -72,7 +69,7 @@ class SyncBitrix24LeadsProgress extends Command
      * its heartbeat — updated_at — is recent). A stale snapshot (crashed run)
      * is treated as not-active so a new run can take over.
      */
-    public static function anotherRunActive(int $heartbeatSeconds = 300): bool
+    public static function anotherRunActive(int $heartbeatSeconds = 600): bool
     {
         $current = Cache::get(self::PROGRESS_KEY);
         if (! is_array($current) || ($current['status'] ?? null) !== 'running') {
@@ -122,17 +119,14 @@ class SyncBitrix24LeadsProgress extends Command
         $restart = (bool) $this->option('restart');
         $fallbackUserId = (int) $this->option('fallback-user') ?: 1;
 
-        // Atomic single-run lock: prevents two processes (overlapping scheduler
-        // ticks, a queue retry_after re-dispatch, or double clicks) from
-        // processing the same leads at once — which would also make the counters
-        // bounce. Held for the whole run, released in finally.
-        $lock = Cache::lock(self::LOCK_KEY, 6 * 3600);
-        if (! $lock->get()) {
+        // Skip only if another run is ACTIVELY going (its heartbeat — the
+        // progress updated_at — is still fresh). This self-heals: a killed/
+        // crashed run's heartbeat goes stale within a few minutes and the next
+        // run takes over, unlike a hard lock that could stick for hours.
+        if (self::anotherRunActive()) {
             $this->warn('Another lead sync is already running — skipping this run.');
             return self::SUCCESS;
         }
-
-        try {
 
         // Resume from the saved cursor by default, so re-running continues instead
         // of starting over. --start=N overrides; --restart forces the beginning.
@@ -288,10 +282,7 @@ class SyncBitrix24LeadsProgress extends Command
             $this->counts['source_changed'], $this->counts['activity_changed']
         ));
 
-            return self::SUCCESS;
-        } finally {
-            optional($lock)->release();
-        }
+        return self::SUCCESS;
     }
 
     /**
