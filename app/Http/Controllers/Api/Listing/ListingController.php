@@ -28,6 +28,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
 use App\Models\SearchAlert;
+use App\Models\Project;
+use App\Models\PropertyType;
 use App\Jobs\CheckSearchAlerts;
 use App\Models\DealProperty;
 use App\Models\PropertyOffer;
@@ -2873,8 +2875,108 @@ public function validateUnitNumber(Request $request)
             'message' => 'Search alert saved'
         ]);
     }
-    
-    
+
+    public function index_search_alerts(Request $request)
+    {
+        $alerts = SearchAlert::where('user_id', auth()->id())
+            ->latest()
+            ->get();
+
+        // Preload lookups so we can show readable labels instead of raw IDs.
+        $areaIds = [];
+        $projectIds = [];
+        $typeIds = [];
+        foreach ($alerts as $alert) {
+            $f = $alert->filters ?? [];
+            if (!empty($f['area_id'])) $areaIds[] = $f['area_id'];
+            if (!empty($f['project_id'])) $projectIds[] = $f['project_id'];
+            if (!empty($f['property_type_id'])) $typeIds[] = $f['property_type_id'];
+            if (!empty($f['property_type_ids'])) $typeIds = array_merge($typeIds, (array) $f['property_type_ids']);
+        }
+
+        $areas = Area::whereIn('id', array_unique($areaIds))->pluck('name', 'id');
+        $projects = Project::whereIn('id', array_unique($projectIds))->pluck('title', 'id');
+        $types = PropertyType::whereIn('id', array_unique($typeIds))->pluck('name', 'id');
+
+        $data = $alerts->map(function ($alert) use ($areas, $projects, $types) {
+            return [
+                'id' => $alert->id,
+                'is_active' => (bool) $alert->is_active,
+                'created_at' => $alert->created_at,
+                'chips' => $this->buildAlertChips($alert->filters ?? [], $areas, $projects, $types),
+            ];
+        });
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function destroy_search_alert(SearchAlert $searchAlert)
+    {
+        if ($searchAlert->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $searchAlert->delete();
+
+        return response()->json(['message' => 'Search alert deleted']);
+    }
+
+    private function buildAlertChips(array $f, $areas, $projects, $types)
+    {
+        $chips = [];
+
+        if (!empty($f['listing_status'])) {
+            $chips[] = 'Type: ' . ucfirst($f['listing_status']);
+        }
+        if (!empty($f['area_id']) && isset($areas[$f['area_id']])) {
+            $chips[] = 'Location: ' . $areas[$f['area_id']];
+        }
+        if (!empty($f['project_id']) && isset($projects[$f['project_id']])) {
+            $chips[] = 'Project: ' . $projects[$f['project_id']];
+        }
+
+        $typeNames = [];
+        if (!empty($f['property_type_ids'])) {
+            foreach ((array) $f['property_type_ids'] as $id) {
+                if (isset($types[$id])) $typeNames[] = $types[$id];
+            }
+        } elseif (!empty($f['property_type_id']) && isset($types[$f['property_type_id']])) {
+            $typeNames[] = $types[$f['property_type_id']];
+        }
+        if ($typeNames) {
+            $chips[] = 'Property Type: ' . implode(', ', $typeNames);
+        }
+
+        if (!empty($f['completion_status'])) {
+            $chips[] = 'Project Status: ' . $f['completion_status'];
+        }
+
+        if (!empty($f['number_of_bedrooms_in'])) {
+            $chips[] = 'Bedrooms: ' . implode(', ', (array) $f['number_of_bedrooms_in']);
+        } elseif (isset($f['number_of_bedrooms'])) {
+            $chips[] = 'Bedrooms: ' . $f['number_of_bedrooms'];
+        }
+
+        if (!empty($f['number_of_bathrooms_in'])) {
+            $chips[] = 'Bathrooms: ' . implode(', ', (array) $f['number_of_bathrooms_in']);
+        } elseif (isset($f['number_of_bathrooms'])) {
+            $chips[] = 'Bathrooms: ' . $f['number_of_bathrooms'];
+        }
+
+        if (isset($f['min_price']) || isset($f['max_price'])) {
+            $chips[] = 'Price: ' . ($f['min_price'] ?? 0) . ' - ' . ($f['max_price'] ?? '∞') . ' AED';
+        }
+        if (isset($f['min_size']) || isset($f['max_size'])) {
+            $chips[] = 'Size: ' . ($f['min_size'] ?? 0) . ' - ' . ($f['max_size'] ?? '∞') . ' sqft';
+        }
+        if (!empty($f['reference_number'])) {
+            $chips[] = 'Reference: ' . $f['reference_number'];
+        }
+
+        return $chips;
+    }
+
+
      public function generateOffer(Request $request, $id)
     {
         try {

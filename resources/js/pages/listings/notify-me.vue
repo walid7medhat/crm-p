@@ -36,6 +36,82 @@
                 Select at least one filter to start.
               </div>
             </div>
+
+            <div class="notifyme-mine">
+              <div class="notifyme-summary-title">Your saved alerts</div>
+
+              <div v-if="loadingAlerts" class="notifyme-summary-empty">
+                Loading your alerts…
+              </div>
+
+              <div v-else-if="!myAlerts.length" class="notifyme-summary-empty">
+                You don’t have any saved alerts yet.
+              </div>
+
+              <div v-else class="notifyme-alert-list">
+                <div v-for="alert in myAlerts" :key="alert.id" class="notifyme-alert-item">
+                  <div class="notifyme-alert-main">
+                    <div class="notifyme-alert-head">
+                      <span
+                        class="notifyme-alert-status"
+                        :class="alert.is_active ? 'is-active' : 'is-inactive'"
+                      >
+                        {{ alert.is_active ? 'Active' : 'Notified' }}
+                      </span>
+                      <span class="notifyme-alert-date">{{ formatDate(alert.created_at) }}</span>
+                    </div>
+                    <div v-if="alert.chips.length" class="notifyme-chips">
+                      <span v-for="chip in alert.chips" :key="chip" class="notifyme-chip">
+                        {{ chip }}
+                      </span>
+                    </div>
+                    <div v-else class="notifyme-summary-empty">No specific criteria.</div>
+
+                    <button v-if="alert.chips.length"
+                      type="button"
+                      class="notifyme-alert-toggle"
+                      @click="toggleDetails(alert.id)"
+                    >
+                      <iconify-icon
+                        :icon="expandedId === alert.id ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+                        class="icon"
+                      />
+                      {{ expandedId === alert.id ? 'Hide details' : 'Show details' }}
+                    </button>
+
+                    <div v-if="expandedId === alert.id" class="notifyme-alert-details">
+                      <div
+                        v-for="row in detailRows(alert)"
+                        :key="row.label"
+                        class="notifyme-detail-row"
+                      >
+                        <span class="notifyme-detail-label">{{ row.label }}</span>
+                        <span class="notifyme-detail-value">{{ row.value }}</span>
+                      </div>
+                      <div class="notifyme-detail-row">
+                        <span class="notifyme-detail-label">Status</span>
+                        <span class="notifyme-detail-value">
+                          {{ alert.is_active ? 'Active — watching for matches' : 'Notified — a match was already sent' }}
+                        </span>
+                      </div>
+                      <div class="notifyme-detail-row">
+                        <span class="notifyme-detail-label">Created</span>
+                        <span class="notifyme-detail-value">{{ formatDate(alert.created_at) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="notifyme-alert-delete"
+                    :disabled="deletingId === alert.id"
+                    @click="deleteAlert(alert)"
+                    aria-label="Delete alert"
+                  >
+                    <iconify-icon icon="lucide:trash-2" class="icon" />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="notifyme-footer">
@@ -59,7 +135,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
@@ -67,6 +143,79 @@ import SearchBar from '@/components/alllisting/SearchBar.vue'
 
 const router = useRouter()
 const submitting = ref(false)
+
+const myAlerts = ref([])
+const loadingAlerts = ref(false)
+const deletingId = ref(null)
+const expandedId = ref(null)
+
+function toggleDetails(id) {
+  expandedId.value = expandedId.value === id ? null : id
+}
+
+// Each chip is a "Label: value" string from the API — split it into label/value rows.
+function detailRows(alert) {
+  return (alert.chips || []).map((chip) => {
+    const idx = chip.indexOf(':')
+    if (idx === -1) return { label: chip, value: '' }
+    return {
+      label: chip.slice(0, idx).trim(),
+      value: chip.slice(idx + 1).trim(),
+    }
+  })
+}
+
+function formatDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+async function loadAlerts() {
+  loadingAlerts.value = true
+  try {
+    const { data } = await api.get('/search-alerts')
+    myAlerts.value = data?.data || []
+  } catch (e) {
+    myAlerts.value = []
+  } finally {
+    loadingAlerts.value = false
+  }
+}
+
+async function deleteAlert(alert) {
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: 'Delete this alert?',
+    text: 'You will no longer be notified for these criteria.',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#dc2626',
+    customClass: { container: 'notifyme-swal-top' },
+  })
+  if (!result.isConfirmed) return
+
+  deletingId.value = alert.id
+  try {
+    await api.delete(`/search-alerts/${alert.id}`)
+    myAlerts.value = myAlerts.value.filter((a) => a.id !== alert.id)
+  } catch (e) {
+    const message = e?.response?.data?.message || e?.message || 'Failed to delete alert'
+    Swal.fire({ icon: 'error', title: 'Could not delete', text: message, customClass: { container: 'notifyme-swal-top' } })
+  } finally {
+    deletingId.value = null
+  }
+}
+
+onMounted(loadAlerts)
 
 const defaultFilters = {
   saleRent: 'All',
@@ -373,6 +522,133 @@ async function submit() {
   color: #64748b;
 }
 
+.notifyme-mine {
+  border: 1px solid #edf2f7;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.notifyme-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notifyme-alert-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fbfdff;
+}
+
+.notifyme-alert-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.notifyme-alert-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.notifyme-alert-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.notifyme-alert-toggle {
+  margin-top: 10px;
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+}
+
+.notifyme-alert-toggle:hover {
+  text-decoration: underline;
+}
+
+.notifyme-alert-details {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notifyme-detail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.notifyme-detail-label {
+  flex: 0 0 120px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.notifyme-detail-value {
+  flex: 1;
+  color: #0f172a;
+}
+
+.notifyme-alert-status {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.notifyme-alert-status.is-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.notifyme-alert-status.is-inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.notifyme-alert-delete {
+  border: 1px solid #fee2e2;
+  background: #fff;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notifyme-alert-delete:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.notifyme-alert-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .notifyme-footer {
   padding: 14px 18px;
   border-top: 1px solid #eef2f7;
@@ -404,6 +680,13 @@ async function submit() {
 
 :deep(.sort-select) {
   display: none !important;
+}
+</style>
+
+<!-- Unscoped: SweetAlert is teleported to <body>, so it must sit above the notify-me modal (z-index 60000). -->
+<style>
+.notifyme-swal-top {
+  z-index: 70000 !important;
 }
 </style>
 

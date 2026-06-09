@@ -678,7 +678,9 @@ Route::prefix('leads')->group(function(){
     // Route::delete('integrations/{integration}', [IntegrationController::class, 'destroy']);
     Route::get('integrations/meta/form-fields/{form_id}',[IntegrationController::class,'getFormFields']);
     
+Route::get('/search-alerts',[ListingController::class, 'index_search_alerts']);
 Route::post('/search-alerts',[ListingController::class, 'store_search_alert']);
+Route::delete('/search-alerts/{searchAlert}',[ListingController::class, 'destroy_search_alert']);
 
     /** Mobile Kanban API — versioned, additive; does not replace existing routes. */
     Route::prefix('v1/mobile')->group(function () {
