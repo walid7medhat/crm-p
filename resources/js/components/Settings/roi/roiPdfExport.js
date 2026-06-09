@@ -1,11 +1,59 @@
 import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { EMIRATES } from './uaeMarketConfig.js'
 import { formatAed, formatPct } from './useRoiCalculations.js'
 
 const PURPLE = [42, 21, 72]
 const GOLD = [245, 197, 24]
 const MUTED = [107, 114, 128]
+
+function drawTable(doc, {
+  startY,
+  columns,
+  rows,
+  colWidths,
+  marginLeft = 14,
+  fontSize = 8.5,
+  rowHeight = 7,
+  headFill = PURPLE,
+  headText = [255, 255, 255],
+  alternateFill = [248, 250, 252],
+  striped = false,
+}) {
+  const tableWidth = colWidths.reduce((sum, width) => sum + width, 0)
+  let y = startY
+
+  doc.setFontSize(fontSize)
+  doc.setFont('helvetica', 'bold')
+  doc.setFillColor(...headFill)
+  doc.setTextColor(...headText)
+  doc.rect(marginLeft, y, tableWidth, rowHeight, 'F')
+
+  let x = marginLeft
+  columns.forEach((column, index) => {
+    doc.text(String(column), x + 2, y + rowHeight - 2.2, { maxWidth: colWidths[index] - 4 })
+    x += colWidths[index]
+  })
+  y += rowHeight
+
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...PURPLE)
+
+  rows.forEach((row, rowIndex) => {
+    if (striped && rowIndex % 2 === 1) {
+      doc.setFillColor(...alternateFill)
+      doc.rect(marginLeft, y, tableWidth, rowHeight, 'F')
+    }
+
+    x = marginLeft
+    row.forEach((cell, cellIndex) => {
+      doc.text(String(cell), x + 2, y + rowHeight - 2.2, { maxWidth: colWidths[cellIndex] - 4 })
+      x += colWidths[cellIndex]
+    })
+    y += rowHeight
+  })
+
+  return y + 4
+}
 
 export function generateRoiReportPdf({
   inputs,
@@ -54,26 +102,21 @@ export function generateRoiReportPdf({
     ['Rent Escalation', '5% p.a. (compounded)'],
   ]
 
-  autoTable(doc, {
+  y = drawTable(doc, {
     startY: y,
-    head: [['Assumption', 'Value']],
-    body: summaryRows,
-    theme: 'plain',
-    styles: { fontSize: 8.5, cellPadding: 2.5, textColor: PURPLE },
-    headStyles: { fillColor: PURPLE, textColor: [255, 255, 255], fontStyle: 'bold' },
-    columnStyles: { 0: { cellWidth: 70 }, 1: { cellWidth: 100 } },
-    margin: { left: 14, right: 14 },
+    columns: ['Assumption', 'Value'],
+    rows: summaryRows,
+    colWidths: [70, 100],
   })
 
-  y = doc.lastAutoTable.finalY + 8
   doc.setFont('helvetica', 'bold')
   doc.text('Key Performance Indicators', 14, y)
   y += 4
 
-  autoTable(doc, {
+  y = drawTable(doc, {
     startY: y,
-    head: [['Metric', 'Value']],
-    body: [
+    columns: ['Metric', 'Value'],
+    rows: [
       ['Total ROI', formatPct(kpis.totalRoi)],
       ['Annualized ROI', formatPct(kpis.annualizedRoi)],
       ['Cash-on-Cash Return', formatPct(kpis.cashOnCash)],
@@ -84,14 +127,12 @@ export function generateRoiReportPdf({
       ['GRM', kpis.grm.toFixed(2)],
       ['1% Rule', formatPct(kpis.onePctRule)],
     ],
-    theme: 'striped',
-    styles: { fontSize: 8.5, cellPadding: 2.5 },
-    headStyles: { fillColor: GOLD, textColor: PURPLE, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    margin: { left: 14, right: 14 },
+    colWidths: [70, 100],
+    headFill: GOLD,
+    headText: PURPLE,
+    striped: true,
   })
 
-  y = doc.lastAutoTable.finalY + 8
   if (y > 240) {
     doc.addPage()
     y = 18
@@ -100,11 +141,12 @@ export function generateRoiReportPdf({
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...PURPLE)
   doc.text('Yearly Projection', 14, y)
+  y += 4
 
-  autoTable(doc, {
-    startY: y + 4,
-    head: [['Year', 'Property Value', 'Annual Rent', 'NOI', 'Cum. NOI', 'Appr. Gain', 'Total Equity']],
-    body: yearlyProjections.map((row) => [
+  y = drawTable(doc, {
+    startY: y,
+    columns: ['Year', 'Property Value', 'Annual Rent', 'NOI', 'Cum. NOI', 'Appr. Gain', 'Total Equity'],
+    rows: yearlyProjections.map((row) => [
       row.year,
       formatAed(row.propertyValue),
       formatAed(row.annualRent),
@@ -113,11 +155,12 @@ export function generateRoiReportPdf({
       formatAed(row.appreciationGain),
       formatAed(row.totalEquity),
     ]),
-    theme: 'striped',
-    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-    headStyles: { fillColor: PURPLE, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-    alternateRowStyles: { fillColor: [241, 245, 249] },
-    margin: { left: 10, right: 10 },
+    colWidths: [10, 30, 28, 24, 26, 28, 30],
+    marginLeft: 10,
+    fontSize: 7,
+    rowHeight: 6,
+    striped: true,
+    alternateFill: [241, 245, 249],
   })
 
   const pageCount = doc.getNumberOfPages()
