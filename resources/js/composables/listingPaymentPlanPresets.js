@@ -18,6 +18,7 @@ export const paymentPlanOptions = [
   { label: '10/1% Monthly', initial_percent: 10, handover_percent: 90 },
   { label: '20/1% Monthly', initial_percent: 20, handover_percent: 80 },
   { label: '30/1% Monthly', initial_percent: 30, handover_percent: 70 },
+  { label: '1% Monthly', initial_percent: 53, handover_percent: 47 },
   { label: '85/15', initial_percent: 85, handover_percent: 15 },
   { label: '90/10', initial_percent: 90, handover_percent: 10 },
   { label: '100%', initial_percent: 100, handover_percent: 0 },

@@ -1943,7 +1943,7 @@ const paymentPlanOptions = [
   { label: '25/75', initial_percent: 25, handover_percent: 75 },
   { label: '75/25', initial_percent: 75, handover_percent: 25 },
   { label: '10/1% Monthly', initial_percent: 10, handover_percent: 90 },
-  { label: '1% Monthly', initial_percent: 10, handover_percent: 90 },
+  { label: '1% Monthly', initial_percent: 53, handover_percent: 47 },
   { label: '20/1% Monthly', initial_percent: 20, handover_percent: 80 },
   { label: '30/1% Monthly', initial_percent: 30, handover_percent: 70 },
   { label: '85/15', initial_percent: 85, handover_percent: 15 },
