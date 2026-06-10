@@ -43,6 +43,9 @@ class SyncResponsiblePersons extends Command
     /** @var array<string, int> */
     private array $counts = ['scanned' => 0, 'updated' => 0, 'unmapped' => 0, 'no_local' => 0];
 
+    /** @var array<int, int> bitrix24 user id => how many leads point to it (but it isn't in our DB) */
+    private array $unmappedUsers = [];
+
     public function handle(): int
     {
         @ini_set('memory_limit', '1024M');
@@ -122,6 +125,7 @@ class SyncResponsiblePersons extends Command
                 $local = (int) ($userMap[$bUserId] ?? 0);
                 if (! $local) {
                     $this->counts['unmapped']++;
+                    $this->unmappedUsers[$bUserId] = ($this->unmappedUsers[$bUserId] ?? 0) + 1;
                     continue;
                 }
                 $wantByBitrixLead[$bLeadId] = $local;
@@ -169,6 +173,16 @@ class SyncResponsiblePersons extends Command
         $this->newLine();
         $this->info(($dryRun ? 'Would update' : 'Updated')." {$this->counts['updated']} lead(s). "
             ."(scanned {$this->counts['scanned']}, unmapped: {$this->counts['unmapped']}, not in local DB: {$this->counts['no_local']})");
+
+        if (! empty($this->unmappedUsers)) {
+            arsort($this->unmappedUsers);
+            $distinct = count($this->unmappedUsers);
+            $this->newLine();
+            $this->warn("{$distinct} distinct Bitrix24 user(s) are not in your DB (provision them with `bitrix24:provision-users`):");
+            foreach ($this->unmappedUsers as $b24UserId => $leadCount) {
+                $this->line("  Bitrix24 user #{$b24UserId} → {$leadCount} lead(s)");
+            }
+        }
 
         return self::SUCCESS;
     }
