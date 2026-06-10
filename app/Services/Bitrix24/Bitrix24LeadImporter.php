@@ -981,9 +981,16 @@ class Bitrix24LeadImporter
             $refresh['updated_at'] = $updatedAtValue;
         }
 
-        // Keep the assigned-user mirror current (used to resolve the activity person).
+        // Keep the assigned-user mirror current, and sync the responsible person
+        // from Bitrix24's ASSIGNED_BY_ID → local user (so webhook/sync updates it).
         if (isset($b24Lead['ASSIGNED_BY_ID'])) {
-            $refresh['bitrix24_assigned_user_id'] = (int) $b24Lead['ASSIGNED_BY_ID'];
+            $assignedB24 = (int) $b24Lead['ASSIGNED_BY_ID'];
+            $refresh['bitrix24_assigned_user_id'] = $assignedB24;
+
+            $localResponsible = $this->mapBitrixUser($assignedB24);
+            if ($localResponsible && (int) $existing->responsible_person_id !== (int) $localResponsible) {
+                $refresh['responsible_person_id'] = $localResponsible;
+            }
         }
 
         // Source can change in Bitrix24 too — keep lead_source / source_information in sync.
