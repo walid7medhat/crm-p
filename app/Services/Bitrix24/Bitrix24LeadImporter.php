@@ -1003,6 +1003,42 @@ class Bitrix24LeadImporter
             $refresh['source_information'] = $newSourceInfo;
         }
 
+        // Refresh the editable contact / business fields too, so ANY edit made in
+        // Bitrix24 (name, phone, email, company, budget, notes…) flows through.
+        // Only non-empty changed values are applied — we never wipe a local value
+        // just because Bitrix returned it empty.
+        $emails  = $this->collectMultifield($b24Lead['EMAIL'] ?? []);
+        $phones  = $this->collectMultifield($b24Lead['PHONE'] ?? []);
+        $webs    = $this->collectMultifield($b24Lead['WEB'] ?? []);
+        $ims     = $this->collectMultifield($b24Lead['IM'] ?? []);
+        $title   = trim((string) ($b24Lead['TITLE'] ?? ''));
+        $nameParts = trim(trim((string) ($b24Lead['NAME'] ?? '')).' '.trim((string) ($b24Lead['LAST_NAME'] ?? '')));
+
+        $editable = [
+            'lead_name'        => $title !== '' ? $title : ($nameParts !== '' ? $nameParts : null),
+            'first_name'       => trim((string) ($b24Lead['NAME'] ?? '')) ?: null,
+            'second_name'      => $b24Lead['SECOND_NAME'] ?? null,
+            'last_name'        => $b24Lead['LAST_NAME'] ?? null,
+            'salutation'       => $b24Lead['HONORIFIC'] ?? null,
+            'date_of_birth'    => $this->parseDate($b24Lead['BIRTHDATE'] ?? null)?->toDateString(),
+            'email'            => $emails[0] ?? null,
+            'secondary_email'  => $emails[1] ?? null,
+            'work_phone'       => $phones[0] ?? null,
+            'work_phone_2'     => $phones[1] ?? null,
+            'website'          => $webs[0] ?? null,
+            'messenger'        => $ims[0] ?? null,
+            'address'          => $this->composeAddress($b24Lead),
+            'company_name'     => $b24Lead['COMPANY_TITLE'] ?? null,
+            'position'         => $b24Lead['POST'] ?? null,
+            'budget'           => $this->numericOrNull($b24Lead['OPPORTUNITY'] ?? null),
+            'more_information' => $this->cleanRichText($b24Lead['COMMENTS'] ?? null),
+        ];
+        foreach ($editable as $field => $value) {
+            if ($value !== null && $value !== '' && (string) $existing->{$field} !== (string) $value) {
+                $refresh[$field] = $value;
+            }
+        }
+
         if (!empty($refresh)) {
             Lead::withoutEvents(fn () => $existing->update($refresh));
         }

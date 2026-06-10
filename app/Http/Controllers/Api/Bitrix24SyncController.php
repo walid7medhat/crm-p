@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Console\Commands\SyncBitrix24LeadsProgress;
+use App\Console\Commands\SyncResponsiblePersons;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncBitrix24LeadsJob;
@@ -392,5 +393,69 @@ class Bitrix24SyncController extends Controller
         Cache::put(SyncBitrix24LeadsProgress::CANCEL_KEY, true, now()->addHours(6));
 
         return ApiResponse::success(null, 'Cancellation requested — will stop after the current lead.');
+    }
+
+    /**
+     * Live progress for the `bitrix24:sync-responsible` command.
+     *   GET /api/bitrix24/sync-responsible/progress
+     */
+    public function responsibleProgress(): JsonResponse
+    {
+        $state = Cache::get(SyncResponsiblePersons::PROGRESS_KEY);
+
+        if (!is_array($state)) {
+            $state = [
+                'status' => 'idle', 'progress' => 0, 'total' => 0,
+                'scanned' => 0, 'updated' => 0, 'unmapped' => 0, 'no_local' => 0,
+                'last_error' => null, 'started_at' => null, 'updated_at' => null, 'finished_at' => null,
+                'events' => [],
+            ];
+        }
+
+        return ApiResponse::success($state, 'Responsible sync progress');
+    }
+
+    /**
+     * Queue the `bitrix24:sync-responsible` command.
+     *   POST /api/leads/bitrix24/sync-responsible/start { dry_run?: bool }
+     */
+    public function startResponsibleSync(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $current = Cache::get(SyncResponsiblePersons::PROGRESS_KEY);
+        if (is_array($current) && ($current['status'] ?? null) === 'running') {
+            return ApiResponse::error('A responsible sync is already running.', 409);
+        }
+
+        Cache::forget(SyncResponsiblePersons::CANCEL_KEY);
+
+        $params = [];
+        if ((bool) $request->input('dry_run', false)) {
+            $params['--dry-run'] = true;
+        }
+
+        Artisan::queue('bitrix24:sync-responsible', $params);
+
+        return ApiResponse::success(['status' => 'queued'], 'Responsible sync queued — watch the progress below.');
+    }
+
+    /**
+     * Ask a running responsible sync to stop.
+     *   POST /api/leads/bitrix24/sync-responsible/cancel
+     */
+    public function cancelResponsibleSync(): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        Cache::put(SyncResponsiblePersons::CANCEL_KEY, true, now()->addHours(6));
+
+        return ApiResponse::success(null, 'Cancellation requested.');
     }
 }

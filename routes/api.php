@@ -472,6 +472,10 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/leads/bitrix24/sync-leads/start', [Bitrix24SyncController::class, 'startLeadsSync']);
     Route::post('/leads/bitrix24/sync-leads/cancel', [Bitrix24SyncController::class, 'cancelLeadsSync']);
     Route::get('/bitrix24/sync-leads/progress', [Bitrix24SyncController::class, 'leadsSyncProgress']);
+    // === Bitrix24 responsible-person sync (bitrix24:sync-responsible) ===
+    Route::post('/leads/bitrix24/sync-responsible/start', [Bitrix24SyncController::class, 'startResponsibleSync']);
+    Route::post('/leads/bitrix24/sync-responsible/cancel', [Bitrix24SyncController::class, 'cancelResponsibleSync']);
+    Route::get('/bitrix24/sync-responsible/progress', [Bitrix24SyncController::class, 'responsibleProgress']);
     // === Deals API ===
     Route::prefix('deals')->group(function () {
         Route::get('/', [DealController::class, 'index']);
