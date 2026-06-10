@@ -1423,12 +1423,20 @@ class Bitrix24LeadImporter
             return $this->userCache[$b24UserId];
         }
 
-        $remote = $this->client->getUser($b24UserId);
-        $email = $remote['EMAIL'] ?? null;
-        $localId = null;
-        if ($email) {
-            $localId = User::where('email', $email)->value('id');
+        // 1) Direct map by users.bitrix24_id (no Bitrix API call) — works as soon
+        //    as the user is linked/provisioned. This is the fast, reliable path.
+        $localId = User::where('bitrix24_id', $b24UserId)->value('id');
+
+        // 2) Fallback: resolve by email via Bitrix user.get (for users that
+        //    aren't linked by bitrix24_id yet but share an email).
+        if (!$localId) {
+            $remote = $this->client->getUser($b24UserId);
+            $email = $remote['EMAIL'] ?? null;
+            if ($email) {
+                $localId = User::where('email', $email)->value('id');
+            }
         }
+
         $this->userCache[$b24UserId] = $localId;
         return $localId;
     }
