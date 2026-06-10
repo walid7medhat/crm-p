@@ -37,8 +37,9 @@ class FixFutureProspectedLeads extends Command
             return self::FAILURE;
         }
 
+        // LIKE so it catches both "Future Prospect" and the stored "Future Prospected".
         $base = Lead::query()
-            ->whereRaw('LOWER(TRIM(status_lead)) = ?', [mb_strtolower(trim($matchStatus))])
+            ->whereRaw('LOWER(TRIM(status_lead)) LIKE ?', ['%'.mb_strtolower(trim($matchStatus)).'%'])
             ->where('stage_id', '!=', $stageId);
 
         $total = (clone $base)->count();
