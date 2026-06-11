@@ -1349,10 +1349,23 @@ const ensureCrmToastStyles = () => {
       display: flex;
       align-items: center;
       gap: 13px;
-      padding: 14px 18px 14px 16px;
+      padding: 14px 34px 14px 16px;
       position: relative;
       min-width: 308px;
     }
+    .crm-toast__close {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; margin: 0;
+      border: none; border-radius: 7px;
+      background: transparent; color: #94a3b8;
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease, transform .15s ease;
+    }
+    .crm-toast__close:hover { background: rgba(15,23,42,.08); color: #334155; transform: rotate(90deg); }
+    .crm-toast__close svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; }
     .crm-toast::before {
       content: '';
       position: absolute;
@@ -1424,6 +1437,7 @@ const ensureCrmToastStyles = () => {
       .crm-toast-popup { background: #1e293b !important; border-color: rgba(255,255,255,0.06); }
       .crm-toast__title { color: #f1f5f9; }
       .crm-toast__sub { color: #94a3b8; }
+      .crm-toast__close:hover { background: rgba(255,255,255,.1); color: #e2e8f0; }
     }
   `
   document.head.appendChild(style)
@@ -1473,6 +1487,9 @@ const showDealNotification = (event) => {
           <div class="crm-toast__title">${t.headline}</div>
           <div class="crm-toast__sub">${subtitle}</div>
         </div>
+        <button type="button" class="crm-toast__close" aria-label="Dismiss">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
       </div>
     `,
     didOpen: (toast) => {
@@ -1482,6 +1499,7 @@ const showDealNotification = (event) => {
       toast.style.setProperty('--crm-ring', t.ring)
       toast.addEventListener('mouseenter', Swal.stopTimer)
       toast.addEventListener('mouseleave', Swal.resumeTimer)
+      toast.querySelector('.crm-toast__close')?.addEventListener('click', () => Swal.close())
     }
   })
 }
