@@ -100,6 +100,8 @@ class LocationHelper
 
             return array_merge($base, [
                 'display_name' => $data['display_name'] ?? null,
+                'building'     => $a['building'] ?? $a['amenity'] ?? $a['shop'] ?? $a['office'] ?? null,
+                'house_number' => $a['house_number'] ?? null,
                 'road'         => $a['road'] ?? null,
                 'district'     => $a['suburb'] ?? $a['neighbourhood'] ?? $a['city_district'] ?? null,
                 'city'         => $a['city'] ?? $a['town'] ?? $a['village'] ?? $a['county'] ?? null,
@@ -131,6 +133,8 @@ class LocationHelper
         }
 
         $parts = array_filter([
+            $location['building'] ?? null,
+            $location['house_number'] ?? null,
             $location['road'] ?? null,
             $location['district'] ?? null,
             $location['city'] ?? null,

@@ -111,13 +111,13 @@ export default {
 
     /**
      * Ask the browser for the user's exact GPS location. Resolves to
-     * { latitude, longitude } or null if unavailable/denied. Never rejects so
-     * login is not blocked when the user declines the permission prompt.
+     * { latitude, longitude }, or rejects with a user-facing message when
+     * unavailable, denied or timed out — login is mandatory-gated on this.
      */
     getCurrentLocation() {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         if (!('geolocation' in navigator)) {
-          resolve(null);
+          reject(new Error('Your browser does not support location. Location is required to sign in.'));
           return;
         }
         navigator.geolocation.getCurrentPosition(
@@ -127,8 +127,14 @@ export default {
               longitude: position.coords.longitude,
             });
           },
-          () => resolve(null),
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          (error) => {
+            const message =
+              error.code === error.PERMISSION_DENIED
+                ? 'Location access is required to sign in. Please allow location and try again.'
+                : 'Could not determine your location. Please enable location and try again.';
+            reject(new Error(message));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
       });
     },
@@ -138,15 +144,21 @@ export default {
       this.errorMessage = '';
 
       try {
-        // Try to capture precise (street-level) location; falls back to
-        // server-side IP geolocation when the user denies or it times out.
-        const coords = await this.getCurrentLocation();
+        // Location is mandatory — if the user denies it, stop before logging in.
+        let coords;
+        try {
+          coords = await this.getCurrentLocation();
+        } catch (locationError) {
+          this.errorMessage = locationError.message;
+          this.loading = false;
+          return;
+        }
 
         const response = await api.post('/auth/login', {
           email: this.email,
           password: this.password,
-          latitude: coords?.latitude ?? null,
-          longitude: coords?.longitude ?? null,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
         });
 
         const token = response.data.data.token;
