@@ -3,7 +3,7 @@
     <div class="hr-frame">
       <div class="hr-topbar">
         <div v-if="isMobileViewport" class="hr-mobile-head">
-          <button type="button" class="hr-mobile-back-btn" @click="activeTab = 'Overview'">
+          <button type="button" class="hr-mobile-back-btn" @click="activeTab = 'Employees'">
             <iconify-icon icon="lucide:chevron-left" />
           </button>
           <span class="hr-mobile-title">HRM</span>
@@ -2779,8 +2779,8 @@ const fetchRealEmployees = async () => {
 }
 
 // ========== UI State ==========
-const headerTabs = ['Overview', 'Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
-const activeTab = ref('Overview')
+const headerTabs = ['Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
+const activeTab = ref('Employees')
 const openHeaderMenu = ref(null)
 const topbarTabsRef = ref(null)
 const isMobileViewport = ref(false)

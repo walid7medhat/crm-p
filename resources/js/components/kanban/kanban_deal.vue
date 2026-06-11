@@ -43,37 +43,18 @@
     <AddStageModal v-if="showAddStageModal" v-model="showAddStageModal"   :stage-type="currentStageType"
         :deal-type="currentDealType"
         @stage-created="handleStageCreated" />
-    <div class="kanban-main-wrapper" :class="{ 'deal-figma-ui': activeTab === 'deals', 'kanban-shell--mobile': kanbanIsMobile }">
-        <b-tabs 
-            v-model="activeTabIndex"
-            class="kanban-tabs-container"
-            content-class="kanban-content-area"
-            no-fade
-        >
-            <!-- Tabs -->
-            <b-tab 
-                v-for="tab in tabs" 
-                :key="tab.id"
-                title-link-class="nav-tab-item"
-            >
-                <!-- <template #title>
-                    <span class="d-flex align-items-center gap-2 h-100 nav-tab-item">
-                        {{ tab.name }}
-                        <iconify-icon v-if="tab.hasChevron" icon="lucide:chevrons-up-down" class="text-md text-secondary-light"></iconify-icon>
-                    </span>
-                    <div class="active-indicator"></div>
-                </template> -->
-
-                <!-- Tab Content -->
-                <Deals v-if="tab.id === 'deals'" ref="dealsRef"    @deal-created="(deal) => dealsRef?.openDealModal?.(deal)"/>
-                <Leads v-else-if="tab.id === 'leads'" ref="leadsRef"  @deal-created="handleDealCreatedFromLeads" />
-                
-                 <LeadPool v-else-if="tab.id === 'lead-pool'" ref="leadPoolRef" />
-
-            </b-tab>
-
-          
-        </b-tabs>
+    <div class="kanban-main-wrapper kanban-content-area" :class="{ 'deal-figma-ui': isDealsView, 'kanban-shell--mobile': kanbanIsMobile }">
+        <Deals
+            v-if="isDealsView"
+            ref="dealsRef"
+            @deal-created="(deal) => dealsRef?.openDealModal?.(deal)"
+        />
+        <Leads
+            v-else-if="isLeadsView"
+            ref="leadsRef"
+            @deal-created="handleDealCreatedFromLeads"
+        />
+        <LeadPool v-else-if="isLeadPoolView" ref="leadPoolRef" />
     </div>
 </template>
 
@@ -141,8 +122,17 @@ const route = useRoute()
 const syncActiveTabWithRoute = () => {
     if (route.path === '/kanban_deal') {
         activeTab.value = 'deals'
+        return
+    }
+    if (route.path === '/kanban') {
+        const stored = readStoredKanbanTab()
+        activeTab.value = stored === 'lead-pool' ? 'lead-pool' : 'leads'
     }
 }
+
+const isDealsView = computed(() => route.path === '/kanban_deal')
+const isLeadsView = computed(() => route.path === '/kanban' && activeTab.value === 'leads')
+const isLeadPoolView = computed(() => route.path === '/kanban' && activeTab.value === 'lead-pool')
 
 watch(activeTab, (id) => {
     persistKanbanTab(id)
@@ -150,6 +140,10 @@ watch(activeTab, (id) => {
     if (id === 'lead-pool') {
         nextTick(() => markKanbanReady())
     }
+}, { immediate: true })
+
+watch(() => route.path, () => {
+    syncActiveTabWithRoute()
 }, { immediate: true })
 
 function updateKanbanMobileBreakpoint() {
@@ -213,15 +207,6 @@ const currentDealType = computed(() => {
 })
 
 
-
-const activeTabIndex = computed({
-    get: () => tabs.value.findIndex(t => t.id === activeTab.value),
-    set: (index) => {
-        if (index >= 0) {
-            activeTab.value = tabs.value[index].id
-        }
-    }
-})
 
 const activeTabName = computed(() => {
     return tabs.value.find(t => t.id === activeTab.value)?.name || ''

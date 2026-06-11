@@ -43,12 +43,13 @@ export function useSidebar() {
     localStorage.setItem('sidebarActive', isSidebarActive.value.toString())
   }
 
+  /** Ensure the sidebar is in its expanded (full-width) state — `active` class means collapsed. */
   function expandSidebarDesktop() {
-    if (isSidebarActive.value) return
-    isSidebarActive.value = true
-    document.querySelector('.sidebar')?.classList.add('active')
-    document.querySelector('.dashboard-main')?.classList.add('active')
-    localStorage.setItem('sidebarActive', 'true')
+    if (!isSidebarActive.value) return
+    isSidebarActive.value = false
+    document.querySelector('.sidebar')?.classList.remove('active')
+    document.querySelector('.dashboard-main')?.classList.remove('active')
+    localStorage.setItem('sidebarActive', 'false')
   }
 
   onMounted(() => {

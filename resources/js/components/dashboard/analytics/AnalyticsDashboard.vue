@@ -7,13 +7,9 @@
       <template v-if="!isMobileViewport">
         <div class="dh-header-text">
           <p class="dh-greeting">Hello, {{ greetingName }} 👋</p>
-          <p class="dh-greeting-sub">CRM, listings & HR in one view.</p>
+          <p class="dh-greeting-sub">Leads, listings & HR — one unified dashboard.</p>
         </div>
         <div class="dh-header-actions">
-          <router-link to="/" class="dh-header-analytics-link" title="Classic dashboard">
-            <iconify-icon icon="lucide:layout-dashboard" width="16" height="16" />
-            <span>Classic</span>
-          </router-link>
           <DashboardDateRangePicker
             v-model:date-from="dateFrom"
             v-model:date-to="dateTo"
@@ -27,7 +23,7 @@
         <div class="dh-mob-top">
           <div class="dh-mob-greeting">
             <p class="dh-greeting">Hello, {{ greetingName }} 👋</p>
-            <p class="dh-greeting-sub">Analytics overview</p>
+            <p class="dh-greeting-sub">Unified dashboard</p>
           </div>
           <div class="dh-mob-actions">
             <DashboardDateRangePicker
@@ -38,9 +34,6 @@
               picker-class="dh-mob-date"
               @apply="applyDateRange"
             />
-            <router-link to="/" class="dh-mob-action-btn" aria-label="Classic dashboard">
-              <iconify-icon icon="lucide:layout-dashboard" width="20" height="20" />
-            </router-link>
           </div>
         </div>
       </template>
@@ -67,144 +60,114 @@
       <button type="button" @click="load(true)">Retry</button>
     </div>
 
-    <!-- ONE dashboard grid — all modules together -->
-    <div class="dh-layout dh-layout--unified-analytics">
-      <!-- Row 1: hero KPIs -->
-      <section class="dh-layout__ua-metrics">
-        <div class="dh-metrics-carousel">
-          <article class="dh-metric-card dh-metric-card--primary">
-            <div class="dh-metric-head">
-              <div class="dh-metric-icon dh-metric-icon--white">
-                <iconify-icon icon="lucide:users" width="22" height="22" />
-              </div>
-              <span class="dh-metric-badge">
-                <iconify-icon icon="lucide:trending-up" width="11" height="11" />
-                {{ crm.conversion_rate }}%
-              </span>
+    <div class="dh-unified-dashboard">
+      <!-- Part 1: Leads & CRM -->
+      <section v-if="canViewModule('crm')" class="dh-unified-section dh-unified-section--leads">
+        <div class="dh-unified-section-head">
+          <h2 class="dh-unified-section-title">Leads & CRM</h2>
+          <router-link to="/kanban" class="dh-panel-link dh-panel-link--accent">Open CRM &gt;</router-link>
+        </div>
+
+        <div class="dh-layout dh-layout--unified-analytics dh-layout--section-leads">
+          <section class="dh-layout__ua-metrics">
+            <div class="dh-metrics-carousel">
+              <article class="dh-metric-card dh-metric-card--primary">
+                <div class="dh-metric-head">
+                  <div class="dh-metric-icon dh-metric-icon--white">
+                    <iconify-icon icon="lucide:users" width="22" height="22" />
+                  </div>
+                  <span class="dh-metric-badge">
+                    <iconify-icon icon="lucide:trending-up" width="11" height="11" />
+                    {{ crm.conversion_rate }}%
+                  </span>
+                </div>
+                <p class="dh-metric-label">Total Leads</p>
+                <div class="dh-metric-value-row dh-metric-value-row--stacked">
+                  <p class="dh-metric-value">{{ formatNumber(crm.total_leads) }}</p>
+                  <p class="dh-metric-vs">{{ formatNumber(crm.converted) }} converted</p>
+                </div>
+              </article>
             </div>
-            <p class="dh-metric-label">Total Leads</p>
-            <div class="dh-metric-value-row dh-metric-value-row--stacked">
-              <p class="dh-metric-value">{{ formatNumber(crm.total_leads) }}</p>
-              <p class="dh-metric-vs">{{ formatNumber(crm.converted) }} converted</p>
+          </section>
+
+          <article class="dh-panel dh-panel--task dh-layout__ua-pipeline">
+            <div class="dh-panel-head">
+              <p class="dh-panel-title">Pipeline</p>
+              <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
+            </div>
+            <div class="dh-task-cards dh-task-cards--compact">
+              <div v-for="pill in crmTaskPills" :key="pill.label" class="dh-task-pill">
+                <p class="dh-task-pill-label">{{ pill.label }}</p>
+                <p class="dh-task-pill-value">{{ pill.value }}</p>
+              </div>
             </div>
           </article>
 
-          <article v-if="showListing" class="dh-metric-card dh-metric-card--light">
-            <div class="dh-metric-head">
-              <div class="dh-metric-icon dh-metric-icon--soft">
-                <iconify-icon icon="lucide:building-2" width="22" height="22" />
-              </div>
-              <span class="dh-metric-badge">{{ listing.conversion_rate }}%</span>
+          <article class="dh-panel dh-panel--sales-stats dh-layout__ua-funnel">
+            <div class="dh-panel-head">
+              <p class="dh-panel-title">Sales Performance</p>
+              <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
             </div>
-            <p class="dh-metric-label">Total Listings</p>
-            <div class="dh-metric-value-row dh-metric-value-row--stacked">
-              <p class="dh-metric-value">{{ formatNumber(listing.total_listings) }}</p>
-              <p class="dh-metric-vs">{{ formatNumber(listing.active_listings) }} active</p>
+            <div v-if="loading" class="dh-sales-stats-grid dh-skeleton" style="min-height: 120px" />
+            <div v-else class="dh-sales-stats-grid">
+              <div class="dh-sales-stat dh-sales-stat--primary">
+                <div class="dh-sales-stat-icon">
+                  <iconify-icon icon="lucide:banknote" width="20" height="20" />
+                </div>
+                <p class="dh-sales-stat-label">Total Sale</p>
+                <p class="dh-sales-stat-value">{{ formatMoney(crm.total_sale) }}</p>
+              </div>
+              <div class="dh-sales-stat">
+                <div class="dh-sales-stat-icon dh-sales-stat-icon--green">
+                  <iconify-icon icon="lucide:percent" width="20" height="20" />
+                </div>
+                <p class="dh-sales-stat-label">Total Commission</p>
+                <p class="dh-sales-stat-value">{{ formatMoney(crm.total_commission) }}</p>
+              </div>
             </div>
           </article>
 
-          <article v-if="showHr" class="dh-metric-card dh-metric-card--light">
-            <div class="dh-metric-head">
-              <div class="dh-metric-icon dh-metric-icon--soft">
-                <iconify-icon icon="lucide:briefcase" width="22" height="22" />
-              </div>
-              <span class="dh-metric-badge">{{ hr.productivity_score }}%</span>
+          <div class="dh-layout__ua-donut">
+            <AnalyticsDonutPanel
+              title="Lead Temperature"
+              :loading="loading"
+              :legend="crmDonutLegend"
+              :series="crmDonutSeries"
+              :center-value="formatNumber(crm.total_leads)"
+              center-label="Total Leads"
+            />
+          </div>
+
+          <article class="dh-panel dh-panel--schedule dh-layout__ua-alerts">
+            <div class="dh-schedule-head">
+              <p class="dh-schedule-date">Alerts & Insights</p>
             </div>
-            <p class="dh-metric-label">Employees</p>
-            <div class="dh-metric-value-row dh-metric-value-row--stacked">
-              <p class="dh-metric-value">{{ formatNumber(hr.total_employees) }}</p>
-              <p class="dh-metric-vs">{{ formatNumber(hr.active_employees) }} active</p>
+            <ul v-if="crmAlerts.length" class="dh-insights-list dh-insights-list--compact">
+              <li
+                v-for="(item, idx) in crmAlerts"
+                :key="idx"
+                class="dh-insight-item"
+                :class="item.tone ? `dh-insight-item--${item.tone}` : ''"
+              >
+                <strong v-if="item.title">{{ item.title }}</strong>
+                {{ item.text }}
+              </li>
+            </ul>
+            <div v-else class="dh-empty dh-empty--compact">
+              <p class="dh-empty-text">No alerts for this period.</p>
+            </div>
+            <div v-if="crm.best_closer" class="dh-closer-mini">
+              <span>Best closer</span>
+              <strong>{{ crm.best_closer.name }}</strong>
+              <em>{{ crm.best_closer.rate }}%</em>
             </div>
           </article>
-        </div>
-      </section>
 
-      <!-- Row 1: CRM pipeline pills -->
-      <article class="dh-panel dh-panel--task dh-layout__ua-pipeline">
-        <div class="dh-panel-head">
-          <p class="dh-panel-title">CRM Pipeline</p>
-          <router-link to="/kanban" class="dh-panel-link dh-panel-link--accent">View Leads &gt;</router-link>
-        </div>
-        <div class="dh-task-cards dh-task-cards--compact">
-          <div v-for="pill in crmTaskPills" :key="pill.label" class="dh-task-pill">
-            <p class="dh-task-pill-label">{{ pill.label }}</p>
-            <p class="dh-task-pill-value">{{ pill.value }}</p>
-          </div>
-        </div>
-      </article>
-
-      <!-- Row 2: total sale & commission (converted deals, role-scoped) -->
-      <article class="dh-panel dh-panel--sales-stats dh-layout__ua-funnel">
-        <div class="dh-panel-head">
-          <p class="dh-panel-title">Sales Performance</p>
-          <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
-        </div>
-        <div v-if="loading" class="dh-sales-stats-grid dh-skeleton" style="min-height: 120px" />
-        <div v-else class="dh-sales-stats-grid">
-          <div class="dh-sales-stat dh-sales-stat--primary">
-            <div class="dh-sales-stat-icon">
-              <iconify-icon icon="lucide:banknote" width="20" height="20" />
+          <article class="dh-panel dh-layout__ua-analysis">
+            <div class="dh-panel-head">
+              <p class="dh-panel-title">Lead Analysis</p>
+              <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
             </div>
-            <p class="dh-sales-stat-label">Total Sale</p>
-            <p class="dh-sales-stat-value">{{ formatMoney(crm.total_sale) }}</p>
-          </div>
-          <div class="dh-sales-stat">
-            <div class="dh-sales-stat-icon dh-sales-stat-icon--green">
-              <iconify-icon icon="lucide:percent" width="20" height="20" />
-            </div>
-            <p class="dh-sales-stat-label">Total Commission</p>
-            <p class="dh-sales-stat-value">{{ formatMoney(crm.total_commission) }}</p>
-          </div>
-        </div>
-      </article>
-
-      <!-- Row 2: lead temperature -->
-      <div class="dh-layout__ua-donut">
-        <AnalyticsDonutPanel
-          title="Lead Temperature"
-          :loading="loading"
-          :legend="crmDonutLegend"
-          :series="crmDonutSeries"
-          :center-value="formatNumber(crm.total_leads)"
-          center-label="Total Leads"
-        />
-      </div>
-
-      <!-- Row 2: alerts + best closer -->
-      <article class="dh-panel dh-panel--schedule dh-layout__ua-alerts">
-        <div class="dh-schedule-head">
-          <p class="dh-schedule-date">Alerts & Insights</p>
-        </div>
-        <ul v-if="allAlerts.length" class="dh-insights-list dh-insights-list--compact">
-          <li
-            v-for="(item, idx) in allAlerts"
-            :key="idx"
-            class="dh-insight-item"
-            :class="item.tone ? `dh-insight-item--${item.tone}` : ''"
-          >
-            <strong v-if="item.title">{{ item.title }}</strong>
-            {{ item.text }}
-          </li>
-        </ul>
-        <div v-else class="dh-empty dh-empty--compact">
-          <p class="dh-empty-text">No alerts for this period.</p>
-        </div>
-        <div v-if="crm.best_closer" class="dh-closer-mini">
-          <span>Best closer</span>
-          <strong>{{ crm.best_closer.name }}</strong>
-          <em>{{ crm.best_closer.rate }}%</em>
-        </div>
-      </article>
-
-      <!-- Row 3: ALL analysis — CRM | Listing | HR -->
-      <article class="dh-panel dh-layout__ua-analysis">
-        <div class="dh-panel-head">
-          <p class="dh-panel-title">All Analysis</p>
-          <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
-        </div>
-        <div class="dh-analysis-columns">
-          <div v-if="canViewModule('crm')" class="dh-analysis-col">
-            <p class="dh-analysis-col-tag">CRM</p>
             <div class="dh-analytics-kpi-grid dh-analytics-kpi-grid--compact">
               <div v-for="k in crmAllKpis" :key="k.label" class="dh-status-cell">
                 <span>{{ k.label }}</span>
@@ -212,7 +175,7 @@
               </div>
             </div>
             <div v-if="crmAgents.length" class="dh-agents-list dh-agents-list--compact">
-              <div v-for="(agent, idx) in crmAgents.slice(0, 3)" :key="agent.id" class="dh-agent-row">
+              <div v-for="(agent, idx) in crmAgents.slice(0, 5)" :key="agent.id" class="dh-agent-row">
                 <div class="dh-agent-rank">{{ idx + 1 }}</div>
                 <div class="dh-agent-info">
                   <p class="dh-agent-name">{{ agent.name }}</p>
@@ -221,10 +184,53 @@
                 <span class="dh-agent-role">{{ agent.role }}</span>
               </div>
             </div>
-          </div>
+          </article>
+        </div>
+      </section>
 
-          <div v-if="showListing" class="dh-analysis-col">
-            <p class="dh-analysis-col-tag">Listing</p>
+      <!-- Part 2: Listings -->
+      <section v-if="showListing" class="dh-unified-section dh-unified-section--listings">
+        <div class="dh-unified-section-head">
+          <h2 class="dh-unified-section-title">Listings</h2>
+          <router-link to="/alllisting" class="dh-panel-link dh-panel-link--accent">View Listings &gt;</router-link>
+        </div>
+
+        <div class="dh-layout dh-layout--unified-analytics dh-layout--section-listings">
+          <section class="dh-layout__ua-metrics">
+            <div class="dh-metrics-carousel">
+              <article class="dh-metric-card dh-metric-card--light">
+                <div class="dh-metric-head">
+                  <div class="dh-metric-icon dh-metric-icon--soft">
+                    <iconify-icon icon="lucide:building-2" width="22" height="22" />
+                  </div>
+                  <span class="dh-metric-badge">{{ listing.conversion_rate }}%</span>
+                </div>
+                <p class="dh-metric-label">Total Listings</p>
+                <div class="dh-metric-value-row dh-metric-value-row--stacked">
+                  <p class="dh-metric-value">{{ formatNumber(listing.total_listings) }}</p>
+                  <p class="dh-metric-vs">{{ formatNumber(listing.active_listings) }} active</p>
+                </div>
+              </article>
+              <article class="dh-metric-card dh-metric-card--light">
+                <div class="dh-metric-head">
+                  <div class="dh-metric-icon dh-metric-icon--soft">
+                    <iconify-icon icon="lucide:eye" width="22" height="22" />
+                  </div>
+                </div>
+                <p class="dh-metric-label">Total Views</p>
+                <div class="dh-metric-value-row dh-metric-value-row--stacked">
+                  <p class="dh-metric-value">{{ formatNumber(listing.total_views) }}</p>
+                  <p class="dh-metric-vs">{{ formatNumber(listing.inquiry_requests) }} inquiries</p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <article class="dh-panel dh-layout__ua-analysis">
+            <div class="dh-panel-head">
+              <p class="dh-panel-title">Listing Performance</p>
+              <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
+            </div>
             <div class="dh-analytics-kpi-grid dh-analytics-kpi-grid--compact">
               <div v-for="k in listingAllKpis" :key="k.label" class="dh-status-cell">
                 <span>{{ k.label }}</span>
@@ -232,27 +238,81 @@
               </div>
             </div>
             <div v-if="listingAgents.length" class="dh-agents-list dh-agents-list--compact">
-              <div v-for="(item, idx) in listingAgents.slice(0, 2)" :key="item.id" class="dh-agent-row">
+              <div v-for="(item, idx) in listingAgents.slice(0, 5)" :key="item.id" class="dh-agent-row">
                 <div class="dh-agent-rank">{{ idx + 1 }}</div>
                 <div class="dh-agent-info">
                   <p class="dh-agent-name">{{ item.name }}</p>
                   <p class="dh-agent-office">{{ item.subtitle }}</p>
                 </div>
+                <span class="dh-agent-role">{{ item.role }}</span>
               </div>
             </div>
-          </div>
+            <div v-else-if="listingAlerts.length" class="dh-insights-list dh-insights-list--compact">
+              <li
+                v-for="(item, idx) in listingAlerts"
+                :key="idx"
+                class="dh-insight-item"
+                :class="item.tone ? `dh-insight-item--${item.tone}` : ''"
+              >
+                {{ item.text }}
+              </li>
+            </div>
+          </article>
+        </div>
+      </section>
 
-          <div v-if="showHr" class="dh-analysis-col">
-            <p class="dh-analysis-col-tag">HR</p>
+      <!-- Part 3: HR -->
+      <section v-if="showHr" class="dh-unified-section dh-unified-section--hr">
+        <div class="dh-unified-section-head">
+          <h2 class="dh-unified-section-title">HR</h2>
+          <router-link to="/hr" class="dh-panel-link dh-panel-link--accent">Open HR &gt;</router-link>
+        </div>
+
+        <div class="dh-layout dh-layout--unified-analytics dh-layout--section-hr">
+          <section class="dh-layout__ua-metrics">
+            <div class="dh-metrics-carousel">
+              <article class="dh-metric-card dh-metric-card--light">
+                <div class="dh-metric-head">
+                  <div class="dh-metric-icon dh-metric-icon--soft">
+                    <iconify-icon icon="lucide:briefcase" width="22" height="22" />
+                  </div>
+                  <span class="dh-metric-badge">{{ hr.productivity_score }}%</span>
+                </div>
+                <p class="dh-metric-label">Employees</p>
+                <div class="dh-metric-value-row dh-metric-value-row--stacked">
+                  <p class="dh-metric-value">{{ formatNumber(hr.total_employees) }}</p>
+                  <p class="dh-metric-vs">{{ formatNumber(hr.active_employees) }} active</p>
+                </div>
+              </article>
+              <article class="dh-metric-card dh-metric-card--light">
+                <div class="dh-metric-head">
+                  <div class="dh-metric-icon dh-metric-icon--soft">
+                    <iconify-icon icon="lucide:calendar-clock" width="22" height="22" />
+                  </div>
+                </div>
+                <p class="dh-metric-label">On Leave</p>
+                <div class="dh-metric-value-row dh-metric-value-row--stacked">
+                  <p class="dh-metric-value">{{ formatNumber(hr.on_leave) }}</p>
+                  <p class="dh-metric-vs">{{ formatNumber(hr.vacation_requests) }} requests</p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <article class="dh-panel dh-layout__ua-analysis">
+            <div class="dh-panel-head">
+              <p class="dh-panel-title">HR Analysis</p>
+              <span class="dh-chart-period dh-chart-period--static">{{ periodLabel }}</span>
+            </div>
             <div class="dh-analytics-kpi-grid dh-analytics-kpi-grid--compact">
               <div v-for="k in hrAllKpis" :key="k.label" class="dh-status-cell">
                 <span>{{ k.label }}</span>
                 <strong>{{ k.value }}</strong>
               </div>
             </div>
-          </div>
+          </article>
         </div>
-      </article>
+      </section>
     </div>
   </div>
 </template>
@@ -340,8 +400,6 @@ const crmAllKpis = computed(() => [
   kpi('Lost', formatNumber(crm.value.lost)),
   kpi('Conversion rate', `${crm.value.conversion_rate}%`),
   kpi('Revenue', formatMoney(crm.value.revenue_from_leads)),
-  kpi('Total sale', formatMoney(crm.value.total_sale)),
-  kpi('Total commission', formatMoney(crm.value.total_commission)),
   kpi('Avg response', `${crm.value.avg_response_time_min} min`),
   kpi('Calls answered', formatNumber(crm.value.calls_answered)),
   kpi('Calls no answer', formatNumber(crm.value.calls_no_answer)),
@@ -404,19 +462,24 @@ const hrAllKpis = computed(() => [
   kpi('Productivity', `${hr.value.productivity_score}%`),
 ])
 
-const allAlerts = computed(() => {
+const crmAlerts = computed(() => {
   const items = []
   if (crm.value.follow_up_overdue > 0) {
     items.push({ title: 'Overdue', text: `${formatNumber(crm.value.follow_up_overdue)} leads need follow-up`, tone: 'warning' })
   }
-  if (listing.value.pending_approval > 0) {
-    items.push({ title: 'Listings', text: `${formatNumber(listing.value.pending_approval)} pending approval`, tone: 'neutral' })
-  }
-  ;(aiInsights.value || []).forEach((i) => items.push({ text: i.text, tone: i.tone }))
   if (crm.value.hot > 0) {
     items.push({ title: 'Hot', text: `${formatNumber(crm.value.hot)} hot leads today`, tone: 'positive' })
   }
+  ;(aiInsights.value || []).forEach((i) => items.push({ text: i.text, tone: i.tone }))
   return items.slice(0, 4)
+})
+
+const listingAlerts = computed(() => {
+  const items = []
+  if (listing.value.pending_approval > 0) {
+    items.push({ text: `${formatNumber(listing.value.pending_approval)} listings pending approval`, tone: 'neutral' })
+  }
+  return items
 })
 
 onMounted(() => load(true))
@@ -435,5 +498,39 @@ onMounted(() => load(true))
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.dh-unified-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.dh-unified-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dh-unified-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0.25rem;
+}
+
+.dh-unified-section-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: -0.02em;
+}
+
+.dh-layout--section-leads,
+.dh-layout--section-listings,
+.dh-layout--section-hr {
+  margin-top: 0;
 }
 </style>

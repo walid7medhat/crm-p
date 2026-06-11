@@ -4,6 +4,7 @@
     class="sidebar"
     :class="{
       active: isSidebarActive,
+      'sidebar--dashboard-home': isDashboardHome,
     }"
     @mouseenter="sidebarHover = true"
     @mouseleave="sidebarHover = false"
@@ -37,65 +38,106 @@
         <li>
           <router-link
             :to="isShowOnlyListing ? '/alllisting' : '/'"
-            :class="{ active: activeLayoutModule === 'dashboard' || isActive(isShowOnlyListing ? '/alllisting' : '/') }"
+            custom
+            v-slot="{ navigate, href }"
           >
-            <img :src="dashboardIcon" class="imgicon" alt="" />
-            <span>Dashboard</span>
+            <a
+              :href="href"
+              class="sidebar-nav-link sidebar-nav-link--dashboard"
+              :class="{ active: isSidebarModuleActive('dashboard') }"
+              @click="navigate"
+            >
+              <img :src="dashboardIcon" class="imgicon" alt="" />
+              <span>Dashboard</span>
+            </a>
           </router-link>
         </li>
 
-        <li v-if="isAdmin">
-          <router-link to="/kanban" :class="{ active: activeLayoutModule === 'crm' }">
+        <li
+          v-if="isAdmin"
+          :class="{
+            dropdown: true,
+            open: activeDropdown === 'crm',
+            'dropdown-open': activeDropdown === 'crm',
+            'active-parent': isSidebarModuleActive('crm'),
+          }"
+        >
+          <a href="javascript:void(0)" @click.stop.prevent="handleCrmClick" :class="{ active: isSidebarModuleActive('crm') }">
             <iconify-icon icon="lucide:handshake" class="menu-icon" />
             <span>CRM</span>
-            </router-link>
-          </li>
-
-        <li
-          v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
-          :class="{ dropdown: true, open: activeDropdown === 'listings', 'dropdown-open': activeDropdown === 'listings', 'active-parent': isListingsMenuActive }"
-        >
-          <a href="javascript:void(0)" @click.stop.prevent="handleListingsClick" :class="{ active: isListingsMenuActive }">
-            <img :src="listingsIcon" class="imgicon" alt="" />
-            <span>Listings</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'listings' }" />
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
-          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'listings'" class="sidebar-submenu sidebar-submenu--grouped">
-              <template v-for="section in listingsSidebarSections" :key="section.key">
-                <li class="sidebar-submenu__heading">{{ section.title }}</li>
-                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
-                    <span class="menu-label">{{ item.label }}</span>
-                    <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
-                    <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
-                </router-link>
-              </li>
-              </template>
-            </ul>
-          </transition>
+          <ul v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
+            <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
+              <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">Lead</a>
+            </li>
+            <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
+              <a href="/kanban_deal" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">Deal</a>
+            </li>
+            <li
+              v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
+              :class="{
+                dropdown: true,
+                'sidebar-submenu__nested': true,
+                open: crmListingsExpanded,
+                'dropdown-open': crmListingsExpanded,
+                'active-parent': isSidebarCrmSectionActive(CRM_SECTIONS.LISTINGS),
+              }"
+            >
+              <a href="javascript:void(0)" @click.stop.prevent="handleCrmListingsClick" :class="{ active: isSidebarCrmSectionActive(CRM_SECTIONS.LISTINGS) }">
+                <img :src="listingsIcon" class="imgicon submenu-icon" alt="" />
+                <span>Listings</span>
+                <span class="dropdown-arrow dropdown-arrow--nested" :class="{ rotated: crmListingsExpanded }" />
+              </a>
+              <ul v-if="crmListingsExpanded" class="sidebar-submenu sidebar-submenu--grouped sidebar-submenu--nested">
+                <template v-for="section in listingsSidebarSections" :key="section.key">
+                  <li class="sidebar-submenu__heading">{{ section.title }}</li>
+                  <li
+                    v-for="item in section.items"
+                    :key="`${section.key}-${item.path}`"
+                    :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]"
+                  >
+                    <a href="#" class="sidebar-nav-link" @click.prevent="goToListingsItem(item.path)">
+                      <span class="menu-label">{{ item.label }}</span>
+                      <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
+                      <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
+                    </a>
+                  </li>
+                </template>
+              </ul>
+            </li>
+          </ul>
         </li>
 
         <li v-if="isSuperAdmin || user.id === 186">
-          <router-link to="/hr" :class="{ active: activeLayoutModule === 'hr' }">
+          <router-link to="/hr" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link sidebar-nav-link--hr"
+              :class="{ active: isSidebarModuleActive('hr') }"
+              @click="navigate"
+            >
               <iconify-icon icon="lucide:users-round" class="menu-icon" />
               <span>HR</span>
-            </router-link>
-          </li>
+            </a>
+          </router-link>
+        </li>
 
         <li
           v-if="filteredUsersItems.length > 0"
-          :class="{ dropdown: true, open: activeDropdown === 'users', 'active-parent': activeLayoutModule === 'agents' }"
+          :class="{ dropdown: true, open: !isDashboardHome && activeDropdown === 'users', 'active-parent': isSidebarModuleActive('agents') }"
         >
-          <a href="javascript:void(0)" @click="toggleDropdown('users')" :class="{ active: activeLayoutModule === 'agents' }">
+          <a href="javascript:void(0)" @click="toggleDropdown('users')" :class="{ active: isSidebarModuleActive('agents') }">
             <img :src="agentsIcon" class="imgicon" alt="" />
             <span>Agents</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'users' }" />
           </a>
           <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'users'" class="sidebar-submenu">
-              <li v-for="item in filteredUsersItems" :key="item.path" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">{{ item.label }}</router-link>
+            <ul v-show="!isDashboardHome && activeDropdown === 'users'" class="sidebar-submenu">
+              <li v-for="item in filteredUsersItems" :key="item.path" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
+                <router-link :to="item.path" custom v-slot="{ navigate, href }">
+                  <a :href="href" class="sidebar-nav-link" @click="navigate">{{ item.label }}</a>
+                </router-link>
               </li>
             </ul>
           </transition>
@@ -103,21 +145,23 @@
         <li
           v-if="settingsSidebarSections.length > 0"
           class="sidebar-menu__settings"
-          :class="{ dropdown: true, open: activeDropdown === 'settings', 'active-parent': activeLayoutModule === 'settings' }"
+          :class="{ dropdown: true, open: !isDashboardHome && activeDropdown === 'settings', 'active-parent': isSidebarModuleActive('settings') }"
         >
-          <a href="javascript:void(0)" @click="toggleDropdown('settings')" :class="{ active: activeLayoutModule === 'settings' }">
+          <a href="javascript:void(0)" @click="toggleDropdown('settings')" :class="{ active: isSidebarModuleActive('settings') }">
             <iconify-icon icon="lucide:settings" class="menu-icon" />
             <span>Settings</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'settings' }" />
           </a>
           <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
-            <ul v-show="activeDropdown === 'settings'" class="sidebar-submenu sidebar-submenu--grouped">
+            <ul v-show="!isDashboardHome && activeDropdown === 'settings'" class="sidebar-submenu sidebar-submenu--grouped">
               <template v-for="section in settingsSidebarSections" :key="section.key">
                 <li class="sidebar-submenu__heading">{{ section.title }}</li>
-                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isActive(item.path) }]">
-                <router-link :to="item.path">
+                <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
+                <router-link :to="item.path" custom v-slot="{ navigate, href }">
+                  <a :href="href" class="sidebar-nav-link" @click="navigate">
                     <iconify-icon v-if="item.icon" :icon="item.icon" class="menu-icon submenu-icon" />
-                  <span>{{ item.label }}</span>
+                    <span>{{ item.label }}</span>
+                  </a>
                 </router-link>
               </li>
               </template>
@@ -228,11 +272,13 @@ import api from '@/plugins/axios';
 import { useSidebar } from '@/composables/useSidebar.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import {
-  resolveActiveModule,
   buildListingsSidebarSections,
   buildSettingsSidebarSections,
-  LISTINGS_OVERVIEW_PATH,
+  CRM_SECTIONS,
+  getListingsEntryPath,
+  resolveCrmSection,
 } from '@/composables/useLayoutNavigation.js';
+import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
 const dashboardIcon=ref('/assets/icons/dashboard-icon.svg');
@@ -323,7 +369,6 @@ const isSuperAdmin = computed(() => {
 
 const tableItems = computed(() => {
   const items = [
-    { path: LISTINGS_OVERVIEW_PATH, label: 'Overview', colorClass: 'text-white w-auto', count: 0 },
     { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: 0,permission: 'listings-list' },
     { path: '/property-form', label: 'Create Listing', colorClass: 'text-info-main w-auto', permission: 'listings-create', count: 0 },
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
@@ -535,13 +580,21 @@ const filteredUsersItems = computed(() => {
   });
 });
 
-const activeLayoutModule = computed(() => resolveActiveModule(route.path));
+const {
+  isDashboardHome,
+  isSidebarModuleActive,
+  isSidebarCrmSectionActive,
+  isSidebarSubItemActive,
+  isMobileDockItemActive,
+  rememberListingsPath,
+  rememberCrmSection,
+} = useLayoutActiveState();
+
+const crmListingsExpanded = ref(false);
 
 const listingsOverviewPath = computed(() =>
-  isShowOnlyListing.value ? '/alllisting' : LISTINGS_OVERVIEW_PATH,
+  isShowOnlyListing.value ? '/alllisting' : '/alllisting',
 );
-
-const isListingsMenuActive = computed(() => activeLayoutModule.value === 'listings');
 
 const listingsSidebarSections = computed(() =>
   buildListingsSidebarSections({
@@ -652,7 +705,35 @@ const mobileDockItems = computed(() => {
   ];
 
   if (isAdmin.value) {
-    items.push({ path: '/kanban', label: 'CRM', icon: 'lucide:handshake' });
+    const crmSections = [
+      {
+        key: 'crm-core',
+        title: 'CRM',
+        items: [
+          { path: '/kanban', label: 'Lead' },
+          { path: '/kanban_deal', label: 'Deal' },
+        ],
+      },
+    ];
+    if (listingsSidebarSections.value.length && !isShowOnlyListing.value) {
+      crmSections.push(
+        ...listingsSidebarSections.value.map((section) => ({
+          key: `crm-${section.key}`,
+          title: section.title,
+          items: section.items.map((it) => ({
+            path: it.path,
+            label: it.label,
+            count: it.count || 0,
+          })),
+        })),
+      );
+    }
+    items.push({
+      key: 'group-crm',
+      label: 'CRM',
+      icon: 'lucide:handshake',
+      sections: crmSections,
+    });
   }
   if (isSuperAdmin.value || user.value?.id === 186) {
     items.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
@@ -663,23 +744,6 @@ const mobileDockItems = computed(() => {
       label: 'Agents',
       icon: 'lucide:user-round',
       children: filteredUsersItems.value.map((it) => ({ path: it.path, label: it.label })),
-    });
-  }
-  if (listingsSidebarSections.value.length) {
-    items.push({
-      key: 'group-listings',
-      label: 'Listings',
-      icon: 'lucide:building-2',
-      children: listingChildren,
-      sections: listingsSidebarSections.value.map((section) => ({
-        key: section.key,
-        title: section.title,
-        items: section.items.map((it) => ({
-          path: it.path,
-          label: it.label,
-          count: it.count || 0,
-        })),
-      })),
     });
   }
   if (settingsSidebarSections.value.length) {
@@ -703,22 +767,17 @@ const mobileDockItems = computed(() => {
 });
 
 function isDockActive(path) {
-  if (path === '/') return route.path === '/';
-  return route.path === path || route.path.startsWith(path + '/');
+  return isMobileDockItemActive(path);
 }
 
 function isDockGroupActive(group) {
-  if (!group?.children?.length) return false;
+  if (isDashboardHome.value || !group?.children?.length) return false;
   return group.children.some((child) => isDockActive(child.path));
 }
 
 async function openMobileDockGroup(group) {
-  if (group?.key === 'group-listings') {
-    openListingsDropdown();
-    const overviewPath = listingsOverviewPath.value;
-    if (route.path !== overviewPath) {
-      await router.push(overviewPath);
-    }
+  if (group?.key === 'group-crm') {
+    openCrmDropdown();
   }
   activeMobileDockGroup.value = group;
   mobileDockExpandedSection.value = group?.sections?.[0]?.key ?? null;
@@ -743,36 +802,63 @@ const toggleDropdown = (name) => {
   localStorage.setItem('activeDropdown', activeDropdown.value || '');
 };
 
-const openListingsDropdown = () => {
-  activeDropdown.value = 'listings';
-  localStorage.setItem('activeDropdown', 'listings');
+const openCrmDropdown = () => {
+  activeDropdown.value = 'crm';
+  localStorage.setItem('activeDropdown', 'crm');
 };
 
-const closeListingsDropdown = () => {
+const closeCrmDropdown = () => {
   activeDropdown.value = null;
   localStorage.removeItem('activeDropdown');
+  crmListingsExpanded.value = false;
 };
 
-const handleListingsClick = async () => {
-  expandSidebarDesktop();
+async function goToCrmSection(section) {
+  rememberCrmSection(section);
+  openCrmDropdown();
+  crmListingsExpanded.value = false;
 
-  if (activeDropdown.value === 'listings') {
-    closeListingsDropdown();
+  if (section === CRM_SECTIONS.LEAD) {
+    localStorage.setItem('kanban_active_tab', 'leads');
+    if (route.path !== '/kanban') {
+      await router.push('/kanban');
+    }
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }));
     return;
   }
 
-  openListingsDropdown();
-  const overviewPath = listingsOverviewPath.value;
-  if (route.path !== overviewPath) {
-    await router.push(overviewPath);
+  if (section === CRM_SECTIONS.DEAL) {
+    localStorage.setItem('kanban_active_tab', 'deals');
+    if (route.path !== '/kanban_deal') {
+      await router.push('/kanban_deal');
+    }
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }));
+    const dealType = localStorage.getItem('kanban_deal_type') || 'primary';
+    window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: dealType }));
   }
+}
+
+async function goToListingsItem(path) {
+  rememberCrmSection(CRM_SECTIONS.LISTINGS);
+  rememberListingsPath(path);
+  openCrmDropdown();
+  if (route.path !== path) {
+    await router.push(path);
+  }
+}
+
+const handleCrmClick = () => {
+  expandSidebarDesktop();
+  if (activeDropdown.value === 'crm') {
+    closeCrmDropdown();
+    return;
+  }
+  openCrmDropdown();
+  crmListingsExpanded.value = false;
 };
 
-const isActive = (path) => {
-  if (path === '/') {
-    return route.path === '/';
-  }
-  return route.path === path || route.path.startsWith(path + '/');
+const handleCrmListingsClick = () => {
+  crmListingsExpanded.value = !crmListingsExpanded.value;
 };
 
 // Animation functions (تبقى كما هي)
@@ -816,25 +902,37 @@ function afterLeave(el) {
 }
 
 function syncSidebarDropdownFromRoute() {
-  if (allListingsMenuPaths.value.some((p) => isActive(p))) {
-    openListingsDropdown();
-    return;
-  }
-  if (route.path === listingsOverviewPath.value) {
-    if (localStorage.getItem('activeDropdown') === 'listings') {
-      openListingsDropdown();
+  if (isDashboardHome.value) {
+    if (activeDropdown.value !== 'crm') {
+      activeDropdown.value = null;
+      localStorage.removeItem('activeDropdown');
     }
     return;
   }
-  if (allSettingsMenuPaths.value.some((p) => isActive(p))) {
+
+  const crmSection = resolveCrmSection(route.path);
+  if (crmSection) {
+    openCrmDropdown();
+    crmListingsExpanded.value = false;
+    if (crmSection === CRM_SECTIONS.LISTINGS) {
+      rememberListingsPath(route.path);
+    }
+    rememberCrmSection(crmSection);
+    return;
+  }
+  if (allSettingsMenuPaths.value.some((p) => isSidebarSubItemActive(p))) {
     activeDropdown.value = 'settings';
     localStorage.setItem('activeDropdown', 'settings');
     return;
   }
-  if (filteredUsersItems.value.some((item) => isActive(item.path))) {
+  if (filteredUsersItems.value.some((item) => isSidebarSubItemActive(item.path))) {
     activeDropdown.value = 'users';
     localStorage.setItem('activeDropdown', 'users');
+    return;
   }
+
+  activeDropdown.value = null;
+  localStorage.removeItem('activeDropdown');
 }
 
 watch(() => route.path, () => {
@@ -843,19 +941,21 @@ watch(() => route.path, () => {
   syncSidebarDropdownFromRoute();
 });
 
+watch(isDashboardHome, (onHome) => {
+  if (!onHome) return;
+  // Keep CRM dropdown open if user explicitly opened it from dashboard
+  if (activeDropdown.value === 'crm') return;
+  activeDropdown.value = null;
+  localStorage.removeItem('activeDropdown');
+});
+
 onMounted(() => {
   syncViewport();
   window.addEventListener('resize', syncViewport);
-  syncSidebarDropdownFromRoute();
-  if (
-    !allListingsMenuPaths.value.some((p) => isActive(p)) &&
-    route.path !== listingsOverviewPath.value &&
-    !allSettingsMenuPaths.value.some((p) => isActive(p)) &&
-    !filteredUsersItems.value.some((item) => isActive(item.path))
-  ) {
-    activeDropdown.value = null;
-    localStorage.removeItem('activeDropdown');
+  if (localStorage.getItem('activeDropdown') === 'listings') {
+    localStorage.setItem('activeDropdown', 'crm');
   }
+  syncSidebarDropdownFromRoute();
   fetchAllCounts();
   setInterval(fetchAllCounts, 60000);
 });
@@ -899,9 +999,19 @@ onUnmounted(() => {
   z-index: 1202;
 }
 
-/* Submenu must stay visible when Listings is expanded (global CSS hides it on collapsed sidebar) */
-.sidebar:not(.active) .sidebar-menu li.dropdown.open .sidebar-submenu,
-.sidebar:not(.active) .sidebar-menu li.dropdown.dropdown-open .sidebar-submenu {
+/* Direct CRM submenu only — do not force nested Listings submenu open */
+.sidebar:not(.active) .sidebar-menu > li.dropdown.open > .sidebar-submenu--crm,
+.sidebar:not(.active) .sidebar-menu > li.dropdown.dropdown-open > .sidebar-submenu--crm {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.sidebar-submenu__nested .sidebar-submenu--nested {
+  display: none !important;
+}
+
+.sidebar-submenu__nested.open .sidebar-submenu--nested,
+.sidebar-submenu__nested.dropdown-open .sidebar-submenu--nested {
   display: block !important;
   visibility: visible !important;
 }
@@ -1285,13 +1395,56 @@ onUnmounted(() => {
 .sidebar-submenu li a:hover {
   color: #fff;
 }
-.sidebar-menu li a.active {
+.sidebar-menu li a.active,
+.sidebar-menu li a.sidebar-nav-link.active {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 10px;
   padding: 8px 10px;
   color: #fff;
+}
+
+/* Main dashboard: only Dashboard may appear active in the sidebar */
+.sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link.active:not(.sidebar-nav-link--dashboard),
+.sidebar--dashboard-home .sidebar-menu .dropdown.active-parent > a,
+.sidebar--dashboard-home .sidebar-menu .nav-link.active-page a {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Keep CRM submenu visible when user opens it from dashboard */
+.sidebar--dashboard-home .sidebar-menu li.dropdown.open > .sidebar-submenu--crm,
+.sidebar--dashboard-home .sidebar-menu li.dropdown.dropdown-open > .sidebar-submenu--crm {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.sidebar-submenu--crm {
+  padding-top: 4px;
+  display: block;
+  overflow: visible;
+}
+
+.sidebar-menu li.dropdown > a {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sidebar-submenu__nested > a {
+  padding-left: 12px;
+}
+
+.sidebar-submenu--nested {
+  margin-left: 8px;
+  padding-left: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dropdown-arrow--nested {
+  margin-left: auto;
 }
 
 

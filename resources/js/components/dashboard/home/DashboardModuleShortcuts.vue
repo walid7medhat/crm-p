@@ -8,10 +8,17 @@
       v-for="item in items"
       :key="item.id"
       :to="item.path"
-      class="top-module-btn"
-      :class="{ active: isActive(item) }"
+      custom
+      v-slot="{ navigate, href }"
     >
-      {{ item.label }}
+      <a
+        :href="href"
+        class="top-module-btn"
+        :class="{ active: isTopModuleItemActive(item) }"
+        @click="navigate"
+      >
+        {{ item.label }}
+      </a>
     </router-link>
   </nav>
 </template>
@@ -19,14 +26,12 @@
 <script setup>
 import { computed, getCurrentInstance } from 'vue'
 import { useRoute } from 'vue-router'
-import {
-  buildTopModuleNav,
-  isTopModuleNavActive,
-  resolveActiveModule,
-} from '@/composables/useLayoutNavigation.js'
+import { buildTopModuleNav } from '@/composables/useLayoutNavigation.js'
+import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js'
 
 const route = useRoute()
 const { proxy } = getCurrentInstance() || {}
+const { isTopModuleItemActive } = useLayoutActiveState()
 
 const user = computed(() => {
   try {
@@ -45,20 +50,29 @@ const isAdmin = computed(() => {
 const isSuperAdmin = computed(() => user.value?.roles?.includes('super_admin') ?? false)
 const isShowOnlyListing = computed(() => user.value?.roles?.includes('only show listings') ?? false)
 
-const items = computed(() =>
-  buildTopModuleNav({
+const items = computed(() => {
+  void route.path
+  return buildTopModuleNav({
     isAdmin: isAdmin.value,
     isSuperAdmin: isSuperAdmin.value,
     isShowOnlyListing: isShowOnlyListing.value,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListing.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
-  }),
-)
-
-const activeModule = computed(() => resolveActiveModule(route.path))
-
-function isActive(item) {
-  return isTopModuleNavActive(route.path, activeModule.value, item)
-}
+  })
+})
 </script>
+
+<style scoped>
+.dh-module-shortcuts .top-module-btn.active {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.dh-module-shortcuts .top-module-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+</style>

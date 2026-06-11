@@ -3,7 +3,6 @@ import { resetSidebarLayout } from './composables/useSidebar.js'
 
 // DashBoard
 import Ai from './pages/dashboard/ai.vue'
-import HomeAi from './components/dashboard/home/DashboardHome.vue'
 import HomeAnalytics from './pages/dashboard/home-analytics.vue'
 import Crm from './pages/dashboard/crm.vue'
 import AllLsting from './components/alllisting/AllLsting.vue'
@@ -14,7 +13,6 @@ import MyListing from './pages/listings/my-listing.vue'
 import Archive from './pages/listings/archive.vue'
 import NotifyMe from './pages/listings/notify-me.vue'
 import PropertyMapPage from './pages/listings/property-map.vue'
-import ListingsOverview from './pages/listings/overview.vue'
 
 // Table
 import BasicTable from './pages/table/table-basic.vue'
@@ -130,7 +128,7 @@ const baseRoutes = [
       { path: '/attendance-monthly-reports', component: AttendanceMonthlyReport, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
   { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/kanban_deal', component: kanban_deal },
+  { path: '/kanban_deal', component: kanban_deal, meta: { requiresAuth: true, requiresAdmin: true } },
   {
     path: '/project-map',
     name: 'project-map',
@@ -158,13 +156,13 @@ const baseRoutes = [
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/roi-calculator', component: RoiCalculatorPage, meta: { requiresAuth: true, requiresAdmin: true } },
-   { path: '/home', component: HomeAi, meta: { requiresAuth: true, dashboardHome: true } },
+   { path: '/home', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
    { path: '/', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 
   { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
   { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },
   { path: '/property-form', component: PropertyForm, meta: { requiresAuth: true } },
-  { path: '/listings/overview', component: ListingsOverview, meta: { requiresAuth: true } },
+  { path: '/listings/overview', redirect: '/' },
   { path: '/my-listing', component: MyListing, meta: { requiresAuth: true } },
   { path: '/archive', component: Archive, meta: { requiresAuth: true } },
   { path: '/alllisting', component: AllLsting, meta: { requiresAuth: true } },

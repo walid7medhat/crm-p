@@ -10,16 +10,56 @@ export const LAYOUT_MODULES = {
   SETTINGS: 'settings',
 };
 
-const CRM_PREFIXES = ['/kanban', '/kanban_deal'];
+export const CRM_PREFIXES = ['/kanban', '/kanban_deal'];
+
+export const CRM_SECTIONS = {
+  LEAD: 'lead',
+  DEAL: 'deal',
+  LISTINGS: 'listings',
+};
+
+export const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab';
+export const CRM_SECTION_KEY = 'crm_active_section';
+export const DEAL_TYPE_KEY = 'kanban_deal_type';
+export const LAST_LISTINGS_PATH_KEY = 'layout_last_listings_path';
+
+const ALL_LISTINGS_MATCH_PATHS = [
+  '/alllisting',
+  '/my-listing',
+  '/archive',
+  '/property-details',
+  '/properties',
+  '/properties-map',
+  '/property-form',
+  '/notify-me',
+  '/my-requests',
+  '/my-orders',
+  '/all-requests',
+  '/hotDeal-requests',
+  '/need-approve-requests',
+  '/my-viewings',
+  '/developers',
+  '/add-developer',
+  '/owners',
+  '/property_types',
+  '/add-property_type',
+  '/unit_views',
+  '/add-unit_view',
+  '/layout_types',
+  '/add-layout_type',
+  '/areas',
+  '/add-area',
+  '/features',
+  '/add-features',
+  '/projects',
+  '/add-projects',
+];
 
 const HR_PREFIXES = ['/hr'];
 
 const AGENTS_PREFIXES = ['/users', '/add-user', '/team-tree', '/view-profile', '/invited'];
 
-export const LISTINGS_OVERVIEW_PATH = '/listings/overview';
-
 const LISTINGS_PREFIXES = [
-  LISTINGS_OVERVIEW_PATH,
   '/alllisting',
   '/my-listing',
   '/property-form',
@@ -73,13 +113,79 @@ function pathMatches(path, prefixes) {
   return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
+export function isDashboardRoute(path) {
+  return path === '/' || path === '/home' || path === '';
+}
+
+export function resolveCrmSection(path) {
+  if (pathMatches(path, LISTINGS_PREFIXES)) return CRM_SECTIONS.LISTINGS;
+  if (path === '/kanban_deal' || path.startsWith('/kanban_deal/')) return CRM_SECTIONS.DEAL;
+  if (path === '/kanban' || path.startsWith('/kanban/')) return CRM_SECTIONS.LEAD;
+  return null;
+}
+
+export function rememberCrmSection(section) {
+  if (!section || !Object.values(CRM_SECTIONS).includes(section)) return;
+  try {
+    localStorage.setItem(CRM_SECTION_KEY, section);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getRememberedCrmSection() {
+  try {
+    const stored = localStorage.getItem(CRM_SECTION_KEY);
+    if (stored && Object.values(CRM_SECTIONS).includes(stored)) return stored;
+  } catch {
+    /* ignore */
+  }
+  return CRM_SECTIONS.LEAD;
+}
+
+export function getCrmSectionEntryPath(section, ctx = {}) {
+  if (section === CRM_SECTIONS.DEAL) return '/kanban_deal';
+  if (section === CRM_SECTIONS.LISTINGS) {
+    const fallback =
+      ctx.isAdmin || ctx.hasPermission?.('listings-list')
+        ? '/alllisting'
+        : '/my-listing';
+    return getListingsEntryPath(fallback);
+  }
+  return '/kanban';
+}
+
+export function getCrmEntryPath(ctx = {}) {
+  return getCrmSectionEntryPath(getRememberedCrmSection(), ctx);
+}
+
+export function getListingsEntryPath(fallback = '/alllisting') {
+  try {
+    const stored = localStorage.getItem(LAST_LISTINGS_PATH_KEY);
+    if (stored && pathMatches(stored, LISTINGS_PREFIXES)) return stored;
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
+export function rememberListingsPath(path) {
+  if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return;
+  try {
+    localStorage.setItem(LAST_LISTINGS_PATH_KEY, path);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function resolveActiveModule(path) {
-  if (path === '/' || path === '/home' || path === '') return LAYOUT_MODULES.DASHBOARD;
-  if (pathMatches(path, CRM_PREFIXES)) return LAYOUT_MODULES.CRM;
+  if (isDashboardRoute(path)) return LAYOUT_MODULES.DASHBOARD;
+  if (pathMatches(path, CRM_PREFIXES) || pathMatches(path, LISTINGS_PREFIXES)) {
+    return LAYOUT_MODULES.CRM;
+  }
   if (pathMatches(path, HR_PREFIXES)) return LAYOUT_MODULES.HR;
   if (pathMatches(path, AGENTS_PREFIXES)) return LAYOUT_MODULES.AGENTS;
   if (pathMatches(path, SETTINGS_PREFIXES)) return LAYOUT_MODULES.SETTINGS;
-  if (pathMatches(path, LISTINGS_PREFIXES)) return LAYOUT_MODULES.LISTINGS;
   return null;
 }
 
@@ -94,18 +200,13 @@ export function isTabActive(currentPath, tab) {
 }
 
 /**
- * Header sub-navigation tabs per active sidebar module.
- * `ctx` supplies permission flags from the layout shell.
+ * Header sub-navigation tabs — context-aware per CRM section or module.
  */
-export function buildHeaderTabs(module, ctx = {}) {
+export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
   const { isAdmin, isSuperAdmin, isCustomAdmin, isShowOnlyListing, hasPermission } = ctx;
 
-  if (module === LAYOUT_MODULES.CRM) {
-    return [
-      { id: 'leads', label: 'Leads', type: 'event' },
-      { id: 'lead-pool', label: 'Lead Pool', type: 'event' },
-      { id: 'deals', label: 'Deals', type: 'event' },
-    ];
+  if (module === LAYOUT_MODULES.CRM && crmSection) {
+    return buildCrmSectionHeaderTabs(crmSection, ctx);
   }
 
   if (module === LAYOUT_MODULES.AGENTS) {
@@ -127,46 +228,6 @@ export function buildHeaderTabs(module, ctx = {}) {
         matchPaths: ['/add-user'],
       });
     }
-    return tabs;
-  }
-
-  if (module === LAYOUT_MODULES.LISTINGS && !isShowOnlyListing) {
-    const mainPath =
-      isAdmin || (hasPermission && hasPermission('listings-list'))
-        ? '/alllisting'
-        : '/my-listing';
-    const tabs = [
-      {
-        id: 'overview',
-        label: 'Overview',
-        type: 'route',
-        path: LISTINGS_OVERVIEW_PATH,
-        matchPaths: [LISTINGS_OVERVIEW_PATH],
-      },
-      {
-        id: 'main',
-        label: 'Main Listings',
-        type: 'route',
-        path: mainPath,
-        matchPaths: ['/alllisting', '/my-listing', '/archive', '/property-details', '/properties', '/properties-map'],
-      },
-    ];
-    if (!hasPermission || hasPermission('listings-create')) {
-      tabs.push({
-        id: 'create',
-        label: 'Create Listing',
-        type: 'route',
-        path: '/property-form',
-        matchPaths: ['/property-form', '/properties'],
-      });
-    }
-    tabs.push({
-      id: 'notify',
-      label: 'Notify Me',
-      type: 'route',
-      path: '/notify-me',
-      matchPaths: ['/notify-me'],
-    });
     return tabs;
   }
 
@@ -237,17 +298,51 @@ export function buildHeaderTabs(module, ctx = {}) {
   return [];
 }
 
+export function buildCrmSectionHeaderTabs(section, ctx = {}) {
+  const { isAdmin, isShowOnlyListing, hasPermission } = ctx;
+
+  if (section === CRM_SECTIONS.LEAD) {
+    return [
+      { id: 'leads', label: 'Lead', type: 'event' },
+      { id: 'lead-pool', label: 'Lead Pool', type: 'event' },
+    ];
+  }
+
+  if (section === CRM_SECTIONS.DEAL) {
+    return [
+      { id: 'primary', label: 'Primary', type: 'deal-type' },
+      { id: 'secondary', label: 'Secondary', type: 'deal-type' },
+      { id: 'rental', label: 'Rental', type: 'deal-type' },
+    ];
+  }
+
+  if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
+    const mainPath =
+      isAdmin || (hasPermission && hasPermission('listings-list'))
+        ? '/alllisting'
+        : '/my-listing';
+    return [
+      {
+        id: 'listings',
+        label: 'Listings',
+        type: 'route',
+        path: mainPath,
+        matchPaths: ALL_LISTINGS_MATCH_PATHS,
+      },
+    ];
+  }
+
+  return [];
+}
+
 /**
- * Top header shortcut row (CRM, HRM, Listings) — dashboard / home layout.
+ * Top header shortcut row (CRM, HRM) — dashboard / home layout only.
  */
 export function buildTopModuleNav(ctx = {}) {
   const {
     isAdmin,
     isSuperAdmin,
-    isShowOnlyListing,
-    hasPermission,
     userId,
-    canAccessListings,
   } = ctx;
 
   const items = [];
@@ -256,8 +351,8 @@ export function buildTopModuleNav(ctx = {}) {
     items.push({
       id: 'crm',
       label: 'CRM',
-      path: '/kanban',
-      matchModules: [LAYOUT_MODULES.DASHBOARD, LAYOUT_MODULES.CRM],
+      path: getCrmEntryPath(ctx),
+      matchModules: [LAYOUT_MODULES.CRM],
     });
   }
 
@@ -270,23 +365,13 @@ export function buildTopModuleNav(ctx = {}) {
     });
   }
 
-  if (canAccessListings && !isShowOnlyListing) {
-    const listingsPath =
-      isAdmin || (hasPermission && hasPermission('listings-list'))
-        ? LISTINGS_OVERVIEW_PATH
-        : '/my-listing';
-    items.push({
-      id: 'listings',
-      label: 'Listings',
-      path: listingsPath,
-      matchModules: [LAYOUT_MODULES.LISTINGS],
-    });
-  }
-
   return items;
 }
 
 export function isTopModuleNavActive(currentPath, activeModule, item) {
+  if (isDashboardRoute(currentPath) || activeModule === LAYOUT_MODULES.DASHBOARD) {
+    return false;
+  }
   if (item.matchModules?.length && item.matchModules.includes(activeModule)) {
     return true;
   }

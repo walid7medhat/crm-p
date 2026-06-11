@@ -4,7 +4,7 @@
       <div v-if="modelValue" class="theme-overlay" @click="onCancel">
         <div class="theme-dialog" role="dialog" aria-labelledby="theme-dialog-title" @click.stop>
           <header class="theme-dialog__head">
-            <h3 id="theme-dialog-title" class="theme-dialog__title">Themes</h3>
+            <h3 id="theme-dialog-title" class="theme-dialog__title">THEMES</h3>
             <button type="button" class="theme-dialog__close" aria-label="Close" @click="onCancel">
               <iconify-icon icon="lucide:x" />
             </button>
@@ -62,14 +62,6 @@
             <button type="button" class="theme-btn theme-btn--cancel" :disabled="saving" @click="onCancel">
               Cancel
             </button>
-            <router-link
-              v-if="canManage"
-              to="/settings/background"
-              class="theme-btn theme-btn--custom"
-              @click="closeAndEmit"
-            >
-              Custom theme
-            </router-link>
           </footer>
         </div>
       </div>
@@ -96,8 +88,6 @@ const saving = ref(false)
 const backgrounds = ref([])
 const savedId = ref(null)
 const pendingId = ref(null)
-const canManage = ref(false)
-
 const dirty = computed(() => pendingId.value !== savedId.value)
 
 const visibleBackgrounds = computed(() =>
@@ -130,7 +120,6 @@ async function loadThemes() {
     backgrounds.value = data.backgrounds || []
     savedId.value = data.selected_id ?? null
     pendingId.value = savedId.value
-    canManage.value = !!data.can_manage
   } catch (e) {
     console.error('Failed to load themes', e)
     backgrounds.value = []
@@ -191,16 +180,18 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.15rem;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .theme-dialog__title {
   margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: 1.75rem;
+  font-weight: 800;
   color: #0f172a;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.1;
 }
 
 .theme-dialog__close {
@@ -409,15 +400,6 @@ watch(
 
 .theme-btn--cancel:hover:not(:disabled) {
   color: #0f172a;
-}
-
-.theme-btn--custom {
-  margin-left: auto;
-  color: #2a1548;
-}
-
-.theme-btn--custom:hover {
-  color: #4c2a7a;
 }
 
 .theme-fade-enter-active,

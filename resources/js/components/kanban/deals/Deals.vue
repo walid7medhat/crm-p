@@ -1,19 +1,5 @@
 <template>
   <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile }">
-    <!-- Top tabs: Primary/Off-Plan, Secondary, Rental -->
-    <div class="deals-type-tabs d-flex gap-2">
-      <button
-        v-for="tab in typeTabs"
-        :key="tab.id"
-        class="deals-type-tab"
-        :class="{ active: activeTypeTab === tab.id }"
-        @click="switchTab(tab.id)"
-      >
-        <iconify-icon :icon="tab.icon" class="tab-icon"></iconify-icon>
-        <span>{{ tab.name }}</span>
-      </button>
-    </div>
-
     <!-- Kanban board with navigation arrows -->
     <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
       <div
@@ -481,6 +467,7 @@ import {
   getDealColumnHeaderStyle,
   resolveDealStageStyle,
 } from '@/config/dealStageStyles.js'
+import { DEAL_TYPE_KEY } from '@/composables/useLayoutNavigation.js'
 
 const props = defineProps({
   filters: {
@@ -535,7 +522,23 @@ const {
   normalizeMissingFromError,
 } = useStageTransition()
 
-const activeTypeTab = ref('primary')
+function readStoredDealType() {
+  try {
+    const stored = localStorage.getItem(DEAL_TYPE_KEY)
+    if (stored && ['primary', 'secondary', 'rental'].includes(stored)) return stored
+  } catch {
+    /* ignore */
+  }
+  return 'primary'
+}
+
+const activeTypeTab = ref(readStoredDealType())
+
+function onExternalDealTypeChange(e) {
+  const typeId = e?.detail
+  if (!typeId || typeId === activeTypeTab.value) return
+  switchTab(typeId)
+}
 const showViewDealModal = ref(false)
 const selectedDeal = ref(null)
 const loading = ref(false)
@@ -1094,6 +1097,13 @@ async function switchTab(tabId) {
   pendingCompleteFields.value = null;
   pendingStageChange.value = null;
   activeTypeTab.value = tabId;
+  try {
+    localStorage.setItem(DEAL_TYPE_KEY, tabId)
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: tabId }))
+  emit('deal-type-change', tabId)
   
   if (window._infiniteObservers) {
     window._infiniteObservers.forEach(observer => observer.disconnect());
@@ -2205,6 +2215,7 @@ onMounted(async () => {
     setupInfiniteScroll();
   });
   window.addEventListener('resize', updateScrollArrows);
+  window.addEventListener('kanban-deal-type-change', onExternalDealTypeChange);
   setTimeout(() => {
     initializeDealUpdates();
   }, 1000);
@@ -2216,6 +2227,7 @@ onUnmounted(() => {
   onDealDragEnd();
   stopScroll();
   window.removeEventListener('resize', updateScrollArrows);
+  window.removeEventListener('kanban-deal-type-change', onExternalDealTypeChange);
   cleanup();
   if (window._infiniteObservers) {
     window._infiniteObservers.forEach(observer => observer.disconnect());

@@ -205,10 +205,17 @@
               v-for="item in topModuleNavItems"
               :key="item.id"
               :to="item.path"
-              class="top-module-btn"
-              :class="{ active: isTopModuleActive(item) }"
+              custom
+              v-slot="{ navigate, href }"
             >
-              {{ item.label }}
+              <a
+                :href="href"
+                class="top-module-btn"
+                :class="{ active: isTopModuleItemActive(item) }"
+                @click="navigate"
+              >
+                {{ item.label }}
+              </a>
             </router-link>
           </nav>
           <select
@@ -227,7 +234,7 @@
             </option>
           </select>
           <nav
-            v-if="moduleHeaderTabs.length"
+            v-if="!isDashboardHome && moduleHeaderTabs.length"
             class="module-tabs-nav module-tabs-nav--sub"
             :class="{ 'module-tabs-nav--hide-on-mobile': isMobileViewport }"
             aria-label="Section navigation"
@@ -242,13 +249,29 @@
               >
                 {{ tab.label }}
               </button>
+              <button
+                v-else-if="tab.type === 'deal-type'"
+                type="button"
+                class="module-tab-btn"
+                :class="{ active: activeDealType === tab.id }"
+                @click="setActiveDealType(tab.id)"
+              >
+                {{ tab.label }}
+              </button>
               <router-link
                 v-else
                 :to="tab.path"
-                class="module-tab-btn"
-                :class="{ active: isModuleTabActive(tab) }"
+                custom
+                v-slot="{ navigate, href }"
               >
-                {{ tab.label }}
+                <a
+                  :href="href"
+                  class="module-tab-btn"
+                  :class="{ active: isModuleTabActive(tab) }"
+                  @click="navigate"
+                >
+                  {{ tab.label }}
+                </a>
               </router-link>
             </template>
           </nav>
@@ -375,9 +398,9 @@
               <iconify-icon icon="lucide:settings" class="text-lg font-weight-bold" style="font-size: 18px;" />
           </button>
       </template>
-        <router-link 
-          v-if="showCreatePropertyButton && !isShowOnlyListing"
-          to="/property-form" 
+        <router-link
+          v-if="showCreateListingButton"
+          to="/property-form"
           class="btn btn-primary btn-sm create-property-btn navbar-create-listing d-flex align-items-center gap-1"
         >
           <i class="ri-add-line"></i>
@@ -622,12 +645,17 @@ import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
 import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
-  resolveActiveModule,
   buildHeaderTabs,
   buildTopModuleNav,
-  isTopModuleNavActive,
   isTabActive,
+  KANBAN_ACTIVE_TAB_KEY,
+  DEAL_TYPE_KEY,
+  CRM_PREFIXES,
+  CRM_SECTIONS,
+  resolveCrmSection,
+  rememberCrmSection,
 } from '@/composables/useLayoutNavigation.js';
+import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import NotificationBell from '@/components/NotificationBell.vue';
@@ -649,9 +677,12 @@ function goBack() {
   router.back();
 }
 const route = useRoute();
-const isDashboardHome = computed(
-  () => !!route.meta?.dashboardHome || route.path === '/' || route.path === '/home' || route.path === '',
-);
+const {
+  isDashboardHome,
+  activeLayoutModule,
+  activeCrmSection,
+  isTopModuleItemActive,
+} = useLayoutActiveState();
 const { proxy } = getCurrentInstance();
 const user = ref(null);
 
@@ -679,37 +710,33 @@ const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only sh
 
 
 
-const activeLayoutModule = computed(() => {
-  if (isDashboardHome.value) {
-    return 'dashboard';
-  }
-  return resolveActiveModule(route.path);
-});
-const moduleHeaderTabs = computed(() =>
-  buildHeaderTabs(activeLayoutModule.value, {
+const moduleHeaderTabs = computed(() => {
+  if (isDashboardHome.value) return [];
+  const ctx = {
     isAdmin: isAdmin.value,
     isSuperAdmin: isSuperAdmin.value,
     isCustomAdmin: isCustomAdmin.value,
     isShowOnlyListing: isShowOnlyListingNav.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
-  }),
-);
+  };
+  if (activeLayoutModule.value === 'crm') {
+    return buildHeaderTabs('crm', ctx, activeCrmSection.value);
+  }
+  return buildHeaderTabs(activeLayoutModule.value, ctx);
+});
 
 const showTopModuleNav = computed(() => isDashboardHome.value && !isMobileViewport.value);
-const topModuleNavItems = computed(() =>
-  buildTopModuleNav({
+const topModuleNavItems = computed(() => {
+  void route.path;
+  return buildTopModuleNav({
     isAdmin: isAdmin.value,
     isSuperAdmin: isSuperAdmin.value,
     isShowOnlyListing: isShowOnlyListingNav.value,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListingNav.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
-  }),
-);
-
-function isTopModuleActive(item) {
-  return isTopModuleNavActive(route.path, activeLayoutModule.value, item);
-}
+  });
+});
 
 function isModuleTabActive(tab) {
   return isTabActive(route.path, tab);
@@ -720,24 +747,14 @@ const soundEnabled = ref(true);
 const browserNotificationsEnabled = ref(true);
 
 // computed property للتحقق من الصلاحيات وعرض الزر
-const showCreatePropertyButton = computed(() => {
-  if (['listings', 'crm', 'settings'].includes(activeLayoutModule.value)) {
-    return false;
-  }
-  const allowedRoutes = [
-    '/property-form',
-    '/my-listing',
-    '/archive',
-    '/alllisting',
-    '/property-details',
-    '/properties',
-  ];
-  return allowedRoutes.some((allowedRoute) =>
-    route.path.startsWith(allowedRoute.replace('/:id', '').replace('/:id?', '')),
-  );
+const showCreateListingButton = computed(() => {
+  if (activeCrmSection.value !== CRM_SECTIONS.LISTINGS) return false;
+  if (isShowOnlyListingNav.value) return false;
+  return !proxy?.$hasPermission || proxy.$hasPermission('listings-create');
 });
 // ========== KANBAN STATE ==========
 const activeKanbanTab = ref('leads')
+const activeDealType = ref('primary')
 const showKanbanSearchModal = ref(false)
 const kanbanLastQuery = ref(null)
 const kanbanDealType = ref('primary')
@@ -784,9 +801,9 @@ function applySearchToApi() {
         activeFilters: activeFilters.value || [],
     }
     
-    if (activeKanbanTab.value === 'deals') {
+    if (isDealRoute.value || activeKanbanTab.value === 'deals') {
         window.dispatchEvent(new CustomEvent('kanban-deal-search', { detail: payload }))
-    } else if (activeKanbanTab.value === 'leads' || activeKanbanTab.value === 'lead-pool') {
+    } else if (isLeadRoute.value || activeKanbanTab.value === 'leads' || activeKanbanTab.value === 'lead-pool') {
         window.dispatchEvent(new CustomEvent('kanban-lead-search', { detail: payload }))
     }
 }
@@ -831,11 +848,12 @@ watch(activeKanbanTab, (newTab) => {
     }
 })
 const isKanbanRoute = computed(() => {
-  // منع ظهور عناصر الكانبان في الداشبورد
   if (isDashboardHome.value) return false;
-  return activeLayoutModule.value === 'crm';
+  return activeCrmSection.value === CRM_SECTIONS.LEAD || activeCrmSection.value === CRM_SECTIONS.DEAL;
 });
-const isListingsRoute = computed(() => activeLayoutModule.value === 'listings');
+const isLeadRoute = computed(() => activeCrmSection.value === CRM_SECTIONS.LEAD);
+const isDealRoute = computed(() => activeCrmSection.value === CRM_SECTIONS.DEAL);
+const isListingsCrmRoute = computed(() => activeCrmSection.value === CRM_SECTIONS.LISTINGS);
 const showMobileCompactHeader = computed(() => isMobileViewport.value);
 
 const mobileModuleLabel = computed(() => {
@@ -852,7 +870,8 @@ const mobileModuleLabel = computed(() => {
 
 const mobileHeaderTabValue = computed(() => {
   if (!moduleHeaderTabs.value.length) return '';
-  if (isKanbanRoute.value) return activeKanbanTab.value;
+  if (isDealRoute.value) return activeDealType.value;
+  if (isLeadRoute.value) return activeKanbanTab.value;
   const active = moduleHeaderTabs.value.find((tab) => isModuleTabActive(tab));
   return active?.id ?? moduleHeaderTabs.value[0]?.id ?? '';
 });
@@ -860,8 +879,27 @@ const mobileHeaderTabValue = computed(() => {
 // وظائف الكانبان
 const setActiveKanbanTab = (tabId) => {
   activeKanbanTab.value = tabId
-  localStorage.setItem('kanban_active_tab', tabId)
+  localStorage.setItem(KANBAN_ACTIVE_TAB_KEY, tabId)
   window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: tabId }))
+}
+
+const setActiveDealType = (typeId) => {
+  activeDealType.value = typeId
+  localStorage.setItem(DEAL_TYPE_KEY, typeId)
+  window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: typeId }))
+}
+
+function loadStoredDealType() {
+  const stored = localStorage.getItem(DEAL_TYPE_KEY)
+  if (stored && ['primary', 'secondary', 'rental'].includes(stored)) {
+    activeDealType.value = stored
+  }
+}
+
+const onDealTypeChangeFromPage = (e) => {
+  const next = e?.detail
+  if (!next || activeDealType.value === next) return
+  activeDealType.value = next
 }
 
 // Sync from kanban_deal.vue when its activeTab changes (route-forced or in-page tab switch).
@@ -900,23 +938,49 @@ const onKanbanDealSearch = (payload) => {
 }
 
 const loadStoredKanbanTab = () => {
-  const stored = localStorage.getItem('kanban_active_tab')
+  const stored = localStorage.getItem(KANBAN_ACTIVE_TAB_KEY)
   if (stored && moduleHeaderTabs.value.some((t) => t.id === stored && t.type === 'event')) {
     activeKanbanTab.value = stored
   }
 }
+
+function isCrmRoute(path) {
+  return CRM_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}
+
+function restoreCrmSectionFromStorage() {
+  const section = resolveCrmSection(route.path)
+  if (section) rememberCrmSection(section)
+
+  if (section === CRM_SECTIONS.DEAL) {
+    loadStoredDealType()
+    activeKanbanTab.value = 'deals'
+    nextTick(() => {
+      window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }))
+      window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: activeDealType.value }))
+    })
+    return
+  }
+
+  if (section === CRM_SECTIONS.LEAD) {
+    loadStoredKanbanTab()
+    if (!['leads', 'lead-pool'].includes(activeKanbanTab.value)) {
+      activeKanbanTab.value = 'leads'
+    }
+    nextTick(() => {
+      window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: activeKanbanTab.value }))
+    })
+  }
+}
 // Search computed properties
 const searchInputPlaceholder = computed(() => {
-    if (activeKanbanTab.value === 'deals') {
+    if (isDealRoute.value || activeKanbanTab.value === 'deals') {
         return 'Search deals, client, phone…';
     }
     if (activeKanbanTab.value === 'lead-pool') {
         return 'Search name, phone, email…';
     }
-    if (activeKanbanTab.value === 'leads') {
-        return 'Search leads, phone, email…';
-    }
-    return 'Search name, phone, email…';
+    return 'Search leads, phone, email…';
 });
 
 const visibleFilterPills = computed(() => {
@@ -1739,12 +1803,23 @@ watch(isProfilePanelOpen, (open) => {
   }
 });
 
+watch(
+  () => route.path,
+  (path) => {
+    if (isCrmRoute(path) || resolveCrmSection(path)) {
+      restoreCrmSectionFromStorage()
+    }
+  },
+)
+
 // تحميل بيانات المستخدم والإعدادات
 onMounted(() => {
   loadUserData();
   loadNotificationSettings();
   setupClickOutsideListener();
-   loadStoredKanbanTab();
+   if (isCrmRoute(route.path)) {
+     restoreCrmSectionFromStorage();
+   }
      document.addEventListener('click', onDocumentClick);
      window.addEventListener('resize', onSearchDropdownReposition);
      window.addEventListener('scroll', onSearchDropdownReposition, true);
@@ -1770,6 +1845,8 @@ onMounted(() => {
   })
 
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
+  window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  loadStoredDealType()
 });
 
 onUnmounted(() => {
@@ -1780,6 +1857,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-lead-search-update', () => {})
   window.removeEventListener('kanban-deal-search-update', () => {})
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
+  window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
     searchDebounceTimer.value = null;
@@ -1839,6 +1917,10 @@ function toggleBrowserNotifications() {
 function onMobileModuleTabChange(event) {
   const tabId = event?.target?.value;
   if (!tabId) return;
+  if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'deal-type')) {
+    setActiveDealType(tabId);
+    return;
+  }
   if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'event')) {
     setActiveKanbanTab(tabId);
     return;
@@ -1974,6 +2056,19 @@ const showBackButton = computed(() => {
   color: #1a1330;
   border-color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* On main dashboard: module shortcuts are links only — no pill highlight */
+.navbar-header--dashboard-home .top-module-btn.active {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.navbar-header--dashboard-home .top-module-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .module-tabs-nav--sub {
