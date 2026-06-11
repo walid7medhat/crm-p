@@ -146,8 +146,16 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-        // Update last login
-        $user->update(['last_login_at' => now()]);
+        // Resolve the user's full location from their request IP (silent, no prompt)
+        $ip = $request->ip();
+        $location = \App\Helpers\LocationHelper::fromIp($ip);
+
+        // Update last login details
+        $user->update([
+            'last_login_at'       => now(),
+            'last_login_ip'       => $ip,
+            'last_login_location' => $location ?? $user->last_login_location,
+        ]);
 
         $user->load('roles', 'permissions');
 

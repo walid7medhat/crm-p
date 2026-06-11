@@ -77,7 +77,13 @@
                                                     {{ user.admin_parent_name }}
                                                 </span>
                                         </div>
-                                         
+                                        <div class="col-12" v-if="user.last_login_location" >
+                                                <label class="col-3">Location:</label>
+                                                <span class=" text-muted col-6 mb-0">
+                                                    <i class="ri-map-pin-line me-1"></i>{{ user.last_login_location }}
+                                                </span>
+                                        </div>
+
                                     </div>
                                 </div>
                               

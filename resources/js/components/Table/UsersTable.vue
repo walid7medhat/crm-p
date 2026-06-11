@@ -91,7 +91,8 @@
                                         <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
                                     </span>
                                 </th>
-                                
+                                <th scope="col">Location</th>
+
                                 <th scope="col">Actions</th>
                                 <th scope="col" @click="sortBy('created_at')" class="sortable">
                                     Created Date
@@ -190,6 +191,12 @@
                                         {{ formatLastLogin (user.last_login_at) }}
                                     </span>
                                     <span v-else class="text-muted text-sm">Never</span>
+                                </td>
+                                <td>
+                                    <span v-if="user.last_login_location" class="text-sm" :title="user.last_login_location">
+                                        <iconify-icon icon="mdi:map-marker-outline" class="me-1"></iconify-icon>{{ user.last_login_location }}
+                                    </span>
+                                    <span v-else class="text-muted text-sm">-</span>
                                 </td>
                                     <td>
                                     <div class="dropdown">
