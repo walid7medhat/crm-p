@@ -9,8 +9,10 @@
         'crm-phone-input--collapse-country': collapseCountryInactive,
       },
     ]"
+    @click.stop
   >
     <VueTelInput
+      :key="vtiKey"
       ref="telInputRef"
       :model-value="displayValue"
       mode="international"
@@ -36,6 +38,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { VueTelInput } from 'vue-tel-input'
 import 'vue-tel-input/vue-tel-input.css'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -49,7 +52,7 @@ const props = defineProps({
   collapseCountryWhenEmpty: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'country-changed'])
 
 const telInputRef = ref(null)
 const lastLibValid = ref(true)
@@ -58,6 +61,10 @@ const isFocused = ref(false)
 const hasExplicitCountryChoice = ref(false)
 const currentDialCode = ref('971') // Store the dial code (default UAE)
 const localNumber = ref('') // Store only the local number (without dial code)
+// ISO2 country derived from the incoming modelValue, e.g. 'EG' for '+201234567890'.
+// Drives the flag shown by vue-tel-input so reopening the modal restores the saved country
+// instead of falling back to the default UAE.
+const detectedCountryIso = ref('')
 
 const normalizedModelValue = computed(() => (props.modelValue == null ? '' : String(props.modelValue)))
 
@@ -111,9 +118,19 @@ const resolvedDefaultCountry = computed(() => {
   return raw.toLowerCase()
 })
 
-const bindingDefaultCountry = computed(() =>
-  props.inferCountryFromIp ? '' : resolvedDefaultCountry.value,
-)
+const bindingDefaultCountry = computed(() => {
+  if (props.inferCountryFromIp) return ''
+  // Honor the country we parsed out of the saved modelValue first, otherwise fall back
+  // to the prop default. Without this, reopening with `+201234567890` would show the UAE
+  // flag (the static default) instead of Egypt.
+  if (detectedCountryIso.value) return detectedCountryIso.value
+  return resolvedDefaultCountry.value
+})
+
+// vue-tel-input reads `default-country` only on mount — once the flag is set, prop changes
+// don't update it. Re-keying the child remounts it so the restored country (from
+// `detectedCountryIso`) actually shows up when the modal reopens with a saved phone.
+const vtiKey = computed(() => `vti-${bindingDefaultCountry.value || 'default'}`)
 
 const collapseCountryInactive = computed(
   () =>
@@ -180,21 +197,39 @@ function onBlur() {
 }
 
 function onCountryChanged(country) {
-  if (!props.collapseCountryWhenEmpty) return
-  hasExplicitCountryChoice.value = true
-  
-  // Update the dial code when country changes
+  // Always update the dial code on country change — the previous early-return for
+  // `!collapseCountryWhenEmpty` meant picking Egypt left the dial code at 971 and
+  // the search ended up sending +971… instead of +20…
+  if (props.collapseCountryWhenEmpty) {
+    hasExplicitCountryChoice.value = true
+  }
+
+  let pickedIso = ''
   if (country) {
     if (country.dialCode) {
-      currentDialCode.value = country.dialCode
-    } else if (typeof country === 'object' && country.dialCode) {
-      currentDialCode.value = country.dialCode
+      currentDialCode.value = String(country.dialCode)
     } else if (typeof country === 'string') {
       const dialMatch = country.match(/\d+/)
       if (dialMatch) currentDialCode.value = dialMatch[0]
     }
+    const iso = country.iso2 || country.iso || country.code
+    if (iso && typeof iso === 'string') {
+      pickedIso = iso.toLowerCase()
+      // Don't touch `detectedCountryIso` here — that drives the remount key, and we
+      // don't want to remount vue-tel-input mid-pick (it already shows the right flag
+      // from its own internal state). detectedCountryIso is set only when we parse
+      // the model-value externally (modal reopen).
+    }
   }
-  
+
+  // Notify the parent about the country selection — gives them iso, dial, and name
+  // even before the user types digits, so they can label/store the selection.
+  emit('country-changed', {
+    iso: pickedIso || detectedCountryIso.value || '',
+    dialCode: currentDialCode.value || '',
+    name: (country && (country.name || country.title)) || '',
+  })
+
   // If there's a local number, rebuild and resend with new dial code
   if (localNumber.value) {
     const fullNumber = `+${currentDialCode.value}${localNumber.value}`
@@ -207,13 +242,31 @@ watch(
   () => props.modelValue,
   (newVal) => {
     if (newVal && typeof newVal === 'string') {
-      // Extract local number from full number
-      const extracted = extractLocalNumber(newVal)
-      if (extracted !== localNumber.value) {
-        localNumber.value = extracted
+      // First try libphonenumber-js to recover both the country and the national digits
+      // from an international number (`+201234567890` → country EG, national 1234567890).
+      // This is what lets the modal reopen with the right flag instead of the static default.
+      const trimmed = newVal.trim()
+      const parsed = trimmed.startsWith('+') ? parsePhoneNumberFromString(trimmed) : null
+      if (parsed && parsed.countryCallingCode) {
+        currentDialCode.value = String(parsed.countryCallingCode)
+        if (parsed.country) {
+          detectedCountryIso.value = parsed.country.toLowerCase()
+        }
+        const national = String(parsed.nationalNumber || '').replace(/^0+/, '')
+        if (national !== localNumber.value) {
+          localNumber.value = national
+        }
+      } else {
+        // Fallback to the legacy extractor when libphonenumber can't parse (partial input,
+        // unknown format) — keeps editing-in-progress values intact.
+        const extracted = extractLocalNumber(trimmed)
+        if (extracted !== localNumber.value) {
+          localNumber.value = extracted
+        }
       }
     } else if (!newVal) {
       localNumber.value = ''
+      detectedCountryIso.value = ''
     }
     if (!newVal) lastLibValid.value = true
   },
@@ -232,6 +285,16 @@ watch(
   },
   { immediate: true }
 )
+
+// Expose the current selection imperatively. A parent that does
+// `const phone = ref(null)` then `phone.value.getCountry()` will get
+// `{ iso, dialCode }` for the currently-flagged country.
+defineExpose({
+  getCountry: () => ({
+    iso: detectedCountryIso.value || '',
+    dialCode: currentDialCode.value || '',
+  }),
+})
 </script>
 
 <style scoped>

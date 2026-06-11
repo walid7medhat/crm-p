@@ -10,6 +10,11 @@
         centered
         body-class="p-0"
     >
+        <div class="lead-search-shell">
+        <div v-if="isInitializing" class="lead-search-initial-loader" aria-live="polite">
+            <div class="lead-search-initial-loader__spinner"></div>
+            <span class="lead-search-initial-loader__text">Restoring search…</span>
+        </div>
         <div class="lead-search-container d-flex">
             <div class="sidebar-pills p-4 d-flex flex-column gap-3 border-end">
                 <button
@@ -358,10 +363,15 @@
                 </div>
             </div>
         </div>
+        </div>
     </b-modal>
 
     <!-- Dropdown mode: panel under search input -->
     <div v-else class="lead-search-dropdown-panel">
+        <div v-if="isInitializing" class="lead-search-initial-loader" aria-live="polite">
+            <div class="lead-search-initial-loader__spinner"></div>
+            <span class="lead-search-initial-loader__text">Restoring search…</span>
+        </div>
         <div class="lead-search-container d-flex">
             <div class="sidebar-pills p-4 d-flex flex-column gap-3 border-end">
                 <button
@@ -827,6 +837,11 @@ const syncingFromResponsible = ref(false)
  *  Cascade watchers (responsible → team → office, team → office, etc.) skip themselves so
  *  they don't re-fetch options and prune the just-hydrated values. */
 const hydratingFromQuery = ref(false)
+/** True from mount until dropdown options have been fetched AND syncFormFromQuery has run.
+ *  We block the form UI behind an overlay during this window — otherwise the user can type
+ *  in a text field or pick from a select, then watch their input get wiped when the saved
+ *  search hydrates a moment later. */
+const isInitializing = ref(true)
 const selectedOffice = ref(null)
 const selectedPillType = ref(null)
 const validationErrors = ref({})
@@ -2671,7 +2686,15 @@ async function fetchTeams() {
                 office_id: team.office_id || team.admin_parent_id || null,
                 admin_parent_id: team.admin_parent_id || null,
                 admin_parent_name: team.admin_parent_name || null,
-                city: team.city || null
+                city: team.city || null,
+                // Preserve display fields the API actually sends — otherwise the team v-select
+                // template falls through to DEFAULT_TEAM_AVATAR and loses the role/parent/branch
+                // lines that match the responsible-person row.
+                avatar: team.avatar || null,
+                role_name: team.role_name || null,
+                parent_name: team.parent_name || null,
+                branch_name: team.branch_name || null,
+                team_size: team.team_size ?? null,
             }))
         }
     } catch (error) {
@@ -2704,7 +2727,13 @@ async function fetchTeamsWithFilter() {
                 office_id: team.office_id || team.admin_parent_id || null,
                 city: team.city || null,
                 admin_parent_id: team.admin_parent_id || null,
-                admin_parent_name: team.admin_parent_name || null
+                admin_parent_name: team.admin_parent_name || null,
+                // See fetchTeams() — same fields are required by the v-select template.
+                avatar: team.avatar || null,
+                role_name: team.role_name || null,
+                parent_name: team.parent_name || null,
+                branch_name: team.branch_name || null,
+                team_size: team.team_size ?? null,
             }))
         } else {
             allTeams.value = []
@@ -3239,6 +3268,11 @@ onMounted(async () => {
         syncFormFromQuery(props.currentQuery)
     }
 
+    // Hydration is done — wait one tick so the form-value assignment has flushed,
+    // then drop the overlay and let the user interact with the populated fields.
+    await nextTick()
+    isInitializing.value = false
+
     console.log('Initial data loaded, selected fields:', selectedLeadFieldIds.value)
 })
 
@@ -3265,6 +3299,45 @@ onBeforeUnmount(() => {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
     background: #fff;
     /* overflow: hidden; */
+    position: relative;
+}
+
+.lead-search-shell {
+    position: relative;
+}
+
+.lead-search-initial-loader {
+    position: absolute;
+    inset: 0;
+    z-index: 10070;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(2px);
+    border-radius: 12px;
+}
+
+.lead-search-initial-loader__spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid #E2E8F0;
+    border-top-color: #733E87;
+    animation: lead-search-spin 0.8s linear infinite;
+}
+
+.lead-search-initial-loader__text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.02em;
+}
+
+@keyframes lead-search-spin {
+    to { transform: rotate(360deg); }
 }
 
 .lead-search-container {

@@ -385,10 +385,10 @@
         </div>
 
         <!-- Create New Button -->
-        <button v-if="isKanbanRoute" class="btn-create-new d-flex align-items-center" @click="handleKanbanCreateNew">
+        <!-- <button v-if="isKanbanRoute" class="btn-create-new d-flex align-items-center" @click="handleKanbanCreateNew">
             <span class="btn-create-new-text">Create New</span>
             <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
-        </button>
+        </button> -->
           <button 
               v-if="isSuperAdmin"
               @click="openSettingsHub"
