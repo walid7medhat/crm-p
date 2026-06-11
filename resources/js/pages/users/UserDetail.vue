@@ -81,6 +81,13 @@
                                                 <label class="col-3">Location:</label>
                                                 <span class=" text-muted col-6 mb-0">
                                                     <i class="ri-map-pin-line me-1"></i>{{ user.last_login_location }}
+                                                    <a v-if="user.last_login_lat && user.last_login_lng"
+                                                       :href="mapsLink(user)"
+                                                       target="_blank"
+                                                       rel="noopener"
+                                                       class="ms-2">
+                                                        View on map
+                                                    </a>
                                                 </span>
                                         </div>
 
@@ -837,6 +844,11 @@ export default {
 
         handleImageError(event) {
             event.target.src = this.userPlaceholder;
+        },
+
+        /** Google Maps link for the user's last-login coordinates. */
+        mapsLink(user) {
+            return `https://www.google.com/maps/search/?api=1&query=${user.last_login_lat},${user.last_login_lng}`;
         },
 
         showNotification(message, type = 'info') {

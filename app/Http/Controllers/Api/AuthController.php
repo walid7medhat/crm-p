@@ -149,12 +149,15 @@ public function resetPassword(Request $request): JsonResponse
         // Resolve the user's full location from their request IP (silent, no prompt)
         $ip = $request->ip();
         $location = \App\Helpers\LocationHelper::fromIp($ip);
+        $address = \App\Helpers\LocationHelper::toAddress($location);
 
         // Update last login details
         $user->update([
             'last_login_at'       => now(),
             'last_login_ip'       => $ip,
-            'last_login_location' => $location ?? $user->last_login_location,
+            'last_login_location' => $address ?? $user->last_login_location,
+            'last_login_lat'      => $location['lat'] ?? $user->last_login_lat,
+            'last_login_lng'      => $location['lon'] ?? $user->last_login_lng,
         ]);
 
         $user->load('roles', 'permissions');

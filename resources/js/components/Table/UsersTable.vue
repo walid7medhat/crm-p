@@ -193,7 +193,15 @@
                                     <span v-else class="text-muted text-sm">Never</span>
                                 </td>
                                 <td>
-                                    <span v-if="user.last_login_location" class="text-sm" :title="user.last_login_location">
+                                    <a v-if="user.last_login_location && user.last_login_lat && user.last_login_lng"
+                                       :href="mapsLink(user)"
+                                       target="_blank"
+                                       rel="noopener"
+                                       class="text-sm"
+                                       :title="user.last_login_location">
+                                        <iconify-icon icon="mdi:map-marker-outline" class="me-1"></iconify-icon>{{ user.last_login_location }}
+                                    </a>
+                                    <span v-else-if="user.last_login_location" class="text-sm" :title="user.last_login_location">
                                         <iconify-icon icon="mdi:map-marker-outline" class="me-1"></iconify-icon>{{ user.last_login_location }}
                                     </span>
                                     <span v-else class="text-muted text-sm">-</span>
@@ -800,6 +808,11 @@ export default {
                 month: 'short',
                 day: 'numeric'
             });
+        },
+
+        /** Google Maps link for the user's last-login coordinates. */
+        mapsLink(user) {
+            return `https://www.google.com/maps/search/?api=1&query=${user.last_login_lat},${user.last_login_lng}`;
         },
 
         formatLastLogin(timestamp) {

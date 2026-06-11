@@ -52,6 +52,8 @@ class UserResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i'),
                         'last_login_at' => $this->last_login_at,
             'last_login_location' => $this->last_login_location,
+            'last_login_lat' => $this->last_login_lat,
+            'last_login_lng' => $this->last_login_lng,
             'last_login_ip' => $this->last_login_ip,
               // Hierarchical data
             'team_members_count' => $this->children()->count(),
