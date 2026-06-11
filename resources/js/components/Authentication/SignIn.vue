@@ -110,33 +110,61 @@ export default {
     },
 
     /**
-     * Ask the browser for the user's exact GPS location. Resolves to
-     * { latitude, longitude }, or rejects with a user-facing message when
-     * unavailable, denied or timed out — login is mandatory-gated on this.
+     * Run a single geolocation attempt with the given options, wrapped in a
+     * promise. Rejects with the raw GeolocationPositionError so the caller can
+     * decide whether to retry or surface a message.
      */
-    getCurrentLocation() {
+    requestPosition(options) {
       return new Promise((resolve, reject) => {
-        if (!('geolocation' in navigator)) {
-          reject(new Error('Your browser does not support location. Location is required to sign in.'));
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
-          },
-          (error) => {
-            const message =
-              error.code === error.PERMISSION_DENIED
-                ? 'Location access is required to sign in. Please allow location and try again.'
-                : 'Could not determine your location. Please enable location and try again.';
-            reject(new Error(message));
-          },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
       });
+    },
+
+    /**
+     * Ask the browser for the user's location. Resolves to { latitude, longitude },
+     * or rejects with a user-facing message. Tries a fast low-accuracy fix first
+     * (works on desktops without GPS), then a high-accuracy pass. Login is gated
+     * on this succeeding.
+     */
+    async getCurrentLocation() {
+      if (!('geolocation' in navigator)) {
+        throw new Error('Your browser does not support location. Location is required to sign in.');
+      }
+
+      // Geolocation only works on https:// or localhost. Fail early with a clear
+      // message instead of a confusing timeout when served over plain http.
+      if (typeof window !== 'undefined' && window.isSecureContext === false) {
+        throw new Error('Location needs a secure (HTTPS) connection. Open the site over https:// to sign in.');
+      }
+
+      const attempts = [
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      ];
+
+      let lastError = null;
+      for (const options of attempts) {
+        try {
+          const position = await this.requestPosition(options);
+          return {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+        } catch (error) {
+          lastError = error;
+          // Don't bother retrying if the user actively denied permission.
+          if (error && error.code === error.PERMISSION_DENIED) {
+            break;
+          }
+        }
+      }
+
+      if (lastError && lastError.code === lastError.PERMISSION_DENIED) {
+        throw new Error('Location access is required to sign in. Please allow location and try again.');
+      }
+      throw new Error(
+        'Could not determine your location. Check that your device location service is turned on, then try again.'
+      );
     },
 
     async login() {
