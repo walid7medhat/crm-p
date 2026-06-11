@@ -146,9 +146,19 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-        // Resolve the user's full location from their request IP (silent, no prompt)
+        // Resolve the user's location. Prefer the exact GPS coordinates sent by the
+        // browser (street-level); fall back to IP geolocation (city-level) when the
+        // user denied location access or the browser didn't provide it.
         $ip = $request->ip();
-        $location = \App\Helpers\LocationHelper::fromIp($ip);
+        $lat = $request->input('latitude');
+        $lng = $request->input('longitude');
+
+        if (is_numeric($lat) && is_numeric($lng)) {
+            $location = \App\Helpers\LocationHelper::fromCoords($lat, $lng);
+        } else {
+            $location = \App\Helpers\LocationHelper::fromIp($ip);
+        }
+
         $address = \App\Helpers\LocationHelper::toAddress($location);
 
         // Update last login details

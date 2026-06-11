@@ -109,14 +109,44 @@ export default {
       this.errorMessage = '';
     },
 
+    /**
+     * Ask the browser for the user's exact GPS location. Resolves to
+     * { latitude, longitude } or null if unavailable/denied. Never rejects so
+     * login is not blocked when the user declines the permission prompt.
+     */
+    getCurrentLocation() {
+      return new Promise((resolve) => {
+        if (!('geolocation' in navigator)) {
+          resolve(null);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          },
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+      });
+    },
+
     async login() {
       this.loading = true;
       this.errorMessage = '';
 
       try {
+        // Try to capture precise (street-level) location; falls back to
+        // server-side IP geolocation when the user denies or it times out.
+        const coords = await this.getCurrentLocation();
+
         const response = await api.post('/auth/login', {
           email: this.email,
           password: this.password,
+          latitude: coords?.latitude ?? null,
+          longitude: coords?.longitude ?? null,
         });
 
         const token = response.data.data.token;
