@@ -98,7 +98,8 @@ class SyncBitrixUsersFull extends Command
         $this->info("===== INACTIVE USERS =====");
 
         foreach ($inactiveUsers as $u) {
-            $this->line("ID: {$u['id']} | Name: {$u['name']}");
+              $this->line("ID: {$u['id']} | Bitrix ID: {$u['bitrix_id']} | Name: {$u['name']}");
+
         }
 
         $this->info("Total Inactive: " . count($inactiveUsers));
@@ -106,7 +107,8 @@ class SyncBitrixUsersFull extends Command
         $this->info("\n===== ACTIVE USERS WITH NO MANAGER =====");
 
         foreach ($activeNoManager as $u) {
-            $this->line("ID: {$u['id']} | Name: {$u['name']}");
+                $this->line("ID: {$u['id']} | Bitrix ID: {$u['bitrix_id']} | Name: {$u['name']}");
+
         }
 
         $this->info("Total Active without manager " . count($activeNoManager));
