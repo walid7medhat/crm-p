@@ -172,21 +172,27 @@ export default {
       this.errorMessage = '';
 
       try {
-        // Location is mandatory — if the user denies it, stop before logging in.
-        let coords;
+        // Location is mandatory in production. On localhost (dev) it is optional,
+        // so a failed/denied lookup still allows login without tracking.
+        const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+        let coords = null;
         try {
           coords = await this.getCurrentLocation();
         } catch (locationError) {
-          this.errorMessage = locationError.message;
-          this.loading = false;
-          return;
+          if (!isLocal) {
+            this.errorMessage = locationError.message;
+            this.loading = false;
+            return;
+          }
+          // Local dev: ignore the error and continue without coordinates.
         }
 
         const response = await api.post('/auth/login', {
           email: this.email,
           password: this.password,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
+          latitude: coords?.latitude ?? null,
+          longitude: coords?.longitude ?? null,
         });
 
         const token = response.data.data.token;

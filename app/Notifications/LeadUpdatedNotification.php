@@ -74,27 +74,33 @@ $userName=auth()->check()?collect(explode(' ',auth()->user()?->name))
                         ->take(2)
                         ->implode(' '):'';
 
+        // No actor (e.g. a Bitrix24 webhook sync) → phrase without a user name.
+        $hasUser = $userName !== '';
+
         switch ($this->actionType) {
             case 'created':
-                return "{$userName} created a new lead: {$leadName}";
+                return $hasUser ? "{$userName} created a new lead: {$leadName}" : "New lead: {$leadName}";
             case 'updated':
-                return "{$userName} updated lead: {$leadName}";
+                return $hasUser ? "{$userName} updated lead: {$leadName}" : "Lead updated: {$leadName}";
             case 'deleted':
-                return "{$userName} deleted lead: {$leadName}";
+                return $hasUser ? "{$userName} deleted lead: {$leadName}" : "Lead deleted: {$leadName}";
             case 'stage_changed':
                 $oldStage = $this->changes['old_stage'] ?? 'Previous Stage';
-                $newStage = $this->changes['new_stage'] ?? $this->lead->stage->name;
-                return "{$userName} moved lead {$leadName} from {$oldStage} to {$newStage}";
+                $newStage = $this->changes['new_stage'] ?? $this->lead->stage?->name;
+                return $hasUser
+                    ? "{$userName} moved lead {$leadName} from {$oldStage} to {$newStage}"
+                    : "Lead {$leadName} moved from {$oldStage} to {$newStage}";
             case 'revert':
                $oldStage = $this->changes['old_stage'] ?? 'Previous Stage';
                $newStage = $this->lead->stage?->name ?? 'New Stage';
-               $newPerson=$this->changes['new_person']?? $this->lead->responsiblePerson?->name;
                return "lead #{$leadName} reverted to {$newStage}";
 
             case 'assigned':
                 $oldPerson = $this->changes['old_person'] ?? 'Previous Person';
-                $newPerson = $this->changes['new_person'] ?? $this->lead->responsiblePerson->name;
-                return "{$userName} assigned lead {$leadName} from {$oldPerson} to {$newPerson}";
+                $newPerson = $this->changes['new_person'] ?? $this->lead->responsiblePerson?->name;
+                return $hasUser
+                    ? "{$userName} assigned lead {$leadName} from {$oldPerson} to {$newPerson}"
+                    : "Lead {$leadName} assigned to {$newPerson}";
             default:
                 return "Lead {$leadName} has been updated";
         }

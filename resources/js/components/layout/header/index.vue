@@ -125,7 +125,7 @@
 
         <li
           v-if="filteredUsersItems.length > 0"
-          :class="{ dropdown: true, open: !isDashboardHome && activeDropdown === 'users', 'active-parent': isSidebarModuleActive('agents') }"
+          :class="{ dropdown: true, open: activeDropdown === 'users', 'active-parent': isSidebarModuleActive('agents') }"
         >
           <a href="javascript:void(0)" @click="toggleDropdown('users')" :class="{ active: isSidebarModuleActive('agents') }">
             <img :src="agentsIcon" class="imgicon" alt="" />
@@ -133,7 +133,7 @@
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'users' }" />
           </a>
           <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
-            <ul v-show="!isDashboardHome && activeDropdown === 'users'" class="sidebar-submenu">
+            <ul v-show="activeDropdown === 'users'" class="sidebar-submenu">
               <li v-for="item in filteredUsersItems" :key="item.path" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
                 <router-link :to="item.path" custom v-slot="{ navigate, href }">
                   <a :href="href" class="sidebar-nav-link" @click="navigate">{{ item.label }}</a>
@@ -943,8 +943,8 @@ watch(() => route.path, () => {
 
 watch(isDashboardHome, (onHome) => {
   if (!onHome) return;
-  // Keep CRM dropdown open if user explicitly opened it from dashboard
-  if (activeDropdown.value === 'crm') return;
+  // Keep CRM/Agents dropdown open if user explicitly opened it from dashboard
+  if (activeDropdown.value === 'crm' || activeDropdown.value === 'users') return;
   activeDropdown.value = null;
   localStorage.removeItem('activeDropdown');
 });

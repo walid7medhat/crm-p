@@ -20,12 +20,15 @@ class LoginRequest extends FormRequest
 
     public function rules(): array
     {
+        // Location is mandatory in production, but optional in local dev where
+        // there is usually no real GPS available.
+        $location = app()->environment('local') ? 'nullable' : 'required';
+
         return [
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:6',
-            // Location is mandatory: users must allow location access to sign in.
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
+            'latitude' => $location . '|numeric|between:-90,90',
+            'longitude' => $location . '|numeric|between:-180,180',
         ];
     }
 }

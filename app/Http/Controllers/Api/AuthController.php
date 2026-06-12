@@ -146,24 +146,26 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-        // Location is mandatory (validated in LoginRequest). Reverse-geocode the
-        // exact GPS coordinates the browser captured into a full street/building
-        // level address — never the coarse IP-based city.
+        // Location is mandatory in production but optional in local dev. When the
+        // browser sends GPS coordinates, reverse-geocode them to a full street/
+        // building level address. When absent (local), skip location tracking.
         $ip = $request->ip();
         $lat = $request->input('latitude');
         $lng = $request->input('longitude');
 
-        $location = \App\Helpers\LocationHelper::fromCoords($lat, $lng);
-        $address = \App\Helpers\LocationHelper::toAddress($location);
+        $loginData = [
+            'last_login_at' => now(),
+            'last_login_ip' => $ip,
+        ];
 
-        // Update last login details
-        $user->update([
-            'last_login_at'       => now(),
-            'last_login_ip'       => $ip,
-            'last_login_location' => $address ?? $user->last_login_location,
-            'last_login_lat'      => $location['lat'] ?? $user->last_login_lat,
-            'last_login_lng'      => $location['lon'] ?? $user->last_login_lng,
-        ]);
+        if (is_numeric($lat) && is_numeric($lng)) {
+            $location = \App\Helpers\LocationHelper::fromCoords($lat, $lng);
+            $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
+            $loginData['last_login_lat'] = $location['lat'] ?? $user->last_login_lat;
+            $loginData['last_login_lng'] = $location['lon'] ?? $user->last_login_lng;
+        }
+
+        $user->update($loginData);
 
         $user->load('roles', 'permissions');
 
