@@ -55,7 +55,7 @@ class SyncBitrixUsersFull extends Command
             */
             $managerId = $remote['UF_HEAD'] ?? null;
 
-            if ($isActive && ($user->parent_id==null || !$user->parent_id=)) {
+            if ($isActive && ($user->parent_id==null || !$user->parent_id)) {
                 $activeNoManager[] = [
                     'id' => $user->id,
 
