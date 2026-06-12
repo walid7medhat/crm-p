@@ -63,10 +63,10 @@
     <div class="dh-unified-dashboard">
       <!-- Part 1: Leads & CRM -->
       <section v-if="canViewModule('crm')" class="dh-unified-section dh-unified-section--leads">
-        <div class="dh-unified-section-head">
+        <!-- <div class="dh-unified-section-head">
           <h2 class="dh-unified-section-title">Leads & CRM</h2>
           <router-link to="/kanban" class="dh-panel-link dh-panel-link--accent">Open CRM &gt;</router-link>
-        </div>
+        </div> -->
 
         <div class="dh-layout dh-layout--unified-analytics dh-layout--section-leads">
           <section class="dh-layout__ua-metrics">
