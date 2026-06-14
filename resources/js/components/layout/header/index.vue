@@ -172,14 +172,21 @@
     </div>
   </aside>
 
-  <nav v-if="isMobileViewport" class="mobile-sidebar-dock" aria-label="Mobile menu">
-    <template v-for="item in mobileDockItems" :key="item.key || item.path">
+  <nav v-if="isMobileViewport" ref="mobileDockRef" class="mobile-sidebar-dock" aria-label="Mobile menu">
+    <span
+      class="mobile-sidebar-dock__cursor"
+      :class="{ 'mobile-sidebar-dock__cursor--ready': dockCursorReady }"
+      :style="dockCursorStyle"
+      aria-hidden="true"
+    />
+    <template v-for="(item, index) in mobileDockItems" :key="item.key || item.path">
       <button
-        v-if="item.children"
+        v-if="item.children || item.sections"
         type="button"
+        :ref="(el) => setDockItemRef(el, index)"
         class="mobile-sidebar-dock__item mobile-sidebar-dock__btn"
-        :class="{ 'is-active': isDockGroupActive(item) || activeMobileDockGroup?.key === item.key, 'is-chat': item.path === '/admin/chat' }"
-        @click="openMobileDockGroup(item)"
+        :class="{ 'is-active': isDockItemHighlighted(item, index), 'is-chat': item.path === '/admin/chat' }"
+        @click="openMobileDockGroup(item, index)"
       >
         <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
         <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
@@ -187,8 +194,10 @@
       <router-link
         v-else
         :to="item.path"
+        :ref="(el) => setDockItemRef(el, index)"
         class="mobile-sidebar-dock__item"
-        :class="{ 'is-active': isDockActive(item.path), 'is-chat': item.path === '/admin/chat' }"
+        :class="{ 'is-active': isDockItemHighlighted(item, index), 'is-chat': item.path === '/admin/chat' }"
+        @click="onDockLinkClick(index)"
       >
         <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
         <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
@@ -771,23 +780,126 @@ function isDockActive(path) {
 }
 
 function isDockGroupActive(group) {
-  if (isDashboardHome.value || !group?.children?.length) return false;
-  return group.children.some((child) => isDockActive(child.path));
+  if (isDashboardHome.value) return false;
+  if (group?.sections?.length) {
+    return group.sections.some((section) =>
+      section.items?.some((child) => isDockActive(child.path)),
+    );
+  }
+  if (group?.children?.length) {
+    return group.children.some((child) => isDockActive(child.path));
+  }
+  return false;
 }
 
-async function openMobileDockGroup(group) {
+const mobileDockRef = ref(null);
+const dockItemRefs = ref([]);
+const dockCursorReady = ref(false);
+const dockCursorStyle = ref({
+  transform: 'translateX(0px)',
+  width: '0px',
+  opacity: '0',
+});
+
+function setDockItemRef(el, index) {
+  if (el) dockItemRefs.value[index] = el;
+}
+
+const activeDockIndex = computed(() => {
+  const items = mobileDockItems.value;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.children || item.sections) {
+      if (activeMobileDockGroup.value?.key === item.key) return i;
+      if (isDockGroupActive(item)) return i;
+    } else if (isDockActive(item.path)) {
+      return i;
+    }
+  }
+  return 0;
+});
+
+function isDockItemHighlighted(item, index) {
+  return activeDockIndex.value === index;
+}
+
+function moveDockCursorToIndex(index) {
+  requestAnimationFrame(() => {
+    const nav = mobileDockRef.value;
+    const el = dockItemRefs.value[index];
+    if (!nav || !el) return;
+    const navRect = nav.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const left = elRect.left - navRect.left + nav.scrollLeft;
+    dockCursorStyle.value = {
+      transform: `translateX(${left}px)`,
+      width: `${elRect.width}px`,
+      opacity: '1',
+    };
+    dockCursorReady.value = true;
+  });
+}
+
+function updateDockCursor() {
+  moveDockCursorToIndex(activeDockIndex.value);
+}
+
+function onDockLinkClick(index) {
+  closeMobileDockGroup();
+  moveDockCursorToIndex(index);
+}
+
+let dockResizeObserver = null;
+
+function attachDockObservers() {
+  updateDockCursor();
+  if (typeof ResizeObserver !== 'undefined' && mobileDockRef.value && !dockResizeObserver) {
+    dockResizeObserver = new ResizeObserver(() => updateDockCursor());
+    dockResizeObserver.observe(mobileDockRef.value);
+    dockItemRefs.value.forEach((el) => {
+      if (el) dockResizeObserver.observe(el);
+    });
+  }
+}
+
+function detachDockObservers() {
+  dockResizeObserver?.disconnect();
+  dockResizeObserver = null;
+}
+
+watch([mobileDockItems, isMobileViewport], () => {
+  dockItemRefs.value = [];
+  nextTick(attachDockObservers);
+});
+
+watch(activeDockIndex, () => {
+  nextTick(updateDockCursor);
+});
+
+watch(() => route.path, () => {
+  closeMobileDockGroup();
+  closeMobileMenu();
+  syncSidebarDropdownFromRoute();
+  nextTick(updateDockCursor);
+});
+
+async function openMobileDockGroup(group, index) {
   if (group?.key === 'group-crm') {
     openCrmDropdown();
   }
   activeMobileDockGroup.value = group;
   mobileDockExpandedSection.value = group?.sections?.[0]?.key ?? null;
   showMobileDockSheet.value = true;
+  moveDockCursorToIndex(index);
+  await nextTick();
+  updateDockCursor();
 }
 
 function closeMobileDockGroup() {
   showMobileDockSheet.value = false;
   activeMobileDockGroup.value = null;
   mobileDockExpandedSection.value = null;
+  nextTick(updateDockCursor);
 }
 
 function toggleMobileDockSection(sectionKey) {
@@ -935,12 +1047,6 @@ function syncSidebarDropdownFromRoute() {
   localStorage.removeItem('activeDropdown');
 }
 
-watch(() => route.path, () => {
-  closeMobileDockGroup();
-  closeMobileMenu();
-  syncSidebarDropdownFromRoute();
-});
-
 watch(isDashboardHome, (onHome) => {
   if (!onHome) return;
   // Keep CRM/Agents dropdown open if user explicitly opened it from dashboard
@@ -952,16 +1058,20 @@ watch(isDashboardHome, (onHome) => {
 onMounted(() => {
   syncViewport();
   window.addEventListener('resize', syncViewport);
+  window.addEventListener('resize', updateDockCursor, { passive: true });
   if (localStorage.getItem('activeDropdown') === 'listings') {
     localStorage.setItem('activeDropdown', 'crm');
   }
   syncSidebarDropdownFromRoute();
   fetchAllCounts();
   setInterval(fetchAllCounts, 60000);
+  nextTick(attachDockObservers);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', syncViewport);
+  window.removeEventListener('resize', updateDockCursor);
+  detachDockObservers();
 });
 
 </script>
@@ -1057,54 +1167,49 @@ onUnmounted(() => {
     z-index: 1200;
     display: flex;
     align-items: center;
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .mobile-sidebar-dock::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
   }
 
   .mobile-sidebar-dock__item {
-    flex: 0 0 auto;
-    min-width: 52px;
-    height: 42px;
-    border-radius: 12px;
-    color: rgba(255, 255, 255, 0.9);
+    flex: 1 1 0;
+    min-width: 0;
+    height: auto;
+    border-radius: 16px;
+    color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    padding: 4px 8px;
+    gap: 3px;
+    padding: 6px 4px;
+    background: transparent;
   }
 
   .mobile-sidebar-dock__item.is-active {
-    background: #ffffff;
-    color: #0b0736;
-    box-shadow: 0 2px 10px rgba(11, 7, 54, 0.22);
+    background: transparent;
+    color: #ffffff;
+    box-shadow: none;
   }
 
   .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__icon,
   .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__label {
-    color: #0b0736;
+    color: #ffffff;
   }
 
   .mobile-sidebar-dock__item.is-active :deep(iconify-icon),
   .mobile-sidebar-dock__item.is-active :deep(svg) {
-    color: #0b0736 !important;
+    color: #ffffff !important;
   }
 
   .mobile-sidebar-dock__icon {
-    font-size: 14px;
+    font-size: 22px;
     line-height: 1;
     color: inherit;
   }
 
   .mobile-sidebar-dock__label {
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1.1;
     white-space: nowrap;
@@ -1112,7 +1217,7 @@ onUnmounted(() => {
   }
 
   .mobile-sidebar-dock__item.is-chat .mobile-sidebar-dock__icon {
-    font-size: 10px;
+    font-size: 20px;
   }
 
   .mobile-sidebar-dock__btn {
@@ -1543,19 +1648,25 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .mobile-sidebar-dock {
-    height: 58px;
-    padding: 6px 10px;
-    background: var(--gradient-crm-glass, linear-gradient(135deg, rgba(11, 7, 54, 0.92) 0%, rgba(115, 62, 135, 0.82) 100%));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    height: auto;
+    min-height: 64px;
+    padding: 6px 8px;
+    background: linear-gradient(
+      135deg,
+      rgba(11, 7, 54, 0.96) 0%,
+      rgba(91, 61, 143, 0.92) 55%,
+      rgba(115, 62, 135, 0.9) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
   }
 
   .mobile-sidebar-dock__item,
   .mobile-sidebar-dock__btn {
-    min-width: 56px;
-    min-height: 44px;
-    padding: 6px 10px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 6px 4px;
   }
 
   .mobile-dock-sheet {
