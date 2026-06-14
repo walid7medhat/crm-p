@@ -101,8 +101,10 @@ class SyncBitrixUsersFull extends Command
                 ->filter()
                 ->first();
 
-            if ($mappedParent) {
+           if (empty($user->parent_id) && $mappedParent) {
                 $user->parent_id = $mappedParent;
+
+                $this->line("Updated parent_id for user {$user->id} → {$mappedParent}");
             }
 
             /*
