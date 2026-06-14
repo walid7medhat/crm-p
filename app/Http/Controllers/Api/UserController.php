@@ -49,41 +49,22 @@ class UserController extends Controller
             if(!$request->has('agents') && !$request->has('chat')){
             
                     // Apply hierarchical filtering based on user role
-                    if ($user->hasRole('sales')) {
-                        // Sales agents can only see themselves and their team members
-                        $query->where(function($q) use ($user) {
-                            $q->where('id', $user->id)
-                            ->orWhere('parent_id', $user->id);
-                        });
-                    } elseif ($user->hasRole('team_lead')) {
-                        // Team leaders can see their team and themselves
-                        $query->where(function($q) use ($user) {
-                            $q->where('id', $user->id)
-                            ->orWhere('parent_id', $user->id)
-                            ->orWhereHas('parent', function($parentQuery) use ($user) {
-                                $parentQuery->where('id', $user->id);
-                            });
-                        });
-                    } elseif ($user->hasRole('manager')) {
-                        // Sales managers can see their entire hierarchy
-                        $query->where(function($q) use ($user) {
-                            $q->where('id', $user->id)
-                            ->orWhere('parent_id', $user->id)
-                            ->orWhereHas('parent', function($parentQuery) use ($user) {
-                                $parentQuery->where('parent_id', $user->id);
-                            });
-                        });
+                 if (!$user->hasRole('super_admin')) {
+
+                        $ids = $user->getAllSubordinatesIds();
+
+                        $query->whereIn('id', $ids);
                     }
                 }
-            if($request->has('parent_id')){
-                $parent=$request->parent_id;
-                $query->where(function($q) use ($parent) {
-                    $q->where('id', $parent)
-                      ->orWhere('parent_id', $parent)
-                      ->orWhereHas('parent', function($parentQuery) use ($parent) {
-                          $parentQuery->where('parent_id', $parent);
-                      });
-                });
+           if ($request->filled('parent_id')) {
+
+                $parent = User::with('children')->find($request->parent_id);
+
+                if ($parent) {
+                    $ids = $parent->getAllSubordinatesIds();
+
+                    $query->whereIn('id', $ids);
+                }
             }
             // Super Admin can see all users automatically
             
