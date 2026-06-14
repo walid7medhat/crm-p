@@ -18,8 +18,8 @@ class SyncBitrixUsersFull extends Command
 
         // 🧠 mapping بين bitrix department و parent_id عندك
         $departmentMap = [
-            7 => 25,
-            5 => 59,
+            7 => 59,
+            5 => 25,
         ];
 
         $remoteUsers = $client->listUsers([
