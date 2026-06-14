@@ -10,14 +10,27 @@ class SyncBitrixUsersFull extends Command
 {
     protected $signature = 'bitrix24:full-sync';
 
-    protected $description = 'Full sync users (status + manager + roles + inactive list)';
+    protected $description = 'Full sync users (status + manager + roles + department mapping)';
 
     public function handle()
     {
         $client = new Bitrix24Client();
 
+        // 🧠 mapping بين bitrix department و parent_id عندك
+        $departmentMap = [
+            7 => 25,
+            5 => 59,
+        ];
+
         $remoteUsers = $client->listUsers([
-            'SELECT' => ['ID', 'NAME', 'LAST_NAME', 'ACTIVE', 'UF_HEAD']
+            'SELECT' => [
+                'ID',
+                'NAME',
+                'LAST_NAME',
+                'ACTIVE',
+                'UF_HEAD',
+                'UF_DEPARTMENT'
+            ]
         ]);
 
         $inactiveUsers = [];
@@ -50,15 +63,14 @@ class SyncBitrixUsersFull extends Command
 
             /*
             |-----------------------------
-            | MANAGER
+            | MANAGER CHECK
             |-----------------------------
             */
             $managerId = $remote['UF_HEAD'] ?? null;
 
-            if ($isActive && ($user->parent_id==null || !$user->parent_id)) {
+            if ($isActive && (!$user->parent_id)) {
                 $activeNoManager[] = [
                     'id' => $user->id,
-
                     'bitrix_id' => $user->bitrix24_id,
                     'name' => $name,
                 ];
@@ -66,7 +78,7 @@ class SyncBitrixUsersFull extends Command
 
             /*
             |-----------------------------
-            | INACTIVE USERS ARRAY
+            | INACTIVE USERS
             |-----------------------------
             */
             if (!$isActive) {
@@ -79,10 +91,26 @@ class SyncBitrixUsersFull extends Command
 
             /*
             |-----------------------------
+            | DEPARTMENT → parent_id
+            |-----------------------------
+            */
+            $departments = $remote['UF_DEPARTMENT'] ?? [];
+
+            $mappedParent = collect($departments)
+                ->map(fn($dept) => $departmentMap[(int)$dept] ?? null)
+                ->filter()
+                ->first();
+
+            if ($mappedParent) {
+                $user->parent_id = $mappedParent;
+            }
+
+            /*
+            |-----------------------------
             | ROLE
             |-----------------------------
             */
-           if ($user->roles->isEmpty()) {
+            if ($user->roles->isEmpty()) {
                 $user->assignRole('sales');
             }
 
@@ -98,8 +126,7 @@ class SyncBitrixUsersFull extends Command
         $this->info("===== INACTIVE USERS =====");
 
         foreach ($inactiveUsers as $u) {
-              $this->line("ID: {$u['id']} | Bitrix ID: {$u['bitrix_id']} | Name: {$u['name']}");
-
+            $this->line("ID: {$u['id']} | Bitrix ID: {$u['bitrix_id']} | Name: {$u['name']}");
         }
 
         $this->info("Total Inactive: " . count($inactiveUsers));
@@ -107,11 +134,10 @@ class SyncBitrixUsersFull extends Command
         $this->info("\n===== ACTIVE USERS WITH NO MANAGER =====");
 
         foreach ($activeNoManager as $u) {
-                $this->line("ID: {$u['id']} | Bitrix ID: {$u['bitrix_id']} | Name: {$u['name']}");
-
+            $this->line("ID: {$u['id']} | Bitrix ID: {$u['bitrix_id']} | Name: {$u['name']}");
         }
 
-        $this->info("Total Active without manager " . count($activeNoManager));
+        $this->info("Total Active without manager: " . count($activeNoManager));
 
         return self::SUCCESS;
     }
