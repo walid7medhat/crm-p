@@ -2447,23 +2447,58 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
     grid-template-columns: 1fr;
   }
 
-  #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--unified) {
+  #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--unified):not(:has(.ap-dashboard--fit)):not(:has(.ap-dashboard--pro)) {
     overflow-x: hidden !important;
     overflow-y: auto !important;
     height: auto !important;
     max-height: none !important;
   }
 
-  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--unified) {
+  #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--compact),
+  #app main.dashboard-main > .dashboard-main-router--home:has(.ap-dashboard--fit) {
+    overflow: hidden !important;
+    height: calc(
+      100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)
+    ) !important;
+    max-height: calc(
+      100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)
+    ) !important;
+  }
+
+  @media (min-width: 1541px) {
+    #app main.dashboard-main > .dashboard-main-router--home:has(.ap-dashboard--pro) {
+      overflow: hidden !important;
+      height: calc(
+        100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)
+      ) !important;
+      max-height: calc(
+        100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)
+      ) !important;
+    }
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--unified):not(:has(.ap-dashboard--fit)):not(:has(.ap-dashboard--pro)) {
     height: auto !important;
     max-height: none !important;
   }
 
-  .crm-dashboard-home--unified {
+  .crm-dashboard-home--unified:not(.ap-dashboard--fit):not(.ap-dashboard--pro) {
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
     max-width: 100%;
+  }
+
+  .crm-dashboard-home--unified.ap-dashboard--fit {
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  @media (min-width: 1541px) {
+    .crm-dashboard-home--unified.ap-dashboard--pro {
+      height: 100% !important;
+      overflow: hidden !important;
+    }
   }
 
   .dh-layout--unified-analytics {
@@ -2758,7 +2793,7 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
 }
 
 /* Legacy stacked analytics (kept for reference) */
-.crm-dashboard-home--analytics:not(.crm-dashboard-home--unified) {
+.crm-dashboard-home--analytics:not(.crm-dashboard-home--unified):not(.ap-dashboard--fit):not(.ap-dashboard--pro) {
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
@@ -3102,5 +3137,213 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
 @media (max-width: 900px) {
   .crm-dashboard-home--analytics .dh-layout--analytics-block {
     min-height: 0;
+  }
+}
+
+/* ── Compact unified analytics: 3 sections, one viewport, no scroll ── */
+#app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--compact),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:has(.crm-dashboard-home--compact) {
+  overflow: hidden !important;
+  height: calc(
+    100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)
+  ) !important;
+  max-height: calc(
+    100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)
+  ) !important;
+  padding: 6px 14px 8px !important;
+}
+
+.crm-dashboard-home--compact {
+  display: flex;
+  flex-direction: column;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  gap: 0;
+}
+
+.crm-dashboard-home--compact .dh-header--compact {
+  margin-bottom: 6px;
+  flex-shrink: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.crm-dashboard-home--compact .dh-header--compact .dh-greeting {
+  font-size: clamp(14px, 1.4vw, 17px);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.crm-dashboard-home--compact .dh-header--compact .dh-greeting-sub {
+  font-size: 10px;
+  margin: 1px 0 0;
+  opacity: 0.75;
+}
+
+.crm-dashboard-home--compact .dh-analytics-error {
+  flex-shrink: 0;
+}
+
+.dh-compact-dashboard {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.dh-compact-section {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 10px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.dh-compact-section--crm {
+  background: rgba(124, 92, 191, 0.12);
+  border-color: rgba(124, 92, 191, 0.22);
+}
+
+.dh-compact-section--listings {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
+.dh-compact-section--hr {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.dh-compact-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 18px;
+}
+
+.dh-compact-section__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dh-compact-section__title h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.dh-compact-section__head .dh-panel-link {
+  font-size: 9px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dh-compact-boxes {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 5px;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dh-compact-box {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  overflow: hidden;
+}
+
+.dh-compact-box--hero {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(124, 92, 191, 0.2);
+}
+
+.dh-compact-section--crm .dh-compact-box--hero {
+  background: linear-gradient(145deg, #5b3d8f 0%, #3d2868 100%);
+  border-color: rgba(124, 92, 191, 0.35);
+}
+
+.dh-compact-section--crm .dh-compact-box--hero span {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dh-compact-section--crm .dh-compact-box--hero strong {
+  color: #fff;
+  font-size: clamp(14px, 1.4vw, 18px);
+}
+
+.dh-compact-section--listings .dh-compact-box--hero strong {
+  color: #15803d;
+  font-size: clamp(14px, 1.4vw, 18px);
+}
+
+.dh-compact-section--hr .dh-compact-box--hero strong {
+  color: #1d4ed8;
+  font-size: clamp(14px, 1.4vw, 18px);
+}
+
+.dh-compact-box span {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dh-text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dh-compact-box strong {
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 700;
+  color: var(--dh-text);
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .dh-compact-boxes {
+    gap: 4px;
+  }
+
+  .dh-compact-box {
+    padding: 5px 6px;
+  }
+
+  .dh-compact-box span {
+    font-size: 7px;
+  }
+
+  .dh-compact-box strong {
+    font-size: 10px;
   }
 }
