@@ -61,6 +61,10 @@ export function useLayoutActiveState() {
 
   function isMobileDockItemActive(path) {
     if (path === '/' || path === '/home') return isDashboardHome.value;
+    if (path === '/alllisting') {
+      if (isDashboardHome.value) return false;
+      return isPathActive(route.path, '/alllisting');
+    }
     if (isDashboardHome.value) return false;
     return isPathActive(route.path, path);
   }

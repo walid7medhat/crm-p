@@ -1,448 +1,452 @@
 <template>
-    <div class="row gy-4 mt-4">
-      <div class="col-lg-4">
-        <div class="user-grid-card position-relative border radius-16 overflow-hidden bg-base h-100">
-          <!-- تم إزالة صورة الخلفية هنا -->
-          <div class="p-24">
-            <div class="text-center border-bottom pb-24">
-              <img 
-                :src="user.avatar || defaultAvatar" 
-                alt="User Avatar"
-                class=" w-200-px h-200-px object-fit-cover border-avatar"
+  <div class="vp-page">
+    <div class="vp-layout">
+      <!-- Left sidebar -->
+      <aside class="vp-sidebar">
+        <div class="vp-identity">
+          <img
+            v-if="user.avatar"
+            :src="user.avatar"
+            :alt="user.name || 'Profile'"
+            class="vp-identity__avatar"
+          />
+          <div v-else class="vp-identity__avatar vp-identity__avatar--placeholder">
+            {{ userInitials }}
+          </div>
+          <div>
+            <div class="vp-identity__name">{{ user.name || 'User' }}</div>
+            <span class="vp-status" :class="{ 'is-active': user.can_login }">
+              {{ user.can_login ? 'ACTIVE' : 'INACTIVE' }}
+            </span>
+          </div>
+        </div>
+
+        <section class="vp-overview">
+          <div class="vp-overview__title">Personal Info</div>
+          <ul class="vp-info-list">
+            <li class="vp-info-list__item">
+              <iconify-icon icon="lucide:user" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Full Name</span>
+                <span class="vp-info-list__value">{{ user.name || '—' }}</span>
+              </div>
+            </li>
+            <li class="vp-info-list__item">
+              <iconify-icon icon="lucide:mail" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Email</span>
+                <span class="vp-info-list__value">{{ user.email || '—' }}</span>
+              </div>
+            </li>
+            <li class="vp-info-list__item">
+              <iconify-icon icon="lucide:phone" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Phone Number</span>
+                <span class="vp-info-list__value">{{ user.phone || '—' }}</span>
+              </div>
+            </li>
+            <li class="vp-info-list__item">
+              <iconify-icon icon="lucide:shield" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Role</span>
+                <span class="vp-info-list__value">{{ user.role_name || 'User' }}</span>
+              </div>
+            </li>
+            <li class="vp-info-list__item">
+              <iconify-icon icon="lucide:activity" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Status</span>
+                <span class="vp-info-list__value">{{ user.status || (user.can_login ? 'Active' : 'Inactive') }}</span>
+              </div>
+            </li>
+            <li class="vp-info-list__item">
+              <iconify-icon icon="lucide:calendar" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Member Since</span>
+                <span class="vp-info-list__value">{{ user.created_at || '—' }}</span>
+              </div>
+            </li>
+            <li v-if="user.parent_name" class="vp-info-list__item">
+              <iconify-icon icon="lucide:user-check" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Supervisor</span>
+                <span class="vp-info-list__value">{{ user.parent_name }}</span>
+              </div>
+            </li>
+            <li v-if="user.admin_parent_name" class="vp-info-list__item">
+              <iconify-icon icon="lucide:building-2" class="vp-info-list__icon" />
+              <div class="vp-info-list__body">
+                <span class="vp-info-list__label">Branch</span>
+                <span class="vp-info-list__value">{{ user.admin_parent_name }}</span>
+              </div>
+            </li>
+          </ul>
+
+          <div v-if="isSuperAdmin && selectedDepartmentLabels.length" class="vp-dept-tags">
+            <span v-for="label in selectedDepartmentLabels" :key="label" class="vp-dept-tag">{{ label }}</span>
+          </div>
+        </section>
+
+        <section v-if="isSuperAdmin" class="vp-schedule">
+          <svg class="vp-schedule__wave" viewBox="0 0 120 56" fill="none" aria-hidden="true">
+            <path d="M0 40 Q30 10 60 35 T120 20 V56 H0 Z" fill="url(#vpWaveGrad)" />
+            <defs>
+              <linearGradient id="vpWaveGrad" x1="0" y1="0" x2="120" y2="56">
+                <stop stop-color="#7c5cbf" />
+                <stop offset="1" stop-color="#5b3d8f" stop-opacity="0.4" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="vp-schedule__head">
+            <div class="vp-schedule__donut" aria-hidden="true" />
+            <div class="vp-schedule__title">Attendance Schedule</div>
+          </div>
+          <div class="vp-schedule__field">
+            <label class="vp-schedule__label">Day</label>
+            <select
+              v-model.number="attendanceSettings.day_of_week"
+              class="vp-schedule__select"
+              :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
+            >
+              <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
+            </select>
+          </div>
+          <div class="vp-schedule__row vp-schedule__field">
+            <div>
+              <label class="vp-schedule__label">From</label>
+              <input
+                v-model="attendanceSettings.start_time"
+                type="time"
+                class="vp-schedule__input"
+                :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
               />
-              <!--<h6 class="mb-0 mt-16">{{ user.name || 'Jacob Jones' }}</h6>-->
-              <!--<span class="text-secondary-light mb-16">{{ user.email || 'ifrandom@gmail.com' }}</span>-->
-              <div class="mt-8">
-                <span class="badge bg-success" v-if="user.can_login">Active</span>
-                <span class="badge bg-info" v-else>Inactive</span>
-              </div>
             </div>
-            <div class="mt-24">
-              <h6 class="text-xl mb-16">Personal Info</h6>
-              <ul>
-                <li class="d-flex align-items-center gap-1">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Full Name</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.name || 'Will Jonto' }}</span>
-                </li>
-                <li class="d-flex align-items-center gap-1">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Email</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.email || 'willjontoax@gmail.com' }}</span>
-                </li>
-                <li class="d-flex align-items-center gap-1">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Phone Number</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.phone || '(1) 2536 2561 2365' }}</span>
-                </li>
-                <li class="d-flex align-items-center gap-1">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Role</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.role_name || 'User' }}</span>
-                </li>
-                <li class="d-flex align-items-center gap-1">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Status</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.status || 'Active' }}</span>
-                </li>
-                <li class="d-flex align-items-center gap-1">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Member Since</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.created_at || '2024-01-01' }}</span>
-                </li>
-                <li class="d-flex align-items-center gap-1" v-if="user.parent_name">
-                  <span class="w-40 text-md fw-semibold text-primary-light">Supervisor</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.parent_name }}</span>
-                </li>
-                 <li class="d-flex align-items-center gap-1" v-if="user.admin_parent_name">
-                  <span class="w-40 text-md fw-semibold text-primary-light"> Branch</span>
-                  <span class="w-60 text-secondary-light fw-medium">: {{ user.admin_parent_name }}</span>
-                </li>
-              </ul>
-              <div v-if="isSuperAdmin" class="attendance-settings-card mt-16">
-                <h6 class="text-md mb-12">Attendance Settings</h6>
-                <div class="mb-12">
-                  <label class="form-label fw-semibold text-primary-light text-sm mb-6">Day of week</label>
-                  <select class="form-select radius-8" v-model.number="attendanceSettings.day_of_week" :disabled="attendanceSettingsLoading || attendanceSettingsSaving">
-                    <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
-                  </select>
-                </div>
-                <div class="row">
-                  <div class="col-6 mb-12">
-                    <label class="form-label fw-semibold text-primary-light text-sm mb-6">From</label>
-                    <input type="time" class="form-control radius-8" v-model="attendanceSettings.start_time" :disabled="attendanceSettingsLoading || attendanceSettingsSaving" />
-                  </div>
-                  <div class="col-6 mb-12">
-                    <label class="form-label fw-semibold text-primary-light text-sm mb-6">To</label>
-                    <input type="time" class="form-control radius-8" v-model="attendanceSettings.end_time" :disabled="attendanceSettingsLoading || attendanceSettingsSaving" />
-                  </div>
-                </div>
-                <div class="mb-12">
-                  <label class="form-label fw-semibold text-primary-light text-sm mb-6">Departments (required check-in)</label>
-                  <div class="attendance-department-picker" :class="{ 'is-disabled': attendanceSettingsLoading || attendanceSettingsSaving }">
-                    <div class="attendance-department-selected mb-8">
-                      <template v-if="selectedDepartmentLabels.length">
-                        <span
-                          v-for="label in selectedDepartmentLabels"
-                          :key="label"
-                          class="attendance-department-chip"
-                        >
-                          {{ label }}
-                        </span>
-                      </template>
-                      <span v-else class="text-secondary-light text-sm">All departments selected</span>
-                    </div>
-                    <div class="attendance-department-list">
-                      <label
-                        v-for="dept in departmentOptions"
-                        :key="dept.value"
-                        class="attendance-department-item"
-                      >
-                        <input
-                          type="checkbox"
-                          :value="dept.value"
-                          :checked="attendanceSettings.department_ids.includes(dept.value)"
-                          :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
-                          @change="toggleDepartmentSelection(dept.value)"
-                        />
-                        <span>{{ dept.label }}</span>
-                      </label>
-                    </div>
-                  </div>
-                  <small class="text-secondary-light d-block mt-6">
-                    Select one or more departments. Leave empty to apply to all departments.
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  class="btn btn-primary text-md px-12 py-6 radius-8"
+            <div>
+              <label class="vp-schedule__label">To</label>
+              <input
+                v-model="attendanceSettings.end_time"
+                type="time"
+                class="vp-schedule__input"
+                :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
+              />
+            </div>
+          </div>
+          <div class="vp-schedule__field">
+            <label class="vp-schedule__label">Departments (required check-in)</label>
+            <div
+              class="vp-schedule__depts"
+              :class="{ 'is-disabled': attendanceSettingsLoading || attendanceSettingsSaving }"
+            >
+              <div class="vp-schedule__chips">
+                <template v-if="selectedDepartmentLabels.length">
+                  <span v-for="label in selectedDepartmentLabels" :key="label" class="vp-dept-tag">{{ label }}</span>
+                </template>
+                <span v-else class="vp-schedule__hint" style="margin: 0">All departments selected</span>
+              </div>
+              <label
+                v-for="dept in departmentOptions"
+                :key="dept.value"
+                class="vp-schedule__dept-item"
+              >
+                <input
+                  type="checkbox"
+                  :value="dept.value"
+                  :checked="attendanceSettings.department_ids.includes(dept.value)"
                   :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
-                  @click="saveAttendanceSettings"
-                >
-                  <span v-if="attendanceSettingsSaving">Saving...</span>
-                  <span v-else>Save</span>
+                  @change="toggleDepartmentSelection(dept.value)"
+                />
+                <span>{{ dept.label }}</span>
+              </label>
+            </div>
+            <p class="vp-schedule__hint">
+              Select one or more departments. Leave empty to apply to all departments.
+            </p>
+            <button
+              type="button"
+              class="vp-btn-save-sm"
+              :disabled="attendanceSettingsLoading || attendanceSettingsSaving"
+              @click="saveAttendanceSettings"
+            >
+              <span v-if="attendanceSettingsSaving">Saving...</span>
+              <span v-else>Save Schedule</span>
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right panel -->
+      <main class="vp-main">
+        <nav class="vp-tabs" role="tablist">
+          <button
+            type="button"
+            class="vp-tab"
+            :class="{ 'is-active': activeTab === 'edit-profile' }"
+            role="tab"
+            @click="activeTab = 'edit-profile'"
+          >
+            <iconify-icon icon="lucide:user-pen" />
+            Edit Profile
+          </button>
+          <button
+            type="button"
+            class="vp-tab"
+            :class="{ 'is-active': activeTab === 'change-password' }"
+            role="tab"
+            @click="activeTab = 'change-password'"
+          >
+            <iconify-icon icon="lucide:key-round" />
+            Change Password
+          </button>
+          <button
+            type="button"
+            class="vp-tab"
+            :class="{ 'is-active': activeTab === 'vacation' }"
+            role="tab"
+            @click="activeTab = 'vacation'"
+          >
+            <iconify-icon icon="lucide:palmtree" />
+            Vacation
+          </button>
+          <button
+            type="button"
+            class="vp-tab"
+            :class="{ 'is-active': activeTab === 'attendance' }"
+            role="tab"
+            @click="activeTab = 'attendance'"
+          >
+            <iconify-icon icon="lucide:calendar-check" />
+            Attendance
+          </button>
+        </nav>
+
+        <div class="vp-panel">
+          <!-- Edit Profile -->
+          <div v-if="activeTab === 'edit-profile'">
+            <div class="vp-section-title">Profile Image</div>
+            <div class="vp-avatar-block">
+              <div id="imagePreview" class="vp-avatar-preview" :style="{ backgroundImage: 'url(' + profileImage + ')' }" />
+              <div class="vp-avatar-actions">
+                <input id="imageUpload" type="file" accept=".png, .jpg, .jpeg, .gif" hidden @change="onImageChange" />
+                <label for="imageUpload" class="vp-btn-upload">
+                  <iconify-icon icon="lucide:cloud-upload" />
+                  upload photo
+                </label>
+                <span class="vp-avatar-hint">JPEG, PNG, JPG, GIF up to 2MB</span>
+              </div>
+            </div>
+
+            <form @submit.prevent="updateProfile">
+              <div class="vp-form-grid">
+                <div class="vp-field">
+                  <label class="vp-field__label">Full Name <span class="required">*</span></label>
+                  <input
+                    v-model="formData.name"
+                    type="text"
+                    class="vp-field__input"
+                    placeholder="Enter Full Name"
+                    required
+                  />
+                </div>
+                <div class="vp-field">
+                  <label class="vp-field__label">Email <span class="required">*</span></label>
+                  <input
+                    v-model="formData.email"
+                    type="email"
+                    class="vp-field__input"
+                    placeholder="Enter email address"
+                    required
+                  />
+                </div>
+                <div class="vp-field">
+                  <label class="vp-field__label">Phone</label>
+                  <input
+                    v-model="formData.phone"
+                    type="text"
+                    class="vp-field__input"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div class="vp-field vp-field--role">
+                  <label class="vp-field__label">Role</label>
+                  <input
+                    type="text"
+                    class="vp-field__input vp-field__input--locked"
+                    :value="user.role_name"
+                    readonly
+                    disabled
+                  />
+                  <iconify-icon icon="lucide:lock" class="vp-field__lock-icon" />
+                  <span class="vp-field__hint">
+                    <iconify-icon icon="lucide:key-round" style="font-size: 12px; color: var(--vp-gold)" />
+                    Role cannot be changed
+                  </span>
+                </div>
+              </div>
+              <div class="vp-form-actions">
+                <button type="button" class="vp-btn-ghost" @click="resetForm">Cancel</button>
+                <button type="submit" class="vp-btn-primary" :disabled="loading">
+                  <span v-if="loading">Saving...</span>
+                  <span v-else>Save Changes</span>
                 </button>
               </div>
-              <!--<div class="attendance-checkin-card mt-16">-->
-              <!--  <h6 class="text-md mb-8">Daily Attendance Check-in</h6>-->
-              <!--  <div class="d-flex align-items-center gap-2 mb-8">-->
-              <!--    <span class="status-badge" :class="checkinBadgeClass">{{ attendanceStatus.status || 'Closed' }}</span>-->
-              <!--    <small class="text-secondary-light">{{ attendanceStatus.window_label || 'Not configured' }}</small>-->
-              <!--  </div>-->
+            </form>
+          </div>
 
-              <!--  <p v-if="attendanceStatus.status === 'Closed'" class="text-secondary-light mb-8">-->
-              <!--    {{ attendanceStatus.is_department_active ? 'Check-in not available' : 'Check-in is not required for your department' }}-->
-              <!--  </p>-->
-              <!--  <small-->
-              <!--    v-if="attendanceStatus.status !== 'Not Checked In'"-->
-              <!--    class="text-secondary-light d-block mb-8"-->
-              <!--  >-->
-              <!--    Department rule:-->
-              <!--    <strong>{{ attendanceStatus.is_department_active ? 'Check-in enabled for your department' : 'Check-in disabled for your department' }}</strong>-->
-              <!--  </small>-->
+          <!-- Change Password -->
+          <div v-if="activeTab === 'change-password'">
+            <div class="vp-section-title">Change Password</div>
+            <form class="vp-password-form" @submit.prevent="changePassword">
+              <div class="vp-field">
+                <label class="vp-field__label">Current Password <span class="required">*</span></label>
+                <div class="vp-input-wrap">
+                  <input
+                    v-model="passwordData.current_password"
+                    :type="currentPasswordVisible ? 'text' : 'password'"
+                    class="vp-field__input"
+                    placeholder="Enter Current Password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    class="vp-input-wrap__toggle"
+                    :aria-label="currentPasswordVisible ? 'Hide password' : 'Show password'"
+                    @click="currentPasswordVisible = !currentPasswordVisible"
+                  >
+                    <iconify-icon :icon="currentPasswordVisible ? 'lucide:eye-off' : 'lucide:eye'" />
+                  </button>
+                </div>
+              </div>
+              <div class="vp-field">
+                <label class="vp-field__label">New Password <span class="required">*</span></label>
+                <div class="vp-input-wrap">
+                  <input
+                    v-model="passwordData.new_password"
+                    :type="newPasswordVisible ? 'text' : 'password'"
+                    class="vp-field__input"
+                    placeholder="Enter New Password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    class="vp-input-wrap__toggle"
+                    @click="newPasswordVisible = !newPasswordVisible"
+                  >
+                    <iconify-icon :icon="newPasswordVisible ? 'lucide:eye-off' : 'lucide:eye'" />
+                  </button>
+                </div>
+              </div>
+              <div class="vp-field">
+                <label class="vp-field__label">Confirm Password <span class="required">*</span></label>
+                <div class="vp-input-wrap">
+                  <input
+                    v-model="passwordData.confirm_password"
+                    :type="confirmPasswordVisible ? 'text' : 'password'"
+                    class="vp-field__input"
+                    placeholder="Confirm Password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    class="vp-input-wrap__toggle"
+                    @click="confirmPasswordVisible = !confirmPasswordVisible"
+                  >
+                    <iconify-icon :icon="confirmPasswordVisible ? 'lucide:eye-off' : 'lucide:eye'" />
+                  </button>
+                </div>
+              </div>
+              <div class="vp-form-actions">
+                <button type="submit" class="vp-btn-primary" :disabled="passwordLoading">
+                  <span v-if="passwordLoading">Updating...</span>
+                  <span v-else>Update Password</span>
+                </button>
+              </div>
+            </form>
+          </div>
 
-              <!--  <p v-if="attendanceStatus.status === 'Checked In'" class="text-success mb-8">-->
-              <!--    You have already checked in today at {{attendanceStatus.check_in_at}}-->
-              <!--  </p>-->
+          <!-- Vacation -->
+          <div v-if="activeTab === 'vacation'">
+            <div class="vp-section-title">Vacation Mode</div>
+            <div class="vp-vacation-card">
+              <div class="vp-vacation-toggle">
+                <div>
+                  <div class="vp-vacation-toggle__title">Activate Vacation Mode</div>
+                  <p>When activated, new requests will be assigned to selected agent</p>
+                </div>
+                <label class="vp-switch">
+                  <input
+                    id="vacationSwitch"
+                    v-model="vacationData.active"
+                    type="checkbox"
+                    :disabled="vacationLoading"
+                  />
+                  <span class="vp-switch__slider" />
+                </label>
+              </div>
 
-              <!--  <div v-if="attendanceStatus.status === 'Not Checked In'" class="d-flex flex-column gap-8">-->
-              <!--    <small class="text-secondary-light">Today's Code: <strong>{{ attendanceStatus.today_code || '----' }}</strong></small>-->
-              <!--    <input-->
-              <!--      type="text"-->
-              <!--      class="form-control radius-8"-->
-              <!--      maxlength="4"-->
-              <!--      v-model="checkinCode"-->
-              <!--      placeholder="Enter 4-char code"-->
-              <!--      :disabled="checkinSubmitting"-->
-              <!--    />-->
-              <!--    <button-->
-              <!--      type="button"-->
-              <!--      class="btn btn-primary text-md px-12 py-6 radius-8 align-self-start"-->
-              <!--      :disabled="checkinSubmitting || !isCheckinCodeComplete"-->
-              <!--      @click="submitCheckin"-->
-              <!--    >-->
-              <!--      <span v-if="checkinSubmitting">Checking in...</span>-->
-              <!--      <span v-else>Check In</span>-->
-              <!--    </button>-->
-              <!--  </div>-->
-              <!--</div>-->
+              <div v-if="vacationData.active">
+                <div class="vp-field">
+                  <label class="vp-field__label">Select Agent to handle your requests</label>
+                  <select
+                    v-model="vacationData.delegate_id"
+                    class="vp-field__input"
+                    :disabled="vacationLoading"
+                  >
+                    <option value="">Choose an agent...</option>
+                    <option v-for="agent in agentsList" :key="agent.id" :value="agent.id">
+                      {{ agent.name }} ({{ agent.email }})
+                    </option>
+                  </select>
+                  <span class="vp-field__hint">This agent will receive all new requests while you're on vacation</span>
+                </div>
+                <div class="vp-form-actions" style="margin-top: 16px">
+                  <button
+                    type="button"
+                    class="vp-btn-gold"
+                    :disabled="vacationLoading || !vacationData.delegate_id"
+                    @click="saveVacationMode"
+                  >
+                    <span v-if="vacationLoading">Saving...</span>
+                    <span v-else>Save Changes</span>
+                  </button>
+                </div>
+              </div>
+
+              <div v-else class="vp-vacation-empty">
+                <iconify-icon icon="lucide:sun" />
+                <p>Vacation mode is currently inactive. Turn it on to delegate your requests.</p>
+              </div>
+            </div>
+
+            <div class="vp-status-card">
+              <div class="vp-section-title vp-section-title--sm">Current Status</div>
+              <div class="vp-status-row">
+                <div class="vp-status-item">
+                  <span class="vp-info-list__label">Mode</span>
+                  <span :class="['vp-badge', vacationData.active ? 'vp-badge--active' : 'vp-badge--inactive']">
+                    {{ vacationData.active ? 'On Vacation' : 'Active' }}
+                  </span>
+                </div>
+                <div v-if="vacationData.active && currentDelegate" class="vp-status-item">
+                  <span class="vp-info-list__label">Delegate</span>
+                  <span class="vp-info-list__value">{{ currentDelegate.name }}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-  
-      <!-- Right Panel -->
-      <div class="col-lg-8">
-        <div class="card h-100">
-          <div class="card-body p-24">
-            <ul class="nav border-gradient-tab nav-pills mb-20 d-inline-flex" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center px-24" 
-                        :class="{ active: activeTab === 'edit-profile' }" 
-                        @click="activeTab = 'edit-profile'">
-                  Edit Profile
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center px-24" 
-                        :class="{ active: activeTab === 'change-password' }" 
-                        @click="activeTab = 'change-password'">
-                  Change Password
-                </button>
-              </li>
-                <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center px-24" 
-                        :class="{ active: activeTab === 'vacation' }" 
-                        @click="activeTab = 'vacation'">
-                 Vacation 
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center px-24"
-                        :class="{ active: activeTab === 'attendance' }"
-                        @click="activeTab = 'attendance'">
-                  Attendance
-                </button>
-              </li>
-            </ul>
-  
-            <div class="tab-content">
-              <!-- Edit Profile Tab -->
-              <div v-if="activeTab === 'edit-profile'">
-                <h6 class="text-md text-primary-light mb-16 mb-3">Profile Image</h6>
-                <div class="mb-24 mt-16">
-                  <div class="avatar-upload">
-                     <div class="avatar-preview">
-                      <div id="imagePreview" :style="{ backgroundImage: 'url(' + profileImage + ')' }"></div>
-                    </div>
 
-                    <div class="avatar-edit  cursor-pointer">
-                      <input type="file" id="imageUpload" accept=".png, .jpg, .jpeg" @change="onImageChange" hidden />
-                      <label for="imageUpload" class="btn btn-primary">
-                        <!-- <iconify-icon icon="solar:camera-outline" class="icon"></iconify-icon> -->
-                            <i class="ri-upload-2-line me-1"></i>
-                          upload photo
-                      </label>
-                      <span class="info-text">JPEG, PNG, JPG, GIF up to 2MB</span>
-                    </div>
-                   
-                  </div>
-                </div>
-  
-                <form @submit.prevent="updateProfile">
-                  <div class="row">
-                    <div class="col-sm-6 mb-20">
-                      <label class="form-label fw-semibold text-primary-light text-sm mb-8">
-                        Full Name <span class="text-danger-600">*</span>
-                      </label>
-                      <input type="text" class="form-control radius-8" 
-                             v-model="formData.name" 
-                             placeholder="Enter Full Name" 
-                             required />
-                    </div>
-                    <div class="col-sm-6 mb-20">
-                      <label class="form-label fw-semibold text-primary-light text-sm mb-8">
-                        Email <span class="text-danger-600">*</span>
-                      </label>
-                      <input type="email" class="form-control radius-8" 
-                             v-model="formData.email" 
-                             placeholder="Enter email address" 
-                             required />
-                    </div>
-                    <div class="col-sm-6 mb-20">
-                      <label class="form-label fw-semibold text-primary-light text-sm mb-8">Phone</label>
-                      <input type="text" class="form-control radius-8" 
-                             v-model="formData.phone" 
-                             placeholder="Enter phone number" />
-                    </div>
-                    <div class="col-sm-6 mb-20">
-                      <label class="form-label fw-semibold text-primary-light text-sm mb-8">Role</label>
-                      <input type="text" class="form-control radius-8" 
-                             :value="user.role_name" 
-                             readonly 
-                             disabled />
-                      <small class="text-muted">You cannot change your role</small>
-                    </div>
-                  </div>
-  
-                  <div class="d-flex align-items-right justify-content-right gap-3">
-                    <button type="button" class=" btn btn-info text-danger-600 text-md px-12 py-6 radius-8"
-                            @click="resetForm">
-                      Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary  text-md px-12 py-6 radius-8"
-                            :disabled="loading">
-                      <span v-if="loading">Saving...</span>
-                      <span v-else>Save Changes</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-  
-              <!-- Change Password Tab -->
-              <div v-if="activeTab === 'change-password'">
-                <form @submit.prevent="changePassword">
-                  <div class="mb-20">
-                    <label class="form-label fw-semibold text-primary-light text-sm mb-8">
-                      Current Password <span class="text-danger-600">*</span>
-                    </label>
-                    <div class="position-relative">
-                      <input :type="currentPasswordVisible ? 'text' : 'password'" 
-                             class="form-control radius-8" 
-                             v-model="passwordData.current_password"
-                             placeholder="Enter Current Password" 
-                             required />
-                      <span @click="currentPasswordVisible = !currentPasswordVisible" 
-                            class="ri-eye-line cursor-pointer position-absolute end-0 top-50 translate-middle-y me-16 text-secondary-light">
-                      </span>
-                    </div>
-                  </div>
-                  <div class="mb-20">
-                    <label class="form-label fw-semibold text-primary-light text-sm mb-8">
-                      New Password <span class="text-danger-600">*</span>
-                    </label>
-                    <div class="position-relative">
-                      <input :type="newPasswordVisible ? 'text' : 'password'" 
-                             class="form-control radius-8" 
-                             v-model="passwordData.new_password"
-                             placeholder="Enter New Password" 
-                             required />
-                      <span @click="newPasswordVisible = !newPasswordVisible" 
-                            class="ri-eye-line cursor-pointer position-absolute end-0 top-50 translate-middle-y me-16 text-secondary-light">
-                      </span>
-                    </div>
-                  </div>
-                  <div class="mb-20">
-                    <label class="form-label fw-semibold text-primary-light text-sm mb-8">
-                      Confirm Password <span class="text-danger-600">*</span>
-                    </label>
-                    <div class="position-relative">
-                      <input :type="confirmPasswordVisible ? 'text' : 'password'" 
-                             class="form-control radius-8" 
-                             v-model="passwordData.confirm_password"
-                             placeholder="Confirm Password" 
-                             required />
-                      <span @click="confirmPasswordVisible = !confirmPasswordVisible" 
-                            class="ri-eye-line cursor-pointer position-absolute end-0 top-50 translate-middle-y me-16 text-secondary-light">
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div class="d-flex align-items-center justify-content-center gap-3">
-                    <button type="submit" class="btn btn-primary border border-primary-600 text-md px-56 py-12 radius-8"
-                            :disabled="passwordLoading">
-                      <span v-if="passwordLoading">Updating...</span>
-                      <span v-else>Update Password</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-               <!-- Change Password Tab -->
-              
-              
-              
-               <!-- Vacation Mode Tab -->
-            <div v-if="activeTab === 'vacation'">
-              <div class="vacation-mode-container">
-                <h6 class="text-md text-primary-light mb-16">Vacation Mode</h6>
-                
-                <!-- Vacation Mode Card -->
-                <div class="card mb-20">
-                  <div class="card-body">
-                    <!-- Toggle Switch -->
-                    <div class="d-flex justify-content-between align-items-center mb-20">
-                      <div>
-                        <h6 class="text-primary-light mb-2">Activate Vacation Mode</h6>
-                        <p class="text-secondary-light mb-0">
-                          When activated, new requests will be assigned to selected agent
-                        </p>
-                      </div>
-                      <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" 
-                               v-model="vacationData.active" 
-                               :disabled="vacationLoading"
-                               id="vacationSwitch">
-                        <label class="form-check-label" for="vacationSwitch">
-                          {{ vacationData.active ? 'Active' : 'Inactive' }}
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <div v-if="vacationData.active" class="delegate-section">
-                      <label class="form-label fw-semibold text-primary-light text-sm mb-8">
-                        Select Agent to handle your requests
-                      </label>
-                      <select class="form-select radius-8 mb-3" 
-                              v-model="vacationData.delegate_id"
-                              :disabled="vacationLoading">
-                        <option value="">Choose an agent...</option>
-                        <option v-for="agent in agentsList" 
-                                :key="agent.id" 
-                                :value="agent.id">
-                          {{ agent.name }} ({{ agent.email }})
-                        </option>
-                      </select>
-                      <small class="text-muted">This agent will receive all new requests while you're on vacation</small>
-                      
-                     
-                    </div>
-                 
-                    <!-- Message when vacation is inactive -->
-                    <div v-else class="text-center py-16">
-                      <i class="ri-sun-line text-warning fs-1 mb-3"></i>
-                      <p class="text-secondary-light mb-0">
-                        Vacation mode is currently inactive. Turn it on to delegate your requests.
-                      </p>
-                    </div>
-                     <!-- Save Button -->
-                      <div class="d-flex justify-content-end mt-20">
-                        <button type="button" class="btn btn-warning"
-                                @click="saveVacationMode"
-                                :disabled="vacationLoading || !vacationData.delegate_id">
-                          <span v-if="vacationLoading">Saving...</span>
-                          <span v-else>Save Changes</span>
-                        </button>
-                      </div>
-                  </div>
-                     
-                </div>
-                
-                <!-- Current Status -->
-                <div class="card">
-                  <div class="card-body">
-                    <h6 class="text-primary-light mb-16">Current Status</h6>
-                    <div class="row">
-                      <div class="col-md-6 mb-3">
-                        <div class="status-item">
-                          <span class="text-secondary-light">Mode:</span>
-                          <span :class="['status-badge ms-2', vacationData.active ? 'active' : 'inactive']">
-                            {{ vacationData.active ? 'On Vacation' : 'Active' }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="col-md-6 mb-3" v-if="vacationData.active && currentDelegate">
-                        <div class="status-item">
-                          <span class="text-secondary-light">Delegate:</span>
-                          <span class="text-primary-light ms-2">{{ currentDelegate.name }}</span>
-                        </div>
-                      </div>
-                    
-                    </div>
-                  </div>
-                 </div>
-             </div>
-             </div>
-             <!--end vacation tab-->
-
-              <!-- Attendance Tab -->
-              <div v-if="activeTab === 'attendance'">
-                <UserAttendanceCarousel />
-              </div>
-
-            </div>
+          <!-- Attendance -->
+          <div v-if="activeTab === 'attendance'">
+            <div class="vp-section-title">Attendance</div>
+            <UserAttendanceCarousel />
           </div>
         </div>
-      </div>
+      </main>
     </div>
-  </template>
-  
+  </div>
+</template>
+
 <script>
 import { ref, onMounted, reactive, getCurrentInstance, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import axios from 'axios';
 import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
@@ -455,7 +459,6 @@ export default {
   },
   setup() {
     const instance = getCurrentInstance();
-    const router = useRouter();
     const user = ref({});
     const activeTab = ref('edit-profile');
     const profileImage = ref(user1);
@@ -499,7 +502,6 @@ export default {
       last_updated: ''
     });
     
-    // دالة لتحميل الوكلاء
     const loadAgents = async () => {
       try {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -515,28 +517,20 @@ export default {
           }
         });
         
-        console.log('Agents API Response:', agentsResponse.data);
-        
         if (agentsResponse.data.status) {
           agentsList.value = agentsResponse.data.data;
-          console.log('Agents loaded:', agentsList.value);
-        } else {
-          console.error('API returned status false:', agentsResponse.data);
         }
         
       } catch (error) {
         console.error('Error loading agents:', error);
-        console.error('Error details:', error.response ? error.response.data : error.message);
       }
     };
     
-    // دالة لتحميل بيانات الفاكيشن
     const loadVacationData = async () => {
       vacationLoading.value = true;
       try {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
-        // تحميل إعدادات الفاكيشن
         const vacationResponse = await axios.get('/api/listings/agent/vacation-mode', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -544,17 +538,13 @@ export default {
           }
         });
         
-        console.log('Vacation API Response:', vacationResponse.data);
-        
         if (vacationResponse.data.status) {
           const data = vacationResponse.data.data;
           vacationData.active = data.on_vacation || false;
           vacationData.delegate_id = data.delegate_agent_id || '';
           vacationData.last_updated = data.updated_at || '';
-          console.log('Vacation data loaded:', vacationData);
         }
         
-        // تحميل قائمة الوكلاء
         await loadAgents();
         
       } catch (error) {
@@ -581,11 +571,8 @@ export default {
           }
         });
         
-        console.log('Save vacation response:', response.data);
-        
         if (response.data.status) {
           showNotification('Vacation mode updated successfully!', 'success');
-          // تحديث البيانات المحلية
           if (response.data.data) {
             Object.assign(vacationData, response.data.data);
             vacationData.active = response.data.data.on_vacation || false;
@@ -634,6 +621,12 @@ export default {
         return name === 'super_admin' || name === 'super admin';
       });
     });
+    const userInitials = computed(() => {
+      const name = String(user.value?.name || 'U').trim();
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return name.slice(0, 2).toUpperCase();
+    });
     const isCheckinCodeComplete = computed(() => String(checkinCode.value || '').trim().length === 4);
     const selectedDepartmentLabels = computed(() => {
       const selectedIds = attendanceSettings.department_ids.map((id) => Number(id));
@@ -666,7 +659,6 @@ export default {
       confirm_password: ''
     });
     
-    // Load user data
     const loadUserData = async () => {
       try {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -695,7 +687,6 @@ export default {
       }
     };
     
-    // Show notification
     const showNotification = (message, type = 'info') => {
       if (instance && instance.appContext.config.globalProperties.$showNotification) {
         instance.appContext.config.globalProperties.$showNotification(message, type);
@@ -704,7 +695,6 @@ export default {
       }
     };
     
-    // Update profile
     const updateProfile = async () => {
       loading.value = true;
       try {
@@ -737,7 +727,6 @@ export default {
       }
     };
     
-    // Change password
     const changePassword = async () => {
       if (passwordData.new_password !== passwordData.confirm_password) {
         showNotification('New password and confirmation do not match!', 'warning');
@@ -785,7 +774,6 @@ export default {
       }
     };
     
-    // Update avatar
     const updateAvatar = async (file) => {
       try {
         const formDataObj = new FormData();
@@ -818,13 +806,12 @@ export default {
       }
     };
     
-    // Handle image change
     const onImageChange = (event) => {
       const file = event.target.files[0];
       if (file) {
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
         if (!validTypes.includes(file.type)) {
-          showNotification('Please select a valid image file (JPEG, JPG, PNG)', 'warning');
+          showNotification('Please select a valid image file (JPEG, JPG, PNG, GIF)', 'warning');
           return;
         }
         
@@ -842,7 +829,6 @@ export default {
       }
     };
     
-    // Reset form
     const resetForm = () => {
       loadUserData();
       showNotification('Form reset to original values', 'info');
@@ -1029,6 +1015,7 @@ export default {
       checkinCode,
       dayOptions,
       isSuperAdmin,
+      userInitials,
       isCheckinCodeComplete,
       selectedDepartmentLabels,
       checkinBadgeClass,
@@ -1050,152 +1037,3 @@ export default {
   }
 };
 </script>
-  
-  <style scoped>
-  .avatar-upload {
-    position: relative;
-    /* max-width: 205px; */
-    /* margin: 0 auto; */
-    display: flex;
-    width: 100%;
-    justify-content: space-between;
-  }
-  
-  .avatar-edit {
-    /* position: absolute; */
-    right: 12px;
-    z-index: 1;
-    top: 10px;
-    margin: 10% auto;
-  }
-  
-  .avatar-preview {
-    width: 192px;
-    height: 192px;
-    /* position: relative; */
-    border-radius: 100%;
-    border: 6px solid #F8F8F8;
-    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
-    margin-right: 100px ;
-  }
-  
-  .avatar-preview > div {
-    width: 100%;
-    height: 100%;
-    border-radius: 100%;
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-  }
-  
-  .form-control:disabled {
-    background-color: #f8f9fa;
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-  .badge{
-      border-radius:5px;
-  }
-  .bg-success{
-    background-color:#733E87 !important;
-  }
-   .bg-info{
-    background-color:#B8B8B8 !important;
-  }
-  .border-gradient-tab .nav-link::before{
-    display: none !important;
-  }
- .border-gradient-tab .nav-link{
-    background-color: #B8B8B8 !important;
-    color: #000000 !important;
-    border-radius: 5px;
-    margin: 10px;
-    border: none;
-  }
-  .border-gradient-tab .nav-link.active{
-    background-color: #0B0736 !important;
-    color: #fff !important;
-    border-radius: 5px;
-    margin: 10px;
-    border: none;
-  }
-  .btn-info{
-    background-color: #B8B8B8 !important;
-    color: #fff !important;
-    border:none
-  }
-    .btn-primary{
-    background-color: #733E87 !important;
-    color: #fff !important;
-    border:none
-  }
-  .justify-content-right {
-    justify-content: end;
-    gap: 100px;
-  }
-  .info-text{
-    margin-top: 10px;
-    color: #A9A9A9;
-    display: block;
-  }
-  .border-gradient-tab{
-      border:none !important;
-  }
-  .border-avatar{
-      border-radius:20px;
-  }
-  .attendance-settings-card{
-    border:1px solid #E5E7EB;
-    border-radius:12px;
-    padding:12px;
-    background:#F9FAFB;
-  }
-  .attendance-checkin-card{
-    border:1px solid #E5E7EB;
-    border-radius:12px;
-    padding:12px;
-    background:#FFFFFF;
-  }
-  .attendance-department-picker{
-    border:1px solid #D1D5DB;
-    border-radius:8px;
-    background:#FFFFFF;
-    padding:10px;
-  }
-  .attendance-department-picker.is-disabled{
-    opacity:0.7;
-    pointer-events:none;
-  }
-  .attendance-department-selected{
-    min-height:32px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    align-items:center;
-  }
-  .attendance-department-chip{
-    background:#EEF2FF;
-    color:#1E3A8A;
-    border-radius:999px;
-    padding:3px 10px;
-    font-size:12px;
-    font-weight:600;
-  }
-  .attendance-department-list{
-    max-height:170px;
-    overflow:auto;
-    border-top:1px solid #E5E7EB;
-    padding-top:8px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .attendance-department-item{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-size:13px;
-    color:#111827;
-    cursor:pointer;
-  }
-  </style>

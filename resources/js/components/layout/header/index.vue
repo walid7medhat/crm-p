@@ -172,38 +172,46 @@
     </div>
   </aside>
 
-  <nav v-if="isMobileViewport" ref="mobileDockRef" class="mobile-sidebar-dock" aria-label="Mobile menu">
-    <span
-      class="mobile-sidebar-dock__cursor"
-      :class="{ 'mobile-sidebar-dock__cursor--ready': dockCursorReady }"
-      :style="dockCursorStyle"
-      aria-hidden="true"
-    />
-    <template v-for="(item, index) in mobileDockItems" :key="item.key || item.path">
-      <button
-        v-if="item.children || item.sections"
-        type="button"
-        :ref="(el) => setDockItemRef(el, index)"
-        class="mobile-sidebar-dock__item mobile-sidebar-dock__btn"
-        :class="{ 'is-active': isDockItemHighlighted(item, index), 'is-chat': item.path === '/admin/chat' }"
-        @click="openMobileDockGroup(item, index)"
-      >
-        <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
-        <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
-      </button>
-      <router-link
-        v-else
-        :to="item.path"
-        :ref="(el) => setDockItemRef(el, index)"
-        class="mobile-sidebar-dock__item"
-        :class="{ 'is-active': isDockItemHighlighted(item, index), 'is-chat': item.path === '/admin/chat' }"
-        @click="onDockLinkClick(index)"
-      >
-        <iconify-icon :icon="item.icon" class="mobile-sidebar-dock__icon" />
-        <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
-      </router-link>
-    </template>
-  </nav>
+  <Teleport to="body">
+    <nav v-if="isMobileViewport" ref="mobileDockRef" class="mobile-sidebar-dock" aria-label="Mobile menu">
+      <span
+        class="mobile-sidebar-dock__cursor"
+        :class="{ 'mobile-sidebar-dock__cursor--ready': dockCursorReady }"
+        :style="dockCursorStyle"
+        aria-hidden="true"
+      />
+      <template v-for="(item, index) in mobileDockItems" :key="item.key || item.path">
+        <button
+          v-if="item.children || item.sections"
+          type="button"
+          :ref="(el) => setDockItemRef(el, index)"
+          class="mobile-sidebar-dock__item mobile-sidebar-dock__btn"
+          :class="{ 'is-active': isDockItemHighlighted(item, index), 'is-chat': item.path === '/admin/chat' }"
+          :aria-label="item.label"
+          :aria-current="isDockItemHighlighted(item, index) ? 'page' : undefined"
+          @click="onDockButtonClick(item, index)"
+        >
+          <img v-if="item.iconSrc" :src="item.iconSrc" class="mobile-sidebar-dock__icon mobile-sidebar-dock__icon--img" alt="" />
+          <iconify-icon v-else :icon="item.icon" class="mobile-sidebar-dock__icon" />
+          <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
+        </button>
+        <router-link
+          v-else
+          :to="item.path"
+          :ref="(el) => setDockItemRef(el, index)"
+          class="mobile-sidebar-dock__item"
+          :class="{ 'is-active': isDockItemHighlighted(item, index), 'is-chat': item.path === '/admin/chat' }"
+          :aria-label="item.label"
+          :aria-current="isDockItemHighlighted(item, index) ? 'page' : undefined"
+          @click="onDockLinkClick(index)"
+        >
+          <img v-if="item.iconSrc" :src="item.iconSrc" class="mobile-sidebar-dock__icon mobile-sidebar-dock__icon--img" alt="" />
+          <iconify-icon v-else :icon="item.icon" class="mobile-sidebar-dock__icon" />
+          <span class="mobile-sidebar-dock__label">{{ item.label }}</span>
+        </router-link>
+      </template>
+    </nav>
+  </Teleport>
 
   <Teleport to="body">
     <div
@@ -218,6 +226,17 @@
           </button>
         </div>
         <div class="mobile-dock-sheet__list" :class="{ 'mobile-dock-sheet__list--inline-two': !activeMobileDockGroup?.sections?.length && (activeMobileDockGroup?.children?.length || 0) === 2 }">
+          <router-link
+            v-for="child in activeMobileDockGroup?.children || []"
+            :key="`dock-flat-${child.path}`"
+            :to="child.path"
+            class="mobile-dock-sheet__item"
+            :class="{ 'is-active': isDockActive(child.path) }"
+            @click="closeMobileDockGroup"
+          >
+            <span>{{ child.label }}</span>
+            <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
+          </router-link>
           <template v-if="activeMobileDockGroup?.sections?.length">
             <div
               v-for="section in activeMobileDockGroup.sections"
@@ -230,6 +249,7 @@
                 :aria-expanded="mobileDockExpandedSection === section.key"
                 @click="toggleMobileDockSection(section.key)"
               >
+                <img v-if="section.iconSrc" :src="section.iconSrc" class="mobile-dock-accordion__icon" alt="" />
                 <span>{{ section.title }}</span>
                 <iconify-icon
                   icon="lucide:chevron-down"
@@ -241,32 +261,37 @@
                 v-show="mobileDockExpandedSection === section.key"
                 class="mobile-dock-accordion__panel"
               >
-                <router-link
-                  v-for="child in section.items"
-                  :key="child.path"
-                  :to="child.path"
-                  class="mobile-dock-sheet__item"
-                  :class="{ 'is-active': isDockActive(child.path) }"
-                  @click="closeMobileDockGroup"
-                >
-                  <span>{{ child.label }}</span>
-                  <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
-                </router-link>
+                <template v-if="section.subsections?.length">
+                  <template v-for="sub in section.subsections" :key="sub.key">
+                    <div class="mobile-dock-sheet__heading">{{ sub.title }}</div>
+                    <router-link
+                      v-for="child in sub.items"
+                      :key="`${sub.key}-${child.path}`"
+                      :to="child.path"
+                      class="mobile-dock-sheet__item"
+                      :class="{ 'is-active': isDockActive(child.path) }"
+                      @click="closeMobileDockGroup"
+                    >
+                      <span>{{ child.label }}</span>
+                      <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
+                    </router-link>
+                  </template>
+                </template>
+                <template v-else>
+                  <router-link
+                    v-for="child in section.items"
+                    :key="child.path"
+                    :to="child.path"
+                    class="mobile-dock-sheet__item"
+                    :class="{ 'is-active': isDockActive(child.path) }"
+                    @click="closeMobileDockGroup"
+                  >
+                    <span>{{ child.label }}</span>
+                    <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
+                  </router-link>
+                </template>
               </div>
             </div>
-          </template>
-          <template v-else>
-            <router-link
-              v-for="child in activeMobileDockGroup.children"
-              :key="child.path"
-              :to="child.path"
-              class="mobile-dock-sheet__item"
-              :class="{ 'is-active': isDockActive(child.path) }"
-              @click="closeMobileDockGroup"
-            >
-              <span>{{ child.label }}</span>
-              <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
-            </router-link>
           </template>
         </div>
       </div>
@@ -699,35 +724,33 @@ const activeMobileDockGroup = ref(null);
 const mobileDockExpandedSection = ref(null);
 
 const mobileDockItems = computed(() => {
-  const listingChildren = listingsSidebarSections.value
-    .flatMap((s) => s.items)
-    .slice(0, 8)
-    .map((it) => ({ path: it.path, label: it.label, count: it.count || 0 }));
-
-  const settingsChildren = settingsSidebarSections.value
-    .flatMap((s) => s.items)
-    .slice(0, 6)
-    .map((it) => ({ path: it.path, label: it.label }));
-
   const items = [
-    { path: isShowOnlyListing.value ? '/alllisting' : '/', label: 'Home', icon: 'solar:home-smile-angle-outline' },
+    {
+      path: isShowOnlyListing.value ? '/alllisting' : '/',
+      label: 'Dashboard',
+      icon: 'lucide:house',
+    },
   ];
 
   if (isAdmin.value) {
-    const crmSections = [
-      {
-        key: 'crm-core',
-        title: 'CRM',
-        items: [
-          { path: '/kanban', label: 'Lead' },
-          { path: '/kanban_deal', label: 'Deal' },
-        ],
-      },
-    ];
+    const crmGroup = {
+      key: 'group-crm',
+      label: 'CRM',
+      icon: 'lucide:handshake',
+      children: [
+        { path: '/kanban', label: 'Lead' },
+        { path: '/kanban_deal', label: 'Deal' },
+      ],
+      sections: [],
+    };
+
     if (listingsSidebarSections.value.length && !isShowOnlyListing.value) {
-      crmSections.push(
-        ...listingsSidebarSections.value.map((section) => ({
-          key: `crm-${section.key}`,
+      crmGroup.sections.push({
+        key: 'crm-listings',
+        title: 'Listings',
+        iconSrc: listingsIcon.value,
+        subsections: listingsSidebarSections.value.map((section) => ({
+          key: section.key,
           title: section.title,
           items: section.items.map((it) => ({
             path: it.path,
@@ -735,32 +758,30 @@ const mobileDockItems = computed(() => {
             count: it.count || 0,
           })),
         })),
-      );
+      });
     }
-    items.push({
-      key: 'group-crm',
-      label: 'CRM',
-      icon: 'lucide:handshake',
-      sections: crmSections,
-    });
+
+    items.push(crmGroup);
   }
+
   if (isSuperAdmin.value || user.value?.id === 186) {
     items.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
   }
+
   if (filteredUsersItems.value.length) {
     items.push({
       key: 'group-agents',
       label: 'Agents',
-      icon: 'lucide:user-round',
+      icon: 'lucide:user',
       children: filteredUsersItems.value.map((it) => ({ path: it.path, label: it.label })),
     });
   }
+
   if (settingsSidebarSections.value.length) {
     items.push({
       key: 'group-settings',
       label: 'Settings',
       icon: 'lucide:settings',
-      children: settingsChildren,
       sections: settingsSidebarSections.value.map((section) => ({
         key: section.key,
         title: section.title,
@@ -781,13 +802,16 @@ function isDockActive(path) {
 
 function isDockGroupActive(group) {
   if (isDashboardHome.value) return false;
+  if (group?.children?.some((child) => isDockActive(child.path))) return true;
   if (group?.sections?.length) {
-    return group.sections.some((section) =>
-      section.items?.some((child) => isDockActive(child.path)),
-    );
-  }
-  if (group?.children?.length) {
-    return group.children.some((child) => isDockActive(child.path));
+    return group.sections.some((section) => {
+      if (section.subsections?.length) {
+        return section.subsections.some((sub) =>
+          sub.items?.some((child) => isDockActive(child.path)),
+        );
+      }
+      return section.items?.some((child) => isDockActive(child.path));
+    });
   }
   return false;
 }
@@ -802,11 +826,29 @@ const dockCursorStyle = ref({
 });
 
 function setDockItemRef(el, index) {
-  if (el) dockItemRefs.value[index] = el;
+  if (!el) {
+    dockItemRefs.value[index] = null;
+    return;
+  }
+  dockItemRefs.value[index] = el.$el ?? el;
 }
+
+const manualDockIndex = ref(null);
 
 const activeDockIndex = computed(() => {
   const items = mobileDockItems.value;
+
+  // Dashboard home: always highlight Dashboard tab
+  if (isDashboardHome.value) {
+    const homeIdx = items.findIndex((it) => it.path === '/' || it.path === '/home');
+    if (homeIdx >= 0) return homeIdx;
+  }
+
+  const dashboardIdx = items.findIndex((it) => it.path === '/alllisting');
+  if (dashboardIdx >= 0 && isDockActive('/alllisting') && !isDockGroupActive(items.find((it) => it.key === 'group-crm'))) {
+    return dashboardIdx;
+  }
+
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     if (item.children || item.sections) {
@@ -819,8 +861,18 @@ const activeDockIndex = computed(() => {
   return 0;
 });
 
+const highlightedDockIndex = computed(() => {
+  if (manualDockIndex.value !== null) return manualDockIndex.value;
+  return activeDockIndex.value;
+});
+
 function isDockItemHighlighted(item, index) {
-  return activeDockIndex.value === index;
+  return highlightedDockIndex.value === index;
+}
+
+function setDockHighlight(index) {
+  manualDockIndex.value = index;
+  moveDockCursorToIndex(index);
 }
 
 function moveDockCursorToIndex(index) {
@@ -830,23 +882,30 @@ function moveDockCursorToIndex(index) {
     if (!nav || !el) return;
     const navRect = nav.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
-    const left = elRect.left - navRect.left + nav.scrollLeft;
+    const insetX = 5;
+    const pillWidth = Math.max(42, elRect.width - insetX * 2);
+    const left = elRect.left - navRect.left + insetX;
     dockCursorStyle.value = {
       transform: `translateX(${left}px)`,
-      width: `${elRect.width}px`,
+      width: `${pillWidth}px`,
       opacity: '1',
     };
     dockCursorReady.value = true;
   });
 }
 
+function onDockButtonClick(item, index) {
+  setDockHighlight(index);
+  openMobileDockGroup(item, index);
+}
+
 function updateDockCursor() {
-  moveDockCursorToIndex(activeDockIndex.value);
+  moveDockCursorToIndex(highlightedDockIndex.value);
 }
 
 function onDockLinkClick(index) {
   closeMobileDockGroup();
-  moveDockCursorToIndex(index);
+  setDockHighlight(index);
 }
 
 let dockResizeObserver = null;
@@ -873,10 +932,13 @@ watch([mobileDockItems, isMobileViewport], () => {
 });
 
 watch(activeDockIndex, () => {
-  nextTick(updateDockCursor);
+  if (manualDockIndex.value === null) {
+    nextTick(updateDockCursor);
+  }
 });
 
 watch(() => route.path, () => {
+  manualDockIndex.value = null;
   closeMobileDockGroup();
   closeMobileMenu();
   syncSidebarDropdownFromRoute();
@@ -899,6 +961,7 @@ function closeMobileDockGroup() {
   showMobileDockSheet.value = false;
   activeMobileDockGroup.value = null;
   mobileDockExpandedSection.value = null;
+  manualDockIndex.value = null;
   nextTick(updateDockCursor);
 }
 
@@ -1162,74 +1225,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .mobile-sidebar-dock {
-    position: fixed;
-    z-index: 1200;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-  }
-
-  .mobile-sidebar-dock__item {
-    flex: 1 1 0;
-    min-width: 0;
-    height: auto;
-    border-radius: 16px;
-    color: rgba(255, 255, 255, 0.72);
-    text-decoration: none;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 6px 4px;
-    background: transparent;
-  }
-
-  .mobile-sidebar-dock__item.is-active {
-    background: transparent;
-    color: #ffffff;
-    box-shadow: none;
-  }
-
-  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__icon,
-  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__label {
-    color: #ffffff;
-  }
-
-  .mobile-sidebar-dock__item.is-active :deep(iconify-icon),
-  .mobile-sidebar-dock__item.is-active :deep(svg) {
-    color: #ffffff !important;
-  }
-
-  .mobile-sidebar-dock__icon {
-    font-size: 22px;
-    line-height: 1;
-    color: inherit;
-  }
-
-  .mobile-sidebar-dock__label {
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1.1;
-    white-space: nowrap;
-    color: inherit;
-  }
-
-  .mobile-sidebar-dock__item.is-chat .mobile-sidebar-dock__icon {
-    font-size: 20px;
-  }
-
-  .mobile-sidebar-dock__btn {
-    border: none;
-    background: transparent;
-  }
-
-  .mobile-sidebar-dock__group {
-    position: relative;
-    flex: 0 0 auto;
-  }
-
   .mobile-dock-inline-submenu {
     position: absolute;
     bottom: calc(100% + 8px);
@@ -1266,11 +1261,13 @@ onUnmounted(() => {
   .mobile-dock-sheet-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2200;
+    z-index: 10100;
     background: rgba(15, 23, 42, 0.42);
     display: flex;
     align-items: flex-end;
     justify-content: center;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
   }
 
   .mobile-dock-sheet {
@@ -1281,6 +1278,8 @@ onUnmounted(() => {
     box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.18);
     max-height: min(44vh, 360px);
     overflow: auto;
+    position: relative;
+    z-index: 10101;
   }
 
 
@@ -1356,6 +1355,15 @@ onUnmounted(() => {
     border-radius: 999px;
     padding: 2px 6px;
     color: #334155;
+  }
+
+  .mobile-dock-sheet__heading {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 8px 4px 2px;
   }
 }
 @media (min-width: 1200px) {
@@ -1647,28 +1655,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .mobile-sidebar-dock {
-    height: auto;
-    min-height: 64px;
-    padding: 6px 8px;
-    background: linear-gradient(
-      135deg,
-      rgba(11, 7, 54, 0.96) 0%,
-      rgba(91, 61, 143, 0.92) 55%,
-      rgba(115, 62, 135, 0.9) 100%
-    );
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-  }
-
-  .mobile-sidebar-dock__item,
-  .mobile-sidebar-dock__btn {
-    min-width: 0;
-    min-height: 52px;
-    padding: 6px 4px;
-  }
-
   .mobile-dock-sheet {
     max-height: min(72vh, 520px);
   }
@@ -1700,6 +1686,13 @@ onUnmounted(() => {
     font-weight: 700;
     text-align: left;
     cursor: pointer;
+  }
+
+  .mobile-dock-accordion__icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .mobile-dock-accordion__chevron {

@@ -10,16 +10,20 @@
             dialog-class="kanban-mobile-fullscreen-modal"
         >
             <div class="create-lead-modal-content p-3">
-                <!-- Header with Close Button -->
-                <ModalHeader title="Create New Lead" @close="closeModal" />
-    
-                <!-- Stage Selector -->
-                <StageSelector class="px-1" v-model="form.stage_id"    :require-validation="false"
-                        @stage-change-request="handleStageChangeRequest" />
-                <div v-if="validationErrors.stage_id" class="invalid-feedback d-block px-1 mb-2">
-                    {{ validationErrors.stage_id[0] }}
+                <div class="create-lead-modal-top">
+                    <ModalHeader title="Create New Lead" @close="closeModal" />
+
+                    <StageSelector
+                        class="px-1"
+                        v-model="form.stage_id"
+                        :require-validation="false"
+                        @stage-change-request="handleStageChangeRequest"
+                    />
+                    <div v-if="validationErrors.stage_id" class="invalid-feedback d-block px-1 mb-0">
+                        {{ validationErrors.stage_id[0] }}
+                    </div>
                 </div>
-    
+
                 <!-- Form Content -->
                 <div class="form-scroll-area">
                     <div class="step-content">
@@ -2604,19 +2608,30 @@ const clearClientData = () => {
       }
       .create-lead-modal-content {
         height: 100dvh;
+        max-height: 100dvh;
         border-radius: 0 !important;
-        padding: 10px 0 0 !important;
+        padding: calc(8px + env(safe-area-inset-top, 0px)) 0 0 !important;
         display: flex;
         flex-direction: column;
         background: #f8fbff;
+        overflow: hidden;
       }
-      :deep(.header-modal-wrapper) {
+      .create-lead-modal-top {
+        flex-shrink: 0;
         position: sticky;
         top: 0;
-        z-index: 5;
-        margin: 0 !important;
-        padding: 8px 12px 12px !important;
+        z-index: 6;
         background: #f8fbff;
+        padding: 0 10px 10px;
+      }
+      :deep(.header-modal-wrapper) {
+        position: relative;
+        top: auto;
+        z-index: 1;
+        margin: 0 !important;
+        padding: 8px 12px 10px !important;
+        background: #f8fbff;
+        border-bottom: none !important;
       }
       :deep(.header-close-btn-top) {
         position: relative !important;
@@ -2652,15 +2667,26 @@ const clearClientData = () => {
         padding: 10px 14px !important;
         margin-bottom: 10px;
       }
-      .stage-selector-wrapper {
+      :deep(.stage-selector-wrapper) {
         background: #fff;
         border-radius: 14px;
         border: 1px solid #eef2f7;
-        margin-bottom: 10px;
-        padding: 8px 10px;
+        margin: 0 0 8px;
+        padding: 10px 8px;
+        overflow: visible;
+      }
+      :deep(.stage-selector-wrapper .stage-container) {
+        overflow-y: visible;
+        padding-top: 2px;
+        padding-bottom: 4px;
+      }
+      :deep(.stage-selector-wrapper .stage-pill) {
+        min-height: 34px;
+        align-items: center;
       }
       :deep(.stage-selector-wrapper .stage-text) {
         font-size: 11px !important;
+        line-height: 1.3;
       }
       .form-card,
       .contact-details-card,

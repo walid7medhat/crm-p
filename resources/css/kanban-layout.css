@@ -103,3 +103,32 @@ body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Mobile: compact stacked stages — no viewport min-heights */
+.kanban-outer--mobile .kanban-wrapper {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.kanban-outer--mobile .kanban-column {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.kanban-outer--mobile .kanban-column > div,
+.kanban-outer--mobile .kanban-column .card-body {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.kanban-outer--mobile .column-content-scrollable {
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible;
+}
+
+.kanban-outer--mobile .tasks-list {
+  flex-grow: 0;
+  min-height: 0;
+}

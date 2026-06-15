@@ -4445,8 +4445,8 @@ const $showNotification = (message, type = 'info') => {
     overflow-x: hidden;
     overflow-y: auto;
     height: auto;
-    min-height: 50vh;
-    padding: 8px 10px 24px;
+    min-height: 0;
+    padding: 8px 10px 16px;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -4454,8 +4454,9 @@ const $showNotification = (message, type = 'info') => {
     flex-direction: column;
     width: 100%;
     min-width: 0;
-    height: auto;
-    gap: 14px;
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 10px;
 }
 
 .kanban-outer--mobile .kanban-column {
@@ -4463,12 +4464,31 @@ const $showNotification = (message, type = 'info') => {
     min-width: 0;
     max-width: none;
     border-left: none;
-    height: auto;
+    height: auto !important;
+    min-height: 0 !important;
     max-height: none;
+    flex-shrink: 0;
+}
+
+.kanban-outer--mobile .kanban-column > div,
+.kanban-outer--mobile .kanban-column .card-body {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 1 auto;
 }
 
 .kanban-outer--mobile .column-content-scrollable {
-    max-height: min(70vh, 520px);
+    flex: 0 1 auto;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none;
+    overflow: visible;
+}
+
+.kanban-outer--mobile .tasks-list {
+    flex: 0 1 auto;
+    flex-grow: 0;
+    min-height: 0;
 }
 
 .kanban-outer--mobile .column-header--mobile {

@@ -355,7 +355,8 @@ onUnmounted(() => {
 
 <style scoped>
 .stage-selector-wrapper {
-    overflow: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
 }
 
 .stage-selector-track {
@@ -472,7 +473,8 @@ onUnmounted(() => {
     align-items: center;
     min-width: 140px;
     max-width: 170px;
-    padding: 2px 10px;
+    min-height: 32px;
+    padding: 4px 10px;
     /*border-radius: 30px;*/
     cursor: pointer;
     transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
@@ -511,7 +513,8 @@ onUnmounted(() => {
     .stage-pill {
         min-width: 104px;
         max-width: 138px;
-        padding: 1px 8px;
+        min-height: 34px;
+        padding: 4px 8px;
     }
 
     .stage-text {

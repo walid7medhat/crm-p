@@ -69,7 +69,7 @@
 
   /* Home dashboard: extra bottom space for dock + chat FAB (scroll lives on main) */
   #app main.dashboard-main > .dashboard-main-router--home {
-    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Auth uses its own background image; hide global shell background */
@@ -84,61 +84,62 @@
     max-height: 100dvh;
   }
 
-  /* —— Bottom dock (Instagram-style sliding pill) —— */
+  /* —— Bottom dock: Instagram glass (light frosted pill bar) —— */
   .mobile-sidebar-dock {
-    position: fixed;
-    left: 12px !important;
-    right: 12px !important;
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    --dock-h: 52px;
+    --dock-inset-y: 4px;
+    --dock-inset-x: 14px;
+    --dock-side: 16px;
+
+    position: fixed !important;
+    left: var(--dock-side) !important;
+    right: var(--dock-side) !important;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
     width: auto !important;
     margin: 0 !important;
-    padding: 6px 8px !important;
-    height: auto !important;
-    min-height: 64px !important;
-    border-radius: 22px !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    background: linear-gradient(
-      135deg,
-      rgba(11, 7, 54, 0.96) 0%,
-      rgba(91, 61, 143, 0.92) 55%,
-      rgba(115, 62, 135, 0.9) 100%
-    ) !important;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    padding: var(--dock-inset-y) var(--dock-inset-x) !important;
+    height: var(--dock-h) !important;
+    min-height: var(--dock-h) !important;
+    max-height: var(--dock-h) !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 255, 255, 0.72) !important;
+    background: rgba(255, 248, 248, 0.68) !important;
+    backdrop-filter: blur(22px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
     box-shadow:
-      0 10px 40px rgba(2, 6, 23, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
-    z-index: 1200;
+      0 4px 24px rgba(0, 0, 0, 0.14),
+      0 1px 3px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-evenly !important;
+    gap: 0 !important;
+    z-index: 9999 !important;
+    box-sizing: border-box !important;
+    -webkit-tap-highlight-color: transparent;
   }
 
+  /* Instagram sliding active pill — CRM purple glass */
   .mobile-sidebar-dock__cursor {
     position: absolute;
-    top: 6px;
-    bottom: 6px;
+    top: var(--dock-inset-y);
+    bottom: var(--dock-inset-y);
     left: 0;
-    border-radius: 16px;
-    background: linear-gradient(
-      145deg,
-      rgba(139, 92, 246, 0.95) 0%,
-      rgba(91, 61, 143, 0.98) 45%,
-      rgba(67, 40, 120, 1) 100%
-    );
+    border-radius: 999px;
+    background: rgba(124, 92, 191, 0.44);
+    border: 1px solid rgba(124, 92, 191, 0.38);
     box-shadow:
-      0 4px 18px rgba(91, 61, 143, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      inset 0 1px 2px rgba(255, 255, 255, 0.28),
+      0 1px 4px rgba(91, 61, 143, 0.2);
     pointer-events: none;
     z-index: 0;
     opacity: 0;
     will-change: transform, width, opacity;
     transition:
-      transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1),
-      width 0.18s cubic-bezier(0.34, 1.3, 0.64, 1),
-      opacity 0.12s ease;
+      transform 0.28s cubic-bezier(0.34, 1.2, 0.64, 1),
+      width 0.28s cubic-bezier(0.34, 1.2, 0.64, 1),
+      opacity 0.18s ease;
   }
 
   .mobile-sidebar-dock__cursor--ready {
@@ -151,74 +152,79 @@
     z-index: 1;
     flex: 1 1 0;
     min-width: 0;
-    max-width: none;
-    min-height: 52px;
-    padding: 6px 4px;
-    gap: 3px;
-    border: none;
+    height: calc(var(--dock-h) - (var(--dock-inset-y) * 2));
+    min-height: calc(var(--dock-h) - (var(--dock-inset-y) * 2));
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
     background: transparent !important;
-    color: rgba(255, 255, 255, 0.72) !important;
-    border-radius: 16px;
-    text-decoration: none;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    color: #111111 !important;
+    border-radius: 999px !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    transition: color 0.18s ease, transform 0.12s ease;
+    transition: transform 0.14s ease;
+    box-shadow: none !important;
   }
 
   .mobile-sidebar-dock__item:active,
   .mobile-sidebar-dock__btn:active {
-    transform: scale(0.94);
+    transform: scale(0.88);
   }
 
   .mobile-sidebar-dock__icon {
-    font-size: 22px !important;
-    line-height: 1;
-    color: inherit !important;
-    transition: transform 0.18s cubic-bezier(0.34, 1.2, 0.64, 1), color 0.18s ease;
+    font-size: 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    line-height: 1 !important;
+    color: #111111 !important;
+    transition: transform 0.28s cubic-bezier(0.34, 1.2, 0.64, 1);
+  }
+
+  .mobile-sidebar-dock__icon--img {
+    object-fit: contain;
+    display: block;
+  }
+
+  .mobile-sidebar-dock__item iconify-icon,
+  .mobile-sidebar-dock__btn iconify-icon,
+  .mobile-sidebar-dock__item svg,
+  .mobile-sidebar-dock__btn svg {
+    color: #111111 !important;
   }
 
   .mobile-sidebar-dock__label {
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1.1;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-    white-space: nowrap;
-    color: inherit !important;
-    letter-spacing: 0.01em;
-    transition: color 0.18s ease;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
   }
 
   .mobile-sidebar-dock__item.is-active,
   .mobile-sidebar-dock__btn.is-active {
     background: transparent !important;
-    color: #ffffff !important;
-    box-shadow: none;
-  }
-
-  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__label,
-  .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__icon,
-  .mobile-sidebar-dock__btn.is-active .mobile-sidebar-dock__label,
-  .mobile-sidebar-dock__btn.is-active .mobile-sidebar-dock__icon {
-    color: #ffffff !important;
+    color: #5b3d8f !important;
   }
 
   .mobile-sidebar-dock__item.is-active .mobile-sidebar-dock__icon,
   .mobile-sidebar-dock__btn.is-active .mobile-sidebar-dock__icon {
+    color: #5b3d8f !important;
     transform: scale(1.08);
   }
 
-  .mobile-sidebar-dock__item.is-active :deep(iconify-icon),
-  .mobile-sidebar-dock__item.is-active :deep(svg),
-  .mobile-sidebar-dock__btn.is-active :deep(iconify-icon),
-  .mobile-sidebar-dock__btn.is-active :deep(svg) {
-    color: #ffffff !important;
+  .mobile-sidebar-dock__item.is-active iconify-icon,
+  .mobile-sidebar-dock__btn.is-active iconify-icon,
+  .mobile-sidebar-dock__item.is-active svg,
+  .mobile-sidebar-dock__btn.is-active svg {
+    color: #5b3d8f !important;
   }
 
   /* —— Kanban page overflow —— */
@@ -231,10 +237,17 @@
     min-width: 0 !important;
   }
 
-  /* —— Chat FAB above bottom dock —— */
+  /* —— Chat FAB —— */
   .chat-floating-btn {
-    bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
-    right: 12px !important;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 18px !important;
+    width: 50px !important;
+    height: 50px !important;
+    z-index: 10050 !important;
+  }
+
+  .chat-floating-btn i {
+    font-size: 23px !important;
   }
 
   .mobile-create-new-fixed {
@@ -281,6 +294,18 @@
     display: none !important;
   }
 
+  /* Dock submenu sheet — above the pill bar, not behind it */
+  .mobile-dock-sheet-overlay {
+    z-index: 10100 !important;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+
+  .mobile-dock-sheet {
+    position: relative;
+    z-index: 10101 !important;
+  }
+
   .auth-landing__video {
     object-position: center top;
   }
@@ -288,22 +313,14 @@
 
 @media (max-width: 390px) {
   .mobile-sidebar-dock {
-    left: 8px !important;
-    right: 8px !important;
-    min-height: 60px !important;
-    padding: 5px 6px !important;
-  }
-
-  .mobile-sidebar-dock__label {
-    font-size: 9px;
+    --dock-h: 50px;
+    --dock-side: 12px;
+    --dock-inset-x: 12px;
   }
 
   .mobile-sidebar-dock__icon {
-    font-size: 20px !important;
-  }
-
-  .mobile-sidebar-dock__item,
-  .mobile-sidebar-dock__btn {
-    min-height: 48px;
+    font-size: 24px !important;
+    width: 24px !important;
+    height: 24px !important;
   }
 }

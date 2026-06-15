@@ -3080,10 +3080,17 @@ font-weight: 600;
     max-width: 100% !important;
     min-width: 100% !important;
     height: auto !important;
+    min-height: 0 !important;
     border-left: none;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     padding: 0;
+  }
+
+  .kanban-container--mobile .kanban-column > div,
+  .kanban-container--mobile .kanban-column .card-body {
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   .kanban-container--mobile .column-header {
@@ -3094,6 +3101,9 @@ font-weight: 600;
 
   .kanban-container--mobile .column-content-scrollable {
     overflow: visible;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   .kanban-container--mobile .tasks-list {

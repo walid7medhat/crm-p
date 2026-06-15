@@ -14,63 +14,59 @@
       <iconify-icon v-if="!iconOnly" icon="lucide:chevrons-up-down" width="14" height="14" />
     </button>
 
-    <div v-if="open" class="dh-date-range-popover" role="dialog" aria-label="Select date range">
-      <p class="dh-date-range-title">Custom date range</p>
-
-      <div class="dh-date-range-presets" role="group" aria-label="Quick ranges">
-        <button
-          v-for="preset in presets"
-          :key="preset.id"
-          type="button"
-          class="dh-date-range-preset"
-          @click="applyPreset(preset)"
-        >
-          {{ preset.label }}
-        </button>
-      </div>
-
-      <div class="dh-date-range-fields">
-        <div class="dh-date-range-field">
-          <div class="dh-date-range-field-head">
-            <span class="dh-date-range-label">From</span>
-            <span v-if="fromPreview" class="dh-date-range-preview">{{ fromPreview }}</span>
-          </div>
-          <DateYmdSelect
-            id-prefix="dh-from"
-            v-model="draftFrom"
-            :invalid="!!error && !draftFrom"
-          />
-        </div>
-        <div class="dh-date-range-field">
-          <div class="dh-date-range-field-head">
-            <span class="dh-date-range-label">To</span>
-            <span v-if="toPreview" class="dh-date-range-preview">{{ toPreview }}</span>
-          </div>
-          <DateYmdSelect
-            id-prefix="dh-to"
-            v-model="draftTo"
-            :invalid="!!error && !draftTo"
-          />
-        </div>
-      </div>
-
-      <p v-if="error" class="dh-date-range-error">{{ error }}</p>
-
-      <div class="dh-date-range-actions">
-        <button type="button" class="dh-date-range-btn dh-date-range-btn--ghost" @click="onCancel">
-          Cancel
-        </button>
-        <button type="button" class="dh-date-range-btn dh-date-range-btn--primary" @click="onApply">
-          Apply
-        </button>
-      </div>
+    <!-- Desktop: anchored popover -->
+    <div
+      v-if="open && !isMobileViewport"
+      class="dh-date-range-popover"
+      role="dialog"
+      aria-label="Select date range"
+    >
+      <DateRangePanel
+        :presets="presets"
+        :draft-from="draftFrom"
+        :draft-to="draftTo"
+        :error="error"
+        :from-preview="fromPreview"
+        :to-preview="toPreview"
+        @preset="applyPreset"
+        @update:draft-from="draftFrom = $event"
+        @update:draft-to="draftTo = $event"
+        @cancel="onCancel"
+        @apply="onApply"
+      />
     </div>
+
+    <!-- Mobile: centered sheet (never clipped by page overflow) -->
+    <Teleport to="body">
+      <div
+        v-if="open && isMobileViewport"
+        class="dh-date-range-mobile-overlay"
+        @click.self="onCancel"
+      >
+        <div class="dh-date-range-mobile-sheet" role="dialog" aria-label="Select date range">
+          <DateRangePanel
+            :presets="presets"
+            :draft-from="draftFrom"
+            :draft-to="draftTo"
+            :error="error"
+            :from-preview="fromPreview"
+            :to-preview="toPreview"
+            @preset="applyPreset"
+            @update:draft-from="draftFrom = $event"
+            @update:draft-to="draftTo = $event"
+            @cancel="onCancel"
+            @apply="onApply"
+          />
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
-import DateYmdSelect from '@/components/dashboard/home/DateYmdSelect.vue'
+import DateRangePanel from '@/components/dashboard/home/DateRangePanel.vue'
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js'
 import { parseToDate, toDateOnlyApiString } from '@/composables/useAdvancedDateModel.js'
 
 const props = defineProps({
@@ -83,6 +79,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:dateFrom', 'update:dateTo', 'apply'])
 
+const { isMobileViewport } = useMobileNavigation()
 const rootRef = ref(null)
 const open = ref(false)
 const draftFrom = ref('')
@@ -117,8 +114,14 @@ watch(
   () => {
     if (!open.value) syncDraft()
   },
-  { immediate: true }
+  { immediate: true },
 )
+
+watch(open, (isOpen) => {
+  if (isMobileViewport.value) {
+    document.body.style.overflow = isOpen ? 'hidden' : ''
+  }
+})
 
 function toggleOpen() {
   open.value = !open.value
@@ -168,6 +171,7 @@ function onApply() {
 
 function onClickOutside(e) {
   if (!open.value || !rootRef.value) return
+  if (isMobileViewport.value) return
   if (rootRef.value.contains(e.target)) return
   onCancel()
 }
@@ -178,5 +182,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside, true)
+  document.body.style.overflow = ''
 })
 </script>

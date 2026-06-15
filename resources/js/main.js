@@ -21,7 +21,6 @@ import 'vue-slick-carousel/dist/vue-slick-carousel-theme.css'
 import 'vue-select/dist/vue-select.css'
 import '../css/vue-select-overrides.css'
 import '../css/form-placeholders.css'
-import '../css/mobile-layout.css'
 import '../css/kanban-layout.css'
 import '../css/crm-background.css'
 import '../css/dashboard-home.css'
@@ -29,6 +28,8 @@ import '../css/analytics-premium.css'
 import '../css/dashboard-ai.css'
 import '../css/roi-calculator.css'
 import '../css/background-settings.css'
+import '../css/mobile-layout.css'
+import '../css/view-profile.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

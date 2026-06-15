@@ -357,6 +357,46 @@
   background: var(--dh-purple-800);
 }
 
+/* Mobile date sheet — centered, never clipped */
+.dh-date-range-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 15000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  background: rgba(15, 10, 35, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-sizing: border-box;
+}
+
+.dh-date-range-mobile-sheet {
+  width: 100%;
+  max-width: 400px;
+  max-height: min(88vh, 640px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(42, 21, 72, 0.28);
+  border: 1px solid #eeeaf5;
+  animation: dhDateSheetIn 0.22s ease;
+}
+
+@keyframes dhDateSheetIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 @media (max-width: 480px) {
   .dh-date-range-popover {
     width: min(360px, calc(100vw - 20px));
@@ -1676,8 +1716,22 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
     padding-top: calc(14px + env(safe-area-inset-top, 0px)) !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
-    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
+  }
+
+  /* Analytics unified home: never clip the floating dock */
+  #app main.dashboard-main > .dashboard-main-router--home:has(.ap-dashboard--uni),
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:has(.ap-dashboard--uni) {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .crm-dashboard-home--unified.ap-dashboard--uni {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   .crm-dashboard-home,

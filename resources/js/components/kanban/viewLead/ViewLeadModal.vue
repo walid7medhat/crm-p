@@ -14,11 +14,9 @@
     >
         <div v-if="show" class="view-lead-modal-content p-3 pb-0">
             <!-- Header -->
-            <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="modal-title">{{ lead?.lead_name }}</span>
-                </div>
-                <button class="close-btn" @click="show = false">
+            <div class="modal-header-custom d-flex align-items-center gap-2 px-1">
+                <span class="modal-title">{{ lead?.lead_name }}</span>
+                <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
             </div>
@@ -704,12 +702,18 @@ const $showNotification = (message, type = 'info') => {
 
 .modal-header-custom {
     background: #fff;
+    position: relative;
 }
 
 .modal-title {
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 16px;
     font-weight: 600;
     color: #0B0736;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .settings-btn, .close-btn, .notification-btn {
@@ -967,24 +971,53 @@ textarea, input, select {
 }
 
 @media (max-width: 768px) {
-    .close-btn {
-        position: static;
+    .close-btn,
+    .view-lead-close-btn {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        left: auto !important;
         transform: none;
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        min-height: 40px;
-        left: auto;
-        top: auto;
-        box-shadow: none;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        margin-left: auto;
+        padding: 0;
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(11, 7, 54, 0.15);
         border-radius: 999px;
-        border: 1px solid #e5e7eb;
-        background: #f8fafc;
+        border: none;
+        background: linear-gradient(135deg, #0b0736 0%, #733e87 100%);
+        color: #ffffff !important;
+        z-index: 10 !important;
     }
 
-    .close-btn iconify-icon {
-        width: 12px;
-        height: 12px;
+    .close-btn iconify-icon,
+    .view-lead-close-btn iconify-icon {
+        width: 20px !important;
+        height: 20px !important;
+        color: #ffffff !important;
+    }
+
+    .modal-header-custom {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px !important;
+        margin-bottom: 8px;
+    }
+
+    .modal-title {
+        font-size: 15px;
+        line-height: 1.25;
+        padding-right: 4px;
     }
 
     :deep(.kanban-mobile-fullscreen-modal) {
@@ -1003,11 +1036,13 @@ textarea, input, select {
     }
     .view-lead-modal-content {
         height: 100dvh;
+        max-height: 100dvh;
         border-radius: 0 !important;
-        padding: 10px !important;
+        padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 10px !important;
         display: flex;
         flex-direction: column;
         background: #f8fbff;
+        overflow: hidden;
     }
     .modal-body-custom {
         flex: 1 1 auto;
@@ -1134,6 +1169,73 @@ textarea, input, select {
     .view-lead-modal {
         height: 100dvh !important;
         max-height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    .modal#view-lead-modal .modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+    }
+
+    .modal#view-lead-modal .modal-content {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Teleported modal: ensure close button always visible on mobile */
+    #view-lead-modal .view-lead-close-btn {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        left: auto !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        flex-shrink: 0 !important;
+        margin-left: auto !important;
+        z-index: 20 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        border-radius: 999px !important;
+        background: linear-gradient(135deg, #0b0736 0%, #733e87 100%) !important;
+        color: #fff !important;
+        box-shadow: 0 2px 10px rgba(11, 7, 54, 0.25) !important;
+    }
+
+    #view-lead-modal .view-lead-close-btn iconify-icon,
+    #view-lead-modal .view-lead-close-btn svg {
+        color: #fff !important;
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    #view-lead-modal .modal-header-custom {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        overflow: hidden !important;
+        flex-shrink: 0 !important;
+    }
+
+    #view-lead-modal .modal-title {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        max-width: calc(100% - 54px) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    /* Hide chat FAB behind lead modal on mobile */
+    body:has(#view-lead-modal.show) .chat-floating-btn {
+        display: none !important;
     }
 }
 </style>

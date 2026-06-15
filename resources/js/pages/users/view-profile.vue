@@ -1,6 +1,5 @@
 <template>
-    <div class="dashboard-main-body">
-
+    <div class="dashboard-main-body vp-page-wrap">
         <Breadcrumb title="View Profile" :breadcrumbs="[
             { name: 'View Profile' }
         ]" />

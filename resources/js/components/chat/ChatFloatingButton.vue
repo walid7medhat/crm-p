@@ -240,13 +240,15 @@ watch(() => props.chatOpen, (isOpen) => {
 
 @media (max-width: 768px) {
   .chat-floating-btn {
-    bottom: 52px;
-    width: 46px;
-    height: 47px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    z-index: 10050;
   }
 
   .chat-floating-btn i {
-    font-size: 18px;
+    font-size: 23px;
   }
 }
 .chat-floating-badge {
