@@ -227,21 +227,59 @@
       </div>
     </div>
 
-    <div v-if="showLightbox && lightboxImages.length" class="lightbox-overlay" @click="closeLightbox">
+     <div v-if="showLightbox && lightboxImages.length" class="lightbox-overlay" @click="closeLightbox">
       <div class="lightbox-content" @click.stop>
         <div class="lightbox-header">
+          <div class="lightbox-info">
+            <span class="lightbox-title">
+              <i class="ri-map-pin-2-line"></i>
+              Floor Plans - {{ getCurrentAreaName() }}
+            </span>
+            <span class="lightbox-counter">
+              {{ currentImageIndex + 1 }} / {{ lightboxImages.length }}
+            </span>
+          </div>
           <button class="lightbox-close" @click="closeLightbox">
             <i class="ri-close-line"></i>
           </button>
         </div>
         <div class="lightbox-main">
-          <button class="lightbox-nav" @click="prevImage" :disabled="currentImageIndex === 0">
+          <button class="lightbox-nav lightbox-nav--prev" @click="prevImage" :disabled="currentImageIndex === 0">
             <i class="ri-arrow-left-s-line"></i>
           </button>
-          <img :src="lightboxImages[currentImageIndex]" class="lightbox-image" alt="" @error="onImageError" />
-          <button class="lightbox-nav" @click="nextImage" :disabled="currentImageIndex >= lightboxImages.length - 1">
+          
+          <div class="lightbox-image-wrapper">
+            <img :src="lightboxImages[currentImageIndex]" class="lightbox-image" alt="" @error="onImageError" />
+            
+            <button 
+              v-if="currentImageIndex > 0" 
+              class="lightbox-image-nav lightbox-image-nav--prev"
+              @click.stop="prevImage"
+            >
+              <i class="ri-arrow-left-s-line"></i>
+            </button>
+            <button 
+              v-if="currentImageIndex < lightboxImages.length - 1" 
+              class="lightbox-image-nav lightbox-image-nav--next"
+              @click.stop="nextImage"
+            >
+              <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+          
+          <button class="lightbox-nav lightbox-nav--next" @click="nextImage" :disabled="currentImageIndex >= lightboxImages.length - 1">
             <i class="ri-arrow-right-s-line"></i>
           </button>
+        </div>
+        
+        <div class="lightbox-dots" v-if="lightboxImages.length > 1">
+          <span 
+            v-for="(_, index) in lightboxImages" 
+            :key="index"
+            class="lightbox-dot"
+            :class="{ active: currentImageIndex === index }"
+            @click="currentImageIndex = index"
+          ></span>
         </div>
       </div>
     </div>
@@ -432,6 +470,33 @@ export default {
       activeHeroIndex.value = index;
     };
 
+   const getCurrentAreaName = () => {
+      if (!activeAreaTab.value) return 'General';
+      if (activeAreaTab.value === 'unassigned') return 'Unassigned';
+      const tab = areaTabs.value.find(t => t.areaId === activeAreaTab.value);
+      return tab ? tab.label : 'General';
+    };
+
+    // تحسين دالة openLightbox لإضافة ميزة الـ Swipe
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    const handleTouchStart = (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    };
+
+    const handleTouchEnd = (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      const diff = touchStartX - touchEndX;
+      if (Math.abs(diff) > 50) { // الحد الأدنى للـ Swipe
+        if (diff > 0) {
+          nextImage();
+        } else {
+          prevImage();
+        }
+      }
+    };
+
     const openLightbox = (images, index) => {
       if (!images.length) {
         Swal.fire({
@@ -447,6 +512,12 @@ export default {
       showLightbox.value = true;
       document.body.style.overflow = 'hidden';
     };
+
+    const openFloorPlanLightbox = (index) => {
+      const images = currentAreaFloorPlans.value.map((item) => getImageUrl(item.image_url));
+      openLightbox(images, index);
+    };
+
 
     const closeLightbox = () => {
       showLightbox.value = false;
@@ -469,11 +540,7 @@ export default {
       openLightbox(galleryImages.value, index);
     };
 
-  const openFloorPlanLightbox = (index) => {
-  // استخدام currentAreaFloorPlans بدلاً من filteredFloorPlans
-  const images = currentAreaFloorPlans.value.map((item) => getImageUrl(item.image_url));
-  openLightbox(images, index);
-};
+
 
     const editProject = () => {
       router.push(`/projects/${project.value.id}/edit`);
@@ -631,6 +698,9 @@ export default {
       activeAreaTab,
       currentAreaFloorPlans,
       getFloorType,
+        getCurrentAreaName,
+      handleTouchStart,
+      handleTouchEnd,
     };
   },
 
@@ -1458,6 +1528,296 @@ export default {
 
   .floor-plan-name {
     font-size: 11px;
+  }
+}
+.lightbox-content {
+  background: #0f172a;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1200px;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.lightbox-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.lightbox-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #e5e7eb;
+}
+
+.lightbox-title {
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lightbox-title i {
+  color: #818cf8;
+}
+
+.lightbox-counter {
+  font-size: 12px;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 12px;
+  border-radius: 12px;
+}
+
+.lightbox-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.lightbox-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  flex: 1;
+  min-height: 60vh;
+  position: relative;
+}
+
+.lightbox-image-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  max-width: calc(100% - 120px);
+  height: 100%;
+  min-height: 50vh;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 8px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lightbox-nav {
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lightbox-nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.lightbox-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* أزرار التنقل على الصورة نفسها (للتجربة الأفضل) */
+.lightbox-image-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lightbox-image-nav:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.lightbox-image-nav--prev {
+  left: 16px;
+}
+
+.lightbox-image-nav--next {
+  right: 16px;
+}
+
+/* النقاط السفلية */
+.lightbox-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lightbox-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lightbox-dot.active {
+  background: #818cf8;
+  width: 24px;
+  border-radius: 4px;
+}
+
+.lightbox-dot:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.lightbox-dot.active:hover {
+  background: #6366f1;
+}
+
+/* تحسينات للموبايل */
+@media (max-width: 767.98px) {
+  .lightbox-main {
+    padding: 12px;
+    gap: 8px;
+    min-height: 50vh;
+  }
+
+  .lightbox-image-wrapper {
+    max-width: calc(100% - 80px);
+    min-height: 40vh;
+  }
+
+  .lightbox-image {
+    max-height: 55vh;
+  }
+
+  .lightbox-nav {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .lightbox-image-nav {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .lightbox-image-nav--prev {
+    left: 4px;
+  }
+
+  .lightbox-image-nav--next {
+    right: 4px;
+  }
+
+  .lightbox-header {
+    padding: 12px 16px;
+  }
+
+  .lightbox-title {
+    font-size: 12px;
+  }
+
+  .lightbox-counter {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  .lightbox-close {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .lightbox-dots {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .lightbox-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .lightbox-dot.active {
+    width: 18px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .lightbox-info {
+    gap: 8px;
+  }
+
+  .lightbox-title {
+    font-size: 10px;
+  }
+
+  .lightbox-title i {
+    display: none;
+  }
+
+  .lightbox-counter {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+
+  .lightbox-image-wrapper {
+    max-width: calc(100% - 60px);
+  }
+
+  .lightbox-nav {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
   }
 }
 </style>
