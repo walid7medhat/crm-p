@@ -53,7 +53,7 @@
         <div class="hero-gallery-wrap" :class="{ 'hero-gallery-wrap--single': heroThumbTiles.length === 0 }">
           <div class="hero-main-image" @click="openImageLightbox(0)">
             <img :src="mainImage" alt="Project main image" @error="onImageError" />
-            <!-- <button
+            <button
               class="gallery-nav gallery-nav--prev"
               v-if="galleryImages.length > 1"
               @click.stop="prevHeroImage"
@@ -66,7 +66,7 @@
               @click.stop="nextHeroImage"
             >
               <i class="ri-arrow-right-s-line"></i>
-            </button> -->
+            </button>
           </div>
 
           <div class="hero-thumbs" v-if="heroThumbTiles.length">
@@ -251,7 +251,7 @@
           <div class="lightbox-image-wrapper">
             <img :src="lightboxImages[currentImageIndex]" class="lightbox-image" alt="" @error="onImageError" />
             
-            <button 
+            <!-- <button 
               v-if="currentImageIndex > 0" 
               class="lightbox-image-nav lightbox-image-nav--prev"
               @click.stop="prevImage"
@@ -264,7 +264,7 @@
               @click.stop="nextImage"
             >
               <i class="ri-arrow-right-s-line"></i>
-            </button>
+            </button> -->
           </div>
           
           <button class="lightbox-nav lightbox-nav--next" @click="nextImage" :disabled="currentImageIndex >= lightboxImages.length - 1">
