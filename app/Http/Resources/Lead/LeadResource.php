@@ -270,124 +270,76 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
  /**
      * تنسيق WhatsApp Qualification ديناميكياً
      */
-   /**
- * تنسيق WhatsApp Qualification ديناميكياً
- */
-/**
- * تنسيق WhatsApp Qualification ديناميكياً
- */
-protected function formatWhatsappQualification($qualification): array
-{
-    if (empty($qualification)) {
-        return [];
-    }
+    protected function formatWhatsappQualification($qualification): array
+    {
+        if (empty($qualification)) {
+            return [];
+        }
 
-    if (is_string($qualification)) {
-        $qualification = json_decode($qualification, true);
-    }
+        if (is_string($qualification)) {
+            $qualification = json_decode($qualification, true);
+        }
 
-    if (!is_array($qualification)) {
-        return [];
-    }
+        if (!is_array($qualification)) {
+            return [];
+        }
 
-    $qaList = [];
-    
-    // ✅ المفاتيح اللي مش عايزين نعرضها
-    $excludeKeys = [
-        'raw_response',
-        'payload',           // إخفاء الـ payload كامل
-        'payload_phone',     // إخفاء الـ payload phone
-        'payload_name',      // إخفاء الـ payload name
-        'payload_email',     // إخفاء الـ payload email
-        'success',           // إخفاء الـ success
-        'response_success',  // إخفاء response success
-        'response_payload',  // إخفاء response payload
-        'altcrm_webhook',    // إخفاء الـ webhook كامل
-        'full_response',     // إخفاء الـ full response
-    ];
-    
-    // ✅ المفاتيح المسموح بعرضها (بنعرضها بشكل منظم)
-    $displayKeys = [
-        'source' => 'Source',
-        'source_label' => 'Source Label',
-        'lead_id' => 'Lead ID',
-        'name' => 'Name',
-        'phone' => 'Phone',
-        'email' => 'Email',
-        'external_id' => 'External ID',
-        'campaign' => 'Campaign',
-        'budget' => 'Budget (AED)',
-        'status' => 'Status',
-        'sent_at' => 'Sent At',
-        'received_at' => 'Received At',
-        'updated_at' => 'Updated At',
-        'response_status' => 'Response Status',
-        'response_source' => 'Response Source',
-        'response_source_label' => 'Response Source Label',
-        'response_lead_id' => 'Response Lead ID',
-        'response_name' => 'Response Name',
-        'response_phone' => 'Response Phone',
-        'response_status' => 'Response Status',
-    ];
-    
-    // ✅ عرض المفاتيح المسموح بها فقط
-    foreach ($displayKeys as $key => $label) {
-        if (isset($qualification[$key]) && !empty($qualification[$key]) && $qualification[$key] !== null) {
-            // التأكد أن المفتاح مش في الـ exclude
-            if (!in_array($key, $excludeKeys)) {
-                $qaList[] = [
-                    'question' => $label,
-                    'answer' => $this->formatAnswer($key, $qualification[$key]),
-                    'key' => $key,
-                ];
+        $qaList = [];
+        
+        // ✅ عرض كل البيانات الموجودة
+        foreach ($qualification as $key => $value) {
+            // تخطي القيم الفارغة
+            if ($value === null || $value === '') {
+                continue;
             }
-        }
-    }
-    
-    // ✅ عرض أي مفاتيح إضافية (غير موجودة في الـ displayKeys أو excludeKeys)
-    foreach ($qualification as $key => $value) {
-        // تخطي القيم الفارغة
-        if ($value === null || $value === '') {
-            continue;
-        }
-        
-        // تخطي المفاتيح المستثناة
-        if (in_array($key, $excludeKeys)) {
-            continue;
-        }
-        
-        // تخطي المفاتيح اللي already عرضناها
-        if (isset($displayKeys[$key])) {
-            continue;
-        }
-        
-        // تخطي التواريخ (عرضناها في النهاية)
-        if ($key === 'updated_at' || $key === 'received_at' || $key === 'sent_at') {
-            continue;
-        }
-        
-        $qaList[] = [
-            'question' => $this->formatQuestion($key),
-            'answer' => $this->formatAnswer($key, $value),
-            'key' => $key,
-        ];
-    }
-    
-    // ✅ إضافة التواريخ في النهاية
-    $dateKeys = ['received_at', 'sent_at', 'updated_at'];
-    foreach ($dateKeys as $key) {
-        if (isset($qualification[$key]) && !empty($qualification[$key])) {
-            $label = $key === 'received_at' ? 'Received At' : ($key === 'sent_at' ? 'Sent At' : 'Updated At');
+            if (
+                $key === 'raw_response' ||
+                $key === 'updated_at' ||
+                $key === 'received_at' ||
+                $key === 'response_success' || // 👈 الجديد
+                $key === 'success' // 👈 لو موجود كمان
+            ) {
+                continue;
+            }
+            // تخطي الـ raw_response (نعرضها في مكان منفصل)
+            if ($key === 'raw_response') {
+                continue;
+            }
+            
+            // تخطي الـ updated_at و received_at (نعرضهم في النهاية)
+            if ($key === 'updated_at' || $key === 'received_at') {
+                continue;
+            }
+            
+            // تنسيق المفتاح ليكون سؤال
+            $question = $this->formatQuestion($key);
+            
             $qaList[] = [
-                'question' => $label,
-                'answer' => $this->formatDate($qualification[$key]),
+                'question' => $question,
+                'answer' => $this->formatAnswer($value),
                 'key' => $key,
             ];
         }
+        
+        // إضافة وقت الاستلام والتحديث في النهاية
+        if (isset($qualification['received_at'])) {
+            $qaList[] = [
+                'question' => 'Received At',
+                'answer' => $this->formatDate($qualification['received_at']),
+                'key' => 'received_at',
+            ];
+        }
+        
+        if (isset($qualification['updated_at'])) {
+            $qaList[] = [
+                'question' => 'Updated At',
+                'answer' => $this->formatDate($qualification['updated_at']),
+                'key' => 'updated_at',
+            ];
+        }
+        
+        return $qaList;
     }
-    
-    return $qaList;
-}
 
     /**
      * تنسيق المفتاح ليكون سؤال
