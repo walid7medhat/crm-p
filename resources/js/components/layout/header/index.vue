@@ -115,6 +115,36 @@
           </ul>
         </li>
 
+        <li
+          v-if="isAdmin"
+          :class="{
+            dropdown: true,
+            open: activeDropdown === 'calculator',
+            'dropdown-open': activeDropdown === 'calculator',
+            'active-parent': isSidebarModuleActive('calculator'),
+          }"
+        >
+          <a href="javascript:void(0)" @click.stop.prevent="toggleDropdown('calculator')" :class="{ active: isSidebarModuleActive('calculator') }">
+            <iconify-icon icon="lucide:calculator" class="menu-icon" />
+            <span>Calculator</span>
+            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'calculator' }" />
+          </a>
+          <ul v-show="activeDropdown === 'calculator'" class="sidebar-submenu sidebar-submenu--crm sidebar-submenu--calculator">
+            <li
+              v-for="item in calculatorMenuItems"
+              :key="item.path"
+              :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]"
+            >
+              <router-link :to="item.path" custom v-slot="{ navigate, href }">
+                <a :href="href" class="sidebar-nav-link" @click="navigate">
+                  <iconify-icon :icon="item.icon" class="menu-icon submenu-icon" />
+                  <span>{{ item.label }}</span>
+                </a>
+              </router-link>
+            </li>
+          </ul>
+        </li>
+
         <li v-if="isSuperAdmin || user.id === 186">
           <router-link to="/hr" custom v-slot="{ navigate, href }">
             <a
@@ -698,19 +728,26 @@ const settingsSidebarSections = computed(() => {
       ]
     : [];
 
-  const tools = isAdmin.value
-    ? [{ path: '/settings/roi-calculator', label: 'ROI Calculator', icon: 'lucide:calculator' }]
-    : [];
-
   return buildSettingsSidebarSections({
     system,
     roles: filteredRolesItems.value,
-    tools,
+    tools: [],
     insights: filteredMainMenuItems.value,
     chat,
     other,
   });
 });
+
+const calculatorMenuItems = computed(() =>
+  isAdmin.value
+    ? [
+        { path: '/settings/roi-calculator', label: 'ROI', icon: 'lucide:trending-up' },
+        { path: '/settings/roe-calculator', label: 'ROE', icon: 'lucide:percent' },
+      ]
+    : [],
+);
+
+const allCalculatorMenuPaths = computed(() => calculatorMenuItems.value.map((i) => i.path));
 
 const allListingsMenuPaths = computed(() =>
   listingsSidebarSections.value.flatMap((s) => s.items.map((i) => i.path)),
@@ -770,6 +807,18 @@ const mobileDockItems = computed(() => {
     }
 
     items.push(crmGroup);
+
+    if (calculatorMenuItems.value.length) {
+      items.push({
+        key: 'group-calculator',
+        label: 'Calculator',
+        icon: 'lucide:calculator',
+        children: calculatorMenuItems.value.map((it) => ({
+          path: it.path,
+          label: it.label,
+        })),
+      });
+    }
   }
 
   if (isSuperAdmin.value || user.value?.id === 186) {
@@ -1086,7 +1135,7 @@ function afterLeave(el) {
 
 function syncSidebarDropdownFromRoute() {
   if (isDashboardHome.value) {
-    if (!['crm', 'settings', 'users'].includes(activeDropdown.value)) {
+    if (!['crm', 'calculator', 'settings', 'users'].includes(activeDropdown.value)) {
       activeDropdown.value = null;
       localStorage.removeItem('activeDropdown');
     }
@@ -1101,6 +1150,11 @@ function syncSidebarDropdownFromRoute() {
       rememberListingsPath(route.path);
     }
     rememberCrmSection(crmSection);
+    return;
+  }
+  if (allCalculatorMenuPaths.value.some((p) => isSidebarSubItemActive(p))) {
+    activeDropdown.value = 'calculator';
+    localStorage.setItem('activeDropdown', 'calculator');
     return;
   }
   if (allSettingsMenuPaths.value.some((p) => isSidebarSubItemActive(p))) {
@@ -1121,7 +1175,7 @@ function syncSidebarDropdownFromRoute() {
 watch(isDashboardHome, (onHome) => {
   if (!onHome) return;
   // Keep dropdown open if user explicitly opened it from dashboard
-  if (['crm', 'settings', 'users'].includes(activeDropdown.value)) return;
+  if (['crm', 'calculator', 'settings', 'users'].includes(activeDropdown.value)) return;
   activeDropdown.value = null;
   localStorage.removeItem('activeDropdown');
 });
@@ -1539,6 +1593,13 @@ onUnmounted(() => {
 /* Keep CRM submenu visible when user opens it from dashboard */
 .sidebar--dashboard-home .sidebar-menu li.dropdown.open > .sidebar-submenu--crm,
 .sidebar--dashboard-home .sidebar-menu li.dropdown.dropdown-open > .sidebar-submenu--crm {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Keep Calculator submenu visible when user opens it from dashboard */
+.sidebar--dashboard-home .sidebar-menu li.dropdown.open > .sidebar-submenu--calculator,
+.sidebar--dashboard-home .sidebar-menu li.dropdown.dropdown-open > .sidebar-submenu--calculator {
   display: block !important;
   visibility: visible !important;
 }

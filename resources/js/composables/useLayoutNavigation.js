@@ -4,11 +4,17 @@ import { computed } from 'vue';
 export const LAYOUT_MODULES = {
   DASHBOARD: 'dashboard',
   CRM: 'crm',
+  CALCULATOR: 'calculator',
   HR: 'hr',
   AGENTS: 'agents',
   LISTINGS: 'listings',
   SETTINGS: 'settings',
 };
+
+export const CALCULATOR_PREFIXES = [
+  '/settings/roi-calculator',
+  '/settings/roe-calculator',
+];
 
 export const CRM_PREFIXES = ['/kanban', '/kanban_deal'];
 
@@ -183,6 +189,7 @@ export function resolveActiveModule(path) {
   if (pathMatches(path, CRM_PREFIXES) || pathMatches(path, LISTINGS_PREFIXES)) {
     return LAYOUT_MODULES.CRM;
   }
+  if (pathMatches(path, CALCULATOR_PREFIXES)) return LAYOUT_MODULES.CALCULATOR;
   if (pathMatches(path, HR_PREFIXES)) return LAYOUT_MODULES.HR;
   if (pathMatches(path, AGENTS_PREFIXES)) return LAYOUT_MODULES.AGENTS;
   if (pathMatches(path, SETTINGS_PREFIXES)) return LAYOUT_MODULES.SETTINGS;
@@ -231,6 +238,25 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
     return tabs;
   }
 
+  if (module === LAYOUT_MODULES.CALCULATOR) {
+    return [
+      {
+        id: 'roi',
+        label: 'ROI',
+        type: 'route',
+        path: '/settings/roi-calculator',
+        matchPaths: ['/settings/roi-calculator'],
+      },
+      {
+        id: 'roe',
+        label: 'ROE',
+        type: 'route',
+        path: '/settings/roe-calculator',
+        matchPaths: ['/settings/roe-calculator'],
+      },
+    ];
+  }
+
   if (module === LAYOUT_MODULES.SETTINGS) {
     const tabs = [];
 
@@ -259,7 +285,6 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       '/sales-intelligence',
       '/investment-analysis',
       '/settings/city-investments',
-      '/settings/roi-calculator',
       '/settings/lead-scoring',
       '/settings/kanban',
       '/settings/stage-visibility',

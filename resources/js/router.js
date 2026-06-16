@@ -94,6 +94,7 @@ import lead_scoring_settings from './components/kanban/LeadScoringSettings.vue'
 import InvestmentAnalysis from './pages/dashboard/investment.vue'
 import CitySettings from './pages/dashboard/city-settings.vue'
 import RoiCalculatorPage from './pages/settings/roi-calculator.vue'
+import RoeCalculatorPage from './pages/settings/roe-calculator.vue'
 import Email from './pages/email/email.vue'
 import StarredEmail from './pages/email/StarredEmail.vue'
 import EmailViewDetails from './pages/email/VeiwDetails.vue'
@@ -156,6 +157,7 @@ const baseRoutes = [
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/roi-calculator', component: RoiCalculatorPage, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/settings/roe-calculator', component: RoeCalculatorPage, meta: { requiresAuth: true, requiresAdmin: true } },
    { path: '/home', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
    { path: '/', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 

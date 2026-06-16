@@ -242,12 +242,26 @@ html:has(#app main.auth-page-main) .dashboard-main.active {
 
 #app main.dashboard-main > .dashboard-main-router:has(.property-form-page),
 #app main.dashboard-main > .dashboard-main-router:has(.property-show-page),
-#app main.dashboard-main > .dashboard-main-router:has(.property-show-inner) {
+#app main.dashboard-main > .dashboard-main-router:has(.property-show-inner),
+#app main.dashboard-main > .dashboard-main-router:has(.project-show-page) {
   flex: 0 0 auto;
+  display: block;
   min-height: auto;
   height: auto;
   max-height: none;
   overflow: visible;
+}
+
+#app main.dashboard-main:has(.project-show-page),
+#app main.dashboard-main:has(.property-show-page),
+#app main.dashboard-main:has(.property-show-inner),
+#app main.dashboard-main:has(.property-form-page) {
+  height: auto;
+  max-height: none;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Route mounts behind loader; keep layout stable without flashing old page */

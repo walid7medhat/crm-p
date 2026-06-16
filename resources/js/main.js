@@ -30,6 +30,7 @@ import '../css/roi-calculator.css'
 import '../css/background-settings.css'
 import '../css/mobile-layout.css'
 import '../css/view-profile.css'
+import '../css/project-page.css'
 
 const addCSS = (url) => {
   const link = document.createElement('link')

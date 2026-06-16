@@ -914,3 +914,264 @@
   width: 1123px;
   background: #fff;
 }
+
+/* ── ROE: allocation, instalments, scenarios ── */
+.roi-calc__alloc {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 11px;
+  border-radius: var(--roi-radius-sm);
+  margin-bottom: 10px;
+  font-size: 0.65rem;
+  color: var(--roi-muted);
+  border: 1px solid var(--roi-border);
+  background: #fffbeb;
+}
+
+.roi-calc__alloc strong {
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.roi-calc__alloc--ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.roi-calc__alloc--ok strong {
+  color: var(--roi-green);
+}
+
+.roi-calc__alloc--warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.roi-calc__alloc--warn strong {
+  color: var(--roi-gold-dark);
+}
+
+.roi-calc__inst {
+  background: #faf9fc;
+  border: 1px solid var(--roi-border);
+  border-radius: var(--roi-radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.roi-calc__inst-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.roi-calc__inst-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.roi-calc__inst-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--roi-brand), var(--roi-brand-dark));
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.roi-calc__inst-label {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--roi-navy);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.roi-calc__inst-del {
+  background: transparent;
+  border: none;
+  color: var(--roi-red);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.roi-calc__mini-lbl {
+  font-size: 0.5625rem;
+  color: var(--roi-brand-dark);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.roi-calc__inst-amt {
+  font-size: 0.625rem;
+  color: var(--roi-gold-dark);
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.roi-calc__date-input {
+  width: 100%;
+  background: #faf9fc;
+  border: 1px solid var(--roi-border);
+  border-radius: var(--roi-radius-sm);
+  padding: 7px 10px;
+  color: var(--roi-text);
+  font-size: 0.75rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.roi-calc__date-input:focus {
+  border-color: var(--roi-brand);
+  box-shadow: 0 0 0 3px rgba(124, 92, 191, 0.12);
+  background: #fff;
+}
+
+.roi-calc__add-btn {
+  width: 100%;
+  padding: 9px;
+  margin-bottom: 8px;
+  background: transparent;
+  border: 1px dashed rgba(124, 92, 191, 0.4);
+  border-radius: var(--roi-radius-sm);
+  color: var(--roi-brand-dark);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.roi-calc__add-btn:hover {
+  background: #f3f0f8;
+  border-color: var(--roi-brand);
+}
+
+.roi-calc__scenarios {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 960px) {
+  .roi-calc__scenarios {
+    grid-template-columns: 1fr;
+  }
+}
+
+.roi-calc__scenario {
+  background: var(--roi-card);
+  border: 1px solid var(--roi-border);
+  border-radius: var(--roi-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--roi-shadow);
+}
+
+.roi-calc__scenario--green {
+  border-top: 3px solid var(--roi-green);
+}
+
+.roi-calc__scenario--blue {
+  border-top: 3px solid var(--roi-blue);
+}
+
+.roi-calc__scenario-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--roi-border);
+}
+
+.roi-calc__scenario--green .roi-calc__scenario-head {
+  background: #f0fdf4;
+}
+
+.roi-calc__scenario--blue .roi-calc__scenario-head {
+  background: #eff6ff;
+}
+
+.roi-calc__scenario-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.roi-calc__scenario--green .roi-calc__scenario-title {
+  color: var(--roi-green);
+}
+
+.roi-calc__scenario--blue .roi-calc__scenario-title {
+  color: var(--roi-blue);
+}
+
+.roi-calc__scenario-sub {
+  font-size: 0.625rem;
+  color: var(--roi-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.roi-calc__scenario-body {
+  padding: 10px 14px;
+}
+
+.roi-calc__scenario-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f3f0f8;
+  font-size: 0.75rem;
+}
+
+.roi-calc__scenario-row:last-child {
+  border-bottom: none;
+}
+
+.roi-calc__scenario-row span {
+  color: var(--roi-muted);
+}
+
+.roi-calc__scenario-row strong {
+  color: var(--roi-navy);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.roi-calc__scenario--green .roi-calc__scenario-row--bold strong {
+  color: var(--roi-green);
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.roi-calc__scenario--blue .roi-calc__scenario-row--bold strong {
+  color: var(--roi-blue);
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.roi-calc__scenario-row--bold span {
+  color: var(--roi-navy);
+  font-weight: 600;
+}

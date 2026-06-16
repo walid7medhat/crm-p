@@ -1,0 +1,51 @@
+/**
+ * Project detail page — natural document scroll (see usePageNaturalScroll).
+ */
+html.page-natural-scroll,
+html.page-natural-scroll body {
+  height: auto !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.page-natural-scroll #app {
+  height: auto !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+html.page-natural-scroll #app main.dashboard-main {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  height: auto !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+html.page-natural-scroll #app main.dashboard-main > .dashboard-main-router {
+  flex: 0 0 auto !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+html.page-natural-scroll .dashboard-main-body.project-show-page {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+@media (max-width: 768px) {
+  html.page-natural-scroll .dashboard-main-body.project-show-page {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}

@@ -1,5 +1,5 @@
 <template>
-  <div class="project-show-page">
+  <div class="dashboard-main-body project-show-page">
     <div v-if="loading" class="state-box">
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Loading...</span>
@@ -216,10 +216,11 @@
 </template>
 
 <script>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
+import { enablePageNaturalScroll, disablePageNaturalScroll } from '@/composables/usePageNaturalScroll.js';
 
 export default {
   name: "ProjectDetails",
@@ -490,14 +491,20 @@ export default {
     };
 
     onMounted(() => {
+      enablePageNaturalScroll();
       fetchProject();
       document.addEventListener('keydown', handleKeydown);
-      
     });
 
     const cleanup = () => {
       document.removeEventListener('keydown', handleKeydown);
+      document.body.style.overflow = '';
     };
+
+    onBeforeUnmount(() => {
+      cleanup();
+      disablePageNaturalScroll();
+    });
 
     return {
       project,
@@ -538,20 +545,18 @@ export default {
     };
   },
 
-  beforeUnmount() {
-    this.cleanup();
-  }
 };
 </script>
 
 <style scoped>
 .project-show-page {
-  padding: 8px 6px 16px;
+  padding: 8px 6px 24px;
+  min-height: 0;
 }
 
 .project-shell {
   border-radius: 16px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.35);
   background:
     linear-gradient(180deg, rgba(92, 86, 176, 0.9), rgba(100, 83, 170, 0.95)),
@@ -731,7 +736,8 @@ export default {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 8px;
-  padding: 0 10px 10px;
+  padding: 0 10px 16px;
+  align-items: start;
 }
 
 .info-card,
@@ -865,9 +871,8 @@ export default {
   background: #f8fafc;
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
-  height: 120px;
-  min-height: 120px;
-  max-height: 120px;
+  min-height: 180px;
+  height: auto;
   cursor: pointer;
 }
 
@@ -911,9 +916,12 @@ export default {
 .floor-plan-main {
   width: 100%;
   max-width: 100%;
-  height: 100%;
+  min-height: 180px;
+  max-height: 360px;
+  height: auto;
   object-fit: contain;
-  padding: 4px 6px;
+  padding: 8px 10px;
+  box-sizing: border-box;
 }
 
 .floor-plan-footer {

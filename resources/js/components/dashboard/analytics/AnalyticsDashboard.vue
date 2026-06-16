@@ -244,7 +244,12 @@ import { useAnalyticsDashboard } from '@/composables/useAnalyticsDashboard.js'
 import { useDashboardPermissions } from '@/composables/useDashboardPermissions.js'
 import { parseToDate } from '@/composables/useAdvancedDateModel.js'
 
-const FUNNEL_COLORS = ['#7c5cbf', '#5b3d8f', '#6366f1', '#a78bfa', '#c4b5fd']
+const PURPLE = '#7c5cbf'
+const PURPLE_DARK = '#5b3d8f'
+const GOLD = '#f59e0b'
+const WHITE_MUTED = 'rgba(255,255,255,0.35)'
+
+const FUNNEL_COLORS = [PURPLE, '#6d52b5', PURPLE_DARK, '#4a3278', '#3d2864']
 
 const { isMobileViewport } = useMobileNavigation()
 const { canViewModule, scopeLabel } = useDashboardPermissions()
@@ -300,10 +305,10 @@ const crmFunnelStages = computed(() => {
 
 const listingBreakdown = computed(() => {
   const items = [
-    { label: 'Active', value: Number(listing.value.active_listings) || 0, color: '#22c55e' },
-    { label: 'Sold', value: Number(listing.value.sold_listings) || 0, color: '#15803d' },
-    { label: 'Pending', value: Number(listing.value.pending_approval) || 0, color: '#f59e0b' },
-    { label: 'Expired', value: Number(listing.value.expired_listings) || 0, color: '#94a3b8' },
+    { label: 'Active', value: Number(listing.value.active_listings) || 0, color: PURPLE },
+    { label: 'Sold', value: Number(listing.value.sold_listings) || 0, color: PURPLE_DARK },
+    { label: 'Pending', value: Number(listing.value.pending_approval) || 0, color: GOLD },
+    { label: 'Expired', value: Number(listing.value.expired_listings) || 0, color: WHITE_MUTED },
   ]
   const max = Math.max(...items.map((i) => i.value), 1)
   return items.map((i) => ({ ...i, pct: Math.round((i.value / max) * 100) }))
@@ -324,9 +329,9 @@ const hrActivePct = computed(() => {
 const hrRingDash = computed(() => Math.round((hrActivePct.value / 100) * 327))
 
 const hrPresence = computed(() => [
-  { label: 'Active', value: Number(hr.value.active_employees) || 0, color: '#22c55e' },
-  { label: 'Absent', value: Number(hr.value.absent_employees) || 0, color: '#ef4444' },
-  { label: 'On leave', value: Number(hr.value.on_leave) || 0, color: '#f59e0b' },
+  { label: 'Active', value: Number(hr.value.active_employees) || 0, color: GOLD },
+  { label: 'Absent', value: Number(hr.value.absent_employees) || 0, color: PURPLE_DARK },
+  { label: 'On leave', value: Number(hr.value.on_leave) || 0, color: WHITE_MUTED },
 ])
 
 function applyDateRange() {
@@ -360,16 +365,16 @@ function renderCrmChart() {
   crmChart = new ApexCharts(crmChartRef.value, {
     series: [{ name: 'Leads', data: values }],
     chart: { type: 'area', height: chartHeight(), toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
-    colors: ['#7c5cbf'],
+    colors: [PURPLE],
     fill: {
       type: 'gradient',
-      gradient: { opacityFrom: 0.45, opacityTo: 0.05 },
+      gradient: { shade: 'dark', type: 'vertical', opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] },
     },
     stroke: { curve: 'smooth', width: 2.5 },
     dataLabels: { enabled: false },
-    xaxis: { categories, labels: { style: { fontSize: '10px', colors: '#475569', fontWeight: 600 } }, axisBorder: { show: false }, axisTicks: { show: false } },
-    yaxis: { labels: { style: { fontSize: '10px', colors: '#475569', fontWeight: 600 } } },
-    grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
+    xaxis: { categories, labels: { style: { fontSize: '10px', colors: 'rgba(255,255,255,0.55)', fontWeight: 600 } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: { labels: { style: { fontSize: '10px', colors: 'rgba(255,255,255,0.55)', fontWeight: 600 } } },
+    grid: { borderColor: 'rgba(255,255,255,0.1)', strokeDashArray: 4 },
     tooltip: { theme: 'light' },
   })
   crmChart.render()
@@ -385,7 +390,7 @@ function renderListingChart() {
   ]
   const hasData = raw.some((v) => v > 0)
   const series = hasData ? raw : [1, 1, 1, 1]
-  const colors = hasData ? ['#15803d', '#22c55e', '#f59e0b', '#94a3b8'] : ['#cbd5e1', '#cbd5e1', '#cbd5e1', '#cbd5e1']
+  const colors = hasData ? [PURPLE_DARK, PURPLE, GOLD, WHITE_MUTED] : ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0.15)']
   if (listingChart) listingChart.destroy()
   listingChartRef.value.innerHTML = ''
   const size = isMobileViewport.value ? 110 : 96
@@ -398,7 +403,7 @@ function renderListingChart() {
     legend: { show: false },
     dataLabels: { enabled: false },
     tooltip: { enabled: hasData },
-    stroke: { width: 3, colors: ['#ecfdf5'] },
+    stroke: { width: 3, colors: ['rgba(42,21,72,0.6)'] },
   })
   listingChart.render()
 }
@@ -416,13 +421,13 @@ function renderHrChart() {
       { name: 'Absent', data: absent },
     ],
     chart: { type: 'bar', height: chartHeight(), toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
-    colors: ['#3b82f6', '#ef4444'],
+    colors: [PURPLE, GOLD],
     plotOptions: { bar: { borderRadius: 5, columnWidth: '50%' } },
     dataLabels: { enabled: false },
-    xaxis: { categories, labels: { style: { fontSize: '10px', colors: '#475569', fontWeight: 600 } }, axisBorder: { show: false } },
-    yaxis: { labels: { style: { fontSize: '10px', colors: '#475569', fontWeight: 600 } } },
-    grid: { borderColor: '#e2e8f0', strokeDashArray: 4 },
-    legend: { show: true, position: 'top', fontSize: '11px', fontWeight: 600, labels: { colors: '#334155' } },
+    xaxis: { categories, labels: { style: { fontSize: '10px', colors: 'rgba(255,255,255,0.55)', fontWeight: 600 } }, axisBorder: { show: false } },
+    yaxis: { labels: { style: { fontSize: '10px', colors: 'rgba(255,255,255,0.55)', fontWeight: 600 } } },
+    grid: { borderColor: 'rgba(255,255,255,0.1)', strokeDashArray: 4 },
+    legend: { show: true, position: 'top', fontSize: '11px', fontWeight: 600, labels: { colors: 'rgba(255,255,255,0.75)' } },
     tooltip: { theme: 'light' },
   })
   hrChart.render()

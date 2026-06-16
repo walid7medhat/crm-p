@@ -105,10 +105,28 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
   background: transparent !important;
 }
 
+/* Detail pages: main shell scrolls with full page height */
+body.app-has-video-bg #app main.dashboard-main:has(.project-show-page),
+body.app-has-video-bg #app main.dashboard-main:has(.property-show-page),
+body.app-has-video-bg #app main.dashboard-main:has(.property-show-inner),
+body.app-has-video-bg #app main.dashboard-main:has(.property-form-page) {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 100dvh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 body.app-has-video-bg .property-show-page {
   margin-top: 0 !important;
   /* padding-top: 0 !important; */
   padding: 0 1rem 1rem 0 !important;
+}
+
+body.app-has-video-bg .dashboard-main-body.project-show-page {
+  margin-top: 0 !important;
+  padding: 0 1rem 1.5rem 0 !important;
 }
 
 /* Kanban / HR shells: internal scroll only */
@@ -181,11 +199,13 @@ body.app-has-video-bg .listing-search-shell {
   background: #fff !important;
 }
 
-/* Property details + listing form: single page scroll */
+/* Property details + listing form + project details: single page scroll */
 body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-show-page),
 body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-show-inner),
-body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-form-page) {
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-form-page),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.project-show-page) {
   flex: 0 0 auto !important;
+  display: block !important;
   min-height: auto !important;
   height: auto !important;
   max-height: none !important;
@@ -195,7 +215,8 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.pro
 body.app-has-video-bg .property-show-page,
 body.app-has-video-bg .property-show-inner,
 body.app-has-video-bg .property-form-page,
-body.app-has-video-bg .property-form-root {
+body.app-has-video-bg .property-form-root,
+body.app-has-video-bg .dashboard-main-body.project-show-page {
   overflow: visible !important;
   height: auto !important;
   min-height: 0 !important;
