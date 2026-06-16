@@ -273,6 +273,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
    /**
  * تنسيق WhatsApp Qualification ديناميكياً
  */
+/**
+ * تنسيق WhatsApp Qualification ديناميكياً
+ */
 protected function formatWhatsappQualification($qualification): array
 {
     if (empty($qualification)) {
@@ -287,23 +290,61 @@ protected function formatWhatsappQualification($qualification): array
         return [];
     }
 
+    $qaList = [];
+    
     // ✅ المفاتيح اللي مش عايزين نعرضها
     $excludeKeys = [
         'raw_response',
-        'payload',
-        'payload_phone',
-        'payload_name',
-        'payload_email',
-        'success',
-        'response_success',
-        'response_payload',
-        'altcrm_webhook',
-        'full_response',
+        'payload',           // إخفاء الـ payload كامل
+        'payload_phone',     // إخفاء الـ payload phone
+        'payload_name',      // إخفاء الـ payload name
+        'payload_email',     // إخفاء الـ payload email
+        'success',           // إخفاء الـ success
+        'response_success',  // إخفاء response success
+        'response_payload',  // إخفاء response payload
+        'altcrm_webhook',    // إخفاء الـ webhook كامل
+        'full_response',     // إخفاء الـ full response
     ];
-
-    $qaList = [];
     
-    // ✅ عرض كل المفاتيح ما عدا المستثناة
+    // ✅ المفاتيح المسموح بعرضها (بنعرضها بشكل منظم)
+    $displayKeys = [
+        'source' => 'Source',
+        'source_label' => 'Source Label',
+        'lead_id' => 'Lead ID',
+        'name' => 'Name',
+        'phone' => 'Phone',
+        'email' => 'Email',
+        'external_id' => 'External ID',
+        'campaign' => 'Campaign',
+        'budget' => 'Budget (AED)',
+        'status' => 'Status',
+        'sent_at' => 'Sent At',
+        'received_at' => 'Received At',
+        'updated_at' => 'Updated At',
+        'response_status' => 'Response Status',
+        'response_source' => 'Response Source',
+        'response_source_label' => 'Response Source Label',
+        'response_lead_id' => 'Response Lead ID',
+        'response_name' => 'Response Name',
+        'response_phone' => 'Response Phone',
+        'response_status' => 'Response Status',
+    ];
+    
+    // ✅ عرض المفاتيح المسموح بها فقط
+    foreach ($displayKeys as $key => $label) {
+        if (isset($qualification[$key]) && !empty($qualification[$key]) && $qualification[$key] !== null) {
+            // التأكد أن المفتاح مش في الـ exclude
+            if (!in_array($key, $excludeKeys)) {
+                $qaList[] = [
+                    'question' => $label,
+                    'answer' => $this->formatAnswer($key, $qualification[$key]),
+                    'key' => $key,
+                ];
+            }
+        }
+    }
+    
+    // ✅ عرض أي مفاتيح إضافية (غير موجودة في الـ displayKeys أو excludeKeys)
     foreach ($qualification as $key => $value) {
         // تخطي القيم الفارغة
         if ($value === null || $value === '') {
@@ -315,8 +356,13 @@ protected function formatWhatsappQualification($qualification): array
             continue;
         }
         
-        // تخطي التواريخ (هنعرضها في الآخر)
-        if (in_array($key, ['updated_at', 'received_at', 'sent_at'])) {
+        // تخطي المفاتيح اللي already عرضناها
+        if (isset($displayKeys[$key])) {
+            continue;
+        }
+        
+        // تخطي التواريخ (عرضناها في النهاية)
+        if ($key === 'updated_at' || $key === 'received_at' || $key === 'sent_at') {
             continue;
         }
         
@@ -329,16 +375,11 @@ protected function formatWhatsappQualification($qualification): array
     
     // ✅ إضافة التواريخ في النهاية
     $dateKeys = ['received_at', 'sent_at', 'updated_at'];
-    $dateLabels = [
-        'received_at' => 'Received At',
-        'sent_at' => 'Sent At',
-        'updated_at' => 'Updated At'
-    ];
-    
     foreach ($dateKeys as $key) {
         if (isset($qualification[$key]) && !empty($qualification[$key])) {
+            $label = $key === 'received_at' ? 'Received At' : ($key === 'sent_at' ? 'Sent At' : 'Updated At');
             $qaList[] = [
-                'question' => $dateLabels[$key] ?? ucwords(str_replace('_', ' ', $key)),
+                'question' => $label,
                 'answer' => $this->formatDate($qualification[$key]),
                 'key' => $key,
             ];
