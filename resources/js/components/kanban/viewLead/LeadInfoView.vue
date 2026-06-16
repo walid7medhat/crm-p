@@ -67,7 +67,7 @@
             
         </div>
 
-        <div class="info-section" v-if="hasAdditionalQuestions">
+        <div class="info-section" v-if="hasAdditionalQuestions || lead?.more_information">
             <div class="info-section-title">More Information</div>
             
             <div class="info-group" v-if="lead?.more_information">
