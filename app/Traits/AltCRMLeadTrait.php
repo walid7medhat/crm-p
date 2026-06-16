@@ -13,32 +13,46 @@ trait AltCRMLeadTrait
     public function sendToAltCRM(array $additionalData = [])
     {
         try {
-            $payload = array_merge([
-                'id' => $this->id,
+            // ✅ الحقول المطلوبة بس حسب الـ webhook
+            $payload = [
                 'phone' => $this->work_phone ?? $this->whatsapp_number,
                 'name' => $this->lead_name ?? $this->first_name . ' ' . $this->last_name,
                 'email' => $this->email,
                 'external_id' => $this->meta_lead_id ?? $this->id,
                 'campaign' => $this->lead_source ?? null,
                 'project' => $this->project_id ? $this->project?->name : null,
-                'project_id' => $this->project_id ? $this->project?->id : null,
                 'budget' => $this->budget,
                 'property_type' => $this->propertyType?->name ?? null,
-                'property_type_id' => $this->propertyType?->id ?? null,
-            ], $additionalData);
+            ];
 
-            $payload = array_filter($payload, fn($value) => !is_null($value));
+            // ✅ إزالة القيم الفارغة
+            $payload = array_filter($payload, function($value) {
+                return !is_null($value) && $value !== '';
+            });
 
+            // ✅ تسجيل الـ payload عشان نشوف بيتم إرسال إيه
+            Log::info('Sending to AltCRM webhook', [
+                'lead_id' => $this->id,
+                'payload' => $payload
+            ]);
+
+            // ✅ إرسال للـ webhook
             $response = Http::withHeaders([
                 'X-Lead-Token' => 'oia_3aa033e6f47b10c0329a4c2afec903c9',
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ])->post('https://webhook.oiaproperties.com/webhook/lead/altcrm', $payload);
 
-            // ✅ تخزين الـ response في more_information كـ JSON string
-            $currentMoreInfo = $this->more_information ? json_decode($this->more_information, true) : [];
-            
+            // ✅ تسجيل الـ response
+            Log::info('AltCRM webhook response', [
+                'lead_id' => $this->id,
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
             if ($response->successful()) {
+                // تخزين النجاح
+                $currentMoreInfo = $this->more_information ? json_decode($this->more_information, true) : [];
                 $currentMoreInfo['altcrm_webhook'] = [
                     'sent_at' => now()->toISOString(),
                     'response' => $response->json(),
@@ -50,21 +64,18 @@ trait AltCRMLeadTrait
                     'more_information' => json_encode($currentMoreInfo)
                 ]);
 
-                Log::info('Lead sent to AltCRM webhook successfully', [
-                    'lead_id' => $this->id
-                ]);
-
                 return true;
             }
 
-            // فشل الإرسال
+            // ✅ تخزين الخطأ بالتفصيل
+            $currentMoreInfo = $this->more_information ? json_decode($this->more_information, true) : [];
             $currentMoreInfo['altcrm_webhook'] = [
                 'sent_at' => now()->toISOString(),
                 'error' => [
                     'status' => $response->status(),
-                    'message' => $response->body()
+                    'message' => $response->body(),
+                    'payload' => $payload
                 ],
-                'payload' => $payload,
                 'status' => 'failed'
             ];
             
@@ -74,7 +85,9 @@ trait AltCRMLeadTrait
 
             Log::error('Failed to send lead to AltCRM webhook', [
                 'lead_id' => $this->id,
-                'status' => $response->status()
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'payload' => $payload
             ]);
 
             return false;
@@ -82,7 +95,8 @@ trait AltCRMLeadTrait
         } catch (\Exception $e) {
             Log::error('Error sending lead to AltCRM webhook', [
                 'lead_id' => $this->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return false;
