@@ -71,13 +71,13 @@
             <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
               <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
                 <img :src="leadsIcon" class="imgicon submenu-icon" alt="" />
-                <span>Lead</span>
+                <span>Leads</span>
               </a>
             </li>
             <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
               <a href="/kanban_deal" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
                 <img :src="dealsIcon" class="imgicon submenu-icon" alt="" />
-                <span>Deal</span>
+                <span>Deals</span>
               </a>
             </li>
             <li
