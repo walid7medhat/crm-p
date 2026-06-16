@@ -469,10 +469,11 @@ export default {
       openLightbox(galleryImages.value, index);
     };
 
-    const openFloorPlanLightbox = (index) => {
-      const images = filteredFloorPlans.value.map((item) => getImageUrl(item.image_url));
-      openLightbox(images, index);
-    };
+  const openFloorPlanLightbox = (index) => {
+  // استخدام currentAreaFloorPlans بدلاً من filteredFloorPlans
+  const images = currentAreaFloorPlans.value.map((item) => getImageUrl(item.image_url));
+  openLightbox(images, index);
+};
 
     const editProject = () => {
       router.push(`/projects/${project.value.id}/edit`);
