@@ -69,6 +69,50 @@
                                         <div class="form-text">The developer's full name</div>
                                     </div>
                                 </div>
+                                    <div class="col-12">
+                                    <hr class="my-3">
+                                    <h6 class="text-muted mb-3">NOC Fees Information</h6>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">NOC Fees for Ready Units</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   v-model="form.noc_fees_ready"
+                                                   :class="{'is-invalid': errors.noc_fees_ready}"
+                                                   placeholder="e.g. 5000"
+                                                   step="0.01"
+                                                   min="0">
+                                        </div>
+                                        <div class="invalid-feedback" v-if="errors.noc_fees_ready">
+                                            {{ errors.noc_fees_ready[0] }}
+                                        </div>
+                                        <div class="form-text">NOC fees for ready units (optional)</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">NOC Fees for Off-Plan</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   v-model="form.noc_fees_off_plan"
+                                                   :class="{'is-invalid': errors.noc_fees_off_plan}"
+                                                   placeholder="e.g. 3000"
+                                                   step="0.01"
+                                                   min="0">
+                                        </div>
+                                        <div class="invalid-feedback" v-if="errors.noc_fees_off_plan">
+                                            {{ errors.noc_fees_off_plan[0] }}
+                                        </div>
+                                        <div class="form-text">NOC fees for off-plan units (optional)</div>
+                                    </div>
+                                </div>
                                 
                             
                             </div>
@@ -116,7 +160,9 @@ export default {
              userPlaceholder: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
             form: {
                 name: '',
-                avatar: ''
+                avatar: '',
+                 noc_fees_ready: null,
+                noc_fees_off_plan: null
             },
             errors: {}
         };
@@ -158,7 +204,12 @@ export default {
                     requestData.append('name', this.form.name);
                 
                     requestData.append('avatar', this.avatarFile);
-
+                    if (this.form.noc_fees_ready !== null && this.form.noc_fees_ready !== '') {
+                        requestData.append('noc_fees_ready', this.form.noc_fees_ready);
+                    }
+                    if (this.form.noc_fees_off_plan !== null && this.form.noc_fees_off_plan !== '') {
+                        requestData.append('noc_fees_off_plan', this.form.noc_fees_off_plan);
+                    }
                     console.log('Using FormData for create');
                     console.log('FormData entries:');
                     for (let pair of requestData.entries()) {
@@ -329,5 +380,12 @@ export default {
 
 .text-info {
     font-size: 0.875rem;
+}
+.section-title {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 </style>

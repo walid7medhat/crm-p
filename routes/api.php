@@ -66,6 +66,7 @@ use App\Http\Controllers\Api\Employee\AssetController;
 use App\Http\Controllers\Api\Employee\LeaveController;
 use App\Http\Controllers\Api\Employee\AnnouncementController;
 use App\Http\Controllers\Api\Employee\RecruitmentController;
+use App\Http\Controllers\Api\Listing\DealCostSettingController;
 
 
 Route::get('/test-email', function () {
@@ -155,6 +156,12 @@ Route::get('/test-server', function() {
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
 Route::middleware(['throttle:300,1','block.bots'])->group(function () {
+Route::prefix('settings')->group(function () {
+    Route::get('/deal-costs', [DealCostSettingController::class, 'index']);
+    Route::get('/deal-costs/{key}', [DealCostSettingController::class, 'show']);
+    Route::put('/deal-costs', [DealCostSettingController::class, 'updateMultiple']);
+    Route::put('/deal-costs/{key}', [DealCostSettingController::class, 'update']);
+});
 
 Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);

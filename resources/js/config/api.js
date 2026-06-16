@@ -60,6 +60,10 @@ export const API_ENDPOINTS = {
     PROJECT_DEVELOPERS: `${API_BASE_URL}/listings/developers`,
   PROJECT_FEATURES: (id) => `${API_BASE_URL}/listings/features`,
 
+      DEAL_COST_SETTINGS: `${API_BASE_URL}/settings/deal-costs`,
+    DEAL_COST_SETTINGS_UPDATE: `${API_BASE_URL}/settings/deal-costs`,
+    DEAL_COST_SETTING_BY_KEY: (key) => `${API_BASE_URL}/settings/deal-costs/${key}`,
+
 };
 
 export default API_BASE_URL;

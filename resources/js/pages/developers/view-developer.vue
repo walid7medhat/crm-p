@@ -75,6 +75,24 @@
                                     <span class="badge bg-success">Active</span>
                                 </div>
                             </div>
+                             <div class="col-12">
+                                <hr class="my-3">
+                                <h6 class="section-title mb-3">NOC Fees</h6>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-muted small">NOC Fees for Ready Units</label>
+                                <div class="fs-6">
+                                    {{ developer.noc_fees_ready ? formatCurrency(developer.noc_fees_ready) : 'Not Set' }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-muted small">NOC Fees for Off-Plan</label>
+                                <div class="fs-6">
+                                    {{ developer.noc_fees_off_plan ? formatCurrency(developer.noc_fees_off_plan) : 'Not Set' }}
+                                </div>
+                            </div>
                         </div>
 
                

@@ -110,10 +110,12 @@ import SyncResponsible from './components/kanban/leadList/SyncResponsible.vue'
 import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
 import Logs from './pages/logs/index.vue'
 import SystemOverview from './pages/system-overview/SystemOverview.vue'
+import DealCostSettings from './pages/settings/DealCostSettings.vue';
 
 
 import AttendanceMonthlyReport   from './pages/hr/attendance-monthly-reports.vue'
 const baseRoutes = [
+    { path: '/settings/deal-costs', component: DealCostSettings, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/sync-bitrix-leads', component: SyncBitrixLeads, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/sync-responsible', component: SyncResponsible, meta: { requiresAuth: true, requiresAdmin: true } },

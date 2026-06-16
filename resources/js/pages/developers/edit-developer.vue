@@ -70,7 +70,51 @@
                                     </div>
                                 </div>
                                 
-                               
+                                 <!-- الحقول الجديدة - NOC Fees -->
+                            <div class="col-12">
+                                <hr class="my-3">
+                                <h6 class="text-muted mb-3">NOC Fees Information</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">NOC Fees for Ready Units</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" 
+                                               class="form-control" 
+                                               v-model="form.noc_fees_ready"
+                                               :class="{'is-invalid': errors.noc_fees_ready}"
+                                               placeholder="e.g. 5000"
+                                               step="0.01"
+                                               min="0">
+                                    </div>
+                                    <div class="invalid-feedback" v-if="errors.noc_fees_ready">
+                                        {{ errors.noc_fees_ready[0] }}
+                                    </div>
+                                    <div class="form-text">NOC fees for ready units (optional)</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">NOC Fees for Off-Plan</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" 
+                                               class="form-control" 
+                                               v-model="form.noc_fees_off_plan"
+                                               :class="{'is-invalid': errors.noc_fees_off_plan}"
+                                               placeholder="e.g. 3000"
+                                               step="0.01"
+                                               min="0">
+                                    </div>
+                                    <div class="invalid-feedback" v-if="errors.noc_fees_off_plan">
+                                        {{ errors.noc_fees_off_plan[0] }}
+                                    </div>
+                                    <div class="form-text">NOC fees for off-plan units (optional)</div>
+                                </div>
+                            </div>
                                 <!-- Read-only Information -->
                                 <div class="col-12">
                                     <hr class="my-4">
@@ -169,7 +213,9 @@ export default {
             avatarPreview: null,
             form: {
                 name: '',
-                avatar: ''
+                avatar: '',
+                  noc_fees_ready: null,
+                noc_fees_off_plan: null
             },
             errors: {} ,
             userPlaceholder
@@ -196,7 +242,10 @@ export default {
                 if (response.ok) {
                     const data = await response.json();
                     this.developer = data.data;
-                    this.form = { ...this.developer };
+                    this.form = { ...this.developer ,             
+                       noc_fees_ready: this.developer.noc_fees_ready || null,
+                        noc_fees_off_plan: this.developer.noc_fees_off_plan || null
+};
                     this.errors = {};
                 } else {
                     throw new Error('Failed to fetch developer');
@@ -241,6 +290,12 @@ export default {
                     requestData = new FormData();
                     requestData.append('name', this.form.name);
                     requestData.append('avatar', this.avatarFile);
+                    if (this.form.noc_fees_ready !== null && this.form.noc_fees_ready !== '') {
+                        requestData.append('noc_fees_ready', this.form.noc_fees_ready);
+                    }
+                    if (this.form.noc_fees_off_plan !== null && this.form.noc_fees_off_plan !== '') {
+                        requestData.append('noc_fees_off_plan', this.form.noc_fees_off_plan);
+                    }
 
                     requestData.append('_method', 'PUT');
                     method = 'POST'; 
@@ -389,5 +444,12 @@ export default {
 
 .text-info {
     font-size: 0.875rem;
+}
+.section-title {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 </style>
