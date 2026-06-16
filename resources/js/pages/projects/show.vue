@@ -122,45 +122,78 @@
             </div>
           </section>
 
-          <section class="info-card floor-card" v-if="filteredFloorPlans.length">
-            <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">Floor Plans</h3>
-            <div class="info-divider"></div>
+         <section class="info-card floor-card" v-if="groupedFloorPlans.length">
+                <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">
+                  Floor Plans 
+                </h3>
+                <div class="info-divider"></div>
 
-            <div class="floor-tabs">
-              <button
-                v-for="tab in floorTabs"
-                :key="tab"
-                class="floor-tab"
-                :class="{ active: activeFloorTab === tab }"
-                @click="activeFloorTab = tab"
-                style="font-size:11px !important;"
-              >
-                {{ tab }}
-              </button>
-            </div>
+                <!-- Area Tabs -->
+                <div class="floor-tabs area-tabs">
+                  <button
+                    v-for="tab in areaTabs"
+                    :key="tab.areaId"
+                    class="floor-tab area-tab"
+                    :class="{ active: activeAreaTab === tab.areaId }"
+                    @click="activeAreaTab = tab.areaId"
+                    style="font-size:11px !important;"
+                  >
+                    <i class="ri-map-pin-line"></i>
+                    {{ tab.label }}
+                    <span class="tab-count">({{ tab.count }})</span>
+                  </button>
+                </div>
 
-            <div class="floor-plan-item" v-if="activeFloorPlan">
-              <div class="floor-plan-preview" @click="openFloorPlanLightbox(0)">
-                <div class="floor-plan-side" :class="{ 'floor-plan-side--fallback': !hasFloorCover(activeFloorPlan) }">
-                  <img
-                    v-if="hasFloorCover(activeFloorPlan)"
-                    :src="getFloorCover(activeFloorPlan, 0)"
-                    alt=""
-                    @error="onImageError"
-                  />
-                  <div v-else class="floor-plan-side-fallback">
-                    <span class="floor-plan-side-number">{{ getFloorBadge(activeFloorPlan) }}</span>
-                    <span class="floor-plan-side-label">BEDROOM</span>
+                <!-- Floor Plans Grid for Selected Area -->
+                <div class="floor-plans-grid" v-if="currentAreaFloorPlans.length">
+                  <div 
+                    v-for="(floorPlan, index) in currentAreaFloorPlans" 
+                    :key="floorPlan.id || index"
+                    class="floor-plan-item"
+                    @click="openFloorPlanLightbox(index)"
+                  >
+                    <div class="floor-plan-preview">
+                      <div class="floor-plan-side" :class="{ 'floor-plan-side--fallback': !hasFloorCover(floorPlan) }">
+                        <img
+                          v-if="hasFloorCover(floorPlan)"
+                          :src="getFloorCover(floorPlan, index)"
+                          :alt="floorPlan.name || 'Floor Plan'"
+                          @error="onImageError"
+                        />
+                        <div v-else class="floor-plan-side-fallback">
+                          <span class="floor-plan-side-number">{{ getFloorBadge(floorPlan) }}</span>
+                          <span class="floor-plan-side-label">{{ getFloorType(floorPlan) }}</span>
+                        </div>
+                      </div>
+                      <img 
+                        class="floor-plan-main" 
+                        :src="getImageUrl(floorPlan.image_url)" 
+                        :alt="floorPlan.name || 'Floor Plan'" 
+                        @error="onImageError" 
+                      />
+                    </div>
+                    <div class="floor-plan-footer">
+                      <div class="floor-plan-info">
+                        <span class="floor-plan-name">{{ floorPlan.name || 'Floor Plan' }}</span>
+                        <span class="floor-plan-area" v-if="floorPlan.area_name">
+                          <i class="ri-map-pin-2-line"></i>
+                          {{ floorPlan.area_name }}
+                        </span>
+                      </div>
+                      <small>
+                        <i class="ri-calendar-line"></i> 
+                        {{ formatDate(floorPlan.created_at) }}
+                      </small>
+                    </div>
                   </div>
                 </div>
-                <img class="floor-plan-main" :src="getImageUrl(activeFloorPlan.image_url)" :alt="activeFloorPlan.name || 'Floor Plan'" @error="onImageError" />
-              </div>
-              <div class="floor-plan-footer">
-                <span>{{ activeFloorPlan.name || 'Floor Plan' }}</span>
-                <small><i class="ri-calendar-line"></i> Posted : {{ formatDate(activeFloorPlan.created_at) }}</small>
-              </div>
-            </div>
-          </section>
+
+                <!-- Empty State -->
+                <div v-else class="empty-floor-plans">
+                  <i class="ri-building-4-line"></i>
+                  <p>No floor plans available for this area</p>
+                </div>
+              </section>
         </div>
 
         <aside class="project-side-col">
@@ -238,7 +271,7 @@ export default {
     const activeHeroIndex = ref(0);
     const activeFloorTab = ref('1 Bedroom');
     const lightboxImages = ref([]);
-
+    const activeAreaTab = ref(null);
     const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=1600&q=80';
 
     const resolveMediaPath = (input) => {
@@ -313,7 +346,53 @@ export default {
     });
 
     const activeFloorPlan = computed(() => filteredFloorPlans.value[0] || null);
+    const groupedFloorPlans = computed(() => {
+      const plans = floorPlans.value;
+      if (!plans.length) return [];
 
+      const grouped = plans.reduce((acc, plan) => {
+        const areaId = plan.area_id || 'unassigned';
+        if (!acc[areaId]) {
+          acc[areaId] = {
+            areaId: areaId,
+            areaName: plan.area_name || plan.area || 'General',
+            plans: []
+          };
+        }
+        acc[areaId].plans.push(plan);
+        return acc;
+      }, {});
+
+      return Object.values(grouped);
+    });
+
+    const areaTabs = computed(() => {
+      return groupedFloorPlans.value.map(group => ({
+        areaId: group.areaId,
+        label: group.areaName,
+        count: group.plans.length
+      }));
+    });
+
+    const currentAreaFloorPlans = computed(() => {
+      if (!activeAreaTab.value || activeAreaTab.value === 'unassigned') {
+        return floorPlans.value.filter(p => !p.area_id);
+      }
+      
+      const group = groupedFloorPlans.value.find(g => g.areaId === activeAreaTab.value);
+      return group ? group.plans : [];
+    });
+
+    const getFloorType = (floorPlan) => {
+      const name = String(floorPlan?.name || '').toLowerCase();
+      if (name.includes('bedroom')) return 'BEDROOM';
+      if (name.includes('studio')) return 'STUDIO';
+      if (name.includes('duplex')) return 'DUPLEX';
+      if (name.includes('penthouse')) return 'PENTHOUSE';
+      return 'FLOOR';
+    };
+
+   
     const fetchProject = async () => {
       try {
         loading.value = true;
@@ -490,12 +569,16 @@ export default {
       }
     };
 
-    onMounted(() => {
+   
+  onMounted(() => {
       enablePageNaturalScroll();
-      fetchProject();
+      fetchProject().then(() => {
+        if (areaTabs.value.length) {
+          activeAreaTab.value = areaTabs.value[0].areaId;
+        }
+      });
       document.addEventListener('keydown', handleKeydown);
     });
-
     const cleanup = () => {
       document.removeEventListener('keydown', handleKeydown);
       document.body.style.overflow = '';
@@ -541,7 +624,12 @@ export default {
       getFloorBadge,
       onImageError,
       cleanup,
-      openFloorPlanLightbox
+      openFloorPlanLightbox,
+        groupedFloorPlans,
+      areaTabs,
+      activeAreaTab,
+      currentAreaFloorPlans,
+      getFloorType,
     };
   },
 
@@ -1153,6 +1241,222 @@ export default {
 
   .project-side-col {
     grid-template-columns: 1fr;
+  }
+}
+.area-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.area-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.area-tab:hover {
+  background: #eef2ff;
+  border-color: #6366f1;
+}
+
+.area-tab.active {
+  background: #02054e;
+  color: #fff;
+  border-color: #02054e;
+}
+
+.area-tab .tab-count {
+  font-size: 9px;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+.area-tab.active .tab-count {
+  opacity: 1;
+}
+
+/* Grid Layout للفلور بلان */
+.floor-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.floor-plan-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #fff;
+}
+
+.floor-plan-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.floor-plan-preview {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  min-height: 150px;
+  background: #f8fafc;
+}
+
+.floor-plan-side {
+  width: 100%;
+  height: 100%;
+  background: #0b1f4d;
+}
+
+.floor-plan-side img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.floor-plan-side--fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #06265d 0%, #041437 100%);
+}
+
+.floor-plan-side-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #fff;
+  line-height: 1;
+}
+
+.floor-plan-side-number {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.floor-plan-side-label {
+  margin-top: 4px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.floor-plan-main {
+  width: 100%;
+  max-width: 100%;
+  min-height: 150px;
+  max-height: 300px;
+  height: auto;
+  object-fit: contain;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.floor-plan-footer {
+  border-top: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.floor-plan-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.floor-plan-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.floor-plan-area {
+  font-size: 10px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.floor-plan-footer small {
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+/* Empty State */
+.empty-floor-plans {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  color: #9ca3af;
+}
+
+.empty-floor-plans i {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.empty-floor-plans p {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+  .floor-plans-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .area-tabs {
+    gap: 4px;
+  }
+
+  .area-tab {
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .floor-plans-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .floor-plan-preview {
+    grid-template-columns: 50px minmax(0, 1fr);
+    min-height: 120px;
+  }
+
+  .floor-plan-main {
+    min-height: 120px;
+    max-height: 200px;
+  }
+
+  .floor-plan-info {
+    gap: 1px;
+  }
+
+  .floor-plan-name {
+    font-size: 11px;
   }
 }
 </style>
