@@ -423,7 +423,8 @@ Route::middleware(['jwt.auth', 'role:super_admin|admin'])->group(function () {
         ]);
     });
 });
-
+Route::post('/altcrm/update-more-info', [AltCRMLeadController::class, 'updateMoreInformation'])
+    ->name('altcrm.update.more.info');
 Route::middleware('jwt.auth')->group(function () {
     Route::prefix('sales-intelligence')->group(function () {
         Route::get('/overview', [SalesIntelligenceController::class, 'overview']);
@@ -461,8 +462,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
     Route::post('/leads/import', [LeadImportController::class, 'import']);
-Route::post('/altcrm/update-more-info', [AltCRMLeadController::class, 'updateMoreInformation'])
-    ->name('altcrm.update.more.info');
+
     // === Bitrix24 sync (admin-only, batched) ===
     Route::post('/leads/bitrix24/sync', [Bitrix24SyncController::class, 'syncBatch']);
     Route::post('/leads/bitrix24/fetch/{bitrixId}', [Bitrix24SyncController::class, 'fetchOne']);
