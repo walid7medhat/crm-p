@@ -741,8 +741,8 @@ const settingsSidebarSections = computed(() => {
 const calculatorMenuItems = computed(() =>
   isAdmin.value
     ? [
-        { path: '/settings/roi-calculator', label: 'ROI', icon: 'lucide:trending-up' },
-        { path: '/settings/roe-calculator', label: 'ROE', icon: 'lucide:percent' },
+        { path: '/settings/roi-calculator', label: 'ROIs', icon: 'lucide:trending-up' },
+        { path: '/settings/roe-calculator', label: 'ROEs', icon: 'lucide:percent' },
       ]
     : [],
 );
@@ -783,8 +783,8 @@ const mobileDockItems = computed(() => {
       label: 'CRM',
       icon: 'lucide:handshake',
       children: [
-        { path: '/kanban', label: 'Lead', iconSrc: leadsIcon.value },
-        { path: '/kanban_deal', label: 'Deal', iconSrc: dealsIcon.value },
+        { path: '/kanban', label: 'Leads', iconSrc: leadsIcon.value },
+        { path: '/kanban_deal', label: 'Deals', iconSrc: dealsIcon.value },
       ],
       sections: [],
     };
