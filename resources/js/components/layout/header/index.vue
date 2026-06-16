@@ -69,10 +69,16 @@
           </a>
           <ul v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
             <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
-              <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">Lead</a>
+              <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
+                <img :src="leadsIcon" class="imgicon submenu-icon" alt="" />
+                <span>Lead</span>
+              </a>
             </li>
             <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
-              <a href="/kanban_deal" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">Deal</a>
+              <a href="/kanban_deal" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
+                <img :src="dealsIcon" class="imgicon submenu-icon" alt="" />
+                <span>Deal</span>
+              </a>
             </li>
             <li
               v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
@@ -145,7 +151,7 @@
         <li
           v-if="settingsSidebarSections.length > 0"
           class="sidebar-menu__settings"
-          :class="{ dropdown: true, open: !isDashboardHome && activeDropdown === 'settings', 'active-parent': isSidebarModuleActive('settings') }"
+          :class="{ dropdown: true, open: activeDropdown === 'settings', 'active-parent': isSidebarModuleActive('settings') }"
         >
           <a href="javascript:void(0)" @click="toggleDropdown('settings')" :class="{ active: isSidebarModuleActive('settings') }">
             <iconify-icon icon="lucide:settings" class="menu-icon" />
@@ -153,7 +159,7 @@
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'settings' }" />
           </a>
           <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
-            <ul v-show="!isDashboardHome && activeDropdown === 'settings'" class="sidebar-submenu sidebar-submenu--grouped">
+            <ul v-show="activeDropdown === 'settings'" class="sidebar-submenu sidebar-submenu--grouped">
               <template v-for="section in settingsSidebarSections" :key="section.key">
                 <li class="sidebar-submenu__heading">{{ section.title }}</li>
                 <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
@@ -316,6 +322,8 @@ import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
 const dashboardIcon=ref('/assets/icons/dashboard-icon.svg');
+const leadsIcon=ref('/assets/icons/leads-icon.svg');
+const dealsIcon=ref('/assets/icons/deals-icon.svg');
 const listingsIcon=ref('/assets/icons/listings-icon.svg');
 const requestsIcon=ref('/assets/icons/request-icon.svg');
 const isMobileOpen = ref(false);
@@ -738,8 +746,8 @@ const mobileDockItems = computed(() => {
       label: 'CRM',
       icon: 'lucide:handshake',
       children: [
-        { path: '/kanban', label: 'Lead' },
-        { path: '/kanban_deal', label: 'Deal' },
+        { path: '/kanban', label: 'Lead', iconSrc: leadsIcon.value },
+        { path: '/kanban_deal', label: 'Deal', iconSrc: dealsIcon.value },
       ],
       sections: [],
     };
@@ -1078,7 +1086,7 @@ function afterLeave(el) {
 
 function syncSidebarDropdownFromRoute() {
   if (isDashboardHome.value) {
-    if (activeDropdown.value !== 'crm') {
+    if (!['crm', 'settings', 'users'].includes(activeDropdown.value)) {
       activeDropdown.value = null;
       localStorage.removeItem('activeDropdown');
     }
@@ -1112,8 +1120,8 @@ function syncSidebarDropdownFromRoute() {
 
 watch(isDashboardHome, (onHome) => {
   if (!onHome) return;
-  // Keep CRM/Agents dropdown open if user explicitly opened it from dashboard
-  if (activeDropdown.value === 'crm' || activeDropdown.value === 'users') return;
+  // Keep dropdown open if user explicitly opened it from dashboard
+  if (['crm', 'settings', 'users'].includes(activeDropdown.value)) return;
   activeDropdown.value = null;
   localStorage.removeItem('activeDropdown');
 });
@@ -1531,6 +1539,13 @@ onUnmounted(() => {
 /* Keep CRM submenu visible when user opens it from dashboard */
 .sidebar--dashboard-home .sidebar-menu li.dropdown.open > .sidebar-submenu--crm,
 .sidebar--dashboard-home .sidebar-menu li.dropdown.dropdown-open > .sidebar-submenu--crm {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Keep Settings submenu visible when user opens it from dashboard */
+.sidebar--dashboard-home .sidebar-menu li.dropdown.open > .sidebar-submenu--grouped,
+.sidebar--dashboard-home .sidebar-menu li.sidebar-menu__settings.open > .sidebar-submenu--grouped {
   display: block !important;
   visibility: visible !important;
 }
