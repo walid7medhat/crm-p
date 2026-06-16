@@ -270,68 +270,83 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
  /**
      * تنسيق WhatsApp Qualification ديناميكياً
      */
-    protected function formatWhatsappQualification($qualification): array
-    {
-        if (empty($qualification)) {
-            return [];
-        }
+   /**
+ * تنسيق WhatsApp Qualification ديناميكياً
+ */
+protected function formatWhatsappQualification($qualification): array
+{
+    if (empty($qualification)) {
+        return [];
+    }
 
-        if (is_string($qualification)) {
-            $qualification = json_decode($qualification, true);
-        }
+    if (is_string($qualification)) {
+        $qualification = json_decode($qualification, true);
+    }
 
-        if (!is_array($qualification)) {
-            return [];
-        }
+    if (!is_array($qualification)) {
+        return [];
+    }
 
-        $qaList = [];
+    // ✅ المفاتيح اللي مش عايزين نعرضها
+    $excludeKeys = [
+        'raw_response',
+        'payload',
+        'payload_phone',
+        'payload_name',
+        'payload_email',
+        'success',
+        'response_success',
+        'response_payload',
+        'altcrm_webhook',
+        'full_response',
+    ];
+
+    $qaList = [];
+    
+    // ✅ عرض كل المفاتيح ما عدا المستثناة
+    foreach ($qualification as $key => $value) {
+        // تخطي القيم الفارغة
+        if ($value === null || $value === '') {
+            continue;
+        }
         
-        // ✅ عرض كل البيانات الموجودة
-        foreach ($qualification as $key => $value) {
-            // تخطي القيم الفارغة
-            if ($value === null || $value === '') {
-                continue;
-            }
-            
-            // تخطي الـ raw_response (نعرضها في مكان منفصل)
-            if ($key === 'raw_response') {
-                continue;
-            }
-            
-            // تخطي الـ updated_at و received_at (نعرضهم في النهاية)
-            if ($key === 'updated_at' || $key === 'received_at') {
-                continue;
-            }
-            
-            // تنسيق المفتاح ليكون سؤال
-            $question = $this->formatQuestion($key);
-            
+        // تخطي المفاتيح المستثناة
+        if (in_array($key, $excludeKeys)) {
+            continue;
+        }
+        
+        // تخطي التواريخ (هنعرضها في الآخر)
+        if (in_array($key, ['updated_at', 'received_at', 'sent_at'])) {
+            continue;
+        }
+        
+        $qaList[] = [
+            'question' => $this->formatQuestion($key),
+            'answer' => $this->formatAnswer($key, $value),
+            'key' => $key,
+        ];
+    }
+    
+    // ✅ إضافة التواريخ في النهاية
+    $dateKeys = ['received_at', 'sent_at', 'updated_at'];
+    $dateLabels = [
+        'received_at' => 'Received At',
+        'sent_at' => 'Sent At',
+        'updated_at' => 'Updated At'
+    ];
+    
+    foreach ($dateKeys as $key) {
+        if (isset($qualification[$key]) && !empty($qualification[$key])) {
             $qaList[] = [
-                'question' => $question,
-                'answer' => $this->formatAnswer($value),
+                'question' => $dateLabels[$key] ?? ucwords(str_replace('_', ' ', $key)),
+                'answer' => $this->formatDate($qualification[$key]),
                 'key' => $key,
             ];
         }
-        
-        // إضافة وقت الاستلام والتحديث في النهاية
-        if (isset($qualification['received_at'])) {
-            $qaList[] = [
-                'question' => 'Received At',
-                'answer' => $this->formatDate($qualification['received_at']),
-                'key' => 'received_at',
-            ];
-        }
-        
-        if (isset($qualification['updated_at'])) {
-            $qaList[] = [
-                'question' => 'Updated At',
-                'answer' => $this->formatDate($qualification['updated_at']),
-                'key' => 'updated_at',
-            ];
-        }
-        
-        return $qaList;
     }
+    
+    return $qaList;
+}
 
     /**
      * تنسيق المفتاح ليكون سؤال
