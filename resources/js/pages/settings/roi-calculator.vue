@@ -4,7 +4,9 @@
       title="ROI Calculator"
       :breadcrumbs="[{ name: 'Settings' }, { name: 'ROI Calculator' }]"
     />
-    <RoiCalculator />
+    <div class="roi-calculator-page__body">
+      <RoiCalculator />
+    </div>
   </div>
 </template>
 

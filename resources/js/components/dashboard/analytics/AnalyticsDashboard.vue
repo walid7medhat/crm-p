@@ -139,6 +139,7 @@
                 />
               </div>
             </div>
+            <p v-if="!loading && !listingHasData" class="adx-uni-empty">No listings in your portfolio yet</p>
           </div>
 
           <div class="adx-uni-list__callouts">
@@ -302,9 +303,16 @@ const listingBreakdown = computed(() => {
     { label: 'Active', value: Number(listing.value.active_listings) || 0, color: '#22c55e' },
     { label: 'Sold', value: Number(listing.value.sold_listings) || 0, color: '#15803d' },
     { label: 'Pending', value: Number(listing.value.pending_approval) || 0, color: '#f59e0b' },
+    { label: 'Expired', value: Number(listing.value.expired_listings) || 0, color: '#94a3b8' },
   ]
   const max = Math.max(...items.map((i) => i.value), 1)
   return items.map((i) => ({ ...i, pct: Math.round((i.value / max) * 100) }))
+})
+
+const listingHasData = computed(() => {
+  const l = listing.value || {}
+  return ['total_listings', 'active_listings', 'sold_listings', 'pending_approval']
+    .some((key) => Number(l[key]) > 0)
 })
 
 const hrActivePct = computed(() => {
@@ -368,21 +376,22 @@ function renderCrmChart() {
 }
 
 function renderListingChart() {
-  if (!listingChartRef.value) return
+  if (!listingChartRef.value || !showListing.value) return
   const raw = [
     Number(listing.value.sold_listings) || 0,
     Number(listing.value.active_listings) || 0,
     Number(listing.value.pending_approval) || 0,
+    Number(listing.value.expired_listings) || 0,
   ]
   const hasData = raw.some((v) => v > 0)
-  const series = hasData ? raw : [1, 1, 1]
-  const colors = hasData ? ['#15803d', '#22c55e', '#f59e0b'] : ['#cbd5e1', '#cbd5e1', '#cbd5e1']
+  const series = hasData ? raw : [1, 1, 1, 1]
+  const colors = hasData ? ['#15803d', '#22c55e', '#f59e0b', '#94a3b8'] : ['#cbd5e1', '#cbd5e1', '#cbd5e1', '#cbd5e1']
   if (listingChart) listingChart.destroy()
   listingChartRef.value.innerHTML = ''
   const size = isMobileViewport.value ? 110 : 96
   listingChart = new ApexCharts(listingChartRef.value, {
     series,
-    labels: ['Sold', 'Active', 'Pending'],
+    labels: ['Sold', 'Active', 'Pending', 'Expired'],
     colors,
     chart: { type: 'donut', height: size, width: size },
     plotOptions: { pie: { donut: { size: '70%', labels: { show: false } } } },
@@ -429,7 +438,7 @@ async function renderAllCharts() {
   })
 }
 
-watch([loading, crm, listing, hr, isMobileViewport], () => renderAllCharts(), { deep: true })
+watch([loading, crm, listing, hr, isMobileViewport, showListing], () => renderAllCharts(), { deep: true })
 
 let resizeTimer = null
 function onResize() {

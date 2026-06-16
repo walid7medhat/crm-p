@@ -1213,16 +1213,28 @@ public function getPropertyTypesWithListings(Request $request)
             return $query;
         };
 
-        $scopeListings = function ($query) use ($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo) {
+        $scopeListingsRole = function ($query) use ($userHierarchy, $isAdmin) {
             if (! $isAdmin) {
-                $query->whereIn('agent_id', $userHierarchy);
+                $query->where(function ($q) use ($userHierarchy) {
+                    $q->whereIn('agent_id', $userHierarchy)
+                        ->orWhereIn('added_by', $userHierarchy);
+                });
             }
+
+            return $query;
+        };
+
+        $scopeListingsInPeriod = function ($query) use ($scopeListingsRole, $rangeFrom, $rangeTo) {
+            $scopeListingsRole($query);
             if ($rangeFrom || $rangeTo) {
                 $this->applyCreatedBetween($query, $rangeFrom, $rangeTo);
             }
 
             return $query;
         };
+
+        // Legacy alias — period-scoped (used only where period matters)
+        $scopeListings = $scopeListingsInPeriod;
 
         // ── CRM ──
         $leadBase = $scopeLeads(Lead::query());
@@ -1318,8 +1330,8 @@ public function getPropertyTypesWithListings(Request $request)
             ];
         }
 
-        // ── Listings ──
-        $listingBase = $scopeListings(Listing::query());
+        // ── Listings (inventory = all time; trend = selected period) ──
+        $listingBase = $scopeListingsRole(Listing::query());
         $listingsTotal = (clone $listingBase)->count();
         $listingsActive = (clone $listingBase)
             ->where('is_active', true)
@@ -1334,9 +1346,12 @@ public function getPropertyTypesWithListings(Request $request)
         $propertyTypeRows = DB::table('listings')
             ->select('property_type_id', DB::raw('count(*) as total'))
             ->whereNotNull('property_type_id')
-            ->when(! $isAdmin, fn ($q) => $q->whereIn('agent_id', $userHierarchy))
-            ->when($rangeFrom, fn ($q) => $q->where('created_at', '>=', $rangeFrom))
-            ->when($rangeTo, fn ($q) => $q->where('created_at', '<=', $rangeTo))
+            ->when(! $isAdmin, function ($q) use ($userHierarchy) {
+                $q->where(function ($sub) use ($userHierarchy) {
+                    $sub->whereIn('agent_id', $userHierarchy)
+                        ->orWhereIn('added_by', $userHierarchy);
+                });
+            })
             ->groupBy('property_type_id')
             ->orderByDesc('total')
             ->limit(6)
@@ -1367,9 +1382,15 @@ public function getPropertyTypesWithListings(Request $request)
             $day = now()->subDays($i)->startOfDay();
             $listingTrend[] = [
                 'label' => $day->format('D'),
-                'value' => (clone $listingBase)->whereDate('created_at', $day)->count(),
+                'value' => $scopeListingsInPeriod(Listing::query())->whereDate('created_at', $day)->count(),
             ];
         }
+
+        $inquiryCount = ListingAccessRequest::query()
+            ->when(! $isAdmin, fn ($q) => $q->whereIn('requested_by', $userHierarchy))
+            ->when($rangeFrom, fn ($q) => $q->where('created_at', '>=', $rangeFrom))
+            ->when($rangeTo, fn ($q) => $q->where('created_at', '<=', $rangeTo))
+            ->count();
 
         // ── HR (summary from users; attendance approximated) ──
         $employeesBase = User::query()->where('status', 'active');
@@ -1431,8 +1452,8 @@ public function getPropertyTypesWithListings(Request $request)
                 'sold_listings' => $listingsSold,
                 'expired_listings' => $listingsExpired,
                 'total_views' => $topListings->sum('views'),
-                'inquiry_requests' => (clone $listingBase)->count() > 0 ? ListingAccessRequest::when(! $isAdmin, fn ($q) => $q->whereIn('requested_by', $userHierarchy))->count() : 0,
-                'viewing_appointments' => ListingAccessRequest::when(! $isAdmin, fn ($q) => $q->whereIn('requested_by', $userHierarchy))->count(),
+                'inquiry_requests' => $inquiryCount,
+                'viewing_appointments' => $inquiryCount,
                 'whatsapp_clicks' => (int) round($listingsActive * 2.4),
                 'saved_listings' => (int) round($listingsActive * 0.6),
                 'conversion_rate' => $listingsTotal > 0 ? round(($listingsSold / $listingsTotal) * 100, 1) : 0,

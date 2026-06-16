@@ -37,6 +37,7 @@ export function useDashboardPermissions() {
       crm: () => isManager.value || hasPermission(user.value, 'leads-list') || hasPermission(user.value, 'leads-show'),
       listing: () =>
         isManager.value
+        || roles.value.includes('only show listings')
         || hasPermission(user.value, 'listings-list')
         || hasPermission(user.value, 'listings-show')
         || user.value?.is_listing_team
