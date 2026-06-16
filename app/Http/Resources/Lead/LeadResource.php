@@ -386,7 +386,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
     /**
      * تنسيق القيمة
      */
-    protected function formatAnswer($value): string
+   protected function formatAnswer($value): string
     {
         if ($value === null || $value === '') {
             return '—';
@@ -402,8 +402,17 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             return json_encode($value, JSON_PRETTY_PRINT);
         }
         
-        // تنسيق الأرقام الكبيرة
+        // ✅ تنسيق الأرقام الكبيرة (باستثناء أرقام التليفون)
         if (is_numeric($value) && $value > 1000) {
+            // التحقق من أن الرقم ليس تليفون (10-15 رقم)
+            $stringValue = (string) $value;
+            $length = strlen($stringValue);
+            
+            // إذا كان الرقم طوله بين 10 و 15 رقم، اعتبره تليفون
+            if ($length >= 10 && $length <= 15) {
+                return (string) $value;
+            }
+            
             return number_format($value, 0, '.', ',');
         }
         
