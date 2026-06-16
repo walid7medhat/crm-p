@@ -385,7 +385,7 @@
         </div>
 
         <!-- Create New Button -->
-        <button v-if="isLeadRoute" class="btn-create-new d-flex align-items-center" @click="handleKanbanCreateNew">
+        <button v-if="isLeadRoute" class="btn-create-new btn-primary d-flex align-items-center" @click="handleKanbanCreateNew">
             <span class="btn-create-new-text">Create New</span>
             <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
         </button>
@@ -3036,14 +3036,14 @@ const showBackButton = computed(() => {
 
 /* Kanban Create Button */
 .btn-create-new {
-  border-radius: 999px;
-  padding: 6px 16px;
-  min-height: 34px;
-  background: linear-gradient(90deg, #12b981, #22c55e);
-  border: 1px solid #16a34a;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.45);
-  transition: all 0.2s ease;
-  gap: 6px;
+    padding: .35rem .6rem !important;
+    min-height: 32px;
+    font-size: .75rem !important;
+    line-height: 1.2;
+    font-weight: 500;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all .3s ease;
 }
 
 .btn-create-new:hover {
