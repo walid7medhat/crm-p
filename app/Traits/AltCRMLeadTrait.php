@@ -13,37 +13,34 @@ trait AltCRMLeadTrait
     public function sendToAltCRM(array $additionalData = [])
     {
         try {
-            // ✅ الحقول المطلوبة بس حسب الـ webhook
+            // ✅ تحويل القيم لنص مع التأكد من وجودها
             $payload = [
-                'phone' => $this->work_phone ?? $this->whatsapp_number,
-                'name' => $this->lead_name ?? $this->first_name . ' ' . $this->last_name,
-                'email' => $this->email,
-                'external_id' => $this->meta_lead_id ?? $this->id,
-                'campaign' => $this->lead_source ?? null,
-                'project' => $this->project_id ? $this->project?->name : null,
-                'budget' => $this->budget,
-                'property_type' => $this->propertyType?->name ?? null,
+                'phone' => (string) ($this->work_phone ?? $this->whatsapp_number ?? ''),
+                'name' => (string) ($this->lead_name ?? $this->first_name . ' ' . $this->last_name ?? ''),
+                'email' => (string) ($this->email ?? ''),
+                'external_id' => (string) ($this->meta_lead_id ?? $this->id),
+                'campaign' => (string) ($this->lead_source ?? ''),
+                'project' => (string) ($this->project_id ? $this->project?->name : ''),
+                'budget' => (string) ($this->budget ?? ''),
+                'property_type' => (string) ($this->propertyType?->name ?? ''),
             ];
 
             // ✅ إزالة القيم الفارغة
             $payload = array_filter($payload, function($value) {
-                return !is_null($value) && $value !== '';
+                return $value !== '' && $value !== null;
             });
 
-            // ✅ تسجيل الـ payload عشان نشوف بيتم إرسال إيه
             Log::info('Sending to AltCRM webhook', [
                 'lead_id' => $this->id,
                 'payload' => $payload
             ]);
 
-            // ✅ إرسال للـ webhook
             $response = Http::withHeaders([
                 'X-Lead-Token' => 'oia_3aa033e6f47b10c0329a4c2afec903c9',
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ])->post('https://webhook.oiaproperties.com/webhook/lead/altcrm', $payload);
 
-            // ✅ تسجيل الـ response
             Log::info('AltCRM webhook response', [
                 'lead_id' => $this->id,
                 'status' => $response->status(),
@@ -51,7 +48,6 @@ trait AltCRMLeadTrait
             ]);
 
             if ($response->successful()) {
-                // تخزين النجاح
                 $currentMoreInfo = $this->more_information ? json_decode($this->more_information, true) : [];
                 $currentMoreInfo['altcrm_webhook'] = [
                     'sent_at' => now()->toISOString(),
@@ -67,7 +63,6 @@ trait AltCRMLeadTrait
                 return true;
             }
 
-            // ✅ تخزين الخطأ بالتفصيل
             $currentMoreInfo = $this->more_information ? json_decode($this->more_information, true) : [];
             $currentMoreInfo['altcrm_webhook'] = [
                 'sent_at' => now()->toISOString(),
@@ -108,6 +103,6 @@ trait AltCRMLeadTrait
      */
     public function shouldSyncToAltCRM(): bool
     {
-        return $this->work_phone || $this->whatsapp_number;
+        return !empty($this->work_phone) || !empty($this->whatsapp_number);
     }
 }
