@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
+use App\Http\Controllers\Api\AltCRMLeadController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
 use App\Http\Controllers\Api\Bitrix24SyncController;
@@ -460,7 +461,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
     Route::post('/leads/import', [LeadImportController::class, 'import']);
-
+Route::post('/altcrm/update-more-info', [AltCRMLeadController::class, 'updateMoreInformation'])
+    ->name('altcrm.update.more.info');
     // === Bitrix24 sync (admin-only, batched) ===
     Route::post('/leads/bitrix24/sync', [Bitrix24SyncController::class, 'syncBatch']);
     Route::post('/leads/bitrix24/fetch/{bitrixId}', [Bitrix24SyncController::class, 'fetchOne']);

@@ -11,10 +11,11 @@ use App\Models\KanbanSetting;
 use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
 use App\Models\LeadScoringSetting;
+use App\Traits\AltCRMLeadTrait;
 class Lead extends Model
 {
     // 
-    use HasFactory;
+    use HasFactory; use AltCRMLeadTrait;
     protected $guarded=[];
     public const INTELLIGENCE_FIELDS = [
         'score',
@@ -53,6 +54,9 @@ class Lead extends Model
                 }
 
                 ProcessLeadAutoAssignmentJob::dispatch($lead->id)->afterCommit();
+                  if ($lead->shouldSyncToAltCRM()) {
+                $lead->sendToAltCRM();
+            }
             });
             static::updated(function ($lead) {
                 $intelligenceOnlyKeys = array_merge(self::INTELLIGENCE_FIELDS, ['updated_at']);

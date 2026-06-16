@@ -729,7 +729,7 @@ const $showNotification = (message, type = 'info') => {
 .close-btn {
     position: absolute;
     top: 8px;
-    right: -48px;
+    right: -65px;
     width: 64px;
     height: 49px;
     border: 1px solid rgba(115, 62, 135, 0.75);
