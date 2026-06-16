@@ -106,7 +106,19 @@
                 No additional information
             </div>
         </div>
-
+ <!-- ✅ WhatsApp Qualification Section -->
+        <div v-if="lead?.whatsapp_qualification && lead.whatsapp_qualification.length > 0" class="info-section whatsapp-qualification-section">
+            <div class="info-section-title">WhatsApp Qualification</div>
+            
+            <div 
+                v-for="(item, index) in lead.whatsapp_qualification" 
+                :key="index"
+                class="info-group"
+            >
+                <label class="form-label-custom">{{ item.question }}</label>
+                <div class="info-value">{{ item.answer }}</div>
+            </div>
+        </div>
         <div v-if="showClientRequirementArea" class="client-requirement-wrap">
             <div class="client-requirement-header-row">
                 <div class="info-section-title mb-0">Client Requirement</div>

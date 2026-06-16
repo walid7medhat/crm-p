@@ -37,6 +37,7 @@ class Lead extends Model
         'last_scored_at' => 'datetime',
         'score_breakdown' => 'array',
         'extra_client_requirements' => 'array',
+         'whatsapp_qualification' => 'array', 
 
     ];
     protected static function booted()

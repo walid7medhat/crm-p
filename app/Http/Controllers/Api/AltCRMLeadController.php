@@ -11,15 +11,15 @@ use Illuminate\Support\Facades\Log;
 class AltCRMLeadController extends Controller
 {
     /**
-     * Update more_information only
-     * Endpoint: POST /api/altcrm/update-more-info
+     * Save AltCRM webhook response to whatsapp_qualification
+     * Endpoint: POST /api/altcrm/whatsapp-qualification
      */
-    public function updateMoreInformation(Request $request)
+    public function updateWhatsappQualification(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'lead_id' => 'required|integer|exists:leads,id',
-                'more_information' => 'required|string', // استقبال JSON string
+                'response' => 'required|array',
             ]);
 
             if ($validator->fails()) {
@@ -38,26 +38,37 @@ class AltCRMLeadController extends Controller
                 ], 404);
             }
 
-            // ✅ تحديث more_information مباشرة
+            // ✅ تخزين الـ response كاملة بدون تنسيق ثابت
+            $qualification = [
+                'raw_response' => $request->response, // تخزين كامل
+                'received_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString(),
+            ];
+
+            // ✅ استخراج البيانات المتاحة ديناميكياً
+            $this->extractDynamicData($qualification, $request->response);
+
+            // ✅ تخزين في whatsapp_qualification
             $lead->update([
-                'more_information' => $request->more_information
+                'whatsapp_qualification' => $qualification
             ]);
 
-            Log::info('More information updated for lead', [
-                'lead_id' => $lead->id
+            Log::info('WhatsApp Qualification updated from webhook', [
+                'lead_id' => $lead->id,
+                'qualification' => $qualification
             ]);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'More information updated successfully',
+                'message' => 'WhatsApp Qualification updated successfully',
                 'data' => [
                     'lead_id' => $lead->id,
-                    'more_information' => $lead->more_information
+                    'whatsapp_qualification' => $lead->whatsapp_qualification
                 ]
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Error updating more_information', [
+            Log::error('Error updating WhatsApp Qualification', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
@@ -66,6 +77,62 @@ class AltCRMLeadController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * استخراج البيانات ديناميكياً من أي هيكل
+     */
+    protected function extractDynamicData(&$qualification, array $data, $prefix = '')
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                // إذا كانت قيمة array، نتعمق فيها
+                $this->extractDynamicData($qualification, $value, $prefix . $key . '_');
+            } else {
+                // تخزين القيمة مع المفتاح
+                $fieldKey = $prefix . $key;
+                // تنظيف المفتاح
+                $fieldKey = str_replace(['altcrm_', 'webhook_'], '', $fieldKey);
+                $qualification[$fieldKey] = $value;
+            }
+        }
+    }
+
+    /**
+     * Get WhatsApp Qualification
+     * Endpoint: GET /api/altcrm/whatsapp-qualification/{lead_id}
+     */
+    public function getWhatsappQualification($lead_id)
+    {
+        try {
+            $lead = Lead::find($lead_id);
+
+            if (!$lead) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Lead not found'
+                ], 404);
+            }
+
+            $qualification = $lead->whatsapp_qualification;
+            if (is_string($qualification)) {
+                $qualification = json_decode($qualification, true);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'lead_id' => $lead->id,
+                    'whatsapp_qualification' => $qualification ?? []
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
             ], 500);
         }
     }

@@ -184,6 +184,10 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'original_branch' => data_get($this->createdHistory, 'changes.lead_branch_source'),
            'api_first_question' => $this->getFirstApiQuestion(),
             'has_service_duplicate' => $this->hasServiceDuplicate(),
+              'whatsapp_qualification' => $this->when(
+                !empty($this->whatsapp_qualification),
+                $this->formatWhatsappQualification($this->whatsapp_qualification)
+            ),
 
         ];
     }
@@ -263,4 +267,165 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         })
         ->exists();
 }
+ /**
+     * تنسيق WhatsApp Qualification ديناميكياً
+     */
+    protected function formatWhatsappQualification($qualification): array
+    {
+        if (empty($qualification)) {
+            return [];
+        }
+
+        if (is_string($qualification)) {
+            $qualification = json_decode($qualification, true);
+        }
+
+        if (!is_array($qualification)) {
+            return [];
+        }
+
+        $qaList = [];
+        
+        // ✅ عرض كل البيانات الموجودة
+        foreach ($qualification as $key => $value) {
+            // تخطي القيم الفارغة
+            if ($value === null || $value === '') {
+                continue;
+            }
+            
+            // تخطي الـ raw_response (نعرضها في مكان منفصل)
+            if ($key === 'raw_response') {
+                continue;
+            }
+            
+            // تخطي الـ updated_at و received_at (نعرضهم في النهاية)
+            if ($key === 'updated_at' || $key === 'received_at') {
+                continue;
+            }
+            
+            // تنسيق المفتاح ليكون سؤال
+            $question = $this->formatQuestion($key);
+            
+            $qaList[] = [
+                'question' => $question,
+                'answer' => $this->formatAnswer($value),
+                'key' => $key,
+            ];
+        }
+        
+        // إضافة وقت الاستلام والتحديث في النهاية
+        if (isset($qualification['received_at'])) {
+            $qaList[] = [
+                'question' => 'Received At',
+                'answer' => $this->formatDate($qualification['received_at']),
+                'key' => 'received_at',
+            ];
+        }
+        
+        if (isset($qualification['updated_at'])) {
+            $qaList[] = [
+                'question' => 'Updated At',
+                'answer' => $this->formatDate($qualification['updated_at']),
+                'key' => 'updated_at',
+            ];
+        }
+        
+        return $qaList;
+    }
+
+    /**
+     * تنسيق المفتاح ليكون سؤال
+     */
+    protected function formatQuestion(string $key): string
+    {
+        // تعريف أسماء جميلة لبعض المفاتيح المعروفة
+        $mapping = [
+            'success' => 'Success',
+            'source' => 'Source',
+            'source_label' => 'Source Label',
+            'lead_id' => 'Lead ID',
+            'name' => 'Name',
+            'phone' => 'Phone',
+            'email' => 'Email',
+            'external_id' => 'External ID',
+            'campaign' => 'Campaign',
+            'budget' => 'Budget',
+            'status' => 'Status',
+            'sent_at' => 'Sent At',
+            'property_type' => 'Property Type',
+            'temperature' => 'Temperature',
+            'score' => 'Score',
+            'timeline' => 'Timeline',
+            'purpose' => 'Purpose',
+            'best_call_time' => 'Best Call Time',
+            'summary' => 'Summary',
+            'notes' => 'Notes',
+            'project' => 'Project',
+            'project_id' => 'Project ID',
+            'property_type_id' => 'Property Type ID',
+            'payload_phone' => 'Payload Phone',
+            'payload_name' => 'Payload Name',
+            'response_status' => 'Response Status',
+            'response_success' => 'Response Success',
+            'response_source' => 'Response Source',
+            'response_source_label' => 'Response Source Label',
+            'response_lead_id' => 'Response Lead ID',
+            'response_name' => 'Response Name',
+            'response_phone' => 'Response Phone',
+        ];
+        
+        // إذا كان المفتاح في الـ mapping
+        if (isset($mapping[$key])) {
+            return $mapping[$key];
+        }
+        
+        // تنسيق المفتاح العام
+        return ucwords(str_replace(['_', '-'], ' ', $key));
+    }
+
+    /**
+     * تنسيق القيمة
+     */
+    protected function formatAnswer($value): string
+    {
+        if ($value === null || $value === '') {
+            return '—';
+        }
+        
+        // إذا كانت القيمة boolean
+        if (is_bool($value)) {
+            return $value ? '✅ Yes' : '❌ No';
+        }
+        
+        // إذا كانت القيمة array أو object
+        if (is_array($value)) {
+            return json_encode($value, JSON_PRETTY_PRINT);
+        }
+        
+        // تنسيق الأرقام الكبيرة
+        if (is_numeric($value) && $value > 1000) {
+            return number_format($value, 0, '.', ',');
+        }
+        
+        // تنسيق التواريخ
+        if (is_string($value) && strtotime($value) !== false) {
+            return $this->formatDate($value);
+        }
+        
+        return (string) $value;
+    }
+
+    protected function formatDate($date): string
+    {
+        if (empty($date)) return '—';
+        
+        try {
+            $timestamp = strtotime($date);
+            if ($timestamp === false) return $date;
+            return date('d M Y, h:i A', $timestamp);
+        } catch (\Exception $e) {
+            return $date;
+        }
+    }
+    
 }

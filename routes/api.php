@@ -423,7 +423,7 @@ Route::middleware(['jwt.auth', 'role:super_admin|admin'])->group(function () {
         ]);
     });
 });
-Route::post('/altcrm/update-more-info', [AltCRMLeadController::class, 'updateMoreInformation'])
+Route::post('/altcrm/update-more-info', [AltCRMLeadController::class, 'updateWhatsappQualification'])
     ->name('altcrm.update.more.info');
 Route::middleware('jwt.auth')->group(function () {
     Route::prefix('sales-intelligence')->group(function () {
