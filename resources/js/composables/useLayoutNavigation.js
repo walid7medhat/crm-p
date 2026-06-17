@@ -133,6 +133,13 @@ function pathMatches(path, prefixes) {
   return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
+/** List pages only — detail/form routes must not overwrite the remembered listings entry. */
+export function isListingsRememberablePath(path) {
+  if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return false;
+  if (path === '/property-details' || path.startsWith('/property-details/')) return false;
+  return true;
+}
+
 export function isDashboardRoute(path) {
   return path === '/' || path === '/home' || path === '';
 }
@@ -182,7 +189,7 @@ export function getCrmEntryPath(ctx = {}) {
 export function getListingsEntryPath(fallback = '/alllisting') {
   try {
     const stored = localStorage.getItem(LAST_LISTINGS_PATH_KEY);
-    if (stored && pathMatches(stored, LISTINGS_PREFIXES)) return stored;
+    if (stored && isListingsRememberablePath(stored)) return stored;
   } catch {
     /* ignore */
   }
@@ -190,7 +197,7 @@ export function getListingsEntryPath(fallback = '/alllisting') {
 }
 
 export function rememberListingsPath(path) {
-  if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return;
+  if (!isListingsRememberablePath(path)) return;
   try {
     localStorage.setItem(LAST_LISTINGS_PATH_KEY, path);
   } catch {

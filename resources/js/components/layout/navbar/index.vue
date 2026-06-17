@@ -5,6 +5,7 @@
       'navbar-header--mobile-compact': isMobileViewport,
       'navbar-header--kanban-mobile': isKanbanRoute && isMobileViewport,
       'navbar-header--dashboard-home': isDashboardHome,
+      'navbar-header--property-detail': isPropertyDetailRoute && isMobileViewport,
     }"
   >
     <div
@@ -12,9 +13,31 @@
     >
       <div v-if="showMobileCompactHeader" class="mob-module-toolbar">
         <div class="kanban-mob-toolbar__main">
-          <div class="kanban-mob-lead-select-wrap">
+          <button
+            v-if="!isPropertyDetailRoute"
+            type="button"
+            class="mob-header-menu"
+            aria-label="Open navigation menu"
+            @click="toggleMobileMenu"
+          >
+            <iconify-icon icon="heroicons:bars-3-solid" />
+          </button>
+          <button
+            v-if="isPropertyDetailRoute"
+            type="button"
+            class="mob-header-back"
+            aria-label="Back to listings"
+            @click="goBackToListings"
+          >
+            <iconify-icon icon="lucide:chevron-left" />
+          </button>
+          <div
+            class="kanban-mob-lead-select-wrap"
+            :class="{ 'kanban-mob-lead-select-wrap--detail': isPropertyDetailRoute }"
+          >
+            <span v-if="isPropertyDetailRoute" class="mob-module-title mob-module-title--detail">Property</span>
             <select
-              v-if="moduleHeaderTabs.length"
+              v-else-if="moduleHeaderTabs.length"
               class="kanban-mob-lead-select"
               :value="mobileHeaderTabValue"
               aria-label="Switch section view"
@@ -657,6 +680,7 @@ import {
   CRM_SECTIONS,
   resolveCrmSection,
   rememberCrmSection,
+  getListingsEntryPath,
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
@@ -675,11 +699,20 @@ import { BFormInput } from 'bootstrap-vue-3';
 const userPlaceholder = userAvatarPlaceholder;
 const { theme, toggleTheme } = useTheme();
 const router = useRouter();
+const route = useRoute();
 
 function goBack() {
   router.back();
 }
-const route = useRoute();
+
+function goBackToListings() {
+  router.push(getListingsEntryPath('/alllisting'));
+}
+
+const isPropertyDetailRoute = computed(
+  () => route.path.startsWith('/property-details/'),
+);
+
 const {
   isDashboardHome,
   activeLayoutModule,
@@ -3471,6 +3504,20 @@ const showBackButton = computed(() => {
 
   .module-tab-select {
     display: block;
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+    line-height: 44px;
+    padding: 0 40px 0 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 2px 10px rgba(0, 0, 0, 0.18);
   }
 
   .module-tabs-nav--hide-on-mobile {
@@ -3591,18 +3638,20 @@ const showBackButton = computed(() => {
     display: flex;
     align-items: center;
     width: 100%;
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(8, 4, 40, 0.72);
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
     color: #fff;
     font-size: 15px;
     font-weight: 700;
     font-family: Montserrat, Inter, system-ui, sans-serif;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
     line-height: 1.2;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 2px 10px rgba(0, 0, 0, 0.18);
     box-sizing: border-box;
   }
 
@@ -3614,41 +3663,133 @@ const showBackButton = computed(() => {
     min-width: 0;
   }
 
+  .mob-header-menu {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .mob-header-menu:active {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .mob-header-back {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .mob-header-back:active {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .kanban-mob-lead-select-wrap--detail {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kanban-mob-lead-select-wrap--detail::after {
+    display: none;
+  }
+
+  .mob-module-title--detail {
+    justify-content: flex-start;
+    min-height: 40px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
   .kanban-mob-lead-select-wrap {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     align-items: center;
+    position: relative;
+  }
+
+  .kanban-mob-lead-select-wrap::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid rgba(255, 255, 255, 0.92);
+    pointer-events: none;
   }
 
   .kanban-mob-lead-select {
     width: 100%;
     min-width: 0;
-    height: 42px;
-    min-height: 42px;
-    padding: 0 36px 0 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(8, 4, 40, 0.72);
+    height: 44px;
+    min-height: 44px;
+    padding: 0 40px 0 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
     color: #fff;
     font-size: 15px;
     font-weight: 700;
     font-family: Montserrat, Inter, system-ui, sans-serif;
-    letter-spacing: 0.01em;
-    line-height: 42px;
+    letter-spacing: 0.02em;
+    line-height: 44px;
     box-sizing: border-box;
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background-image: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 2px 10px rgba(0, 0, 0, 0.18);
     cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  .kanban-mob-lead-select:focus {
+    outline: none;
+    border-color: rgba(183, 148, 246, 0.65);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 0 0 3px rgba(115, 62, 135, 0.35);
   }
 
   .kanban-mob-lead-select option {
     font-weight: 600;
     color: #0b0736;
+    background: #fff;
+    padding: 10px;
   }
 
   .kanban-mob-toolbar__actions {

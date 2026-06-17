@@ -6,9 +6,14 @@ const isMobileViewport = ref(false);
 const isMobileMenuOpen = ref(false);
 let listenersAttached = false;
 
+export function isMobileLayout() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia(`(max-width: ${MOBILE_LAYOUT_MAX_WIDTH}px)`).matches;
+}
+
 export function syncMobileViewport() {
   if (typeof window === 'undefined') return;
-  const mobile = window.matchMedia(`(max-width: ${MOBILE_LAYOUT_MAX_WIDTH}px)`).matches;
+  const mobile = isMobileLayout();
   isMobileViewport.value = mobile;
   if (!mobile) {
     closeMobileMenu();
@@ -16,15 +21,22 @@ export function syncMobileViewport() {
 }
 
 export function openMobileMenu() {
-  /* Mobile uses bottom dock only; desktop sidebar drawer is not shown ≤768px */
-  if (!isMobileViewport.value) return;
-  isMobileMenuOpen.value = false;
+  const mobile = isMobileLayout();
+  isMobileViewport.value = mobile;
+  if (!mobile) return;
+  isMobileMenuOpen.value = true;
+  document.body.classList.add('overlay-active', 'mobile-nav-open');
+  document.querySelector('aside.sidebar')?.classList.add('sidebar-open', 'sidebar--mobile-drawer');
 }
 
 export function closeMobileMenu() {
   isMobileMenuOpen.value = false;
   document.body.classList.remove('overlay-active', 'mobile-nav-open');
-  document.querySelector('aside.sidebar')?.classList.remove('sidebar-open');
+  const sidebar = document.querySelector('aside.sidebar');
+  sidebar?.classList.remove('sidebar-open');
+  if (!isMobileLayout()) {
+    sidebar?.classList.remove('sidebar--mobile-drawer');
+  }
 }
 
 export function toggleMobileMenu() {
@@ -51,5 +63,6 @@ export function useMobileNavigation() {
     closeMobileMenu,
     toggleMobileMenu,
     syncMobileViewport,
+    isMobileLayout,
   };
 }

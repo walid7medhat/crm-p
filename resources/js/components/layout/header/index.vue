@@ -1,13 +1,15 @@
 <template>
+  <Teleport to="body" :disabled="!isMobileViewport">
   <aside
-    v-if="!isMobileViewport"
     class="sidebar"
     :class="{
-      active: isSidebarActive,
+      active: isSidebarActive && !isMobileViewport,
       'sidebar--dashboard-home': isDashboardHome,
+      'sidebar-open': isMobileMenuOpen,
+      'sidebar--mobile-drawer': isMobileViewport || isMobileMenuOpen,
     }"
-    @mouseenter="sidebarHover = true"
-    @mouseleave="sidebarHover = false"
+    @mouseenter="!isMobileViewport && (sidebarHover = true)"
+    @mouseleave="!isMobileViewport && (sidebarHover = false)"
   >
     <div class="sidebar-toggle-container sidebar-header d-flex align-items-center" :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }">
       <div
@@ -19,14 +21,17 @@
           type="button"
           class="sidebar-toggle"
           :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)) }"
-          :title="isSidebarActive ? 'Expand menu' : 'Oia Properties'"
-          @click="handleSidebarToggleClick"
+          :title="isMobileViewport ? 'Close menu' : (isSidebarActive ? 'Expand menu' : 'Oia Properties')"
+          @click="isMobileViewport ? closeMobileMenu() : handleSidebarToggleClick()"
           aria-label="Toggle menu"
         >
-          <iconify-icon icon="material-symbols:menu-rounded" class="sidebar-menu-icon" />
+          <iconify-icon
+            :icon="isMobileViewport ? 'lucide:x' : 'material-symbols:menu-rounded'"
+            class="sidebar-menu-icon"
+          />
           <!-- "Oia Properties" when open; "Expand menu" with icon when collapsed + hover anywhere on sidebar -->
           <span
-            v-show="!isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover))"
+            v-show="!isMobileViewport && (!isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)))"
             class="sidebar-toggle-label"
           >{{ !isSidebarActive ? 'Oia Properties' : 'Expand menu' }}</span>
         </button>
@@ -219,9 +224,53 @@
       </ul>
     </div>
   </aside>
+  </Teleport>
 
   <Teleport to="body">
-    <nav v-if="isMobileViewport" ref="mobileDockRef" class="mobile-sidebar-dock" aria-label="Mobile menu">
+    <div
+      v-if="isMobileMenuOpen"
+      class="mobile-sidebar-overlay"
+      aria-hidden="true"
+      @click="closeMobileMenu"
+    />
+  </Teleport>
+
+  <Teleport to="body">
+    <nav
+      v-if="showMobileCoreDock"
+      class="mobile-core-dock"
+      aria-label="Quick navigation"
+    >
+      <router-link
+        v-if="showMobileQuickLeads"
+        to="/kanban"
+        class="mobile-core-dock__btn"
+        :class="{ 'is-active': isCoreDockLeadsActive }"
+        @click="onCoreDockLeadsClick"
+      >
+        <iconify-icon icon="lucide:contact" class="mobile-core-dock__icon" />
+        <span>Leads</span>
+      </router-link>
+      <span
+        v-if="showMobileQuickLeads && showMobileQuickListings"
+        class="mobile-core-dock__divider"
+        aria-hidden="true"
+      />
+      <router-link
+        v-if="showMobileQuickListings"
+        :to="crmListingsFlatPath"
+        class="mobile-core-dock__btn"
+        :class="{ 'is-active': isCoreDockListingsActive }"
+        @click="onCoreDockListingsClick"
+      >
+        <iconify-icon icon="lucide:building-2" class="mobile-core-dock__icon" />
+        <span>Listings</span>
+      </router-link>
+    </nav>
+  </Teleport>
+
+  <Teleport to="body">
+    <nav v-if="false" ref="mobileDockRef" class="mobile-sidebar-dock mobile-sidebar-dock--bayut" aria-label="Mobile menu">
       <span
         class="mobile-sidebar-dock__cursor"
         :class="{ 'mobile-sidebar-dock__cursor--ready': dockCursorReady }"
@@ -818,93 +867,78 @@ const activeMobileDockGroup = ref(null);
 const mobileDockExpandedSection = ref(null);
 
 const mobileDockItems = computed(() => {
-  const items = [
-    {
-      path: isShowOnlyListing.value ? '/alllisting' : '/',
-      label: 'Dashboard',
-      icon: 'lucide:house',
-    },
-  ];
+  const moreChildren = [];
+  const moreSections = [];
 
-  if (isAdmin.value) {
-    const crmGroup = {
-      key: 'group-crm',
-      label: 'CRM',
-      icon: 'lucide:handshake',
-      children: [
-        { path: '/kanban', label: 'Leads', iconSrc: leadsIcon.value },
-        { path: '/kanban_deal', label: 'Deals', iconSrc: dealsIcon.value },
-      ],
-      sections: [],
-    };
-
-    if (listingsSidebarSections.value.length && !isShowOnlyListing.value) {
-      if (isListingsDropdownAdmin.value) {
-        crmGroup.sections.push({
-          key: 'crm-listings',
-          title: 'Listings',
-          iconSrc: listingsIcon.value,
-          subsections: listingsSidebarSections.value.map((section) => ({
-            key: section.key,
-            title: section.title,
-            items: section.items.map((it) => ({
-              path: it.path,
-              label: it.label,
-              count: it.count || 0,
-            })),
-          })),
-        });
-      } else {
-        crmGroup.children.push({
-          path: crmListingsFlatPath.value,
-          label: 'Listings',
-          iconSrc: listingsIcon.value,
-        });
-      }
-    }
-
-    items.push(crmGroup);
-
-    if (calculatorMenuItems.value.length) {
-      items.push({
-        key: 'group-calculator',
-        label: 'Calculators',
-        icon: 'lucide:calculator',
-        children: calculatorMenuItems.value.map((it) => ({
-          path: it.path,
-          label: `${it.label} · ${it.name}`,
-          icon: it.icon,
-        })),
-      });
-    }
+  if (isAdmin.value && calculatorMenuItems.value.length) {
+    moreChildren.push(...calculatorMenuItems.value.map((it) => ({
+      path: it.path,
+      label: `${it.label} · ${it.name}`,
+      icon: it.icon,
+    })));
   }
 
   if (isSuperAdmin.value || user.value?.id === 186) {
-    items.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
+    moreChildren.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
   }
 
   if (filteredUsersItems.value.length) {
-    items.push({
-      key: 'group-agents',
-      label: 'Agents',
-      icon: 'lucide:user',
-      children: filteredUsersItems.value.map((it) => ({ path: it.path, label: it.label })),
-    });
+    moreChildren.push(...filteredUsersItems.value.map((it) => ({ path: it.path, label: it.label })));
   }
 
   if (settingsSidebarSections.value.length) {
-    items.push({
-      key: 'group-settings',
-      label: 'Settings',
-      icon: 'lucide:settings',
-      sections: settingsSidebarSections.value.map((section) => ({
+    moreSections.push(...settingsSidebarSections.value.map((section) => ({
+      key: section.key,
+      title: section.title,
+      items: section.items.map((it) => ({ path: it.path, label: it.label })),
+    })));
+  }
+
+  if (isAdmin.value && listingsSidebarSections.value.length && isListingsDropdownAdmin.value) {
+    moreSections.push({
+      key: 'more-listings',
+      title: 'Listings',
+      iconSrc: listingsIcon.value,
+      subsections: listingsSidebarSections.value.map((section) => ({
         key: section.key,
         title: section.title,
         items: section.items.map((it) => ({
           path: it.path,
           label: it.label,
+          count: it.count || 0,
         })),
       })),
+    });
+  }
+
+  const items = [
+    {
+      path: isShowOnlyListing.value ? '/alllisting' : '/',
+      label: 'Home',
+      icon: 'lucide:house',
+    },
+  ];
+
+  if (isAdmin.value || isShowOnlyListing.value) {
+    items.push({
+      path: isShowOnlyListing.value ? '/alllisting' : getListingsEntryPath(),
+      label: 'Listings',
+      icon: 'lucide:building-2',
+    });
+  }
+
+  if (isAdmin.value && !isShowOnlyListing.value) {
+    items.push({ path: '/kanban', label: 'Leads', iconSrc: leadsIcon.value });
+    items.push({ path: '/kanban_deal', label: 'Deals', iconSrc: dealsIcon.value });
+  }
+
+  if (moreChildren.length || moreSections.length) {
+    items.push({
+      key: 'group-more',
+      label: 'More',
+      icon: 'lucide:layout-grid',
+      children: moreChildren,
+      sections: moreSections,
     });
   }
 
@@ -1107,6 +1141,7 @@ async function goToCrmSection(section) {
   rememberCrmSection(section);
   openCrmDropdown();
   crmListingsExpanded.value = false;
+  if (isMobileViewport.value) closeMobileMenu();
 
   if (section === CRM_SECTIONS.LEAD) {
     localStorage.setItem('kanban_active_tab', 'leads');
@@ -1132,6 +1167,7 @@ async function goToListingsItem(path) {
   rememberCrmSection(CRM_SECTIONS.LISTINGS);
   rememberListingsPath(path);
   openCrmDropdown();
+  if (isMobileViewport.value) closeMobileMenu();
   if (route.path !== path) {
     await router.push(path);
   }
@@ -1145,6 +1181,42 @@ async function goToCrmListingsFlat() {
   if (route.path !== crmListingsFlatPath.value) {
     await router.push(crmListingsFlatPath.value);
   }
+}
+
+const showMobileQuickLeads = computed(() => isAdmin.value && !isShowOnlyListing.value);
+const showMobileQuickListings = computed(() => isAdmin.value || isShowOnlyListing.value);
+const showMobileSidebarQuickbar = computed(() => showMobileQuickLeads.value || showMobileQuickListings.value);
+const showMobileCoreDock = computed(() => showMobileSidebarQuickbar.value);
+
+const isCoreDockLeadsActive = computed(() => {
+  const p = route.path;
+  return p === '/kanban' || (p.startsWith('/kanban/') && !p.startsWith('/kanban_deal'));
+});
+
+const isCoreDockListingsActive = computed(() => {
+  if (route.path.startsWith('/property-details')) return true;
+  return resolveCrmSection(route.path) === CRM_SECTIONS.LISTINGS;
+});
+
+function onCoreDockLeadsClick() {
+  rememberCrmSection(CRM_SECTIONS.LEAD);
+  localStorage.setItem('kanban_active_tab', 'leads');
+  window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }));
+}
+
+function onCoreDockListingsClick() {
+  rememberCrmSection(CRM_SECTIONS.LISTINGS);
+  rememberListingsPath(crmListingsFlatPath.value);
+}
+
+async function mobileQuickGoLeads() {
+  closeMobileMenu();
+  await goToCrmSection(CRM_SECTIONS.LEAD);
+}
+
+async function mobileQuickGoListings() {
+  closeMobileMenu();
+  await goToCrmListingsFlat();
 }
 
 const handleCrmClick = () => {
@@ -1345,16 +1417,30 @@ onUnmounted(() => {
   z-index: 1300 !important;
 }
 @media (max-width: 991px) {
-  .sidebar.sidebar-open {
+  .sidebar.sidebar-open:not(.sidebar--mobile-drawer) {
     background: var(--gradient-crm-glass) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
-            z-index: 100 !important;
-
+    z-index: 100 !important;
   }
 }
 
 @media (max-width: 768px) {
+  .sidebar {
+    z-index: 12050 !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    pointer-events: auto !important;
+    touch-action: auto !important;
+  }
+
+  .sidebar .sidebar-menu li a,
+  .sidebar .sidebar-nav-link {
+    pointer-events: auto !important;
+    cursor: pointer;
+  }
+
   .mobile-dock-inline-submenu {
     position: absolute;
     bottom: calc(100% + 8px);
