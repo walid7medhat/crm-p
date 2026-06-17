@@ -116,7 +116,11 @@ export default {
      */
     requestPosition(options) {
       return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos),
+          (err) => reject(err),
+          options
+        );
       });
     },
 
