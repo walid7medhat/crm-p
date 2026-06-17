@@ -125,10 +125,12 @@
                                          <div class="col">
                                             <label class="form-label-custom">Secondary Phone</label>
                                             <CrmPhoneInput 
-                                                v-model="form.work_phone_2" 
+                                             :model-value="form.work_phone_2"
+                                                @update:model-value="(val) => { form.work_phone_2 = val; console.log('Phone2:', val); }"
                                                 placeholder="Enter Phone Number" 
                                                 :invalid="!!validationErrors.work_phone_2"
                                                 :show-errors="showPhoneFieldErrors"
+                                               
                                             />
                                             <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone_2[0] }}
