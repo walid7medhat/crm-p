@@ -100,7 +100,8 @@
                                         <div class="col">
                                             <label class="form-label-custom">Primary Phone</label>
                                             <CrmPhoneInput 
-                                                v-model="form.work_phone" 
+                                                :model-value="form.work_phone"
+                                                @update:model-value="(val) => { form.work_phone = val; console.log('Phone:', val); }"
                                                 placeholder="Enter Phone Number" 
                                                 :invalid="!!validationErrors.work_phone"
                                                 :show-errors="showPhoneFieldErrors"
