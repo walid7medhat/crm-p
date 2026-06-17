@@ -1584,11 +1584,13 @@ const clearClientData = () => {
                 $showNotification(budgetError, 'warning')
                 return
             }
+            console.log('PHONE:', form.value.work_phone)
             if (form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
                 validationErrors.value.work_phone = ['Enter a valid phone number']
                 $showNotification('Primary phone is not valid', 'warning')
                 return
             }
+            console.log('PHONE2:', form.value.work_phone_2)
             if (form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
                 validationErrors.value.work_phone_2 = ['Enter a valid phone number']
                 $showNotification('Secondary phone is not valid', 'warning')
