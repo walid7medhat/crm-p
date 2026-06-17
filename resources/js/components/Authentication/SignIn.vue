@@ -159,7 +159,9 @@ export default {
         }
       }
 
-      if (lastError && lastError.code === lastError.PERMISSION_DENIED) {
+     const PERMISSION_DENIED = 1;
+
+      if (lastError && lastError.code === PERMISSION_DENIED) {
         throw new Error('Location access is required to sign in. Please allow location and try again.');
       }
       throw new Error(
