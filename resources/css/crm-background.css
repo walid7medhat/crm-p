@@ -278,6 +278,16 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
     background-position: center top;
   }
 
+  body.app-has-video-bg .property-show-page,
+  body.app-has-video-bg .property-show-inner,
+  body.app-has-video-bg .dashboard-main-body.property-show-page,
+  body.app-has-video-bg .dashboard-main-body-inner.property-show-inner {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   body.app-has-video-bg #app main.dashboard-main > .navbar-header {
     min-height: var(--app-topbar-height, 3.25rem) !important;
   }

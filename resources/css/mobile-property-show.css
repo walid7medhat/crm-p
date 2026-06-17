@@ -1,15 +1,73 @@
 @media (max-width: 768px) {
+  /* ── Full-width shell (no side gaps on video-bg layout) ── */
+  body.app-has-video-bg #app main.dashboard-main:has(.property-show-page),
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.property-show-page) {
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+    background: #fff !important;
+    overflow-x: hidden !important;
+  }
+
+  body.app-has-video-bg .property-show-page,
+  body.app-has-video-bg .property-show-inner,
+  body.app-has-video-bg .dashboard-main-body.property-show-page,
+  body.app-has-video-bg .dashboard-main-body-inner.property-show-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+  }
+
+  #app main.dashboard-main:has(.property-show-page) {
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin-inline-start: 0 !important;
+    background: #fff;
+  }
+
+  #app main.dashboard-main > .dashboard-main-router:has(.property-show-page) {
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+    margin: 0 !important;
+  }
+
+  #app main.dashboard-main > .navbar-header.navbar-header--property-detail {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
   .property-show-page .breadcrumb-area,
   .property-show-page .dashboard-main-body > .breadcrumb-area {
     display: none !important;
   }
 
-  .property-show-page {
-    padding-top: 0 !important;
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
+  .property-show-page,
+  .property-show-page--mobile {
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
     overflow-x: hidden;
+    background: #fff;
+    box-sizing: border-box;
+  }
+
+  .property-show-page > .row {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    --bs-gutter-x: 0;
   }
 
   .property-show-page .dashboard-main-body {
@@ -19,20 +77,14 @@
     max-width: 100%;
   }
 
-  .property-show-page .row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100%;
-    max-width: 100%;
-  }
-
   .property-show-inner,
   .property-show-inner--mobile {
     padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 auto !important;
+    margin: 0 !important;
     box-sizing: border-box;
+    background: #fff;
   }
 
   .property-show-inner--mobile .card-main {
@@ -40,6 +92,9 @@
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
   }
 
   .property-show-inner--mobile .card-body {
@@ -78,6 +133,8 @@
   /* ── Mobile hero ── */
   .ps-mobile-hero {
     background: #fff;
+    width: 100%;
+    max-width: 100%;
   }
 
   .ps-mobile-hero__quick {
@@ -202,6 +259,8 @@
     position: relative;
     background: #0f172a;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
   }
 
   .ps-gallery__viewport {

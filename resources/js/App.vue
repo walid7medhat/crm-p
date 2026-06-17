@@ -286,5 +286,9 @@ body.mobile-nav-open {
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
   }
+
+  #app main.dashboard-main > .dashboard-main-router:has(.property-show-page) {
+    padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+  }
 }
 </style>
