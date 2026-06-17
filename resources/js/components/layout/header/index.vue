@@ -11,7 +11,25 @@
     @mouseenter="!isMobileViewport && (sidebarHover = true)"
     @mouseleave="!isMobileViewport && (sidebarHover = false)"
   >
-    <div class="sidebar-toggle-container sidebar-header d-flex align-items-center" :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }">
+    <header v-if="isMobileViewport" class="mobile-drawer-header">
+      <div class="mobile-drawer-header__brand">
+        <span class="mobile-drawer-header__logo">Oia</span>
+        <span class="mobile-drawer-header__title">Properties</span>
+      </div>
+      <button
+        type="button"
+        class="mobile-drawer-header__close"
+        aria-label="Close menu"
+        @click="closeMobileMenu"
+      >
+        <iconify-icon icon="lucide:x" />
+      </button>
+    </header>
+    <div
+      v-if="!isMobileViewport"
+      class="sidebar-toggle-container sidebar-header d-flex align-items-center"
+      :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }"
+    >
       <div
         class="sidebar-toggle-wrap"
         @mouseenter="sidebarHeaderHover = true"
@@ -38,7 +56,7 @@
       </div>
     </div>
     <!-- Menu -->
-    <div class="sidebar-menu-area">
+    <div class="sidebar-menu-area" @click="onMobileSidebarNavClick">
       <ul class="sidebar-menu">
         <li>
           <router-link
@@ -1207,6 +1225,15 @@ function onCoreDockLeadsClick() {
 function onCoreDockListingsClick() {
   rememberCrmSection(CRM_SECTIONS.LISTINGS);
   rememberListingsPath(crmListingsFlatPath.value);
+}
+
+function onMobileSidebarNavClick(event) {
+  if (!isMobileViewport.value) return;
+  const link = event.target.closest('a.sidebar-nav-link, .sidebar-menu a[href]');
+  if (!link) return;
+  const href = link.getAttribute('href') || '';
+  if (href.startsWith('javascript') || href === '#') return;
+  closeMobileMenu();
 }
 
 async function mobileQuickGoLeads() {

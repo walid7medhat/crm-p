@@ -1,5 +1,23 @@
 /* Bayut-inspired mobile listings UX — mobile only (≤768px) */
 @media (max-width: 768px) {
+  /* iOS: prevent focus zoom on search & filters */
+  .listing-search-transparent.bayut-mobile input,
+  .listing-search-transparent.bayut-mobile select,
+  .listing-search-transparent.bayut-mobile textarea,
+  .bayut-search-overlay input,
+  .bayut-search-overlay select,
+  .bayut-search-overlay textarea,
+  .bayut-search-overlay .vs__search,
+  .bayut-search-overlay .vs__selected,
+  .bayut-filter-sheet input,
+  .bayut-filter-sheet select,
+  .bayut-chip-sheet input,
+  .bayut-chip-sheet select,
+  .bayut-range-field input,
+  .bayut-range-compact__input {
+    font-size: 16px !important;
+  }
+
   /* ── Search shell ── */
   .listing-search-transparent.bayut-mobile {
     background: transparent;
@@ -51,7 +69,7 @@
     border-right: 1px solid #e2e8f0;
     background: #f8f6fc;
     color: #5b3d8f;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     white-space: nowrap;
   }
@@ -258,7 +276,7 @@
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 15px;
+    font-size: 16px;
     color: #1e1b2e;
     outline: none;
     min-width: 0;
@@ -552,7 +570,7 @@
     padding: 0 12px;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: 16px;
     color: #1e1b2e;
     background: #fff;
   }
@@ -728,7 +746,7 @@
 
   .ml-card__title {
     margin: 0 0 4px;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     color: #1e1b2e;
     line-height: 1.35;
@@ -1063,7 +1081,7 @@
     border: none;
     background: transparent;
     padding: 10px 0;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: #1e1b2e;
     text-align: right;
@@ -1099,7 +1117,7 @@
     align-items: center !important;
     margin: 0 !important;
     padding: 0 4px !important;
-    font-size: 14px !important;
+    font-size: 16px !important;
     font-weight: 600 !important;
     line-height: 1 !important;
     height: auto !important;

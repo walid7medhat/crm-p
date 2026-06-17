@@ -3761,7 +3761,7 @@ const showBackButton = computed(() => {
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
     color: #fff;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     font-family: Montserrat, Inter, system-ui, sans-serif;
     letter-spacing: 0.02em;
