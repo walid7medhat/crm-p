@@ -1193,7 +1193,7 @@ const clearClientData = () => {
             clearClientData() // مسح بيانات العميل القديمة
         } else {
             // للمستخدمين العاديين
-            clearClientData()
+            // clearClientData()
         }
     })
     onMounted(() => {
