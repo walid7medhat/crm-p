@@ -127,8 +127,8 @@ export default {
      * on this succeeding.
      */
     async getCurrentLocation() {
-      if (!('geolocation' in navigator)) {
-        throw new Error('Your browser does not support location. Location is required to sign in.');
+      if (!navigator?.geolocation) {
+          throw new Error('Your browser does not support location. Location is required to sign in.');
       }
 
       // Geolocation only works on https:// or localhost. Fail early with a clear

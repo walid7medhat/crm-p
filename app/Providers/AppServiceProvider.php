@@ -37,7 +37,9 @@ class AppServiceProvider extends ServiceProvider
     //         'subject' => $event->message->getSubject(),
     //     ]);
     // });
-
+\Illuminate\Support\Facades\Response::macro('secureHeaders', function ($response) {
+        return $response->header('Permissions-Policy', 'geolocation=(self)');
+    });
     Event::listen(MessageFailed::class, function ($event) {
         \Log::error('❌ Mail Failed', [
             'to' => $event->message->getTo(),
