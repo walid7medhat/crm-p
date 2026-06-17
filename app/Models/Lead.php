@@ -55,9 +55,9 @@ class Lead extends Model
                 }
 
                 ProcessLeadAutoAssignmentJob::dispatch($lead->id)->afterCommit();
-                  if ($lead->shouldSyncToAltCRM()) {
-                $lead->sendToAltCRM();
-            }
+            //       if ($lead->shouldSyncToAltCRM()) {
+            //     $lead->sendToAltCRM();
+            // }
             });
             static::updated(function ($lead) {
                 $intelligenceOnlyKeys = array_merge(self::INTELLIGENCE_FIELDS, ['updated_at']);
