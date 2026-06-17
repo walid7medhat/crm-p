@@ -14,14 +14,24 @@
     max-width: 100vw;
   }
 
-  /* —— Hide desktop sidebar drawer; navigation uses bottom dock only —— */
-  aside.sidebar,
-  aside.sidebar.sidebar--mobile-drawer,
+  /* —— Mobile sidebar drawer (hamburger menu) —— */
+  aside.sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 12050 !important;
+    inset-inline-start: -100%;
+  }
+
   aside.sidebar.sidebar-open {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    transform: none !important;
+    inset-inline-start: 0 !important;
+  }
+
+  .mobile-sidebar-overlay {
+    display: block !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
   }
 
   .mobile-nav-overlay {
@@ -64,7 +74,7 @@
   #app main.dashboard-main > .dashboard-main-router {
     padding-left: 0;
     padding-right: 0;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Home dashboard: extra bottom space for dock + chat FAB (scroll lives on main) */
@@ -84,43 +94,96 @@
     max-height: 100dvh;
   }
 
-  /* —— Bottom dock: Instagram glass (light frosted pill bar) —— */
-  .mobile-sidebar-dock {
-    --dock-h: 52px;
-    --dock-inset-y: 4px;
-    --dock-inset-x: 14px;
-    --dock-side: 16px;
+  /* —— Bottom dock: Bayut-style Leads | Listings floating pill —— */
+  .mobile-sidebar-dock,
+  .mobile-sidebar-dock--bayut {
+    display: none !important;
+  }
 
+  .mobile-core-dock {
     position: fixed !important;
-    left: var(--dock-side) !important;
-    right: var(--dock-side) !important;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-    width: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+    transform: translateX(-50%);
+    width: min(300px, calc(100vw - 48px)) !important;
     margin: 0 !important;
-    padding: var(--dock-inset-y) var(--dock-inset-x) !important;
-    height: var(--dock-h) !important;
-    min-height: var(--dock-h) !important;
-    max-height: var(--dock-h) !important;
+    padding: 0 !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    height: 48px !important;
     border-radius: 999px !important;
-    border: 1px solid rgba(255, 255, 255, 0.72) !important;
-    background: rgba(255, 248, 248, 0.68) !important;
-    backdrop-filter: blur(22px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
+    border: none !important;
+    background: #ffffff !important;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.14),
-      0 1px 3px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
-    overflow: hidden !important;
+      0 6px 24px rgba(15, 23, 42, 0.16),
+      0 2px 8px rgba(15, 23, 42, 0.08) !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: space-evenly !important;
-    gap: 0 !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
     z-index: 9999 !important;
     box-sizing: border-box !important;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Instagram sliding active pill — CRM purple glass */
+  .mobile-core-dock__btn {
+    flex: 1 1 50%;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    min-height: 48px !important;
+    padding: 0 12px !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #733e87 !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    letter-spacing: 0;
+    transition: background 0.15s ease;
+    cursor: pointer;
+  }
+
+  .mobile-core-dock__btn:active {
+    background: #faf8fc !important;
+  }
+
+  .mobile-core-dock__btn.is-active {
+    background: #f8f4fb !important;
+    color: #733e87 !important;
+  }
+
+  .mobile-core-dock__icon {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 22px !important;
+    color: #733e87 !important;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: none;
+  }
+
+  .mobile-core-dock__btn iconify-icon.mobile-core-dock__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-core-dock__divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 11px 0;
+    background: #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  body.mobile-listing-sheet-open .mobile-core-dock,
+  body.mobile-nav-open .mobile-core-dock {
+    display: none !important;
+  }
+
+  /* Legacy dock cursor — hidden */
   .mobile-sidebar-dock__cursor {
     position: absolute;
     top: var(--dock-inset-y);
@@ -239,7 +302,7 @@
 
   /* —— Chat FAB —— */
   .chat-floating-btn {
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
     right: 18px !important;
     width: 50px !important;
     height: 50px !important;
@@ -308,6 +371,15 @@
 
   .auth-landing__video {
     object-position: center top;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-core-dock,
+  .mobile-sidebar-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 }
 

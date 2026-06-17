@@ -1,12 +1,75 @@
 <template>
-  <div class="search-container listing-search-transparent">
+  <div class="search-container listing-search-transparent" :class="{ 'bayut-mobile': isMobileViewport }">
     <div class="listing-search-shell">
       <div class="listing-headline">
-        <h2>{{ dynamicHeadline }}</h2>
+        <h6 class="listing-headline__title">{{ dynamicHeadline }}</h6>
         <span>{{ formattedResultCount }} listed</span>
       </div>
 
-      <div class="listing-main-search">
+      <div v-if="isMobileViewport" class="bayut-mobile-search">
+        <div class="bayut-search-bar">
+          <button type="button" class="bayut-purpose-btn" @click.stop="openMobileChipSheet('purpose')">
+            {{ mobilePurposeLabel }}
+            <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <div class="bayut-search-field" @click="openMobileSearchOverlay">
+            <i class="ri-search-line bayut-search-field__icon" aria-hidden="true"></i>
+            <span v-if="mobileSearchDisplay" class="bayut-search-value">{{ mobileSearchDisplay }}</span>
+            <span v-else class="bayut-search-placeholder">Search city, area or building</span>
+          </div>
+          <button type="button" class="bayut-location-btn" aria-label="Search location" @click="openMobileSearchOverlay">
+            <i class="ri-map-pin-line"></i>
+          </button>
+        </div>
+
+        <div class="bayut-filter-chips">
+          <button type="button" class="bayut-chip bayut-chip--filters" @click="showMobileFilterSheet = true">
+            <i class="ri-equalizer-line"></i>
+            <span v-if="mobileActiveFilterCount > 0" class="bayut-filter-count">{{ mobileActiveFilterCount }}</span>
+          </button>
+          <button
+            type="button"
+            class="bayut-chip"
+            :class="{ active: selectedSaleRent !== 'All' }"
+            @click="openMobileChipSheet('purpose')"
+          >
+            {{ mobilePurposeChipLabel }} <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <button
+            type="button"
+            class="bayut-chip"
+            :class="{ active: selectedPropertyTypes.length > 0 }"
+            @click="openMobileChipSheet('type')"
+          >
+            {{ mobilePropertyTypeChipLabel }} <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <button
+            type="button"
+            class="bayut-chip"
+            :class="{ active: selectedBeds.length > 0 || selectedBaths.length > 0 }"
+            @click="openMobileChipSheet('beds')"
+          >
+            {{ mobileBedsChipLabel }} <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <button
+            type="button"
+            class="bayut-chip"
+            :class="{ active: hasActivePriceFilter }"
+            @click="openMobileChipSheet('price')"
+          >
+            Price <i class="ri-arrow-down-s-line"></i>
+          </button>
+        </div>
+
+        <div class="bayut-results-header">
+          <h6 class="listing-headline__title">{{ dynamicHeadline }}</h6>
+          <button type="button" class="bayut-sort-btn" @click="openMobileSortSheet">
+            {{ mobileSortLabel }} <i class="ri-arrow-down-s-line"></i>
+          </button>
+        </div>
+      </div>
+
+      <div v-show="!isMobileViewport" class="listing-main-search">
         <i class="ri-search-line listing-main-search-icon"></i>
         <v-select
           v-model="selectedArea"
@@ -57,28 +120,6 @@
           </span>
         </template>
         </v-select>
-      </div>
-
-      <div v-if="isMobileViewport" class="mobile-quick-chips">
-        <button type="button" class="mobile-quick-chip" :class="{ active: selectedSaleRent === 'Sale' }" @click="toggleMobileQuickSale()">For Sale</button>
-        <button type="button" class="mobile-quick-chip" :class="{ active: selectedCompletionStatus?.value === 'Completed' }" @click="toggleMobileQuickReady()">Ready</button>
-        <button
-          type="button"
-          class="mobile-quick-chip mobile-quick-chip-action"
-          @click="showMobileFilterSheet = true"
-        >
-          <i class="ri-equalizer-line"></i>
-          <span>Filter</span>
-          <span v-if="mobileActiveFilterCount > 0" class="mobile-filter-badge">{{ mobileActiveFilterCount }}</span>
-        </button>
-        <button
-          type="button"
-          class="mobile-quick-chip mobile-quick-chip-action"
-          @click="openMobileSortSheet"
-        >
-          <i class="ri-sort-desc"></i>
-          <span>Sort</span>
-        </button>
       </div>
 
       <div class="listing-pill-row">
@@ -438,162 +479,219 @@
 
     <div v-if="showPriceDropdown || showMoreFilters || showBedsDropdown || showPropertyTypeDropdown || showSortDropdown || showSaleRentDropdown" class="dropdown-overlay" @click="closeAllDropdowns"></div>
 
+    <Teleport to="body">
     <div v-if="isMobileViewport && showMobileFilterSheet" class="mobile-filter-sheet-overlay" @click.self="showMobileFilterSheet = false">
-      <div class="mobile-filter-sheet" @click.stop>
-        <div class="mobile-filter-sheet-head">
-          <button type="button" class="mobile-filter-clear" @click="resetFilters">Clear All</button>
+      <div class="mobile-filter-sheet bayut-filters-sheet" @click.stop>
+        <div class="mobile-filter-sheet-head bayut-filters-sheet__head">
+          <button type="button" class="mobile-filter-clear" @click="resetFilters">Reset</button>
+          <h6 class="mobile-filter-sheet-title">Filters</h6>
           <button type="button" class="mobile-filter-close" @click="showMobileFilterSheet = false" aria-label="Close">
             <i class="ri-close-line"></i>
           </button>
         </div>
 
-        <div class="mobile-filter-accordion">
-          <details open>
-            <summary>
-              <span>Listing Type</span>
-              <small>{{ mobileSaleRentLabel }}</small>
-            </summary>
-            <v-select
-              v-model="selectedSaleRent"
-              :options="typeOptions"
-              label="label"
-              :reduce="option => option.value"
-              :searchable="false"
-              :append-to-body="false"
-              placeholder="All"
-              class="custom-select listing-pop-select"
-              @update:modelValue="handleFilterChange"
-            />
-          </details>
+        <div class="bayut-filters-body">
+          <!-- Purpose -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Purpose</h6>
+            <div class="bayut-segmented">
+              <button
+                v-for="opt in typeOptions"
+                :key="'mf-purpose-' + opt.value"
+                type="button"
+                class="bayut-segmented__btn"
+                :class="{ active: selectedSaleRent === opt.value }"
+                @click="selectedSaleRent = opt.value"
+              >{{ opt.label === 'Sale' ? 'Buy' : opt.label }}</button>
+            </div>
+          </section>
 
-          <details open>
-            <summary>
-              <span>Property Type</span>
-              <small>{{ mobilePropertyTypeLabel }}</small>
-            </summary>
-            <!--<div class="listing-tab-switch listing-tab-switch-mobile">-->
-            <!--  <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'residential' }" @click="propertyTypeTab = 'residential'">Residential</button>-->
-            <!--  <button type="button" class="listing-tab-btn" :class="{ active: propertyTypeTab === 'commercial' }" @click="propertyTypeTab = 'commercial'">Commercial</button>-->
-            <!--</div>-->
-            <div class="listing-property-grid listing-property-grid-mobile">
+          <!-- Property Type -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Property Type</h6>
+            <div class="bayut-type-grid">
               <button
                 v-for="type in visiblePropertyTypes"
-                :key="'m-type-' + type.id"
+                :key="'mf-type-' + type.id"
                 type="button"
-                class="listing-property-pill"
+                class="bayut-type-pill"
                 :class="{ active: isPropertyTypeSelected(type) }"
                 @click="togglePropertyTypeOption(type)"
-              >
-                {{ type.name }}
-              </button>
+              >{{ type.name }}</button>
             </div>
-          </details>
+          </section>
 
-          <details>
-            <summary>
-              <span>Beds & Baths</span>
-              <small>{{ mobileBedsBathsLabel }}</small>
-            </summary>
-            <div class="listing-pop-label">Bedrooms</div>
-            <div class="listing-chip-grid">
+          <!-- Beds -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Beds</h6>
+            <div class="bayut-pill-row">
               <button
                 v-for="bed in bedsOptions"
-                :key="'m-bed-' + bed"
+                :key="'mf-bed-' + bed"
                 type="button"
-                class="listing-chip-btn"
+                class="bayut-pill bayut-pill--row"
                 :class="{ active: selectedBeds.includes(bed) }"
                 @click="selectBedsOption(bed)"
               >{{ bed }}</button>
             </div>
-            <div class="listing-pop-label mt-2">Bathrooms</div>
-            <div class="listing-chip-grid">
+          </section>
+
+          <!-- Baths -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Baths</h6>
+            <div class="bayut-pill-row">
               <button
                 v-for="bath in bathsOptions"
-                :key="'m-bath-' + bath"
+                :key="'mf-bath-' + bath"
                 type="button"
-                class="listing-chip-btn"
+                class="bayut-pill bayut-pill--row"
                 :class="{ active: selectedBaths.includes(bath) }"
                 @click="selectBathOption(bath)"
               >{{ bath }}</button>
             </div>
-          </details>
+          </section>
 
-          <details>
-            <summary>
-              <span>Price Range</span>
-              <small>{{ mobilePriceLabel }}</small>
-            </summary>
-            <div class="listing-pop-grid">
-              <div>
-                <label>Minimum</label>
-                <input type="text" :value="formatThousandsDisplay(priceFrom)" class="range-input-side" @input="onPriceFromInput" @blur="handlePriceChange" placeholder="0" />
+          <!-- Price -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Price (AED)</h6>
+            <div class="bayut-range-compact">
+              <div class="bayut-range-compact__row">
+                <span class="bayut-range-compact__key">Min</span>
+                <input
+                  type="text"
+                  class="bayut-range-compact__input"
+                  inputmode="numeric"
+                  :value="formatThousandsDisplay(priceFrom)"
+                  @input="onPriceFromInput"
+                  @blur="handlePriceChange"
+                  placeholder="0"
+                />
               </div>
-              <div>
-                <label>Maximum</label>
-                <input type="text" :value="formatThousandsDisplay(priceTo)" class="range-input-side" @input="onPriceToInput" @blur="handlePriceChange" placeholder="Any" />
-              </div>
-            </div>
-          </details>
-
-          <details>
-            <summary>
-              <span>Area (sqft)</span>
-              <small>{{ mobileSizeLabel }}</small>
-            </summary>
-            <div class="listing-pop-grid">
-              <div>
-                <label>Minimum</label>
-                <input type="text" :value="formatThousandsDisplay(sizeFrom)" class="range-input-side" @input="onSizeFromInput" @blur="handleSizeChange" placeholder="0" />
-              </div>
-              <div>
-                <label>Maximum</label>
-                <input type="text" :value="formatThousandsDisplay(sizeTo)" class="range-input-side" @input="onSizeToInput" @blur="handleSizeChange" placeholder="Any" />
+              <div class="bayut-range-compact__row">
+                <span class="bayut-range-compact__key">Max</span>
+                <input
+                  type="text"
+                  class="bayut-range-compact__input"
+                  inputmode="numeric"
+                  :value="formatThousandsDisplay(priceTo)"
+                  @input="onPriceToInput"
+                  @blur="handlePriceChange"
+                  placeholder="Any"
+                />
               </div>
             </div>
-          </details>
+          </section>
 
-          <details v-if="!isMyListingPage">
-            <summary>
-              <span>Agent</span>
-              <small>{{ mobileAgentLabel }}</small>
-            </summary>
-            <v-select
-              v-model="selectedAgent"
-              :options="agents"
-              :disabled="isLoadingAgents"
-              label="name"
-              :searchable="true"
-              :append-to-body="false"
-              placeholder="Select agent"
-              class="custom-select listing-pop-select"
-              @update:modelValue="handleFilterChange"
-            />
-          </details>
+          <!-- Area -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Area (sqft)</h6>
+            <div class="bayut-range-compact">
+              <div class="bayut-range-compact__row">
+                <span class="bayut-range-compact__key">Min</span>
+                <input
+                  type="text"
+                  class="bayut-range-compact__input"
+                  inputmode="numeric"
+                  :value="formatThousandsDisplay(sizeFrom)"
+                  @input="onSizeFromInput"
+                  @blur="handleSizeChange"
+                  placeholder="0"
+                />
+              </div>
+              <div class="bayut-range-compact__row">
+                <span class="bayut-range-compact__key">Max</span>
+                <input
+                  type="text"
+                  class="bayut-range-compact__input"
+                  inputmode="numeric"
+                  :value="formatThousandsDisplay(sizeTo)"
+                  @input="onSizeToInput"
+                  @blur="handleSizeChange"
+                  placeholder="Any"
+                />
+              </div>
+            </div>
+          </section>
 
-          <details>
-            <summary>
-              <span>Occupancy Status</span>
-              <small>{{ selectedOccupancyStatus?.label || 'Any' }}</small>
-            </summary>
-            <v-select
-              v-model="selectedOccupancyStatus"
-              :options="occupancyStatusOptions"
-              :searchable="false"
-              :append-to-body="false"
-              placeholder="Select occupancy"
-              class="custom-select listing-pop-select"
-              @update:modelValue="handleFilterChange"
-            />
-          </details>
+          <!-- Property Status -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Property Status</h6>
+            <div class="bayut-pill-row">
+              <button
+                v-for="opt in completionStatusOptions"
+                :key="'mf-comp-' + (opt.value || 'all')"
+                type="button"
+                class="bayut-pill bayut-pill--row"
+                :class="{ active: (selectedCompletionStatus?.value || null) === opt.value }"
+                @click="selectedCompletionStatus = opt.value ? opt : null; handleFilterChange()"
+              >{{ opt.label }}</button>
+            </div>
+          </section>
 
+          <!-- Agent -->
+          <section v-if="!isMyListingPage || (isMyListingPage && isTeamLeadManager)" class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Agent</h6>
+            <div class="bayut-select-wrap">
+              <v-select
+                v-model="selectedAgent"
+                :options="agents"
+                :disabled="isLoadingAgents"
+                label="name"
+                :searchable="true"
+                :append-to-body="false"
+                placeholder="Any agent"
+                class="custom-select bayut-mobile-select"
+                @update:modelValue="handleFilterChange"
+              />
+            </div>
+          </section>
+
+          <!-- Occupancy -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Furnishing / Occupancy</h6>
+            <div class="bayut-pill-row bayut-pill-row--wrap">
+              <button
+                type="button"
+                class="bayut-pill bayut-pill--row"
+                :class="{ active: !selectedOccupancyStatus }"
+                @click="selectedOccupancyStatus = null; handleFilterChange()"
+              >Any</button>
+              <button
+                v-for="opt in occupancyStatusOptions"
+                :key="'mf-occ-' + opt.value"
+                type="button"
+                class="bayut-pill bayut-pill--row"
+                :class="{ active: selectedOccupancyStatus?.value === opt.value }"
+                @click="selectedOccupancyStatus = opt; handleFilterChange()"
+              >{{ opt.label }}</button>
+            </div>
+          </section>
+
+          <!-- Features -->
+          <section v-if="listingFeatureOptions.length" class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Features</h6>
+            <div class="bayut-type-grid">
+              <button
+                v-for="feature in listingFeatureOptions"
+                :key="feature.key"
+                type="button"
+                class="bayut-type-pill"
+                :class="{ active: isFeatureSelected(feature.key) }"
+                @click="toggleFeature(feature.key)"
+              >{{ feature.label }}</button>
+            </div>
+          </section>
         </div>
 
-        <div class="mobile-filter-sticky-actions">
-          <button type="button" class="btn btn-primary w-100" @click="applyMobileFilters">Apply Filters</button>
+        <div class="mobile-filter-sticky-actions mobile-filter-sticky-actions--dual bayut-filters-sheet__footer">
+          <button type="button" class="bayut-sheet__btn bayut-sheet__btn--reset" @click="resetFilters">Reset</button>
+          <button type="button" class="bayut-sheet__btn bayut-sheet__btn--apply" @click="applyMobileFilters">See {{ formattedResultCount }} properties</button>
         </div>
       </div>
     </div>
+    </Teleport>
 
+    <Teleport to="body">
     <div v-if="isMobileViewport && showMobileSortSheet" class="mobile-filter-sheet-overlay" @click.self="showMobileSortSheet = false">
       <div class="mobile-sort-sheet" @click.stop>
         <div class="mobile-filter-sheet-head">
@@ -619,6 +717,150 @@
         </div>
       </div>
     </div>
+    </Teleport>
+
+    <!-- Mobile location search overlay -->
+    <Teleport to="body">
+      <div v-if="isMobileViewport && showMobileSearchOverlay" class="bayut-search-overlay">
+        <div class="bayut-search-overlay__head">
+          <button type="button" class="bayut-search-overlay__back" aria-label="Close" @click="closeMobileSearchOverlay">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <div class="bayut-search-overlay__input-wrap">
+            <i class="ri-search-line" style="color:#94a3b8"></i>
+            <input
+              ref="mobileSearchInputRef"
+              v-model="mobileSearchQuery"
+              type="search"
+              class="bayut-search-overlay__input"
+              placeholder="City, Area, Community, Project or Building"
+              autocomplete="off"
+              @keydown.esc="closeMobileSearchOverlay"
+            />
+          </div>
+        </div>
+        <div v-if="selectedArea.length" class="bayut-search-selected-tags">
+          <span v-for="area in selectedArea" :key="area.id" class="bayut-area-tag">
+            {{ locationFirstLine(area) }}
+            <button type="button" aria-label="Remove" @click="removeMobileArea(area)"><i class="ri-close-line"></i></button>
+          </span>
+        </div>
+        <ul class="bayut-search-suggestions">
+          <li v-if="!filteredMobileAreas.length && mobileSearchQuery" class="bayut-search-suggestion" style="cursor:default;color:#94a3b8">
+            No locations found
+          </li>
+          <li v-for="area in filteredMobileAreas" :key="area.id">
+            <button
+              type="button"
+              class="bayut-search-suggestion"
+              :class="{ 'is-selected': isAreaSelected(area) }"
+              @click="selectMobileArea(area)"
+            >
+              <i class="ri-map-pin-line bayut-search-suggestion__icon"></i>
+              <span>
+                <span class="bayut-search-suggestion__name" v-html="highlightMobileQuery(locationFirstLine(area))"></span>
+                <span class="bayut-search-suggestion__sub">{{ locationSecondLine(area) }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </Teleport>
+
+    <!-- Mobile filter chip bottom sheet -->
+    <Teleport to="body">
+      <div v-if="isMobileViewport && mobileChipSheet" class="bayut-sheet-overlay" @click.self="closeMobileChipSheet">
+        <div class="bayut-sheet" @click.stop>
+          <div class="bayut-sheet__head">
+            <button type="button" class="bayut-sheet__reset" @click="resetMobileChipSheet">Reset</button>
+            <h6 class="bayut-sheet__title">{{ mobileChipSheetTitle }}</h6>
+            <button type="button" class="bayut-sheet__close" aria-label="Close" @click="closeMobileChipSheet">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+          <div class="bayut-sheet__body">
+            <template v-if="mobileChipSheet === 'purpose'">
+              <div class="bayut-pill-grid">
+                <button
+                  v-for="opt in typeOptions"
+                  :key="opt.value"
+                  type="button"
+                  class="bayut-pill"
+                  :class="{ active: selectedSaleRent === opt.value }"
+                  @click="selectedSaleRent = opt.value"
+                >{{ opt.label === 'Sale' ? 'Buy' : opt.label }}</button>
+              </div>
+            </template>
+            <template v-else-if="mobileChipSheet === 'type'">
+              <div class="bayut-pill-grid">
+                <button
+                  v-for="type in visiblePropertyTypes"
+                  :key="'chip-type-' + type.id"
+                  type="button"
+                  class="bayut-pill"
+                  :class="{ active: isPropertyTypeSelected(type) }"
+                  @click="togglePropertyTypeOption(type)"
+                >{{ type.name }}</button>
+              </div>
+            </template>
+            <template v-else-if="mobileChipSheet === 'beds'">
+              <p class="bayut-sheet-label">Bedrooms</p>
+              <div class="bayut-pill-grid">
+                <button
+                  v-for="bed in bedsOptions"
+                  :key="'chip-bed-' + bed"
+                  type="button"
+                  class="bayut-pill"
+                  :class="{ active: selectedBeds.includes(bed) }"
+                  @click="selectBedsOption(bed)"
+                >{{ bed }}</button>
+              </div>
+              <p class="bayut-sheet-label">Bathrooms</p>
+              <div class="bayut-pill-grid">
+                <button
+                  v-for="bath in bathsOptions"
+                  :key="'chip-bath-' + bath"
+                  type="button"
+                  class="bayut-pill"
+                  :class="{ active: selectedBaths.includes(bath) }"
+                  @click="selectBathOption(bath)"
+                >{{ bath }}</button>
+              </div>
+            </template>
+            <template v-else-if="mobileChipSheet === 'price'">
+              <div class="bayut-range-compact">
+                <div class="bayut-range-compact__row">
+                  <span class="bayut-range-compact__key">Min</span>
+                  <input
+                    type="text"
+                    class="bayut-range-compact__input"
+                    inputmode="numeric"
+                    :value="formatThousandsDisplay(priceFrom)"
+                    @input="onPriceFromInput"
+                    placeholder="0"
+                  />
+                </div>
+                <div class="bayut-range-compact__row">
+                  <span class="bayut-range-compact__key">Max</span>
+                  <input
+                    type="text"
+                    class="bayut-range-compact__input"
+                    inputmode="numeric"
+                    :value="formatThousandsDisplay(priceTo)"
+                    @input="onPriceToInput"
+                    placeholder="Any"
+                  />
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="bayut-sheet__actions">
+            <button type="button" class="bayut-sheet__btn bayut-sheet__btn--reset" @click="resetMobileChipSheet">Reset</button>
+            <button type="button" class="bayut-sheet__btn bayut-sheet__btn--apply" @click="applyMobileChipSheet">Done</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -626,7 +868,7 @@
 import { LISTING_FEATURE_OPTIONS } from '@/config/listingFeatures';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
-import { ref, onMounted, computed, getCurrentInstance, onUnmounted, watch } from 'vue';
+import { ref, onMounted, computed, getCurrentInstance, onUnmounted, watch, nextTick } from 'vue';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import { useRoute } from 'vue-router';
 import api from '@/plugins/axios';
@@ -690,6 +932,10 @@ export default {
     const showMobileSortSheet = ref(false);
     const mobileSortDraft = ref("created_at_desc");
     const showMobileFilterSheet = ref(false);
+    const showMobileSearchOverlay = ref(false);
+    const mobileSearchQuery = ref('');
+    const mobileSearchInputRef = ref(null);
+    const mobileChipSheet = ref(null);
     const isMobileViewport = ref(false);
     let resizeHandler = null;
 const searchReferenceNumber = ref("");
@@ -1013,8 +1259,8 @@ const propertyTypeButtonLabel = computed(() => {
     });
     const mobileAgentLabel = computed(() => selectedAgent.value?.name || "Any");
     const mobileSortLabel = computed(() => {
-      const row = sortOptions.find((item) => item.value === selectedSort.value);
-      return row?.label || "Most Recent";
+      const row = sortOptions.find((item) => item.value === (selectedSort.value || 'created_at_desc'));
+      return row?.label || 'Popular';
     });
 
     const saleRentButtonLabel = computed(() => {
@@ -1085,6 +1331,78 @@ const propertyTypeButtonLabel = computed(() => {
       selectedSort.value = mobileSortDraft.value || "created_at_desc";
       showMobileSortSheet.value = false;
       handleFilterChange();
+    };
+
+    const openMobileSearchOverlay = async () => {
+      mobileSearchQuery.value = '';
+      showMobileSearchOverlay.value = true;
+      showMobileFilterSheet.value = false;
+      mobileChipSheet.value = null;
+      await nextTick();
+      mobileSearchInputRef.value?.focus();
+    };
+
+    const closeMobileSearchOverlay = () => {
+      showMobileSearchOverlay.value = false;
+      mobileSearchQuery.value = '';
+    };
+
+    const selectMobileArea = (area) => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? [...selectedArea.value] : [];
+      const exists = selectedAreas.some((item) => Number(item?.id) === Number(area?.id));
+      if (!exists) selectedAreas.push(area);
+      selectedArea.value = selectedAreas;
+      handleFilterChange();
+      closeMobileSearchOverlay();
+    };
+
+    const removeMobileArea = (area) => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      selectedArea.value = selectedAreas.filter((item) => Number(item?.id) !== Number(area?.id));
+      handleFilterChange();
+    };
+
+    const highlightMobileQuery = (text) => {
+      const q = mobileSearchQuery.value.trim();
+      if (!q || !text) return text;
+      const idx = text.toLowerCase().indexOf(q.toLowerCase());
+      if (idx < 0) return text;
+      const before = text.slice(0, idx);
+      const match = text.slice(idx, idx + q.length);
+      const after = text.slice(idx + q.length);
+      return `${before}<mark>${match}</mark>${after}`;
+    };
+
+    const openMobileChipSheet = (type) => {
+      mobileChipSheet.value = type;
+      showMobileFilterSheet.value = false;
+      showMobileSortSheet.value = false;
+    };
+
+    const closeMobileChipSheet = () => {
+      mobileChipSheet.value = null;
+    };
+
+    const resetMobileChipSheet = () => {
+      if (mobileChipSheet.value === 'purpose') selectedSaleRent.value = 'All';
+      if (mobileChipSheet.value === 'type') {
+        selectedPropertyTypes.value = [];
+        selectedPropertyType.value = null;
+      }
+      if (mobileChipSheet.value === 'beds') {
+        selectedBeds.value = [];
+        selectedBaths.value = [];
+      }
+      if (mobileChipSheet.value === 'price') {
+        priceFrom.value = 0;
+        priceTo.value = 10000000;
+      }
+    };
+
+    const applyMobileChipSheet = () => {
+      if (mobileChipSheet.value === 'price') handlePriceChange();
+      else handleFilterChange();
+      closeMobileChipSheet();
     };
 
     const togglePropertyTypeDropdown = () => {
@@ -1242,9 +1560,63 @@ const featuresButtonLabel = computed(() => {
       if (selectedBeds.value.length) n++;
       if (selectedBaths.value.length) n++;
       if (priceFrom.value > 0 || priceTo.value < 10000000) n++;
+      if (sizeFrom.value > 0 || sizeTo.value < 10000) n++;
       if (selectedCompletionStatus.value !== null) n++;
-      if (selectedSort.value && selectedSort.value !== "created_at_desc") n++;
+      if (selectedOccupancyStatus.value) n++;
+      if (selectedAgent.value) n++;
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      if (selectedAreas.length) n++;
       return n;
+    });
+
+    const mobilePurposeLabel = computed(() => {
+      if (selectedSaleRent.value === 'Rent') return 'Rent';
+      if (selectedSaleRent.value === 'Sale') return 'Buy';
+      return 'Buy';
+    });
+
+    const mobilePurposeChipLabel = computed(() => {
+      if (selectedSaleRent.value === 'Rent') return 'Rent';
+      if (selectedSaleRent.value === 'Sale') return 'Buy';
+      return 'Buy';
+    });
+
+    const mobilePropertyTypeChipLabel = computed(() => {
+      if (!selectedPropertyTypes.value.length) return 'Type';
+      if (selectedPropertyTypes.value.length === 1) return selectedPropertyTypes.value[0].name;
+      return `Type (${selectedPropertyTypes.value.length})`;
+    });
+
+    const mobileBedsChipLabel = computed(() => {
+      const parts = [];
+      if (selectedBeds.value.length) parts.push(`${selectedBeds.value.length} bed`);
+      if (selectedBaths.value.length) parts.push(`${selectedBaths.value.length} bath`);
+      return parts.length ? parts.join(' · ') : 'Beds';
+    });
+
+    const hasActivePriceFilter = computed(() => priceFrom.value > 0 || priceTo.value < 10000000);
+
+    const mobileSearchDisplay = computed(() => {
+      const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      if (!selectedAreas.length) return '';
+      if (selectedAreas.length === 1) return locationFirstLine(selectedAreas[0]);
+      return `${locationFirstLine(selectedAreas[0])} +${selectedAreas.length - 1}`;
+    });
+
+    const filteredMobileAreas = computed(() => {
+      const q = mobileSearchQuery.value.trim().toLowerCase();
+      const list = areas.value || [];
+      if (!q) return list.slice(0, 40);
+      return list.filter((area) => {
+        const name = String(area.name || '').toLowerCase();
+        const sub = String(area.subtitle || '').toLowerCase();
+        return name.includes(q) || sub.includes(q);
+      }).slice(0, 40);
+    });
+
+    const mobileChipSheetTitle = computed(() => {
+      const titles = { purpose: 'Purpose', type: 'Property Type', beds: 'Beds & Baths', price: 'Price Range' };
+      return titles[mobileChipSheet.value] || 'Filters';
     });
 
     const dynamicHeadline = computed(() => {
@@ -1838,11 +2210,24 @@ fetchProjects()
       });
     });
 
+    watch(
+      [showMobileFilterSheet, showMobileSortSheet, mobileChipSheet, showMobileSearchOverlay],
+      () => {
+        const sheetOpen = showMobileFilterSheet.value
+          || showMobileSortSheet.value
+          || !!mobileChipSheet.value
+          || showMobileSearchOverlay.value;
+        document.body.classList.toggle('mobile-listing-sheet-open', sheetOpen);
+      },
+      { immediate: true },
+    );
+
     onUnmounted(() => {
       if (resizeHandler) window.removeEventListener('resize', resizeHandler);
       if (searchTimer.value) {
         clearTimeout(searchTimer.value);
       }
+      document.body.classList.remove('mobile-listing-sheet-open');
     });
 
     return {
@@ -1882,6 +2267,10 @@ fetchProjects()
       showMobileSortSheet,
       mobileSortDraft,
       showMobileFilterSheet,
+      showMobileSearchOverlay,
+      mobileSearchQuery,
+      mobileSearchInputRef,
+      mobileChipSheet,
       isMobileViewport,
       propertyTypeTab,
        listingFeatureOptions,     
@@ -1918,6 +2307,14 @@ fetchProjects()
       sizeProgressStyle,
       hasActiveFilters,
       mobileActiveFilterCount,
+      mobilePurposeLabel,
+      mobilePurposeChipLabel,
+      mobilePropertyTypeChipLabel,
+      mobileBedsChipLabel,
+      hasActivePriceFilter,
+      mobileSearchDisplay,
+      filteredMobileAreas,
+      mobileChipSheetTitle,
       dynamicHeadline,
       formattedResultCount,
       featuresButtonLabel,
@@ -1937,6 +2334,15 @@ fetchProjects()
       openMobileSortSheet,
       resetMobileSort,
       applyMobileSort,
+      openMobileSearchOverlay,
+      closeMobileSearchOverlay,
+      selectMobileArea,
+      removeMobileArea,
+      highlightMobileQuery,
+      openMobileChipSheet,
+      closeMobileChipSheet,
+      resetMobileChipSheet,
+      applyMobileChipSheet,
       toggleSaleRentDropdown,
       toggleSizeDropdown,
       toggleMoreFilters,
@@ -2857,7 +3263,8 @@ fetchProjects()
   margin-bottom: 14px;
 }
 
-.listing-headline h2 {
+.listing-headline h6,
+.listing-headline__title {
   margin: 0;
   font-size: 24px;
   line-height: 1.1;
@@ -3236,7 +3643,8 @@ fetchProjects()
   margin-bottom: 6px !important;
 }
 
-.listing-headline h2 {
+.listing-headline h6,
+.listing-headline__title {
   font-size: 18px !important;
   font-weight: 500 !important;
   letter-spacing: -0.1px;
@@ -4067,7 +4475,7 @@ fetchProjects()
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.45);
-    z-index: 2000;
+    z-index: 12000 !important;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -4078,8 +4486,18 @@ fetchProjects()
     overflow: auto;
     background: #fff;
     border-radius: 18px 18px 0 0;
-    padding: 10px 10px calc(60px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 10px calc(20px + env(safe-area-inset-bottom, 0px));
     position: relative;
+    z-index: 12001;
+  }
+
+  .mobile-filter-sheet.bayut-filters-sheet {
+    display: flex;
+    flex-direction: column;
+    max-height: 92dvh;
+    overflow: hidden;
+    padding: 0;
+    border-radius: 20px 20px 0 0;
   }
   .mobile-sort-sheet {
     width: 100%;
@@ -4087,8 +4505,9 @@ fetchProjects()
     overflow: auto;
     background: #fff;
     border-radius: 18px 18px 0 0;
-    padding: 10px 10px calc(60px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 10px calc(20px + env(safe-area-inset-bottom, 0px));
     position: relative;
+    z-index: 12001;
   }
   .mobile-sort-list {
     display: grid;
@@ -4122,10 +4541,13 @@ fetchProjects()
   .mobile-filter-clear {
     border: none;
     background: transparent;
-    color: #334155;
-    font-weight: 500;
-    font-size: 12px;
+    color: #733E87;
+    font-weight: 600;
+    font-size: 14px;
     padding: 4px 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
   }
   .mobile-filter-close {
     width: 30px;

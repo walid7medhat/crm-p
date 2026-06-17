@@ -3,6 +3,7 @@ import api from '@/plugins/axios'
 const emptyPayload = () => ({
   scope: { role: 'personal', team_size: 0, period: 'monthly' },
   crm: {},
+  deals: {},
   listing: {},
   hr: {},
   finance: {},

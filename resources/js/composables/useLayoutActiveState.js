@@ -61,9 +61,10 @@ export function useLayoutActiveState() {
 
   function isMobileDockItemActive(path) {
     if (path === '/' || path === '/home') return isDashboardHome.value;
-    if (path === '/alllisting') {
+    if (path === '/alllisting' || path === '/my-listing' || path === '/archive') {
       if (isDashboardHome.value) return false;
-      return isPathActive(route.path, '/alllisting');
+      if (route.path.startsWith('/property-details/')) return true;
+      return isPathActive(route.path, path);
     }
     if (isDashboardHome.value) return false;
     return isPathActive(route.path, path);

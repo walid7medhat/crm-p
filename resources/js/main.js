@@ -29,8 +29,14 @@ import '../css/dashboard-ai.css'
 import '../css/roi-calculator.css'
 import '../css/background-settings.css'
 import '../css/mobile-layout.css'
+import '../css/mobile-listings.css'
+import '../css/mobile-property-show.css'
+import '../css/mobile-sidebar.css'
 import '../css/view-profile.css'
 import '../css/project-page.css'
+import { syncMobileViewport } from './composables/useMobileNavigation.js'
+
+syncMobileViewport()
 
 const addCSS = (url) => {
   const link = document.createElement('link')

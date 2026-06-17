@@ -1,13 +1,19 @@
 <template>
-  <div class="dashboard-main-body-inner property-show-inner">
+  <div
+    class="dashboard-main-body-inner property-show-inner"
+    :class="{
+      'property-show-inner--mobile': isMobileViewport,
+      'has-mobile-agent-bar': isMobileViewport && property?.agent && !onlyShow,
+    }"
+  >
     <div class="row gy-4 property-show-row">
       <!-- Main Content -->
-      <div class="col-lg-9">
+      <div class="col-12 col-lg-9">
         <div class="card card-main p-0 radius-12 overflow-hidden">
           <div class="card-body ">
          
-            <!-- Carousel Section -->
-            <div class="property-gallery" v-if="property && property.gallery_images">
+            <!-- Desktop gallery -->
+            <div class="property-gallery property-gallery--desktop" v-if="property && property.gallery_images && !isMobileViewport">
               <div
                 class="gallery-container"
                 :class="{ 'is-single': property.gallery_images.length === 1 }"
@@ -51,6 +57,55 @@
                 </div>
               </div>
             </div>
+
+            <!-- Mobile gallery + hero (Bayut-style) -->
+            <div v-if="property && property.gallery_images && isMobileViewport" class="ps-mobile-hero">
+              <MobilePropertyGallery
+                :images="property.gallery_images"
+                :get-image-url="getImageUrl"
+                :badges="mobileGalleryBadges"
+                @open="openLightbox"
+              />
+              <div v-if="(property.floor_plans && property.floor_plans.length) || property.drive_link" class="ps-mobile-hero__quick">
+                <button
+                  v-if="property.floor_plans && property.floor_plans.length"
+                  type="button"
+                  class="ps-mobile-hero__quick-btn"
+                  @click="openFloorPlanSlider(0)"
+                >
+                  <i class="ri-layout-grid-line"></i>
+                  Floor plans
+                </button>
+                <button
+                  v-if="property.drive_link"
+                  type="button"
+                  class="ps-mobile-hero__quick-btn"
+                  @click="openDriveLink"
+                >
+                  <i class="fab fa-google-drive"></i>
+                  Drive
+                </button>
+              </div>
+              <div class="ps-mobile-hero__body">
+                <p class="ps-mobile-hero__price">
+                  AED {{ formatPrice(property.price) }}
+                  <span v-if="property.listing_status === 'rent'" class="ps-mobile-hero__price-unit">/ year</span>
+                </p>
+                <div v-if="mobileSpecs.length" class="ps-mobile-hero__specs">
+                  <span v-for="spec in mobileSpecs" :key="spec.key" class="ps-mobile-hero__spec">
+                    <i :class="spec.icon"></i>{{ spec.value }}
+                  </span>
+                </div>
+                <h6 v-if="mobileListingTitle" class="ps-mobile-hero__title">{{ mobileListingTitle }}</h6>
+                <p v-if="mobileLocationLabel" class="ps-mobile-hero__location">{{ mobileLocationLabel }}</p>
+                <div v-if="mobileHeroChips.length" class="ps-mobile-hero__chips">
+                  <span v-for="chip in mobileHeroChips" :key="chip.label" class="ps-mobile-hero__chip">
+                    {{ chip.label }}: <strong>{{ chip.value }}</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
            <div v-if="hasRejectionReason" class="rejection-alert-container mb-4">
               <div class="alert alert-danger rejection-alert" role="alert">
                 <div class="rejection-alert-header">
@@ -86,8 +141,8 @@
                 </button>
               </div> -->
 
-              <!-- Property Price and Basic Info -->
-              <div class="property-main-info mb-16">
+              <!-- Property Price and Basic Info (desktop) -->
+              <div class="property-main-info mb-16" v-if="!isMobileViewport">
                 <div class="property-actions mb-16">
                   <button class="btn btn-primary" >
                  {{ property.listing_status || "Not specified" }}
@@ -153,12 +208,12 @@
               <div class="info-section">
                 <h3 class="section-title mb-20">Property Details</h3>
                 <div class="info-grid">
-                  <div class="info-item">
+                  <div class="info-item" v-if="!isMobileViewport">
                     <span class="info-label">Sale/Rent</span>
                     <span class="info-value">{{ property.listing_status || "Not specified" }}</span>
                   </div>
                   
-                  <div class="info-item">
+                  <div class="info-item" v-if="!isMobileViewport">
                     <span class="info-label">Price</span>
                     <span class="info-value">AED {{ formatPrice(property.price) }}</span>
                   </div>
@@ -2138,10 +2193,23 @@
     </div>
   </div>
 </div>
+
+    <Teleport to="body">
+      <MobilePropertyAgentBar
+        v-if="isMobileViewport && property?.agent && !onlyShow"
+        :agent="property.agent"
+        :can-chat="canUsePropertyChat"
+        @chat="handleChatWithAgentClick"
+        @profile="goToAgentDetails(property.agent.id)"
+      />
+    </Teleport>
 </template>
 
 <script>
 import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextTick } from 'vue';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.vue';
+import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
@@ -2161,6 +2229,8 @@ export default {
    components: {
     vSelect,
     PaymentDetailsSection,
+    MobilePropertyGallery,
+    MobilePropertyAgentBar,
   },
   data() {
     return {};
@@ -2177,6 +2247,8 @@ const locationIcon  =  '/assets/images/Location.png';
 const OiaLogo = '/assets/images/LogoWhite.png';
 
 const LastSlide_bg = '/assets/images/lastslide-bg.png';
+
+    const { isMobileViewport } = useMobileNavigation();
 
     const propertySidebarColRef = ref(null);
     const propertySidebarStickyRef = ref(null);
@@ -2917,6 +2989,80 @@ const onlyShow = computed(() => {
   return userRoles.includes('only show listings') ;
 
 });
+
+const mobileGalleryBadges = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const badges = [];
+  if (p.listing_status === 'sale') badges.push('For Sale');
+  else if (p.listing_status === 'rent') badges.push('For Rent');
+  if (p.completion_status === 'Under Construction') badges.push('Off-Plan');
+  else if (p.completion_status === 'Completed') badges.push('Ready');
+  if (p.is_hot_deal === 'Yes') badges.push('Hot Deal');
+  return badges;
+});
+
+const mobilePurposeLabel = computed(() => {
+  const status = property.value?.listing_status;
+  if (status === 'sale') return 'For Sale';
+  if (status === 'rent') return 'For Rent';
+  return status || '';
+});
+
+const mobileListingTitle = computed(() => {
+  const p = property.value;
+  if (!p) return '';
+  return p.project?.title || p.area?.area_title || p.title || p.reference_number || '';
+});
+
+const mobileLocationLabel = computed(() => {
+  const p = property.value;
+  if (!p) return '';
+  const parts = [];
+  if (p.area?.area_title && p.area.area_title !== mobileListingTitle.value) {
+    parts.push(p.area.area_title);
+  } else if (p.area?.title && p.area.title !== mobileListingTitle.value) {
+    parts.push(p.area.title);
+  }
+  if (p.project?.developer_name) parts.push(p.project.developer_name);
+  return parts.filter(Boolean).join(', ') || p.area?.area_title || p.area?.title || p.title || '';
+});
+
+const mobileSpecs = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const typeName = (p.property_type?.name || '').toLowerCase();
+  const isLand = typeName.includes('plot') || typeName.includes('land');
+  const specs = [];
+  if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
+    specs.push({
+      key: 'beds',
+      icon: 'ri-hotel-bed-line',
+      value: p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : String(p.number_of_bedrooms),
+    });
+  }
+  if (!isLand && p.number_of_bathrooms) {
+    specs.push({ key: 'baths', icon: 'ri-drop-line', value: String(p.number_of_bathrooms) });
+  }
+  if (p.size_sqft) {
+    specs.push({ key: 'size', icon: 'ri-ruler-line', value: `${p.size_sqft} sqft` });
+  } else if (p.size_sqmt) {
+    specs.push({ key: 'size', icon: 'ri-ruler-line', value: `${p.size_sqmt} sqm` });
+  }
+  return specs;
+});
+
+watch(
+  [isMobileViewport, () => property.value?.agent, onlyShow],
+  ([mobile, agent, only]) => {
+    if (mobile && agent && !only) {
+      document.body.classList.add('ps-mobile-agent-bar-open');
+    } else {
+      document.body.classList.remove('ps-mobile-agent-bar-open');
+    }
+  },
+  { immediate: true },
+);
 const canMarkAsConverted = computed(() => {
   return canEditProperty.value;
 });
@@ -6105,6 +6251,7 @@ const windowWidth = ref(window.innerWidth);
       if (propertySidebarSyncRaf) {
         cancelAnimationFrame(propertySidebarSyncRaf);
       }
+      document.body.classList.remove('ps-mobile-agent-bar-open');
     });
 
     watch(loading, (isLoading) => {
@@ -6174,6 +6321,20 @@ const formatPaymentPlan = (paymentPlan) => {
   const plans = parsePaymentPlans({ payment_plan: paymentPlan });
   return plans.join(', ');
 };
+
+const mobileHeroChips = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const chips = [];
+  if (p.handover_date) {
+    chips.push({ label: 'Handover', value: formatDate(p.handover_date) });
+  }
+  const plan = formatPaymentPlan(p.payment_plan_json || p.payment_plan);
+  if (plan && plan !== 'N/A' && plan !== 'Not specified') {
+    chips.push({ label: 'Payment Plan', value: plan });
+  }
+  return chips;
+});
 
 // Add to computed properties
 const getPaymentPlans = computed(() => {
@@ -6285,6 +6446,13 @@ const openDriveLink = () => {
       propertySidebarColRef,
       propertySidebarStickyRef,
       propertySidebarSpacerRef,
+      isMobileViewport,
+      mobileGalleryBadges,
+      mobilePurposeLabel,
+      mobileListingTitle,
+      mobileLocationLabel,
+      mobileSpecs,
+      mobileHeroChips,
       property,
       logo,
       propertyIcon,
@@ -9836,7 +10004,13 @@ margin: 0 2px;
 </style>
 <style>
 .property-show-inner{
-  padding:0 1rem 1rem 0 !important;
+  padding:0 1rem 1rem 1rem !important;
+}
+
+@media (max-width: 768px) {
+  .property-show-inner {
+    padding: 0 !important;
+  }
 }
 .flex-column{
   flex-direction: column !important;

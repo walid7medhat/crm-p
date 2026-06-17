@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4">
+  <div class="container-fluid" :class="{ 'all-listings-mobile': isMobileViewport, 'mt-4': !isMobileViewport }">
    
     <div class="top-search-toolbar mb-3">
       <div class="top-search-col">
@@ -27,7 +27,7 @@
       <!-- Empty State -->
       <div v-else-if="properties.length === 0" class="col-12 text-center py-5">
         <i class="ri-home-4-line display-1 text-white"></i>
-        <h4 class="mt-3 text-white">No properties found</h4>
+        <h6 class="mt-3 text-white">No properties found</h6>
         <button @click="notifyMe" class="btn btn-primary">
         Get notified when matching properties become available
         </button>
@@ -35,16 +35,22 @@
       </div>
 
       <!-- Properties Grid -->
-      <div
-        v-else
-        v-for="(property, index) in properties"
-        :key="property.id || index"
-        class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600 "
-      >
+      <template v-else>
         <div
-          class="property-listing-card"
-          :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
+          v-for="(property, index) in properties"
+          :key="property.id || index"
+          :class="isMobileViewport ? 'col-12' : 'col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600'"
         >
+          <MobileListingCard
+            v-if="isMobileViewport"
+            :property="property"
+            :fallback-image="defaultImages[0]"
+          />
+          <div
+            v-else
+            class="property-listing-card"
+            :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
+          >
        <router-link
             :to="`/property-details/${property.id}`"
             class="property-card-link"
@@ -123,7 +129,7 @@
                     </div>
                    
 
-                <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
+                <h6 class="property-title mb-2">{{ property.title || 'No Title' }}</h6>
                 <p class="property-location mb-3" :title="property.area">
                   <i class="ri-map-pin-line me-1"></i>{{ property.area }}
                 </p>
@@ -189,7 +195,8 @@
             Add payment breakdown
           </button>
         </div>
-      </div>
+        </div>
+      </template>
     </div>
 
     <ListingPaymentBreakdownQuickModal
@@ -256,6 +263,8 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue'; // ✅ إضافة nextTick و watch
 import { useRoute, useRouter } from 'vue-router'; // ✅ إضافة useRoute/useRouter
 import SearchBar from "./SearchBar.vue";
+import MobileListingCard from '@/components/listings/MobileListingCard.vue';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
@@ -272,8 +281,9 @@ import {
 
 export default {
   name: 'AllListings',
-  components: { SearchBar, Breadcrumb, ListingPaymentBreakdownQuickModal },
+  components: { SearchBar, Breadcrumb, ListingPaymentBreakdownQuickModal, MobileListingCard },
   setup() {
+    const { isMobileViewport } = useMobileNavigation();
             const property1 = "/assets/images/a.jpeg";
     const property2 = "/assets/images/b.jpeg";
     const property3 = "/assets/images/c.jpeg";
@@ -961,6 +971,8 @@ const decodeFiltersFromQuery = async (query) => {
     });
 
     return {
+      isMobileViewport,
+      defaultImages,
       properties: filteredProperties, 
       propertyIcon,
       bedIcon,

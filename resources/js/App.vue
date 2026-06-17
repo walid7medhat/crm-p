@@ -204,7 +204,9 @@ html:has(#app main.auth-page-main) body {
 /* Auth screens: never show app sidebar / mobile dock (e.g. after logout) */
 html:has(#app main.auth-page-main) .sidebar,
 html:has(#app main.auth-page-main) .mobile-sidebar-dock,
-html:has(#app main.auth-page-main) .mobile-dock-sheet-overlay {
+html:has(#app main.auth-page-main) .mobile-core-dock,
+html:has(#app main.auth-page-main) .mobile-dock-sheet-overlay,
+html:has(#app main.auth-page-main) .mobile-sidebar-overlay {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -272,7 +274,6 @@ html:has(#app main.auth-page-main) .dashboard-main.active {
 
 body.mobile-nav-open {
   overflow: hidden;
-  touch-action: none;
 }
 
 @media (max-width: 768px) {
@@ -284,6 +285,10 @@ body.mobile-nav-open {
   #app main.dashboard-main > .dashboard-main-router {
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
+  }
+
+  #app main.dashboard-main > .dashboard-main-router:has(.property-show-page) {
+    padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

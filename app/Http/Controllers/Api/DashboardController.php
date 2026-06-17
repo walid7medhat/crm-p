@@ -1412,6 +1412,50 @@ public function getPropertyTypesWithListings(Request $request)
             ->when($rangeTo, fn ($q) => $q->where('created_at', '<=', $rangeTo))
             ->count();
 
+        // ── Deals ──
+        $scopeDeals = function ($query) use ($userHierarchy, $isAdmin, $rangeFrom, $rangeTo) {
+            if (! $isAdmin) {
+                $query->whereIn('responsible_person_id', $userHierarchy);
+            }
+            if ($rangeFrom || $rangeTo) {
+                $this->applyCreatedBetween($query, $rangeFrom, $rangeTo);
+            }
+
+            return $query;
+        };
+
+        $dealBase = $scopeDeals(Deal::query());
+        $totalDeals = (clone $dealBase)->count();
+        $primaryDeals = (clone $dealBase)->where('deal_type', 'primary')->count();
+        $secondaryDeals = (clone $dealBase)->where('deal_type', 'secondary')->count();
+        $rentalDeals = (clone $dealBase)->where('deal_type', 'rental')->count();
+
+        $dealStageCounts = (clone $dealBase)
+            ->select('stage_id', DB::raw('count(*) as total'))
+            ->whereNotNull('stage_id')
+            ->groupBy('stage_id')
+            ->pluck('total', 'stage_id');
+
+        $dealStages = Stage::query()
+            ->where('stage_type', 'deal')
+            ->orderBy('order')
+            ->get(['id', 'name', 'deal_type'])
+            ->map(fn ($s) => [
+                'label' => $s->name,
+                'type' => $s->deal_type,
+                'count' => (int) ($dealStageCounts[$s->id] ?? 0),
+            ])
+            ->values();
+
+        $dealTrend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = now()->subDays($i)->startOfDay();
+            $dealTrend[] = [
+                'label' => $day->format('D'),
+                'value' => $scopeDeals(Deal::query())->whereDate('created_at', $day)->count(),
+            ];
+        }
+
         // ── HR (summary from users; attendance approximated) ──
         $employeesBase = User::query()->where('status', 'active');
         if (! $isAdmin) {
@@ -1464,6 +1508,16 @@ public function getPropertyTypesWithListings(Request $request)
                 'agent_ranking' => $agentRanking,
                 'best_closer' => $bestCloser,
                 'trend' => $trendSeries,
+            ],
+            'deals' => [
+                'total_deals' => $totalDeals,
+                'primary' => $primaryDeals,
+                'secondary' => $secondaryDeals,
+                'rental' => $rentalDeals,
+                'total_sale' => $salesMetrics['total_sale'],
+                'total_commission' => $salesMetrics['total_commission'],
+                'stages' => $dealStages,
+                'trend' => $dealTrend,
             ],
             'listing' => [
                 'total_listings' => $listingsTotal,
