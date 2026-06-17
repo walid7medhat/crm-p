@@ -172,8 +172,10 @@ function cleanInput(value) {
   // Keep only digits
   return value.replace(/\D/g, '')
 }
-
+const isTyping = ref(false)
 function onUpdate(v) {
+    isTyping.value = true
+
   // Clean the input value (remove spaces and non-digits)
   const cleaned = cleanInput(v ?? '')
   localNumber.value = cleaned
@@ -186,6 +188,9 @@ function onUpdate(v) {
   
   // Emit the full number to parent/backend
   emit('update:modelValue', fullNumber)
+  nextTick(() => {
+    isTyping.value = false
+  })
 }
 
 function onFocus() {
@@ -204,7 +209,7 @@ function onCountryChanged(country) {
     hasExplicitCountryChoice.value = true
   }
 
-  let pickedIso = ''
+  // Update the dial code when country changes
   if (country) {
     if (country.dialCode) {
       currentDialCode.value = String(country.dialCode)
@@ -214,18 +219,14 @@ function onCountryChanged(country) {
     }
     const iso = country.iso2 || country.iso || country.code
     if (iso && typeof iso === 'string') {
-      pickedIso = iso.toLowerCase()
-      // Don't touch `detectedCountryIso` here — that drives the remount key, and we
-      // don't want to remount vue-tel-input mid-pick (it already shows the right flag
-      // from its own internal state). detectedCountryIso is set only when we parse
-      // the model-value externally (modal reopen).
+      detectedCountryIso.value = iso.toLowerCase()
     }
   }
 
   // Notify the parent about the country selection — gives them iso, dial, and name
   // even before the user types digits, so they can label/store the selection.
   emit('country-changed', {
-    iso: pickedIso || detectedCountryIso.value || '',
+    iso: detectedCountryIso.value || '',
     dialCode: currentDialCode.value || '',
     name: (country && (country.name || country.title)) || '',
   })
@@ -241,6 +242,7 @@ function onCountryChanged(country) {
 watch(
   () => props.modelValue,
   (newVal) => {
+    if (isTyping.value) return
     if (newVal && typeof newVal === 'string') {
       // First try libphonenumber-js to recover both the country and the national digits
       // from an international number (`+201234567890` → country EG, national 1234567890).
