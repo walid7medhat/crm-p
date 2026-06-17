@@ -31,7 +31,9 @@ $duplicatedProject = Project::whereRaw(
             'developer' => $this->developer ? [
                 'id' => $this->developer->id,
                 'name' => $this->developer->name,
-                'avatar' => $this->developer->avatar_path ? asset('storage/' . $this->developer->avatar_path) : null
+                'avatar' => $this->developer->avatar_path ? asset('storage/' . $this->developer->avatar_path) : null,
+                'noc_fees_ready' => $this->developer?->noc_fees_ready,
+                 'noc_fees_off_plan' => $this->developer?->noc_fees_off_plan,
             ] : null,
             
             // Area data - 
