@@ -173,21 +173,27 @@ function cleanInput(value) {
   return value.replace(/\D/g, '')
 }
 
-function onUpdate(v) {
-  // Clean the input value (remove spaces and non-digits)
-  const cleaned = cleanInput(v ?? '')
-  localNumber.value = cleaned
+// function onUpdate(v) {
+//   // Clean the input value (remove spaces and non-digits)
+//   const cleaned = cleanInput(v ?? '')
+//   localNumber.value = cleaned
   
-  // Build the full international number to send to backend
-  let fullNumber = ''
-  if (cleaned) {
-    fullNumber = `+${currentDialCode.value}${cleaned}`
-  }
+//   // Build the full international number to send to backend
+//   let fullNumber = ''
+//   if (cleaned) {
+//     fullNumber = `+${currentDialCode.value}${cleaned}`
+//   }
   
-  // Emit the full number to parent/backend
-  emit('update:modelValue', fullNumber)
-}
+//   // Emit the full number to parent/backend
+//   emit('update:modelValue', fullNumber)
+// }
+const onUpdate = (value, meta) => {
+    const fullNumber = meta?.number?.international || value || ''
 
+    phone.value = fullNumber
+
+    emit('update:modelValue', fullNumber)
+}
 function onFocus() {
   isFocused.value = true
 }
