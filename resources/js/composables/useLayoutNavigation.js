@@ -29,7 +29,7 @@ export const CRM_SECTION_KEY = 'crm_active_section';
 export const DEAL_TYPE_KEY = 'kanban_deal_type';
 export const LAST_LISTINGS_PATH_KEY = 'layout_last_listings_path';
 
-const ALL_LISTINGS_MATCH_PATHS = [
+const LISTINGS_INVENTORY_PATHS = [
   '/alllisting',
   '/my-listing',
   '/archive',
@@ -37,13 +37,6 @@ const ALL_LISTINGS_MATCH_PATHS = [
   '/properties',
   '/properties-map',
   '/property-form',
-  '/notify-me',
-  '/my-requests',
-  '/my-orders',
-  '/all-requests',
-  '/hotDeal-requests',
-  '/need-approve-requests',
-  '/my-viewings',
   '/developers',
   '/add-developer',
   '/owners',
@@ -59,6 +52,27 @@ const ALL_LISTINGS_MATCH_PATHS = [
   '/add-features',
   '/projects',
   '/add-projects',
+];
+
+const NOTIFY_ME_PATHS = ['/notify-me'];
+
+const VIEWINGS_PATHS = ['/my-viewings'];
+
+const REQUESTS_ADMIN_PATHS = ['/all-requests'];
+
+const REQUESTS_USER_PATHS = [
+  '/my-requests',
+  '/my-orders',
+  '/hotDeal-requests',
+  '/need-approve-requests',
+];
+
+const ALL_LISTINGS_MATCH_PATHS = [
+  ...LISTINGS_INVENTORY_PATHS,
+  ...NOTIFY_ME_PATHS,
+  ...VIEWINGS_PATHS,
+  ...REQUESTS_ADMIN_PATHS,
+  ...REQUESTS_USER_PATHS,
 ];
 
 const HR_PREFIXES = ['/hr'];
@@ -242,14 +256,14 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
     return [
       {
         id: 'roi',
-        label: 'ROI',
+        label: 'ROI Calculator',
         type: 'route',
         path: '/settings/roi-calculator',
         matchPaths: ['/settings/roi-calculator'],
       },
       {
         id: 'roe',
-        label: 'ROE',
+        label: 'ROE Calculator',
         type: 'route',
         path: '/settings/roe-calculator',
         matchPaths: ['/settings/roe-calculator'],
@@ -342,19 +356,71 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
   }
 
   if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
+    const canList = !hasPermission || hasPermission('listings-list');
     const mainPath =
-      isAdmin || (hasPermission && hasPermission('listings-list'))
+      isAdmin || canList
         ? '/alllisting'
         : '/my-listing';
-    return [
+    const { listingTabCounts = {} } = ctx;
+
+    const tabs = [
       {
         id: 'listings',
         label: 'Listings',
         type: 'route',
         path: mainPath,
-        matchPaths: ALL_LISTINGS_MATCH_PATHS,
+        matchPaths: LISTINGS_INVENTORY_PATHS,
+        count: listingTabCounts.listings || 0,
       },
     ];
+
+    if (canList) {
+      tabs.push({
+        id: 'notify-me',
+        label: 'Notify Me',
+        type: 'route',
+        path: '/notify-me',
+        matchPaths: NOTIFY_ME_PATHS,
+      });
+    }
+
+    if (isAdmin) {
+      tabs.push({
+        id: 'requests',
+        label: 'Requests',
+        type: 'route',
+        path: '/all-requests',
+        matchPaths: REQUESTS_ADMIN_PATHS,
+        count: listingTabCounts.requests || 0,
+      });
+      tabs.push({
+        id: 'viewings',
+        label: 'Viewings',
+        type: 'route',
+        path: '/my-viewings',
+        matchPaths: VIEWINGS_PATHS,
+        count: listingTabCounts.viewings || 0,
+      });
+    } else if (canList) {
+      tabs.push({
+        id: 'requests',
+        label: 'Requests',
+        type: 'route',
+        path: '/my-requests',
+        matchPaths: REQUESTS_USER_PATHS,
+        count: listingTabCounts.requests || 0,
+      });
+      tabs.push({
+        id: 'viewings',
+        label: 'Viewings',
+        type: 'route',
+        path: '/my-viewings',
+        matchPaths: VIEWINGS_PATHS,
+        count: listingTabCounts.viewings || 0,
+      });
+    }
+
+    return tabs;
   }
 
   return [];

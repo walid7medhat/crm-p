@@ -1188,6 +1188,20 @@ public function getPropertyTypesWithListings(Request $request)
      */
     public function getAnalyticsOverview(Request $request)
     {
+        try {
+            return $this->buildAnalyticsOverviewResponse($request);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load analytics',
+            ], 500);
+        }
+    }
+
+    private function buildAnalyticsOverviewResponse(Request $request)
+    {
         [$rangeFrom, $rangeTo] = $this->resolveAnalyticsPeriod($request);
         $currentUser = auth()->user();
 
@@ -1241,14 +1255,20 @@ public function getPropertyTypesWithListings(Request $request)
         $totalLeads = (clone $leadBase)->count();
         $newLeads = (clone $leadBase)->where('created_at', '>=', now()->subDays(7))->count();
 
+        $stageCountsById = (clone $leadBase)
+            ->select('stage_id', DB::raw('count(*) as total'))
+            ->whereNotNull('stage_id')
+            ->groupBy('stage_id')
+            ->pluck('total', 'stage_id');
+
         $countByStage = Stage::query()
             ->where('stage_type', 'lead')
-            ->withCount(['leads' => function ($q) use ($scopeLeads) {
-                $scopeLeads($q);
-            }])
             ->orderBy('order')
             ->get(['id', 'name'])
-            ->map(fn ($s) => ['name' => $s->name, 'count' => (int) $s->leads_count])
+            ->map(fn ($s) => [
+                'name' => $s->name,
+                'count' => (int) ($stageCountsById[$s->id] ?? 0),
+            ])
             ->values();
 
         $pickStage = function (array $needles) use ($countByStage) {

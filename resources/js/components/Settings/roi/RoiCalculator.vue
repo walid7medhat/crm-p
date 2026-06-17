@@ -3,10 +3,13 @@
     <header class="roi-calc__nav">
       <div class="roi-calc__brand">
         <div class="roi-calc__brand-icon">
-          <iconify-icon icon="lucide:calculator" />
+          <iconify-icon icon="lucide:percent" />
         </div>
         <div>
-          <div class="roi-calc__logo">ROI Calculator</div>
+          <div class="roi-calc__logo">
+            <span class="roi-calc__logo-acronym">ROI</span>
+            <span class="roi-calc__logo-name">Calculator</span>
+          </div>
           <div class="roi-calc__tag">Oia Properties · UAE Investment Analysis</div>
         </div>
       </div>

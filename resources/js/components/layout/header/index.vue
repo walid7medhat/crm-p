@@ -81,7 +81,7 @@
               </a>
             </li>
             <li
-              v-if="listingsSidebarSections.length > 0 && !isShowOnlyListing"
+              v-if="showCrmListingsDropdown"
               :class="{
                 dropdown: true,
                 'sidebar-submenu__nested': true,
@@ -112,6 +112,15 @@
                 </template>
               </ul>
             </li>
+            <li
+              v-else-if="showCrmListingsFlat"
+              :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LISTINGS) }]"
+            >
+              <a href="#" class="sidebar-nav-link" @click.prevent="goToCrmListingsFlat">
+                <img :src="listingsIcon" class="imgicon submenu-icon" alt="" />
+                <span>Listings</span>
+              </a>
+            </li>
           </ul>
         </li>
 
@@ -126,7 +135,7 @@
         >
           <a href="javascript:void(0)" @click.stop.prevent="toggleDropdown('calculator')" :class="{ active: isSidebarModuleActive('calculator') }">
             <iconify-icon icon="lucide:calculator" class="menu-icon" />
-            <span>Calculator</span>
+            <span>Calculators</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'calculator' }" />
           </a>
           <ul v-show="activeDropdown === 'calculator'" class="sidebar-submenu sidebar-submenu--crm sidebar-submenu--calculator">
@@ -136,9 +145,12 @@
               :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]"
             >
               <router-link :to="item.path" custom v-slot="{ navigate, href }">
-                <a :href="href" class="sidebar-nav-link" @click="navigate">
+                <a :href="href" class="sidebar-nav-link sidebar-nav-link--calculator" @click="navigate">
                   <iconify-icon :icon="item.icon" class="menu-icon submenu-icon" />
-                  <span>{{ item.label }}</span>
+                  <span class="sidebar-calc-label">
+                    <span class="sidebar-calc-label__acronym">{{ item.label }}</span>
+                    <span class="sidebar-calc-label__name">{{ item.name }}</span>
+                  </span>
                 </a>
               </router-link>
             </li>
@@ -270,6 +282,7 @@
             :class="{ 'is-active': isDockActive(child.path) }"
             @click="closeMobileDockGroup"
           >
+            <iconify-icon v-if="child.icon" :icon="child.icon" class="mobile-dock-sheet__item-icon" />
             <span>{{ child.label }}</span>
             <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
           </router-link>
@@ -683,6 +696,29 @@ const listingsSidebarSections = computed(() =>
   }),
 );
 
+/** Listings nested submenu — super_admin only */
+const isListingsDropdownAdmin = computed(() => {
+  if (!user.value?.roles) return false;
+  return user.value.roles.includes('super_admin');
+});
+
+const showCrmListingsDropdown = computed(() =>
+  isListingsDropdownAdmin.value &&
+  listingsSidebarSections.value.length > 0 &&
+  !isShowOnlyListing.value,
+);
+
+const showCrmListingsFlat = computed(() =>
+  isAdmin.value &&
+  !isListingsDropdownAdmin.value &&
+  !isShowOnlyListing.value,
+);
+
+const crmListingsFlatPath = computed(() => {
+  const fallback = user.value?.roles?.includes('admin') ? '/alllisting' : '/my-listing';
+  return getListingsEntryPath(fallback);
+});
+
 const mainMenuItems = computed(() => {
   const items = [];
 
@@ -744,8 +780,18 @@ const settingsSidebarSections = computed(() => {
 const calculatorMenuItems = computed(() =>
   isAdmin.value
     ? [
-        { path: '/settings/roi-calculator', label: 'ROIs', icon: 'lucide:trending-up' },
-        { path: '/settings/roe-calculator', label: 'ROEs', icon: 'lucide:percent' },
+        {
+          path: '/settings/roi-calculator',
+          label: 'ROI',
+          name: 'Return on Investment',
+          icon: 'lucide:percent',
+        },
+        {
+          path: '/settings/roe-calculator',
+          label: 'ROE',
+          name: 'Return on Equity',
+          icon: 'lucide:trending-up',
+        },
       ]
     : [],
 );
@@ -793,20 +839,28 @@ const mobileDockItems = computed(() => {
     };
 
     if (listingsSidebarSections.value.length && !isShowOnlyListing.value) {
-      crmGroup.sections.push({
-        key: 'crm-listings',
-        title: 'Listings',
-        iconSrc: listingsIcon.value,
-        subsections: listingsSidebarSections.value.map((section) => ({
-          key: section.key,
-          title: section.title,
-          items: section.items.map((it) => ({
-            path: it.path,
-            label: it.label,
-            count: it.count || 0,
+      if (isListingsDropdownAdmin.value) {
+        crmGroup.sections.push({
+          key: 'crm-listings',
+          title: 'Listings',
+          iconSrc: listingsIcon.value,
+          subsections: listingsSidebarSections.value.map((section) => ({
+            key: section.key,
+            title: section.title,
+            items: section.items.map((it) => ({
+              path: it.path,
+              label: it.label,
+              count: it.count || 0,
+            })),
           })),
-        })),
-      });
+        });
+      } else {
+        crmGroup.children.push({
+          path: crmListingsFlatPath.value,
+          label: 'Listings',
+          iconSrc: listingsIcon.value,
+        });
+      }
     }
 
     items.push(crmGroup);
@@ -814,11 +868,12 @@ const mobileDockItems = computed(() => {
     if (calculatorMenuItems.value.length) {
       items.push({
         key: 'group-calculator',
-        label: 'Calculator',
+        label: 'Calculators',
         icon: 'lucide:calculator',
         children: calculatorMenuItems.value.map((it) => ({
           path: it.path,
-          label: it.label,
+          label: `${it.label} · ${it.name}`,
+          icon: it.icon,
         })),
       });
     }
@@ -1082,6 +1137,16 @@ async function goToListingsItem(path) {
   }
 }
 
+async function goToCrmListingsFlat() {
+  rememberCrmSection(CRM_SECTIONS.LISTINGS);
+  rememberListingsPath(crmListingsFlatPath.value);
+  openCrmDropdown();
+  crmListingsExpanded.value = false;
+  if (route.path !== crmListingsFlatPath.value) {
+    await router.push(crmListingsFlatPath.value);
+  }
+}
+
 const handleCrmClick = () => {
   expandSidebarDesktop();
   if (activeDropdown.value === 'crm') {
@@ -1148,7 +1213,7 @@ function syncSidebarDropdownFromRoute() {
   const crmSection = resolveCrmSection(route.path);
   if (crmSection) {
     openCrmDropdown();
-    crmListingsExpanded.value = false;
+    crmListingsExpanded.value = showCrmListingsDropdown.value && crmSection === CRM_SECTIONS.LISTINGS;
     if (crmSection === CRM_SECTIONS.LISTINGS) {
       rememberListingsPath(route.path);
     }
@@ -1391,8 +1456,15 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     font-size: 11px;
     font-weight: 600;
+  }
+
+  .mobile-dock-sheet__item-icon {
+    flex-shrink: 0;
+    font-size: 15px;
+    color: #5b3d8f;
   }
 
   .mobile-dock-sheet__list--inline-two .mobile-dock-sheet__item {
@@ -1598,6 +1670,41 @@ onUnmounted(() => {
 .sidebar--dashboard-home .sidebar-menu li.dropdown.dropdown-open > .sidebar-submenu--crm {
   display: block !important;
   visibility: visible !important;
+}
+
+.sidebar-submenu--calculator {
+  padding-top: 4px;
+}
+
+.sidebar-nav-link--calculator {
+  align-items: flex-start !important;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+
+.sidebar-calc-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.sidebar-calc-label__acronym {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.sidebar-calc-label__name {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.58);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Keep Calculator submenu visible when user opens it from dashboard */
