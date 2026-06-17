@@ -2758,10 +2758,10 @@ const showLeadNotification = (event) => {
     }
     const themes = {
         created:       { grad: 'linear-gradient(135deg,#34d399,#059669)', accent: '#10b981', soft: 'rgba(16,185,129,.12)', ring: 'rgba(16,185,129,.45)', icon: svg.created,       headline: `New Lead` },
-        updated:       { grad: 'linear-gradient(135deg,#60a5fa,#2563eb)', accent: '#3b82f6', soft: 'rgba(59,130,246,.12)', ring: 'rgba(59,130,246,.45)', icon: svg.updated,       headline: `<b>${userName}</b> updated` },
-        assigned:      { grad: 'linear-gradient(135deg,#fbbf24,#d97706)', accent: '#f59e0b', soft: 'rgba(245,158,11,.14)', ring: 'rgba(245,158,11,.5)',  icon: svg.assigned,      headline: `<b>${userName}</b> assigned` },
-        stage_changed: { grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)', accent: '#8b5cf6', soft: 'rgba(139,92,246,.13)', ring: 'rgba(139,92,246,.45)', icon: svg.stage_changed, headline: `<b>${userName}</b> moved` },
-        deleted:       { grad: 'linear-gradient(135deg,#f87171,#dc2626)', accent: '#ef4444', soft: 'rgba(239,68,68,.12)',  ring: 'rgba(239,68,68,.45)',  icon: svg.deleted,       headline: `<b>${userName}</b> deleted` },
+        updated:       { grad: 'linear-gradient(135deg,#60a5fa,#2563eb)', accent: '#3b82f6', soft: 'rgba(59,130,246,.12)', ring: 'rgba(59,130,246,.45)', icon: svg.updated,       headline: `updated` },
+        assigned:      { grad: 'linear-gradient(135deg,#fbbf24,#d97706)', accent: '#f59e0b', soft: 'rgba(245,158,11,.14)', ring: 'rgba(245,158,11,.5)',  icon: svg.assigned,      headline: `assigned` },
+        stage_changed: { grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)', accent: '#8b5cf6', soft: 'rgba(139,92,246,.13)', ring: 'rgba(139,92,246,.45)', icon: svg.stage_changed, headline: `moved` },
+        deleted:       { grad: 'linear-gradient(135deg,#f87171,#dc2626)', accent: '#ef4444', soft: 'rgba(239,68,68,.12)',  ring: 'rgba(239,68,68,.45)',  icon: svg.deleted,       headline: `deleted` },
     }
     const t = themes[event.action_type] || { grad: 'linear-gradient(135deg,#94a3b8,#475569)', accent: '#64748b', soft: 'rgba(100,116,139,.13)', ring: 'rgba(100,116,139,.45)', icon: svg.default, headline: `Lead updated` }
 
