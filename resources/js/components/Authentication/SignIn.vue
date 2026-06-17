@@ -102,7 +102,41 @@ export default {
     togglePassword() {
       this.showPassword = !this.showPassword;
     },
+          getDeviceType() {
+            const ua = navigator.userAgent.toLowerCase();
 
+            if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+            if (/android/.test(ua)) return 'android';
+            return 'desktop';
+          },
+
+          handleLocationError(error) {
+            const type = this.getDeviceType();
+
+            if (error?.code === 1) {
+              // Permission denied
+              if (type === 'ios') {
+                return `Location is blocked on iPhone.
+
+          Go to:
+          Settings → Privacy & Security → Location Services → Safari Websites → While Using`;
+              }
+
+              if (type === 'android') {
+                return `Location is blocked on Android.
+
+          Go to:
+          Settings → Location → App permissions → Enable browser access`;
+              }
+
+              return `Location permission is blocked in your browser.
+          Please allow location access and try again.`;
+            }
+
+            // Other errors (timeout / unavailable)
+            return `Could not detect your location.
+          Please make sure location services are enabled and try again.`;
+          },
     clearForm() {
       this.email = '';
       this.password = '';
@@ -166,8 +200,10 @@ export default {
      const PERMISSION_DENIED = 1;
 
       if (lastError && lastError.code === PERMISSION_DENIED) {
-        throw new Error('Location access is required to sign in. Please allow location and try again.');
+        throw new Error(this.handleLocationError(lastError));
       }
+
+      throw new Error(this.handleLocationError(lastError));
       throw new Error(
         'Could not determine your location. Check that your device location service is turned on, then try again.'
       );
