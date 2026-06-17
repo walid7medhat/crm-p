@@ -230,7 +230,7 @@
               :key="tab.id"
               :value="tab.id"
             >
-              {{ tab.label }}
+              {{ tab.label }}{{ tab.count > 0 ? ` (${tab.count})` : '' }}
             </option>
           </select>
           <nav
@@ -248,6 +248,7 @@
                 @click="setActiveKanbanTab(tab.id)"
               >
                 {{ tab.label }}
+                <span v-if="tab.count > 0" class="module-tab-count">{{ tab.count }}</span>
               </button>
               <button
                 v-else-if="tab.type === 'deal-type'"
@@ -257,6 +258,7 @@
                 @click="setActiveDealType(tab.id)"
               >
                 {{ tab.label }}
+                <span v-if="tab.count > 0" class="module-tab-count">{{ tab.count }}</span>
               </button>
               <router-link
                 v-else
@@ -271,6 +273,7 @@
                   @click="navigate"
                 >
                   {{ tab.label }}
+                  <span v-if="tab.count > 0" class="module-tab-count">{{ tab.count }}</span>
                 </a>
               </router-link>
             </template>
@@ -708,7 +711,35 @@ const isCustomAdmin = computed(() => {
 
 const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only show listings') ?? false);
 
+const listingTabCounts = ref({ listings: 0, requests: 0, viewings: 0 });
 
+async function fetchListingTabCounts() {
+  try {
+    const response = await api.get('/sidebar/counts');
+    if (!response.data?.success) return;
+    const counts = response.data.data || {};
+    listingTabCounts.value = {
+      listings: isAdmin.value
+        ? (counts.listings?.all || 0)
+        : (counts.listings?.my || 0),
+      requests: isAdmin.value
+        ? (counts.orders?.all || 0)
+        : ((counts.requests?.all || 0) + (counts.orders?.all || 0)),
+      viewings: 0,
+    };
+  } catch {
+    /* ignore */
+  }
+}
+
+watch(
+  () => activeCrmSection.value,
+  (section) => {
+    if (section === CRM_SECTIONS.LISTINGS) {
+      fetchListingTabCounts();
+    }
+  },
+);
 
 const moduleHeaderTabs = computed(() => {
   if (isDashboardHome.value) return [];
@@ -718,6 +749,7 @@ const moduleHeaderTabs = computed(() => {
     isCustomAdmin: isCustomAdmin.value,
     isShowOnlyListing: isShowOnlyListingNav.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
+    listingTabCounts: listingTabCounts.value,
   };
   if (activeLayoutModule.value === 'crm') {
     return buildHeaderTabs('crm', ctx, activeCrmSection.value);
@@ -1817,6 +1849,7 @@ onMounted(() => {
   loadUserData();
   loadNotificationSettings();
   setupClickOutsideListener();
+  fetchListingTabCounts();
    if (isCrmRoute(route.path)) {
      restoreCrmSectionFromStorage();
    }
@@ -2985,6 +3018,26 @@ const showBackButton = computed(() => {
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.module-tab-count {
+  margin-left: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #1e1b2e;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.module-tab-btn.active .module-tab-count {
+  background: #fff;
+  color: #5b3d8f;
 }
 
 .active-indicator {

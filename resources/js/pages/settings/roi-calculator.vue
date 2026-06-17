@@ -2,7 +2,7 @@
   <div class="dashboard-main-body roi-calculator-page">
     <Breadcrumb
       title="ROI Calculator"
-      :breadcrumbs="[{ name: 'Settings' }, { name: 'ROI Calculator' }]"
+      :breadcrumbs="[{ name: 'Calculators' }, { name: 'ROI Calculator' }]"
     />
     <div class="roi-calculator-page__body">
       <RoiCalculator />
