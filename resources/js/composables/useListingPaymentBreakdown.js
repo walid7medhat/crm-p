@@ -137,35 +137,50 @@ export function useListingPaymentBreakdown({
   const paidPercentOfOp = computed(() =>
     (pastDueInstallmentsAed.value / Math.max(1, originalPriceNum.value)) * 100,
   );
-
-  const nocPercentOfOp = computed(() => {
-    const parsed = Number(form.value.noc_percentage ?? 0);
-    return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0;
+  const getNocFixedAmount = computed(() => {
+    if (nocFixedAmount !== null && typeof nocFixedAmount === 'object' && 'value' in nocFixedAmount) {
+      return Number(nocFixedAmount.value || 0);
+    }
+    return Number(form.value.noc_fixed_amount || 0);
   });
-
-  const nocRequiredAed = computed(() => (originalPriceNum.value * nocPercentOfOp.value) / 100);
-
+   const nocPercentOfOp = computed(() => {
+    const fixedAmount = getNocFixedAmount.value;
+    const op = originalPriceNum.value;
+    if (op <= 0 || fixedAmount <= 0) return 0;
+    return (fixedAmount / op) * 100;
+  });
+const nocFixedAmount = computed(() => {
+    return Number(form.value.noc_fixed_amount || 0);
+  });
+const nocRequiredAed = computed(() => {
+    return getNocFixedAmount.value;
+  });
   const nocRequirementMet = computed(() => {
-    if (nocPercentOfOp.value <= 0) return true;
-    return scheduledInstallmentsAed.value >= nocRequiredAed.value - 0.01;
+    const required = nocRequiredAed.value;
+    if (required <= 0) return true;
+    return scheduledInstallmentsAed.value >= required - 0.01;
   });
 
-  const nocRemainingAed = computed(() =>
-    Math.max(0, nocRequiredAed.value - scheduledInstallmentsAed.value),
-  );
+  const nocRemainingAed = computed(() => {
+    const required = nocRequiredAed.value;
+    if (required <= 0) return 0;
+    return Math.max(0, required - scheduledInstallmentsAed.value);
+  });
 
   const nocProgressBarPct = computed(() => {
-    if (nocPercentOfOp.value <= 0 || nocRequiredAed.value <= 0) return 100;
-    return Math.min(100, (scheduledInstallmentsAed.value / nocRequiredAed.value) * 100);
+    const required = nocRequiredAed.value;
+    if (required <= 0) return 100;
+    return Math.min(100, (scheduledInstallmentsAed.value / required) * 100);
   });
 
   const nocProgressPaidLabel = computed(() => {
-    if (nocPercentOfOp.value <= 0) return '—';
-    return `${formatAed(scheduledInstallmentsAed.value)} / ${formatAed(nocRequiredAed.value)}`;
+    const required = nocRequiredAed.value;
+    if (required <= 0) return '—';
+    return `${formatAed(scheduledInstallmentsAed.value)} / ${formatAed(required)}`;
   });
 
   const nocRequirementWarningActive = computed(
-    () => isUnderConstruction.value && nocPercentOfOp.value > 0 && !nocRequirementMet.value,
+    () => isUnderConstruction.value && nocRequiredAed.value > 0 && !nocRequirementMet.value,
   );
 
   const breakdownGrandTotal = computed(
@@ -443,9 +458,11 @@ export function useListingPaymentBreakdown({
     ucTrancheAed,
     handoverAmountForm,
     installmentToAmount,
+    nocFixedAmount,
     pastDueInstallmentsAed,
     scheduledInstallmentsAed,
     paidAmountForm: pastDueInstallmentsAed,
+    //  nocFixedAmount: getNocFixedAmount,
     paidPercentOfOp,
     nocPercentOfOp,
     nocRequiredAed,

@@ -32,8 +32,9 @@ export function useListingAssignmentExpenses({
   sellingPriceNum,
   premiumAmountForm,
   formatAed,
+  dealCostSettings = null, // ✅ استقبل الإعدادات
 }) {
-  const assignmentExpenseLines = ref([]);
+ const assignmentExpenseLines = ref([]);
   const assignmentExpenseDraft = ref({
     label: '',
     calcType: 'percentage',
@@ -85,17 +86,92 @@ export function useListingAssignmentExpenses({
     };
   };
 
-  const loadAssignmentExpenseLines = (raw) => {
-    const arr = parseAssignmentExpenseLines(raw);
-    assignmentExpenseLines.value = arr.map((line, i) => ({
-      id: line.id != null ? Number(line.id) : Date.now() + i,
-      label: String(line.label || ''),
-      calcType: line.calcType === 'fixed' ? 'fixed' : 'percentage',
-      base: line.base || 'op',
-      value: Number(line.value || 0),
-      vatEnabled: !!line.vatEnabled,
-    }));
-  };
+  // ✅ دالة لإضافة التكاليف الافتراضية
+const addDefaultDealCosts = () => {
+  console.log('📝 Adding default deal costs');
+  
+  // Get fee values from settings
+  const dariFee = Number(dealCostSettings?.value?.dari_admin_fee || 
+                         dealCostSettings?.value?.['1'] || 0);
+  
+  const adgmFee = Number(dealCostSettings?.value?.adgm_admin_fee || 
+                         dealCostSettings?.value?.['2'] || 0);
+  
+  console.log('📝 dariFee:', dariFee);
+  console.log('📝 adgmFee:', adgmFee);
+  
+  // Check if Dari Admin Fee exists - check by label AND isDefault flag
+  const existingDari = assignmentExpenseLines.value.find(
+    line => line.label === 'Dari Admin Fee' && line.isDefault === true
+  );
+  
+  if (!existingDari) {
+    assignmentExpenseLines.value.push({
+      id: Date.now() + Math.random() * 1000 + 1,
+      label: 'Dari Admin Fee',
+      calcType: 'fixed',
+      base: null,
+      value: dariFee,
+      vatEnabled: false,
+      isDefault: true,
+      isReadonly: false,
+    });
+    console.log('✅ Dari Admin Fee added');
+  } else {
+    // Update the value if it changed
+    existingDari.value = dariFee;
+    console.log('✅ Dari Admin Fee updated');
+  }
+  
+  // Check if ADGM Admin Fee exists
+  const existingAdgm = assignmentExpenseLines.value.find(
+    line => line.label === 'ADGM Admin Fee' && line.isDefault === true
+  );
+  
+  if (!existingAdgm) {
+    assignmentExpenseLines.value.push({
+      id: Date.now() + Math.random() * 1000 + 2,
+      label: 'ADGM Admin Fee',
+      calcType: 'fixed',
+      base: null,
+      value: adgmFee,
+      vatEnabled: false,
+      isDefault: true,
+      isReadonly: false,
+    });
+    console.log('✅ ADGM Admin Fee added');
+  } else {
+    existingAdgm.value = adgmFee;
+    console.log('✅ ADGM Admin Fee updated');
+  }
+  
+  console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
+};
+const loadAssignmentExpenseLines = (raw) => {
+  const arr = parseAssignmentExpenseLines(raw);
+  
+  // Clear existing lines first
+  assignmentExpenseLines.value = [];
+  
+  if (arr.length > 0) {
+    // Add server data
+    arr.forEach((line, i) => {
+      assignmentExpenseLines.value.push({
+        id: line.id != null ? Number(line.id) : Date.now() + i,
+        label: String(line.label || ''),
+        calcType: line.calcType === 'fixed' ? 'fixed' : 'percentage',
+        base: line.base || 'op',
+        value: Number(line.value || 0),
+        vatEnabled: !!line.vatEnabled,
+        isDefault: line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee',
+        isReadonly: false,
+      });
+    });
+  }
+  
+  // Always add default costs after loading server data
+  addDefaultDealCosts();
+};
 
   const addAssignmentExpenseLine = (onError) => {
     const label = String(assignmentExpenseDraft.value.label || '').trim();
@@ -115,12 +191,23 @@ export function useListingAssignmentExpenses({
       base: assignmentExpenseDraft.value.base || 'op',
       value,
       vatEnabled: !!assignmentExpenseDraft.value.vatEnabled,
+      isDefault: false,
+      isReadonly: false
     });
     resetAssignmentExpenseDraft();
     return true;
   };
 
   const removeAssignmentExpenseLine = (id) => {
+    const line = assignmentExpenseLines.value.find(l => l.id === id);
+    
+    // ✅ منع حذف التكاليف الافتراضية
+    if (line && line.isDefault) {
+      // يمكنك عرض رسالة أو تجاهل الحذف
+      console.warn('⚠️ Cannot remove default cost line:', line.label);
+      return;
+    }
+    
     assignmentExpenseLines.value = assignmentExpenseLines.value.filter((line) => line.id !== id);
   };
 
@@ -137,5 +224,6 @@ export function useListingAssignmentExpenses({
     loadAssignmentExpenseLines,
     addAssignmentExpenseLine,
     removeAssignmentExpenseLine,
+    addDefaultDealCosts, // ✅ تصدير الدالة للاستخدام الخارجي
   };
 }

@@ -277,15 +277,14 @@
               </div>
             </div>
 
-            <div v-if="!isUnderConstruction" class="alert alert-light border mb-0 mt-2" role="note">
+            <!-- <div v-if="!isUnderConstruction" class="alert alert-light border mb-0 mt-2" role="note">
               <p class="mb-0 text-muted small">
                 Set <strong>Completion status</strong> to <strong>Under Construction</strong> to add installments, NOC, and payment plan details below.
               </p>
-            </div>
+            </div> -->
 
-            <template v-if="isUnderConstruction">
             <div class="row gy-3 mt-1">
-              <div class="col-12">
+              <div class="col-12" v-if="isUnderConstruction">
                 <div class="payment-calc-summary border rounded-3 p-3 bg-light">
                   <div class="row g-3 small">
                     <div class="col-md-4">
@@ -310,22 +309,22 @@
                 </div>
               </div>
 
-              <div v-if="breakdownSellingPriceMismatchActive" class="col-12">
+              <div v-if="breakdownSellingPriceMismatchActive && isUnderConstruction" class="col-12">
                 <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">
                   <strong>Payment breakdown total does not match selling price.</strong>
                   <span v-if="breakdownSellingDeltaMessage" class="d-block mt-1">{{ breakdownSellingDeltaMessage }}</span>
                 </div>
               </div>
 
-              <div v-if="mixedInstallmentTypesError" class="col-12">
+              <div v-if="mixedInstallmentTypesError && isUnderConstruction" class="col-12">
                 <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ mixedInstallmentTypesError }}</div>
               </div>
 
-              <div v-if="percentageInstallmentPlanMismatchError" class="col-12">
+              <div v-if="percentageInstallmentPlanMismatchError && isUnderConstruction" class="col-12">
                 <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ percentageInstallmentPlanMismatchError }}</div>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-4" v-if="isUnderConstruction">
                 <label class="form-label">Handover date</label>
                 <AdvancedDatePicker
                   v-model="form.handover_date"
@@ -340,7 +339,7 @@
                 <div v-if="paymentHandoverDateError" class="text-danger small mt-1" role="alert">{{ paymentHandoverDateError }}</div>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-4" v-if="isUnderConstruction">
                 <label class="form-label">Total paid (installments with past due date)</label>
                 <input
                   :value="`${formatAed(paidAmountForm)} (${paidPercentOfOp.toFixed(2)}% of OP)`"
@@ -349,91 +348,89 @@
                   readonly
                 />
               </div>
-              <div class="col-md-4">
-                <label class="form-label">NOC <span class="text-muted fw-normal small">(% of original price)</span></label>
-                <v-select
-                  v-model="form.noc_percentage"
-                  :options="nocPercentageOptions"
-                  :reduce="(item) => item.value"
-                  label="label"
-                  placeholder="0 – 50"
-                />
+             <!-- NOC - تظهر في كلتا الحالتين -->
+              <div class="col-md-4" v-if="showNocField">
+                <label class="form-label">
+                  NOC Fees 
+                  <span class="text-muted fw-normal small">(AED)</span>
+                  <span class="badge" :class="currentNocType === 'Off-Plan' ? 'bg-warning' : 'bg-success'">
+                    {{ currentNocType }}
+                  </span>
+                </label>
+                
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="fas fa-shield-alt" :class="isNocAutoPopulated ? 'text-primary' : 'text-muted'"></i>
+                  </span>
+                  <input
+                    v-model.number="form.noc_fixed_amount"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    class="form-control"
+                    :disabled="isNocAutoPopulated"
+                    :class="{ 'bg-light': isNocAutoPopulated }"
+                    placeholder="Enter NOC amount"
+                  />
+                  <span class="input-group-text" v-if="isNocAutoPopulated">
+                    <i class="fas fa-lock text-primary" title="Auto-populated from developer"></i>
+                  </span>
+                </div>
+                
                 <small class="text-muted d-block mt-1">
-                  NOC % applies to <strong>original price (OP)</strong> only (not the payment-plan split). Example: OP 1,000,000 AED and NOC 25% → <strong>250,000 AED</strong> must be covered by total installments entered below.
-                  <strong>0</strong> = no NOC payment check.
+                  NOC fees must be covered by total installments.
+                  <span v-if="isNocAutoPopulated && developerNocValue > 0" class="text-primary d-block">
+                    <i class="fas fa-info-circle"></i> 
+                    Auto-populated from developer ({{ currentNocType }}): 
+                    <strong>{{ formatAed(developerNocValue) }}</strong>
+                  </span>
+                  <span v-else-if="developerNocValue === 0" class="text-muted d-block">
+                    <i class="fas fa-info-circle"></i> No NOC fees for this developer ({{ currentNocType }})
+                  </span>
+                  <span v-else class="text-warning d-block">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    NOC value modified manually
+                  </span>
                 </small>
               </div>
 
-              <div class="col-md-12">
+              <!-- NOC Summary Card - تظهر في كلتا الحالتين عند وجود NOC -->
+              <div v-if="showNocField && nocFixedAmount > 0" class="col-md-12">
                 <div class="noc-summary-card border rounded-3 p-3 mb-3 bg-white">
-                  <div class="text-uppercase text-muted small fw-semibold mb-2">NOC summary</div>
+                  <div class="text-uppercase text-muted small fw-semibold mb-2">
+                    NOC summary 
+                    <span class="badge" :class="currentNocType === 'Off-Plan' ? 'bg-warning' : 'bg-success'">
+                      {{ currentNocType }}
+                    </span>
+                  </div>
                   <div class="row g-2 small">
                     <div class="col-md-4">
                       <div class="text-muted">NOC required</div>
                       <div class="fw-semibold">{{ formatAed(nocRequiredAed) }}</div>
-                      <div v-if="nocPercentOfOp > 0" class="text-muted">({{ nocPercentOfOp }}% of OP)</div>
+                      <div v-if="nocPercentOfOp > 0" class="text-muted">({{ nocPercentOfOp.toFixed(1) }}% of OP)</div>
                     </div>
                     <div class="col-md-4">
-                      <div class="text-muted">Scheduled installments</div>
-                      <div class="fw-semibold">{{ formatAed(scheduledInstallmentsAed) }}</div>
-                      <div class="text-muted small">Past due: {{ formatAed(paidAmountForm) }}</div>
-                    </div>
-                    <div class="col-md-4">
-                      <div class="text-muted">Remaining for NOC</div>
+                      <div class="text-muted">Status</div>
                       <div class="fw-semibold" :class="nocRequirementMet ? 'text-success' : 'text-warning'">
-                        {{ nocPercentOfOp <= 0 ? '—' : formatAed(nocRemainingAed) }}
+                        {{ nocRequirementMet ? '✅ Covered' : '⚠️ Pending' }}
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="text-muted">Remaining</div>
+                      <div class="fw-semibold" :class="nocRequirementMet ? 'text-success' : 'text-warning'">
+                        {{ nocFixedAmount <= 0 ? '—' : formatAed(nocRemainingAed) }}
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="noc-status-box" :class="nocRequirementMet ? 'is-met' : 'is-pending'">
-                  <div
-                    v-if="nocRequirementWarningActive"
-                    class="alert alert-warning py-2 px-3 small mb-2"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    {{ NOC_PAID_BELOW_REQUIRED_MSG }}
-                  </div>
-                  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                    <strong>{{ nocRequirementMet ? 'NOC requirement met' : 'NOC: paid installments are below the required threshold' }}</strong>
-                    <span v-if="nocPercentOfOp > 0" class="badge rounded-pill" :class="nocRequirementMet ? 'bg-success' : 'bg-warning text-dark'">
-                      {{ nocRequirementMet ? 'OK to proceed' : 'Below threshold' }}
-                    </span>
-                  </div>
-                  <ul class="list-unstyled small mb-2 noc-status-lines">
-                    <li><span class="text-muted">NOC threshold:</span> <strong>{{ nocPercentOfOp }}%</strong> of OP → <strong>{{ formatAed(nocRequiredAed) }}</strong></li>
-                    <li><span class="text-muted">Paid installments (past due):</span> <strong>{{ formatAed(paidAmountForm) }}</strong></li>
-                    <li v-if="nocPercentOfOp > 0 && !nocRequirementMet" class="noc-remaining-highlight mt-2 p-2 rounded">
-                      <span class="text-muted">Still to pay for NOC:</span>
-                      <strong class="ms-1">{{ formatAed(nocRemainingAed) }}</strong>
-                      <span v-if="originalPriceNum > 0" class="text-muted"> ({{ nocRemainingPctOfOp.toFixed(2) }}% of OP)</span>
-                    </li>
-                  </ul>
-                  <div v-if="nocPercentOfOp > 0" class="noc-progress-wrap">
-                    <div class="d-flex justify-content-between small text-muted mb-1">
-                      <span>Progress to NOC threshold</span>
-                      <span>{{ nocProgressPaidLabel }}</span>
-                    </div>
-                    <div class="progress" style="height: 10px;">
-                      <div
-                        class="progress-bar"
-                        :class="nocRequirementMet ? 'bg-success' : 'bg-warning'"
-                        role="progressbar"
-                        :style="{ width: `${nocProgressBarPct}%` }"
-                        :aria-valuenow="nocProgressBarPct"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
+
+              
             </div>
 
             <hr class="my-3">
 
-            <div class="row gy-3 align-items-end">
+            <div class="row gy-3 align-items-end" v-if="isUnderConstruction">
               <div class="col-md-3">
                 <label class="form-label">Installment type</label>
                 <v-select
@@ -490,7 +487,7 @@
               </div>
             </div>
 
-            <div class="table-responsive mt-3">
+            <div class="table-responsive mt-3" v-if="isUnderConstruction">
               <table class="table table-sm align-middle">
                 <thead>
                   <tr>
@@ -545,7 +542,7 @@
                 </div>
               </div>
 
-              <div class="assignment-expenses-add row g-2 g-md-3 align-items-end mb-3">
+              <!-- <div class="assignment-expenses-add row g-2 g-md-3 align-items-end mb-3">
                 <div class="col-12 col-md-3">
                   <label class="form-label small mb-1">Label</label>
                   <input
@@ -605,7 +602,7 @@
                     + Add cost line
                   </button>
                 </div>
-              </div>
+              </div> -->
 
               <div class="assignment-expenses-table-wrap">
                 <table class="table table-sm assignment-expenses-table mb-0">
@@ -629,6 +626,7 @@
                           type="text"
                           class="form-control form-control-sm assignment-expenses-inline-input"
                           placeholder="Label"
+                           :disabled="line.isReadonly"
                         />
                       </td>
                       <td class="d-none d-md-table-cell">
@@ -640,6 +638,7 @@
                           label="label"
                           :clearable="false"
                           class="assignment-expenses-inline-select"
+                           :disabled="line.isReadonly"
                         />
                         <span v-else class="text-muted small">—</span>
                       </td>
@@ -651,6 +650,7 @@
                           label="label"
                           :clearable="false"
                           class="assignment-expenses-inline-select"
+                           :disabled="line.isReadonly"
                         />
                       </td>
                       <td>
@@ -662,6 +662,7 @@
                             step="any"
                             class="form-control form-control-sm assignment-expenses-inline-input assignment-expenses-value-input"
                             @keydown="preventNumberInvalidKeys"
+                             :disabled="line.isReadonly"
                           />
                           <span class="text-muted small text-nowrap">{{ line.calcType === 'percentage' ? '%' : 'AED' }}</span>
                         </div>
@@ -679,7 +680,7 @@
                         </label>
                       </td>
                       <td class="text-end text-nowrap fw-semibold">{{ formatAed(assignmentExpenseLineTotal(line)) }}</td>
-                      <td class="text-end">
+                      <!-- <td class="text-end">
                         <button
                           type="button"
                           class="btn btn-sm btn-link text-danger p-0"
@@ -688,7 +689,7 @@
                         >
                           ×
                         </button>
-                      </td>
+                      </td> -->
                     </tr>
                     <tr v-if="assignmentExpenseLines.length === 0">
                       <td colspan="8" class="text-center text-muted py-4">
@@ -720,7 +721,7 @@
               </div>
             </section>
 
-            <div class="payment-validation-summary border rounded-3 p-3 mt-3 bg-white">
+            <div class="payment-validation-summary border rounded-3 p-3 mt-3 bg-white" v-if="isUnderConstruction">
               <div class="fw-semibold small text-uppercase text-muted mb-2">Validation summary</div>
               <ul class="list-unstyled small mb-0 payment-validation-summary-list">
                 <li
@@ -754,7 +755,6 @@
                 Save
               </button>
             </div>
-            </template>
           </div>
         </div>
       </div>
@@ -776,7 +776,10 @@
         :noc-remaining-aed="nocRemainingAed"
         :noc-requirement-met="nocRequirementMet"
         :noc-progress-label="nocProgressPaidLabel"
+        :noc-fixed-amount="nocFixedAmount"
+        :noc-type="currentNocType"
         :breakdown-rows="paymentBreakdownRows"
+        :is-under-construction="isUnderConstruction"
         :assignment-expense-rows="assignmentExpenseLines"
         :assignment-expenses-subtotal="assignmentExpensesSubtotal"
         :assignment-expenses-total-vat="assignmentExpensesTotalVat"
@@ -1895,8 +1898,54 @@ const form = ref({
   original_price: "",
   handover_date: "",
   noc_percentage: 0,
+   noc_fixed_amount: 0,
 });
+// ✅ جلب تكاليف الصفقة الثابتة
+const dealCostSettings = ref([]);
+const isLoadingDealCosts = ref(false);
 
+const fetchDealCosts = async () => {
+  try {
+    isLoadingDealCosts.value = true;
+    const response = await api.get("/settings/deal-costs");
+    const data = response.data.data || response.data;
+    
+    console.log('📦 Deal cost API response:', data);
+    
+    // Store settings properly
+    if (data.settings) {
+      const settings = {};
+      Object.keys(data.settings).forEach(key => {
+        const numKey = parseInt(key) || key;
+        settings[numKey] = data.settings[key];
+      });
+      dealCostSettings.value = settings;
+    } else if (data.details) {
+      const settings = {};
+      data.details.forEach(item => {
+        settings[item.key] = item.value;
+      });
+      dealCostSettings.value = settings;
+    } else {
+      dealCostSettings.value = data;
+    }
+    
+    console.log('✅ Deal cost settings loaded:', dealCostSettings.value);
+    
+    // The default costs will be added by loadAssignmentExpenseLines
+    
+  } catch (error) {
+    console.error('❌ Error fetching deal costs:', error);
+    // Use default values
+    dealCostSettings.value = {
+      dari_admin_fee: 0,
+      adgm_admin_fee: 0
+    };
+    proxy.$showNotification("ℹ️ Using default deal costs (0). You can edit them manually.", "info");
+  } finally {
+    isLoadingDealCosts.value = false;
+  }
+};
 /** Matches v-select value and common API spellings so the payment / NOC block can show after load. */
 const isUnderConstruction = computed(() => {
   const s = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
@@ -1950,14 +1999,18 @@ const {
   publishPaymentBreakdownBlockTitle,
   paymentBreakdownValidationSummary,
   formatAed,
-  formatDateShort,
+  formatDateShort, nocFixedAmount,
+  
 } = useListingPaymentBreakdown({
   form,
   breakdownInstallments,
   installmentDraft,
   isUnderConstruction,
   breakdownPaidOnLoadIds,
+  
 });
+
+const dealCostSettingsComputed = computed(() => dealCostSettings.value);
 
 const {
   assignmentExpenseLines,
@@ -1971,13 +2024,62 @@ const {
   loadAssignmentExpenseLines,
   addAssignmentExpenseLine,
   removeAssignmentExpenseLine,
+  nocFixedAmount: nocFixedAmountFromComposable,
+  addDefaultDealCosts,
+  
 } = useListingAssignmentExpenses({
+  
   originalPriceNum,
   sellingPriceNum,
   premiumAmountForm,
   formatAed,
+   nocFixedAmount,
+   dealCostSettings,
+});
+// const nocFixedAmount = computed(() => {
+//   return Number(form.value.noc_fixed_amount || 0);
+// });
+
+const currentNocType = computed(() => {
+  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  return isUC ? 'Off-Plan' : 'Ready';
 });
 
+const developerNocValue = computed(() => {
+  if (!selectedProject.value || !selectedProject.value.developer) return 0;
+  
+  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  
+  if (isUC) {
+    return Number(selectedProject.value.developer.noc_fees_off_plan || 0);
+  } else {
+    return Number(selectedProject.value.developer.noc_fees_ready || 0);
+  }
+});
+
+const isNocEnabled = computed(() => {
+  if (!selectedProject.value) return false;
+  if (!selectedProject.value.developer) return false;
+  
+  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  const isReady = status === 'completed';
+  
+  if (!isUC && !isReady) return false;
+  
+  return true;
+});
+
+const isNocAutoPopulated = computed(() => {
+  if (!isNocEnabled.value) return false;
+  return developerNocValue.value > 0;
+});
+
+const showNocField = computed(() => {
+  return isNocEnabled.value;
+});
 const onAddAssignmentExpenseLine = () => {
   addAssignmentExpenseLine((msg) => proxy.$showNotification(msg, 'error'));
 };
@@ -2008,7 +2110,43 @@ const paymentBreakdownTableTotals = computed(() => {
     rowCount: rows.length,
   };
 });
-
+const updateNocBasedOnStatus = () => {
+  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  const isReady = status === 'completed';
+  
+  console.log('🔄 updateNocBasedOnStatus called with status:', status);
+  console.log('📊 Selected project:', selectedProject.value);
+  
+  if (!selectedProject.value || !selectedProject.value.developer) {
+    console.log('⚠️ No project or developer selected');
+    form.value.noc_fixed_amount = 0;
+    return;
+  }
+  
+  let nocValue = 0;
+  
+  if (isUC) {
+    nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
+    console.log(`✅ Using Off-Plan NOC: ${formatAed(nocValue)}`);
+  } else if (isReady) {
+    nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
+    console.log(`✅ Using Ready NOC: ${formatAed(nocValue)}`);
+    
+    // عند Completed، تنظيف بيانات الدفع
+    form.value.payment_plans = null;
+    form.value.payment_plan = null;
+    breakdownInstallments.value = [];
+    assignmentExpenseLines.value = [];
+    form.value.handover_date = '';
+    // form.value.original_price = '';
+  } else {
+    console.log('⚠️ Unknown status, setting NOC to 0');
+  }
+  
+  form.value.noc_fixed_amount = !isNaN(nocValue) && nocValue >= 0 ? nocValue : 0;
+  console.log('✅ NOC fixed amount set to:', form.value.noc_fixed_amount);
+};
 const startOfDay = (value) => {
   const d = value instanceof Date ? new Date(value.getTime()) : new Date(value);
   if (Number.isNaN(d.getTime())) return d;
@@ -2270,6 +2408,7 @@ watch(() => form.value.completionStatus, (newStatus) => {
     form.value.occupancyStatus = '';
     form.value.rentExpiryDate = '';
     form.value.rentAmount = '';
+    updateNocBasedOnStatus();
 
     console.log('🏗️ Property under construction - occupancy status cleared');
   } else if (isComp) {
@@ -2277,10 +2416,13 @@ watch(() => form.value.completionStatus, (newStatus) => {
     form.value.payment_plan = null;
     breakdownInstallments.value = [];
     breakdownPaidOnLoadIds.value = new Set();
-    assignmentExpenseLines.value = [];
+    // assignmentExpenseLines.value = [];
     form.value.handover_date = '';
     form.value.noc_percentage = 0;
-    form.value.original_price = '';
+    // form.value.original_price = '';
+    updateNocBasedOnStatus();
+    
+  
   }
 });
 
@@ -2335,7 +2477,8 @@ const fetchProjects = async () => {
       id: project.id,
       name: project.title || project.name,
       area: project.area,
-      area_id: project.area_id
+      area_id: project.area_id,
+         developer: project.developer 
     }));
     
     console.log('✅ Projects loaded:', projects.value);
@@ -2372,6 +2515,16 @@ const fetchPropertyData = async (id) => {
       fetchOwners(),
       fetchProjects()
     ]);
+    
+    // ✅ تأكد من وجود التكاليف الافتراضية
+    // حتى لو كانت هناك بيانات من الخادم، تأكد من وجود التكاليف الافتراضية
+    const hasDari = assignmentExpenseLines.value.some(
+      line => line.label === 'Dari Admin Fee'
+    );
+    const hasAdgm = assignmentExpenseLines.value.some(
+      line => line.label === 'ADGM Admin Fee'
+    );
+    
     
     let matchedProject = null;
     if (propertyData.project && propertyData.project.id) {
@@ -2483,8 +2636,13 @@ const fetchPropertyData = async (id) => {
     }
     breakdownInstallments.value = loadedBreakdown;
     captureBreakdownPaidOnLoadIds(loadedBreakdown);
-    loadAssignmentExpenseLines(propertyData.assignment_expense_lines);
-
+      // In fetchPropertyData function, when loading property data:
+     if (propertyData.assignment_expense_lines) {
+        loadAssignmentExpenseLines(propertyData.assignment_expense_lines);
+      } else {
+        // This will load default costs
+        loadAssignmentExpenseLines([]);
+      }
     form.value = {
       ...form.value,
       title: propertyData.title || "",
@@ -2525,6 +2683,10 @@ const fetchPropertyData = async (id) => {
         ? String(propertyData.handover_date).slice(0, 10) : '',
       noc_percentage: [0, 10, 20, 30, 40, 50].includes(Number(propertyData.noc_percentage))
         ? Number(propertyData.noc_percentage) : 0,
+         noc_fixed_amount: propertyData.noc_fixed_amount || 0,
+      noc_type: propertyData.noc_type || 'Off-Plan',
+      noc_fees_ready: propertyData.noc_fees_ready || 0,
+      noc_fees_off_plan: propertyData.noc_fees_off_plan || 0,
     };
     
     // Load additional features generically — walks the shared key list so any
@@ -2616,12 +2778,13 @@ const validateDriveLink = (link) => {
   return drivePatterns.some(pattern => pattern.test(link));
 };
 watch(() => selectedProject.value, async (newProject, oldProject) => {
-      form.value.project_id = newProject?.id || null;
+  form.value.project_id = newProject?.id || null;
 
   console.log('🔄 Project changed:', newProject?.name, 'from', oldProject?.name);
   
   if (newProject) {
     try {
+      // تحميل مناطق المشروع
       const response = await api.get(`/listings/projects/${newProject.id}/areas`);
       const projectAreasData = response.data.data || response.data;
       
@@ -2632,6 +2795,21 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
       }));
       
       console.log(`✅ Loaded ${form.value.projectAreas.length} areas for project:`, newProject.name);
+      
+      // ✅ حفظ قيم NOC من المطور
+      if (newProject.developer) {
+        const readyValue = Number(newProject.developer.noc_fees_ready || 0);
+        form.value.noc_fees_ready = !isNaN(readyValue) && readyValue >= 0 ? readyValue : 0;
+        
+        const offPlanValue = Number(newProject.developer.noc_fees_off_plan || 0);
+        form.value.noc_fees_off_plan = !isNaN(offPlanValue) && offPlanValue >= 0 ? offPlanValue : 0;
+        
+        console.log(`✅ Developer NOC values loaded:
+          - Ready: ${formatAed(form.value.noc_fees_ready)}
+          - Off-Plan: ${formatAed(form.value.noc_fees_off_plan)}`);
+        
+        updateNocBasedOnStatus();
+      }
       
       if (form.value.area && form.value.area.id) {
         const areaExistsInNewProject = form.value.projectAreas.some(
@@ -2647,11 +2825,9 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
       }
       
       areaSelectKey.value++;
-          await fetchProjectFloorPlans(1);
-    
-            importedFloorPlans.value = [];
-            
-            showProjectFloorPlans.value = false;
+      await fetchProjectFloorPlans(1);
+      importedFloorPlans.value = [];
+      showProjectFloorPlans.value = false;
       
     } catch (error) {
       console.error('❌ Error fetching project areas:', error);
@@ -2660,16 +2836,15 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
     }
   } else {
     form.value.projectAreas = [];
-    
-    if (form.value.area && form.value.area.project_id) {
-      form.value.area = null;
-    }
-    
+    form.value.area = null;
     areaSelectKey.value++;
-       projectFloorPlans.value = [];
+    projectFloorPlans.value = [];
     totalProjectFloorPlans.value = 0;
     importedFloorPlans.value = [];
     showProjectFloorPlans.value = false;
+    form.value.noc_fixed_amount = 0;
+    form.value.noc_fees_ready = 0;
+    form.value.noc_fees_off_plan = 0;
   }
 });
 watch(() => selectedProject.value, async (newProject) => {
@@ -4044,13 +4219,26 @@ const handleSubmit = async (action = 'draft') => {
       formData.append('selling_price', sellingForDb);
     }
 
-    if (isUnderConstruction.value) {
-      formData.append('noc_percentage', String(Number(form.value.noc_percentage ?? 0)));
-      formData.append('payment_breakdown', JSON.stringify(breakdownInstallments.value));
-      formData.append('assignment_expense_lines', JSON.stringify(assignmentExpenseLines.value));
-      if (form.value.handover_date) formData.append('handover_date', form.value.handover_date);
-    }
+      // ✅ NOC - يرسل في كلتا الحالتين (Under Construction و Completed)
+      if (showNocField.value && form.value.noc_fixed_amount > 0) {
+        formData.append('noc_fixed_amount', String(Math.round(Number(form.value.noc_fixed_amount || 0))));
+        formData.append('noc_percentage', '0');
+        formData.append('noc_type', currentNocType.value);
+        formData.append('noc_fees_ready', String(form.value.noc_fees_ready || 0));
+        formData.append('noc_fees_off_plan', String(form.value.noc_fees_off_plan || 0));
+      } else {
+        formData.append('noc_fixed_amount', '0');
+        formData.append('noc_percentage', '0');
+        formData.append('noc_type', 'none');
+      }
 
+      // ✅ Payment Breakdown - يرسل فقط عند Under Construction
+      if (isUnderConstruction.value) {
+        formData.append('payment_breakdown', JSON.stringify(breakdownInstallments.value));
+       
+        if (form.value.handover_date) formData.append('handover_date', form.value.handover_date);
+      }
+       formData.append('assignment_expense_lines', JSON.stringify(assignmentExpenseLines.value));
     // Add floor plans
     if (form.value.floorPlans.length > 0) {
       form.value.floorPlans.forEach((item, index) => {
@@ -4238,18 +4426,26 @@ onMounted(async () => {
   if (route.params.id) {
     propertyId.value = route.params.id;
     
+    // Load deal costs first
+    await fetchDealCosts();
+    
+    // Load other data
     await Promise.all([
       fetchPropertyTypes(),
       fetchAreas(),
       fetchOwners(),
       fetchProjects(),
       fetchLayoutTypes(),
-      fetchUnitViews()
+      fetchUnitViews(),
     ]);
     
+    // Load property data
     await fetchPropertyData(propertyId.value);
-      newFloorPlans.value = [];
-
+    newFloorPlans.value = [];
+    
+    // After loading property data, ensure default costs are present
+    // The loadAssignmentExpenseLines will handle this
+    // But we can also call it explicitly to be safe
     setTimeout(() => {
       debugFormData();
     }, 500);

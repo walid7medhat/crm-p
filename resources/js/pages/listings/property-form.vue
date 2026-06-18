@@ -4289,27 +4289,24 @@ const handleSubmit = async (action = 'draft') => {
       formData.append('selling_price', sellingForDb);
     }
 
-    if (isUnderConstruction.value) {
-        // ✅ إرسال NOC فقط إذا كان Under Construction وله قيمة
-        if (showNocField.value && form.value.noc_fixed_amount > 0) {
-          formData.append('noc_fixed_amount', String(Math.round(Number(form.value.noc_fixed_amount || 0))));
-          formData.append('noc_percentage', '0');
-          
-          // ✅ إرسال نوع NOC المستخدم
-          const nocType = currentNocType.value;
-          formData.append('noc_type', nocType);
-          formData.append('noc_fees_ready', String(form.value.noc_fees_ready));
-          formData.append('noc_fees_off_plan', String(form.value.noc_fees_off_plan));
-        } else {
-          formData.append('noc_fixed_amount', '0');
-          formData.append('noc_percentage', '0');
-          formData.append('noc_type', 'none');
-        }
-        
-        formData.append('payment_breakdown', JSON.stringify(breakdownInstallments.value));
-        formData.append('assignment_expense_lines', JSON.stringify(assignmentExpenseLines.value));
-        if (form.value.handover_date) formData.append('handover_date', form.value.handover_date);
-      }
+    if (showNocField.value && form.value.noc_fixed_amount > 0) {
+            formData.append('noc_fixed_amount', String(Math.round(Number(form.value.noc_fixed_amount || 0))));
+            formData.append('noc_percentage', '0');
+            formData.append('noc_type', currentNocType.value);
+            formData.append('noc_fees_ready', String(form.value.noc_fees_ready || 0));
+            formData.append('noc_fees_off_plan', String(form.value.noc_fees_off_plan || 0));
+          } else {
+            formData.append('noc_fixed_amount', '0');
+            formData.append('noc_percentage', '0');
+            formData.append('noc_type', 'none');
+          }
+    
+          // ✅ Payment Breakdown - يرسل فقط عند Under Construction
+          if (isUnderConstruction.value) {
+            formData.append('payment_breakdown', JSON.stringify(breakdownInstallments.value));
+            if (form.value.handover_date) formData.append('handover_date', form.value.handover_date);
+          }
+       formData.append('assignment_expense_lines', JSON.stringify(assignmentExpenseLines.value));
 
     if (form.value.developer) formData.append('developer_id', form.value.developer.id);
     if (selectedProject.value) formData.append('project_id', selectedProject.value.id);

@@ -2732,7 +2732,7 @@ const hasAdditionalFeatures = computed(() => {
       const pb = parseListArray(property.value.payment_breakdown);
       const completionStr = String(property.value.completion_status ?? '')
         .trim().toLowerCase().replace(/_/g, ' ');
-      const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
+      // const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
       const hasInstallments = pb.length > 2;
       const hasOriginalPrice = Number(property.value.original_price || 0) > 0;
       return hasInstallments && isUnderConstruction && hasOriginalPrice;
