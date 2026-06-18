@@ -7,6 +7,7 @@
       'sidebar--dashboard-home': isDashboardHome,
       'sidebar-open': isMobileMenuOpen,
       'sidebar--mobile-drawer': isMobileViewport || isMobileMenuOpen,
+      'mobile-drawer-flyout-open': isMobileViewport && crmListingsExpanded && showCrmListingsDropdown,
     }"
     @mouseenter="!isMobileViewport && (sidebarHover = true)"
     @mouseleave="!isMobileViewport && (sidebarHover = false)"
@@ -20,7 +21,7 @@
         type="button"
         class="mobile-drawer-header__close"
         aria-label="Close menu"
-        @click="closeMobileMenu"
+        @click="handleMobileDrawerClose"
       >
         <iconify-icon icon="lucide:x" />
       </button>
@@ -242,7 +243,7 @@
       </ul>
     </div>
 
-    <!-- Mobile: Listings sub-menu slides in from the right -->
+    <!-- Mobile: Listings panel slides in front of the main menu -->
     <div
       v-if="isMobileViewport && crmListingsExpanded && showCrmListingsDropdown"
       class="mobile-drawer-flyout"
@@ -1284,13 +1285,18 @@ const handleCrmClick = () => {
 
 const handleCrmListingsClick = () => {
   if (isMobileViewport.value) {
-    if (!crmListingsExpanded.value) {
-      openCrmDropdown();
-    }
     crmListingsExpanded.value = !crmListingsExpanded.value;
     return;
   }
   crmListingsExpanded.value = !crmListingsExpanded.value;
+};
+
+const handleMobileDrawerClose = () => {
+  if (isMobileViewport.value && crmListingsExpanded.value && showCrmListingsDropdown.value) {
+    crmListingsExpanded.value = false;
+    return;
+  }
+  closeMobileMenu();
 };
 
 // Animation functions (تبقى كما هي)

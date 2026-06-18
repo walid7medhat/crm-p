@@ -53,6 +53,7 @@
     height: 100dvh;
     height: 100vh;
     overflow: hidden;
+    position: fixed;
   }
 
   .sidebar.sidebar--mobile-drawer.sidebar-open {
@@ -188,8 +189,11 @@
 
   aside.sidebar .sidebar-submenu .submenu-icon,
   aside.sidebar .sidebar-submenu .imgicon {
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 0 !important;
     opacity: 1 !important;
-    filter: brightness(0) saturate(100%) invert(42%) sepia(12%) saturate(708%) hue-rotate(176deg) brightness(93%) contrast(88%);
+    filter: brightness(0) saturate(100%) invert(40%) sepia(12%) saturate(700%) hue-rotate(176deg) brightness(90%) contrast(90%);
   }
 
   aside.sidebar .sidebar-submenu li.active-page .submenu-icon,
@@ -254,24 +258,29 @@
     transform: rotate(45deg);
   }
 
-  /* Submenu */
+  /* Submenu — align with top-level items (same left edge as Dashboard) */
   aside.sidebar .sidebar-submenu {
-    padding: 4px 0 8px !important;
+    padding: 0 !important;
     margin: 0 !important;
-    background: #fafbfc !important;
-    border-top: 1px solid #f1f5f9;
-    border-bottom: 1px solid #f1f5f9;
+    background: #fff !important;
+    border-top: none;
+    border-bottom: none;
   }
 
   aside.sidebar .sidebar-submenu li a,
   aside.sidebar .sidebar-submenu .sidebar-nav-link {
     min-height: 48px !important;
-    padding: 10px 20px 10px 56px !important;
+    padding: 10px 20px !important;
     font-size: 15px !important;
     font-weight: 500 !important;
     color: #475569 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+
+  aside.sidebar .sidebar-submenu--crm > li.nav-link > a,
+  aside.sidebar .sidebar-submenu--crm > li.sidebar-submenu__nested > a {
+    padding-left: 20px !important;
   }
 
   aside.sidebar .sidebar-submenu li a span {
@@ -282,10 +291,10 @@
 
   aside.sidebar .sidebar-submenu li.active-page a,
   aside.sidebar .sidebar-submenu li.active-page .sidebar-nav-link {
-    background: #f3eef8 !important;
+    background: #faf5ff !important;
     color: #733e87 !important;
     font-weight: 600 !important;
-    box-shadow: none !important;
+    box-shadow: inset 3px 0 0 #733e87 !important;
   }
 
   aside.sidebar .sidebar-submenu li.active-page a span {
@@ -293,43 +302,33 @@
     font-weight: 600 !important;
   }
 
-  aside.sidebar .sidebar-submenu__heading {
-    padding: 10px 20px 6px 56px !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #94a3b8 !important;
+  /* Nested listings stay in flyout on mobile — never inline */
+  .sidebar.sidebar--mobile-drawer .sidebar-submenu--nested {
+    display: none !important;
   }
 
-  aside.sidebar .sidebar-submenu--nested .sidebar-nav-link,
-  aside.sidebar .sidebar-submenu--nested li a {
-    padding-left: 72px !important;
+  .sidebar.sidebar--mobile-drawer .sidebar-submenu__nested.open > a,
+  .sidebar.sidebar--mobile-drawer .sidebar-submenu__nested.dropdown-open > a {
+    background: #faf5ff !important;
+    color: #733e87 !important;
+    box-shadow: inset 3px 0 0 #733e87 !important;
   }
 
-  aside.sidebar .sidebar-submenu--nested .sidebar-submenu__heading {
-    padding-left: 72px !important;
-  }
-
-  aside.sidebar .sidebar-submenu__nested > a {
-    padding-left: 56px !important;
-  }
-
-  /* Listings flyout panel (slides over menu from the right) */
+  /* Listings flyout — full panel in front of main menu */
   .mobile-drawer-flyout {
     position: absolute;
     inset: 0;
-    z-index: 20;
+    z-index: 20000;
     display: flex;
     flex-direction: column;
     background: #fff;
-    animation: mobileDrawerFlyoutIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: mobileDrawerFlyoutIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   @keyframes mobileDrawerFlyoutIn {
     from {
-      transform: translateX(100%);
-      opacity: 0.6;
+      transform: translateX(12%);
+      opacity: 0.85;
     }
     to {
       transform: translateX(0);
@@ -341,18 +340,19 @@
     flex-shrink: 0;
     padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 10px;
     border-bottom: 1px solid #eef2f6;
+    background: #fff;
   }
 
   .mobile-drawer-flyout__back {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     border: none;
     background: transparent;
     color: #733e87;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
-    padding: 8px 4px;
+    padding: 10px 8px;
     cursor: pointer;
   }
 
@@ -367,7 +367,7 @@
     -webkit-overflow-scrolling: touch;
     list-style: none;
     margin: 0;
-    padding: 8px 0 calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 0 calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-drawer-flyout__section {
@@ -412,16 +412,13 @@
     color: #733e87;
   }
 
+  .sidebar.sidebar--mobile-drawer.mobile-drawer-flyout-open .sidebar-menu-area {
+    overflow: hidden;
+  }
+
   .sidebar.sidebar--mobile-drawer .sidebar-menu-area {
     position: relative;
     flex: 1 1 auto;
-  }
-
-  aside.sidebar .sidebar-submenu .submenu-icon,
-  aside.sidebar .sidebar-submenu .imgicon {
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 0 !important;
   }
 
   body.mobile-nav-open {
