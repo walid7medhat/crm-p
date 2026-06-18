@@ -2124,22 +2124,30 @@ const fetchDealCosts = async () => {
     
     // تخزين الإعدادات
     if (data.settings) {
-      // ✅ تحويل المفاتيح إلى أرقام
       const settings = {};
       Object.keys(data.settings).forEach(key => {
-        // إذا كان المفتاح يحتوي على رقم، استخرجه
         const numKey = parseInt(key) || key;
         settings[numKey] = data.settings[key];
       });
+      // ✅ إضافة Agency Fee إذا لم تكن موجودة
+      if (!settings['3'] && !settings['agency_fee']) {
+        settings['agency_fee'] = 2; // 2% افتراضي
+      }
       dealCostSettings.value = settings;
     } else if (data.details) {
       const settings = {};
       data.details.forEach(item => {
         settings[item.key] = item.value;
       });
+      if (!settings['agency_fee']) {
+        settings['agency_fee'] = 2;
+      }
       dealCostSettings.value = settings;
     } else {
       dealCostSettings.value = data;
+      if (!dealCostSettings.value['agency_fee']) {
+        dealCostSettings.value['agency_fee'] = 2;
+      }
     }
     
     console.log('✅ Deal cost settings loaded:', dealCostSettings.value);
@@ -2147,12 +2155,20 @@ const fetchDealCosts = async () => {
     
   } catch (error) {
     console.error('❌ Error fetching deal costs:', error);
-    proxy.$showNotification("⚠️ Could not load deal cost settings", "warning");
+    // ✅ استخدام قيم افتراضية
+    dealCostSettings.value = {
+      dari_admin_fee: 0,
+      adgm_admin_fee: 0,
+      agency_fee: 2 // ✅ 2% افتراضي
+    };
+    addDefaultDealCosts();
+    proxy.$showNotification("ℹ️ Using default deal costs", "info");
   } finally {
     isLoadingDealCosts.value = false;
   }
 };
 
+// ✅ إضافة التكاليف الثابتة تلقائياً
 // ✅ إضافة التكاليف الثابتة تلقائياً
 const addDefaultDealCosts = () => {
   console.log('📝 Adding default deal costs. Settings:', dealCostSettings.value);
@@ -2160,8 +2176,33 @@ const addDefaultDealCosts = () => {
   // ✅ استخدام المفاتيح النصية
   const fees = {
     dariAdminFee: dealCostSettings.value['dari_admin_fee'] || dealCostSettings.value['1'] || 0,
-    adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0
+    adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0,
+    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2 // ✅ 2% افتراضي
   };
+  
+  // ✅ Agency Fee (2% من سعر البيع)
+  const agencyFeeValue = Number(fees.agencyFee) || 2; // 2% افتراضي
+  console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
+  
+  const existingAgency = assignmentExpenseLines.value.find(
+    line => line.label === 'Agency Fee' && line.isDefault
+  );
+  if (!existingAgency) {
+    assignmentExpenseLines.value.push({
+      id: Date.now() + 3,
+      label: 'Agency Fee',
+      calcType: 'percentage', // ✅ نسبة مئوية
+      base: 'sp', // ✅ من سعر البيع (Selling Price)
+      value: agencyFeeValue, // ✅ 2% أو القيمة من الإعدادات
+      vatEnabled: false,
+      isDefault: true,
+      isReadonly: true
+    });
+    console.log('✅ Agency Fee added');
+  } else {
+    existingAgency.value = agencyFeeValue;
+    console.log('✅ Agency Fee updated');
+  }
   
   // Dari Admin Fee
   if (Number(fees.dariAdminFee) > 0) {
@@ -4186,6 +4227,14 @@ const handleSubmit = async (action = 'draft') => {
     }
 
     if (action !== 'draft') {
+      if (isUnderConstruction.value) {
+              // ✅ للـ Under Construction: original_price مطلوب
+              if (!form.value.original_price || parsePriceInputDigits(form.value.original_price) <= 0) {
+                proxy.$showNotification("❌ Please enter original price for under construction properties!", "error");
+                isSubmitting.value = false;
+                return;
+              }
+            }
       if (!form.value.completionStatus) {
         proxy.$showNotification("❌ Please select completion status!", "error");
         isSubmitting.value = false;

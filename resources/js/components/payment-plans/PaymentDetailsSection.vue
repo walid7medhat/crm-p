@@ -18,7 +18,7 @@
           <div class="pd-cell-label">Original price (OP)</div>
           <div class="pd-cell-value pd-cell-value--dark">{{ formatAed(originalPrice) }}</div>
         </div>
-        <div class="pd-cell pd-cell--muted">
+        <div class="pd-cell pd-cell--muted" v-if="paymentPlanLabel">
           <div class="pd-cell-label">Payment plan (%)</div>
           <div class="pd-cell-value pd-cell-value--dark">{{ paymentPlanLabel || '—' }}</div>
         </div>
@@ -50,8 +50,8 @@
         </span>
       </div>
 
-      <div v-if="breakdownRows.length > 0 && listing.completion_status !='Completed'" class="pd-section-heading">Installment breakdown</div>
-      <div v-if="breakdownRows.length > 0" class="pd-table-wrap">
+      <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-section-heading">Installment breakdown</div>
+      <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-table-wrap">
         <table class="pd-table">
           <thead>
             <tr>

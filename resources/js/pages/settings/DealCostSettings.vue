@@ -47,9 +47,7 @@
                                     <span class="text-muted small">(Dari)</span>
                                 </label>
                                 <div class="input-group">
-                                    <span class="input-group-text">
-                                        <iconify-icon icon="lucide:dollar-sign"></iconify-icon>
-                                    </span>
+                                    
                                     <input type="number" 
                                            class="form-control form-control-lg" 
                                            v-model="form.dari_admin_fee"
@@ -78,9 +76,7 @@
                                     <span class="text-muted small">(ADGM)</span>
                                 </label>
                                 <div class="input-group">
-                                    <span class="input-group-text">
-                                        <iconify-icon icon="lucide:dollar-sign"></iconify-icon>
-                                    </span>
+                                   
                                     <input type="number" 
                                            class="form-control form-control-lg" 
                                            v-model="form.adgm_admin_fee"
@@ -97,6 +93,33 @@
                                 <div class="form-text">
                                     <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
                                     Admin fee applied to ADGM type deals
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">
+                                    ADGM Admin Fee
+                                    <span class="text-muted small">(ADGM)</span>
+                                </label>
+                                <div class="input-group">
+                                   
+                                    <input type="number" 
+                                           class="form-control form-control-lg" 
+                                           v-model="form.agency_fee"
+                                           :class="{'is-invalid': errors.agency_fee}"
+                                           placeholder="Enter ADGM admin fee"
+                                           step="0.01"
+                                           min="0"
+                                           @input="validateInput('agency_fee')">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="invalid-feedback" v-if="errors.agency_fee">
+                                    {{ errors.agency_fee[0] }}
+                                </div>
+                                <div class="form-text">
+                                    <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+                                    Agency fee applied 
                                 </div>
                             </div>
                         </div>
@@ -161,7 +184,8 @@ export default {
             settingsDetails: [],
             form: {
                 dari_admin_fee: 0,
-                adgm_admin_fee: 0
+                adgm_admin_fee: 0,
+                agency_fee:0,
             },
             errors: {},
             originalForm: {}
@@ -199,14 +223,15 @@ export default {
 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    if (data.success && data.data) {
+                    console.log(data);
+                    if (data.status && data.data) {
                         const settings = data.data.settings || {};
                         this.settingsDetails = data.data.details || [];
                         
                         // تحديث الفورم بالقيم الموجودة
                         this.form.dari_admin_fee = parseFloat(settings.dari_admin_fee) || 0;
                         this.form.adgm_admin_fee = parseFloat(settings.adgm_admin_fee) || 0;
+                        this.form.agency_fee = parseFloat(settings.agency_fee) || 0;
                         
                         // حفظ نسخة أصلية للمقارنة
                         this.originalForm = { ...this.form };
@@ -244,7 +269,8 @@ export default {
                 
                 const payload = {
                     dari_admin_fee: parseFloat(this.form.dari_admin_fee) || 0,
-                    adgm_admin_fee: parseFloat(this.form.adgm_admin_fee) || 0
+                    adgm_admin_fee: parseFloat(this.form.adgm_admin_fee) || 0,
+                    agency_fee: parseFloat(this.form.agency_fee) || 0
                 };
                 
                 const response = await fetch(API_ENDPOINTS.DEAL_COST_SETTINGS_UPDATE, {

@@ -2725,17 +2725,26 @@ const hasAdditionalFeatures = computed(() => {
 
     const hasPaymentDetails = computed(() => {
       if (!property.value) return false;
-      // Show Payment Details only when:
-      //   1) the breakdown has more than 2 installments,
-      //   2) completion_status is Under Construction (or Off Plan), and
-      //   3) a real original_price is set on the listing.
-      const pb = parseListArray(property.value.payment_breakdown);
+      
       const completionStr = String(property.value.completion_status ?? '')
         .trim().toLowerCase().replace(/_/g, ' ');
-      // const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
-      const hasInstallments = pb.length > 2;
+      const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
+      
+      // ✅ للـ Under Construction: تحتاج installments و original_price
+      if (isUnderConstruction) {
+        const pb = parseListArray(property.value.payment_breakdown);
+        const hasInstallments = pb.length > 2;
+        const hasOriginalPrice = Number(property.value.original_price || 0) > 0;
+        return hasInstallments && hasOriginalPrice;
+      }
+      
+      // ✅ للـ Completed: يظهر دائماً إذا كان هناك تكاليف (حتى لو كانت افتراضية)
+      // أو إذا كان هناك original_price
       const hasOriginalPrice = Number(property.value.original_price || 0) > 0;
-      return hasInstallments && isUnderConstruction && hasOriginalPrice;
+      const hasAssignmentCosts = property.value.assignment_expense_lines && 
+                                property.value.assignment_expense_lines.length > 0;
+      // hasOriginalPrice ||
+      return  hasAssignmentCosts;
     });
 
     const canRequestUnitNumber = computed(() => {
@@ -5936,9 +5945,9 @@ const createPaymentDetailsSlide = () => {
   const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
   const hasInstallments = installments.length > 2;
   const hasOriginalPrice = rawOriginalPrice > 0;
-  if (!(hasInstallments && isUnderConstruction && hasOriginalPrice)) {
-    return '';
-  }
+  // if (!(hasInstallments && isUnderConstruction && hasOriginalPrice)) {
+  //   return '';
+  // }
 
   let planLabel = '';
   if (p.payment_plan) {
@@ -6017,7 +6026,7 @@ const createPaymentDetailsSlide = () => {
   }).join('');
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Upcoming';
-  const premiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0)
+  const premiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction
     ? `<tr style="background:#f8fafc;">
         <td style="padding:2mm 1.5mm;font-size:2.6mm;">Premium</td>
         <td style="padding:2mm 1.5mm;font-size:2.6mm;">—</td>
@@ -6110,7 +6119,7 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 
-  const installmentTable = (installmentRows || premiumRow || handoverRow) ? `
+  const installmentTable = (installmentRows || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:2.5mm;">
       <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Installment breakdown</div>
       <div style="background:#ffffff !important;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
@@ -6159,10 +6168,11 @@ const createPaymentDetailsSlide = () => {
           <div style="font-size:2.4mm;margin-bottom:1mm;">Original price (OP)</div>
           <div style="font-size:3.5mm;font-weight:700;">${fmtAed(originalPrice)}</div>
         </div>
+           ${planLabel ? `
         <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
           <div style="font-size:2.4mm;margin-bottom:1mm;">Payment plan</div>
           <div style="font-size:3.5mm;font-weight:700;">${planLabel || '—'}</div>
-        </div>
+        </div>    ` : ''}
         <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
           <div style="font-size:2.4mm;margin-bottom:1mm;">Premium</div>
           <div style="font-size:3.5mm;font-weight:700;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>

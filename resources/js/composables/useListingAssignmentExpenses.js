@@ -88,61 +88,79 @@ export function useListingAssignmentExpenses({
 
   // ✅ دالة لإضافة التكاليف الافتراضية
 const addDefaultDealCosts = () => {
-  console.log('📝 Adding default deal costs');
+  console.log('📝 Adding default deal costs. Settings:', dealCostSettings.value);
   
-  // Get fee values from settings
-  const dariFee = Number(dealCostSettings?.value?.dari_admin_fee || 
-                         dealCostSettings?.value?.['1'] || 0);
+  // ✅ استخدام المفاتيح النصية
+  const fees = {
+    dariAdminFee: dealCostSettings.value['dari_admin_fee'] || dealCostSettings.value['1'] || 0,
+    adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0,
+    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2 // ✅ 2% افتراضي
+  };
   
-  const adgmFee = Number(dealCostSettings?.value?.adgm_admin_fee || 
-                         dealCostSettings?.value?.['2'] || 0);
+  // ✅ Agency Fee (2% من سعر البيع)
+  const agencyFeeValue = Number(fees.agencyFee) || 2; // 2% افتراضي
+  console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
   
-  console.log('📝 dariFee:', dariFee);
-  console.log('📝 adgmFee:', adgmFee);
-  
-  // Check if Dari Admin Fee exists - check by label AND isDefault flag
-  const existingDari = assignmentExpenseLines.value.find(
-    line => line.label === 'Dari Admin Fee' && line.isDefault === true
+  const existingAgency = assignmentExpenseLines.value.find(
+    line => line.label === 'Agency Fee' && line.isDefault
   );
-  
-  if (!existingDari) {
+  if (!existingAgency) {
     assignmentExpenseLines.value.push({
-      id: Date.now() + Math.random() * 1000 + 1,
-      label: 'Dari Admin Fee',
-      calcType: 'fixed',
-      base: null,
-      value: dariFee,
+      id: Date.now() + 3,
+      label: 'Agency Fee',
+      calcType: 'percentage', // ✅ نسبة مئوية
+      base: 'sp', // ✅ من سعر البيع (Selling Price)
+      value: agencyFeeValue, // ✅ 2% أو القيمة من الإعدادات
       vatEnabled: false,
       isDefault: true,
-      isReadonly: false,
+      isReadonly: true
     });
-    console.log('✅ Dari Admin Fee added');
+    console.log('✅ Agency Fee added');
   } else {
-    // Update the value if it changed
-    existingDari.value = dariFee;
-    console.log('✅ Dari Admin Fee updated');
+    existingAgency.value = agencyFeeValue;
+    console.log('✅ Agency Fee updated');
   }
   
-  // Check if ADGM Admin Fee exists
-  const existingAdgm = assignmentExpenseLines.value.find(
-    line => line.label === 'ADGM Admin Fee' && line.isDefault === true
-  );
+  // Dari Admin Fee
+  if (Number(fees.dariAdminFee) > 0) {
+    console.log(`✅ Found Dari Admin Fee: ${fees.dariAdminFee}`);
+    const existing = assignmentExpenseLines.value.find(
+      line => line.label === 'Dari Admin Fee' && line.isDefault
+    );
+    if (!existing) {
+      assignmentExpenseLines.value.push({
+        id: Date.now() + 1,
+        label: 'Dari Admin Fee',
+        calcType: 'fixed',
+        base: null,
+        value: Number(fees.dariAdminFee),
+        vatEnabled: false,
+        isDefault: true,
+        isReadonly: true
+      });
+      console.log('✅ Dari Admin Fee added');
+    }
+  }
   
-  if (!existingAdgm) {
-    assignmentExpenseLines.value.push({
-      id: Date.now() + Math.random() * 1000 + 2,
-      label: 'ADGM Admin Fee',
-      calcType: 'fixed',
-      base: null,
-      value: adgmFee,
-      vatEnabled: false,
-      isDefault: true,
-      isReadonly: false,
-    });
-    console.log('✅ ADGM Admin Fee added');
-  } else {
-    existingAdgm.value = adgmFee;
-    console.log('✅ ADGM Admin Fee updated');
+  // ADGM Admin Fee
+  if (Number(fees.adgmAdminFee) > 0) {
+    console.log(`✅ Found ADGM Admin Fee: ${fees.adgmAdminFee}`);
+    const existing = assignmentExpenseLines.value.find(
+      line => line.label === 'ADGM Admin Fee' && line.isDefault
+    );
+    if (!existing) {
+      assignmentExpenseLines.value.push({
+        id: Date.now() + 2,
+        label: 'ADGM Admin Fee',
+        calcType: 'fixed',
+        base: null,
+        value: Number(fees.adgmAdminFee),
+        vatEnabled: false,
+        isDefault: true,
+        isReadonly: true
+      });
+      console.log('✅ ADGM Admin Fee added');
+    }
   }
   
   console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
@@ -164,7 +182,7 @@ const loadAssignmentExpenseLines = (raw) => {
         value: Number(line.value || 0),
         vatEnabled: !!line.vatEnabled,
         isDefault: line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee',
-        isReadonly: false,
+        isReadonly: true,
       });
     });
   }
@@ -192,7 +210,7 @@ const loadAssignmentExpenseLines = (raw) => {
       value,
       vatEnabled: !!assignmentExpenseDraft.value.vatEnabled,
       isDefault: false,
-      isReadonly: false
+      isReadonly: true
     });
     resetAssignmentExpenseDraft();
     return true;

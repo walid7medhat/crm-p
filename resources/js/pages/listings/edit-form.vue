@@ -1912,36 +1912,47 @@ const fetchDealCosts = async () => {
     
     console.log('📦 Deal cost API response:', data);
     
-    // Store settings properly
+    // تخزين الإعدادات
     if (data.settings) {
       const settings = {};
       Object.keys(data.settings).forEach(key => {
         const numKey = parseInt(key) || key;
         settings[numKey] = data.settings[key];
       });
+      // ✅ إضافة Agency Fee إذا لم تكن موجودة
+      if (!settings['3'] && !settings['agency_fee']) {
+        settings['agency_fee'] = 2; // 2% افتراضي
+      }
       dealCostSettings.value = settings;
     } else if (data.details) {
       const settings = {};
       data.details.forEach(item => {
         settings[item.key] = item.value;
       });
+      if (!settings['agency_fee']) {
+        settings['agency_fee'] = 2;
+      }
       dealCostSettings.value = settings;
     } else {
       dealCostSettings.value = data;
+      if (!dealCostSettings.value['agency_fee']) {
+        dealCostSettings.value['agency_fee'] = 2;
+      }
     }
     
     console.log('✅ Deal cost settings loaded:', dealCostSettings.value);
-    
-    // The default costs will be added by loadAssignmentExpenseLines
+    addDefaultDealCosts();
     
   } catch (error) {
     console.error('❌ Error fetching deal costs:', error);
-    // Use default values
+    // ✅ استخدام قيم افتراضية
     dealCostSettings.value = {
       dari_admin_fee: 0,
-      adgm_admin_fee: 0
+      adgm_admin_fee: 0,
+      agency_fee: 2 // ✅ 2% افتراضي
     };
-    proxy.$showNotification("ℹ️ Using default deal costs (0). You can edit them manually.", "info");
+    addDefaultDealCosts();
+    proxy.$showNotification("ℹ️ Using default deal costs", "info");
   } finally {
     isLoadingDealCosts.value = false;
   }
@@ -2137,7 +2148,7 @@ const updateNocBasedOnStatus = () => {
     form.value.payment_plans = null;
     form.value.payment_plan = null;
     breakdownInstallments.value = [];
-    assignmentExpenseLines.value = [];
+    // assignmentExpenseLines.value = [];
     form.value.handover_date = '';
     // form.value.original_price = '';
   } else {
