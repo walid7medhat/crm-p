@@ -8,7 +8,7 @@
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-top: 0 !important;
-    background: #fff !important;
+    background: transparent !important;
     overflow-x: hidden !important;
   }
 
@@ -27,7 +27,7 @@
     width: 100% !important;
     max-width: 100vw !important;
     margin-inline-start: 0 !important;
-    background: #fff;
+    background: transparent !important;
   }
 
   #app main.dashboard-main > .dashboard-main-router:has(.property-show-page) {
@@ -39,12 +39,35 @@
     margin: 0 !important;
   }
 
+  /* Same glass header as other mobile pages + flush to gallery */
+  #app main.dashboard-main:has(.navbar-header--property-detail) {
+    --app-topbar-height: 3.25rem;
+    --app-header-below-gap: 0;
+  }
+
   #app main.dashboard-main > .navbar-header.navbar-header--property-detail {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
     max-width: 100vw !important;
+    margin-bottom: 0 !important;
     border-radius: 0 !important;
+    background: var(--gradient-crm-glass) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 4px 24px rgba(11, 7, 54, 0.08) !important;
+  }
+
+  #app main.dashboard-main > .navbar-header.navbar-header--property-detail .navbar-header-toolbar {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: 3.25rem;
+  }
+
+  #app main.dashboard-main > .navbar-header.navbar-header--property-detail .mob-module-toolbar {
+    min-height: 3.25rem;
   }
 
   .property-show-page .breadcrumb-area,
@@ -55,9 +78,9 @@
   .property-show-page,
   .property-show-page--mobile {
     padding: 0 !important;
+    margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 auto !important;
     overflow-x: hidden;
     background: #fff;
     box-sizing: border-box;
@@ -68,6 +91,7 @@
     width: 100% !important;
     max-width: 100% !important;
     --bs-gutter-x: 0;
+    --bs-gutter-y: 0;
   }
 
   .property-show-page .dashboard-main-body {
@@ -103,6 +127,16 @@
 
   .property-show-inner--mobile .property-show-row {
     margin: 0 !important;
+    --bs-gutter-y: 0;
+  }
+
+  .property-show-inner--mobile .ps-mobile-hero {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .property-show-inner--mobile .ps-gallery {
+    margin-top: 0 !important;
   }
 
   .property-show-inner--mobile .col-lg-9,
@@ -119,7 +153,23 @@
   }
 
   .property-show-inner--mobile .property-content {
-    padding: 0 16px 24px !important;
+    padding: 0 0 24px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Hero text blocks keep side inset; data sections go edge-to-edge */
+  .property-show-inner--mobile .ps-mobile-hero__body,
+  .property-show-inner--mobile .ps-mobile-hero__quick {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .property-show-inner--mobile .property-content > *:not(.ps-mobile-hero) {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   body.ps-mobile-agent-bar-open {
@@ -371,26 +421,37 @@
     font-weight: 600;
   }
 
-  /* ── Property information (notes-style box) ── */
+  /* ── Property information — full-width rows, single border ── */
   .property-show-inner--mobile .detailed-info-section {
     padding: 0 !important;
-    margin-bottom: 20px !important;
+    margin: 0 0 12px !important;
     border: none !important;
-    background: transparent !important;
+    background: #fff !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  .property-show-inner--mobile .info-section {
-    margin-bottom: 0 !important;
+  .property-show-inner--mobile .detailed-info-section .info-section {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .property-show-inner--mobile .detailed-info-section.mb-16 {
+    margin-bottom: 12px !important;
   }
 
   .property-show-inner--mobile .section-title {
     font-size: 18px !important;
     font-weight: 800 !important;
     color: #0f172a !important;
-    margin-bottom: 10px !important;
-    padding: 0 !important;
+    margin: 0 !important;
+    padding: 16px 16px 10px !important;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .property-show-inner--mobile .info-grid {
@@ -398,11 +459,15 @@
     flex-direction: column !important;
     gap: 0 !important;
     grid-template-columns: none !important;
-    margin-bottom: 0 !important;
-    background: #f8f9fa;
-    padding: 4px 16px;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    border: none !important;
+    border-top: 1px solid #e9ecef !important;
+    border-bottom: 1px solid #e9ecef !important;
+    border-radius: 0 !important;
     box-sizing: border-box;
   }
 
@@ -411,11 +476,13 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    padding: 14px 2px !important;
+    width: 100% !important;
+    padding: 14px 16px !important;
+    margin: 0 !important;
     border: none !important;
     border-bottom: 1px solid #e9ecef !important;
     border-radius: 0 !important;
-    background: transparent !important;
+    background: #fff !important;
     box-shadow: none !important;
     box-sizing: border-box;
   }
@@ -461,10 +528,28 @@
   }
 
   .property-show-inner--mobile .description-content {
+    margin: 0 16px;
     background: #f8f9fa;
     padding: 16px;
     border-radius: 8px;
     border: 1px solid #e9ecef;
+    box-sizing: border-box;
+  }
+
+  /* Chips / tags above sections */
+  .property-show-inner--mobile .property-content .badge,
+  .property-show-inner--mobile .property-content .feature,
+  .property-show-inner--mobile .property-content .payment-plan-chip,
+  .property-show-inner--mobile .property-content > .mb-16:not(.detailed-info-section) {
+    margin-left: 16px !important;
+    margin-right: 16px !important;
+  }
+
+  .property-show-inner--mobile .features-section,
+  .property-show-inner--mobile .floor-plans-section,
+  .property-show-inner--mobile .documents-section {
+    padding-left: 16px;
+    padding-right: 16px;
     box-sizing: border-box;
   }
 
@@ -486,14 +571,11 @@
   .ps-agent-bar__sheet {
     pointer-events: auto;
     padding: 14px 14px 12px;
-    background: linear-gradient(180deg, #f7fbf8 0%, #ffffff 55%);
+    background: #fff;
     border-radius: 22px 22px 0 0;
-    border: 1px solid rgba(226, 232, 240, 0.65);
-    border-bottom: none;
-    box-shadow:
-      0 -10px 40px rgba(15, 23, 42, 0.08),
-      0 -2px 8px rgba(15, 23, 42, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    border: none;
+    border-top: 1px solid #e8edf2;
+    box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.1);
   }
 
   body.mobile-listing-sheet-open .ps-agent-bar {

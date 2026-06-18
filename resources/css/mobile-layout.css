@@ -102,8 +102,10 @@
   }
 
   html:has(#app main.auth-page-main) body {
-    overflow: hidden;
-    max-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: none;
+    min-height: 100dvh;
   }
 
   /* —— Bottom dock: Bayut-style Leads | Listings floating pill —— */
@@ -335,11 +337,11 @@
     display: none !important;
   }
 
-  #app main.dashboard-main:has(.navbar-header--mobile-compact):not(:has(.navbar-header--kanban-mobile)) {
+  #app main.dashboard-main:has(.navbar-header--mobile-compact):not(:has(.navbar-header--kanban-mobile)):not(:has(.navbar-header--property-detail)) {
     --app-topbar-height: 3.75rem;
   }
 
-  #app main.dashboard-main:has(.navbar-header--mobile-compact):not(:has(.navbar-header--kanban-mobile)) > .app-navbar-spacer {
+  #app main.dashboard-main:has(.navbar-header--mobile-compact):not(:has(.navbar-header--kanban-mobile)):not(:has(.navbar-header--property-detail)) > .app-navbar-spacer {
     min-height: calc(3.75rem + env(safe-area-inset-top, 0px)) !important;
     height: calc(3.75rem + env(safe-area-inset-top, 0px)) !important;
   }

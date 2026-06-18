@@ -7,6 +7,7 @@
       'sidebar--dashboard-home': isDashboardHome,
       'sidebar-open': isMobileMenuOpen,
       'sidebar--mobile-drawer': isMobileViewport || isMobileMenuOpen,
+      'mobile-drawer-flyout-open': isMobileViewport && crmListingsExpanded && showCrmListingsDropdown,
     }"
     @mouseenter="!isMobileViewport && (sidebarHover = true)"
     @mouseleave="!isMobileViewport && (sidebarHover = false)"
@@ -20,7 +21,7 @@
         type="button"
         class="mobile-drawer-header__close"
         aria-label="Close menu"
-        @click="closeMobileMenu"
+        @click="handleMobileDrawerClose"
       >
         <iconify-icon icon="lucide:x" />
       </button>
@@ -118,9 +119,9 @@
                 <span>Listings</span>
                 <span class="dropdown-arrow dropdown-arrow--nested" :class="{ rotated: crmListingsExpanded }" />
               </a>
-              <ul v-if="crmListingsExpanded" class="sidebar-submenu sidebar-submenu--grouped sidebar-submenu--nested">
+              <ul v-if="crmListingsExpanded && !isMobileViewport" class="sidebar-submenu sidebar-submenu--grouped sidebar-submenu--nested">
                 <template v-for="section in listingsSidebarSections" :key="section.key">
-                  <li class="sidebar-submenu__heading">{{ section.title }}</li>
+                  <li v-if="section.key !== 'listings'" class="sidebar-submenu__heading">{{ section.title }}</li>
                   <li
                     v-for="item in section.items"
                     :key="`${section.key}-${item.path}`"
@@ -239,6 +240,35 @@
             </ul>
           </transition>
         </li>
+      </ul>
+    </div>
+
+    <!-- Mobile: Listings panel slides in front of the main menu -->
+    <div
+      v-if="isMobileViewport && crmListingsExpanded && showCrmListingsDropdown"
+      class="mobile-drawer-flyout"
+    >
+      <div class="mobile-drawer-flyout__head">
+        <button type="button" class="mobile-drawer-flyout__back" @click="crmListingsExpanded = false">
+          <iconify-icon icon="lucide:chevron-left" />
+          <span>Listings</span>
+        </button>
+      </div>
+      <ul class="mobile-drawer-flyout__list">
+        <template v-for="section in listingsSidebarSections" :key="`flyout-${section.key}`">
+          <li v-if="section.key !== 'listings'" class="mobile-drawer-flyout__section">{{ section.title }}</li>
+          <li
+            v-for="item in section.items"
+            :key="`flyout-${section.key}-${item.path}`"
+            :class="{ 'is-active': isSidebarSubItemActive(item.path) }"
+          >
+            <a href="#" class="mobile-drawer-flyout__link" @click.prevent="goToListingsItem(item.path)">
+              <span>{{ item.label }}</span>
+              <span v-if="item.count > 0" class="mobile-drawer-flyout__count">{{ item.count }}</span>
+              <span v-else-if="countsLoading && item.count !== undefined" class="mobile-drawer-flyout__count loading">…</span>
+            </a>
+          </li>
+        </template>
       </ul>
     </div>
   </aside>
@@ -763,11 +793,8 @@ const listingsSidebarSections = computed(() =>
   }),
 );
 
-/** Listings nested submenu — super_admin only */
-const isListingsDropdownAdmin = computed(() => {
-  if (!user.value?.roles) return false;
-  return user.value.roles.includes('super_admin');
-});
+/** Listings nested submenu — all admins (inventory links under CRM → Listings) */
+const isListingsDropdownAdmin = computed(() => isAdmin.value && !isShowOnlyListing.value);
 
 const showCrmListingsDropdown = computed(() =>
   isListingsDropdownAdmin.value &&
@@ -1257,7 +1284,19 @@ const handleCrmClick = () => {
 };
 
 const handleCrmListingsClick = () => {
+  if (isMobileViewport.value) {
+    crmListingsExpanded.value = !crmListingsExpanded.value;
+    return;
+  }
   crmListingsExpanded.value = !crmListingsExpanded.value;
+};
+
+const handleMobileDrawerClose = () => {
+  if (isMobileViewport.value && crmListingsExpanded.value && showCrmListingsDropdown.value) {
+    crmListingsExpanded.value = false;
+    return;
+  }
+  closeMobileMenu();
 };
 
 // Animation functions (تبقى كما هي)
@@ -1312,7 +1351,10 @@ function syncSidebarDropdownFromRoute() {
   const crmSection = resolveCrmSection(route.path);
   if (crmSection) {
     openCrmDropdown();
-    crmListingsExpanded.value = showCrmListingsDropdown.value && crmSection === CRM_SECTIONS.LISTINGS;
+    crmListingsExpanded.value =
+      showCrmListingsDropdown.value &&
+      crmSection === CRM_SECTIONS.LISTINGS &&
+      !isMobileViewport.value;
     if (crmSection === CRM_SECTIONS.LISTINGS) {
       rememberListingsPath(route.path);
     }
@@ -1345,6 +1387,10 @@ watch(isDashboardHome, (onHome) => {
   if (['crm', 'calculator', 'settings', 'users'].includes(activeDropdown.value)) return;
   activeDropdown.value = null;
   localStorage.removeItem('activeDropdown');
+});
+
+watch(isMobileMenuOpen, (open) => {
+  if (!open) crmListingsExpanded.value = false;
 });
 
 onMounted(() => {

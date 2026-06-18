@@ -201,6 +201,32 @@ html:has(#app main.auth-page-main) body {
   max-height: 100dvh;
 }
 
+@media (max-width: 768px) {
+  #app main.auth-page-main {
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #app main.auth-page-main > * {
+    height: auto;
+    min-height: 100dvh;
+    flex: 0 0 auto;
+  }
+
+  html:has(#app main.auth-page-main),
+  html:has(#app main.auth-page-main) body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: none;
+    height: auto;
+    min-height: 100dvh;
+  }
+}
+
 /* Auth screens: never show app sidebar / mobile dock (e.g. after logout) */
 html:has(#app main.auth-page-main) .sidebar,
 html:has(#app main.auth-page-main) .mobile-sidebar-dock,
@@ -288,6 +314,7 @@ body.mobile-nav-open {
   }
 
   #app main.dashboard-main > .dashboard-main-router:has(.property-show-page) {
+    padding-top: 0 !important;
     padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
   }
 }

@@ -62,7 +62,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 4px;
     padding: 0 14px;
     min-width: 76px;
     border: none;
@@ -72,6 +72,15 @@
     font-size: 16px;
     font-weight: 700;
     white-space: nowrap;
+  }
+
+  .bayut-purpose-btn::after {
+    font-family: remixicon !important;
+    content: "\ea4e";
+    font-size: 16px;
+    line-height: 1;
+    color: #94a3b8;
+    flex-shrink: 0;
   }
 
   .bayut-purpose-btn i {
@@ -148,7 +157,7 @@
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     padding: 8px 14px;
     border-radius: 999px;
     border: 1px solid #e2e8f0;
@@ -160,9 +169,18 @@
     min-height: 36px;
   }
 
+  .bayut-chip:not(.bayut-chip--filters)::after {
+    font-family: remixicon !important;
+    content: "\ea4e";
+    font-size: 14px;
+    line-height: 1;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
   .bayut-chip i {
     font-size: 14px;
-    opacity: 0.6;
+    opacity: 1;
   }
 
   .bayut-chip.active {
@@ -220,7 +238,7 @@
   .bayut-sort-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     border: none;
     background: transparent;
     color: #64748b;
@@ -228,6 +246,15 @@
     font-weight: 600;
     padding: 6px 0;
     white-space: nowrap;
+  }
+
+  .bayut-sort-btn::after {
+    font-family: remixicon !important;
+    content: "\ea4e";
+    font-size: 14px;
+    line-height: 1;
+    color: #94a3b8;
+    flex-shrink: 0;
   }
 
   /* Search overlay */
