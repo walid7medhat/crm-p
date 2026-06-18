@@ -1231,7 +1231,8 @@ async function goToCrmListingsFlat() {
 const showMobileQuickLeads = computed(() => isAdmin.value && !isShowOnlyListing.value);
 const showMobileQuickListings = computed(() => isAdmin.value || isShowOnlyListing.value);
 const showMobileSidebarQuickbar = computed(() => showMobileQuickLeads.value || showMobileQuickListings.value);
-const showMobileCoreDock = computed(() => showMobileSidebarQuickbar.value);
+const isPropertyShowPage = computed(() => route.path.startsWith('/property-details'));
+const showMobileCoreDock = computed(() => showMobileSidebarQuickbar.value && !isPropertyShowPage.value);
 
 const isCoreDockLeadsActive = computed(() => {
   const p = route.path;

@@ -17,15 +17,6 @@
       </div>
 
       <div class="ps-agent-bar__actions">
-        <a
-          v-if="agent.email"
-          :href="`mailto:${agent.email}`"
-          class="ps-agent-bar__btn ps-agent-bar__btn--email"
-          @click.stop
-        >
-          <i class="ri-mail-line"></i>
-          <span>Email</span>
-        </a>
         <button
           v-if="canChat"
           type="button"
@@ -36,21 +27,14 @@
           <span>Chat</span>
         </button>
         <button
-          v-else-if="agent.email"
+          v-if="showActions"
           type="button"
-          class="ps-agent-bar__btn ps-agent-bar__btn--chat"
-          @click="emit('profile')"
+          class="ps-agent-bar__btn ps-agent-bar__btn--actions"
+          :class="{ 'ps-agent-bar__btn--solo': !canChat }"
+          @click="emit('actions')"
         >
-          <i class="ri-phone-line"></i>
-          <span>Contact</span>
-        </button>
-        <button
-          type="button"
-          class="ps-agent-bar__btn ps-agent-bar__btn--profile"
-          aria-label="View agent profile"
-          @click="emit('profile')"
-        >
-          <i class="ri-user-line"></i>
+          <i class="ri-more-2-line"></i>
+          <span>Actions</span>
         </button>
       </div>
     </div>
@@ -63,9 +47,10 @@ import { computed, ref } from 'vue'
 const props = defineProps({
   agent: { type: Object, required: true },
   canChat: { type: Boolean, default: false },
+  showActions: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['chat', 'profile'])
+const emit = defineEmits(['chat', 'profile', 'actions'])
 
 const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 const avatarFailed = ref(false)

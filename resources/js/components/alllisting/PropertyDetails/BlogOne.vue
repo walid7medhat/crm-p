@@ -785,271 +785,26 @@
                   
                   <div class="dropdown-container" :class="{ expanded: showActionsDropdown }">
                     <div class="dropdown-menu" :class="{ show: showActionsDropdown }">
-                        <button 
-                          v-if="canApproveListings && !property.approved && property.status !== 'converted' && property.status !== 'rented'"
-                          class="dropdown-item success"
-                          @click="approveListing"
-                        >
-                          <i class="ri-checkbox-circle-line"></i>
-                          Approve Listing
-                        </button>
-                        
-                        <button 
-                          v-if="canApproveListings && property.approved"
-                          class="dropdown-item warning"
-                          @click="openRejectFromDetailsModal"
-                        >
-                          <i class="ri-close-circle-line"></i>
-                          Remove Approval / Reject
-                        </button>
-                          <!-- Create Offer -->
-                              <button   v-if="canGenerateOffer"
-                                class="dropdown-item"
-                                @click="generatePDF"
-                              >
-                                <i class="ri-file-pdf-line"></i>
-                                Create Offer
-                              </button>
-                              <button  v-if="canShowOffers"
-                                  class="dropdown-item"
-                                  @click="showOfferHistory"
-                                >
-                                  <i class="ri-history-line"></i>
-                                  View Offer History
-                                </button>
-                                <button v-if="canDeleteProperty" class="dropdown-item" @click="confirmDeleteProperty">
-                                  <i class="ri-delete-bin-line"></i>
-                                  Delete Property
-                                </button> 
-                              <!-- Edit Property -->
-                              <button 
-                                v-if="canEditProperty" 
-                                class="dropdown-item"
-                                @click="editProperty"
-                              >
-                                <i class="ri-edit-line"></i>
-                                Edit Property
-                              </button>
-                    
-                              <!-- Active/Inactive -->
-                              <button 
-                                v-if="canEditProperty"
-                                class="dropdown-item"
-                                @click="toggleActive"
-                              >
-                                <i class="ri-toggle-line" v-if="property.is_active"></i>
-                                <i class="ri-toggle-fill" v-else></i>
-                                {{ property.is_active ? 'Set Inactive' : 'Set Active' }}
-                              </button>
-                    
-                              <!-- Assign to Agent -->
-                              <button 
-                                v-if="canAssignAgent && property.status != 'converted' && property.status != 'rented'"
-                                class="dropdown-item"
-                                @click="openAssignAgentModal"
-                              >
-                                <i class="ri-user-shared-line"></i>
-                                Assign to Agent
-                              </button>
-
-                              <!-- Chat with Agent -->
-                              <button
-                                v-if="canUsePropertyChat && property?.agent"
-                                class="dropdown-item"
-                                @click="handleChatWithAgentClick"
-                              >
-                                <i class="ri-chat-3-fill"></i>
-                                Chat with Agent
-                              </button>
-                    
-                              <!-- Mark as Converted (Sold Out) -->
-                              <button 
-                                v-if="canMarkAsConverted && property.status !== 'converted' && property.listing_status === 'sale'"
-                                class="dropdown-item success"
-                                @click="openSoldOutModal"
-                              >
-                                <i class="ri-checkbox-circle-line"></i>
-                                Mark as Sold Out
-                              </button>
-                    
-                              <!-- Revert from Sold Out -->
-                              <button 
-                                v-if="canMarkAsConverted && property.status === 'converted' && property.listing_status === 'sale'"
-                                class="dropdown-item warning"
-                                @click="revertFromConverted"
-                              >
-                                <i class="ri-arrow-go-back-line"></i>
-                                Revert from Sold Out
-                              </button>
-                              
-                              <!-- Mark as Rented - only for RENT -->
-                            <button 
-                                v-if="canMarkAsConverted && property.status !== 'rented' && property.listing_status === 'rent'"
-                                class="dropdown-item success"
-                                @click="openRentedModal"
-                            >
-                                <i class="ri-home-gear-line"></i>
-                                Mark as Rented
-                            </button>
-                            
-                            <!-- Revert from Rented -->
-                            <button 
-                                v-if="canMarkAsConverted && property.status === 'rented' && property.listing_status === 'rent'"
-                                class="dropdown-item warning"
-                                @click="revertFromRented"
-                            >
-                                <i class="ri-arrow-go-back-line"></i>
-                                Revert from Rented
-                            </button>
-                              <!-- Viewing -->
-            
-                    <div v-if="!isPropertyOwner && property?.completion_status=='Completed'" class="dropdown-item-btn">
-                          <div v-if="requestStatus?.viewing_status === 'approved'" class="dropdown-item approved-info viewing">
-                            <div>
-                              <i class="ri-checkbox-circle-line text-success"></i>
-                              <span>Viewing Approved</span>
-                            </div>
-                            <div>
-                              <small v-if="requestStatus?.viewing_details" class="request-time viewing">
-                                {{ formatDate(requestStatus.viewing_details.date) }} at {{ formatTime(requestStatus.viewing_details.time) }}
-                              </small>
-                            </div>
-                          </div>
-                        
-                          <div v-else-if="requestStatus?.viewing_status === 'in_progress'" class="dropdown-item approved-info viewing" style="width:100%">
-                              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                                <div>
-                                  <div>
-                                    <i class="ri-checkbox-circle-line text-success"></i>
-                                    <span>Viewing In Progress</span>
-                                  </div>
-                                  <div>
-                                    <small v-if="requestStatus?.viewing_details" class="request-time viewing">
-                                      {{ formatDate(requestStatus.viewing_details.date) }} at {{ formatTime(requestStatus.viewing_details.time) }}
-                                    </small>
-                                  </div>
-                                </div>
-                                <div>
-                                  <button
-                                    class="btn-cancel-small"
-                                            @click="handleCancelViewingClick($event)"
-
-                                    :disabled="cancellingSpecificRequest"
-                                    style="background: #dc3545; border: none; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                                  >
-                                    <i class="ri-close-line" style="color: white; font-size: 12px;"></i>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          <div v-else-if="requestStatus?.viewing_status === 'pending'" class="dropdown-item pending-info">
-                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                              <div style="display: flex; align-items: center; gap: 8px; flex-direction:column">
-                                <div  style="display: flex; gap: 8px;">
-                                  <i class="ri-time-line text-warning"></i>
-                                  <span class="text-warning">Viewing Pending</span>
-                                </div>
-                                <small v-if="requestStatus?.viewing_details" class="request-time viewing">
-                                  {{ formatDate(requestStatus.viewing_details.date) }} {{ formatTime(requestStatus.viewing_details.time) }}
-                                </small>
-                              </div>
-                              <button
-                                class="btn-cancel-small"
-                                @click.stop="cancelRequest('viewing')"
-                                :disabled="cancellingRequest"
-                                style="background: #dc3545; border: none; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                              >
-                                <i class="ri-close-line" style="color: white; font-size: 12px;"></i>
-                              </button>
-                            </div>
-                          </div>
-                        
-                          <button
-                            v-else
-                            class="dropdown-item"
-                            @click.stop="openViewingModal"
-                            :disabled="loadingRequest || cancellingRequest"
-                            style="display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;"
-                          >
-                            <i class="ri-calendar-line"></i>
-                            <span>Request Viewing</span>
-                          </button>
-                        </div>
-
-                                  <!-- Unit Number Request -->
-            
-                     <div v-if="!isPropertyOwner" class="dropdown-item-btn">
-                        <div v-if="requestStatus?.unit_number_status === 'approved'" class="dropdown-item approved-info">
-                          <i class="ri-checkbox-circle-line text-success"></i>
-                          <span>Unit Number Approved</span>
-                        </div>
-                        
-                        <div v-else-if="requestStatus?.unit_number_status === 'pending'" class="dropdown-item pending-info">
-                          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                              <i class="ri-time-line text-warning"></i>
-                              <span class="text-warning">Unit Number Pending</span>
-                            </div>
-                            <button 
-                              class="btn-cancel-small" 
-                              @click.stop="cancelRequest('unit_number')"
-                              :disabled="cancellingRequest"
-                              style="background: #dc3545; border: none; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                            >
-                              <i class="ri-close-line" style="color: white; font-size: 12px;"></i>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <button 
-                          v-else
-                          class="dropdown-item"
-                          @click.stop="requestUnitNumber" 
-                          :disabled="loadingRequest || cancellingRequest"
-                          style="display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;"
-                        >
-                          <i class="ri-home-4-line"></i>
-                          <span v-if="loadingRequest">Sending...</span>
-                          <span v-else>Request Unit Number</span>
-                        </button>
-                      </div>
-            
-                      <!-- Owner Info Request -->
-                      <div v-if="!isPropertyOwner" class="dropdown-item-btn">
-                        <div v-if="requestStatus?.owner_info_status === 'approved'" class="dropdown-item approved-info">
-                          <i class="ri-checkbox-circle-line text-success"></i>
-                          <span>Owner Info Approved</span>
-                        </div>
-                        
-                        <div v-else-if="requestStatus?.owner_info_status === 'pending'" class="dropdown-item pending-info">
-                          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                              <i class="ri-time-line text-warning"></i>
-                              <span class="text-warning">Owner Info Pending</span>
-                            </div>
-                            <button 
-                              class="btn-cancel-small" 
-                              @click.stop="cancelRequest('owner_data')"
-                              :disabled="cancellingRequest"
-                              style="background: #dc3545; border: none; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer;"
-                            >
-                              <i class="ri-close-line" style="color: white; font-size: 12px;"></i>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <button 
-                          v-else
-                          class="dropdown-item"
-                          @click.stop="requestOwnerInfo" 
-                          :disabled="loadingRequest || cancellingRequest"
-                          style="display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;"
-                        >
-                          <i class="ri-user-search-line"></i>
-                          <span v-if="loadingRequest">Sending...</span>
-                          <span v-else>Request Owner Info</span>
-                        </button>
-                      </div>
+                      <PropertyActionsMenuContent
+                        variant="dropdown"
+                        :property="property"
+                        :request-status="requestStatus"
+                        :can-approve-listings="canApproveListings"
+                        :can-generate-offer="canGenerateOffer"
+                        :can-show-offers="canShowOffers"
+                        :can-delete-property="canDeleteProperty"
+                        :can-edit-property="canEditProperty"
+                        :can-assign-agent="canAssignAgent"
+                        :can-use-property-chat="canUsePropertyChat"
+                        :can-mark-as-converted="canMarkAsConverted"
+                        :is-property-owner="isPropertyOwner"
+                        :loading-request="loadingRequest"
+                        :cancelling-request="cancellingRequest"
+                        :cancelling-specific-request="cancellingSpecificRequest"
+                        :format-date="formatDate"
+                        :format-time="formatTime"
+                        v-on="propertyMenuHandlers"
+                      />
                     </div>
                   </div>
                 </div>
@@ -2199,9 +1954,39 @@
         v-if="isMobileViewport && property?.agent && !onlyShow"
         :agent="property.agent"
         :can-chat="canUsePropertyChat"
+        :show-actions="!onlyShow"
         @chat="handleChatWithAgentClick"
         @profile="goToAgentDetails(property.agent.id)"
+        @actions="openMobilePropertyActions"
       />
+    </Teleport>
+
+    <Teleport to="body">
+      <MobilePropertyActionsSheet
+        v-if="isMobileViewport && mobilePropertyActionsOpen && property && !onlyShow"
+        @close="closeMobilePropertyActions"
+      >
+        <PropertyActionsMenuContent
+          variant="sheet"
+          :property="property"
+          :request-status="requestStatus"
+          :can-approve-listings="canApproveListings"
+          :can-generate-offer="canGenerateOffer"
+          :can-show-offers="canShowOffers"
+          :can-delete-property="canDeleteProperty"
+          :can-edit-property="canEditProperty"
+          :can-assign-agent="canAssignAgent"
+          :can-use-property-chat="canUsePropertyChat"
+          :can-mark-as-converted="canMarkAsConverted"
+          :is-property-owner="isPropertyOwner"
+          :loading-request="loadingRequest"
+          :cancelling-request="cancellingRequest"
+          :cancelling-specific-request="cancellingSpecificRequest"
+          :format-date="formatDate"
+          :format-time="formatTime"
+          v-on="propertyMenuHandlers"
+        />
+      </MobilePropertyActionsSheet>
     </Teleport>
 </template>
 
@@ -2210,6 +1995,8 @@ import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextT
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.vue';
 import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
+import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActionsSheet.vue';
+import PropertyActionsMenuContent from '@/components/listings/PropertyActionsMenuContent.vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
@@ -2231,6 +2018,8 @@ export default {
     PaymentDetailsSection,
     MobilePropertyGallery,
     MobilePropertyAgentBar,
+    MobilePropertyActionsSheet,
+    PropertyActionsMenuContent,
   },
   data() {
     return {};
@@ -3189,6 +2978,26 @@ const closeActionsDropdown = () => {
   const card = document.querySelector('.agent-sidebar-card');
   if (card) {
     card.classList.remove('expanding');
+  }
+};
+
+const mobilePropertyActionsOpen = ref(false);
+
+const openMobilePropertyActions = () => {
+  mobilePropertyActionsOpen.value = true;
+  document.body.classList.add('mobile-listing-sheet-open');
+};
+
+const closeMobilePropertyActions = () => {
+  mobilePropertyActionsOpen.value = false;
+  document.body.classList.remove('mobile-listing-sheet-open');
+};
+
+const runPropertyMenuAction = (action) => {
+  closeMobilePropertyActions();
+  closeActionsDropdown();
+  if (typeof action === 'function') {
+    action();
   }
 };
 
@@ -6262,6 +6071,7 @@ const windowWidth = ref(window.innerWidth);
         cancelAnimationFrame(propertySidebarSyncRaf);
       }
       document.body.classList.remove('ps-mobile-agent-bar-open');
+      document.body.classList.remove('mobile-listing-sheet-open');
     });
 
     watch(loading, (isLoading) => {
@@ -6452,6 +6262,27 @@ const openDriveLink = () => {
   window.open(property.value.drive_link, '_blank', 'noopener,noreferrer');
 }
 
+const propertyMenuHandlers = {
+  'approve-listing': () => runPropertyMenuAction(approveListing),
+  'reject-listing': () => runPropertyMenuAction(openRejectFromDetailsModal),
+  'create-offer': () => runPropertyMenuAction(generatePDF),
+  'view-offers': () => runPropertyMenuAction(showOfferHistory),
+  'delete-property': () => runPropertyMenuAction(confirmDeleteProperty),
+  'edit-property': () => runPropertyMenuAction(editProperty),
+  'toggle-active': () => runPropertyMenuAction(toggleActive),
+  'assign-agent': () => runPropertyMenuAction(openAssignAgentModal),
+  'chat-agent': () => runPropertyMenuAction(openChatWithAgent),
+  'mark-sold': () => runPropertyMenuAction(openSoldOutModal),
+  'revert-sold': () => runPropertyMenuAction(revertFromConverted),
+  'mark-rented': () => runPropertyMenuAction(openRentedModal),
+  'revert-rented': () => runPropertyMenuAction(revertFromRented),
+  'cancel-viewing': (event) => runPropertyMenuAction(() => handleCancelViewingClick(event)),
+  'request-viewing': () => runPropertyMenuAction(openViewingModal),
+  'cancel-request': (type) => runPropertyMenuAction(() => cancelRequest(type)),
+  'request-unit-number': () => runPropertyMenuAction(requestUnitNumber),
+  'request-owner-info': () => runPropertyMenuAction(requestOwnerInfo),
+};
+
     return {
       propertySidebarColRef,
       propertySidebarStickyRef,
@@ -6570,6 +6401,10 @@ const openDriveLink = () => {
         canMarkAsConverted,
         toggleActionsDropdown,
         closeActionsDropdown,
+        mobilePropertyActionsOpen,
+        openMobilePropertyActions,
+        closeMobilePropertyActions,
+        propertyMenuHandlers,
         toggleArchive,
         toggleActive,
         openAssignAgentModal,

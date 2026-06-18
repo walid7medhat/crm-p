@@ -48,7 +48,7 @@
             :class="{ active: hasActivePriceFilter }"
             @click="openMobileChipSheet('price')"
           >
-            Price
+            {{ mobilePriceChipLabel }}
           </button>
         </div>
 
@@ -533,30 +533,81 @@
           <!-- Price -->
           <section class="bayut-filter-section">
             <h6 class="bayut-filter-section__title">Price (AED)</h6>
-            <div class="bayut-range-compact">
-              <div class="bayut-range-compact__row">
-                <span class="bayut-range-compact__key">Min</span>
-                <input
-                  type="text"
-                  class="bayut-range-compact__input"
-                  inputmode="numeric"
-                  :value="formatThousandsDisplay(priceFrom)"
-                  @input="onPriceFromInput"
-                  @blur="handlePriceChange"
-                  placeholder="0"
-                />
+            <div class="bayut-price-mobile">
+              <div class="bayut-price-mobile__summary">
+                <span class="bayut-price-mobile__summary-label">Selected range</span>
+                <strong class="bayut-price-mobile__summary-value">{{ mobilePriceSummary }}</strong>
               </div>
-              <div class="bayut-range-compact__row">
-                <span class="bayut-range-compact__key">Max</span>
-                <input
-                  type="text"
-                  class="bayut-range-compact__input"
-                  inputmode="numeric"
-                  :value="formatThousandsDisplay(priceTo)"
-                  @input="onPriceToInput"
-                  @blur="handlePriceChange"
-                  placeholder="Any"
-                />
+              <p class="bayut-sheet-label">Popular ranges</p>
+              <div class="bayut-pill-grid bayut-pill-grid--price">
+                <button
+                  v-for="preset in mobilePricePresets"
+                  :key="'mf-price-' + preset.label"
+                  type="button"
+                  class="bayut-pill bayut-pill--price"
+                  :class="{ active: isMobilePricePresetActive(preset) }"
+                  @click="applyMobilePricePreset(preset)"
+                >{{ preset.label }}</button>
+              </div>
+              <p class="bayut-sheet-label">Or enter amount</p>
+              <div class="bayut-price-mobile__fields">
+                <div class="bayut-price-mobile__field">
+                  <label class="bayut-price-mobile__field-label">Min</label>
+                  <div class="bayut-price-mobile__input-wrap">
+                    <span class="bayut-price-mobile__currency">AED</span>
+                    <input
+                      type="text"
+                      class="bayut-price-mobile__input"
+                      inputmode="numeric"
+                      :value="formatThousandsDisplay(priceFrom)"
+                      @input="onPriceFromInput"
+                      @blur="handlePriceChange"
+                      placeholder="Any"
+                    />
+                  </div>
+                </div>
+                <div class="bayut-price-mobile__field">
+                  <label class="bayut-price-mobile__field-label">Max</label>
+                  <div class="bayut-price-mobile__input-wrap">
+                    <span class="bayut-price-mobile__currency">AED</span>
+                    <input
+                      type="text"
+                      class="bayut-price-mobile__input"
+                      inputmode="numeric"
+                      :value="formatThousandsDisplay(priceTo)"
+                      @input="onPriceToInput"
+                      @blur="handlePriceChange"
+                      placeholder="Any"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="bayut-price-mobile__slider-wrap">
+                <div class="bayut-price-mobile__slider-labels">
+                  <span>Any</span>
+                  <span>{{ formatMobilePriceShort(mobilePriceMax) }}+</span>
+                </div>
+                <div class="bayut-price-mobile__track">
+                  <div class="bayut-price-mobile__progress" :style="mobilePriceProgressStyle"></div>
+                  <input
+                    type="range"
+                    class="bayut-price-mobile__range"
+                    min="0"
+                    :max="mobilePriceMax"
+                    step="10000"
+                    :value="Math.min(priceFrom, mobilePriceMax)"
+                    @input="onMobilePriceSliderFrom"
+                  />
+                  <input
+                    type="range"
+                    class="bayut-price-mobile__range"
+                    min="0"
+                    :max="mobilePriceMax"
+                    step="10000"
+                    :value="Math.min(priceTo, mobilePriceMax)"
+                    @input="onMobilePriceSliderTo"
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -811,28 +862,81 @@
               </div>
             </template>
             <template v-else-if="mobileChipSheet === 'price'">
-              <div class="bayut-range-compact">
-                <div class="bayut-range-compact__row">
-                  <span class="bayut-range-compact__key">Min</span>
-                  <input
-                    type="text"
-                    class="bayut-range-compact__input"
-                    inputmode="numeric"
-                    :value="formatThousandsDisplay(priceFrom)"
-                    @input="onPriceFromInput"
-                    placeholder="0"
-                  />
+              <div class="bayut-price-mobile">
+                <div class="bayut-price-mobile__summary">
+                  <span class="bayut-price-mobile__summary-label">Selected range</span>
+                  <strong class="bayut-price-mobile__summary-value">{{ mobilePriceSummary }}</strong>
                 </div>
-                <div class="bayut-range-compact__row">
-                  <span class="bayut-range-compact__key">Max</span>
-                  <input
-                    type="text"
-                    class="bayut-range-compact__input"
-                    inputmode="numeric"
-                    :value="formatThousandsDisplay(priceTo)"
-                    @input="onPriceToInput"
-                    placeholder="Any"
-                  />
+                <p class="bayut-sheet-label">Popular ranges</p>
+                <div class="bayut-pill-grid bayut-pill-grid--price">
+                  <button
+                    v-for="preset in mobilePricePresets"
+                    :key="'chip-price-' + preset.label"
+                    type="button"
+                    class="bayut-pill bayut-pill--price"
+                    :class="{ active: isMobilePricePresetActive(preset) }"
+                    @click="applyMobilePricePreset(preset)"
+                  >{{ preset.label }}</button>
+                </div>
+                <p class="bayut-sheet-label">Or enter amount</p>
+                <div class="bayut-price-mobile__fields">
+                  <div class="bayut-price-mobile__field">
+                    <label class="bayut-price-mobile__field-label">Min</label>
+                    <div class="bayut-price-mobile__input-wrap">
+                      <span class="bayut-price-mobile__currency">AED</span>
+                      <input
+                        type="text"
+                        class="bayut-price-mobile__input"
+                        inputmode="numeric"
+                        :value="formatThousandsDisplay(priceFrom)"
+                        @input="onPriceFromInput"
+                        @blur="handlePriceChange"
+                        placeholder="Any"
+                      />
+                    </div>
+                  </div>
+                  <div class="bayut-price-mobile__field">
+                    <label class="bayut-price-mobile__field-label">Max</label>
+                    <div class="bayut-price-mobile__input-wrap">
+                      <span class="bayut-price-mobile__currency">AED</span>
+                      <input
+                        type="text"
+                        class="bayut-price-mobile__input"
+                        inputmode="numeric"
+                        :value="formatThousandsDisplay(priceTo)"
+                        @input="onPriceToInput"
+                        @blur="handlePriceChange"
+                        placeholder="Any"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="bayut-price-mobile__slider-wrap">
+                  <div class="bayut-price-mobile__slider-labels">
+                    <span>Any</span>
+                    <span>{{ formatMobilePriceShort(mobilePriceMax) }}+</span>
+                  </div>
+                  <div class="bayut-price-mobile__track">
+                    <div class="bayut-price-mobile__progress" :style="mobilePriceProgressStyle"></div>
+                    <input
+                      type="range"
+                      class="bayut-price-mobile__range"
+                      min="0"
+                      :max="mobilePriceMax"
+                      step="10000"
+                      :value="Math.min(priceFrom, mobilePriceMax)"
+                      @input="onMobilePriceSliderFrom"
+                    />
+                    <input
+                      type="range"
+                      class="bayut-price-mobile__range"
+                      min="0"
+                      :max="mobilePriceMax"
+                      step="10000"
+                      :value="Math.min(priceTo, mobilePriceMax)"
+                      @input="onMobilePriceSliderTo"
+                    />
+                  </div>
                 </div>
               </div>
             </template>
@@ -1236,6 +1340,99 @@ const propertyTypeButtonLabel = computed(() => {
       if ((priceFrom.value || 0) <= 0 && (priceTo.value || 10000000) >= 10000000) return "Any";
       return `${formatThousandsDisplay(priceFrom.value) || 0} - ${formatThousandsDisplay(priceTo.value) || "Any"}`;
     });
+
+    const mobilePriceMax = computed(() => (
+      selectedSaleRent.value === 'Rent' ? 500000 : 10000000
+    ));
+
+    const formatMobilePriceShort = (amount) => {
+      const parsed = Number(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) return '0';
+      if (parsed >= 1000000) {
+        const millions = parsed / 1000000;
+        return Number.isInteger(millions) ? `${millions}M` : `${millions.toFixed(1)}M`;
+      }
+      if (parsed >= 1000) return `${Math.round(parsed / 1000)}K`;
+      return formatThousandsDisplay(parsed);
+    };
+
+    const mobilePricePresets = computed(() => {
+      if (selectedSaleRent.value === 'Rent') {
+        return [
+          { label: 'Any', min: 0, max: 500000 },
+          { label: 'Up to 50K', min: 0, max: 50000 },
+          { label: '50K – 100K', min: 50000, max: 100000 },
+          { label: '100K – 150K', min: 100000, max: 150000 },
+          { label: '150K+', min: 150000, max: 500000 },
+        ];
+      }
+      return [
+        { label: 'Any', min: 0, max: 10000000 },
+        { label: 'Up to 500K', min: 0, max: 500000 },
+        { label: '500K – 1M', min: 500000, max: 1000000 },
+        { label: '1M – 2M', min: 1000000, max: 2000000 },
+        { label: '2M – 5M', min: 2000000, max: 5000000 },
+        { label: '5M+', min: 5000000, max: 10000000 },
+      ];
+    });
+
+    const mobilePriceSummary = computed(() => {
+      const max = mobilePriceMax.value;
+      const from = priceFrom.value || 0;
+      const to = priceTo.value ?? max;
+      const isAny = from <= 0 && (to >= max || to >= 10000000);
+      if (isAny) return 'Any price';
+      const displayTo = to > max ? max : to;
+      const minLabel = from > 0 ? `AED ${formatMobilePriceShort(from)}` : 'Any';
+      const maxLabel = displayTo < max ? `AED ${formatMobilePriceShort(displayTo)}` : 'Any';
+      return `${minLabel} — ${maxLabel}`;
+    });
+
+    const mobilePriceChipLabel = computed(() => {
+      const max = mobilePriceMax.value;
+      const from = priceFrom.value || 0;
+      const to = priceTo.value ?? max;
+      const isAny = from <= 0 && (to >= max || to >= 10000000);
+      if (isAny) return 'Price';
+      const displayTo = to > max ? max : to;
+      if (from > 0 && displayTo < max) {
+        return `${formatMobilePriceShort(from)} – ${formatMobilePriceShort(displayTo)}`;
+      }
+      if (from > 0) return `${formatMobilePriceShort(from)}+`;
+      if (displayTo < max) return `Up to ${formatMobilePriceShort(displayTo)}`;
+      return 'Price';
+    });
+
+    const mobilePriceProgressStyle = computed(() => {
+      const max = mobilePriceMax.value || 1;
+      const from = Math.min(priceFrom.value || 0, max);
+      const to = Math.min(priceTo.value ?? max, max);
+      const fromPct = (from / max) * 100;
+      const toPct = (to / max) * 100;
+      return {
+        left: `${Math.min(100, Math.max(0, fromPct))}%`,
+        right: `${Math.min(100, Math.max(0, 100 - toPct))}%`,
+      };
+    });
+
+    const isMobilePricePresetActive = (preset) => (
+      priceFrom.value === preset.min && priceTo.value === preset.max
+    );
+
+    const applyMobilePricePreset = (preset) => {
+      priceFrom.value = preset.min;
+      priceTo.value = preset.max;
+    };
+
+    const onMobilePriceSliderFrom = (event) => {
+      priceFrom.value = parseInt(event.target.value, 10) || 0;
+      updatePriceFrom();
+    };
+
+    const onMobilePriceSliderTo = (event) => {
+      priceTo.value = parseInt(event.target.value, 10) || 0;
+      updatePriceTo();
+    };
     const mobileSizeLabel = computed(() => {
       if ((sizeFrom.value || 0) <= 0 && (sizeTo.value || 10000) >= 10000) return "Any";
       return `${formatThousandsDisplay(sizeFrom.value) || 0} - ${formatThousandsDisplay(sizeTo.value) || "Any"}`;
@@ -1564,10 +1761,28 @@ const featuresButtonLabel = computed(() => {
       return `Type (${selectedPropertyTypes.value.length})`;
     });
 
+    const formatSelectedList = (items) => {
+      if (!items.length) return null;
+      const getNumericValue = (val) => {
+        if (val === 'Studio') return 0;
+        if (String(val).endsWith('+')) return parseFloat(val) + 0.5;
+        return parseFloat(val);
+      };
+      return [...items]
+        .sort((a, b) => getNumericValue(a) - getNumericValue(b))
+        .join(', ');
+    };
+
     const mobileBedsChipLabel = computed(() => {
       const parts = [];
-      if (selectedBeds.value.length) parts.push(`${selectedBeds.value.length} bed`);
-      if (selectedBaths.value.length) parts.push(`${selectedBaths.value.length} bath`);
+      const bedsText = formatSelectedList(selectedBeds.value);
+      const bathsText = formatSelectedList(selectedBaths.value);
+      if (bedsText) {
+        parts.push(`${bedsText} bed${selectedBeds.value.length > 1 ? 's' : ''}`);
+      }
+      if (bathsText) {
+        parts.push(`${bathsText} bath${selectedBaths.value.length > 1 ? 's' : ''}`);
+      }
       return parts.length ? parts.join(' · ') : 'Beds';
     });
 
@@ -2306,6 +2521,16 @@ fetchProjects()
       mobilePropertyTypeChipLabel,
       mobileBedsChipLabel,
       hasActivePriceFilter,
+      mobilePriceChipLabel,
+      mobilePriceSummary,
+      mobilePricePresets,
+      mobilePriceMax,
+      mobilePriceProgressStyle,
+      formatMobilePriceShort,
+      isMobilePricePresetActive,
+      applyMobilePricePreset,
+      onMobilePriceSliderFrom,
+      onMobilePriceSliderTo,
       mobileSearchDisplay,
       filteredMobileAreas,
       mobileChipSheetTitle,
@@ -2362,6 +2587,7 @@ fetchProjects()
       validateSizeTo,
       formatNumber,
       formatThousandsDisplay,
+      Math,
       handleFilterChange,
       emitStatusChange,
       setQuickSort,

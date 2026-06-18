@@ -486,7 +486,7 @@
   }
 
   .bayut-sheet__body {
-    flex: 1;
+    flex: 0 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 16px;
@@ -1119,6 +1119,206 @@
   .bayut-range-compact__input::placeholder {
     color: #cbd5e1;
     font-weight: 500;
+  }
+
+  /* Mobile price filter — presets, compact AED inputs, slider */
+  .bayut-price-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bayut-price-mobile__summary {
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f8f4fc 0%, #f3eef8 100%);
+    border: 1px solid rgba(115, 62, 135, 0.14);
+  }
+
+  .bayut-price-mobile__summary-label {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
+  .bayut-price-mobile__summary-value {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    color: #5b3d8f;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .bayut-price-mobile .bayut-sheet-label {
+    margin: 0;
+    padding: 0;
+  }
+
+  .bayut-pill-grid--price {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .bayut-pill--price {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .bayut-price-mobile__fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .bayut-price-mobile__field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 10px;
+    min-width: 0;
+  }
+
+  .bayut-price-mobile__field + .bayut-price-mobile__field {
+    border-top: none;
+    border-left: 1px solid #f1f5f9;
+  }
+
+  .bayut-price-mobile__field-label {
+    flex: 0 0 26px;
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .bayut-price-mobile__input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .bayut-price-mobile__input-wrap:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .bayut-price-mobile__currency {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 800;
+    color: #733e87;
+  }
+
+  .bayut-price-mobile__input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e1b2e;
+    outline: none;
+    text-align: right;
+  }
+
+  .bayut-price-mobile__input::placeholder {
+    color: #cbd5e1;
+    font-weight: 500;
+  }
+
+  .bayut-price-mobile__slider-wrap {
+    padding: 2px 2px 0;
+  }
+
+  .bayut-price-mobile__slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+
+  .bayut-price-mobile__track {
+    position: relative;
+    height: 4px;
+    margin: 12px 0 4px;
+    border-radius: 999px;
+    background: #e8edf2;
+  }
+
+  .bayut-price-mobile__progress {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #733e87, #5b3d8f);
+    z-index: 1;
+  }
+
+  .bayut-price-mobile__range {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 28px;
+    margin: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    z-index: 2;
+  }
+
+  .bayut-price-mobile__range::-webkit-slider-thumb {
+    pointer-events: all;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #733e87;
+    box-shadow: 0 2px 8px rgba(91, 61, 143, 0.28);
+    cursor: pointer;
+  }
+
+  .bayut-price-mobile__range::-moz-range-thumb {
+    pointer-events: all;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #733e87;
+    box-shadow: 0 2px 8px rgba(91, 61, 143, 0.28);
+    cursor: pointer;
   }
 
   .bayut-select-wrap :deep(.vs__dropdown-toggle) {

@@ -1813,6 +1813,37 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
     gap: 10px;
   }
 
+  .dh-mob-top__lead {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .dh-mob-menu {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    margin-top: 2px;
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .dh-mob-menu:active {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
   .dh-mob-greeting {
     min-width: 0;
     flex: 1 1 auto;

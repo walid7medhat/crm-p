@@ -1165,6 +1165,28 @@
     min-width: 0;
   }
 
+  .adx-header__menu {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .adx-header__menu:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
   .adx-header__logo {
     width: 40px;
     height: 40px;
@@ -1757,6 +1779,16 @@
   overflow: visible;
   position: relative;
   z-index: 6;
+}
+
+.ap-dashboard--uni .adx-header__menu {
+  border-color: var(--uni-border);
+  background: var(--uni-card-inner);
+  color: var(--uni-purple-mid);
+}
+
+.ap-dashboard--uni .adx-header__menu:active {
+  background: #ede9f5;
 }
 
 .adx-uni-body {

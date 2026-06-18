@@ -5,6 +5,15 @@
   >
     <header class="adx-header">
       <div class="adx-header__brand">
+        <button
+          v-if="isMobileViewport"
+          type="button"
+          class="adx-header__menu"
+          aria-label="Open navigation menu"
+          @click="toggleMobileMenu"
+        >
+          <iconify-icon icon="heroicons:bars-3-solid" width="22" height="22" />
+        </button>
         <div class="adx-header__logo">
           <iconify-icon icon="lucide:layout-dashboard" width="20" height="20" />
         </div>
@@ -445,7 +454,7 @@ const CHART_GRID = '#e2e8f0'
 const FUNNEL_COLORS = [PURPLE, '#8b6fd4', PURPLE_DARK, GOLD, '#a78bfa']
 const SOURCE_COLORS = [PURPLE, PURPLE_DARK, '#22c55e', GOLD, '#a78bfa', SLATE]
 
-const { isMobileViewport } = useMobileNavigation()
+const { isMobileViewport, toggleMobileMenu } = useMobileNavigation()
 const { canViewModule, scopeLabel } = useDashboardPermissions()
 
 const showLeads = computed(() => canViewModule('crm'))
