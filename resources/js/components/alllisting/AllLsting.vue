@@ -636,6 +636,65 @@ export default {
       'completion_status', 'occupancy_status', 'agent_id', 'agent_name','additional_features'
     ];
 
+    const LISTING_FILTERS_STORAGE_KEY = 'listingSearchFilters';
+
+    const hasListingQueryParams = (query) =>
+      LISTING_QUERY_KEYS.some((key) => {
+        const value = query[key];
+        return value !== undefined && value !== null && value !== '';
+      });
+
+    const saveListingFiltersToStorage = (filters) => {
+      if (!filters) return;
+      try {
+        const payload = {
+          saleRent: filters.saleRent || 'All',
+          area: Array.isArray(filters.area)
+            ? filters.area.map((area) => ({
+              id: area.id,
+              name: area.name || '',
+              subtitle: area.subtitle || '',
+            }))
+            : [],
+          project: filters.project?.id ? { id: filters.project.id } : null,
+          propertyType: filters.propertyType?.id ? { id: filters.propertyType.id } : null,
+          propertyTypes: Array.isArray(filters.propertyTypes)
+            ? filters.propertyTypes.map((type) => ({ id: type.id }))
+            : [],
+          beds: filters.beds || '',
+          bedsList: filters.bedsList || [],
+          baths: filters.baths || '',
+          bathsList: filters.bathsList || [],
+          priceFrom: filters.priceFrom ?? 0,
+          priceTo: filters.priceTo ?? 10000000,
+          sizeFrom: filters.sizeFrom ?? 0,
+          sizeTo: filters.sizeTo ?? 10000,
+          sort: filters.sort || 'created_at_desc',
+          referenceNumber: filters.referenceNumber || '',
+          completionStatus: filters.completionStatus || null,
+          occupancyStatus: filters.occupancyStatus || null,
+          agent: filters.agent?.id ? { id: filters.agent.id } : null,
+          selectedFeatures: filters.selectedFeatures || {},
+        };
+        localStorage.setItem(LISTING_FILTERS_STORAGE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Failed to save listing filters:', error);
+      }
+    };
+
+    const loadListingFiltersFromStorage = () => {
+      try {
+        const raw = localStorage.getItem(LISTING_FILTERS_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch (error) {
+        console.warn('Failed to load listing filters:', error);
+        return null;
+      }
+    };
+
     const pruneEmptyQueryValues = (obj) => {
       const out = {};
       Object.keys(obj).forEach((k) => {
@@ -665,10 +724,10 @@ export default {
         baths: filters.baths || undefined,
         beds_list: Array.isArray(filters.bedsList) && filters.bedsList.length ? filters.bedsList.join(',') : undefined,
         baths_list: Array.isArray(filters.bathsList) && filters.bathsList.length ? filters.bathsList.join(',') : undefined,
-        price_from: filters.priceFrom,
-        price_to: filters.priceTo,
-        size_from: filters.sizeFrom,
-        size_to: filters.sizeTo,
+        price_from: filters.priceFrom > 0 ? filters.priceFrom : undefined,
+        price_to: filters.priceTo < 10000000 ? filters.priceTo : undefined,
+        size_from: filters.sizeFrom > 0 ? filters.sizeFrom : undefined,
+        size_to: filters.sizeTo < 10000 ? filters.sizeTo : undefined,
         sort: filters.sort || undefined,
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
@@ -773,8 +832,9 @@ const decodeFiltersFromQuery = async (query) => {
       // Fetch properties with new filters (reset to page 1)
       fetchProperties({}, 1); 
 
-      // Persist filters in URL so browser Back restores the same search state
+      // Persist filters in URL so browser Back / refresh restores the same search state
       replaceRouteWithListingFilters(filters);
+      saveListingFiltersToStorage(filters);
     };
 
     // Convert frontend filters to backend API format
@@ -951,23 +1011,39 @@ const decodeFiltersFromQuery = async (query) => {
 
     // Fetch initial properties on component mount
     onMounted(async () => {
-      await fetchUserInfo(); 
+      await fetchUserInfo();
 
-      const hasQuery = Object.keys(route.query).length > 0;
-      if (hasQuery) {
+      const restoreAndFetch = async (filters) => {
+        currentFilters.value = convertFiltersToAPI(filters);
+        initialFilters.value = filters;
+        saveListingFiltersToStorage(filters);
+        await fetchProperties({}, 1);
+      };
+
+      if (hasListingQueryParams(route.query)) {
         try {
-          // decodeFiltersFromQuery is async (loads area labels); must await or initialFilters stays a Promise
           const filters = await decodeFiltersFromQuery(route.query);
-          currentFilters.value = convertFiltersToAPI(filters);
-          initialFilters.value = filters;
-          await fetchProperties({}, 1);
+          await restoreAndFetch(filters);
         } catch (e) {
           console.error('Failed to restore listing filters from URL:', e);
           fetchProperties();
         }
-      } else {
-        fetchProperties();
+        return;
       }
+
+      const storedFilters = loadListingFiltersFromStorage();
+      if (storedFilters) {
+        try {
+          await restoreAndFetch(storedFilters);
+          replaceRouteWithListingFilters(storedFilters);
+        } catch (e) {
+          console.error('Failed to restore listing filters from storage:', e);
+          fetchProperties();
+        }
+        return;
+      }
+
+      fetchProperties();
     });
 
     return {

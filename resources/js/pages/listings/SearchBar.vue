@@ -10,7 +10,6 @@
         <div class="bayut-search-bar">
           <button type="button" class="bayut-purpose-btn" @click.stop="openMobileChipSheet('purpose')">
             {{ mobilePurposeLabel }}
-            <i class="ri-arrow-down-s-line"></i>
           </button>
           <div class="bayut-search-field" @click="openMobileSearchOverlay">
             <i class="ri-search-line bayut-search-field__icon" aria-hidden="true"></i>
@@ -30,18 +29,10 @@
           <button
             type="button"
             class="bayut-chip"
-            :class="{ active: selectedSaleRent !== 'All' }"
-            @click="openMobileChipSheet('purpose')"
-          >
-            {{ mobilePurposeChipLabel }} <i class="ri-arrow-down-s-line"></i>
-          </button>
-          <button
-            type="button"
-            class="bayut-chip"
             :class="{ active: selectedPropertyTypes.length > 0 }"
             @click="openMobileChipSheet('type')"
           >
-            {{ mobilePropertyTypeChipLabel }} <i class="ri-arrow-down-s-line"></i>
+            {{ mobilePropertyTypeChipLabel }}
           </button>
           <button
             type="button"
@@ -49,7 +40,7 @@
             :class="{ active: selectedBeds.length > 0 || selectedBaths.length > 0 }"
             @click="openMobileChipSheet('beds')"
           >
-            {{ mobileBedsChipLabel }} <i class="ri-arrow-down-s-line"></i>
+            {{ mobileBedsChipLabel }}
           </button>
           <button
             type="button"
@@ -57,14 +48,14 @@
             :class="{ active: hasActivePriceFilter }"
             @click="openMobileChipSheet('price')"
           >
-            Price <i class="ri-arrow-down-s-line"></i>
+            Price
           </button>
         </div>
 
         <div class="bayut-results-header">
           <h6 class="listing-headline__title">{{ dynamicHeadline }}</h6>
           <button type="button" class="bayut-sort-btn" @click="openMobileSortSheet">
-            {{ mobileSortLabel }} <i class="ri-arrow-down-s-line"></i>
+            {{ mobileSortLabel }}
           </button>
         </div>
       </div>
@@ -86,9 +77,7 @@
           @update:modelValue="handleFilterChange"
         >
            <template #open-indicator="{ attributes }">
-              <span v-bind="attributes">
-                  <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-              </span>
+              <iconify-icon v-bind="attributes" icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
           </template>
           <template #option="option">
             <div class="location-option" :class="{ selected: isAreaSelected(option) }">
@@ -130,7 +119,6 @@
             @click.stop="toggleSaleRentDropdown"
           >
             <span>{{ saleRentButtonLabel }}</span>
-            <i class="ri-arrow-down-s-line"></i>
           </button>
           <div v-if="showSaleRentDropdown" class="listing-sale-rent-popover" @click.stop>
             <div class="listing-pop-title-sm">Purpose</div>
@@ -167,7 +155,6 @@
             @click.stop="togglePropertyTypeDropdown"
           >
             <span>{{ propertyTypeButtonLabel }}</span>
-            <i class="ri-arrow-down-s-line"></i>
           </button>
           <div v-if="showPropertyTypeDropdown" class="listing-property-type-popover" @click.stop>
             <!--<div class="listing-pop-title-sm">Property Type</div>-->
@@ -211,7 +198,6 @@
         <div class="listing-beds-wrap">
           <button type="button" class="listing-pill-btn" @click.stop="toggleBedsDropdown">
             <span>{{ bedsBathsButtonLabel }}</span>
-            <i class="ri-arrow-down-s-line"></i>
           </button>
           <div v-if="showBedsDropdown" class="listing-beds-popover" @click.stop>
             <div class="listing-pop-title-sm">Beds & Baths</div>
@@ -251,7 +237,6 @@
         <div class="listing-price-wrap">
           <button type="button" class="listing-pill-btn" @click.stop="togglePriceDropdown">
             <span>Price</span>
-            <i class="ri-arrow-down-s-line"></i>
           </button>
 
           <div v-if="showPriceDropdown" class="listing-price-popover" @click.stop>
@@ -331,9 +316,7 @@
                   @update:modelValue="handleFilterChange"
                 >
                  <template #open-indicator="{ attributes }">
-                      <span v-bind="attributes">
-                          <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                      </span>
+                      <iconify-icon v-bind="attributes" icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                   </template>
                   <template #clear-indicator="{ attributes }">
                     <span v-bind="attributes">
@@ -355,9 +338,7 @@
                   @update:modelValue="handleFilterChange"
                 >
                <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
+                    <iconify-icon v-bind="attributes" icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                 </template>
                 <template #clear-indicator="{ attributes }">
                     <span v-bind="attributes">
@@ -377,9 +358,7 @@
                   @update:modelValue="handleFilterChange"
                 >
                   <template #open-indicator="{ attributes }">
-                    <span v-bind="attributes">
-                      <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                    </span>
+                      <iconify-icon v-bind="attributes" icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
                   </template>
                   <template #clear-indicator="{ attributes }">
                     <span v-bind="attributes">
@@ -642,7 +621,11 @@
                 placeholder="Any agent"
                 class="custom-select bayut-mobile-select"
                 @update:modelValue="handleFilterChange"
-              />
+              >
+                <template #open-indicator="{ attributes }">
+                  <iconify-icon v-bind="attributes" icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                </template>
+              </v-select>
             </div>
           </section>
 
@@ -1352,14 +1335,14 @@ const propertyTypeButtonLabel = computed(() => {
       const exists = selectedAreas.some((item) => Number(item?.id) === Number(area?.id));
       if (!exists) selectedAreas.push(area);
       selectedArea.value = selectedAreas;
-      handleFilterChange();
+      handleFilterChange(true);
       closeMobileSearchOverlay();
     };
 
     const removeMobileArea = (area) => {
       const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
       selectedArea.value = selectedAreas.filter((item) => Number(item?.id) !== Number(area?.id));
-      handleFilterChange();
+      handleFilterChange(true);
     };
 
     const highlightMobileQuery = (text) => {
@@ -1401,7 +1384,7 @@ const propertyTypeButtonLabel = computed(() => {
 
     const applyMobileChipSheet = () => {
       if (mobileChipSheet.value === 'price') handlePriceChange();
-      else handleFilterChange();
+      else handleFilterChange(mobileChipSheet.value === 'purpose');
       closeMobileChipSheet();
     };
 
@@ -1575,12 +1558,6 @@ const featuresButtonLabel = computed(() => {
       return 'Buy';
     });
 
-    const mobilePurposeChipLabel = computed(() => {
-      if (selectedSaleRent.value === 'Rent') return 'Rent';
-      if (selectedSaleRent.value === 'Sale') return 'Buy';
-      return 'Buy';
-    });
-
     const mobilePropertyTypeChipLabel = computed(() => {
       if (!selectedPropertyTypes.value.length) return 'Type';
       if (selectedPropertyTypes.value.length === 1) return selectedPropertyTypes.value[0].name;
@@ -1722,45 +1699,53 @@ const featuresButtonLabel = computed(() => {
       return apiFilters;
     };
 
-    const performSearch = () => {
+    const buildCurrentFilters = () => ({
+      saleRent: selectedSaleRent.value,
+      completionStatus: selectedCompletionStatus.value,
+      occupancyStatus: selectedOccupancyStatus.value,
+      status: selectedStatus.value,
+      area: Array.isArray(selectedArea.value) ? selectedArea.value : (selectedArea.value ? [selectedArea.value] : []),
+      project: selectedProject.value,
+      propertyType: selectedPropertyTypes.value[0] || null,
+      propertyTypes: selectedPropertyTypes.value,
+      agent: selectedAgent.value,
+      beds: selectedBeds.value[0] || "",
+      bedsList: selectedBeds.value,
+      priceFrom: priceFrom.value,
+      priceTo: priceTo.value,
+      sizeFrom: sizeFrom.value,
+      sizeTo: sizeTo.value,
+      sort: selectedSort.value,
+      referenceNumber: searchReferenceNumber.value,
+      baths: selectedBaths.value[0] || "",
+      bathsList: selectedBaths.value,
+      selectedFeatures: selectedFeatures.value,
+    });
+
+    const emitCurrentFilters = () => {
+      const filters = buildCurrentFilters();
+      console.log("🔍 Auto-search with filters:", filters);
+      emit('filters-changed', filters);
+    };
+
+    const performSearch = (immediate = false) => {
       if (searchTimer.value) {
         clearTimeout(searchTimer.value);
+        searchTimer.value = null;
+      }
+
+      if (immediate) {
+        emitCurrentFilters();
+        return;
       }
 
       searchTimer.value = setTimeout(() => {
-        const filters = {
-          saleRent: selectedSaleRent.value,
-              completionStatus: selectedCompletionStatus.value,
-          occupancyStatus: selectedOccupancyStatus.value,
-          status: selectedStatus.value,
-          area: selectedArea.value,
-          project: selectedProject.value,
-          propertyType: selectedPropertyTypes.value[0] || null,
-          propertyTypes: selectedPropertyTypes.value,
-          agent: selectedAgent.value,
-          beds: selectedBeds.value[0] || "",
-          bedsList: selectedBeds.value,
-          priceFrom: priceFrom.value,
-          priceTo: priceTo.value,
-          sizeFrom: sizeFrom.value,
-          sizeTo: sizeTo.value,
-          sort: selectedSort.value,
-           referenceNumber: searchReferenceNumber.value,
-           baths: selectedBaths.value[0] || "",
-           bathsList: selectedBaths.value,
-            selectedFeatures: selectedFeatures.value,
-        };
-        
-        console.log("🔍 Auto-search with filters:", filters);
-        
-        // Emit event to parent component
-        emit('filters-changed', filters);
+        emitCurrentFilters();
       }, 500);
     };
 
-    const handleFilterChange = () => {
-       
-      performSearch();
+    const handleFilterChange = (immediate = false) => {
+      performSearch(immediate);
     };
 
     const emitStatusChange = (status) => {
@@ -1993,6 +1978,16 @@ const featuresButtonLabel = computed(() => {
 
     watch([propertyTypes, agents], () => {
       syncPropertyTypeAndAgentFromLoadedOptions();
+    });
+
+    watch(allAreas, (areas) => {
+      if (!areas.length) return;
+      const selected = Array.isArray(selectedArea.value) ? selectedArea.value : [];
+      if (!selected.length) return;
+      selectedArea.value = selected.map((area) => {
+        const found = areas.find((item) => Number(item.id) === Number(area.id));
+        return found || area;
+      });
     });
 
     const resetFilters = () => {
@@ -2308,7 +2303,6 @@ fetchProjects()
       hasActiveFilters,
       mobileActiveFilterCount,
       mobilePurposeLabel,
-      mobilePurposeChipLabel,
       mobilePropertyTypeChipLabel,
       mobileBedsChipLabel,
       hasActivePriceFilter,
@@ -3406,9 +3400,19 @@ fetchProjects()
   gap: 10px;
   font-size: 22px;
 }
- .listing-pill-btn i{
-  color: rgb(207, 219, 236);
- }
+
+.listing-pill-btn:not(.listing-filter-btn)::after {
+  font-family: remixicon !important;
+  content: "\ea4e";
+  font-size: 14px;
+  line-height: 1;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.listing-pill-btn i {
+  color: inherit;
+}
 .listing-price-wrap {
   position: relative;
 }
@@ -3955,8 +3959,13 @@ fetchProjects()
 .vs__open-indicator-icon {
   width: 16px !important;
   height: 16px !important;
-  color: rgb(207, 219, 236) !important;
+  color: #94a3b8 !important;
   display: block !important;
+}
+
+/* One chevron only — hide vue-select default SVG when a custom indicator is used */
+.search-container :deep(.vs__open-indicator svg) {
+  display: none !important;
 }
 
 :deep(.custom-clear) {
@@ -4606,17 +4615,13 @@ fetchProjects()
     border-radius: 999px;
   }
   .mobile-filter-sheet :deep(.vs__open-indicator-icon) {
-    font-size: 9px !important;
+    font-size: 14px !important;
     font-weight: 400 !important;
-    color: #66666680 !important;
+    color: #94a3b8 !important;
   }
-  .mobile-filter-sheet :deep(.vs__open-indicator) {
-    transform: scale(0.7);
-    transform-origin: center;
-    fill: #66666680 !important;
-  }
+
   .mobile-filter-sheet :deep(.vs__open-indicator svg) {
-    fill: #66666680 !important;
+    display: none !important;
   }
   .mobile-filter-sheet :deep(.vs__dropdown-toggle) {
     min-height: 32px;

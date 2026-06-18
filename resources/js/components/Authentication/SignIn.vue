@@ -1,24 +1,24 @@
 <template>
   <AuthLandingShell>
     <div class="auth-glass-card auth-glass-card--signin">
-      <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
-      <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
+      <h6 class="auth-glass-card__eyebrow auth-glass-card__eyebrow--desktop">Welcome To</h6>
+      <h6 class="auth-glass-card__title auth-glass-card__title--desktop">OIA PROPERTIES</h6>
 
       <form class="auth-glass-form" @submit.prevent="login">
         <div class="auth-glass-field">
-          <label class="auth-glass-field__label" for="signin-username">Username</label>
+          <label class="auth-glass-field__label" for="signin-username">Email</label>
           <div class="auth-glass-input-wrap">
             <input
               id="signin-username"
               v-model="email"
               type="email"
               class="auth-glass-input"
-              placeholder="Enter username"
+              placeholder="Enter Email"
               autocomplete="username"
               required
             />
             <span class="auth-glass-input__icon" aria-hidden="true">
-              <iconify-icon icon="mdi:account-outline" />
+              <iconify-icon icon="mdi:email-outline" />
             </span>
           </div>
         </div>
@@ -70,7 +70,7 @@
           don't have account? <b>Sign Up</b>
         </router-link>
 
-        <router-link to="/privacy-policy" class="auth-glass-footer-link">Privacy Policy</router-link>
+        <router-link to="/privacy-policy" class="auth-glass-footer-link auth-glass-footer-link--policy">Privacy Policy</router-link>
       </form>
     </div>
   </AuthLandingShell>

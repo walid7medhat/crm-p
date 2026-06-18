@@ -14,8 +14,11 @@
           <img :src="oiaLogo" alt="Oia Properties" class="auth-landing__brand-logo auth-landing__brand-logo--oia" />
         </div>
 
-        <h6 class="auth-landing__headline">
+        <h6 class="auth-landing__headline auth-landing__headline--desktop">
           A Powerful Digital Workspace for Real Estate Professionals and Growing Businesses
+        </h6>
+        <h6 class="auth-landing__headline auth-landing__headline--mobile">
+          Access OIA'S Exclusive Tools to Boost Your Brokerage
         </h6>
 
         <div
@@ -345,6 +348,14 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.auth-landing__headline--mobile {
+  display: none;
+}
+
+.auth-landing__headline--desktop {
+  display: block;
+}
+
 .auth-landing__cards-track {
   display: flex;
   flex-direction: row;
@@ -462,7 +473,190 @@ onUnmounted(() => {
   flex: 0 0 auto;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 768px) {
+  .auth-landing {
+    --auth-mobile-purple: #5c3488;
+    --auth-mobile-purple-deep: #3d2268;
+    --auth-mobile-purple-dark: #2a1548;
+    --auth-mobile-surface: rgba(61, 34, 104, 0.55);
+    --auth-mobile-input-bg: rgba(42, 21, 72, 0.5);
+    align-items: stretch;
+    justify-content: flex-start;
+    height: auto;
+    min-height: 100%;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    background: linear-gradient(
+      180deg,
+      var(--auth-mobile-purple) 0%,
+      var(--auth-mobile-purple-deep) 42%,
+      var(--auth-mobile-purple-dark) 100%
+    );
+  }
+
+  .auth-landing__bg-image,
+  .auth-landing__overlay,
+  .auth-landing__mesh,
+  .auth-landing__glow {
+    display: none;
+  }
+
+  .auth-landing__grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    padding: 0;
+    gap: 0;
+    overflow: visible;
+  }
+
+  .auth-landing__marketing {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 10px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    background: transparent;
+  }
+
+  .auth-landing__brand-row {
+    justify-content: center;
+    gap: 28px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .auth-landing__brand-divider {
+    display: none;
+  }
+
+  .auth-landing__brand-logo--altcrm {
+    width: 88px;
+    max-height: 52px;
+  }
+
+  .auth-landing__brand-logo--oia {
+    width: 100px;
+    max-height: 48px;
+  }
+
+  .auth-landing__headline--desktop {
+    display: none;
+  }
+
+  .auth-landing__headline--mobile {
+    display: block;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    padding: 0 4px;
+    max-width: 320px;
+    margin: 0 auto;
+    flex-shrink: 0;
+  }
+
+  .auth-landing__cards-track {
+    flex: 0 0 auto;
+    gap: 10px;
+    padding: 0 2px 2px;
+    margin: 0;
+    max-height: 132px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .auth-landing__feature-card {
+    flex: 0 0 calc(50% - 6px);
+    min-width: calc(50% - 6px);
+    max-height: 128px;
+    min-height: 0;
+    height: 128px;
+    padding: 8px 8px 6px;
+    border-radius: 16px;
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(61, 34, 104, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: none;
+  }
+
+  .auth-landing__feature-title {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.92);
+    -webkit-line-clamp: 2;
+  }
+
+  .auth-landing__feature-media {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: rgba(42, 21, 72, 0.35);
+  }
+
+  .auth-landing__feature-image {
+    max-height: 78px;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: 8px;
+  }
+
+  .auth-landing__dots {
+    flex-shrink: 0;
+    gap: 6px;
+    padding-top: 2px;
+    padding-bottom: 0;
+  }
+
+  .auth-landing__dot {
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .auth-landing__dot.is-active {
+    width: 22px;
+    background: #fff;
+  }
+
+  .auth-landing__auth-panel {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    min-height: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 2;
+    background: transparent;
+  }
+
+  .auth-landing__auth-panel > * {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 auto;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
   .auth-landing {
     align-items: center;
     height: 100%;
@@ -518,17 +712,41 @@ onUnmounted(() => {
 
 @media (max-width: 639px) {
   .auth-landing__brand-logo--altcrm {
-    width: 110px;
-    max-height: 56px;
-  }
-
-  .auth-landing__brand-logo--oia {
-    width: 128px;
+    width: 88px;
     max-height: 52px;
   }
 
-  .auth-landing__headline {
-    font-size: 1.05rem;
+  .auth-landing__brand-logo--oia {
+    width: 100px;
+    max-height: 48px;
+  }
+
+  .auth-landing__headline--mobile {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) and (max-height: 700px) {
+  .auth-landing__marketing {
+    gap: 8px;
+    padding-bottom: 6px;
+  }
+
+  .auth-landing__cards-track {
+    max-height: 112px;
+  }
+
+  .auth-landing__feature-card {
+    height: 108px;
+    max-height: 108px;
+  }
+
+  .auth-landing__feature-image {
+    max-height: 64px;
+  }
+
+  .auth-landing__auth-panel {
+    padding-top: 6px;
   }
 }
 </style>

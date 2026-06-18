@@ -338,6 +338,118 @@
   margin-top: 20px;
 }
 
+@media (max-width: 768px) {
+  .auth-glass-card--signin {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 0;
+    max-height: none;
+    padding: 20px 18px 14px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(61, 34, 104, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: none;
+  }
+
+  .auth-glass-card__eyebrow--desktop,
+  .auth-glass-card__title--desktop {
+    display: none !important;
+  }
+
+  .auth-glass-card--signin .auth-glass-form {
+    min-height: 0;
+    justify-content: flex-start;
+  }
+
+  .auth-glass-card--signin .auth-glass-field {
+    margin-bottom: 14px;
+  }
+
+  .auth-glass-field__label {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .auth-glass-input {
+    height: 48px;
+    padding: 0 44px 0 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(42, 21, 72, 0.45);
+    font-size: 16px;
+    color: #fff;
+  }
+
+  .auth-glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.42);
+  }
+
+  .auth-glass-input__icon {
+    right: 14px;
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .auth-glass-link {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .auth-glass-actions {
+    margin-top: 18px;
+    gap: 10px;
+  }
+
+  .auth-glass-btn {
+    height: 48px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+  }
+
+  .auth-glass-btn--ghost {
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #fff;
+  }
+
+  .auth-glass-btn--primary {
+    background: #fff;
+    color: #2a1548;
+    font-weight: 700;
+  }
+
+  .auth-glass-divider {
+    margin: 16px 0 14px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .auth-glass-divider::before,
+  .auth-glass-divider::after {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .auth-glass-pill-link {
+    height: 48px;
+    font-size: 0.88rem;
+    border-color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .auth-glass-footer-link--policy {
+    margin-top: 14px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 @media (max-width: 560px) {
   .auth-glass-card--signin {
     width: 100%;
@@ -350,9 +462,5 @@
 @media (max-width: 639px) {
   .auth-glass-card:not(.auth-glass-card--signin) {
     padding: 22px 20px 18px;
-  }
-
-  .auth-glass-card--signin {
-    padding: 28px 24px 22px;
   }
 }
