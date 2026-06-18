@@ -31,7 +31,7 @@
                 <div class="pd-card-label">Original price (OP)</div>
                 <div class="pd-card-value pd-card-value--dark">{{ formatAed(originalPrice) }}</div>
               </div>
-              <div class="pd-card pd-card--muted">
+              <div class="pd-card pd-card--muted" v-if="paymentPlanLabel">
                 <div class="pd-card-label">Payment plan (%)</div>
                 <div class="pd-card-value pd-card-value--dark">{{ paymentPlanLabel || '—' }}</div>
               </div>
@@ -41,10 +41,13 @@
               </div>
             </div>
 
-            <div v-if="Number(nocPercent) > 0" class="pd-noc-strip">
+            <div v-if="nocFixedAmount > 0 || Number(nocPercent) > 0" class="pd-noc-strip">
               <span class="pd-noc-strip__item">
-                NOC <strong>{{ nocPercentDisplay }}%</strong>
-                · Required <strong>{{ formatAed(nocRequiredAed) }}</strong>
+                <span class="badge" :class="nocType === 'Ready' ? 'bg-success' : 'bg-warning'">
+                  {{ nocType }}
+                </span>
+                NOC <strong>{{ formatAed(nocFixedAmount) }}</strong>
+                <span v-if="Number(nocPercent) > 0" class="text-muted">({{ nocPercentDisplay }}% of OP)</span>
               </span>
               <span class="pd-noc-strip__item">
                 Paid <strong>{{ formatAed(paidTotalAed) }}</strong>
@@ -54,12 +57,12 @@
                 Remaining <strong>{{ formatAed(nocRemainingAed) }}</strong>
               </span>
               <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
-                {{ nocRequirementMet ? 'NOC met' : 'Below NOC' }}
+                {{ nocRequirementMet ? 'NOC met ✅' : 'Below NOC ⚠️' }}
               </span>
             </div>
 
-            <div class="pd-section-heading">Installment breakdown</div>
-            <div class="pd-table-wrap">
+            <div class="pd-section-heading"  v-if="isUnderConstruction">Installment breakdown</div>
+            <div class="pd-table-wrap"  v-if="isUnderConstruction">
               <table class="pd-table">
                 <thead>
                   <tr>
@@ -161,6 +164,9 @@ const props = defineProps({
   assignmentExpensesSubtotal: { type: Number, default: 0 },
   assignmentExpensesTotalVat: { type: Number, default: 0 },
   assignmentExpensesGrandTotal: { type: Number, default: 0 },
+    nocFixedAmount: { type: Number, default: 0 },
+  nocType: { type: String, default: 'Off-Plan' },
+  isUnderConstruction: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);

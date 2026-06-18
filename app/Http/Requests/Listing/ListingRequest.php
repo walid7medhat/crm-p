@@ -74,6 +74,7 @@ $listingId = $this->route('property');
             'original_price' => 'nullable|numeric|min:0',
             'selling_price' => 'nullable|numeric|min:0',
             'noc_percentage' => 'nullable|integer|min:0|max:50',
+            'noc_fixed_amount' => 'nullable|integer|min:0',
             'handover_date' => 'nullable|date',
             'payment_breakdown' => 'nullable|array',
             'payment_breakdown.*.id' => 'nullable',

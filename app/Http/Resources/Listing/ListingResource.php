@@ -211,6 +211,7 @@ $allowedAgentIds = [];
             'assignment_expense_lines' => $this->assignment_expense_lines,
             'has_payment_breakdown' => $this->hasPaymentBreakdown(),
             'noc_percentage' => $this->noc_percentage,
+            'noc_fixed_amount'=>$this->noc_fixed_amount,
             'handover_date' => $this->handover_date?->format('Y-m-d'),
             'project' => $this->whenLoaded('project', function () {
                  $projectGalleryImages = $this->project->images->sortBy('sort_order')->values();

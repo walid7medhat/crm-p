@@ -234,23 +234,23 @@
               <div class="col-md-4">
                 <label class="form-label">Original price (OP) <span class="text-muted fw-normal small">(developer / contract)</span></label>
                 <input
-                  :value="formatPriceInputDisplay(form.original_price)"
+                  :value="formatDecimalPriceDisplay(form.original_price)"
                   type="text"
                   inputmode="numeric"
                   class="form-control"
                   placeholder="Original price in AED"
-                  @input="form.original_price = parsePriceInputDigits($event.target.value)"
+                  @input="form.original_price = parseDecimalPrice($event.target.value)"
                 />
               </div>
               <div class="col-md-4">
                 <label class="form-label">Selling price <span class="text-muted fw-normal small">(listing price)</span></label>
                 <input
-                  :value="formatPriceInputDisplay(form.price)"
+                  :value="formatDecimalPriceDisplay(form.price)"
                   type="text"
                   inputmode="numeric"
                   class="form-control"
                   placeholder="Selling price in AED"
-                  @input="form.price = parsePriceInputDigits($event.target.value)"
+                  @input="form.price = parseDecimalPrice($event.target.value)"
                 />
               </div>
               <div v-if="isUnderConstruction" class="col-md-4">
@@ -1613,7 +1613,7 @@ import draggable from "vuedraggable";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
-import { parsePriceInputDigits, formatPriceInputDisplay } from "@/utils/priceInputFormat";
+import { parsePriceInputDigits,parseDecimalPrice,formatDecimalPriceDisplay, formatPriceInputDisplay } from "@/utils/priceInputFormat";
 import {
   paymentPlanOptions,
   paymentPlanSelectionLabel,
@@ -3798,7 +3798,7 @@ const formatDate = (dateString) => {
 };
 
 const listingPriceForApi = () => {
-  const raw = parsePriceInputDigits(form.value.price);
+  const raw = parseDecimalPrice(form.value.price);
   const p = Number(raw || 0);
   if (isUnderConstruction.value && p > 0) return String(Math.round(p));
   return raw;
@@ -4036,10 +4036,10 @@ const handleSubmit = async (action = 'draft') => {
     });
 
     if (form.value.original_price !== '' && form.value.original_price != null) {
-      const opDigits = parsePriceInputDigits(form.value.original_price);
+      const opDigits = parseDecimalPrice(form.value.original_price);
       if (opDigits !== '') formData.append('original_price', opDigits);
     }
-    const sellingForDb = parsePriceInputDigits(form.value.price);
+    const sellingForDb = parseDecimalPrice(form.value.price);
     if (sellingForDb !== '') {
       formData.append('selling_price', sellingForDb);
     }

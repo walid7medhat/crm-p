@@ -207,7 +207,18 @@ export default {
             } catch (error) {
                 return false;
             }
-        }
+        },
+            formatCurrency(value) {
+                if (!value) return 'Not Set';
+                
+                // Format as USD currency
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'AED',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(value);
+            },
     }
 };
 </script>

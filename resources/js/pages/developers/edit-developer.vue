@@ -304,7 +304,10 @@ export default {
                 } else {
                     requestData = JSON.stringify({
                         name: this.form.name,
+                        noc_fees_ready: this.form.noc_fees_ready,
+                        noc_fees_off_plan: this.form.noc_fees_off_plan
                     });
+                    
                     headers['Content-Type'] = 'application/json';
                     console.log('Using JSON (PUT)');
                 }

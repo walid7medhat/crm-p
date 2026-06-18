@@ -30,10 +30,13 @@
         </div>
       </div>
 
-      <div v-if="nocPercent > 0" class="pd-noc-strip">
+     <div v-if="nocFixedAmount > 0" class="pd-noc-strip">
         <span class="pd-noc-strip__item">
-          NOC <strong>{{ nocPercent }}%</strong>
-          · Required <strong>{{ formatAed(nocRequiredAed) }}</strong>
+          <span class="badge" :class="nocType === 'Ready' ? 'bg-success' : 'bg-warning text-dark'">
+            {{ nocType }}
+          </span>
+          NOC <strong>{{ formatAed(nocFixedAmount) }}</strong>
+          <span v-if="nocPercent > 0" class="pd-text-muted">({{ nocPercent.toFixed(1) }}% of OP)</span>
         </span>
         <span class="pd-noc-strip__item">
           Paid <strong>{{ formatAed(paidTotalAed) }}</strong>
@@ -43,11 +46,11 @@
           Remaining <strong>{{ formatAed(nocRemainingAed) }}</strong>
         </span>
         <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
-          {{ nocRequirementMet ? 'NOC met' : 'Below NOC' }}
+          {{ nocRequirementMet ? '✅ Covered' : '⚠️ Pending' }}
         </span>
       </div>
 
-      <div v-if="breakdownRows.length > 0" class="pd-section-heading">Installment breakdown</div>
+      <div v-if="breakdownRows.length > 0 && listing.completion_status !='Completed'" class="pd-section-heading">Installment breakdown</div>
       <div v-if="breakdownRows.length > 0" class="pd-table-wrap">
         <table class="pd-table">
           <thead>
@@ -133,9 +136,12 @@ const toNumber = (v) => {
 const sellingPrice = computed(() => toNumber(props.listing?.price ?? props.listing?.selling_price));
 const originalPrice = computed(() => toNumber(props.listing?.original_price) || sellingPrice.value);
 const premiumAmount = computed(() => sellingPrice.value - originalPrice.value);
+const nocFixedAmount = computed(() => toNumber(props.listing?.noc_fixed_amount || 0));
+const nocType = computed(() => props.listing?.noc_type || 'Off-Plan');
+
 const nocPercent = computed(() => {
-  const n = toNumber(props.listing?.noc_percentage);
-  return Math.max(0, Math.min(100, n));
+  if (originalPrice.value <= 0 || nocFixedAmount.value <= 0) return 0;
+  return (nocFixedAmount.value / originalPrice.value) * 100;
 });
 
 const rawBreakdown = computed(() => {
