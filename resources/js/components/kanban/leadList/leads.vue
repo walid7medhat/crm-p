@@ -1751,12 +1751,15 @@ function openConvertLeadModal(lead) {
 }
 
 function handleLeadConverted(deal) {
-
-   
+    const payload = {
+        ...(deal && typeof deal === 'object' ? deal : {}),
+        deal_type: deal?.deal_type || deal?.type || null,
+        id: deal?.id ?? deal?.deal_id ?? null,
+    }
 
     $showNotification('Lead converted to deal successfully', 'success')
     fetchLeads(true)
- emit('deal-created', deal)
+    emit('deal-created', payload)
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
 }

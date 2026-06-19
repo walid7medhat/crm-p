@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-main-body hr-screen">
     <div class="hr-frame">
-      <div class="hr-topbar">
+      <div class="hr-topbar" ref="hrTopbarRef">
         <div v-if="isMobileViewport" class="hr-mobile-head">
           <button type="button" class="hr-mobile-back-btn" @click="activeTab = 'Employees'">
             <iconify-icon icon="lucide:chevron-left" />
@@ -22,7 +22,7 @@
               class="hr-tab"
               :class="{ active: tab === activeTab || openHeaderMenu === tab }"
               :aria-expanded="openHeaderMenu === tab"
-              @click="onHeaderTabClick(tab)"
+              @click.stop="onHeaderTabClick(tab, $event)"
             >
               {{ tab }}
               <iconify-icon v-if="tab !== 'Overview'" icon="lucide:chevron-down" class="hr-tab-chevron" />
@@ -40,30 +40,8 @@
             </div>
           </div>
         </div>
-        <div v-if="isMobileViewport && openHeaderMenu && openHeaderMenu !== 'Overview'" class="hr-mobile-tab-sheet">
-          <button
-            v-for="item in headerTabMenus[openHeaderMenu] || []"
-            :key="item"
-            type="button"
-            class="hr-mobile-tab-sheet-item"
-            @click="onHeaderMenuSelect(openHeaderMenu, item)"
-          >
-            <span class="hr-mobile-tab-sheet-item-left">
-              <iconify-icon :icon="menuItemIcon(item)" />
-              <span>{{ item }}</span>
-            </span>
-            <iconify-icon icon="lucide:chevron-right" />
-          </button>
-        </div>
-
-        <div class="hr-topbar-actions">
-          <template v-if="isMobileViewport">
-            <div class="hr-overview-search hr-overview-search--mobile">
-              <input v-model="overviewSearch" type="text" placeholder="Search and advanced filter" />
-              <iconify-icon icon="lucide:search" />
-            </div>
-          </template>
-          <template v-else-if="activeTab === 'Overview'">
+        <div v-if="!isMobileViewport" class="hr-topbar-actions">
+          <template v-if="activeTab === 'Overview'">
             <div class="hr-overview-search">
               <iconify-icon icon="lucide:plus" />
               <input v-model="overviewSearch" type="text" placeholder="Filter and search" />
@@ -671,8 +649,8 @@
                   />
                 </div>
                 <div
-                  v-if="showAttendanceSearchModal"
-                  class="hr-attendance-search-dropdown-outer"
+                  v-if="showAttendanceSearchModal && !isMobileViewport"
+                  class="hr-attendance-search-dropdown-outer hr-attendance-search-dropdown-outer--desktop"
                   @mousedown.prevent
                 >
                   <HrAttendanceSearchDropdown
@@ -1411,10 +1389,85 @@
         </div>
       </div>
 
+      <div class="hr-content-card" v-else-if="activeTab === 'Payroll'">
+        <div class="hr-content-shell">
+          <div class="hr-payroll-placeholder">
+            <h6>{{ payrollSectionLabel }}</h6>
+            <p>Payroll tools are available from the menu above. Full payroll views are coming soon.</p>
+          </div>
+        </div>
+      </div>
+
       <div v-else class="hr-content-card">
         <div class="hr-content-shell hr-empty-tab"></div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="isMobileViewport && openHeaderMenu && openHeaderMenu !== 'Overview'"
+        class="hr-mob-nav-sheet"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="`${openHeaderMenu} sections`"
+      >
+        <button type="button" class="hr-mob-nav-sheet__backdrop" aria-label="Close menu" @click="openHeaderMenu = null" />
+        <div class="hr-mob-nav-sheet__panel">
+          <div class="hr-mob-nav-sheet__head">
+            <h2 class="hr-mob-nav-sheet__title">{{ openHeaderMenu }}</h2>
+            <button type="button" class="hr-mob-nav-sheet__close" aria-label="Close" @click="openHeaderMenu = null">
+              <iconify-icon icon="lucide:x" />
+            </button>
+          </div>
+          <div class="hr-mob-nav-sheet__list">
+            <button
+              v-for="item in headerTabMenus[openHeaderMenu] || []"
+              :key="item"
+              type="button"
+              class="hr-mob-nav-sheet__item"
+              @click="onHeaderMenuSelect(openHeaderMenu, item)"
+            >
+              <span class="hr-mob-nav-sheet__item-left">
+                <iconify-icon :icon="menuItemIcon(item)" />
+                <span>{{ item }}</span>
+              </span>
+              <iconify-icon icon="lucide:chevron-right" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="isMobileViewport && showAttendanceSearchModal"
+        class="hr-attendance-mob-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Attendance filters"
+      >
+        <button type="button" class="hr-attendance-mob-sheet__backdrop" aria-label="Close filters" @click="showAttendanceSearchModal = false" />
+        <div class="hr-attendance-mob-sheet__panel" @mousedown.prevent>
+          <HrAttendanceSearchDropdown
+            :filters="attendanceSearchFilters"
+            :chips="attendanceSearchChips"
+            :selected-chip="selectedAttendanceSearchChip"
+            :employee-options="attendanceEmployeeOptions"
+            :department-options="attendanceDepartmentOptions"
+            :type-options="attendanceTypeOptions"
+            :status-options="attendanceStatusOptions"
+            :date-display="formatDateDisplay(attendanceSearchFilters.attendanceDate)"
+            :select-append-to-body="true"
+            @close="showAttendanceSearchModal = false"
+            @reset="resetAttendanceSearchFilters"
+            @apply="applyAttendanceSearchFilters"
+            @select-chip="selectAttendanceSearchChip"
+            @open-date-picker="openDatePicker('attendanceSearchFilters.attendanceDate')"
+            @update:filters="onAttendanceSearchFiltersPatch"
+          />
+        </div>
+      </div>
+    </Teleport>
 
     <div v-if="showLeaveSearchModal" class="edit-overlay" @click.self="showLeaveSearchModal = false">
       <div class="employee-filter-modal leave-search-modal">
@@ -2783,6 +2836,8 @@ const headerTabs = ['Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Ass
 const activeTab = ref('Employees')
 const openHeaderMenu = ref(null)
 const topbarTabsRef = ref(null)
+const hrTopbarRef = ref(null)
+const payrollSectionLabel = ref('Manage Salary')
 const isMobileViewport = ref(false)
 const overviewSearch = ref('')
 const selectedOverviewEmployee = ref(null)
@@ -4439,8 +4494,21 @@ function exportAssets() {
   URL.revokeObjectURL(link.href)
 }
 
-function onHeaderTabClick(tab) {
+function onHeaderTabClick(tab, event) {
   const hasDropdown = !!headerTabMenus[tab]
+
+  if (isMobileViewport.value) {
+    activeTab.value = tab
+    if (!hasDropdown) {
+      if (tab === 'Leave / Attendance') leaveSectionMode.value = 'leave'
+      openHeaderMenu.value = null
+      return
+    }
+    event?.stopPropagation?.()
+    openHeaderMenu.value = openHeaderMenu.value === tab ? null : tab
+    return
+  }
+
   if (!hasDropdown) {
     activeTab.value = tab
     if (tab === 'Leave / Attendance') leaveSectionMode.value = 'leave'
@@ -4452,7 +4520,14 @@ function onHeaderTabClick(tab) {
 }
 
 function onHeaderMenuSelect(tab, item) {
-  activeTab.value = tab
+  if (tab === 'Employees') {
+    activeTab.value = item === 'Employee Assets' ? 'Assets' : 'Employees'
+  } else if (tab === 'Assets') {
+    activeTab.value = 'Assets'
+  } else {
+    activeTab.value = tab
+  }
+
   if (tab === 'Leave / Attendance') {
     if (item === 'Leave Management') leaveSectionMode.value = 'leave'
     else if (item === 'Attendance Management') leaveSectionMode.value = 'attendance'
@@ -4462,6 +4537,9 @@ function onHeaderMenuSelect(tab, item) {
     if (item === 'Manage Recruitments') careerSectionMode.value = 'manage-recruitments'
     else if (item === 'Interviews') careerSectionMode.value = 'interviews'
     else careerSectionMode.value = 'career-lists'
+  }
+  if (tab === 'Payroll') {
+    payrollSectionLabel.value = item
   }
   openHeaderMenu.value = null
 }
@@ -4487,20 +4565,30 @@ function scrollEmployeeDetailSection(sectionKey) {
 }
 
 function menuItemIcon(item) {
-  if (String(item).toLowerCase().includes('asset')) return 'lucide:briefcase-business'
-  return 'lucide:clock-3'
+  const label = String(item).toLowerCase()
+  if (label.includes('asset')) return 'lucide:briefcase-business'
+  if (label.includes('attendance')) return 'lucide:calendar-check'
+  if (label.includes('leave')) return 'lucide:calendar-off'
+  if (label.includes('announcement')) return 'lucide:megaphone'
+  if (label.includes('salary') || label.includes('pay')) return 'lucide:wallet'
+  if (label.includes('recruit') || label.includes('career') || label.includes('interview')) return 'lucide:briefcase'
+  if (label.includes('employee')) return 'lucide:users'
+  return 'lucide:layout-grid'
 }
 
 function onDocumentClick(event) {
   if (showAttendanceSearchModal.value) {
     if (event.target.closest?.('.lr-date-modal, .lead-search-date-backdrop, .flatpickr-calendar')) return
+    if (event.target.closest?.('.hr-attendance-mob-sheet')) return
     const anchor = attendanceSearchAnchorRef.value
     if (anchor && !anchor.contains(event.target)) {
       showAttendanceSearchModal.value = false
     }
   }
-  if (!topbarTabsRef.value) return
-  if (!topbarTabsRef.value.contains(event.target)) {
+  if (!topbarTabsRef.value && !hrTopbarRef.value) return
+  const inTopbar = hrTopbarRef.value?.contains(event.target) || topbarTabsRef.value?.contains(event.target)
+  const inMobSheet = event.target.closest?.('.hr-mob-nav-sheet__panel, .hr-attendance-mob-sheet__panel')
+  if (!inTopbar && !inMobSheet) {
     openHeaderMenu.value = null
   }
   if (assetUserPickerRef.value && !assetUserPickerRef.value.contains(event.target)) {

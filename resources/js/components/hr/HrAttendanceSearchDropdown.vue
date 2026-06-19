@@ -31,7 +31,7 @@
             :model-value="filters.employee"
             :options="employeeOptions"
             placeholder="Search by name or employee ID"
-            :append-to-body="false"
+            :append-to-body="selectAppendToBody"
             @update:model-value="patch('employee', $event)"
           />
         </div>
@@ -41,7 +41,7 @@
             :model-value="filters.department"
             :options="departmentOptions"
             placeholder="All departments"
-            :append-to-body="false"
+            :append-to-body="selectAppendToBody"
             @update:model-value="patch('department', $event)"
           />
         </div>
@@ -61,7 +61,7 @@
             :model-value="filters.type"
             :options="typeOptions"
             placeholder="All types"
-            :append-to-body="false"
+            :append-to-body="selectAppendToBody"
             @update:model-value="patch('type', $event)"
           />
         </div>
@@ -71,7 +71,7 @@
             :model-value="filters.status"
             :options="statusOptions"
             placeholder="All statuses"
-            :append-to-body="false"
+            :append-to-body="selectAppendToBody"
             @update:model-value="patch('status', $event)"
           />
         </div>
@@ -96,6 +96,7 @@ const props = defineProps({
   typeOptions: { type: Array, default: () => [] },
   statusOptions: { type: Array, default: () => [] },
   dateDisplay: { type: String, default: '' },
+  selectAppendToBody: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close', 'reset', 'apply', 'select-chip', 'open-date-picker', 'update:filters'])

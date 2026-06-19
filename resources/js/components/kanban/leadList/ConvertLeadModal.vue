@@ -1,72 +1,93 @@
 <!-- components/Deals/ConvertLeadModal.vue -->
 <template>
-    <div ref="modalRootRef" class="modal fade convert-lead-modal-root" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered convert-lead-dialog">
-            <div class="modal-content convert-lead-content">
-                <div class="modal-header convert-lead-header">
-                    <h6 class="modal-title mb-0">Select Converted Lead Type</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body convert-lead-body">
-                    <div class="options-container">
-                        <label class="deal-type-option" :class="{ selected: form.deal_type === 'primary' }">
-                            <div class="option-icon">
-                                <img :src="primaryIcon" alt="Primary / Off Plan" width="32" height="32">
-                            </div>
-                            <input type="radio" name="dealType" value="primary" v-model="form.deal_type" class="deal-type-radio">
-                            <span class="deal-type-label">Primary</span>
-                            <span class="selected-mark" :class="{ show: form.deal_type === 'primary' }">
-                                <img :src="checkIcon" alt="✓" >
-                            </span>
-                        </label>
-
-                        <label class="deal-type-option" :class="{ selected: form.deal_type === 'secondary' }">
-                            <div class="option-icon">
-                                <img :src="secondaryIcon" alt="Secondary" width="32" height="32">
-                            </div>
-                            <input type="radio" name="dealType" value="secondary" v-model="form.deal_type" class="deal-type-radio">
-                            <span class="deal-type-label">Secondary</span>
-                            <span class="selected-mark" :class="{ show: form.deal_type === 'secondary' }">
-                                <img :src="checkIcon" alt="✓" >
-                            </span>
-                        </label>
-
-                        <label class="deal-type-option" :class="{ selected: form.deal_type === 'rental' }">
-                            <div class="option-icon">
-                                <img :src="rentalIcon" alt="Rental" width="32" height="32">
-                            </div>
-                            <input type="radio" name="dealType" value="rental" v-model="form.deal_type" class="deal-type-radio">
-                            <span class="deal-type-label">Rental</span>
-                            <span class="selected-mark" :class="{ show: form.deal_type === 'rental' }">
-                                <img :src="checkIcon" alt="✓" >
-                            </span>
-                        </label>
+    <Teleport to="body">
+        <div
+            v-if="visible"
+            class="convert-lead-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Select converted lead type"
+            @click.self="hide"
+        >
+            <div class="convert-lead-dialog">
+                <div class="convert-lead-content">
+                    <div class="convert-lead-header">
+                        <h6 class="convert-lead-title">Select Converted Lead Type</h6>
+                        <button type="button" class="convert-lead-close" aria-label="Close" @click="hide">
+                            <iconify-icon icon="lucide:x" />
+                        </button>
                     </div>
-                </div>
-                <div class="modal-footer convert-lead-footer">
-                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button
-                        type="button"
-                        class="btn btn-add-deal"
-                        @click="submitConversion"
-                        :disabled="!form.deal_type || loading"
-                    >
-                        <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                        Add Deal
-                    </button>
+                    <div class="convert-lead-body">
+                        <div class="options-container">
+                            <button
+                                type="button"
+                                class="deal-type-option"
+                                :class="{ selected: form.deal_type === 'primary' }"
+                                @click.stop="selectDealType('primary')"
+                            >
+                                <div class="option-icon">
+                                    <img :src="primaryIcon" alt="Primary / Off Plan" width="32" height="32">
+                                </div>
+                                <span class="deal-type-label">Primary</span>
+                                <span class="selected-mark" :class="{ show: form.deal_type === 'primary' }">
+                                    <img :src="checkIcon" alt="Selected">
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="deal-type-option"
+                                :class="{ selected: form.deal_type === 'secondary' }"
+                                @click.stop="selectDealType('secondary')"
+                            >
+                                <div class="option-icon">
+                                    <img :src="secondaryIcon" alt="Secondary" width="32" height="32">
+                                </div>
+                                <span class="deal-type-label">Secondary</span>
+                                <span class="selected-mark" :class="{ show: form.deal_type === 'secondary' }">
+                                    <img :src="checkIcon" alt="Selected">
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="deal-type-option"
+                                :class="{ selected: form.deal_type === 'rental' }"
+                                @click.stop="selectDealType('rental')"
+                            >
+                                <div class="option-icon">
+                                    <img :src="rentalIcon" alt="Rental" width="32" height="32">
+                                </div>
+                                <span class="deal-type-label">Rental</span>
+                                <span class="selected-mark" :class="{ show: form.deal_type === 'rental' }">
+                                    <img :src="checkIcon" alt="Selected">
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="convert-lead-footer">
+                        <button type="button" class="btn-cancel" @click="hide">Cancel</button>
+                        <button
+                            type="button"
+                            class="btn-add-deal"
+                            @click.stop="submitConversion"
+                            :disabled="!form.deal_type || loading"
+                        >
+                            <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                            Add Deal
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </Teleport>
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
-import * as bootstrap from 'bootstrap'
 
-// Import images from public folder (no import needed, just use direct path)
 const primaryIcon = '/assets/images/deal-types/primary.svg'
 const secondaryIcon = '/assets/images/deal-types/secondary.svg'
 const rentalIcon = '/assets/images/deal-types/rental.svg'
@@ -85,9 +106,8 @@ const props = defineProps({
 
 const emit = defineEmits(['converted', 'closed'])
 
+const visible = ref(false)
 const loading = ref(false)
-const modalInstance = ref(null)
-const modalRootRef = ref(null)
 
 const form = ref({
     lead_id: props.leadId,
@@ -97,6 +117,16 @@ const form = ref({
 watch(() => props.leadId, (newId) => {
     form.value.lead_id = newId
 })
+
+function selectDealType(type) {
+    form.value.deal_type = type
+}
+
+function onEscapeKey(event) {
+    if (event.key === 'Escape' && visible.value) {
+        hide()
+    }
+}
 
 const resolveLeadId = (explicitLeadId = null, explicitLeadData = null) => {
     const candidate =
@@ -118,59 +148,36 @@ const resolveLeadId = (explicitLeadId = null, explicitLeadData = null) => {
     return candidate
 }
 
+function cleanupBootstrapBackdrops() {
+    document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove())
+    document.body.classList.remove('modal-open')
+    document.body.style.removeProperty('overflow')
+    document.body.style.removeProperty('padding-right')
+}
+
 const show = (leadId = null, leadData = null) => {
+    cleanupBootstrapBackdrops()
     form.value.lead_id = resolveLeadId(leadId, leadData)
-    nextTick(() => {
-        const modalEl = modalRootRef.value
-        if (modalEl) {
-            if (!modalInstance.value) {
-                // `focus: false` stops Bootstrap from auto-focusing the modal-root on open,
-                // which was triggering a browser :focus outline (rendered yellow on some
-                // OS/theme combos) on the dialog as soon as it appeared.
-                modalInstance.value = new bootstrap.Modal(modalEl, { focus: false })
-            }
-            modalInstance.value.show()
-            // When stacked over another modal, bump the newly-created backdrop above the
-            // parent modal (z-index 1055) but below this dialog (z-index 2080).
-            nextTick(() => {
-                const backdrops = document.querySelectorAll('.modal-backdrop')
-                const last = backdrops[backdrops.length - 1]
-                if (last) last.style.zIndex = '2070'
-                // Belt-and-braces: blur whatever Bootstrap may have left focused.
-                if (document.activeElement && typeof document.activeElement.blur === 'function') {
-                    document.activeElement.blur()
-                }
-            })
-        }
-    })
+    form.value.deal_type = ''
+    visible.value = true
+    document.body.style.overflow = 'hidden'
 }
 
 const hide = () => {
-    if (modalInstance.value) {
-        modalInstance.value.hide()
-    }
-}
-
-const onHidden = () => {
+    if (!visible.value) return
+    visible.value = false
+    document.body.style.overflow = ''
     emit('closed')
     form.value.deal_type = ''
 }
 
 onMounted(() => {
-    const modalEl = modalRootRef.value
-    if (!modalEl) return
-    modalEl.addEventListener('hidden.bs.modal', onHidden)
+    document.addEventListener('keydown', onEscapeKey)
 })
 
 onUnmounted(() => {
-    const modalEl = modalRootRef.value
-    if (modalEl) {
-        modalEl.removeEventListener('hidden.bs.modal', onHidden)
-    }
-    if (modalInstance.value) {
-        modalInstance.value.dispose()
-        modalInstance.value = null
-    }
+    document.removeEventListener('keydown', onEscapeKey)
+    document.body.style.overflow = ''
 })
 
 const submitConversion = async () => {
@@ -187,7 +194,7 @@ const submitConversion = async () => {
     }
 
     loading.value = true
-    
+
     try {
         const resolvedLeadId = resolveLeadId()
         if (!resolvedLeadId) {
@@ -210,9 +217,8 @@ const submitConversion = async () => {
             id: resolvedLeadId,
             deal_type: form.value.deal_type
         })
-        
+
         if (response.data.success) {
-                
             Swal.fire({
                 icon: 'success',
                 title: 'Lead converted successfully!',
@@ -221,8 +227,12 @@ const submitConversion = async () => {
                 showConfirmButton: false,
                 timer: 3000
             })
-            
-            emit('converted', response.data.data)
+
+            const createdDeal = {
+                ...(response.data.data || {}),
+                deal_type: response.data.data?.deal_type ?? form.value.deal_type,
+            }
+            emit('converted', createdDeal)
             hide()
         }
     } catch (error) {
@@ -250,47 +260,90 @@ defineExpose({
 </script>
 
 <style scoped>
-/* When opened on top of another modal (e.g. ViewLeadModal), Bootstrap reuses z-index 1055
- * for both this modal and the parent's backdrop, so clicks get eaten. Bumping the dialog
- * above the standard backdrop z-index keeps interactions live. */
-.convert-lead-modal-root {
-    z-index: 2080 !important;
+.convert-lead-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 101800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    pointer-events: auto;
+    animation: convertLeadFadeIn 0.2s ease;
+}
+
+@keyframes convertLeadFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .convert-lead-dialog {
-    max-width: 760px;
+    width: min(760px, 100%);
+    max-height: calc(100vh - 40px);
+    pointer-events: auto;
+    animation: convertLeadSlideIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes convertLeadSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .convert-lead-content {
     border-radius: 24px;
     border: 1px solid #e5e7eb;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
+    overflow: visible;
+    background: #fff;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    pointer-events: auto;
 }
 
 .convert-lead-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 28px 32px 20px;
     border-bottom: 1px solid #f0f0f0;
     background: white;
 }
 
-.convert-lead-header .modal-title {
+.convert-lead-title {
+    margin: 0;
     font-size: 22px !important;
     font-weight: 600;
     line-height: 1.3;
     color: #111827;
-    margin: 0;
 }
 
-.convert-lead-header .btn-close {
-    opacity: 1;
-    transform: scale(1.2);
-    filter: brightness(0.6);
+.convert-lead-close {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    background: #fff;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .convert-lead-body {
     padding: 24px 32px;
     background: white;
+    pointer-events: auto;
 }
 
 .options-container {
@@ -298,6 +351,7 @@ defineExpose({
     flex-direction: row;
     gap: 16px;
     justify-content: space-between;
+    pointer-events: auto;
 }
 
 .deal-type-option {
@@ -310,32 +364,22 @@ defineExpose({
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     background: #fff;
     position: relative;
     gap: 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    text-align: center;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
-/* Only show the soft hover state on non-selected options, and avoid the lift transform
- * (it was making the yellow border read as a "stuck" focus on touch devices). */
 .deal-type-option:not(.selected):hover {
     border-color: #d1d5db;
     background: #f9fafb;
-}
-
-/* Hidden radio inputs can leak focus to :focus-within — kill it, the selected check icon
- * is the affordance we want users to see. */
-.deal-type-option:focus,
-.deal-type-option:focus-within,
-.deal-type-option:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
-    border-color: #e5e7eb;
-}
-.deal-type-option.selected:focus,
-.deal-type-option.selected:focus-within,
-.deal-type-option.selected:focus-visible {
-    border-color: #0B0736 !important;
 }
 
 .deal-type-option.selected {
@@ -350,22 +394,11 @@ defineExpose({
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    pointer-events: none;
 }
 
 .option-icon img {
     filter: brightness(0) saturate(100%) invert(67%) sepia(71%) saturate(1235%) hue-rotate(1deg) brightness(102%) contrast(103%);
-    transition: all 0.2s ease;
-}
-
-.deal-type-option.selected .option-icon img {
-    filter: brightness(0) saturate(100%) invert(67%) sepia(71%) saturate(1235%) hue-rotate(1deg) brightness(102%) contrast(103%);
-}
-
-.deal-type-radio {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
 }
 
 .deal-type-label {
@@ -373,6 +406,7 @@ defineExpose({
     font-weight: 500;
     color: #000;
     text-align: center;
+    pointer-events: none;
 }
 
 .deal-type-option.selected .deal-type-label {
@@ -380,7 +414,7 @@ defineExpose({
 }
 
 .selected-mark {
-   position: absolute;
+    position: absolute;
     top: -10px;
     right: -2px;
     width: 28px;
@@ -390,32 +424,22 @@ defineExpose({
     align-items: center;
     justify-content: center;
     opacity: 0;
-    /* background: #733E87;
-    color: #fff; */
-   
-}
-
-.selected-mark img {
-    /* filter: brightness(0) invert(1);
-    width: 16px;
-    height: 16px; */
+    pointer-events: none;
+    transition: opacity 0.15s ease;
 }
 
 .selected-mark.show {
     opacity: 1;
-    transform: scale(1);
-}
-
-.deal-type-option.selected .selected-mark {
-    /* background: #733E87; */
 }
 
 .convert-lead-footer {
-    border-top: 1px solid #f0f0f0;
-    padding: 20px 32px 28px;
+    display: flex;
     justify-content: flex-end;
     gap: 12px;
+    border-top: 1px solid #f0f0f0;
+    padding: 20px 32px 28px;
     background: white;
+    pointer-events: auto;
 }
 
 .btn-cancel,
@@ -427,13 +451,12 @@ defineExpose({
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    line-height: 1;
     font-size: 14px;
     font-weight: 600;
     padding: 0 24px;
     cursor: pointer;
     transition: all 0.2s ease;
+    pointer-events: auto;
 }
 
 .btn-cancel {
@@ -452,8 +475,7 @@ defineExpose({
 
 .btn-add-deal:hover:not(:disabled) {
     background: #733E87;
-    color: #000000;
-    transform: translateY(-1px);
+    color: #fff;
 }
 
 .btn-add-deal:disabled {
@@ -462,6 +484,20 @@ defineExpose({
 }
 
 @media (max-width: 768px) {
+    .convert-lead-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .convert-lead-dialog {
+        width: 100%;
+        max-height: 90vh;
+    }
+
+    .convert-lead-content {
+        border-radius: 20px 20px 0 0;
+    }
+
     .convert-lead-header,
     .convert-lead-body,
     .convert-lead-footer {
@@ -474,21 +510,17 @@ defineExpose({
         padding-bottom: 16px;
     }
 
-    .convert-lead-header .modal-title {
+    .convert-lead-title {
         font-size: 18px !important;
     }
 
-    .convert-lead-body {
-        padding: 20px;
-    }
-
     .options-container {
-        gap: 12px;
+        gap: 10px;
     }
 
     .deal-type-option {
-        padding: 16px 12px;
-        gap: 10px;
+        padding: 14px 10px;
+        gap: 8px;
     }
 
     .option-icon {
@@ -512,11 +544,6 @@ defineExpose({
         right: 8px;
     }
 
-    .selected-mark img {
-        width: 14px;
-        height: 14px;
-    }
-
     .btn-cancel,
     .btn-add-deal {
         min-width: 90px;
@@ -525,65 +552,4 @@ defineExpose({
         padding: 0 18px;
     }
 }
-/* Kill all focus rings (browser/OS default + Bootstrap defaults) on the modal element
- * and every descendant — the modal-root has tabindex="-1" so it can grab focus and paint
- * a yellow outline on themes that use yellow for the focus color. */
-.convert-lead-modal-root,
-.convert-lead-modal-root:focus,
-.convert-lead-modal-root:focus-visible,
-.convert-lead-modal-root .modal-dialog,
-.convert-lead-modal-root .modal-dialog:focus,
-.convert-lead-modal-root .modal-dialog:focus-visible,
-.convert-lead-modal-root .modal-content,
-.convert-lead-modal-root .modal-content:focus,
-.convert-lead-modal-root .modal-content:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
-}
-
-.convert-lead-modal-root *:focus,
-.convert-lead-modal-root *:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
-}
-
-/* Bootstrap's .btn-close adds a blue/system-color focus ring on click — strip it. */
-.convert-lead-modal-root .btn-close:focus,
-.convert-lead-modal-root .btn-close:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
-}
-.modal-backdrop {
-   
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
-  padding: 20px;
-  animation: fadeIn 0.3s ease;
-}
 </style>
-<style>
-.modal-backdrop {
-   
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
-  padding: 20px;
-  animation: fadeIn 0.3s ease;
-}</style>

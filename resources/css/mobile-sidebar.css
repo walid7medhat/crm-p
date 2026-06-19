@@ -169,35 +169,54 @@
     font-weight: 600 !important;
   }
 
+  /* Same lucide / SVG assets as desktop — sized for light drawer */
   aside.sidebar .sidebar-menu li a .menu-icon,
-  aside.sidebar .sidebar-menu li a iconify-icon {
+  aside.sidebar .sidebar-menu li a > iconify-icon.menu-icon {
     color: #64748b !important;
-    font-size: 22px !important;
-    width: 22px;
+    font-size: 1.125rem !important;
+    width: 1.125rem;
+    height: 1.125rem;
     flex-shrink: 0;
-  }
-
-  aside.sidebar .sidebar-menu li a .imgicon,
-  aside.sidebar .sidebar-nav-link .imgicon {
-    width: 22px !important;
-    height: 22px !important;
-    object-fit: contain;
-    flex-shrink: 0;
-    opacity: 1 !important;
     filter: none !important;
   }
 
-  aside.sidebar .sidebar-submenu .submenu-icon,
-  aside.sidebar .sidebar-submenu .imgicon {
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 0 !important;
-    opacity: 1 !important;
+  /* Desktop SVGs are white line-art; tint for white mobile drawer */
+  aside.sidebar .sidebar-menu li a .imgicon,
+  aside.sidebar .sidebar-nav-link .imgicon {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    object-fit: contain;
+    flex-shrink: 0;
+    opacity: 0.95 !important;
     filter: brightness(0) saturate(100%) invert(40%) sepia(12%) saturate(700%) hue-rotate(176deg) brightness(90%) contrast(90%);
   }
 
-  aside.sidebar .sidebar-submenu li.active-page .submenu-icon,
-  aside.sidebar .sidebar-submenu li.active-page .imgicon {
+  aside.sidebar .sidebar-submenu .menu-icon,
+  aside.sidebar .sidebar-submenu iconify-icon.menu-icon {
+    color: #64748b !important;
+    font-size: 1rem !important;
+    width: 1rem;
+    height: 1rem;
+    margin-inline-end: 6px !important;
+    flex-shrink: 0;
+    filter: none !important;
+  }
+
+  aside.sidebar .sidebar-submenu .imgicon {
+    width: 1rem !important;
+    height: 1rem !important;
+    margin-inline-end: 6px !important;
+    opacity: 0.95 !important;
+    filter: brightness(0) saturate(100%) invert(40%) sepia(12%) saturate(700%) hue-rotate(176deg) brightness(90%) contrast(90%);
+  }
+
+  aside.sidebar .sidebar-nav-link.active .imgicon,
+  aside.sidebar .sidebar-menu li > a.active-page .imgicon,
+  aside.sidebar .sidebar-submenu li.active-page .imgicon,
+  aside.sidebar .sidebar-menu li.dropdown.open > a .imgicon,
+  aside.sidebar .sidebar-menu li.active-parent > a .imgicon,
+  aside.sidebar .sidebar-submenu__nested.open > a .imgicon,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a .imgicon {
     filter: brightness(0) saturate(100%) invert(28%) sepia(47%) saturate(1200%) hue-rotate(256deg) brightness(88%) contrast(90%);
   }
 
@@ -223,7 +242,13 @@
 
   aside.sidebar .sidebar-nav-link.active .menu-icon,
   aside.sidebar .sidebar-nav-link.active iconify-icon,
-  aside.sidebar .sidebar-menu li > a.active-page .menu-icon {
+  aside.sidebar .sidebar-menu li > a.active-page .menu-icon,
+  aside.sidebar .sidebar-submenu li.active-page .menu-icon,
+  aside.sidebar .sidebar-submenu li.active-page iconify-icon,
+  aside.sidebar .sidebar-menu li.dropdown.open > a .menu-icon,
+  aside.sidebar .sidebar-menu li.active-parent > a .menu-icon,
+  aside.sidebar .sidebar-submenu__nested.open > a .menu-icon,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a .menu-icon {
     color: #733e87 !important;
   }
 
