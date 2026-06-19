@@ -2646,7 +2646,7 @@ const ensureCrmToastStyles = () => {
             display: flex;
             align-items: center;
             gap: 13px;
-            padding: 14px 34px 14px 16px;
+            padding: 14px 14px 14px 16px;
             position: relative;
             min-width: 308px;
         }
