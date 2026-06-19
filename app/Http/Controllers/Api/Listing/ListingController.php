@@ -2311,7 +2311,8 @@ public function updatePaymentBreakdown(Request $request, $id): JsonResponse
             'payment_plan' => 'nullable',
             'payment_breakdown' => 'nullable',
             'assignment_expense_lines' => 'nullable',
-            'noc_percentage' => 'nullable|integer|min:0|max:50',
+            'noc_percentage' => 'nullable|integer|min:0',
+            'noc_fixed_amount' => 'nullable|integer|min:0',
             'handover_date' => 'nullable|date',
         ]);
 
@@ -2353,6 +2354,9 @@ public function updatePaymentBreakdown(Request $request, $id): JsonResponse
 
         if (array_key_exists('noc_percentage', $validated)) {
             $updates['noc_percentage'] = $validated['noc_percentage'];
+        } 
+        if (array_key_exists('noc_fixed_amount', $validated)) {
+            $updates['noc_fixed_amount'] = $validated['noc_fixed_amount'];
         }
 
         if (array_key_exists('handover_date', $validated)) {

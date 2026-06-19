@@ -50,7 +50,8 @@
                       />
                     </div>
                   </div>
-                  <div class="col-12">
+                  <!-- Payment plan - يظهر فقط للـ Under Construction -->
+                  <div class="col-12" v-if="isUnderConstruction">
                     <label class="lpb-label">Payment plan</label>
                     <v-select
                       v-model="form.payment_plans"
@@ -64,10 +65,18 @@
                     />
                     <div v-if="paymentPlanFieldInvalid" class="lpb-hint lpb-hint--err">{{ paymentPlanFieldError }}</div>
                   </div>
+                  <!-- للـ Completed: رسالة توضيحية -->
+                  <div class="col-12" v-else>
+                    <div class="text-muted small mt-2">
+                      <i class="fas fa-info-circle me-1"></i>
+                      Payment plan not required for completed properties.
+                    </div>
+                  </div>
                 </div>
               </section>
 
-              <section class="lpb-section lpb-summary-grid">
+              <!-- Summary - يظهر فقط للـ Under Construction -->
+              <section class="lpb-section lpb-summary-grid" v-if="isUnderConstruction">
                 <div class="lpb-summary-item">
                   <span class="lpb-summary-label">UC tranche</span>
                   <span class="lpb-summary-value">{{ initialPercentForm.toFixed(0) }}%</span>
@@ -85,10 +94,12 @@
                 </div>
               </section>
 
+              <!-- Handover & NOC -->
               <section class="lpb-section">
                 <h6 class="lpb-section-title">Handover &amp; NOC</h6>
                 <div class="row g-2">
-                  <div class="col-sm-6">
+                  <!-- Handover date - يظهر فقط للـ Under Construction -->
+                  <div class="col-sm-6" v-if="isUnderConstruction">
                     <label class="lpb-label">Handover date</label>
                     <AdvancedDatePicker
                       v-model="form.handover_date"
@@ -102,16 +113,46 @@
                     />
                     <div v-if="paymentHandoverDateError" class="lpb-hint lpb-hint--err">{{ paymentHandoverDateError }}</div>
                   </div>
-                  <div class="col-sm-6">
-                    <label class="lpb-label">NOC % of OP</label>
-                    <v-select
-                      v-model="form.noc_percentage"
-                      :options="nocPercentageOptions"
-                      :reduce="(item) => item.value"
-                      label="label"
-                      :clearable="false"
-                      class="lpb-vselect"
-                    />
+                  <div class="col-sm-6" :class="{ 'col-sm-12': !isUnderConstruction }">
+                    <label class="lpb-label">
+                      NOC Fees
+                      <span class="text-muted fw-normal small">(AED)</span>
+                      <span class="badge ms-1" :class="currentNocType === 'Off-Plan' ? 'bg-warning' : 'bg-success'" style="font-size: 8px;">
+                        {{ currentNocType }}
+                      </span>
+                    </label>
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-light">
+                        <i class="fas fa-shield-alt" :class="developerNocValue > 0 ? 'text-primary' : 'text-muted'"></i>
+                      </span>
+                      <input
+                        v-model.number="form.noc_fixed_amount"
+                        type="number"
+                        min="0"
+                        step="1000"
+                        class="form-control lpb-control"
+                        :disabled="developerNocValue > 0"
+                        :class="{ 'bg-light': developerNocValue > 0 }"
+                        placeholder="Enter NOC amount"
+                      />
+                      <span class="input-group-text" v-if="developerNocValue > 0">
+                        <i class="fas fa-lock text-primary" title="Auto-populated from developer"></i>
+                      </span>
+                    </div>
+                    <small class="text-muted d-block mt-1" style="font-size: 9px;">
+                      <span v-if="developerNocValue > 0" class="text-primary">
+                        <i class="fas fa-info-circle"></i> 
+                        Auto-populated from developer ({{ currentNocType }}): 
+                        <strong>{{ formatAed(developerNocValue) }}</strong>
+                      </span>
+                      <span v-else-if="selectedProject && developerNocValue === 0" class="text-muted">
+                        <i class="fas fa-info-circle"></i> No NOC fees for this developer
+                      </span>
+                      <span v-else class="text-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        NOC value modified manually
+                      </span>
+                    </small>
                   </div>
                 </div>
                 <div class="lpb-noc-mini mt-2">
@@ -120,8 +161,8 @@
                   <span>Scheduled: <strong>{{ formatAed(scheduledInstallmentsAed) }}</strong></span>
                 </div>
               </section>
-
-              <section v-if="paymentBreakdownValidationSummary.length" class="lpb-section lpb-validation">
+              <!-- Validation - يظهر فقط للـ Under Construction -->
+              <section v-if="isUnderConstruction && paymentBreakdownValidationSummary.length" class="lpb-section lpb-validation">
                 <h6 class="lpb-section-title">Checks</h6>
                 <ul class="lpb-validation-list">
                   <li
@@ -136,8 +177,8 @@
               </section>
             </div>
 
-            <!-- Right column: installments -->
-            <div class="lpb-col lpb-col--table">
+            <!-- Right column: installments - يظهر فقط للـ Under Construction -->
+            <div class="lpb-col lpb-col--table" v-if="isUnderConstruction">
               <section class="lpb-section lpb-section--fill">
                 <h6 class="lpb-section-title">Installments</h6>
 
@@ -235,13 +276,25 @@
                 </div>
               </section>
             </div>
+
+            <!-- للـ Completed: رسالة بدلاً من جدول الأقساط -->
+            <div class="lpb-col lpb-col--table" v-else>
+              <section class="lpb-section lpb-section--fill d-flex align-items-center justify-content-center">
+                <div class="text-center text-muted">
+                  <i class="fas fa-check-circle fa-2x mb-2 d-block" style="color: #28a745;"></i>
+                  <p class="mb-0">No installments required for completed properties.</p>
+                </div>
+              </section>
+            </div>
           </div>
 
+          <!-- Assignment deal costs - يظهر دائماً -->
           <section class="lpb-section lpb-section--expenses mt-2">
             <h6 class="lpb-section-title">Assignment deal costs</h6>
             <p class="lpb-expenses-hint mb-2">DLD, agency, mortgage fees, and other charges — separate from installments.</p>
 
-            <div class="row g-2 align-items-end lpb-expenses-add">
+            <!-- إضافة تكلفة جديدة -->
+            <!-- <div class="row g-2 align-items-end lpb-expenses-add">
               <div class="col-12 col-md-3">
                 <label class="lpb-label">Label</label>
                 <div class="lpb-input-shell">
@@ -298,10 +351,11 @@
               <div class="col-12 col-md-2">
                 <button type="button" class="btn btn-outline-primary lpb-btn-add w-100" @click="addExpenseLine">+ Add cost</button>
               </div>
-            </div>
+            </div> -->
 
             <div v-if="addExpenseError" class="lpb-hint lpb-hint--err mt-1">{{ addExpenseError }}</div>
 
+            <!-- جدول التكاليف -->
             <div class="lpb-expenses-table-wrap mt-2">
               <table class="table lpb-table lpb-expenses-table mb-0">
                 <thead>
@@ -317,11 +371,27 @@
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- عرض Agency Fee كبند تلقائي إذا كان سعر البيع > 0 -->
+                  <tr v-if="Number(sellingPriceNum) > 0" class="table-light">
+                    <td>
+                      <span class="fw-semibold">Agency Fee</span>
+                      <span class="badge bg-primary ms-1" style="font-size: 8px;">2%</span>
+                    </td>
+                    <td class="d-none d-lg-table-cell">SP</td>
+                    <td>Percentage</td>
+                    <td>2%</td>
+                    <td class="text-end">{{ formatAed((Number(sellingPriceNum) * 2) / 100) }}</td>
+                    <td class="text-end">—</td>
+                    <td class="text-end fw-semibold">{{ formatAed((Number(sellingPriceNum) * 2) / 100) }}</td>
+                    <td></td>
+                  </tr>
+                  
+                  <!-- التكاليف الأخرى -->
                   <tr v-for="line in assignmentExpenseLines" :key="line.id">
                     <td>
                       <div class="lpb-input-shell">
                         <span v-if="textFieldIsEmpty(line.label)" class="lpb-input-hint">Label</span>
-                        <input v-model="line.label" type="text" class="form-control lpb-control lpb-control--inline" />
+                        <input v-model="line.label" type="text" class="form-control lpb-control lpb-control--inline" :disabled="line.isReadonly" />
                       </div>
                     </td>
                     <td class="d-none d-lg-table-cell">
@@ -333,6 +403,7 @@
                         label="label"
                         :clearable="false"
                         class="lpb-vselect lpb-vselect--inline"
+                        :disabled="line.isReadonly"
                       />
                       <span v-else class="text-muted">—</span>
                     </td>
@@ -344,42 +415,44 @@
                         label="label"
                         :clearable="false"
                         class="lpb-vselect lpb-vselect--inline"
+                        :disabled="line.isReadonly"
                       />
                     </td>
                     <td>
-                      <input v-model.number="line.value" type="number" min="0" step="any" class="form-control lpb-control lpb-control--inline" />
+                      <input v-model.number="line.value" type="number" min="0" step="any" class="form-control lpb-control lpb-control--inline" :disabled="line.isReadonly" />
                     </td>
                     <td class="text-end text-nowrap">{{ formatAed(assignmentExpenseLineAmount(line)) }}</td>
                     <td class="text-end text-nowrap">
                       <label class="d-inline-flex align-items-center gap-1 mb-0">
-                        <input v-model="line.vatEnabled" type="checkbox" class="form-check-input m-0" />
+                        <input v-model="line.vatEnabled" type="checkbox" class="form-check-input m-0" :disabled="line.isReadonly" />
                         <span>{{ line.vatEnabled ? formatAed(assignmentExpenseLineVat(line)) : '—' }}</span>
                       </label>
                     </td>
                     <td class="text-end text-nowrap fw-semibold">{{ formatAed(assignmentExpenseLineTotal(line)) }}</td>
                     <td class="text-end">
-                      <button type="button" class="btn btn-link lpb-btn-remove" @click="removeAssignmentExpenseLine(line.id)">×</button>
+                      <button type="button" class="btn btn-link lpb-btn-remove" @click="removeAssignmentExpenseLine(line.id)" :disabled="line.isReadonly">×</button>
                     </td>
                   </tr>
-                  <tr v-if="!assignmentExpenseLines.length">
+                  <tr v-if="!assignmentExpenseLines.length && Number(sellingPriceNum) <= 0">
                     <td colspan="8" class="text-center text-muted py-3">No cost lines yet — add DLD, agency, or other fees above.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div v-if="assignmentExpenseLines.length" class="lpb-expenses-summary row g-2 mt-2 pt-2 border-top">
+            <!-- ملخص التكاليف مع Agency Fee -->
+            <div v-if="assignmentExpenseLines.length > 0 || Number(sellingPriceNum) > 0" class="lpb-expenses-summary row g-2 mt-2 pt-2 border-top">
               <div class="col-4">
                 <span class="lpb-summary-label">Subtotal</span>
-                <div class="lpb-summary-value">{{ formatAed(assignmentExpensesSubtotal) }}</div>
+                <div class="lpb-summary-value">{{ formatAed(expensesSubtotalWithAgency) }}</div>
               </div>
               <div class="col-4">
                 <span class="lpb-summary-label">VAT (5%)</span>
-                <div class="lpb-summary-value">{{ formatAed(assignmentExpensesTotalVat) }}</div>
+                <div class="lpb-summary-value">{{ formatAed(expensesVatWithAgency) }}</div>
               </div>
               <div class="col-4">
                 <span class="lpb-summary-label">Grand total</span>
-                <div class="lpb-summary-value text-primary">{{ formatAed(assignmentExpensesGrandTotal) }}</div>
+                <div class="lpb-summary-value text-primary">{{ formatAed(expensesGrandTotalWithAgency) }}</div>
               </div>
             </div>
           </section>
@@ -475,6 +548,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'saved']);
 
+// ============ تعريف جميع refs ============
 const isLoading = ref(false);
 const isSaving = ref(false);
 const loadError = ref('');
@@ -483,6 +557,8 @@ const addInstallmentError = ref('');
 const addExpenseError = ref('');
 const listingTitle = ref('');
 const showPaymentPreview = ref(false);
+const selectedProject = ref(null);
+const dealCostSettings = ref({});
 
 const form = ref({
   price: '',
@@ -491,6 +567,7 @@ const form = ref({
   payment_plan: '',
   handover_date: '',
   noc_percentage: 0,
+  noc_fixed_amount: 0,
   completionStatus: 'Under Construction',
 });
 
@@ -501,7 +578,37 @@ const installmentDraft = ref({
   date: new Date().toISOString().slice(0, 10),
 });
 
-const isUnderConstruction = computed(() => true);
+// ============ Computed Properties ============
+const isUnderConstruction = computed(() => {
+  const s = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
+  return s === 'under construction' || s === 'off plan';
+});
+
+const nocFixedAmount = computed(() => {
+  return Number(form.value.noc_fixed_amount || 0);
+});
+
+const developerNocValue = computed(() => {
+    console.log('🔍 developerNocValue computed called');
+  console.log('📌 selectedProject.value:', selectedProject.value);
+  console.log('📌 selectedProject.value?.developer:', selectedProject.value?.developer);
+  if (!selectedProject.value || !selectedProject.value.developer) return 0;
+  
+  const status = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  console.log("selectedProject.value.developer"+selectedProject.value.developer);
+  if (isUC) {
+    return Number(selectedProject.value.developer.noc_fees_off_plan || 0);
+  } else {
+    return Number(selectedProject.value.developer.noc_fees_ready || 0);
+  }
+});
+
+const currentNocType = computed(() => {
+  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  return isUC ? 'Off-Plan' : 'Ready';
+});
 
 const nocPercentageOptions = [
   { label: '0%', value: 0 },
@@ -517,6 +624,7 @@ const installmentTypeOptions = [
   { label: 'Amount (AED)', value: 'amount' },
 ];
 
+// ============ useListingPaymentBreakdown ============
 const {
   selectedPaymentPlanLabel,
   initialPercentForm,
@@ -557,6 +665,7 @@ const {
   isUnderConstruction,
 });
 
+// ============ useListingAssignmentExpenses ============
 const {
   assignmentExpenseLines,
   assignmentExpenseDraft,
@@ -569,17 +678,104 @@ const {
   loadAssignmentExpenseLines,
   addAssignmentExpenseLine,
   removeAssignmentExpenseLine,
+  addDefaultDealCosts,
 } = useListingAssignmentExpenses({
   originalPriceNum,
   sellingPriceNum,
   premiumAmountForm,
   formatAed,
+  nocFixedAmount: nocFixedAmount,
+  dealCostSettings: dealCostSettings,
 });
 
+// ============ حساب التكاليف مع Agency Fee ============
+const agencyFeePercent = computed(() => 2);
+
+const agencyFeeAmount = computed(() => {
+  const sp = Number(sellingPriceNum.value || 0);
+  return (sp * agencyFeePercent.value) / 100;
+});
+
+const expensesSubtotalWithAgency = computed(() => {
+  const agency = agencyFeeAmount.value;
+  const subtotal = Number(assignmentExpensesSubtotal.value || 0);
+  return subtotal + agency;
+});
+
+const expensesVatWithAgency = computed(() => {
+  const agencyVat = agencyFeeAmount.value * 0.05;
+  const vat = Number(assignmentExpensesTotalVat.value || 0);
+  return vat + agencyVat;
+});
+
+const expensesGrandTotalWithAgency = computed(() => {
+  return expensesSubtotalWithAgency.value + expensesVatWithAgency.value;
+});
+
+// ============ Functions ============
 const close = () => emit('update:modelValue', false);
+
+const fetchDealCosts = async () => {
+  try {
+    const response = await api.get("/settings/deal-costs");
+    const data = response.data.data || response.data;
+    
+    if (data.settings) {
+      const settings = {};
+      Object.keys(data.settings).forEach(key => {
+        const numKey = parseInt(key) || key;
+        settings[numKey] = data.settings[key];
+      });
+      if (!settings['3'] && !settings['agency_fee']) {
+        settings['agency_fee'] = 2;
+      }
+      dealCostSettings.value = settings;
+    } else if (data.details) {
+      const settings = {};
+      data.details.forEach(item => {
+        settings[item.key] = item.value;
+      });
+      if (!settings['agency_fee']) {
+        settings['agency_fee'] = 2;
+      }
+      dealCostSettings.value = settings;
+    } else {
+      dealCostSettings.value = data;
+      if (!dealCostSettings.value['agency_fee']) {
+        dealCostSettings.value['agency_fee'] = 2;
+      }
+    }
+    
+    console.log('✅ Deal cost settings loaded:', dealCostSettings.value);
+    
+    if (typeof addDefaultDealCosts === 'function') {
+      addDefaultDealCosts();
+    }
+    
+  } catch (error) {
+    console.error('❌ Error fetching deal costs:', error);
+    dealCostSettings.value = {
+      dari_admin_fee: 0,
+      adgm_admin_fee: 0,
+      agency_fee: 2
+    };
+    if (typeof addDefaultDealCosts === 'function') {
+      addDefaultDealCosts();
+    }
+  }
+};
 
 const hydrateFromProperty = (propertyData) => {
   listingTitle.value = propertyData.title || propertyData.reference_number || `Listing #${propertyData.id}`;
+  console.log('🔍 hydrateFromProperty called with:', propertyData);
+
+  if (propertyData.project) {
+    selectedProject.value = {
+      id: propertyData.project.id,
+      name: propertyData.project.title || propertyData.project.name,
+      developer: propertyData.project.developerData
+    };
+  }
 
   let paymentPlanValue = propertyData.payment_plans ?? propertyData.payment_plan;
   if (typeof paymentPlanValue === 'string' && paymentPlanValue.startsWith('[')) {
@@ -594,6 +790,18 @@ const hydrateFromProperty = (propertyData) => {
     paymentPlanValue = paymentPlanValue[0];
   }
 
+  const status = String(propertyData.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
+  const isUC = status === 'under construction' || status === 'off plan';
+  
+  let nocValue = 0;
+  if (selectedProject.value?.developer) {
+    if (isUC) {
+      nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
+    } else {
+      nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
+    }
+  }
+
   form.value = {
     price: String(propertyData.price ?? propertyData.selling_price ?? ''),
     original_price:
@@ -603,9 +811,8 @@ const hydrateFromProperty = (propertyData) => {
     payment_plans: paymentPlanValue ? resolvePaymentPlanOption(paymentPlanValue) ?? paymentPlanValue : null,
     payment_plan: propertyData.payment_plan || '',
     handover_date: propertyData.handover_date ? String(propertyData.handover_date).slice(0, 10) : '',
-    noc_percentage: [0, 10, 20, 30, 40, 50].includes(Number(propertyData.noc_percentage))
-      ? Number(propertyData.noc_percentage)
-      : 0,
+    noc_percentage: nocValue > 0 ? 100 : 0,
+    noc_fixed_amount: nocValue,
     completionStatus: propertyData.completion_status || 'Under Construction',
   };
 
@@ -635,6 +842,7 @@ const loadListing = async () => {
   isLoading.value = true;
   loadError.value = '';
   try {
+    await fetchDealCosts();
     if (props.listingPreview && listingHasPreviewBreakdownData(props.listingPreview)) {
       hydrateFromProperty({ ...props.listingPreview, id: props.listingId });
       return;
@@ -657,6 +865,54 @@ const loadListing = async () => {
   }
 };
 
+watch(
+  () => form.value.completionStatus,
+  (newStatus) => {
+    if (!selectedProject.value?.developer) return;
+    
+    const status = String(newStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
+    const isUC = status === 'under construction' || status === 'off plan';
+    
+    let nocValue = 0;
+    if (isUC) {
+      nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
+    } else {
+      nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
+    }
+    
+    form.value.noc_fixed_amount = nocValue;
+  }
+);
+// ✅ مراقبة تغيير المشروع وتحديث NOC
+watch(
+  () => selectedProject.value,
+  (newProject) => {
+    if (!newProject?.developer) {
+      form.value.noc_fixed_amount = 0;
+      return;
+    }
+    
+    const status = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
+    const isUC = status === 'under construction' || status === 'off plan';
+    
+    let nocValue = 0;
+    if (isUC) {
+      nocValue = Number(newProject.developer.noc_fees_off_plan || 0);
+    } else {
+      nocValue = Number(newProject.developer.noc_fees_ready || 0);
+    }
+    
+    console.log('🔄 NOC updated from project:', {
+      project: newProject.name,
+      isUC,
+      nocValue,
+      developer: newProject.developer
+    });
+    
+    form.value.noc_fixed_amount = nocValue;
+  },
+  { deep: true, immediate: true }
+);
 watch(
   () => [props.modelValue, props.listingId],
   ([open, id]) => {
@@ -722,6 +978,7 @@ const save = async () => {
       payment_breakdown: breakdownInstallments.value,
       assignment_expense_lines: assignmentExpenseLines.value,
       noc_percentage: Number(form.value.noc_percentage ?? 0),
+      noc_fixed_amount: Number(form.value.noc_fixed_amount || 0),
       handover_date: form.value.handover_date || null,
     };
     const response = await api.patch(`/listings/properties/${props.listingId}/payment-breakdown`, payload);

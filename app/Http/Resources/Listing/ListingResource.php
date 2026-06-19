@@ -243,7 +243,10 @@ $allowedAgentIds = [];
                     'area' => $this->project->area ? [
                         'id' => $this->project->area->id,
                         'name' => $this->project->area->name,
-                        'area_parents_title' => $this->project->area->area_parents_title
+                        'area_parents_title' => $this->project->area->area_parents_title,
+                        'admin_fee_type' => $this->project->area->getAdminFeeType(),
+                            'is_adgm' => $this->project->area->isAdgmArea(),
+                            'all_names' => $this->project->area->getAllAreaNames(),
                     ] : null,
                     'project_id' => $this->project->id,
                      'features' => $this->project->features->map(function ($feature) {
@@ -257,6 +260,13 @@ $allowedAgentIds = [];
 
                     'developer'=>$this->project->developer_id,
                     'developer_name'=>$this->project->developer?->name,
+                     'developerData' => $this->project->developer ? [
+                        'id' => $this->project->developer->id,
+                        'name' => $this->project->developer->name,
+                        'avatar' => $this->project->developer->avatar_path ? asset('storage/' . $this->project?->developer->avatar_path) : null,
+                        'noc_fees_ready' => $this->project->developer?->noc_fees_ready,
+                        'noc_fees_off_plan' => $this->project->developer?->noc_fees_off_plan,
+                    ] : null,
                         // 'image' => $this->project->mainImage ? asset('storage/' . $this->project->mainImage->image_path) : null,
                     'image' => $projectMainImage ? asset('storage/' . $projectMainImage->image_path) : null,
                     'image2' => $projectSecondImage ? asset('storage/' . $projectSecondImage->image_path) : null,

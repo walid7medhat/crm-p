@@ -421,7 +421,8 @@ class Listing extends Model
 
     public function hasPaymentBreakdown(): bool
     {
-        $rows = $this->payment_breakdown;
+        // $rows = $this->payment_breakdown;
+        $rows=$this->assignment_expense_lines;
         if (is_string($rows)) {
             $decoded = json_decode($rows, true);
             $rows = is_array($decoded) ? $decoded : [];

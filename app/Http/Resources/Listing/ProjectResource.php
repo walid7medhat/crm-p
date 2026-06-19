@@ -42,7 +42,9 @@ $duplicatedProject = Project::whereRaw(
                 'name' => $this->area->name,
                 'area_parents_title' => $this->area->area_parents_title,
                 'children_count' => $this->area->children_count,
-                
+                 'admin_fee_type' => $this->area->getAdminFeeType(),
+                    'is_adgm' => $this->area->isAdgmArea(),
+                    'all_names' => $this->area->getAllAreaNames(),
               
             ] : null,
             

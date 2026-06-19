@@ -2168,20 +2168,21 @@ const fetchDealCosts = async () => {
   }
 };
 
-// ✅ إضافة التكاليف الثابتة تلقائياً
-// ✅ إضافة التكاليف الثابتة تلقائياً
+
+// ✅ إضافة التكاليف الثابتة تلقائياً (في صفحة الإنشاء)
 const addDefaultDealCosts = () => {
   console.log('📝 Adding default deal costs. Settings:', dealCostSettings.value);
+  console.log('📍 Current area in create form:', form.value.area);
   
   // ✅ استخدام المفاتيح النصية
   const fees = {
     dariAdminFee: dealCostSettings.value['dari_admin_fee'] || dealCostSettings.value['1'] || 0,
     adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0,
-    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2 // ✅ 2% افتراضي
+    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2
   };
   
-  // ✅ Agency Fee (2% من سعر البيع)
-  const agencyFeeValue = Number(fees.agencyFee) || 2; // 2% افتراضي
+  // ✅ 1. Agency Fee (2% من سعر البيع)
+  const agencyFeeValue = Number(fees.agencyFee) || 2;
   console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
   
   const existingAgency = assignmentExpenseLines.value.find(
@@ -2191,9 +2192,9 @@ const addDefaultDealCosts = () => {
     assignmentExpenseLines.value.push({
       id: Date.now() + 3,
       label: 'Agency Fee',
-      calcType: 'percentage', // ✅ نسبة مئوية
-      base: 'sp', // ✅ من سعر البيع (Selling Price)
-      value: agencyFeeValue, // ✅ 2% أو القيمة من الإعدادات
+      calcType: 'percentage',
+      base: 'sp',
+      value: agencyFeeValue,
       vatEnabled: false,
       isDefault: true,
       isReadonly: true
@@ -2204,34 +2205,27 @@ const addDefaultDealCosts = () => {
     console.log('✅ Agency Fee updated');
   }
   
-  // Dari Admin Fee
-  if (Number(fees.dariAdminFee) > 0) {
-    console.log(`✅ Found Dari Admin Fee: ${fees.dariAdminFee}`);
-    const existing = assignmentExpenseLines.value.find(
-      line => line.label === 'Dari Admin Fee' && line.isDefault
-    );
-    if (!existing) {
-      assignmentExpenseLines.value.push({
-        id: Date.now() + 1,
-        label: 'Dari Admin Fee',
-        calcType: 'fixed',
-        base: null,
-        value: Number(fees.dariAdminFee),
-        vatEnabled: false,
-        isDefault: true,
-        isReadonly: true
-      });
-      console.log('✅ Dari Admin Fee added');
-    }
-  }
+  // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة
+  const areaData = form.value.area;
+  const feeType = getAdminFeeTypeFromArea(areaData);
+  console.log(`📍 Admin fee type: ${feeType}`);
   
-  // ADGM Admin Fee
-  if (Number(fees.adgmAdminFee) > 0) {
-    console.log(`✅ Found ADGM Admin Fee: ${fees.adgmAdminFee}`);
-    const existing = assignmentExpenseLines.value.find(
-      line => line.label === 'ADGM Admin Fee' && line.isDefault
-    );
-    if (!existing) {
+  // ✅ إزالة التكاليف الإدارية القديمة
+  const adminFeeIndices = [];
+  assignmentExpenseLines.value.forEach((line, index) => {
+    if ((line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee') && line.isDefault) {
+      adminFeeIndices.push(index);
+    }
+  });
+  adminFeeIndices.reverse().forEach(index => {
+    assignmentExpenseLines.value.splice(index, 1);
+    console.log(`🗑️ Removed old admin fee at index ${index}`);
+  });
+
+  // ✅ 3. إضافة التكلفة الإدارية المناسبة
+  if (feeType === 'adgm') {
+    // ADGM Admin Fee
+    if (Number(fees.adgmAdminFee) > 0) {
       assignmentExpenseLines.value.push({
         id: Date.now() + 2,
         label: 'ADGM Admin Fee',
@@ -2240,13 +2234,70 @@ const addDefaultDealCosts = () => {
         value: Number(fees.adgmAdminFee),
         vatEnabled: false,
         isDefault: true,
-        isReadonly: true
+        isReadonly: true,
+        isAdminFee: true,
       });
-      console.log('✅ ADGM Admin Fee added');
+      console.log(`✅ ADGM Admin Fee added: ${fees.adgmAdminFee} AED`);
+    }
+  } else {
+    // Dari Admin Fee
+    if (Number(fees.dariAdminFee) > 0) {
+      assignmentExpenseLines.value.push({
+        id: Date.now() + 1,
+        label: 'Dari Admin Fee',
+        calcType: 'fixed',
+        base: null,
+        value: Number(fees.dariAdminFee),
+        vatEnabled: false,
+        isDefault: true,
+        isReadonly: true,
+        isAdminFee: true,
+      });
+      console.log(`✅ Dari Admin Fee added: ${fees.dariAdminFee} AED`);
     }
   }
   
   console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
+};
+
+// ✅ دالة لتحديد نوع التكلفة بناءً على المنطقة
+const getAdminFeeTypeFromArea = (areaData) => {
+  if (!areaData) return 'dari';
+  
+  // استخدام is_adgm من الـ API إذا كانت موجودة
+  if (areaData.is_adgm !== undefined) {
+    return areaData.is_adgm ? 'adgm' : 'dari';
+  }
+  
+  // استخدام all_names
+  if (areaData.all_names && Array.isArray(areaData.all_names)) {
+    const adgmTerms = ['maryah island', 'reem island'];
+    const isAdgm = areaData.all_names.some(name => 
+      adgmTerms.some(term => 
+        String(name).toLowerCase().includes(term.toLowerCase().trim())
+      )
+    );
+    return isAdgm ? 'adgm' : 'dari';
+  }
+  
+  // استخدام hierarchy
+  if (areaData.hierarchy && Array.isArray(areaData.hierarchy)) {
+    const adgmTerms = ['maryah island', 'reem island'];
+    const isAdgm = areaData.hierarchy.some(h => 
+      adgmTerms.some(term => 
+        String(h.name || '').toLowerCase().includes(term.toLowerCase().trim())
+      )
+    );
+    return isAdgm ? 'adgm' : 'dari';
+  }
+  
+  // Fallback
+  const areaName = String(areaData.name || areaData.area_title || areaData.title || '').toLowerCase();
+  if (areaName.includes('maryah') || areaName.includes('reem')) {
+    return 'adgm';
+  }
+  
+  return 'dari';
 };
 const selectedPaymentPlanOption = computed(() => resolvePaymentPlanOption(form.value.payment_plans));
 
@@ -3100,7 +3151,18 @@ const listingFeatureOptions = LISTING_FEATURE_OPTIONS;
 
 const isLoadingUnitNumber = ref(false);
 const unitNumberError = ref("");
-
+watch(
+  () => form.value.area,
+  (newArea, oldArea) => {
+    if (!newArea && !oldArea) return;
+    
+    console.log('🔄 Area changed in create form from:', oldArea?.name, 'to:', newArea?.name);
+    console.log('📍 New area data:', newArea);
+    
+    addDefaultDealCosts();
+  },
+  { deep: true }
+);
 watch(() => [form.value.unit_number, selectedProject.value, form.value.saleOrRent, form.value.area], 
   ([newUnitNumber, newProject, newStatus, newArea], [oldUnitNumber, oldProject, oldStatus, oldArea]) => {
   if ((newProject !== oldProject || newStatus !== oldStatus || newArea !== oldArea) && newUnitNumber) {
@@ -3485,6 +3547,9 @@ watch(() => selectedProject.value, async (newProject) => {
     
     selectedAreaForFilter.value = null; // Reset filter
     clearSelectedProjectFloorPlan();
+     if (newProject?.developer) {
+      updateNocBasedOnStatus();
+    }
   } else {
     projectFloorPlans.value = [];
     filteredFloorPlans.value = [];

@@ -28,6 +28,9 @@ class AreaResource extends JsonResource
             'project_name'=>$this->project?->name,
             'developer_id'=>$this->project?->developer_id,
             'developer_name'=>$this->project?->developer?->name,
+            'admin_fee_type' => $this->getAdminFeeType(),
+            'is_adgm' => $this->isAdgmArea(),
+            'all_names' => $this->getAllAreaNames(),
         ];
     }
 }

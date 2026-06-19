@@ -97,6 +97,7 @@ class ListingGridResource extends JsonResource
             'size_sqmt' => $this->size_sqmt,
             'number_of_bedrooms' => $this->number_of_bedrooms,
             'number_of_bathrooms' => $this->number_of_bathrooms,
+           
             'price' => $this->price,
             'furnished_status' => $this->furnished_status,
             'listing_status' => $this->listing_status,
@@ -131,6 +132,75 @@ class ListingGridResource extends JsonResource
             'canShowOwner' => $canSeeOwnerData,
             'canShowUnitNumber' => $canSeeUnitNumber,
             'created_at' => $this->created_at?->format('M d, Y'),
+                  'project' => $this->whenLoaded('project', function () {
+                 $projectGalleryImages = $this->project->images->sortBy('sort_order')->values();
+                    $projectMainImage = $projectGalleryImages->firstWhere('is_main', true);
+                    $projectSecondImage = null;
+                    
+                    // If we have main image and at least 2 images total, get the second one
+                    if ($projectGalleryImages->count() >= 2) {
+                        if ($projectMainImage && $projectGalleryImages->count() >= 2) {
+                            // Get the next image after main
+                            $mainIndex = $projectGalleryImages->search(function($img) use ($projectMainImage) {
+                                return $img->id === $projectMainImage->id;
+                            });
+                            if ($mainIndex !== false && isset($projectGalleryImages[$mainIndex + 1])) {
+                                $projectSecondImage = $projectGalleryImages[$mainIndex + 1];
+                            }
+                        } else {
+                            // If no main image, just take first two
+                            $projectSecondImage = $projectGalleryImages[1] ?? null;
+                        }
+                    }
+    
+                return [
+                    'id' => $this->project->id,
+                    'title' => $this->project->title,
+                    'name' => $this->project->title,
+                    'about' => $this->project->about,
+                    'area_id' => $this->project->area_id,
+                 
+                    'area' => $this->project->area ? [
+                        'id' => $this->project->area->id,
+                        'name' => $this->project->area->name,
+                        'area_parents_title' => $this->project->area->area_parents_title,
+                        'admin_fee_type' => $this->project->area->getAdminFeeType(),
+                            'is_adgm' => $this->project->area->isAdgmArea(),
+                            'all_names' => $this->project->area->getAllAreaNames(),
+                    ] : null,
+                    'project_id' => $this->project->id,
+                     'features' => $this->project->features->map(function ($feature) {
+                        return [
+                            'id' => $feature->id,
+                            'name' => $feature->name,
+                            'img' => $feature->img ? asset('storage/' . $feature->img) : null,
+                            'category' => $feature->category ?? null
+                        ];
+                    }),
+
+                    'developer'=>$this->project->developer_id,
+                    'developer_name'=>$this->project->developer?->name,
+                     'developerData' => $this->project->developer ? [
+                        'id' => $this->project->developer->id,
+                        'name' => $this->project->developer->name,
+                        'avatar' => $this->project->developer->avatar_path ? asset('storage/' . $this->project?->developer->avatar_path) : null,
+                        'noc_fees_ready' => $this->project->developer?->noc_fees_ready,
+                        'noc_fees_off_plan' => $this->project->developer?->noc_fees_off_plan,
+                    ] : null,
+                        // 'image' => $this->project->mainImage ? asset('storage/' . $this->project->mainImage->image_path) : null,
+                    'image' => $projectMainImage ? asset('storage/' . $projectMainImage->image_path) : null,
+                    'image2' => $projectSecondImage ? asset('storage/' . $projectSecondImage->image_path) : null,
+                    'floor_plan_images' => FloorPlanImageResource::collection($this->project->floorPlanImages),
+                    'gallery_images'=>$this->project->images->map(function ($image) {
+                        return [
+                            'id' => $image->id,
+                            'image_url' => asset('storage/' . $image->image_path),
+                            'is_main' => $image->is_main,
+                            'sort_order' => $image->sort_order
+                        ];
+                    }),
+                ];
+            }),
         ];
     }
 }

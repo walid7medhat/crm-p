@@ -29,7 +29,7 @@ export function listingHasPaymentBreakdown(property) {
 
 /** Off-plan listing with no installment breakdown rows yet. */
 export function listingNeedsPaymentBreakdownHighlight(property) {
-  return isUnderConstructionListing(property) && !listingHasPaymentBreakdown(property);
+  return  !listingHasPaymentBreakdown(property);
 }
 
 export function getStoredAuthUser() {

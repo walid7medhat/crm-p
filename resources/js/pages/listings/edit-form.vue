@@ -2022,6 +2022,7 @@ const {
 });
 
 const dealCostSettingsComputed = computed(() => dealCostSettings.value);
+const areaComputed = computed(() => form.value.area);
 
 const {
   assignmentExpenseLines,
@@ -2046,6 +2047,7 @@ const {
   formatAed,
    nocFixedAmount,
    dealCostSettings,
+     area: areaComputed,
 });
 // const nocFixedAmount = computed(() => {
 //   return Number(form.value.noc_fixed_amount || 0);
@@ -2410,6 +2412,23 @@ watch(() => form.value.saleOrRent, (newValue) => {
     }
   }
 });
+watch(
+  () => form.value.area,
+  (newArea, oldArea) => {
+    // تجنب التحديث عند التحميل الأولي
+    if (!newArea && !oldArea) return;
+    
+    console.log('🔄 Area changed from:', oldArea?.name, 'to:', newArea?.name);
+    console.log('📍 New area data:', newArea);
+    
+    addDefaultDealCosts();
+    
+    if (selectedProject.value?.developer) {
+      updateNocBasedOnStatus();
+    }
+  },
+  { deep: true }
+);
 watch(() => form.value.completionStatus, (newStatus) => {
   const s = String(newStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
   const isUC = s === 'under construction' || s === 'off plan';
