@@ -20,6 +20,8 @@ class SyncBitrixUsersFull extends Command
         $departmentMap = [
             7 => 59,
             5 => 25,
+            943 => 1596,
+            977 => 25,
         ];
 
         $remoteUsers = $client->listUsers([
