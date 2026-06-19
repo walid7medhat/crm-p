@@ -6,6 +6,7 @@
       'navbar-header--kanban-mobile': isKanbanRoute && isMobileViewport,
       'navbar-header--dashboard-home': isDashboardHome,
       'navbar-header--property-detail': isPropertyDetailRoute && isMobileViewport,
+      'navbar-header--agent-detail': isAgentDetailRoute && isMobileViewport,
     }"
   >
     <div
@@ -14,7 +15,7 @@
       <div v-if="showMobileCompactHeader" class="mob-module-toolbar">
         <div class="kanban-mob-toolbar__main">
           <button
-            v-if="!isPropertyDetailRoute"
+            v-if="!showMobileHeaderBack"
             type="button"
             class="mob-header-menu"
             aria-label="Open navigation menu"
@@ -23,19 +24,19 @@
             <iconify-icon icon="heroicons:bars-3-solid" />
           </button>
           <button
-            v-if="isPropertyDetailRoute"
+            v-if="showMobileHeaderBack"
             type="button"
             class="mob-header-back"
-            aria-label="Back to listings"
-            @click="goBackToListings"
+            :aria-label="mobileHeaderBackLabel"
+            @click="onMobileHeaderBack"
           >
             <iconify-icon icon="lucide:chevron-left" />
           </button>
           <div
             class="kanban-mob-lead-select-wrap"
-            :class="{ 'kanban-mob-lead-select-wrap--detail': isPropertyDetailRoute }"
+            :class="{ 'kanban-mob-lead-select-wrap--detail': showMobileHeaderBack }"
           >
-            <span v-if="isPropertyDetailRoute" class="mob-module-title mob-module-title--detail">Property</span>
+            <span v-if="showMobileHeaderBack" class="mob-module-title mob-module-title--detail">{{ mobileDetailTitle }}</span>
             <select
               v-else-if="moduleHeaderTabs.length"
               class="kanban-mob-lead-select"
@@ -709,9 +710,45 @@ function goBackToListings() {
   router.push(getListingsEntryPath('/alllisting'));
 }
 
+function goBackToAgentsList() {
+  router.push('/users');
+}
+
 const isPropertyDetailRoute = computed(
   () => route.path.startsWith('/property-details/'),
 );
+
+const isAgentDetailRoute = computed(
+  () => /^\/users\/\d+$/.test(route.path),
+);
+
+const showMobileHeaderBack = computed(
+  () => isPropertyDetailRoute.value || isAgentDetailRoute.value,
+);
+
+const mobileDetailTitle = computed(() => {
+  if (isPropertyDetailRoute.value) return 'Property';
+  if (isAgentDetailRoute.value) return 'Agent';
+  return '';
+});
+
+const mobileHeaderBackLabel = computed(() => {
+  if (isPropertyDetailRoute.value) return 'Back to listings';
+  if (isAgentDetailRoute.value) return 'Back to agents list';
+  return 'Go back';
+});
+
+function onMobileHeaderBack() {
+  if (isPropertyDetailRoute.value) {
+    goBackToListings();
+    return;
+  }
+  if (isAgentDetailRoute.value) {
+    goBackToAgentsList();
+    return;
+  }
+  router.back();
+}
 
 const {
   isDashboardHome,

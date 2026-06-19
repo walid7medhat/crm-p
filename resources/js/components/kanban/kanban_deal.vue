@@ -130,7 +130,10 @@ const syncActiveTabWithRoute = () => {
     }
 }
 
-const isDealsView = computed(() => route.path === '/kanban_deal')
+const isDealsView = computed(() => {
+    if (route.path === '/kanban_deal') return true
+    return route.path === '/kanban' && activeTab.value === 'deals'
+})
 const isLeadsView = computed(() => route.path === '/kanban' && activeTab.value === 'leads')
 const isLeadPoolView = computed(() => route.path === '/kanban' && activeTab.value === 'lead-pool')
 
@@ -151,24 +154,27 @@ function updateKanbanMobileBreakpoint() {
 }
 const handleDealCreatedFromLeads = (createdDeal) => {
     console.log('📦 New deal created from leads:', createdDeal)
-    
+
     activeTab.value = 'deals'
-    
-    setTimeout(() => {
-        if (dealsRef.value) {
-            const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
-            if (dealsComponent && typeof dealsComponent.openDealModal === 'function') {
-                dealsComponent.openDealModal(createdDeal)
-            } else {
-                console.warn('openDealModal not found, retrying...')
-                setTimeout(() => {
-                    if (dealsComponent && typeof dealsComponent.openDealModal === 'function') {
-                        dealsComponent.openDealModal(createdDeal)
-                    }
-                }, 100)
-            }
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }))
+
+    const openCreatedDeal = () => {
+        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+        if (dealsComponent && typeof dealsComponent.openDealModal === 'function') {
+            dealsComponent.openDealModal(createdDeal)
+            return true
         }
-    }, 200)
+        return false
+    }
+
+    nextTick(() => {
+        if (openCreatedDeal()) return
+        setTimeout(() => {
+            if (!openCreatedDeal()) {
+                console.warn('openDealModal not found after lead conversion')
+            }
+        }, 250)
+    })
 }
 provide('kanbanIsMobile', kanbanIsMobile)
 provide('kanbanOpenCreateLead', () => {
