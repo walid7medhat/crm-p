@@ -285,3 +285,124 @@ const emit = defineEmits([
   'request-owner-info',
 ])
 </script>
+
+<style scoped>
+.property-actions-menu--dropdown {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.property-actions-menu--dropdown .dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  min-height: 0;
+  line-height: 1.3;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 0;
+}
+
+.property-actions-menu--dropdown > .dropdown-item:last-of-type,
+.property-actions-menu--dropdown .property-actions-menu__group:last-child .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.property-actions-menu--dropdown .dropdown-item:hover:not(:disabled) {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.property-actions-menu--dropdown .dropdown-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.property-actions-menu--dropdown .dropdown-item i {
+  font-size: 15px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__group {
+  padding: 0;
+  margin: 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__group:last-child {
+  border-bottom: none;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 14px;
+  font-size: 13px;
+  line-height: 1.3;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__status--approved {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__status--pending {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__meta {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__cancel {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__cancel:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.property-actions-menu--dropdown .property-actions-menu__cancel:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+</style>

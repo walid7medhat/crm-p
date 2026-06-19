@@ -503,8 +503,9 @@ const openDealModal = async (dealData) => {
     
     console.log('Selected deal set, opening modal:', selectedDeal.value)
     
-    // 3. فتح المودال (converted lead flow -> open directly in buyer edit)
-    autoEditSection.value = 'buyer_details'
+    // 3. Open deal modal in buyer/tenant edit mode after lead conversion
+    const editSection = newDealType === 'rental' ? 'tenant_details' : 'buyer_details'
+    autoEditSection.value = editSection
     await nextTick()
     showViewDealModal.value = true
     

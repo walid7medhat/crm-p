@@ -2971,6 +2971,16 @@ function onMobileCardTouchEnd(column, event) {
 }
 
 function viewLead(task) {
+    const dealId = task?.converted_to_deal_id
+    if (dealId) {
+        emit('deal-created', {
+            id: dealId,
+            deal_id: dealId,
+            deal_type: task?.converted_deal_type || task?.deal_type || null,
+            lead_id: task?.id ?? null,
+        })
+        return
+    }
     if (task?.id) {
         openLeadView(task.id)
     }

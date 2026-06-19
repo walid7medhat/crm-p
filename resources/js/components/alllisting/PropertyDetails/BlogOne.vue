@@ -775,7 +775,7 @@
            <!-- Property Actions Dropdown -->
             <div class="sidebar-section " v-if="!onlyShow">
               <div class="property-actions-dropdown-wrapper">
-                <div class="property-actions-dropdown">
+                <div class="property-actions-dropdown" :class="{ 'is-open': showActionsDropdown }">
                   <button 
                     class="dropdown-toggle"
                     @click="toggleActionsDropdown"
@@ -6610,9 +6610,9 @@ const propertyMenuHandlers = {
 
 .dropdown-toggle {
   width: 100%;
-  /* display: flex; */
+  display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 8px;
   background: #733E87;
   color: white;
@@ -6623,6 +6623,10 @@ const propertyMenuHandlers = {
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
+}
+
+.property-actions-dropdown.is-open .dropdown-toggle {
+  border-radius: 6px 6px 0 0;
 }
 
 .dropdown-toggle:hover {
@@ -6650,21 +6654,26 @@ const propertyMenuHandlers = {
   overflow: hidden;
   transition: all 0.3s ease;
   margin: 0;
+  padding: 0;
   border: none;
   box-shadow: none;
   transform: none;
+  background: transparent;
 }
 
 .dropdown-menu.show {
   opacity: 1;
   visibility: visible;
   max-height: 400px;
-  margin-top: 8px;
+  margin-top: 0;
+  padding: 0;
   border: 1px solid #e9ecef;
-  border-radius: 8px;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: none;
-  overflow-y:auto;
+  overflow-y: auto;
+  background: #fff;
 }
 
 .dropdown-item {

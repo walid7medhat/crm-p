@@ -134,10 +134,12 @@ const selectedLeadForConversion = ref(null)
 const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
 
-function handleLeadConverted() {
+function handleLeadConverted(deal) {
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
-    emit('lead-updated', lead.value)
+    show.value = false
+    emit('update:modelValue', false)
+    window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: deal }))
 }
 
 const canViewHistory = computed(() => {
