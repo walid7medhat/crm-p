@@ -40,6 +40,12 @@
 
     <CreateLeadModal v-if="showCreateModal" v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <CreateDealModal v-if="showCreateDealModal" v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
+    <ViewDealModal
+        v-model="showDealViewModal"
+        :deal="dealViewPayload"
+        :auto-edit-section="dealViewAutoEditSection"
+        @deal-updated="onConvertedDealUpdated"
+    />
     <AddStageModal v-if="showAddStageModal" v-model="showAddStageModal"   :stage-type="currentStageType"
         :deal-type="currentDealType"
         @stage-created="handleStageCreated" />
@@ -66,16 +72,19 @@ import LeadSearchModal from './leadList/LeadSearchModal.vue'
 import DealSearchModal from './deals/DealSearchModal.vue'
 import CreateLeadModal from './createLead/CreateLeadModal.vue'
 import CreateDealModal from './deals/CreateDealModal.vue'
+import ViewDealModal from './deals/ViewDealModal.vue'
 import AddStageModal from './stage/AddStageModal.vue'
 import LeadPool from './leadList/LeadPool.vue'
+import { openDealView, useDealViewModal } from '@/composables/useDealViewModal.js'
 
 const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import SettingsHub from './settings/SettingsHub.vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
+import { rememberCrmSection, CRM_SECTIONS, DEAL_TYPE_KEY } from '@/composables/useLayoutNavigation.js'
 
 const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab'
 
@@ -118,6 +127,39 @@ const searchDebounceTimer = ref(null)
 const SEARCH_DEBOUNCE_MS = 400
 const kanbanIsMobile = ref(false)
 const route = useRoute()
+const router = useRouter()
+const { showDealViewModal, dealViewPayload, dealViewAutoEditSection } = useDealViewModal()
+
+const DEAL_TYPES = ['primary', 'secondary', 'rental']
+
+function resolveDealType(deal) {
+    const raw = deal?.deal_type || deal?.type
+    return DEAL_TYPES.includes(raw) ? raw : 'primary'
+}
+
+async function switchToDealsSection(createdDeal) {
+    const dealType = resolveDealType(createdDeal)
+
+    rememberCrmSection(CRM_SECTIONS.DEAL)
+    persistKanbanTab('deals')
+    try {
+        localStorage.setItem(DEAL_TYPE_KEY, dealType)
+    } catch {
+        /* ignore */
+    }
+
+    activeTab.value = 'deals'
+
+    if (route.path !== '/kanban_deal') {
+        await router.push('/kanban_deal')
+    }
+
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }))
+    window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: dealType }))
+
+    await nextTick()
+    return dealType
+}
 
 const syncActiveTabWithRoute = () => {
     if (route.path === '/kanban_deal') {
@@ -152,29 +194,28 @@ watch(() => route.path, () => {
 function updateKanbanMobileBreakpoint() {
     kanbanIsMobile.value = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
 }
-const handleDealCreatedFromLeads = (createdDeal) => {
-    console.log('📦 New deal created from leads:', createdDeal)
-
-    activeTab.value = 'deals'
-    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }))
-
-    const openCreatedDeal = () => {
-        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
-        if (dealsComponent && typeof dealsComponent.openDealModal === 'function') {
-            dealsComponent.openDealModal(createdDeal)
-            return true
-        }
-        return false
-    }
+const handleDealCreatedFromLeads = async (createdDeal) => {
+    const dealType = await switchToDealsSection(createdDeal)
+    const autoEditSection = dealType === 'rental' ? 'tenant_details' : 'buyer_details'
+    await openDealView(createdDeal, { autoEditSection })
 
     nextTick(() => {
-        if (openCreatedDeal()) return
-        setTimeout(() => {
-            if (!openCreatedDeal()) {
-                console.warn('openDealModal not found after lead conversion')
-            }
-        }, 250)
+        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+        dealsComponent?.fetchDeals?.(true)
     })
+}
+
+function onConvertedDealUpdated() {
+    const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+    dealsComponent?.fetchDeals?.(true)
+}
+
+async function onKanbanOpenConvertedDeal(event) {
+    const deal = event?.detail
+    if (!deal) return
+    const dealType = await switchToDealsSection(deal)
+    const autoEditSection = dealType === 'rental' ? 'tenant_details' : 'buyer_details'
+    await openDealView(deal, { autoEditSection })
 }
 provide('kanbanIsMobile', kanbanIsMobile)
 provide('kanbanOpenCreateLead', () => {
@@ -359,6 +400,7 @@ onMounted(() => {
     });
 
     window.addEventListener('kanban-leads-board-refresh', onKanbanLeadsBoardRefresh);
+    window.addEventListener('kanban-open-converted-deal', onKanbanOpenConvertedDeal);
 
 })
 
@@ -438,6 +480,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-lead-search', () => {})
   window.removeEventListener('kanban-deal-search', () => {})
       window.removeEventListener('kanban-open-settings', onKanbanOpenSettings)
+      window.removeEventListener('kanban-open-converted-deal', onKanbanOpenConvertedDeal)
         delete window.__kanbanDealsRef;
     delete window.__kanbanLeadsRef;
 
