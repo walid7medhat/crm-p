@@ -125,7 +125,7 @@ class ListingResource extends JsonResource
             $showDocuments= $user->id == $this->added_by || 
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
         }
-         $canAssignAgent = false;
+         $canAssignAgent = false;$canViewUpdate=false;
 
     if ($user) {
 $roleAllowed = $user->hasAnyRole(['admin','super_admin','team_lead','manager']);
@@ -134,18 +134,25 @@ $allowedAgentIds = [];
         if ($roleAllowed) {
             if ($user->hasAnyRole(['super_admin','admin'])) {
                 $canAssignAgent = true;
+                $canViewUpdate=true;
             }elseif ($user->hasAnyRole(['manager']) && $user->listing_team==1) {
                 $canAssignAgent = true;
+                $canViewUpdate=true;
             } else {
               $allowedAgentIds = $user->getAllSubordinatesIds();
 
                 if ($this->agent_id && in_array($this->agent_id, $allowedAgentIds)) {
                     $canAssignAgent = true;
+                    $canViewUpdate=true;
                 }
             }
         }
     }
 
+      $canViewInternalUpdates = $user && ( $canViewUpdate ||
+        $this->agent_id == $user->id ||
+        $user->id == 30
+    );
         return [
             'id' => $this->id,
             'reference_number'=>$this->reference_number,
@@ -447,6 +454,28 @@ $allowedAgentIds = [];
             'rented_by_agent_name' => $this->rented_by_agent_name,
             'rented_by_agent_phone' => $this->rented_by_agent_phone,
             'rented_by_agent_email' => $this->rented_by_agent_email,
+
+               'internal_updates' => $this->when($canViewInternalUpdates, function () {
+                    return $this->internalUpdates->map(function ($update) {
+                        return [
+                            'id' => $update->id,
+                            'content' => $update->content,
+                            'user' => [
+                                'id' => $update->user->id,
+                                'name' => User::resolveDisplayName($update->user),
+                                'avatar' => $update->user->avatar ? asset('storage/' . $update->user->avatar) : null,
+                            ],
+                            'created_at' => $update->created_at->format('Y-m-d H:i:s'),
+                            'created_at_human' => $update->created_at->diffForHumans(),
+                        ];
+                    });
+                }, []),
+                
+                'can_add_internal_update' => $user && (
+                    $this->agent_id == $user->id ||
+                    $user->hasRole('super_admin') ||
+                    $user->hasRole('admin')
+                ),
         ];
     }
 }

@@ -429,4 +429,9 @@ class Listing extends Model
         }
         return is_array($rows) && count($rows) > 0;
     }
+
+    public function internalUpdates()
+{
+    return $this->hasMany(InternalUpdate::class, 'listing_id')->latest();
+}
 }

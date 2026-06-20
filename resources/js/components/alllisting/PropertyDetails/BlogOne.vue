@@ -327,6 +327,7 @@
                 </div>
               </div>
             </div>
+          
              
 
             <!-- Mortgage Information Section -->
@@ -438,6 +439,109 @@
                 </div>
               </div>
             </div>
+              <!-- Internal Updates Section (للوكيل، التيم ليد، والمدير فقط) -->
+              <div 
+                v-if="canViewInternalUpdates" 
+                class="detailed-info-section mb-16"
+              >
+                <div class="info-section">
+                  <h3 class="section-title mb-20 d-flex align-items-center">
+                    <i class="ri-chat-history-line me-2"></i>
+                    Agent Updates
+                    <span class="badge bg-primary ms-2">{{ internalUpdates.length }}</span>
+                    <small class="text-muted ms-2">(Internal - Team Lead & Manager)</small>
+                  </h3>
+                  
+                  <!-- إضافة تحديث جديد (للوكيل فقط) -->
+                  <div v-if="canAddInternalUpdate" class="add-update-form mb-4">
+                    <div class="card border-primary">
+                      <div class="card-body p-3">
+                        <div class="d-flex gap-2">
+                          <textarea 
+                            v-model="newUpdateText"
+                            class="form-control"
+                            rows="2"
+                            placeholder="Add internal update (visible to team lead & manager)..."
+                            @keydown.ctrl.enter="submitInternalUpdate"
+                            maxlength="5000"
+                          ></textarea>
+                          <button 
+                            class="btn btn-primary"
+                            @click="submitInternalUpdate"
+                            :disabled="!newUpdateText.trim() || submittingUpdate"
+                            style="height: fit-content;"
+                          >
+                            <i class="ri-send-plane-line"></i>
+                          </button>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                          <small class="text-muted">
+                            {{ newUpdateText.length }}/5000
+                            <span class="ms-2">• Ctrl+Enter to submit</span>
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Loading -->
+                  <div v-if="loadingUpdates" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                  
+                  <!-- No Updates -->
+                  <div v-else-if="internalUpdates.length === 0" class="text-center py-5 text-muted">
+                    <i class="ri-chat-3-line" style="font-size: 48px;"></i>
+                    <p class="mt-2">No internal updates yet</p>
+                  </div>
+                  
+                  <!-- Timeline -->
+                  <div v-else class="internal-timeline">
+                    <div 
+                      v-for="update in internalUpdates" 
+                      :key="update.id" 
+                      class="timeline-item"
+                    >
+                      <!-- Avatar -->
+                      <div class="timeline-avatar">
+                        <img 
+                          :src="update.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                          class="update-avatar"
+                          alt="User"
+                        />
+                      </div>
+                      
+                      <!-- Content -->
+                      <div class="timeline-content">
+                        <div class="timeline-header">
+                          <strong>{{ update.user.name }}</strong>
+                          <span class="text-muted ms-2">
+                            <i class="ri-time-line"></i>
+                            {{ update.created_at_human }}
+                          </span>
+                          
+                          <!-- Delete button (only owner or admin) -->
+                          <button 
+                            v-if="canDeleteUpdate(update)"
+                            class="btn btn-sm btn-outline-danger ms-auto"
+                            @click="deleteInternalUpdate(update.id)"
+                          >
+                            <i class="ri-delete-bin-line"></i>
+                          </button>
+                        </div>
+                        
+                        <div class="timeline-body">
+                          <p class="mb-0" style="white-space: pre-wrap; word-break: break-word;">
+                            {{ update.content }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="comment-container" v-if="!onlyShow">
                 <!-- Comments Section -->
                 <div class="comments-section " v-if="property">
@@ -4319,16 +4423,17 @@ const revertFromConverted = async () => {
           property.value = response.data.data;
         //   console.log(response.data.data);
         //   console.log('Property Data:', property.value);
-          console.log('Area Data:', property.value.area);
-          console.log('Area Hierarchy:', property.value.area?.hierarchy);
-          console.log('Area Parent:', property.value.area?.parent);
-                console.log('📦 Additional features:', property.value.additional_features);
+          // console.log('Area Data:', property.value.area);
+          // console.log('Area Hierarchy:', property.value.area?.hierarchy);
+          // console.log('Area Parent:', property.value.area?.parent);
+          //       console.log('📦 Additional features:', property.value.additional_features);
 
           if (property.value.gallery_images && property.value.gallery_images.length > 0) {
             currentMainImage.value = getImageUrl(property.value.main_image);
           }
-          
+          await fetchInternalUpdates();
           await fetchRequestStatus();
+
            const hasAccess = checkAccessAndRedirect();
               if (!hasAccess) {
                 return;
@@ -6034,10 +6139,10 @@ const getLocationIcon = () => {
 const windowWidth = ref(window.innerWidth);
 
     onMounted(() => {
-          console.log('Current User:', getCurrentUser());
-  console.log('Roles:', getCurrentUser()?.roles);
-  console.log('is_listing_team:', getCurrentUser()?.is_listing_team);
-  console.log('canApproveListings:', canApproveListings.value);
+  //         console.log('Current User:', getCurrentUser());
+  // console.log('Roles:', getCurrentUser()?.roles);
+  // console.log('is_listing_team:', getCurrentUser()?.is_listing_team);
+  // console.log('canApproveListings:', canApproveListings.value);
         window.addEventListener('resize', () => {
           windowWidth.value = window.innerWidth;
           schedulePropertySidebarSync();
@@ -6046,7 +6151,7 @@ const windowWidth = ref(window.innerWidth);
       fetchComments();
       fetchCommentsStats();
       document.addEventListener('keydown', handleKeydown);
-      
+      // fetchInternalUpdates();
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.property-actions-dropdown')) {
           closeActionsDropdown();
@@ -6281,6 +6386,129 @@ const propertyMenuHandlers = {
   'cancel-request': (type) => runPropertyMenuAction(() => cancelRequest(type)),
   'request-unit-number': () => runPropertyMenuAction(requestUnitNumber),
   'request-owner-info': () => runPropertyMenuAction(requestOwnerInfo),
+};
+
+
+// ========== Internal Updates ==========
+const internalUpdates = ref([]);
+const newUpdateText = ref('');
+const submittingUpdate = ref(false);
+const loadingUpdates = ref(false);
+
+// هل المستخدم يمكنه رؤية التحديثات الداخلية؟
+const canViewInternalUpdates = computed(() => {
+  const user = getCurrentUser();
+  if (!user) return false;
+  
+  return property.value?.user_permissions?.is_owner ||
+         user.roles?.includes('super_admin') ||
+         user.roles?.includes('admin') ||
+         (user.roles?.includes('manager') && user.is_listing_team) ||
+         user.id === 30;
+});
+
+// هل المستخدم يمكنه إضافة تحديث؟
+const canAddInternalUpdate = computed(() => {
+  const user = getCurrentUser();
+  if (!user) return false;
+  
+  return property.value?.agent?.id === user.id ||
+         user.roles?.includes('super_admin') ||
+         user.roles?.includes('admin');
+});
+
+// جلب التحديثات
+const fetchInternalUpdates = async () => {
+   if (!property.value || !property.value.id) {
+    console.log('⏳ Property not loaded yet, skipping internal updates fetch');
+    return;
+  }
+  if (!canViewInternalUpdates.value) return;
+  
+  try {
+    loadingUpdates.value = true;
+    const response = await api.get(
+      `/listings/properties/${property.value.id}/internal-updates`
+    );
+    
+    if (response.data.status) {
+      // internalUpdates.value = response.data.data;
+       internalUpdates.value = response.data.data.map(update => ({
+        ...update,
+        created_at_human: formatDateTime(update.created_at)
+      }));
+    }
+  } catch (error) {
+    console.error('Error fetching updates:', error);
+    proxy.$showNotification('Failed to load internal updates', 'error');
+  } finally {
+    loadingUpdates.value = false;
+  }
+};
+
+// إضافة تحديث جديد
+const submitInternalUpdate = async () => {
+  if (!newUpdateText.value.trim() || submittingUpdate.value) return;
+  
+  try {
+    submittingUpdate.value = true;
+    
+    const response = await api.post(
+      `/listings/properties/${property.value.id}/internal-updates`,
+      { content: newUpdateText.value.trim() }
+    );
+    
+    if (response.data.status) {
+      internalUpdates.value.unshift(response.data.data);
+      newUpdateText.value = '';
+      proxy.$showNotification('Update added successfully!', 'success');
+    }
+  } catch (error) {
+    console.error('Error adding update:', error);
+    proxy.$showNotification('Failed to add update', 'error');
+  } finally {
+    submittingUpdate.value = false;
+  }
+};
+
+// حذف تحديث
+const deleteInternalUpdate = async (updateId) => {
+  const confirmed = await Swal.fire({
+    title: 'Delete Update?',
+    text: 'This action cannot be undone.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, Delete'
+  });
+  
+  if (!confirmed.isConfirmed) return;
+  
+  try {
+    const response = await api.delete(
+      `/listings/properties/${property.value.id}/internal-updates/${updateId}`
+    );
+    
+    if (response.data.status) {
+      internalUpdates.value = internalUpdates.value.filter(
+        u => u.id !== updateId
+      );
+      proxy.$showNotification('Update deleted successfully!', 'success');
+    }
+  } catch (error) {
+    console.error('Error deleting update:', error);
+    proxy.$showNotification('Failed to delete update', 'error');
+  }
+};
+
+const canDeleteUpdate = (update) => {
+  const user = getCurrentUser();
+  if (!user) return false;
+  
+  return update.user.id === user.id ||
+         user.roles?.includes('super_admin') ||
+         user.roles?.includes('admin');
 };
 
     return {
@@ -6523,7 +6751,18 @@ const propertyMenuHandlers = {
     markAsRentedByOIAgent,
     openAToAModalForRent,
     submitAToAForRent,
-   hasRejectionReason,formatRejectionDate ,rejectionDetails
+   hasRejectionReason,formatRejectionDate ,rejectionDetails,
+
+    internalUpdates,
+  newUpdateText,
+  submittingUpdate,
+  loadingUpdates,
+  canViewInternalUpdates,
+  canAddInternalUpdate,
+  fetchInternalUpdates,
+  submitInternalUpdate,
+  deleteInternalUpdate,
+  canDeleteUpdate,
     };
   },
 
@@ -9855,6 +10094,75 @@ margin: 0 2px;
     font-size: 12px !important;
     text-transform: capitalize !important;
 }
+
+/* Internal Updates Timeline */
+.internal-timeline {
+  position: relative;
+  padding-left: 20px;
+}
+
+.internal-timeline::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e9ecef;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.timeline-avatar {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.update-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+}
+
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.timeline-body p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.add-update-form .card {
+  border: 1px solid #733E87 !important;
+  border-radius: 12px;
+  margin-bottom: 5px !important;
+}
+
 </style>
 <style>
 .property-show-inner{
@@ -9870,4 +10178,5 @@ margin: 0 2px;
   flex-direction: column !important;
 
 }
+
 </style>

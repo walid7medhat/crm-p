@@ -67,7 +67,7 @@ use App\Http\Controllers\Api\Employee\LeaveController;
 use App\Http\Controllers\Api\Employee\AnnouncementController;
 use App\Http\Controllers\Api\Employee\RecruitmentController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
-
+use App\Http\Controllers\Api\Listing\InternalUpdateController;
 
 Route::get('/test-email', function () {
     try {
@@ -702,6 +702,12 @@ Route::delete('/search-alerts/{searchAlert}',[ListingController::class, 'destroy
     });
 
 Route::prefix('listings')->group(function(){
+
+    Route::get('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'index']);
+    Route::post('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'store']);
+    Route::delete('/properties/{listing}/internal-updates/{update}', [InternalUpdateController::class, 'destroy']);
+
+
       Route::patch('/properties/{listing}/approve', [ListingController::class, 'approve']);
     Route::patch('/properties/{listing}/reject', [ListingController::class, 'reject']);
     Route::get('/pending-approvals', [ListingController::class, 'getPendingApprovals']);
