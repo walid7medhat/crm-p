@@ -130,8 +130,8 @@ const baseRoutes = [
 
       { path: '/attendance-monthly-reports', component: AttendanceMonthlyReport, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
-  { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/kanban_deal', component: kanban_deal, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/kanban', component: Kanban, meta: { requiresAuth: true} },
+  { path: '/kanban_deal', component: kanban_deal, meta: { requiresAuth: true} },
   {
     path: '/project-map',
     name: 'project-map',
