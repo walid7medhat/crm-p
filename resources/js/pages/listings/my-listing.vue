@@ -961,8 +961,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
         const headers = canSeeSensitiveData.value
           ? [
+              'Title',
               'Project name',
               'Unit number',
+              'Purpose',
               'Size per sqft',
               'Selling price',
               'Status',
@@ -973,7 +975,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
               'Created at',
             ]
           : [
+              'Title',
               'Project name',
+              'Agent',
+              'Purpose',
               'Size per sqft',
               'Selling price',
               'Status',
@@ -983,6 +988,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
             ];
 
         const lines = await Promise.all(rows.map(async (property) => {
+          const title =property?.area || '-';
           const projectName = property?.project?.name || property?.project_name || property?.title || '-';
           const unitNumber = property?.unit_number || property?.reference_number || '-';
           const sizePerSqft = property?.size_sqft || '-';
@@ -992,11 +998,14 @@ const fetchProperties = async (filters = {}, page = 1) => {
           const createdAt = property?.created_at ? formatDate(property.created_at) : '-';
           const bedroom = getBedroomLabel(property);
           const type = getPropertyType(property);
-
+          const listing_status = property?.listing_status || '-';
+          const agent=property?.agent?.name;
           if (canSeeSensitiveData.value) {
             return [
+              toCell(title),
               toCell(projectName),
               toTextCell(unitNumber),
+              toCell(listing_status),
               toCell(sizePerSqft),
               toCell(sellingPrice),
               toCell(status),
@@ -1009,7 +1018,10 @@ const fetchProperties = async (filters = {}, page = 1) => {
           }
 
           return [
+            toCell(title),
             toCell(projectName),
+            toCell(agent),
+            toCell(listing_status),
             toCell(sizePerSqft),
             toCell(sellingPrice),
             toCell(status),
