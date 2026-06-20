@@ -345,7 +345,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
 }
 
 export function buildCrmSectionHeaderTabs(section, ctx = {}) {
-  const { isAdmin, isShowOnlyListing, hasPermission } = ctx;
+  const { isAdmin, isShowOnlyListing, hasPermission, user } = ctx; // ← أضف user
 
   if (section === CRM_SECTIONS.LEAD) {
     return [
@@ -400,6 +400,36 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         matchPaths: REQUESTS_ADMIN_PATHS,
         count: listingTabCounts.requests || 0,
       });
+      
+      if (user?.is_listing_team && 
+          (user.roles?.includes('super_admin') || 
+           user.roles?.includes('admin') || 
+           user.roles?.includes('team_lead') || 
+           user.roles?.includes('manager'))) {
+        tabs.push({
+          id: 'hotDeal-requests',
+          label: 'Hot Deal Requests',
+          type: 'route',
+          path: '/hotDeal-requests',
+          matchPaths: ['/hotDeal-requests'],
+          count: 0,
+        });
+      }
+      
+      // ✅ إضافة Need Approval Listings للأدمن (نفس البرمشن)
+      if (user?.is_listing_team && 
+          (user.roles?.includes('super_admin') || 
+           user.roles?.includes('manager'))) {
+        tabs.push({
+          id: 'need-approve-requests',
+          label: 'Need Approval Listings',
+          type: 'route',
+          path: '/need-approve-requests',
+          matchPaths: ['/need-approve-requests'],
+          count: 0,
+        });
+      }
+      
       tabs.push({
         id: 'viewings',
         label: 'Viewings',
@@ -408,6 +438,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         matchPaths: VIEWINGS_PATHS,
         count: listingTabCounts.viewings || 0,
       });
+      
     } else if (canList) {
       tabs.push({
         id: 'requests',
@@ -417,6 +448,35 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         matchPaths: REQUESTS_USER_PATHS,
         count: listingTabCounts.requests || 0,
       });
+      
+      if (user?.is_listing_team && 
+          (user.roles?.includes('super_admin') || 
+           user.roles?.includes('admin') || 
+           user.roles?.includes('team_lead') || 
+           user.roles?.includes('manager'))) {
+        tabs.push({
+          id: 'hotDeal-requests',
+          label: 'Hot Deal Requests',
+          type: 'route',
+          path: '/hotDeal-requests',
+          matchPaths: ['/hotDeal-requests'],
+          count: 0,
+        });
+      }
+      
+      if (user?.is_listing_team && 
+          (user.roles?.includes('super_admin') || 
+           user.roles?.includes('manager'))) {
+        tabs.push({
+          id: 'need-approve-requests',
+          label: 'Need Approval Listings',
+          type: 'route',
+          path: '/need-approve-requests',
+          matchPaths: ['/need-approve-requests'],
+          count: 0,
+        });
+      }
+      
       tabs.push({
         id: 'viewings',
         label: 'Viewings',

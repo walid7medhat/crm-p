@@ -820,6 +820,7 @@ const moduleHeaderTabs = computed(() => {
     isShowOnlyListing: isShowOnlyListingNav.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
     listingTabCounts: listingTabCounts.value,
+       user: user.value,
   };
   if (activeLayoutModule.value === 'crm') {
     return buildHeaderTabs('crm', ctx, activeCrmSection.value);

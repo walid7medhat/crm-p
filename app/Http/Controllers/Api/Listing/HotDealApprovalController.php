@@ -38,13 +38,13 @@ class HotDealApprovalController extends Controller
             ])->where('status', 'pending');
     
             // 🟢 Manager (listing team) → كل الريكويستات
-            if ($user->hasRole('manager') && $user->is_listing_team) {
+            if (($user->hasRole('manager') && $user->is_listing_team) || $user->hasRole('super_admin')) {
     
                 // no filter → full access
             }
     
             // 🟡 Team Lead → تحتَه فقط
-            elseif ($user->hasRole('team_lead')) {
+            elseif ($user->hasRole('team_lead') || $user->hasRole('admin')) {
     
                 $userIdsUnder = $this->getAllSubUsers($user->id);
     
