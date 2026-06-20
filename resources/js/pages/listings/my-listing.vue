@@ -961,7 +961,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
 
         const headers = canSeeSensitiveData.value
           ? [
-              'Title',
+              'Area',
               'Project name',
               'Unit number',
               'Purpose',
@@ -975,7 +975,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
               'Created at',
             ]
           : [
-              'Title',
+              'Area',
               'Project name',
               'Agent',
               'Purpose',
