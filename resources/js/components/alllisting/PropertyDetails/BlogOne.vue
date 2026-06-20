@@ -908,6 +908,7 @@
                         :format-date="formatDate"
                         :format-time="formatTime"
                         v-on="propertyMenuHandlers"
+                         :can-view-history="canViewHistory"
                       />
                     </div>
                   </div>
@@ -2052,7 +2053,77 @@
     </div>
   </div>
 </div>
+<!-- History Modal -->
+<div v-if="showHistoryModal" class="modal-overlay" @click="showHistoryModal = false">
+    <div class="modal-content history-modal" @click.stop style="max-width: 800px; max-height: 80vh;">
+        <div class="modal-header">
+            <div class="header-content">
+                <i class="ri-history-line header-icon"></i>
+                <div>
+                    <h4 class="modal-title">Property History</h4>
+                    <p class="modal-subtitle">Complete activity log for this listing</p>
+                </div>
+            </div>
+            <button class="modal-close" @click="showHistoryModal = false">
+                <i class="ri-close-line"></i>
+            </button>
+        </div>
 
+        <div class="modal-body" style="overflow-y: auto; padding: 1.5rem;">
+            <div v-if="loadingHistory" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div v-else-if="historyData.length === 0" class="text-center py-5 text-muted">
+                <i class="ri-inbox-line" style="font-size: 48px;"></i>
+                <p class="mt-2">No activity recorded yet.</p>
+            </div>
+            <div v-else class="history-timeline">
+                <div
+                    v-for="(item, index) in historyData"
+                    :key="item.id"
+                    class="history-item"
+                    :class="{ 'history-item--first': index === 0 }"
+                >
+                    <div class="history-item-dot">
+                        <i :class="getHistoryIcon(item.event)"></i>
+                    </div>
+                    <div class="history-item-content">
+                        <div class="history-item-header">
+                            <strong>{{ item.causer?.name || 'System' }}</strong>
+                            <span class="history-item-time">{{ item.created_at_human }}</span>
+                        </div>
+                        <!-- عرض التعيينات بشكل مميز -->
+                        <div v-if="item.assignment_changed" class="history-item-description">
+                            <span v-if="item.old_agent_name && item.new_agent_name">
+                                Assigned from <strong>{{ item.old_agent_name }}</strong> to <strong>{{ item.new_agent_name }}</strong>
+                            </span>
+                            <span v-else-if="item.new_agent_name">
+                                Assigned to <strong>{{ item.new_agent_name }}</strong>
+                            </span>
+                            <span v-else-if="item.old_agent_name">
+                                Unassigned from <strong>{{ item.old_agent_name }}</strong>
+                            </span>
+                            <span v-else>Agent assignment changed</span>
+                        </div>
+                        <div v-else class="history-item-description"  v-html="item.description"></div>
+                        <!-- عرض التغييرات الأخرى -->
+                        <!-- <div v-if="item.properties && item.properties.attributes && !item.assignment_changed" class="history-item-changes">
+                            <span v-for="(value, key) in item.properties.attributes" :key="key" class="badge bg-light me-1">
+                                {{ key }}: {{ value }}
+                            </span>
+                        </div> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-close-modal" @click="showHistoryModal = false">Close</button>
+        </div>
+    </div>
+</div>
     <Teleport to="body">
       <MobilePropertyAgentBar
         v-if="isMobileViewport && property?.agent && !onlyShow"
@@ -6386,6 +6457,7 @@ const propertyMenuHandlers = {
   'cancel-request': (type) => runPropertyMenuAction(() => cancelRequest(type)),
   'request-unit-number': () => runPropertyMenuAction(requestUnitNumber),
   'request-owner-info': () => runPropertyMenuAction(requestOwnerInfo),
+      'view-history': () => runPropertyMenuAction(openHistoryModal),
 };
 
 
@@ -6509,6 +6581,55 @@ const canDeleteUpdate = (update) => {
   return update.user.id === user.id ||
          user.roles?.includes('super_admin') ||
          user.roles?.includes('admin');
+};
+
+// ========== History ==========
+const showHistoryModal = ref(false);
+const historyData = ref([]);
+const loadingHistory = ref(false);
+
+const canViewHistory = computed(() => {
+    const user = getCurrentUser();
+    if (!user) return false;
+    return user.roles?.includes('super_admin') ||
+           user.roles?.includes('admin') ||
+           (user.roles?.includes('manager') && user.is_listing_team);
+});
+
+const openHistoryModal = async () => {
+    showHistoryModal.value = true;
+    await fetchHistory();
+};
+
+const fetchHistory = async () => {
+    if (!property.value?.id) return;
+    try {
+        loadingHistory.value = true;
+        const response = await api.get(`/listings/properties/${property.value.id}/activities`);
+        if (response.data.status) {
+            historyData.value = response.data.data;
+        }
+    } catch (error) {
+        console.error('Error fetching history:', error);
+        proxy.$showNotification('Failed to load history', 'error');
+    } finally {
+        loadingHistory.value = false;
+    }
+};
+
+const getHistoryIcon = (event) => {
+    const icons = {
+        created: 'ri-add-circle-line',
+        updated: 'ri-edit-line',
+        deleted: 'ri-delete-bin-line',
+        assigned: 'ri-user-shared-line',
+        approved: 'ri-check-line',
+        rejected: 'ri-close-circle-line',
+        converted: 'ri-exchange-line',
+        rented: 'ri-home-gear-line',
+        'status-changed': 'ri-exchange-line',
+    };
+    return icons[event] || 'ri-information-line';
 };
 
     return {
@@ -6763,6 +6884,13 @@ const canDeleteUpdate = (update) => {
   submitInternalUpdate,
   deleteInternalUpdate,
   canDeleteUpdate,
+     showHistoryModal,
+    historyData,
+    loadingHistory,
+    canViewHistory,
+    openHistoryModal,
+    fetchHistory,
+    getHistoryIcon,
     };
   },
 
@@ -10178,5 +10306,101 @@ margin: 0 2px;
   flex-direction: column !important;
 
 }
+/* History Timeline */
+.history-timeline {
+    position: relative;
+    padding-left: 30px;
+}
 
+.history-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.history-item {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.history-item-dot {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 2px solid #0B0736;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0B0736;
+    font-size: 14px;
+    margin-top: 2px;
+    z-index: 1;
+}
+
+.history-item-content {
+    flex: 1;
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.history-item-time {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.history-item-description {
+    font-size: 14px;
+    color: #333;
+}
+
+.history-item-changes {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.history-item-changes .badge {
+    background: #f1f3f5;
+    color: #495057;
+    font-weight: 400;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.history-modal .modal-content {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+.history-modal .modal-header {
+    background: linear-gradient(180deg, #fff, #141e50c9 0%, #050a28f2);
+    color: white;
+}
+
+.history-modal .modal-title {
+    color: white !important;
+}
 </style>

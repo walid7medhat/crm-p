@@ -3389,4 +3389,261 @@ public function watermark(Request $request)
         'Cache-Control' => 'public, max-age=86400'
     ]);
 }
+
+
+public function getActivityLog($listingId)
+{
+    $listing = Listing::findOrFail($listingId);
+
+    // قائمة الميزات (نسخة من ListingResource::FEATURE_LABELS)
+    $featureLabels = [
+        'maid' => "Maid's Room",
+        'storage' => 'Storage Areas',
+        'study' => 'Study Room',
+        'laundry' => 'Laundry Room',
+        'driver' => 'Driver Room',
+        'swimming_pool' => 'Swimming Pool',
+        'gym' => 'Fully Equipped Gymnasium',
+        'kids_play_area' => 'Kids Play Area',
+        'garden' => 'Landscaped Gardens',
+        'bbq' => 'BBQ Area',
+        'jogging' => 'Jogging & Cycling Tracks',
+        'sauna' => 'Sauna & Steam Room',
+        'jacuzzi' => 'Jacuzzi',
+        'community_parks' => 'Community Parks',
+        'multi_purpose_courts' => 'Multi-Purpose Courts',
+        'community_center' => 'Community Center',
+        'pet_friendly' => 'Pet-Friendly Community',
+        'family_oriented' => 'Family-Oriented Environment',
+        'cafes_restaurants' => 'Cafés & Restaurants',
+        'retail_shops' => 'Retail Shops & Supermarkets',
+        'mosque' => 'Mosque',
+        'day_care' => 'Day Care Center',
+        'easy_access_roads' => 'Easy Access to Major Roads',
+        'close_to_essentials' => 'Close to Schools, Hospitals & Shopping Malls',
+        'balcony' => 'Balcony / Terrace',
+        'spacious_living' => 'Spacious Living Areas',
+        'wardrobes' => 'Built-in Wardrobes',
+        'high_quality_finishes' => 'High-Quality Finishes',
+        'central_ac' => 'Central Air Conditioning',
+        'double_glazed_windows' => 'Double-Glazed Windows',
+        'elevators' => 'High-Speed Elevators',
+        'lobby' => 'Elegant Lobby & Reception Area',
+        'covered_parking' => 'Covered Parking',
+        'visitor_parking' => 'Visitor Parking Available',
+        'broadband' => 'Broadband Internet Ready',
+        'satellite_tv' => 'Satellite/Cable TV Connection',
+        'intercom' => 'Intercom System',
+        'security_24_7' => '24/7 Security',
+        'cctv' => 'CCTV Surveillance',
+        'concierge' => 'Concierge Services',
+        'maintenance' => 'Maintenance Services',
+        'waste_disposal' => 'Waste Disposal Facilities',
+    ];
+
+    $importantFields = [
+        'agent_id' => 'Agent',
+        'owner_id' => 'Owner',
+        'price' => 'Price',
+        'status' => 'Status',
+        'listing_status' => 'Listing Status',
+        'is_active' => 'Active',
+        'approved' => 'Approved',
+        'rejection_reason' => 'Rejection Reason',
+        'is_archived' => 'Archived',
+        'unit_number' => 'Unit Number',
+        'completion_status' => 'Completion Status',
+        'furnished_status' => 'Furnished Status',
+        'number_of_bedrooms' => 'Bedrooms',
+        'number_of_bathrooms' => 'Bathrooms',
+        'size_sqft' => 'Size (sqft)',
+        'size_sqmt' => 'Size (sqm)',
+        'additional_features' => 'Additional Features',
+    ];
+
+    $activities = $listing->activities()
+        ->with('causer')
+        ->latest()
+        ->get()
+        ->filter(function ($activity) use ($importantFields) {
+            if ($activity->event === 'created') {
+                return true;
+            }
+            if ($activity->event === 'updated') {
+                $attributes = $activity->properties['attributes'] ?? [];
+                $changedKeys = array_keys($attributes);
+                $ignoredFields = ['created_at', 'floor_plans_source'];
+                foreach ($changedKeys as $key) {
+                    if (isset($importantFields[$key])) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return true;
+        })
+        ->values();
+
+    // جمع معرفات المستخدمين والمالكين
+    $userIds = [];
+    $ownerIds = [];
+    foreach ($activities as $activity) {
+        $props = $activity->properties;
+        if (isset($props['old']['agent_id'])) $userIds[] = $props['old']['agent_id'];
+        if (isset($props['attributes']['agent_id'])) $userIds[] = $props['attributes']['agent_id'];
+        if (isset($props['old']['owner_id'])) $ownerIds[] = $props['old']['owner_id'];
+        if (isset($props['attributes']['owner_id'])) $ownerIds[] = $props['attributes']['owner_id'];
+    }
+    $users = User::whereIn('id', array_unique($userIds))->get()->keyBy('id');
+    $owners = Owner::whereIn('id', array_unique($ownerIds))->get()->keyBy('id');
+
+    $data = $activities->map(function ($activity) use ($users, $owners, $importantFields, $featureLabels) {
+        $props = $activity->properties;
+        $causerName = $activity->causer?->name ?? 'System';
+
+        $oldAgentId = $props['old']['agent_id'] ?? null;
+        $newAgentId = $props['attributes']['agent_id'] ?? null;
+        $oldAgentName = $oldAgentId ? ($users[$oldAgentId]->name ?? 'Unknown') : null;
+        $newAgentName = $newAgentId ? ($users[$newAgentId]->name ?? 'Unknown') : null;
+        $assignmentChanged = $oldAgentId !== null || $newAgentId !== null;
+
+        $oldOwnerId = $props['old']['owner_id'] ?? null;
+        $newOwnerId = $props['attributes']['owner_id'] ?? null;
+        $oldOwnerName = $oldOwnerId ? (($owners[$oldOwnerId]->first_name ?? '') . ' ' . ($owners[$oldOwnerId]->last_name ?? '')) : null;
+        $newOwnerName = $newOwnerId ? (($owners[$newOwnerId]->first_name ?? '') . ' ' . ($owners[$newOwnerId]->last_name ?? '')) : null;
+        $ownerChanged = $oldOwnerId !== null || $newOwnerId !== null;
+
+        $description = '';
+        $eventIcon = 'updated';
+
+        if ($assignmentChanged) {
+            if ($oldAgentName && $newAgentName && $oldAgentName !== $newAgentName) {
+                $description = "Assigned from <strong>{$oldAgentName}</strong> to <strong>{$newAgentName}</strong>";
+            } elseif ($newAgentName) {
+                $description = "Assigned to <strong>{$newAgentName}</strong>";
+            } elseif ($oldAgentName) {
+                $description = "Unassigned from <strong>{$oldAgentName}</strong>";
+            } else {
+                $description = "Agent assignment changed";
+            }
+            $eventIcon = 'assigned';
+        } elseif ($ownerChanged) {
+            if ($oldOwnerName && $newOwnerName && $oldOwnerName !== $newOwnerName) {
+                $description = "Owner changed from <strong>{$oldOwnerName}</strong> to <strong>{$newOwnerName}</strong>";
+            } elseif ($newOwnerName) {
+                $description = "Owner set to <strong>{$newOwnerName}</strong>";
+            } elseif ($oldOwnerName) {
+                $description = "Owner removed (<strong>{$oldOwnerName}</strong>)";
+            } else {
+                $description = "Owner information updated";
+            }
+            $eventIcon = 'updated';
+        } elseif ($activity->event === 'created') {
+            $description = "Property created";
+            $eventIcon = 'created';
+        } elseif ($activity->event === 'deleted') {
+            $description = "Property deleted";
+            $eventIcon = 'deleted';
+        } elseif ($activity->event === 'updated') {
+            $attributes = $activity->properties['attributes'] ?? [];
+            $old = $activity->properties['old'] ?? [];
+            $changedKeys = array_keys($attributes);
+            $changes = [];
+
+            foreach ($changedKeys as $key) {
+                if (!isset($importantFields[$key])) continue;
+
+                $oldValue = $old[$key] ?? null;
+                $newValue = $attributes[$key] ?? null;
+                $label = $importantFields[$key];
+
+                if ($key === 'additional_features') {
+                    $oldFeatures = is_array($oldValue) ? $oldValue : json_decode($oldValue, true);
+                    $newFeatures = is_array($newValue) ? $newValue : json_decode($newValue, true);
+                    if (is_array($oldFeatures) && is_array($newFeatures)) {
+                        $changedFeatures = [];
+                        foreach ($newFeatures as $featureKey => $value) {
+                            $oldVal = $oldFeatures[$featureKey] ?? null;
+                            if ($value != $oldVal) {
+                                $labelFeature = $featureLabels[$featureKey] ?? $featureKey;
+                                $changedFeatures[] = $labelFeature . ': ' . ($value ? '✅ Yes' : '❌ No');
+                            }
+                        }
+                        if (!empty($changedFeatures)) {
+                            $changes[] = $label . ': ' . implode(', ', $changedFeatures);
+                        }
+                    }
+                    continue;
+                }
+
+                // تنسيق القيم
+                if ($key === 'price') {
+                    $oldValue = $oldValue ? number_format($oldValue, 0) : 'N/A';
+                    $newValue = $newValue ? number_format($newValue, 0) : 'N/A';
+                } elseif ($key === 'is_active' || $key === 'approved' || $key === 'is_archived') {
+                    $oldValue = $oldValue ? 'Yes' : 'No';
+                    $newValue = $newValue ? 'Yes' : 'No';
+                } elseif ($key === 'number_of_bedrooms') {
+                    $oldValue = $oldValue == 0 ? 'Studio' : ($oldValue . ' Bedrooms');
+                    $newValue = $newValue == 0 ? 'Studio' : ($newValue . ' Bedrooms');
+                }
+
+                if ($oldValue != $newValue) {
+                    if ($oldValue === null || $oldValue === '') {
+                        $changes[] = $label . ' set to <strong>' . $newValue . '</strong>';
+                    } elseif ($newValue === null || $newValue === '') {
+                        $changes[] = $label . ' removed (was <strong>' . $oldValue . '</strong>)';
+                    } else {
+                        $changes[] = $label . ' changed from <strong>' . $oldValue . '</strong> to <strong>' . $newValue . '</strong>';
+                    }
+                }
+            }
+
+            $description = implode(';</br> ', $changes);
+            $eventIcon = 'updated';
+        }
+
+        if (empty($description)) {
+            $description = $activity->description;
+        }
+
+        return [
+            'id' => $activity->id,
+            'description' => $description,
+            'event' => $eventIcon,
+            'causer' => $activity->causer ? [
+                'id' => $activity->causer->id,
+                'name' => $causerName,
+            ] : null,
+            'properties' => $props,
+            'created_at' => $activity->created_at->toISOString(),
+            'created_at_human' => $activity->created_at->diffForHumans(),
+            'assignment_changed' => $assignmentChanged,
+            'old_agent_name' => $oldAgentName,
+            'new_agent_name' => $newAgentName,
+        ];
+    });
+    if ($data->isEmpty() || !$data->contains('event', 'created')) {
+    $createdAt = $listing->created_at;
+    $createdBy = $listing->addedBy?->name ?? 'System';
+    $createdItem = [
+        'id' => 0,
+        'description' => 'Property created',
+        'event' => 'created',
+        'causer' => [
+            'id' => $listing->added_by,
+            'name' => $createdBy,
+        ],
+        'properties' => [],
+        'created_at' => $createdAt->toISOString(),
+        'created_at_human' => $createdAt->diffForHumans(),
+        'assignment_changed' => false,
+        'old_agent_name' => null,
+        'new_agent_name' => null,
+    ];
+    $data->push($createdItem);
+}
+
+    return ApiResponse::success($data, 'Activity log retrieved successfully');
+}
 }

@@ -706,7 +706,7 @@ Route::prefix('listings')->group(function(){
     Route::get('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'index']);
     Route::post('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'store']);
     Route::delete('/properties/{listing}/internal-updates/{update}', [InternalUpdateController::class, 'destroy']);
-
+    Route::get('/properties/{listing}/activities', [ListingController::class, 'getActivityLog']);
 
       Route::patch('/properties/{listing}/approve', [ListingController::class, 'approve']);
     Route::patch('/properties/{listing}/reject', [ListingController::class, 'reject']);

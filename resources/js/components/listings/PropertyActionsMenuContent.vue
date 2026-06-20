@@ -9,7 +9,13 @@
       <i class="ri-checkbox-circle-line"></i>
       <span>Approve Listing</span>
     </button>
-
+      <button
+          v-if="canViewHistory"
+          class="dropdown-item"
+          @click="$emit('view-history')"
+      >
+          <i class="ri-history-line"></i> View History
+      </button>
     <button
       v-if="canApproveListings && property.approved"
       type="button"
@@ -144,6 +150,7 @@
               {{ formatDate(requestStatus.viewing_details.date) }} {{ formatTime(requestStatus.viewing_details.time) }}
             </small>
           </div>
+          
           <button
             type="button"
             class="property-actions-menu__cancel"
@@ -253,6 +260,7 @@ const props = defineProps({
   formatDate: { type: Function, required: true },
   formatTime: { type: Function, required: true },
   variant: { type: String, default: 'dropdown' },
+   canViewHistory: { type: Boolean, default: false },
 })
 
 const itemClass = (modifier) => {
@@ -283,6 +291,7 @@ const emit = defineEmits([
   'cancel-request',
   'request-unit-number',
   'request-owner-info',
+  'view-history',
 ])
 </script>
 
