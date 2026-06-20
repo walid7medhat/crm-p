@@ -534,22 +534,6 @@
           <section class="bayut-filter-section">
             <h6 class="bayut-filter-section__title">Price (AED)</h6>
             <div class="bayut-price-mobile">
-              <div class="bayut-price-mobile__summary">
-                <span class="bayut-price-mobile__summary-label">Selected range</span>
-                <strong class="bayut-price-mobile__summary-value">{{ mobilePriceSummary }}</strong>
-              </div>
-              <p class="bayut-sheet-label">Popular ranges</p>
-              <div class="bayut-pill-grid bayut-pill-grid--price">
-                <button
-                  v-for="preset in mobilePricePresets"
-                  :key="'mf-price-' + preset.label"
-                  type="button"
-                  class="bayut-pill bayut-pill--price"
-                  :class="{ active: isMobilePricePresetActive(preset) }"
-                  @click="applyMobilePricePreset(preset)"
-                >{{ preset.label }}</button>
-              </div>
-              <p class="bayut-sheet-label">Or enter amount</p>
               <div class="bayut-price-mobile__fields">
                 <div class="bayut-price-mobile__field">
                   <label class="bayut-price-mobile__field-label">Min</label>
@@ -863,22 +847,6 @@
             </template>
             <template v-else-if="mobileChipSheet === 'price'">
               <div class="bayut-price-mobile">
-                <div class="bayut-price-mobile__summary">
-                  <span class="bayut-price-mobile__summary-label">Selected range</span>
-                  <strong class="bayut-price-mobile__summary-value">{{ mobilePriceSummary }}</strong>
-                </div>
-                <p class="bayut-sheet-label">Popular ranges</p>
-                <div class="bayut-pill-grid bayut-pill-grid--price">
-                  <button
-                    v-for="preset in mobilePricePresets"
-                    :key="'chip-price-' + preset.label"
-                    type="button"
-                    class="bayut-pill bayut-pill--price"
-                    :class="{ active: isMobilePricePresetActive(preset) }"
-                    @click="applyMobilePricePreset(preset)"
-                  >{{ preset.label }}</button>
-                </div>
-                <p class="bayut-sheet-label">Or enter amount</p>
                 <div class="bayut-price-mobile__fields">
                   <div class="bayut-price-mobile__field">
                     <label class="bayut-price-mobile__field-label">Min</label>
@@ -1356,38 +1324,6 @@ const propertyTypeButtonLabel = computed(() => {
       return formatThousandsDisplay(parsed);
     };
 
-    const mobilePricePresets = computed(() => {
-      if (selectedSaleRent.value === 'Rent') {
-        return [
-          { label: 'Any', min: 0, max: 500000 },
-          { label: 'Up to 50K', min: 0, max: 50000 },
-          { label: '50K – 100K', min: 50000, max: 100000 },
-          { label: '100K – 150K', min: 100000, max: 150000 },
-          { label: '150K+', min: 150000, max: 500000 },
-        ];
-      }
-      return [
-        { label: 'Any', min: 0, max: 10000000 },
-        { label: 'Up to 500K', min: 0, max: 500000 },
-        { label: '500K – 1M', min: 500000, max: 1000000 },
-        { label: '1M – 2M', min: 1000000, max: 2000000 },
-        { label: '2M – 5M', min: 2000000, max: 5000000 },
-        { label: '5M+', min: 5000000, max: 10000000 },
-      ];
-    });
-
-    const mobilePriceSummary = computed(() => {
-      const max = mobilePriceMax.value;
-      const from = priceFrom.value || 0;
-      const to = priceTo.value ?? max;
-      const isAny = from <= 0 && (to >= max || to >= 10000000);
-      if (isAny) return 'Any price';
-      const displayTo = to > max ? max : to;
-      const minLabel = from > 0 ? `AED ${formatMobilePriceShort(from)}` : 'Any';
-      const maxLabel = displayTo < max ? `AED ${formatMobilePriceShort(displayTo)}` : 'Any';
-      return `${minLabel} — ${maxLabel}`;
-    });
-
     const mobilePriceChipLabel = computed(() => {
       const max = mobilePriceMax.value;
       const from = priceFrom.value || 0;
@@ -1414,15 +1350,6 @@ const propertyTypeButtonLabel = computed(() => {
         right: `${Math.min(100, Math.max(0, 100 - toPct))}%`,
       };
     });
-
-    const isMobilePricePresetActive = (preset) => (
-      priceFrom.value === preset.min && priceTo.value === preset.max
-    );
-
-    const applyMobilePricePreset = (preset) => {
-      priceFrom.value = preset.min;
-      priceTo.value = preset.max;
-    };
 
     const onMobilePriceSliderFrom = (event) => {
       priceFrom.value = parseInt(event.target.value, 10) || 0;
@@ -2522,13 +2449,9 @@ fetchProjects()
       mobileBedsChipLabel,
       hasActivePriceFilter,
       mobilePriceChipLabel,
-      mobilePriceSummary,
-      mobilePricePresets,
       mobilePriceMax,
       mobilePriceProgressStyle,
       formatMobilePriceShort,
-      isMobilePricePresetActive,
-      applyMobilePricePreset,
       onMobilePriceSliderFrom,
       onMobilePriceSliderTo,
       mobileSearchDisplay,
