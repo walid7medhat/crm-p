@@ -72,7 +72,7 @@ class ProjectController extends Controller
  
    private function getProjectsData(Request $request): array
 {
-    $query = Project::with(['developer', 'area']);
+    $query = Project::with(['developer', 'area', 'images', 'mainImage']);
     
     // Filters
     if ($request->has('search')) {

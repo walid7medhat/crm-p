@@ -68,6 +68,7 @@
                                             :icon="sortDirection === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'"
                                         />
                                     </th>
+                                    <th scope="col">About</th>
                                     
                                     <th @click="sortBy('developer')" class="sortable">Developer</th>
                                     <th @click="sortBy('area')" class="sortable">Area</th>
@@ -91,13 +92,21 @@
                                 <td>{{ project.id }}</td>
                                  <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        <img v-if="project.main_image" 
-                                             :src="project.main_image" 
-                                             alt="Project Image"
-                                             class="flex-shrink-0 me-2 radius-8"
-                                             width="60"
-                                             height="60"
-                                             style="object-fit: cover;">
+                                        <button
+                                            v-if="project.main_image"
+                                            type="button"
+                                            class="project-thumb-btn flex-shrink-0 me-2 radius-8"
+                                            :title="`View ${project.title} gallery`"
+                                            @click="openProjectGallery(project)"
+                                        >
+                                            <img
+                                                :src="project.main_image"
+                                                alt="Project Image"
+                                                width="60"
+                                                height="60"
+                                                style="object-fit: cover;"
+                                            >
+                                        </button>
                                         <div v-else class="bg-light rounded d-flex align-items-center justify-content-center"
                                              style="width: 60px; height: 60px;">
                                             <iconify-icon icon="lucide:image" class="text-muted"></iconify-icon>
@@ -113,6 +122,19 @@
                                     <!--<small class="text-muted">-->
                                     <!--    {{ project.from_sqft }} - {{ project.to_sqft }} sqft-->
                                     <!--</small>-->
+                                </td>
+                                <td class="project-about-cell">
+                                    <template v-if="getAboutText(project)">
+                                        <p class="project-about-preview mb-1">{{ truncateAbout(getAboutText(project)) }}</p>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-primary project-about-view-btn"
+                                            @click="openAboutModal(project)"
+                                        >
+                                            View
+                                        </button>
+                                    </template>
+                                    <span v-else class="text-muted">N/A</span>
                                 </td>
                                 <td>
                                     <div v-if="project.developer" class="d-flex align-items-center">
@@ -359,6 +381,89 @@
             </div>
         </div>
     </div>
+
+    <Teleport to="body">
+        <div
+            v-if="showGallery && galleryImages.length"
+            class="project-gallery-overlay"
+            @click="closeProjectGallery"
+        >
+            <div class="project-gallery-content" @click.stop>
+                <div class="project-gallery-header">
+                    <div class="project-gallery-info">
+                        <span class="project-gallery-title">{{ galleryTitle }}</span>
+                        <span class="project-gallery-counter">
+                            {{ currentGalleryIndex + 1 }} / {{ galleryImages.length }}
+                        </span>
+                    </div>
+                    <button type="button" class="project-gallery-close" @click="closeProjectGallery" aria-label="Close gallery">
+                        <iconify-icon icon="lucide:x"></iconify-icon>
+                    </button>
+                </div>
+                <div class="project-gallery-main">
+                    <button
+                        type="button"
+                        class="project-gallery-nav project-gallery-nav--prev"
+                        :disabled="currentGalleryIndex === 0"
+                        @click="prevGalleryImage"
+                        aria-label="Previous image"
+                    >
+                        <iconify-icon icon="lucide:chevron-left"></iconify-icon>
+                    </button>
+                    <div class="project-gallery-image-wrap">
+                        <img
+                            :src="galleryImages[currentGalleryIndex]"
+                            class="project-gallery-image"
+                            :alt="galleryTitle"
+                        >
+                    </div>
+                    <button
+                        type="button"
+                        class="project-gallery-nav project-gallery-nav--next"
+                        :disabled="currentGalleryIndex >= galleryImages.length - 1"
+                        @click="nextGalleryImage"
+                        aria-label="Next image"
+                    >
+                        <iconify-icon icon="lucide:chevron-right"></iconify-icon>
+                    </button>
+                </div>
+                <div v-if="galleryImages.length > 1" class="project-gallery-dots">
+                    <button
+                        v-for="(_, index) in galleryImages"
+                        :key="index"
+                        type="button"
+                        class="project-gallery-dot"
+                        :class="{ active: currentGalleryIndex === index }"
+                        :aria-label="`Go to image ${index + 1}`"
+                        @click="currentGalleryIndex = index"
+                    ></button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <Teleport to="body">
+        <div
+            v-if="showAboutModal"
+            class="project-about-overlay"
+            @click="closeAboutModal"
+        >
+            <div class="project-about-modal" @click.stop>
+                <div class="project-about-modal__header">
+                    <div>
+                        <h6 class="project-about-modal__title">{{ aboutModalTitle }}</h6>
+                        <span class="project-about-modal__subtitle">About</span>
+                    </div>
+                    <button type="button" class="project-about-modal__close" @click="closeAboutModal" aria-label="Close">
+                        <iconify-icon icon="lucide:x"></iconify-icon>
+                    </button>
+                </div>
+                <div class="project-about-modal__body">
+                    <p class="project-about-modal__text">{{ aboutModalText }}</p>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
 
 <script>
@@ -379,7 +484,14 @@ export default {
             projects: [],
              sortByImage: 'all' ,
         sortKey: null,          // title | status | duplicated | created_at | ...
-        sortDirection: 'asc'    // asc | desc
+        sortDirection: 'asc',    // asc | desc
+            showGallery: false,
+            galleryImages: [],
+            currentGalleryIndex: 0,
+            galleryTitle: '',
+            showAboutModal: false,
+            aboutModalTitle: '',
+            aboutModalText: '',
         };
     },
     computed: {
@@ -393,6 +505,7 @@ export default {
                         project.title.toLowerCase().includes(search) ||
                         (project.developer?.name && project.developer.name.toLowerCase().includes(search)) ||
                         (project.area?.name && project.area.name.toLowerCase().includes(search)) ||
+                        (this.getAboutText(project) && this.getAboutText(project).toLowerCase().includes(search)) ||
                         project.status.toLowerCase().includes(search)
                     );
                 }
@@ -493,6 +606,11 @@ export default {
     },
     mounted() {
         this.fetchProjects();
+        window.addEventListener('keydown', this.onGalleryKeydown);
+    },
+    beforeUnmount() {
+        window.removeEventListener('keydown', this.onGalleryKeydown);
+        document.body.style.overflow = '';
     },
     methods: {
           sortBy(key) {
@@ -603,6 +721,125 @@ export default {
                 return;
             }
             this.$router.push(`/projects/${id}`);
+        },
+
+        getProjectGalleryImages(project) {
+            const urls = [];
+            if (Array.isArray(project?.images) && project.images.length) {
+                project.images.forEach((img) => {
+                    const url = img?.image_url || img?.url || (typeof img === 'string' ? img : null);
+                    if (url && !urls.includes(url)) urls.push(url);
+                });
+            }
+            if (project?.main_image && !urls.includes(project.main_image)) {
+                urls.unshift(project.main_image);
+            }
+            return urls;
+        },
+
+        async openProjectGallery(project) {
+            let images = this.getProjectGalleryImages(project);
+
+            if (!images.length && project?.id) {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(API_ENDPOINTS.PROJECT_BY_ID(project.id), {
+                        headers: {
+                            Authorization: 'Bearer ' + token,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    if (response.ok) {
+                        const payload = await response.json();
+                        const fullProject = payload.data || payload;
+                        images = this.getProjectGalleryImages(fullProject);
+                    }
+                } catch (error) {
+                    console.error('Error loading project gallery:', error);
+                }
+            }
+
+            if (!images.length) {
+                this.$showNotification('No images available for this project', 'warning');
+                return;
+            }
+
+            let startIndex = 0;
+            if (project?.main_image) {
+                const mainIndex = images.findIndex((url) => url === project.main_image);
+                if (mainIndex >= 0) startIndex = mainIndex;
+            }
+
+            this.galleryImages = images;
+            this.currentGalleryIndex = startIndex;
+            this.galleryTitle = project?.title || 'Project Gallery';
+            this.showGallery = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        closeProjectGallery() {
+            this.showGallery = false;
+            this.galleryImages = [];
+            this.currentGalleryIndex = 0;
+            this.galleryTitle = '';
+            if (!this.showAboutModal) {
+                document.body.style.overflow = '';
+            }
+        },
+
+        nextGalleryImage() {
+            if (this.currentGalleryIndex < this.galleryImages.length - 1) {
+                this.currentGalleryIndex += 1;
+            }
+        },
+
+        prevGalleryImage() {
+            if (this.currentGalleryIndex > 0) {
+                this.currentGalleryIndex -= 1;
+            }
+        },
+
+        onGalleryKeydown(event) {
+            if (event.key === 'Escape') {
+                if (this.showGallery) this.closeProjectGallery();
+                if (this.showAboutModal) this.closeAboutModal();
+                return;
+            }
+            if (!this.showGallery) return;
+            if (event.key === 'ArrowRight') {
+                this.nextGalleryImage();
+            } else if (event.key === 'ArrowLeft') {
+                this.prevGalleryImage();
+            }
+        },
+
+        getAboutText(project) {
+            const text = project?.about || project?.description || '';
+            return typeof text === 'string' ? text.trim() : '';
+        },
+
+        truncateAbout(text, maxLength = 90) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return `${text.slice(0, maxLength).trim()}…`;
+        },
+
+        openAboutModal(project) {
+            const text = this.getAboutText(project);
+            if (!text) return;
+            this.aboutModalTitle = project?.title || 'Project';
+            this.aboutModalText = text;
+            this.showAboutModal = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        closeAboutModal() {
+            this.showAboutModal = false;
+            this.aboutModalTitle = '';
+            this.aboutModalText = '';
+            if (!this.showGallery) {
+                document.body.style.overflow = '';
+            }
         },
 
         editProject(id) {
@@ -867,6 +1104,268 @@ export default {
 }
 .sortable:hover {
     text-decoration: underline;
+}
+
+.project-thumb-btn {
+    display: block;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: zoom-in;
+    overflow: hidden;
+    line-height: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.project-thumb-btn:hover {
+    transform: scale(1.04);
+    box-shadow: 0 4px 12px rgba(11, 7, 54, 0.18);
+}
+
+.project-gallery-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100500;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.project-gallery-content {
+    width: min(960px, 100%);
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.project-gallery-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #fff;
+}
+
+.project-gallery-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.project-gallery-title {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.project-gallery-counter {
+    font-size: 13px;
+    opacity: 0.75;
+}
+
+.project-gallery-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.project-gallery-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.project-gallery-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 0;
+}
+
+.project-gallery-image-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: calc(100vh - 180px);
+}
+
+.project-gallery-image {
+    max-width: 100%;
+    max-height: calc(100vh - 180px);
+    object-fit: contain;
+    border-radius: 8px;
+    background: #111;
+}
+
+.project-gallery-nav {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.project-gallery-nav:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.project-gallery-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.project-gallery-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.project-gallery-dot {
+    width: 8px;
+    height: 8px;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+}
+
+.project-gallery-dot.active {
+    background: #fff;
+    transform: scale(1.15);
+}
+
+@media (max-width: 768px) {
+    .project-gallery-main {
+        gap: 8px;
+    }
+
+    .project-gallery-nav {
+        width: 36px;
+        height: 36px;
+    }
+
+    .project-gallery-title {
+        font-size: 14px;
+    }
+}
+
+.project-about-cell {
+    max-width: 220px;
+    min-width: 160px;
+}
+
+.project-about-preview {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #64748b;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.project-about-view-btn {
+    padding: 2px 10px;
+    font-size: 11px;
+    line-height: 1.4;
+    border-radius: 999px;
+}
+
+.project-about-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100500;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.project-about-modal {
+    width: min(640px, 100%);
+    max-height: calc(100vh - 32px);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.project-about-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.project-about-modal__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.project-about-modal__subtitle {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.project-about-modal__close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.project-about-modal__close:hover {
+    background: #e2e8f0;
+}
+
+.project-about-modal__body {
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+}
+
+.project-about-modal__text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #334155;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 </style>
