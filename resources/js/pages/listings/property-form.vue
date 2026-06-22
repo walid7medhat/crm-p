@@ -4586,7 +4586,8 @@ const isNocAutoPopulated = computed(() => {
   }
   
   const currentNoc = Number(form.value.noc_fixed_amount);
-  return developerNoc > 0;
+  // return developerNoc > 0;
+  return false
 });
 
 const showNocField = computed(() => {

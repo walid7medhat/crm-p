@@ -2085,7 +2085,9 @@ const isNocEnabled = computed(() => {
 
 const isNocAutoPopulated = computed(() => {
   if (!isNocEnabled.value) return false;
-  return developerNocValue.value > 0;
+  // return developerNocValue.value > 0;
+  return false;
+  
 });
 
 const showNocField = computed(() => {

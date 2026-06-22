@@ -134,9 +134,7 @@
                        
                         placeholder="Enter NOC amount"
                       />
-                      <span class="input-group-text" v-if="developerNocValue > 0">
-                        <i class="fas fa-lock text-primary" title="Auto-populated from developer"></i>
-                      </span>
+                      
                     </div>
                     <small class="text-muted d-block mt-1" style="font-size: 9px;">
                       <span v-if="developerNocValue > 0" class="text-primary">
