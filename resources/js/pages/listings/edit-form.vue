@@ -372,9 +372,7 @@
                     :class="{ 'bg-light': isNocAutoPopulated }"
                     placeholder="Enter NOC amount"
                   />
-                  <span class="input-group-text" v-if="isNocAutoPopulated">
-                    <i class="fas fa-lock text-primary" title="Auto-populated from developer"></i>
-                  </span>
+                
                 </div>
                 
                 <small class="text-muted d-block mt-1">

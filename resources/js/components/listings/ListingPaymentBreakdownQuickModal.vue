@@ -65,7 +65,6 @@
                     />
                     <div v-if="paymentPlanFieldInvalid" class="lpb-hint lpb-hint--err">{{ paymentPlanFieldError }}</div>
                   </div>
-                  <!-- للـ Completed: رسالة توضيحية -->
                   <div class="col-12" v-else>
                     <div class="text-muted small mt-2">
                       <i class="fas fa-info-circle me-1"></i>
@@ -123,16 +122,16 @@
                     </label>
                     <div class="input-group input-group-sm">
                       <span class="input-group-text bg-light">
-                        <i class="fas fa-shield-alt" :class="developerNocValue > 0 ? 'text-primary' : 'text-muted'"></i>
+                        <i class="fas fa-shield-alt" :class="text-muted"></i>
                       </span>
                       <input
                         v-model.number="form.noc_fixed_amount"
                         type="number"
                         min="0"
                         step="1000"
-                        class="form-control lpb-control"
-                        :disabled="developerNocValue > 0"
-                        :class="{ 'bg-light': developerNocValue > 0 }"
+                        class="form-control lpb-control bg-light"
+                        disabled="true"
+                       
                         placeholder="Enter NOC amount"
                       />
                       <span class="input-group-text" v-if="developerNocValue > 0">
