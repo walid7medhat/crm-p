@@ -3074,7 +3074,7 @@ watch(visibleSearchFields, async (fields) => {
     propertyTypeOptions.value = data || []
     propertyTypesLoaded.value = true
   }
-}, { immediate: true })
+}, { immediate: false })
 // تأكد من أن restoreSavedFields هي async
 const restoreSavedFields = async () => {
     try {
