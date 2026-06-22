@@ -2748,7 +2748,7 @@ const showLeadNotification = (event) => {
 
     const leadData = event.lead?.data || event.lead
 
-    if (leadData?.bitrix24_id && event.action_type != 'created') {
+    if (leadData?.bitrix24_id && leadData?.bitrix24_id != null && event.action_type != 'created') {
         return
     }
     const leadName = leadData?.lead_name || leadData?.lead_number || 'Unknown Lead'
