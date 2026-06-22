@@ -804,7 +804,10 @@ import 'vue-select/dist/vue-select.css'
 import FilterFieldSettingsModal from './FilterFieldSettingsModal.vue'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
-
+import { useCache } from '@/composables/useCache'
+const { fetchOffices, fetchAreas, fetchPropertyTypes, fetchStages, fetchBranchSources } = useCache()
+const areasLoaded = ref(false)
+const propertyTypesLoaded = ref(false)
 const props = defineProps({
     modelValue: Boolean,
     asDropdown: { type: Boolean, default: false },
@@ -923,6 +926,7 @@ const isCitySelected = (cityId) => {
 
 // Handle office / branch change — refresh API lists, then drop team/responsible if incompatible
 const handleOfficeChange = async (newOffice) => {
+     if (hydratingFromQuery.value) return
     console.log('Office changed to:', newOffice)
     const normalizedOffices = normalizeOfficeSelection(newOffice)
     form.value.office = normalizedOffices
@@ -1461,15 +1465,12 @@ function mapApiStatusToFormValue(apiValue, stageId) {
         ]
     }
     
-    // إذا كانت القيمة نصية موجودة في الخيارات، أرجعها كما هي
     if (options.includes(apiValue)) return apiValue
     
-    // خريطة التحويل من رقم إلى نص (حسب الحاجة)
     const numericToTextMap = {
         1: 'cold',
         2: 'warm',
         3: 'hot',
-        // أضف المزيد حسب ما يرسله الـ API
     }
     
     return numericToTextMap[apiValue] || apiValue
@@ -1590,38 +1591,7 @@ const locationSecondLine = (area) => {
     if (community && city) return `${community}, ${city}`
     return community || city || ''
 }
-const fetchAreas = async () => {
-    try {
-        const res = await api.get('/listings/areas/?has_listings=true')
-        const data = res.data.data || res.data || []
-        areaOptions.value = data.map(area => ({
-            id: area.id,
-            name: area.name || area.title,
-            parent: area.area_parents_title || area.parent || area.parent_name || '',
-            community_name: area.community_name || area.communityName || '',
-            city_name: area.city_name || area.cityName || '',
-        }))
-    } catch (error) {
-        console.error('Error fetching areas:', error)
-        areaOptions.value = []
-    }
-}
-const fetchPropertyTypes = async () => {
-    try {
-        const res = await api.get('/listings/property-types')
-        const data = res.data.data || res.data
-        propertyTypeOptions.value = [
-            // { value: null, text: 'Select Property Type' },
-            ...data.map(type => ({
-                value: type.id,
-                text: type.name
-            }))
-        ]
-    } catch (error) {
-        console.error('Error fetching property types:', error)
-        propertyTypeOptions.value = [{ value: null, text: 'Select Property Type' }]
-    }
-}
+
 
 const user = ref(getUserFromStorage())
 
@@ -1769,6 +1739,8 @@ const selectedLeadFieldIdsSet = computed(() => new Set(selectedLeadFieldIds.valu
 
 // عدّل visibleSearchFields لاستخدام Set
 const visibleSearchFields = computed(() => {
+     const config = searchFieldsConfig.value
+  if (!Array.isArray(config)) return []
     const stageOrder = getSelectedStageOrder(form.value.stageId)
     const selectedSet = selectedLeadFieldIdsSet.value
 
@@ -1809,17 +1781,17 @@ const visibleSearchFields = computed(() => {
         }))
 })
 const visibleSearchSections = computed(() => {
-    // إضافة console.log للتأكد من التحديث
-    console.log('Recalculating visibleSearchSections with selected fields:', selectedLeadFieldIds.value)
-    
-    return searchFieldSections
-        .map(section => ({
-            ...section,
-            fields: section.fieldIds
-                .map(id => visibleSearchFields.value.find(field => field.id === id))
-                .filter(Boolean)
-        }))
-        .filter(section => section.fields.length > 0)
+  const searchFields = visibleSearchFields.value
+  if (!Array.isArray(searchFields)) return []
+
+  return searchFieldSections
+    .map(section => ({
+      ...section,
+      fields: section.fieldIds
+        .map(id => searchFields.find(field => field.id === id))
+        .filter(Boolean)
+    }))
+    .filter(section => section.fields.length > 0)
 })
 const searchFieldSections = [
     {
@@ -2633,47 +2605,9 @@ async function fetchResponsiblePersonsWithFilter() {
     }
 }
 
-async function fetchBranchSources() {
-    try {
-        const res = await api.get('/get/lead/branch_source')
-        const data = res.data?.data
-        if (Array.isArray(data) && data.length) {
-            branchSourceOptions.value = [
-                // { value: null, text: 'Select Branch Source' },
-                ...data.map(b => ({ value: b.name, text: b.name }))
-            ]
-        }
-    } catch (_) {}
-}
 
-async function fetchStages() {
-    try {
-        const res = await api.get('/stages')
-        const raw = res.data?.data
-        const data = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : [])
-        if (data.length) {
-            // ✅ تصفية أول اتنين Stage (بناءً على order)
-            const filteredStages = data.filter(s => {
-                const order = Number(s.order || 0)
-                return order !== 1 && order !== 2
-            })
-            
-            stageOptions.value = [
-                // { value: null, text: 'Select Stage' },
-                ...filteredStages.map(s => ({ 
-                    value: s.id, 
-                    text: s.name, 
-                    order: Number(s.order || 0) 
-                }))
-            ]
-        }
-    } catch (_) {}
-}
 
-async function fetchSources() {
-    // Source options are fixed by requirement:
-    // Meta or Website, with a second selector for website source.
-}
+
 
 async function fetchTeams() {
     try {
@@ -2741,48 +2675,6 @@ async function fetchTeamsWithFilter() {
     } catch (error) {
         console.error('Error fetching teams with filter:', error)
         allTeams.value = []
-    }
-}
-
-async function fetchOffices() {
-    try {
-        const res = await api.get('/get-offices')
-        const data = res.data?.data
-        if (Array.isArray(data) && data.length) {
-            officeOptions.value = [
-                // { value: null, text: 'Select Office' },
-                ...data.map(office => ({
-                    value: office.id,
-                    text: office.name,
-                    cityKey: detectCityKeyFromOffice(office),
-                    raw: office,
-                }))
-            ]
-        }
-    } catch (error) {
-        console.error('Error fetching offices:', error)
-        try {
-            const res2 = await api.get('/users', {
-                params: {
-                    role: 'admin',
-                    has_parent: true
-                }
-            })
-            const admins = res2.data?.data
-            if (Array.isArray(admins) && admins.length) {
-                officeOptions.value = [
-                    // { value: null, text: 'Select Office' },
-                    ...admins.map(admin => ({
-                        value: admin.id,
-                        text: admin.name,
-                        cityKey: detectCityKeyFromOffice(admin),
-                        raw: admin,
-                    }))
-                ]
-            }
-        } catch (err) {
-            console.error('Error fetching admin users:', err)
-        }
     }
 }
 
@@ -3169,7 +3061,20 @@ watch(() => props.modelValue, (val) => {
         }
     }
 })
-
+watch(visibleSearchFields, async (fields) => {
+  if (fields.some(f => f.id === 'location') && !areasLoaded.value) {
+    const data = await fetchAreas()
+    // areaOptions تتوقع array من الكائنات بالشكل { id, name, parent, ... }
+    areaOptions.value = data || []
+    areasLoaded.value = true
+  }
+  if (fields.some(f => f.id === 'property_type') && !propertyTypesLoaded.value) {
+    const data = await fetchPropertyTypes()
+    // propertyTypeOptions تتوقع array من الكائنات بالشكل { value, text }
+    propertyTypeOptions.value = data || []
+    propertyTypesLoaded.value = true
+  }
+}, { immediate: true })
 // تأكد من أن restoreSavedFields هي async
 const restoreSavedFields = async () => {
     try {
@@ -3240,40 +3145,47 @@ function restoreDefaultFields() {
     }
 }
 
-onMounted(async () => {
-    console.log('LeadSearchModal mounted, key:', props.key)
-    document.addEventListener('click', onDocumentClick)
-    updateUserFromStorage()
 
-    await Promise.all([
-        fetchResponsiblePersonsWithFilter(),
-        fetchBranchSources(),
-        fetchStages(),
-        fetchSources(),
-        fetchTeamsWithFilter(),
-        fetchOffices(),
-        fetchAreas(),
-        fetchPropertyTypes()
+onMounted(async () => {
+  document.addEventListener('click', onDocumentClick)
+  updateUserFromStorage()
+
+  try {
+    const [offices, stages, branchSources] = await Promise.all([
+      fetchOffices(),
+      fetchStages(),
+      fetchBranchSources()
     ])
 
-    // تحميل الحقول المحفوظة عند التحميل
+    // المكاتب تأتي الآن بالتنسيق { value, text, cityKey, raw }
+    officeOptions.value = offices || []
+
+    // المراحل تأتي الآن بالتنسيق { value, text, order }
+    stageOptions.value = stages || []
+   
+    // مصادر الفروع تأتي بالتنسيق { value, text }
+    branchSourceOptions.value = branchSources || []
+
+    // جلب المسؤولين والفرق
+    await Promise.all([
+      fetchResponsiblePersonsWithFilter(),
+      fetchTeamsWithFilter()
+    ])
+
+    // استعادة الحقول المحفوظة
     await restoreSavedFields()
-
-    // Hydrate the form from the last-applied query NOW that all dropdown options have loaded.
-    // The modal is v-if'd in the navbar, so each open is a fresh mount — `props.modelValue`
-    // is already `true` on mount, which means the open-side watchers never fire (they only
-    // react to changes). This is the one place we know we have both `currentQuery` and
-    // all the option lists, so the saved selections will display correctly.
+    
+    // مزامنة الاستعلام إذا كان الموديل مفتوحاً
     if (props.modelValue) {
-        syncFormFromQuery(props.currentQuery)
+      syncFormFromQuery(props.currentQuery)
     }
-
-    // Hydration is done — wait one tick so the form-value assignment has flushed,
-    // then drop the overlay and let the user interact with the populated fields.
+    
     await nextTick()
+  } catch (error) {
+    console.error('Error initializing LeadSearchModal:', error)
+  } finally {
     isInitializing.value = false
-
-    console.log('Initial data loaded, selected fields:', selectedLeadFieldIds.value)
+  }
 })
 
 onBeforeUnmount(() => {
