@@ -54,7 +54,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
         return [
             'id' => $this->id,
             'added_by' => $this->added_by,
-            
+            'bitrix24_id '=>$this->bitrix24_id ,
             // Basic Information
             'lead_name' => $this->lead_name,
             'deal_name' => $this->deal_name,

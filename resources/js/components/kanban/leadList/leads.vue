@@ -2747,6 +2747,10 @@ const showLeadNotification = (event) => {
     ensureCrmToastStyles()
 
     const leadData = event.lead?.data || event.lead
+
+    if (leadData?.bitrix24_id) {
+        return
+    }
     const leadName = leadData?.lead_name || leadData?.lead_number || 'Unknown Lead'
     const leadNumber = leadData?.lead_number ? `#${leadData.lead_number}` : ''
     const userName = event.user_name || user.value?.name || 'Someone'
