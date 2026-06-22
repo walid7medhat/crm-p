@@ -521,10 +521,15 @@ class StageController extends Controller
                 $stageLeadsQuery = (clone $baseLeadsQuery)
                     ->with($kanbanEagerLoads)
                     ->where('stage_id', $stage->id);
-
+                if($stage->order==1){
                 $stageLeadsQuery
+                    ->orderBy('created_at', 'desc')
+                    ->orderBy('id', 'desc');
+                }else{
+                     $stageLeadsQuery
                     ->orderBy('updated_at', 'desc')
                     ->orderBy('id', 'desc');
+                }
 
                 $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
                 $leads = $stageLeadsQuery->limit($perPage)->get();
@@ -862,10 +867,17 @@ class StageController extends Controller
                             }
                     });
                 }
-                 // ================= pagination =================
-                        $leadsQuery
-                            ->orderBy('updated_at', 'desc')
-                            ->orderBy('id', 'desc');
+             // ================= pagination =================
+                if($stage->order==1){
+                $leadsQuery
+                    ->orderBy('created_at', 'desc')
+                    ->orderBy('id', 'desc');
+                }else{
+                     $leadsQuery
+                    ->orderBy('updated_at', 'desc')
+                    ->orderBy('id', 'desc');
+                }
+                    
                     
                         $paginatedLeads = $leadsQuery->paginate($perPage, ['*'], 'page', $page);
 
