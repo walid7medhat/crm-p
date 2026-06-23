@@ -11,7 +11,7 @@
       <img :src="applicant.avatar" :alt="applicant.name" class="rec-applicant-card__avatar" loading="lazy" />
       <div class="rec-applicant-card__body">
         <div class="rec-applicant-card__head">
-          <h3>{{ applicant.name }}</h3>
+          <p class="rec-applicant-card__name">{{ applicant.name }}</p>
           <span class="rec-applicant-card__status">{{ applicant.statusLabel }}</span>
         </div>
         <p class="rec-applicant-card__role">{{ applicant.appliedPosition }}</p>

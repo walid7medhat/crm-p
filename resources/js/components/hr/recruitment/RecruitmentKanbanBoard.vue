@@ -8,7 +8,7 @@
     >
       <header class="rec-kanban__column-head">
         <span class="rec-kanban__dot" />
-        <h4>{{ stage.label }}</h4>
+        <h6>{{ stage.label }}</h6>
         <span class="rec-kanban__count">{{ (board[stage.id] || []).length }}</span>
       </header>
 

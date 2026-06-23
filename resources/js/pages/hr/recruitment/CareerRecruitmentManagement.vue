@@ -98,7 +98,7 @@
     <!-- Error -->
     <div v-else-if="error" class="emp-error">
       <div class="emp-error__icon"><iconify-icon icon="lucide:alert-circle" /></div>
-      <h3>Could not load recruitment data</h3>
+      <h6>Could not load recruitment data</h6>
       <p>{{ error }}</p>
       <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="loadAll">Try again</button>
     </div>
@@ -107,7 +107,7 @@
     <template v-else-if="activeView === 'jobs'">
       <div v-if="!filteredJobs.length" class="emp-empty">
         <div class="emp-empty__icon"><iconify-icon icon="lucide:briefcase" /></div>
-        <h3>No job listings</h3>
+        <h6>No job listings</h6>
         <p>{{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Post a job opening to start recruiting.' }}</p>
       </div>
       <div v-else class="emp-mgmt__grid rec-jobs-grid">
@@ -127,7 +127,7 @@
         <div class="rec-split-layout__list">
           <div v-if="!filteredApplicants.length" class="emp-empty">
             <div class="emp-empty__icon"><iconify-icon icon="lucide:users" /></div>
-            <h3>No applicants</h3>
+            <h6>No applicants</h6>
             <p>No candidates match your current filters.</p>
           </div>
           <div v-else class="rec-applicants-list">
@@ -160,7 +160,7 @@
     <template v-else-if="activeView === 'pipeline'">
       <div v-if="!filteredApplicants.length" class="emp-empty">
         <div class="emp-empty__icon"><iconify-icon icon="lucide:columns-3" /></div>
-        <h3>Pipeline is empty</h3>
+        <h6>Pipeline is empty</h6>
         <p>Select a job or wait for new applications.</p>
       </div>
       <RecruitmentKanbanBoard
@@ -201,7 +201,7 @@
         <div class="emp-filter-sheet__panel">
           <div class="emp-filter-sheet__handle" />
           <div class="emp-filter-sheet__head">
-            <h3>Filter recruitment</h3>
+            <h6>Filter recruitment</h6>
             <button type="button" class="emp-mgmt__toolbar-btn" @click="showFilters = false">
               <iconify-icon icon="lucide:x" />
             </button>
@@ -224,7 +224,7 @@
     <Teleport to="body">
       <div v-if="showMoveModal" class="rec-modal-overlay" @click.self="showMoveModal = false">
         <div class="rec-modal">
-          <h3>Move candidate</h3>
+          <h6>Move candidate</h6>
           <p v-if="moveTarget">{{ moveTarget.name }}</p>
           <div class="rec-stage-picker">
             <button
@@ -249,7 +249,7 @@
     <Teleport to="body">
       <div v-if="showScheduleModal" class="rec-modal-overlay" @click.self="showScheduleModal = false">
         <div class="rec-modal rec-modal--wide">
-          <h3>Schedule interview</h3>
+          <h6>Schedule interview</h6>
           <div class="rec-form-grid">
             <label>
               Interviewer

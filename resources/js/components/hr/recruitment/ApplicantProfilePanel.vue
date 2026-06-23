@@ -11,7 +11,7 @@
         </button>
         <img :src="applicant.avatar" :alt="applicant.name" />
         <div>
-          <h2>{{ applicant.name }}</h2>
+          <p class="rec-profile__name">{{ applicant.name }}</p>
           <p>{{ applicant.appliedPosition }}</p>
           <span class="rec-profile__status">{{ applicant.statusLabel }}</span>
         </div>
@@ -36,7 +36,7 @@
       </div>
 
       <section class="rec-profile__section">
-        <h3>Contact</h3>
+        <h6>Contact</h6>
         <div class="rec-profile__grid">
           <p><span>Email</span><strong>{{ applicant.email }}</strong></p>
           <p><span>Phone</span><strong>{{ applicant.phone }}</strong></p>
@@ -46,7 +46,7 @@
       </section>
 
       <section v-if="applicant.resumeUrl" class="rec-profile__section">
-        <h3>Resume Preview</h3>
+        <h6>Resume Preview</h6>
         <div class="rec-profile__resume">
           <iframe v-if="isPdf(applicant.resumeUrl)" :src="applicant.resumeUrl" title="Resume preview" />
           <a v-else :href="applicant.resumeUrl" target="_blank" rel="noopener">Open resume file</a>
@@ -54,7 +54,7 @@
       </section>
 
       <section class="rec-profile__section">
-        <h3>Work Experience</h3>
+        <h6>Work Experience</h6>
         <div v-if="experienceItems.length" class="rec-profile__list">
           <div v-for="(item, idx) in experienceItems" :key="`exp-${idx}`" class="rec-profile__list-item">
             <strong>{{ item.title || item.role || 'Experience' }}</strong>
@@ -68,7 +68,7 @@
       </section>
 
       <section class="rec-profile__section">
-        <h3>Education</h3>
+        <h6>Education</h6>
         <div v-if="educationItems.length" class="rec-profile__list">
           <div v-for="(item, idx) in educationItems" :key="`edu-${idx}`" class="rec-profile__list-item">
             <strong>{{ item.degree || item.qualification || 'Education' }}</strong>
@@ -80,7 +80,7 @@
       </section>
 
       <section class="rec-profile__section">
-        <h3>Skills</h3>
+        <h6>Skills</h6>
         <div v-if="skills.length" class="rec-profile__skills">
           <span v-for="(skill, idx) in skills" :key="`skill-${idx}`">{{ skill }}</span>
         </div>
@@ -88,12 +88,12 @@
       </section>
 
       <section class="rec-profile__section">
-        <h3>Notes</h3>
+        <h6>Notes</h6>
         <p class="rec-profile__notes">{{ applicant.notes || 'No notes yet.' }}</p>
       </section>
 
       <section class="rec-profile__section">
-        <h3>Interview History</h3>
+        <h6>Interview History</h6>
         <div v-if="applicant.interviews?.length" class="rec-profile__list">
           <div v-for="interview in applicant.interviews" :key="interview.id" class="rec-profile__list-item">
             <strong>{{ formatInterviewType(interview.type) }}</strong>

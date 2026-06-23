@@ -1,25 +1,37 @@
 <template>
-  <article class="emp-card la-record-card">
-    <div class="emp-card__head">
-      <img :src="record.avatar" :alt="record.name" class="emp-card__avatar" loading="lazy" />
-      <div class="emp-card__meta">
-        <h3 class="emp-card__name">{{ record.name }}</h3>
-        <p class="emp-card__code">{{ record.department }}</p>
+  <article class="la-attendance-row" :class="`la-attendance-row--${record.status}`">
+    <div class="la-attendance-row__employee">
+      <img :src="record.avatar" :alt="record.name" class="la-attendance-row__avatar" loading="lazy" />
+      <div class="la-attendance-row__identity">
+        <p class="la-attendance-row__name">{{ record.name }}</p>
+        <span class="la-attendance-row__meta">{{ record.department }}</span>
       </div>
-      <span class="emp-card__badge" :class="statusClass">{{ record.status }}</span>
     </div>
-    <div class="la-record-card__times">
-      <div><label>In</label><strong>{{ formatTime(record.checkIn) }}</strong></div>
-      <div><label>Out</label><strong>{{ formatTime(record.checkOut) }}</strong></div>
-      <div><label>Hours</label><strong>{{ record.workingHours }}</strong></div>
-      <div><label>OT</label><strong>{{ record.overtimeHours }}</strong></div>
+
+    <span class="la-attendance-row__cell la-attendance-row__dept">{{ record.department }}</span>
+
+    <span class="la-attendance-row__cell">
+      <span class="la-attendance-row__status" :class="statusClass">{{ statusLabel }}</span>
+    </span>
+
+    <span class="la-attendance-row__cell la-attendance-row__time">{{ formatTime(record.checkIn) }}</span>
+    <span class="la-attendance-row__cell la-attendance-row__time">{{ formatTime(record.checkOut) }}</span>
+    <span class="la-attendance-row__cell la-attendance-row__num">{{ record.workingHours || '—' }}</span>
+    <span class="la-attendance-row__cell la-attendance-row__num">{{ record.overtimeHours || '—' }}</span>
+
+    <div class="la-attendance-row__times-mobile">
+      <span><em>In</em> {{ formatTime(record.checkIn) }}</span>
+      <span><em>Out</em> {{ formatTime(record.checkOut) }}</span>
+      <span><em>Hrs</em> {{ record.workingHours || '—' }}</span>
+      <span><em>OT</em> {{ record.overtimeHours || '—' }}</span>
     </div>
-    <div class="emp-card__actions" @click.stop>
-      <button type="button" class="emp-card__action" @click="$emit('edit', record.raw || record)">
-        <iconify-icon icon="lucide:pencil" /> Edit
+
+    <div class="la-attendance-row__actions" @click.stop>
+      <button type="button" class="la-attendance-row__action" title="Edit" @click="$emit('edit', record.raw || record)">
+        <iconify-icon icon="lucide:pencil" />
       </button>
-      <button type="button" class="emp-card__action" @click="$emit('history', record.raw || record)">
-        <iconify-icon icon="lucide:history" /> History
+      <button type="button" class="la-attendance-row__action" title="History" @click="$emit('history', record.raw || record)">
+        <iconify-icon icon="lucide:history" />
       </button>
     </div>
   </article>
@@ -34,11 +46,17 @@ const props = defineProps({
 
 defineEmits(['edit', 'history'])
 
+const statusLabel = computed(() => {
+  const map = { present: 'Present', late: 'Late', absent: 'Absent', on_leave: 'On Leave' }
+  return map[props.record.status] || props.record.status || '—'
+})
+
 const statusClass = computed(() => {
   const s = props.record.status
-  if (s === 'present') return 'emp-card__badge--active'
-  if (s === 'late') return 'emp-card__badge--on_leave'
-  return 'emp-card__badge--inactive'
+  if (s === 'present') return 'is-present'
+  if (s === 'late') return 'is-late'
+  if (s === 'absent') return 'is-absent'
+  return 'is-other'
 })
 
 function formatTime(t) {
@@ -48,27 +66,3 @@ function formatTime(t) {
   return m ? m[1] : s.slice(0, 5)
 }
 </script>
-
-<style scoped>
-.la-record-card__times {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #eef2f7;
-}
-.la-record-card__times label {
-  display: block;
-  font-size: 9px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.la-record-card__times strong {
-  font-size: 12px;
-  color: #0b0736;
-}
-</style>

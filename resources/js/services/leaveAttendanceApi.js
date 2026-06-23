@@ -21,11 +21,15 @@ export function normalizeAttendanceRow(row) {
   if (!row) return null
   const checkIn = row.check_in ?? row.first_checkin ?? null
   const checkOut = row.check_out ?? row.last_checkout ?? null
+  const empCode = row.employee_code ?? row.biometric_code ?? row.emp_code ?? row.employee_id
   return {
     id: row.employee_id ?? row.user_id ?? row.id,
     employeeId: row.employee_id ?? row.biometric_code ?? row.emp_code,
+    empCode: empCode ? `ID : #${String(empCode).replace(/^#/, '')}` : '—',
     name: row.employee_name ?? row.name ?? 'Unknown',
     department: row.department ?? '—',
+    branch: row.branch || row.department || '—',
+    attendanceType: row.attendance_type || mapAttendanceType(row.status),
     email: row.email ?? '',
     status: (row.status || 'absent').toLowerCase(),
     checkIn,
@@ -36,6 +40,38 @@ export function normalizeAttendanceRow(row) {
     avatar: row.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(row.employee_name || 'E')}&background=733e87&color=fff`,
     raw: row,
   }
+}
+
+function mapAttendanceType(status) {
+  const map = {
+    present: 'Office',
+    late: 'Office',
+    absent: '—',
+    on_leave: 'Paid Time Off',
+  }
+  return map[status] || 'Office'
+}
+
+export function formatAttendanceDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+export function formatAttendanceTime(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  }
+  const m = String(value).match(/(\d{1,2}):(\d{2})/)
+  if (!m) return String(value)
+  let h = Number(m[1])
+  const min = m[2]
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  h = h % 12 || 12
+  return `${String(h).padStart(2, '0')}:${min} ${ampm}`
 }
 
 export function normalizeLeaveRow(req) {

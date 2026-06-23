@@ -1,7 +1,7 @@
 <template>
   <section class="ast-tracking">
     <div class="ast-tracking__block">
-      <h3><iconify-icon icon="lucide:history" /> Assignment history</h3>
+      <h6><iconify-icon icon="lucide:history" /> Assignment history</h6>
       <div v-if="!assignments.length" class="ast-tracking__empty">No assignment history yet.</div>
       <div v-else class="ast-tracking__list">
         <article v-for="item in assignments" :key="item.id" class="ast-tracking__item">
@@ -16,7 +16,7 @@
     </div>
 
     <div class="ast-tracking__block">
-      <h3><iconify-icon icon="lucide:git-branch" /> Asset lifecycle</h3>
+      <h6><iconify-icon icon="lucide:git-branch" /> Asset lifecycle</h6>
       <div v-if="!timeline.length" class="ast-tracking__empty">No lifecycle events recorded.</div>
       <div v-else class="ast-tracking__timeline">
         <article v-for="item in timeline" :key="item.id" class="ast-tracking__timeline-item">
@@ -28,7 +28,7 @@
     </div>
 
     <div class="ast-tracking__block">
-      <h3><iconify-icon icon="lucide:wrench" /> Maintenance schedule</h3>
+      <h6><iconify-icon icon="lucide:wrench" /> Maintenance schedule</h6>
       <div v-if="!maintenanceRecords.length" class="ast-tracking__empty">No maintenance records.</div>
       <div v-else class="ast-tracking__list">
         <article v-for="(item, idx) in maintenanceRecords" :key="`m-${idx}`" class="ast-tracking__item">
@@ -43,7 +43,7 @@
     </div>
 
     <div class="ast-tracking__block">
-      <h3><iconify-icon icon="lucide:bell-ring" /> Warranty alerts</h3>
+      <h6><iconify-icon icon="lucide:bell-ring" /> Warranty alerts</h6>
       <div v-if="!warrantyAlerts.length" class="ast-tracking__empty">No warranty alerts.</div>
       <div v-else class="ast-tracking__alerts">
         <article

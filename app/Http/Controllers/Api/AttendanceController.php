@@ -99,7 +99,11 @@ class AttendanceController extends Controller
         }
 
         $query = Attendance::query()
-            ->with('user:id,name,email')
+            ->with([
+                'user:id,name,email',
+                'user.employeeProfile.department',
+                'user.employeeProfile.companyBranch',
+            ])
             ->whereDate('date', $targetDate);
 
         if ($employeeIdFilter !== null && $employeeIdFilter !== '') {
@@ -135,6 +139,9 @@ class AttendanceController extends Controller
                 'check_out' => $attendance->check_out?->timezone('Asia/Dubai')->toDateTimeString(),
                 'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
                 'department' => $attendance->user?->employeeProfile?->department?->name,
+                'branch' => $attendance->user?->employeeProfile?->companyBranch?->name,
+                'employee_code' => $attendance->user?->employeeProfile?->employee_code ?? $attendance->employee_id,
+                'attendance_type' => $this->resolveAttendanceType($attendance),
                 'email' => $attendance->user?->email,
             ];
 
@@ -158,6 +165,15 @@ class AttendanceController extends Controller
                 'employees' => $normalized,
             ],
         ]);
+    }
+
+    private function resolveAttendanceType(Attendance $attendance): string
+    {
+        return match ($attendance->status) {
+            'absent' => '—',
+            'late', 'present' => 'Office',
+            default => 'Office',
+        };
     }
 
     /**

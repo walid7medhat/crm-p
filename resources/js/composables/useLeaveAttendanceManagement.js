@@ -88,7 +88,7 @@ export function useLeaveAttendanceManagement() {
 
   const filteredAttendance = computed(() =>
     attendanceRows.value.filter((row) => {
-      if (!matchesSearch(row, [row.name, row.employeeId, row.department])) return false
+      if (!matchesSearch(row, [row.name, row.employeeId, row.department, row.branch, row.empCode])) return false
       if (filters.value.department && row.department !== filters.value.department) return false
       if (filters.value.attendance_status && row.status !== filters.value.attendance_status) return false
       if (filters.value.manager_id) {

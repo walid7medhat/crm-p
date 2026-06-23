@@ -18,15 +18,6 @@
     <!-- Sticky toolbar -->
     <div class="emp-mgmt__toolbar" ref="toolbarRef">
       <div class="emp-mgmt__search-row">
-        <div class="emp-mgmt__search">
-          <iconify-icon icon="lucide:search" class="emp-mgmt__search-icon" />
-          <input
-            v-model="searchQuery"
-            type="search"
-            placeholder="Search name, ID, email, phone, department, manager…"
-            autocomplete="off"
-          />
-        </div>
         <button type="button" class="emp-mgmt__toolbar-btn" @click="showFilters = !showFilters">
           <iconify-icon icon="lucide:sliders-horizontal" />
           <span>Filters{{ activeFilterCount ? ` (${activeFilterCount})` : '' }}</span>
@@ -71,48 +62,48 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="emp-mgmt__grid">
-      <div v-for="n in 6" :key="n" class="emp-skeleton" />
+    <div v-if="loading" class="emp-directory-table emp-directory-table--loading">
+      <div v-for="n in 6" :key="n" class="emp-directory-table__skeleton" />
     </div>
 
     <!-- Error -->
     <div v-else-if="error" class="emp-error">
       <div class="emp-error__icon"><iconify-icon icon="lucide:alert-circle" /></div>
-      <h3>Could not load employees</h3>
+      <h6>Could not load employees</h6>
       <p>{{ error }}</p>
-      <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="loadEmployees(true)">Try again</button>
+      <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="loadEmployees(1)">Try again</button>
     </div>
 
     <!-- Empty -->
     <div v-else-if="!employees.length" class="emp-empty">
       <div class="emp-empty__icon"><iconify-icon icon="lucide:users" /></div>
-      <h3>No employees found</h3>
+      <h6>No employees found</h6>
       <p>{{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first employee to get started.' }}</p>
       <button v-if="hasActiveFilters" type="button" class="emp-mgmt__toolbar-btn" @click="clearFilters">Clear filters</button>
       <button v-else type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="$emit('add')">Add Employee</button>
     </div>
 
-    <!-- Grid -->
-    <div v-else class="emp-mgmt__grid">
-      <EmployeeCard
-        v-for="employee in employees"
-        :key="employee.id"
-        :employee="employee"
-        @view="onView"
-        @edit="onEdit"
-        @assets="onAssets"
-        @attendance="onAttendance"
-        @leave="onLeave"
-        @delete="onDelete"
-      />
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="!loading && employees.length && currentPage < lastPage" class="emp-load-more">
-      <button type="button" :disabled="loadingMore" @click="loadMore">
-        {{ loadingMore ? 'Loading…' : `Load more (${employees.length} of ${total})` }}
-      </button>
-    </div>
+    <!-- Table -->
+    <EmployeesTable
+      v-else
+      :employees="employees"
+      v-model:page="tablePage"
+      v-model:per-page="tablePerPage"
+      v-model:selected-ids="selectedIds"
+      v-model:search-query="searchQuery"
+      :total="total"
+      :total-pages="lastPage"
+      :start-entry="startEntry"
+      :end-entry="endEntry"
+      :pagination-items="paginationItems"
+      @export="exportEmployees"
+      @view="onView"
+      @edit="onEdit"
+      @assets="onAssets"
+      @attendance="onAttendance"
+      @leave="onLeave"
+      @delete="onDelete"
+    />
 
     <!-- Mobile FAB -->
     <button v-if="isMobile" type="button" class="emp-fab" aria-label="Add employee" @click="$emit('add')">
@@ -126,7 +117,7 @@
         <div class="emp-filter-sheet__panel">
           <div class="emp-filter-sheet__handle" />
           <div class="emp-filter-sheet__head">
-            <h3>Filter employees</h3>
+            <h6>Filter employees</h6>
             <button type="button" class="emp-mgmt__toolbar-btn" @click="showFilters = false">
               <iconify-icon icon="lucide:x" />
             </button>
@@ -149,12 +140,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useEmployeesManagement } from '@/composables/useEmployeesManagement'
 import { MOBILE_LAYOUT_MAX_WIDTH } from '@/composables/useMobileNavigation'
-import EmployeeCard from '@/components/hr/employees/EmployeeCard.vue'
+import { exportCsv } from '@/services/leaveAttendanceApi'
+import EmployeesTable from '@/components/hr/employees/EmployeesTable.vue'
 import EmployeesFilterFields from '@/components/hr/employees/EmployeesFilterFields.vue'
 
 defineProps({
@@ -168,17 +160,20 @@ const toolbarRef = ref(null)
 const showFilters = ref(false)
 const isMobile = ref(false)
 const localFilters = ref({})
+const selectedIds = ref([])
+const tablePage = ref(1)
+const tablePerPage = ref(10)
 
 const {
   employees,
   loading,
-  loadingMore,
   error,
   searchQuery,
   filters,
   currentPage,
   lastPage,
   total,
+  perPage,
   departments,
   designations,
   branches,
@@ -187,11 +182,54 @@ const {
   hasActiveFilters,
   statsCards,
   loadEmployees,
-  loadMore,
+  goToPage,
+  setPerPage,
   clearFilters,
   applyQuickFilter,
   removeEmployee,
 } = useEmployeesManagement()
+
+const startEntry = computed(() => (total.value ? (currentPage.value - 1) * perPage.value + 1 : 0))
+const endEntry = computed(() => Math.min(currentPage.value * perPage.value, total.value))
+
+const paginationItems = computed(() => {
+  const pages = lastPage.value
+  const current = currentPage.value
+  if (pages <= 1) return [{ type: 'page', n: 1 }]
+  if (pages <= 7) {
+    return Array.from({ length: pages }, (_, i) => ({ type: 'page', n: i + 1 }))
+  }
+  const items = []
+  const pushDots = () => {
+    if (items.length && items[items.length - 1].type === 'dots') return
+    items.push({ type: 'dots' })
+  }
+  items.push({ type: 'page', n: 1 })
+  const left = Math.max(2, current - 1)
+  const right = Math.min(pages - 1, current + 1)
+  if (left > 2) pushDots()
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+  if (right < pages - 1) pushDots()
+  items.push({ type: 'page', n: pages })
+  return items
+})
+
+watch(tablePage, (page) => {
+  if (page !== currentPage.value) goToPage(page)
+})
+
+watch(currentPage, (page) => {
+  if (page !== tablePage.value) tablePage.value = page
+  selectedIds.value = []
+})
+
+watch(tablePerPage, (value) => {
+  if (value !== perPage.value) setPerPage(value)
+})
+
+watch(perPage, (value) => {
+  if (value !== tablePerPage.value) tablePerPage.value = value
+})
 
 const quickChips = [
   { key: 'employment_status', value: 'active', label: 'Active' },
@@ -206,7 +244,7 @@ function syncMobile() {
 function onApplyFilters() {
   filters.value = { ...localFilters.value }
   showFilters.value = false
-  loadEmployees(true)
+  loadEmployees(1)
 }
 
 function onClearFilters() {
@@ -262,6 +300,20 @@ async function onDelete(employee) {
   } catch (e) {
     Swal.fire({ icon: 'error', title: 'Delete failed', text: e?.response?.data?.message || e?.message })
   }
+}
+
+function exportEmployees() {
+  exportCsv('employees.csv', employees.value, [
+    { label: 'ID', value: (r) => r.employeeCode },
+    { label: 'Name', value: (r) => r.name },
+    { label: 'Designation', value: (r) => r.designation },
+    { label: 'Email', value: (r) => r.email },
+    { label: 'Department', value: (r) => r.department },
+    { label: 'Phone', value: (r) => r.phone },
+    { label: 'Branch', value: (r) => r.branch },
+    { label: 'Manager', value: (r) => r.manager },
+    { label: 'Status', value: (r) => r.employmentStatus },
+  ])
 }
 
 onMounted(() => {

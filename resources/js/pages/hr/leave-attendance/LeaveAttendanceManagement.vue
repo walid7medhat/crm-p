@@ -51,9 +51,9 @@
           <iconify-icon icon="lucide:download" />
           <span>Export</span>
         </button>
-        <button v-if="!isMobile" type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="primaryAction">
+        <button v-if="!isMobile && activeView === 'leave'" type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="primaryAction">
           <iconify-icon icon="lucide:plus" />
-          <span>{{ primaryActionLabel }}</span>
+          <span>Apply Leave</span>
         </button>
       </div>
       <div class="emp-mgmt__chips">
@@ -86,12 +86,12 @@
     </div>
 
     <!-- Content -->
-    <div v-if="loading" class="emp-mgmt__grid">
-      <div v-for="n in 6" :key="n" class="emp-skeleton" />
+    <div v-if="loading" class="la-attendance-table-wrap la-attendance-table-wrap--loading">
+      <div v-for="n in 8" :key="n" class="la-attendance-table__skeleton" />
     </div>
     <div v-else-if="error" class="emp-error">
       <div class="emp-error__icon"><iconify-icon icon="lucide:alert-circle" /></div>
-      <h3>Something went wrong</h3>
+      <h6>Something went wrong</h6>
       <p>{{ error }}</p>
       <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="loadAll">Retry</button>
     </div>
@@ -100,25 +100,30 @@
     <template v-else-if="activeView === 'records'">
       <div v-if="!filteredAttendance.length" class="emp-empty">
         <div class="emp-empty__icon"><iconify-icon icon="lucide:clipboard-list" /></div>
-        <h3>No attendance records</h3>
+        <h6>No attendance records</h6>
         <p>No records match your search for {{ selectedDate }}.</p>
       </div>
-      <div v-else class="emp-mgmt__grid">
-        <AttendanceRecordCard
-          v-for="row in filteredAttendance"
-          :key="`att-${row.id}-${row.checkIn}`"
-          :record="row"
-          @edit="$emit('edit-attendance', row)"
-          @history="$emit('view-history', row)"
-        />
-      </div>
+      <AttendanceTable
+        v-else
+        :records="pagedAttendance"
+        v-model:page="attendancePage"
+        v-model:per-page="attendancePerPage"
+        v-model:selected-ids="selectedAttendanceIds"
+        :total="filteredAttendance.length"
+        :total-pages="attendanceTotalPages"
+        :start-entry="attendanceStartEntry"
+        :end-entry="attendanceEndEntry"
+        :pagination-items="attendancePaginationItems"
+        @edit="$emit('edit-attendance', $event)"
+        @history="$emit('view-history', $event)"
+      />
     </template>
 
     <!-- Leave requests -->
     <template v-else-if="activeView === 'leave'">
       <div v-if="!filteredLeaves.length" class="emp-empty">
         <div class="emp-empty__icon"><iconify-icon icon="lucide:calendar-days" /></div>
-        <h3>No leave requests</h3>
+        <h6>No leave requests</h6>
         <p>No requests match your filters.</p>
         <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="$emit('apply-leave')">Apply leave</button>
       </div>
@@ -173,7 +178,7 @@
           <span><i class="la-calendar__dot la-calendar__dot--leave" /> Leave</span>
         </div>
         <div v-if="selectedDayLeaves.length" class="la-calendar__schedule">
-          <h4>Leave on {{ formatDisplayDate(selectedDate) }}</h4>
+          <h6>Leave on {{ formatDisplayDate(selectedDate) }}</h6>
           <ul>
             <li v-for="l in selectedDayLeaves" :key="l.id">{{ l.employeeName }} — {{ l.leaveType }}</li>
           </ul>
@@ -186,7 +191,7 @@
       <div class="la-analytics">
         <div class="la-analytics__row">
           <div class="la-chart-card">
-            <h3>Today's attendance</h3>
+            <h6>Today's attendance</h6>
             <div class="la-bar-chart">
               <div v-for="bar in attendanceTrend" :key="bar.label" class="la-bar-chart__item">
                 <div class="la-bar-chart__bar" :style="{ height: barHeight(bar.value, attendanceTrend) + '%', background: bar.color }" />
@@ -196,7 +201,7 @@
             </div>
           </div>
           <div class="la-chart-card">
-            <h3>Leave statistics</h3>
+            <h6>Leave statistics</h6>
             <div class="la-bar-chart">
               <div v-for="bar in leaveTrend" :key="bar.label" class="la-bar-chart__item">
                 <div class="la-bar-chart__bar" :style="{ height: barHeight(bar.value, leaveTrend) + '%', background: bar.color }" />
@@ -207,7 +212,7 @@
           </div>
         </div>
         <div class="la-chart-card la-chart-card--wide">
-          <h3>Department comparison (today)</h3>
+          <h6>Department comparison (today)</h6>
           <div class="la-dept-bars">
             <div v-for="dept in departmentBreakdown" :key="dept.name" class="la-dept-bar">
               <span class="la-dept-bar__name">{{ dept.name }}</span>
@@ -221,7 +226,7 @@
       </div>
     </template>
 
-    <button v-if="isMobile" type="button" class="emp-fab" @click="primaryAction">
+    <button v-if="isMobile && activeView === 'leave'" type="button" class="emp-fab" @click="primaryAction">
       <iconify-icon icon="lucide:plus" />
     </button>
 
@@ -231,7 +236,7 @@
         <div class="emp-filter-sheet__panel">
           <div class="emp-filter-sheet__handle" />
           <div class="emp-filter-sheet__head">
-            <h3>Filters</h3>
+            <h6>Filters</h6>
             <button type="button" class="emp-mgmt__toolbar-btn" @click="showFilters = false"><iconify-icon icon="lucide:x" /></button>
           </div>
           <LeaveAttendanceFilterFields
@@ -262,7 +267,7 @@ import {
   rejectLeaveHr,
   exportCsv,
 } from '@/services/leaveAttendanceApi'
-import AttendanceRecordCard from '@/components/hr/leave-attendance/AttendanceRecordCard.vue'
+import AttendanceTable from '@/components/hr/leave-attendance/AttendanceTable.vue'
 import LeaveRequestCard from '@/components/hr/leave-attendance/LeaveRequestCard.vue'
 import LeaveAttendanceFilterFields from '@/components/hr/leave-attendance/LeaveAttendanceFilterFields.vue'
 
@@ -277,6 +282,9 @@ const showFilters = ref(false)
 const isMobile = ref(false)
 const localFilters = ref({})
 const loadingMoreLeaves = ref(false)
+const attendancePage = ref(1)
+const attendancePerPage = ref(10)
+const selectedAttendanceIds = ref([])
 
 const {
   loading,
@@ -304,6 +312,58 @@ const {
   clearFilters,
 } = useLeaveAttendanceManagement()
 
+const attendanceTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredAttendance.value.length / attendancePerPage.value))
+)
+
+const pagedAttendance = computed(() => {
+  const start = (attendancePage.value - 1) * attendancePerPage.value
+  return filteredAttendance.value.slice(start, start + attendancePerPage.value)
+})
+
+const attendanceStartEntry = computed(() =>
+  filteredAttendance.value.length ? (attendancePage.value - 1) * attendancePerPage.value + 1 : 0
+)
+
+const attendanceEndEntry = computed(() =>
+  Math.min(attendancePage.value * attendancePerPage.value, filteredAttendance.value.length)
+)
+
+const attendancePaginationItems = computed(() => {
+  const total = attendanceTotalPages.value
+  const current = attendancePage.value
+  if (total <= 1) return [{ type: 'page', n: 1 }]
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+  }
+  const items = []
+  const pushDots = () => {
+    if (items.length && items[items.length - 1].type === 'dots') return
+    items.push({ type: 'dots' })
+  }
+  items.push({ type: 'page', n: 1 })
+  const left = Math.max(2, current - 1)
+  const right = Math.min(total - 1, current + 1)
+  if (left > 2) pushDots()
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+  if (right < total - 1) pushDots()
+  items.push({ type: 'page', n: total })
+  return items
+})
+
+watch(filteredAttendance, () => {
+  attendancePage.value = 1
+  selectedAttendanceIds.value = []
+})
+
+watch(attendanceTotalPages, (tp) => {
+  if (attendancePage.value > tp) attendancePage.value = tp
+})
+
+watch(searchQuery, () => {
+  attendancePage.value = 1
+})
+
 activeView.value = props.initialView === 'leave' ? 'leave' : props.initialView === 'attendance' ? 'records' : props.initialView
 
 const viewTabs = [
@@ -329,10 +389,6 @@ const searchPlaceholder = computed(() =>
   activeView.value === 'leave'
     ? 'Search employee, leave type…'
     : 'Search name, ID, department, team…'
-)
-
-const primaryActionLabel = computed(() =>
-  activeView.value === 'leave' ? 'Apply Leave' : 'Add Attendance'
 )
 
 const calendarTitle = computed(() =>
@@ -452,8 +508,7 @@ function onClearFilters() {
 }
 
 function primaryAction() {
-  if (activeView.value === 'leave') emit('apply-leave')
-  else emit('create-attendance')
+  emit('apply-leave')
 }
 
 async function loadMoreLeaves() {

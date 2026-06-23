@@ -7,6 +7,14 @@
   --rec-border: #e8edf3;
   --rec-card: #ffffff;
   font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+}
+
+.rec-mgmt h6 {
+  font-size: 12px !important;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
 }
 
 .rec-stats-grid {
@@ -108,8 +116,8 @@
 }
 
 .rec-job-card__title {
-  margin: 0 0 6px;
-  font-size: 15px;
+  margin: 0 0 4px;
+  font-size: 12px !important;
   font-weight: 700;
   color: var(--rec-navy);
 }
@@ -222,16 +230,17 @@
   flex-shrink: 0;
 }
 
+.rec-applicant-card__name {
+  margin: 0;
+  font-size: 12px !important;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .rec-applicant-card__head {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-}
-
-.rec-applicant-card__head h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
 }
 
 .rec-applicant-card__status {
@@ -315,9 +324,15 @@
   object-fit: cover;
 }
 
-.rec-profile__head h2 {
+.rec-profile__name {
   margin: 0;
-  font-size: 18px;
+  font-size: 12px !important;
+  font-weight: 700;
+  color: var(--rec-navy);
+}
+
+.rec-profile__head h6 {
+  font-size: 12px !important;
 }
 
 .rec-profile__head p {
@@ -366,9 +381,9 @@
   border-top: 1px solid var(--rec-border);
 }
 
-.rec-profile__section h3 {
-  margin: 0 0 10px;
-  font-size: 13px;
+.rec-profile__section h6 {
+  margin: 0 0 8px;
+  font-size: 11px !important;
   font-weight: 700;
 }
 
@@ -468,10 +483,10 @@
   background: var(--stage-color, var(--rec-primary));
 }
 
-.rec-kanban__column-head h4 {
+.rec-kanban__column-head h6 {
   margin: 0;
   flex: 1;
-  font-size: 12px;
+  font-size: 11px !important;
   font-weight: 700;
 }
 
@@ -593,8 +608,9 @@
   width: min(520px, 100%);
 }
 
-.rec-modal h3 {
+.rec-modal h6 {
   margin: 0 0 8px;
+  font-size: 12px !important;
 }
 
 .rec-stage-picker {

@@ -11,7 +11,7 @@
       </div>
 
       <div v-else-if="error" class="emp-error">
-        <h3>{{ error }}</h3>
+        <h6>{{ error }}</h6>
         <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="load">Retry</button>
       </div>
 
@@ -21,7 +21,7 @@
             <iconify-icon :icon="asset.imageIcon || 'lucide:package'" />
           </div>
           <div class="ast-detail__hero-body">
-            <h1>{{ asset.name }}</h1>
+            <h6>{{ asset.name }}</h6>
             <p>{{ asset.assetId }} · {{ asset.category }} · {{ asset.serialNumber }}</p>
             <div class="ast-detail__badges">
               <span class="ast-card__badge" :class="`ast-card__badge--${asset.status}`">{{ asset.statusLabel }}</span>
@@ -44,7 +44,7 @@
         <div class="ast-detail__layout">
           <div class="ast-detail__main">
             <section class="ast-detail__section">
-              <h2>Asset information</h2>
+              <h6>Asset information</h6>
               <div class="ast-detail__grid">
                 <div><label>Asset ID</label><span>{{ asset.assetId }}</span></div>
                 <div><label>Category</label><span>{{ asset.category }}</span></div>
@@ -60,7 +60,7 @@
             </section>
 
             <section class="ast-detail__section">
-              <h2>Warranty information</h2>
+              <h6>Warranty information</h6>
               <div class="ast-detail__grid">
                 <div><label>Warranty end</label><span>{{ formatDate(asset.warrantyDate) }}</span></div>
                 <div><label>Status</label><span>{{ asset.warrantyStatus?.label }}</span></div>
@@ -69,7 +69,7 @@
             </section>
 
             <section class="ast-detail__section">
-              <h2>Assignment history</h2>
+              <h6>Assignment history</h6>
               <div v-if="!assignments.length" class="ast-tracking__empty">No assignments recorded.</div>
               <div v-else class="ast-detail__history">
                 <article v-for="item in assignments" :key="item.id">
@@ -80,7 +80,7 @@
             </section>
 
             <section class="ast-detail__section">
-              <h2>Maintenance records</h2>
+              <h6>Maintenance records</h6>
               <div v-if="!maintenanceRecords.length" class="ast-tracking__empty">No maintenance records.</div>
               <div v-else class="ast-detail__history">
                 <article v-for="(item, idx) in maintenanceRecords" :key="`m-${idx}`">
@@ -92,7 +92,7 @@
             </section>
 
             <section class="ast-detail__section">
-              <h2>Documents</h2>
+              <h6>Documents</h6>
               <div class="ast-detail__docs">
                 <p v-if="asset.description"><strong>Description</strong><br>{{ asset.description }}</p>
                 <p v-if="asset.remarks"><strong>Remarks</strong><br>{{ asset.remarks }}</p>
@@ -101,7 +101,7 @@
             </section>
 
             <section class="ast-detail__section">
-              <h2>Activity timeline</h2>
+              <h6>Activity timeline</h6>
               <div v-if="!timeline.length" class="ast-tracking__empty">No activity yet.</div>
               <div v-else class="ast-detail__timeline">
                 <article v-for="item in timeline" :key="item.id">
@@ -123,7 +123,7 @@
     <Teleport to="body">
       <div v-if="showEditModal" class="ast-modal-overlay" @click.self="showEditModal = false">
         <div class="ast-modal ast-modal--wide">
-          <h3>Edit Asset</h3>
+          <h6>Edit Asset</h6>
           <div class="ast-form-grid">
             <label>Asset name *<input v-model="editForm.name" type="text" /></label>
             <label>Serial number<input v-model="editForm.serial_number" type="text" /></label>
@@ -158,7 +158,7 @@
     <Teleport to="body">
       <div v-if="showAssignModal" class="ast-modal-overlay" @click.self="showAssignModal = false">
         <div class="ast-modal">
-          <h3>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h3>
+          <h6>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h6>
           <div class="ast-form-grid">
             <label>
               Employee

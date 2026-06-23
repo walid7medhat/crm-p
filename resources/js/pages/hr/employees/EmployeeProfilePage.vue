@@ -8,7 +8,7 @@
 
       <div v-if="loading" class="emp-skeleton" style="min-height:120px;margin-bottom:16px;" />
       <div v-else-if="error" class="emp-error">
-        <h3>{{ error }}</h3>
+        <h6>{{ error }}</h6>
         <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="load">Retry</button>
       </div>
 
@@ -16,7 +16,7 @@
         <header class="emp-profile__hero">
           <img :src="employee.avatar" :alt="employee.name" class="emp-profile__hero-avatar" />
           <div>
-            <h1>{{ employee.name }}</h1>
+            <h6>{{ employee.name }}</h6>
             <p>{{ employee.employeeCode }} · {{ employee.designation }} · {{ employee.department }}</p>
             <span class="emp-card__badge" :class="badgeClass" style="margin-top:8px;">{{ statusLabel }}</span>
           </div>
@@ -24,7 +24,7 @@
 
         <div class="emp-profile__sections">
           <section class="emp-profile__section">
-            <h2>Personal information</h2>
+            <h6>Personal information</h6>
             <div class="emp-profile__grid">
               <div class="emp-profile__field"><label>Full name</label><span>{{ employee.name }}</span></div>
               <div class="emp-profile__field"><label>Nationality</label><span>{{ employee.nationality }}</span></div>
@@ -34,7 +34,7 @@
           </section>
 
           <section class="emp-profile__section">
-            <h2>Contact information</h2>
+            <h6>Contact information</h6>
             <div class="emp-profile__grid">
               <div class="emp-profile__field"><label>Work email</label><span>{{ employee.email }}</span></div>
               <div class="emp-profile__field"><label>Phone</label><span>{{ employee.phone }}</span></div>
@@ -44,7 +44,7 @@
           </section>
 
           <section class="emp-profile__section">
-            <h2>Employment details</h2>
+            <h6>Employment details</h6>
             <div class="emp-profile__grid">
               <div class="emp-profile__field"><label>Department</label><span>{{ employee.department }}</span></div>
               <div class="emp-profile__field"><label>Position</label><span>{{ employee.designation }}</span></div>
@@ -56,7 +56,7 @@
           </section>
 
           <section v-if="activeTab === 'leave' || !activeTab" class="emp-profile__section">
-            <h2>Leave summary</h2>
+            <h6>Leave summary</h6>
             <div v-if="leaveLoading" class="emp-skeleton" style="min-height:60px;" />
             <div v-else-if="!leaveBalance.length" class="emp-empty" style="padding:20px;">
               <p style="margin:0;color:#64748b;">No leave balance data</p>
@@ -70,7 +70,7 @@
           </section>
 
           <section v-if="activeTab === 'assets' || !activeTab" class="emp-profile__section">
-            <h2>Assigned assets</h2>
+            <h6>Assigned assets</h6>
             <div v-if="assetsLoading" class="emp-skeleton" style="min-height:60px;" />
             <div v-else-if="!assets.length" class="emp-empty" style="padding:20px;">
               <p style="margin:0;color:#64748b;">No assets assigned</p>
@@ -88,7 +88,7 @@
           </section>
 
           <section class="emp-profile__section">
-            <h2>Documents</h2>
+            <h6>Documents</h6>
             <div v-if="documentGroups.length" class="emp-profile__grid">
               <div v-for="group in documentGroups" :key="group.type" class="emp-profile__field">
                 <label>{{ formatDocType(group.type) }}</label>
@@ -99,7 +99,7 @@
           </section>
 
           <section class="emp-profile__section">
-            <h2>Activity timeline</h2>
+            <h6>Activity timeline</h6>
             <p style="margin:0;color:#64748b;font-size:13px;">
               Joined {{ formatDate(employee.joiningDate) }}
               <span v-if="employee.raw?.updated_at"> · Last updated {{ formatDateTime(employee.raw.updated_at) }}</span>

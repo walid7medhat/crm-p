@@ -3,7 +3,7 @@
     <div class="emp-card__head">
       <img :src="employee.avatar" :alt="employee.name" class="emp-card__avatar" loading="lazy" />
       <div class="emp-card__meta">
-        <h3 class="emp-card__name">{{ employee.name }}</h3>
+        <p class="emp-card__name">{{ employee.name }}</p>
         <p class="emp-card__code">{{ employee.employeeCode }}</p>
       </div>
       <span class="emp-card__badge" :class="badgeClass">{{ statusLabel }}</span>

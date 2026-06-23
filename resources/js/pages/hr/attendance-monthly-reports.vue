@@ -156,7 +156,7 @@
         <div class="profile-head">
           <div class="profile-avatar">{{ initials(selectedEmployee.employeeName) }}</div>
           <div>
-            <h4>{{ selectedEmployee.employeeName }}</h4>
+            <h6>{{ selectedEmployee.employeeName }}</h6>
             <p>{{ selectedEmployee.totalDays }} working days in selected range</p>
           </div>
         </div>

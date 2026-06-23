@@ -2,7 +2,7 @@
   <article class="rec-job-card" @click="$emit('select', job)">
     <div class="rec-job-card__head">
       <div class="rec-job-card__title-wrap">
-        <h3 class="rec-job-card__title">{{ job.title }}</h3>
+        <p class="rec-job-card__title">{{ job.title }}</p>
         <span class="rec-job-card__badge" :class="`rec-job-card__badge--${job.status}`">{{ job.statusLabel }}</span>
       </div>
       <button type="button" class="rec-job-card__menu" @click.stop="$emit('menu', job)">

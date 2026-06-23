@@ -13,7 +13,7 @@
       </div>
       <div class="ast-card__body">
         <div class="ast-card__head">
-          <h3>{{ asset.name }}</h3>
+          <p class="ast-card__name">{{ asset.name }}</p>
           <span class="ast-card__badge" :class="`ast-card__badge--${asset.status}`">{{ asset.statusLabel }}</span>
         </div>
         <p class="ast-card__id">{{ asset.assetId }}</p>

@@ -32,7 +32,7 @@ export function useEmployeesManagement() {
   const currentPage = ref(1)
   const lastPage = ref(1)
   const total = ref(0)
-  const perPage = 20
+  const perPage = ref(10)
 
   const departments = ref([])
   const designations = ref([])
@@ -95,7 +95,7 @@ export function useEmployeesManagement() {
   })
 
   function buildParams(page = 1) {
-    const params = { page, per_page: perPage }
+    const params = { page, per_page: perPage.value }
     const q = searchQuery.value.trim()
     if (q) params.search = q
     Object.entries(filters.value).forEach(([key, value]) => {
@@ -135,44 +135,42 @@ export function useEmployeesManagement() {
     }
   }
 
-  async function loadEmployees(reset = true) {
-    if (reset) {
-      loading.value = true
-      error.value = ''
-      currentPage.value = 1
-    } else {
-      loadingMore.value = true
-    }
+  async function loadEmployees(page = currentPage.value) {
+    loading.value = true
+    error.value = ''
 
     try {
-      const page = reset ? 1 : currentPage.value + 1
       const result = await fetchEmployees(buildParams(page))
-      if (reset) {
-        employees.value = result.items
-      } else {
-        employees.value = [...employees.value, ...result.items]
-      }
+      employees.value = result.items
       currentPage.value = result.currentPage
       lastPage.value = result.lastPage
       total.value = result.total
     } catch (e) {
       error.value = e?.response?.data?.message || e?.message || 'Failed to load employees'
-      if (reset) employees.value = []
+      employees.value = []
     } finally {
       loading.value = false
       loadingMore.value = false
     }
   }
 
-  async function loadMore() {
-    if (loadingMore.value || currentPage.value >= lastPage.value) return
-    await loadEmployees(false)
+  function goToPage(page) {
+    const next = Math.max(1, Math.min(page, lastPage.value || 1))
+    if (next === currentPage.value && employees.value.length) return
+    currentPage.value = next
+    return loadEmployees(next)
+  }
+
+  function setPerPage(value) {
+    perPage.value = value
+    currentPage.value = 1
+    return loadEmployees(1)
   }
 
   function clearFilters() {
     filters.value = DEFAULT_FILTERS()
     searchQuery.value = ''
-    loadEmployees(true)
+    loadEmployees(1)
   }
 
   function applyQuickFilter(key, value) {
@@ -181,7 +179,7 @@ export function useEmployeesManagement() {
     } else {
       filters.value[key] = value
     }
-    loadEmployees(true)
+    loadEmployees(1)
   }
 
   async function removeEmployee(id) {
@@ -193,11 +191,11 @@ export function useEmployeesManagement() {
 
   watch(searchQuery, () => {
     clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => loadEmployees(true), 300)
+    searchTimer = setTimeout(() => loadEmployees(1), 300)
   })
 
   onMounted(async () => {
-    await Promise.all([loadStatistics(), loadFilterOptions(), loadEmployees(true)])
+    await Promise.all([loadStatistics(), loadFilterOptions(), loadEmployees(1)])
   })
 
   return {
@@ -211,6 +209,7 @@ export function useEmployeesManagement() {
     currentPage,
     lastPage,
     total,
+    perPage,
     departments,
     designations,
     branches,
@@ -220,7 +219,8 @@ export function useEmployeesManagement() {
     hasActiveFilters,
     statsCards,
     loadEmployees,
-    loadMore,
+    goToPage,
+    setPerPage,
     clearFilters,
     applyQuickFilter,
     removeEmployee,

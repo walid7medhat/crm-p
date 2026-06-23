@@ -89,7 +89,7 @@
 
     <div v-else-if="error" class="emp-error">
       <div class="emp-error__icon"><iconify-icon icon="lucide:alert-circle" /></div>
-      <h3>Could not load assets</h3>
+      <h6>Could not load assets</h6>
       <p>{{ error }}</p>
       <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="loadAssets(true)">Try again</button>
     </div>
@@ -97,7 +97,7 @@
     <template v-else-if="activeView === 'inventory'">
       <div v-if="!filteredAssets.length" class="emp-empty">
         <div class="emp-empty__icon"><iconify-icon icon="lucide:package" /></div>
-        <h3>No assets found</h3>
+        <h6>No assets found</h6>
         <p>{{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first asset to get started.' }}</p>
         <button v-if="!hasActiveFilters" type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="openCreate">Add Asset</button>
       </div>
@@ -133,7 +133,7 @@
         <div class="emp-filter-sheet__panel">
           <div class="emp-filter-sheet__handle" />
           <div class="emp-filter-sheet__head">
-            <h3>Filter assets</h3>
+            <h6>Filter assets</h6>
             <button type="button" class="emp-mgmt__toolbar-btn" @click="showFilters = false">
               <iconify-icon icon="lucide:x" />
             </button>
@@ -156,7 +156,7 @@
     <Teleport to="body">
       <div v-if="showFormModal" class="ast-modal-overlay" @click.self="closeFormModal">
         <div class="ast-modal ast-modal--wide">
-          <h3>{{ editingId ? 'Edit Asset' : 'Add New Asset' }}</h3>
+          <h6>{{ editingId ? 'Edit Asset' : 'Add New Asset' }}</h6>
           <div class="ast-form-grid">
             <label>
               Asset type *
@@ -237,7 +237,7 @@
     <Teleport to="body">
       <div v-if="showAssignModal" class="ast-modal-overlay" @click.self="showAssignModal = false">
         <div class="ast-modal">
-          <h3>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h3>
+          <h6>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h6>
           <p v-if="actionAsset">{{ actionAsset.name }} ({{ actionAsset.assetId }})</p>
           <div class="ast-form-grid">
             <label>
