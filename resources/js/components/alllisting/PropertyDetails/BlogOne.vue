@@ -5888,7 +5888,8 @@ const createPaymentDetailsSlide = () => {
   const rawOriginalPrice = toNum(p.original_price);
   const originalPrice = rawOriginalPrice || sellingPrice;
   const premium = sellingPrice - originalPrice;
-  const nocPct = Math.max(0, Math.min(100, toNum(p.noc_percentage)));
+  const nocFixedAmount = toNum(p.noc_fixed_amount);
+  const nocPct = originalPrice > 0 ? Math.max(0, Math.min(100, (nocFixedAmount / originalPrice) * 100)) : 0;
 
   // Only render the breakdown slide when ALL of the following hold:
   //   1) the listing has at least one installment in its payment breakdown,
@@ -6065,7 +6066,7 @@ const createPaymentDetailsSlide = () => {
 
   const nocStrip = nocPct > 0 ? `
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 5mm;background:#ffffff;border-radius:3mm;padding:1.6mm 2mm;margin-bottom:2mm;font-size:2.6mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
-      <span>NOC <strong>${nocPct}%</strong> · Required <strong>${fmtAed(nocRequired)}</strong></span>
+      <span>NOC <strong>${fmtAed(nocFixedAmount)}</strong></span>
       <span>Paid <strong>${fmtAed(paidAed)}</strong></span>
       <span>Remaining <strong>${fmtAed(nocRemaining)}</strong></span>
       <span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;font-size:2.4mm;${nocMet ? 'background:#22c55e;color:#fff;' : 'background:#fecdd3;color:#9f1239;'}">${nocMet ? 'NOC met' : 'Below NOC'}</span>
@@ -7959,6 +7960,7 @@ margin-top: 20px;
 
 .sidebar-sticky-container.is-sidebar-fixed .agent-sidebar-card {
   box-shadow: 0 8px 28px rgba(11, 7, 54, 0.18);
+  background-color: #161c38;
 }
 
 /* Agent Sidebar Card - Improved Styles */

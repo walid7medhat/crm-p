@@ -112,7 +112,7 @@
                     />
                     <div v-if="paymentHandoverDateError" class="lpb-hint lpb-hint--err">{{ paymentHandoverDateError }}</div>
                   </div>
-                  <div class="col-sm-6" :class="{ 'col-sm-12': !isUnderConstruction }">
+                  <div class="col-sm-6" :class="{ 'col-sm-12': !isUnderConstruction }"  v-if="Number(nocFixedAmount) > 0">
                     <label class="lpb-label">
                       NOC Fees
                       <span class="text-muted fw-normal small">(AED)</span>
@@ -122,7 +122,7 @@
                     </label>
                     <div class="input-group input-group-sm">
                       <span class="input-group-text bg-light">
-                        <i class="fas fa-shield-alt" :class="text-muted"></i>
+                        <i class="fas fa-shield-alt text-muted" ></i>
                       </span>
                       <input
                         v-model.number="form.noc_fixed_amount"

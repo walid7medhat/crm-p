@@ -360,16 +360,15 @@
                 
                 <div class="input-group">
                   <span class="input-group-text bg-light">
-                    <i class="fas fa-shield-alt" :class="isNocAutoPopulated ? 'text-primary' : 'text-muted'"></i>
+                    <i class="fas fa-shield-alt text-muted" ></i>
                   </span>
                   <input
                     v-model.number="form.noc_fixed_amount"
                     type="number"
                     min="0"
                     step="1000"
-                    class="form-control"
-                    :disabled="isNocAutoPopulated"
-                    :class="{ 'bg-light': isNocAutoPopulated }"
+                    class="form-control bg-light"
+                    :disabled="true"
                     placeholder="Enter NOC amount"
                   />
                 
@@ -2080,7 +2079,16 @@ const isNocEnabled = computed(() => {
   
   if (!isUC && !isReady) return false;
   
-  return true;
+  // ✅ تعريف nocValue أولاً
+  let nocValue = 0;
+  if (isUC) {
+    nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
+  } else if (isReady) {
+    nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
+  }
+  
+  // ✅ إرجاع true فقط إذا كانت القيمة أكبر من 0
+  return nocValue > 0;
 });
 
 const isNocAutoPopulated = computed(() => {
@@ -2091,7 +2099,19 @@ const isNocAutoPopulated = computed(() => {
 });
 
 const showNocField = computed(() => {
-  return isNocEnabled.value;
+  if (!isNocEnabled.value) return false;
+  
+  const nocValue = developerNocValue.value;
+  if (nocValue <= 0) return false;
+  
+  console.log('🔍 showNocField: true', {
+    isUnderConstruction: isUnderConstruction.value,
+    selectedProject: !!selectedProject.value,
+    developer: !!selectedProject.value?.developer,
+    nocValue: nocValue
+  });
+  
+  return true;
 });
 const onAddAssignmentExpenseLine = () => {
   addAssignmentExpenseLine((msg) => proxy.$showNotification(msg, 'error'));

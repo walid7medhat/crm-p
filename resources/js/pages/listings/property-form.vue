@@ -375,16 +375,15 @@
             
             <div class="input-group">
               <span class="input-group-text bg-light">
-                <i class="fas fa-shield-alt" :class="isNocAutoPopulated ? 'text-primary' : 'text-muted'"></i>
+                <i class="fas fa-shield-alt text-muted"></i>
               </span>
               <input
                 v-model.number="form.noc_fixed_amount"
                 type="number"
                 min="0"
                 step="1000"
-                class="form-control"
-                :disabled="isNocAutoPopulated"
-                :class="{ 'bg-light': isNocAutoPopulated }"
+                class="form-control bg-light"
+                :disabled="true"
                 placeholder="Enter NOC amount"
               />
             
@@ -4569,7 +4568,7 @@ const isNocEnabled = computed(() => {
   }
   if (!isUC && !isReady) return false;
   
-  return true;
+   return nocValue > 0;
 });
 
 const isNocAutoPopulated = computed(() => {
@@ -4591,14 +4590,19 @@ const isNocAutoPopulated = computed(() => {
 });
 
 const showNocField = computed(() => {
-  const result = isNocEnabled.value;
-  console.log('🔍 showNocField:', result, {
+  if (!isNocEnabled.value) return false;
+  
+  const nocValue = developerNocValue.value;
+  if (nocValue <= 0) return false;
+  
+  console.log('🔍 showNocField: true', {
     isUnderConstruction: isUnderConstruction.value,
     selectedProject: !!selectedProject.value,
     developer: !!selectedProject.value?.developer,
-    nocValue: developerNocValue.value
+    nocValue: nocValue
   });
-  return result;
+  
+  return true;
 });
 
 const currentNocType = computed(() => {
