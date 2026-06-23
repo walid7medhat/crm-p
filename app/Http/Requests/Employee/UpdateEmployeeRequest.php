@@ -47,7 +47,7 @@ class UpdateEmployeeRequest extends FormRequest
             'swift_code' => 'nullable|string|max:20',
             'iban_number' => 'nullable|string|max:34',
             
-            'insurance_policy_type' => 'nullable|in:general,life,health,motor',
+            'insurance_policy_type' => 'nullable',
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_provider' => 'nullable|string|max:255',
             'insurance_start_date' => 'nullable|date',

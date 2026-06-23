@@ -21,7 +21,7 @@ class StoreEmployeeRequest extends FormRequest
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
-            'role_id' => 'required|exists:roles,id',
+            'role_id' => 'nullable|exists:roles,id',
             'parent_id' => 'nullable|exists:users,id',
             'status' => 'nullable|in:active,in_active,blocked',
             
@@ -55,7 +55,7 @@ class StoreEmployeeRequest extends FormRequest
             'iban_number' => 'nullable|string|max:34',
             
             // ========== INSURANCE DETAILS ==========
-            'insurance_policy_type' => 'nullable|string|in:general,life,health,motor',
+            'insurance_policy_type' => 'nullable|string',
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_provider' => 'nullable|string|max:255',
             'insurance_start_date' => 'nullable|date',

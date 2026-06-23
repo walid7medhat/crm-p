@@ -126,13 +126,18 @@ class EmployeeController extends Controller
                 });
             }
             
-            $perPage = min((int) ($request->per_page ?? 20), 100);
-            $employees = $query->orderBy('created_at', 'desc')->paginate($perPage);
-            
-            return ApiResponse::success(
-                EmployeeResource::collection($employees),
-                'Employees retrieved successfully'
-            );
+       $perPage = min((int) ($request->per_page ?? 10), 100);
+        $employees = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        
+        return ApiResponse::success([
+            'data' => EmployeeResource::collection($employees->items()),
+            'current_page' => $employees->currentPage(),
+            'last_page' => $employees->lastPage(),
+            'per_page' => $employees->perPage(),
+            'total' => $employees->total(),
+            'from' => $employees->firstItem(),
+            'to' => $employees->lastItem(),
+        ], 'Employees retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve employees: ' . $e->getMessage());
         }

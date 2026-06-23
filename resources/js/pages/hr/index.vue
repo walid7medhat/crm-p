@@ -143,6 +143,7 @@
             :selected-employee-id="selectedOverviewEmployee ? selectedOverviewEmployee.id : null"
             @select-all="selectAllOverviewEmployees"
             @select-employee="selectOverviewEmployee"
+            
           />
           <EmployeeDetails v-if="selectedOverviewEmployee" :employee="selectedOverviewEmployee" />
         </div>
@@ -150,7 +151,7 @@
 
       <div class="hr-content-card hr-employees-card" v-else-if="activeTab === 'Employees'">
         <div class="hr-content-shell overview-shell hr-employees-shell">
-          <EmployeesManagement embedded @add="showAddEmployeeModal = true" @edit="openEditEmployee" />
+          <EmployeesManagement embedded @add="showAddEmployeeModal = true" @edit="openEditEmployee" @delete="deleteEmployee"  @view="openEmployeeDetails" />
         </div>
       </div>
 
@@ -633,7 +634,7 @@
                 <label>Branch *</label>
                 <SearchableSelect
                   v-model="announcementForm.branch"
-                  :options="announcementBranchOptions"
+                  :options="branchOptions"
                   placeholder="Not Selected"
                 />
               </div>
@@ -1409,19 +1410,19 @@
             <div class="add-grid-two">
               <div class="add-field">
                 <label>Branch *</label>
-                <SearchableSelect v-model="addEmployeeForm.branch" :options="branchOptions" placeholder="Not Selected" />
+                <SearchableSelect v-model="addEmployeeForm.branch_id" :options="branchOptions" placeholder="Not Selected" />
               </div>
               <div class="add-field">
                 <label>Designation *</label>
-                <SearchableSelect v-model="addEmployeeForm.designation" :options="designationOptions" placeholder="Not Selected" />
+                <SearchableSelect v-model="addEmployeeForm.designation_id" :options="designationOptions" placeholder="Not Selected" />
               </div>
               <div class="add-field">
                 <label>Department *</label>
-                <SearchableSelect v-model="addEmployeeForm.department" :options="departmentOptions" placeholder="Not Selected" />
+                <SearchableSelect v-model="addEmployeeForm.department_id" :options="departmentOptions" placeholder="Not Selected" />
               </div>
               <div class="add-field">
                 <label>Supervisor *</label>
-                <SearchableSelect v-model="addEmployeeForm.supervisor" :options="supervisorOptions" placeholder="Not Selected" />
+                <SearchableSelect v-model="addEmployeeForm.supervisor_id" :options="supervisorOptions" placeholder="Not Selected" />
               </div>
               <div class="add-field">
                 <label>User Type</label>
@@ -1463,48 +1464,130 @@
           </section>
 
           <section class="add-employee-section">
-            <h6>Upload Employee Documents</h6>
-            <div class="doc-chip-row">
-              <button
-                v-for="doc in employeeDocumentTypes"
-                :key="doc"
-                type="button"
-                class="doc-chip"
-                :class="{ active: selectedDocumentType === doc }"
-                @click="selectedDocumentType = doc"
-              >
-                {{ doc }}
-              </button>
-            </div>
-            <div class="add-field">
-              <label>Emirates ID Number *</label>
-              <input v-model="addEmployeeForm.emirates_id_number" type="text" placeholder="Enter Emirates ID Number" />
-            </div>
-            <div class="add-field mt-2">
-              <label>Expiry Date *</label>
-              <input :value="formatDateDisplay(addEmployeeForm.documents_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.documents_expiry_date')" />
-            </div>
-            <div class="upload-dropzone">
-              <div>
-                <strong>Drag and drop your files</strong>
-                <small>JPEG, PNG and PDF formats, up to 50MB</small>
-              </div>
-              <label class="select-file-btn">
-                Select File
-                <input type="file" class="d-none" @change="handleAddEmployeeFileChange" />
-              </label>
-            </div>
-            <div v-if="addEmployeeUploadedFile" class="uploaded-doc-card">
-              <iconify-icon icon="lucide:file-text" />
-              <div>
-                <p>{{ addEmployeeUploadedFile.name }}</p>
-                <small>{{ `${Math.max(1, Math.round(addEmployeeUploadedFile.size / 1024))}KB` }}</small>
-              </div>
-              <button type="button" @click="removeAddEmployeeFile">
-                <iconify-icon icon="lucide:x-circle" />
-              </button>
-            </div>
-          </section>
+                <h6>Upload Employee Documents</h6>
+                <div class="doc-chip-row">
+                  <button
+                    v-for="doc in employeeDocumentTypes"
+                    :key="doc.value"
+                    type="button"
+                    class="doc-chip"
+                    :class="{ active: selectedDocumentType === doc.value }"
+                    @click="selectedDocumentType = doc.value"
+                  >
+                    {{ doc.label }}
+                  </button>
+                </div>
+
+                <!-- 🔥 Emirates ID -->
+                <template v-if="selectedDocumentType === 'emirates_id'">
+                  <div class="add-field">
+                    <label>Emirates ID Number *</label>
+                    <input v-model="addEmployeeForm.emirates_id_number" type="text" placeholder="Enter Emirates ID Number" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Expiry Date *</label>
+                    <input :value="formatDateDisplay(addEmployeeForm.documents_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.documents_expiry_date')" />
+                  </div>
+                </template>
+
+                <!-- 🔥 Labor Card -->
+                <template v-else-if="selectedDocumentType === 'labor_card'">
+                  <div class="add-field">
+                    <label>Labor Card Number *</label>
+                    <input v-model="addEmployeeForm.labor_card_number" type="text" placeholder="Enter Labor Card Number" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Expiry Date *</label>
+                    <input :value="formatDateDisplay(addEmployeeForm.labor_card_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.labor_card_expiry_date')" />
+                  </div>
+                </template>
+
+                <!-- 🔥 Passport -->
+                <template v-else-if="selectedDocumentType === 'passport'">
+                  <div class="add-field">
+                    <label>Passport Number *</label>
+                    <input v-model="addEmployeeForm.passport_number" type="text" placeholder="Enter Passport Number" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Expiry Date *</label>
+                    <input :value="formatDateDisplay(addEmployeeForm.passport_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.passport_expiry_date')" />
+                  </div>
+                </template>
+
+                <!-- 🔥 Visa -->
+                <template v-else-if="selectedDocumentType === 'visa'">
+                  <div class="add-field">
+                    <label>Visa Number</label>
+                    <input v-model="addEmployeeForm.visa_number" type="text" placeholder="Enter Visa Number" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Expiry Date</label>
+                    <input :value="formatDateDisplay(addEmployeeForm.visa_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.visa_expiry_date')" />
+                  </div>
+                </template>
+
+       
+
+                <!-- 🔥 Insurance Card -->
+                <template v-else-if="selectedDocumentType === 'insurance_card'">
+                  <div class="add-field">
+                    <label>Insurance Provider</label>
+                    <input v-model="addEmployeeForm.insurance_provider" type="text" placeholder="Enter Insurance Provider" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Policy Number</label>
+                    <input v-model="addEmployeeForm.policy_number" type="text" placeholder="Enter Policy Number" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Expiry Date</label>
+                    <input :value="formatDateDisplay(addEmployeeForm.insurance_expiry_date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('addEmployeeForm.insurance_expiry_date')" />
+                  </div>
+                </template>
+
+              
+
+
+                
+
+             
+
+             
+
+
+                <!-- 🔥 Attested Certificates -->
+                <template v-else-if="selectedDocumentType === 'attested_certificate'">
+                  <div class="add-field">
+                    <label>Certificate Name *</label>
+                    <input v-model="addEmployeeForm.certificate_name" type="text" placeholder="Enter Certificate Name" />
+                  </div>
+                  <div class="add-field mt-2">
+                    <label>Attestation Status *</label>
+                    <SearchableSelect v-model="addEmployeeForm.attestation_status" :options="['Attested', 'Not Attested', 'In Progress']" placeholder="Select Status" />
+                  </div>
+                </template>
+
+                <!-- 🔥 رفع الملف (يظهر دائماً) -->
+                <div class="upload-dropzone mt-3">
+                  <div>
+                    <strong>Drag and drop your files</strong>
+                    <small>JPEG, PNG and PDF formats, up to 50MB</small>
+                  </div>
+                  <label class="select-file-btn">
+                    Select File
+                    <input type="file" class="d-none" @change="handleAddEmployeeFileChange" />
+                  </label>
+                </div>
+                <div v-if="addEmployeeUploadedFile" class="uploaded-doc-card">
+                  <iconify-icon icon="lucide:file-text" />
+                  <div>
+                    <p>{{ addEmployeeUploadedFile.name }}</p>
+                    <small>{{ `${Math.max(1, Math.round(addEmployeeUploadedFile.size / 1024))}KB` }}</small>
+                  </div>
+                  <button type="button" @click="removeAddEmployeeFile">
+                    <iconify-icon icon="lucide:x-circle" />
+                  </button>
+                </div>
+              </section>
 
           <section class="add-employee-section">
             <h6>Bank Account Details</h6>
@@ -1745,7 +1828,14 @@ import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
-
+import {
+  createEmployee,
+  updateEmployee,
+  fetchDepartments,
+  fetchDesignations,
+  fetchBranches,
+  fetchManagers,fetchEmployee
+} from '@/services/employeesApi'
 const {
   loading,
   error,
@@ -1766,7 +1856,11 @@ const {
   hrAttendanceTeamTree,
   teamOptions,
 } = useHrDashboard()
-
+const departmentsList = ref([])
+const designationsList = ref([])
+const branchesList = ref([])
+const managersList = ref([])
+const filterOptionsLoading = ref(false)
 const route = useRoute()
 const HR_ACTIVE_TAB_STORAGE_KEY = 'hr.activeTab'
 const HR_LEAVE_MODE_STORAGE_KEY = 'hr.leaveSectionMode'
@@ -1802,7 +1896,7 @@ const fetchRealEmployees = async () => {
       statusType: 'active',
       nationality: 'Indian',
       salary: '2000.00',
-      salary_type: 'Monthly',
+      salary_type: 'monthly',
       supervisor: 'Khalid Al Mazrouei',
       role_name: 'Employee',
       employee_code: 'EMP-340',
@@ -1853,7 +1947,7 @@ const fetchRealEmployees = async () => {
         statusType: emp.status === 'active' ? 'active' : 'inactive',
         nationality: emp.nationality || '-',
         salary: emp.salary || '-',
-        salary_type: emp.salary_type || 'Monthly',
+        salary_type: emp.salary_type || 'monthly',
         supervisor: emp.parent?.name || '-',
         role_name: emp.role_name || '-',
         employee_code: emp.employee_profile?.employee_code || `EMP-${emp.id}`,
@@ -1957,7 +2051,7 @@ const employeeInsuranceSectionRef = ref(null)
 const showSectionEditModal = ref(false)
 const editingSection = ref('')
 const sectionEditForm = ref({})
-const selectedDocumentType = ref('Emirates ID')
+const selectedDocumentType = ref('emirates_id')
 const addEmployeeUploadedFile = ref(null)
 const showRequestDocumentModal = ref(false)
 const showDocumentDetailModal = ref(false)
@@ -2313,50 +2407,54 @@ const filteredOverviewEmployees = computed(() => {
 })
 
 // ========== OPTIONS FOR FILTERS ==========
-const departmentOptions = computed(() => {
-  const depts = new Set()
-  employeesDirectory.value.forEach(emp => {
-    if (emp.department && emp.department !== '-') depts.add(emp.department)
-  })
-  return Array.from(depts)
+
+
+const branchOptions = computed(() => {
+  return branchesList.value.map(b => ({
+    value: b.id,
+    label: b.name || b
+  }))
 })
 
 const designationOptions = computed(() => {
-  const desigs = new Set()
-  employeesDirectory.value.forEach(emp => {
-    if (emp.designation && emp.designation !== '-') desigs.add(emp.designation)
-  })
-  return Array.from(desigs)
+  return designationsList.value.map(d => ({
+    value: d.id,
+    label: d.name || d
+  }))
+})
+
+const departmentOptions = computed(() => {
+  return departmentsList.value.map(d => ({
+    value: d.id,
+    label: d.name || d
+  }))
 })
 
 const supervisorOptions = computed(() => {
-  const sups = new Set()
-  employeesDirectory.value.forEach(emp => {
-    if (emp.supervisor && emp.supervisor !== '-') sups.add(emp.supervisor)
-  })
-  return Array.from(sups)
+  return managersList.value.map(m => ({
+    value: m.id,
+    label: m.name || m
+  }))
 })
-
-const branchOptions = ['Dubai HQ', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Saadiyat', 'Reem', 'Main']
 const nationalityOptions = ['UAE', 'Egypt', 'India', 'Pakistan', 'Morocco', 'Jordan', 'Philippines']
-const salaryTypeOptions = ['Daily', 'Monthly', 'Yearly']
+const salaryTypeOptions = ['daily', 'monthly', 'yearly']
 const maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed']
 const bankNameOptions = ['Emirates NBD', 'ADCB', 'Mashreq', 'FAB', 'RAKBANK']
 const policyTypeOptions = ['Basic Health', 'Standard Health', 'Premium Health', 'Life Insurance']
 const employeeDocumentTypes = [
-  'Emirates ID',
-  'Labor Card',
-  'Passport',
-  'Visa',
-  'Passport Photo',
-  'Insurance Card',
-  'Broker License',
-  'ILOE Certificate',
-  'Company Stamp',
-  'Labor Contract',
-  'Job Offer Latter',
-  'Signature',
-  'Attested Certificates',
+  { label: 'Emirates ID', value: 'emirates_id' },
+  { label: 'Labor Card', value: 'labor_card' },
+  { label: 'Passport', value: 'passport' },
+  { label: 'Visa', value: 'visa' },
+  { label: 'Passport Photo', value: 'passport_photo' },
+  { label: 'Insurance Card', value: 'insurance_card' },
+  { label: 'Broker License', value: 'broker_license' },
+  { label: 'ILOE Certificate', value: 'iloe_certificate' },
+  { label: 'Company Stamp', value: 'company_stamp' },
+  { label: 'Labor Contract', value: 'labor_contract' },
+  { label: 'Job Offer Letter', value: 'job_offer_letter' },
+  { label: 'Signature', value: 'signature' },
+  { label: 'Attested Certificates', value: 'attested_certificate' },
 ]
 const statusOptions = ['Active', 'In Active', 'Blocked']
 const leaveTypeOptions = [
@@ -2544,6 +2642,28 @@ const defaultAddEmployeeForm = () => ({
   policy_number: '',
   insurance_start_date: '',
   insurance_expiry_date: '',
+   emirates_id_number: '',
+  documents_expiry_date: '',
+  labor_card_number: '',
+  labor_card_expiry_date: '',
+  passport_number: '',
+  passport_expiry_date: '',
+  visa_number: '',
+  visa_expiry_date: '',
+  policy_number: '',
+  insurance_expiry_date: '',
+
+  contract_number: '',
+
+  certificate_name: '',
+  attestation_status: '',
+  branch_id: '',    
+  designation: '',
+  designation_id: '',
+  department: '',
+  department_id: '',
+  supervisor: '',
+  supervisor_id: '',
 })
 
 const addEmployeeForm = ref(defaultAddEmployeeForm())
@@ -3418,7 +3538,38 @@ async function onAttendanceDateChange() {
   page.value = 1
   await loadAttendance()
 }
-
+// ========== LOAD FILTER OPTIONS ==========
+async function loadFilterOptions() {
+  filterOptionsLoading.value = true
+  try {
+    const [depts, desigs, brs, mgrs] = await Promise.all([
+      fetchDepartments(),
+      fetchDesignations(),
+      fetchBranches(),
+      fetchManagers(),
+    ])
+    
+    departmentsList.value = depts || []
+    designationsList.value = desigs || []
+    branchesList.value = brs || []
+    managersList.value = mgrs || []
+    
+    console.log('✅ Filter options loaded:', {
+      departments: departmentsList.value.length,
+      designations: designationsList.value.length,
+      branches: branchesList.value.length,
+      managers: managersList.value.length,
+    })
+  } catch (error) {
+    console.error('❌ Failed to load filter options:', error)
+    departmentsList.value = []
+    designationsList.value = []
+    branchesList.value = []
+    managersList.value = []
+  } finally {
+    filterOptionsLoading.value = false
+  }
+}
 function exportAttendance() {
   if (!filteredRows.value.length) {
     if (window.$showNotification) window.$showNotification('No attendance data to export', 'warning')
@@ -4518,34 +4669,132 @@ function resetAddEmployeeForm() {
   selectedDocumentType.value = 'Emirates ID'
 }
 
+// In your setup script
 function mapRowToEmployeeForm(row) {
+  // Get the raw API data (either from row.raw or use row itself)
+  const apiData = row.raw || row;
+  const profile = apiData.employee_profile || {};
+  const bank = profile.bank_details || {};
+  const insurance = profile.insurance_details || {};
+  const addresses = profile.addresses || {};
+  const emergency = profile.emergency_contact || {};
+  const salary = apiData.salary || {};
+  
+  console.log('🔍 Mapping API Data:', {
+    apiData,
+    profile,
+    bank,
+    insurance,
+    addresses,
+    emergency,
+    salary
+  });
+
   return {
-    ...defaultAddEmployeeForm(),
-    full_name: row.name || '',
-    nationality: row.nationality || '',
-    phone: row.phone || '+971 56125 4568',
-    salary_type: row.salary_type || 'Monthly',
-    email: row.email || '',
-    salary: row.salary || '2000.00',
-    branch: row.branch || 'Abu Dhabi Head Office',
-    designation: row.designation || '',
-    department: row.department || '',
-    supervisor: row.supervisor || 'Khalid Al Mazrouei',
-    joining_date: normalizeDateInput(row.joiningDate),
-    visa_validity: normalizeDateInput(row.visaValidity),
-    emirates_id_number: row.emiratesId || '784-1990-1234567-1',
-    account_holder_name: row.account_holder_name || row.name || '',
-    bank_name: row.bank_name || 'Abu Dhabi Commercial Bank (ADCB)',
-    branch_location: row.branch_location || 'Abu Dhabi - Madeena zayd',
-    account_number: row.account_number || '009876543210',
-    iban_number: row.iban_number || 'AE89 203 000456789123456',
-    swift_code: row.swift_code || 'ADCBAEAA456',
-    policy_type: row.policy_type || 'Health Insurance',
-    insurance_provider: row.insurance_provider || 'Daman Insurance',
-    policy_number: row.policy_number || 'DAM-2024-123456',
-    insurance_start_date: normalizeDateInput(row.insurance_start_date) || '2024-02-17',
-    insurance_expiry_date: normalizeDateInput(row.insurance_expiry_date) || '2025-02-17',
+    // ===== Basic Info =====
+    full_name: apiData.name || row.name || '',
+    nationality: apiData.nationality || row.nationality || '',
+    phone: apiData.phone || row.phone || '',
+    home_country_phone_number: apiData.home_country_phone_number || row.home_country_phone_number || '',
+    email: apiData.email || row.email || '',
+    salary: salary.amount || row.salaryAmount || row.salary || '',
+    salary_type: salary.type || row.salaryType || row.salary_type || '',
+    
+    // ===== Addresses =====
+    address_inside_uae: addresses.inside_uae || row.address_inside_uae || '',
+    address_outside_uae: addresses.outside_uae || row.address_outside_uae || '',
+    
+    // ===== Personal Info =====
+    father_name: profile.father_name || row.father_name || '',
+    mother_name: profile.mother_name || row.mother_name || '',
+    marital_status: row.marital_status || '',
+    religion: profile.religion || row.religion || '',
+    emergency_contact_name: emergency.name || row.emergency_contact_name || '',
+    emergency_email: emergency.email || row.emergency_email || '',
+    emergency_phone_number: emergency.phone || row.emergency_phone_number || '',
+    
+    // ===== Company Details (IDs) =====
+    branch_id: profile.company_branch_id || row.branchId || '',
+    designation_id: profile.designation?.id || row.designationId || '',
+    department_id: profile.department?.id || row.departmentId || '',
+    supervisor_id: apiData.parent?.id || row.managerId || '',
+    user_type: row.user_type || '',
+    
+    // ===== Company Dates =====
+    joining_date: formatDateForInput(profile.joining_date || row.joiningDate),
+    visa_validity: formatDateForInput(profile.visa_validity || row.visa_validity),
+    probation_end_date: formatDateForInput(profile.probation_end_date || row.probation_end_date),
+    contract_joining_date: formatDateForInput(profile.contract_joining_date || row.contract_joining_date),
+    gratuity_termination: formatDateForInput(profile.gratuity_termination || row.gratuity_termination),
+    
+    // ===== Company Info =====
+    sponsor: profile.sponsor || row.sponsor || '',
+    visa_quota: profile.visa_quota || row.visa_quota || '',
+    vehicle: profile.vehicle || row.vehicle || '',
+    
+    // ===== Documents =====
+    emirates_id_number: profile.emirates_id_number || row.emirates_id_number || '',
+    documents_expiry_date: formatDateForInput(profile.documents_expiry_date || row.documents_expiry_date),
+    labor_card_number: profile.labor_card_number || row.labor_card_number || '',
+    labor_card_expiry_date: formatDateForInput(profile.labor_card_expiry_date || row.labor_card_expiry_date),
+    passport_number: profile.passport_number || row.passport_number || '',
+    passport_expiry_date: formatDateForInput(profile.passport_expiry_date || row.passport_expiry_date),
+    visa_number: profile.visa_number || row.visa_number || '',
+    visa_expiry_date: formatDateForInput(profile.visa_expiry_date || row.visa_expiry_date),
+    iloe_expiry_date: formatDateForInput(profile.iloe_expiry_date || row.iloe_expiry_date),
+    certificate_name: profile.certificate_name || row.certificate_name || '',
+    attestation_status: row.attestation_status || '',
+    
+    // ===== Bank Details =====
+    account_holder_name: bank.bank_account_holder_name || row.account_holder_name || '',
+    bank_name: bank.bank_name || row.bank_name || '',
+    branch_location: bank.branch_location || row.branch_location || '',
+    account_number: bank.account_number || row.account_number || '',
+    iban_number: bank.iban_number || row.iban_number || '',
+    swift_code: bank.swift_code || row.swift_code || '',
+    
+    // ===== Insurance =====
+    policy_type: insurance.policy_type || row.policy_type || '',
+    insurance_provider: insurance.provider || row.insurance_provider || '',
+    policy_number: insurance.policy_number || row.policy_number || '',
+    insurance_start_date: formatDateForInput(insurance.start_date || row.insurance_start_date),
+    insurance_expiry_date: formatDateForInput(insurance.expiry_date || row.insurance_expiry_date),
+    
+    // ===== Extra Fields =====
+    photo_description: '',
+    broker_license_number: '',
+    broker_license_expiry_date: '',
+    iloe_number: '',
+    stamp_description: '',
+    contract_number: '',
+    offer_letter_description: '',
+    signature_description: '',
+  };
+}
+
+// Helper function to format dates for input fields
+function formatDateForInput(value) {
+  if (!value) return '';
+  
+  // Check if it's already in YYYY-MM-DD format
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
   }
+  
+  // Handle date strings like "2026-07-04T20:00:00.000000Z"
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) {
+    console.warn('Failed to parse date:', value);
+  }
+  
+  return value;
 }
 
 function normalizeDateInput(value) {
@@ -4571,7 +4820,7 @@ function enrichEmployeeDetail(row) {
     address: row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
     address_inside_uae: row.address_inside_uae || row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
     address_outside_uae: row.address_outside_uae || row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
-    salary_type: row.salary_type || 'Monthly',
+    salary_type: row.salary_type || 'monthly',
     salary: row.salary || '2000.00',
     branch: row.branch || 'Abu Dhabi Head Office',
     supervisor: row.supervisor || 'Khalid Al Mazrouei',
@@ -4593,14 +4842,82 @@ function enrichEmployeeDetail(row) {
   }
 }
 
-function openEditEmployee(row) {
-  isEditEmployeeMode.value = true
-  editingEmployeeId.value = row.id
-  addEmployeeForm.value = mapRowToEmployeeForm(enrichEmployeeDetail(row))
-  addEmployeeProfilePreview.value = row.avatar || ''
-  showAddEmployeeModal.value = true
-  openEmployeeRowMenuId.value = null
+async function openEditEmployee(row) {
+  try {
+    isEditEmployeeMode.value = true
+    editingEmployeeId.value = row.id
+    
+    const employeeData = await fetchEmployee(row.id)
+    console.log('🔍 Employee Data from API:', employeeData)
+    
+    if (employeeData) {
+      const mappedData = mapRowToEmployeeForm(employeeData)
+      console.log('📝 Mapped Form Data:', mappedData)
+      
+      addEmployeeForm.value = mappedData
+      addEmployeeProfilePreview.value = employeeData.avatar || ''
+    }
+    
+    showAddEmployeeModal.value = true
+    openEmployeeRowMenuId.value = null
+  } catch (error) {
+    console.error('Error fetching employee data:', error)
+    showNotification('Failed to load employee data', 'error')
+  }
 }
+// ========== DELETE EMPLOYEE ==========
+const deleteEmployee = async (employee) => {
+  // Show confirmation dialog
+  const confirmed = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete employee "${employee.name}". This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        resolve(result.isConfirmed)
+      })
+    } else {
+      resolve(window.confirm(`Are you sure you want to delete "${employee.name}"?`))
+    }
+  })
+
+  if (!confirmed) return
+
+  try {
+    // Call API to delete employee
+    await api.delete(`/employees/${employee.id}`)
+    
+    // Remove from local array
+    employeesDirectory.value = employeesDirectory.value.filter(
+      (emp) => String(emp.id) !== String(employee.id)
+    )
+    
+    // If this employee was selected as detail, clear it
+    if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(employee.id)) {
+      selectedEmployeeDetail.value = null
+      if (activeTab.value === 'Employee Details') {
+        activeTab.value = 'Employees'
+      }
+    }
+    
+    // Show success notification
+    showNotification(`Employee "${employee.name}" deleted successfully`, 'success')
+    
+    // Close any open menus
+    openEmployeeRowMenuId.value = null
+    
+  } catch (error) {
+    console.error('Error deleting employee:', error)
+    showNotification(error.response?.data?.message || 'Failed to delete employee', 'error')
+  }
+}
+
 
 function openEmployeeDetails(row) {
   selectedEmployeeDetail.value = enrichEmployeeDetail(row)
@@ -4717,32 +5034,124 @@ function confirmRejectDocument() {
   selectedRequestedDocument.value = { ...selectedRequestedDocument.value, status: 'Rejected', rejectionReason: reason }
   closeRejectDocumentModal()
 }
-
-function saveEmployeeForm() {
-  if (isEditEmployeeMode.value && editingEmployeeId.value) {
-    const idx = employeesDirectory.value.findIndex((e) => String(e.id) === String(editingEmployeeId.value))
-    if (idx >= 0) {
-      employeesDirectory.value[idx] = {
-        ...employeesDirectory.value[idx],
-        name: addEmployeeForm.value.full_name,
-        email: addEmployeeForm.value.email,
-        designation: addEmployeeForm.value.designation,
-        department: addEmployeeForm.value.department,
-        nationality: addEmployeeForm.value.nationality,
-        salary_type: addEmployeeForm.value.salary_type,
-        salary: addEmployeeForm.value.salary,
-        branch: addEmployeeForm.value.branch,
-        supervisor: addEmployeeForm.value.supervisor,
-        joiningDate: formatDate(addEmployeeForm.value.joining_date),
-        visaValidity: formatDate(addEmployeeForm.value.visa_validity),
-        avatar: addEmployeeProfilePreview.value || employeesDirectory.value[idx].avatar,
-      }
-      if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(editingEmployeeId.value)) {
-        selectedEmployeeDetail.value = enrichEmployeeDetail(employeesDirectory.value[idx])
-      }
-    }
+function showNotification(message, type = 'success') {
+  if (window.$showNotification) {
+    window.$showNotification(message, type)
+  } else {
+    Swal.fire({
+      icon: type,
+      title: message,
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    })
   }
-  closeAddEmployeeModal()
+}
+async function saveEmployeeForm() {
+  try {
+    const formData = new FormData()
+    
+    formData.append('name', addEmployeeForm.value.full_name)
+    formData.append('email', addEmployeeForm.value.email)
+    formData.append('phone', addEmployeeForm.value.phone)
+    formData.append('personal_phone', addEmployeeForm.value.phone)
+    formData.append('home_country_phone_number', addEmployeeForm.value.home_country_phone_number || '')
+    formData.append('nationality', addEmployeeForm.value.nationality || '')
+    formData.append('salary_type', addEmployeeForm.value.salary_type || '')
+    formData.append('salary_amount', addEmployeeForm.value.salary || 0)
+    formData.append('password', 'password123') // مؤقت
+    
+    formData.append('father_name', addEmployeeForm.value.father_name || '')
+    formData.append('mother_name', addEmployeeForm.value.mother_name || '')
+    formData.append('religion', addEmployeeForm.value.religion || '')
+    formData.append('emergency_contact_name', addEmployeeForm.value.emergency_contact_name || '')
+    formData.append('emergency_email', addEmployeeForm.value.emergency_email || '')
+    formData.append('emergency_phone', addEmployeeForm.value.emergency_phone_number || '')
+    formData.append('address_inside_uae', addEmployeeForm.value.address_inside_uae || '')
+    formData.append('address_outside_uae', addEmployeeForm.value.address_outside_uae || '')
+    formData.append('employee_name', addEmployeeForm.value.full_name)
+    
+    formData.append('designation_id', addEmployeeForm.value.designation_id || '')
+    formData.append('department_id', addEmployeeForm.value.department_id || '')
+    formData.append('company_branch_id', addEmployeeForm.value.branch_id  || '')
+    formData.append('parent_id', addEmployeeForm.value.supervisor_id || '')
+    formData.append('joining_date', addEmployeeForm.value.joining_date || '')
+    formData.append('contract_end_date', addEmployeeForm.value.visa_validity || '')
+    formData.append('probation_end_date', addEmployeeForm.value.probation_end_date || '')
+    formData.append('contract_joining_date', addEmployeeForm.value.contract_joining_date || '')
+    formData.append('gratuity_termination', addEmployeeForm.value.gratuity_termination || '')
+    formData.append('visa_validity', addEmployeeForm.value.visa_validity || '')
+    formData.append('sponsor', addEmployeeForm.value.sponsor || '')
+    formData.append('visa_quota', addEmployeeForm.value.visa_quota || '')
+    formData.append('vehicle', addEmployeeForm.value.vehicle || '')
+    
+    if (selectedDocumentType.value === 'Emirates ID') {
+      formData.append('emirates_id_number', addEmployeeForm.value.emirates_id_number || '')
+      formData.append('documents_expiry_date', addEmployeeForm.value.documents_expiry_date || '')
+    } else if (selectedDocumentType.value === 'Labor Card') {
+      formData.append('labor_card_number', addEmployeeForm.value.labor_card_number || '')
+      formData.append('labor_card_expiry_date', addEmployeeForm.value.labor_card_expiry_date || '')
+    } else if (selectedDocumentType.value === 'Passport') {
+      formData.append('passport_number', addEmployeeForm.value.passport_number || '')
+      formData.append('passport_expiry_date', addEmployeeForm.value.passport_expiry_date || '')
+    } else if (selectedDocumentType.value === 'Visa') {
+      formData.append('visa_number', addEmployeeForm.value.visa_number || '')
+      formData.append('visa_expiry_date', addEmployeeForm.value.visa_expiry_date || '')
+    } else if (selectedDocumentType.value === 'Insurance Card') {
+      formData.append('insurance_provider', addEmployeeForm.value.insurance_provider || '')
+      formData.append('insurance_policy_number', addEmployeeForm.value.policy_number || '')
+      formData.append('insurance_expiry_date', addEmployeeForm.value.insurance_expiry_date || '')
+    } else if (selectedDocumentType.value === 'ILOE Certificate') {
+      formData.append('iloe_expiry_date', addEmployeeForm.value.iloe_expiry_date || '')
+    } else if (selectedDocumentType.value === 'Attested Certificates') {
+      formData.append('certificate_name', addEmployeeForm.value.certificate_name || '')
+      formData.append('attestation_status', addEmployeeForm.value.attestation_status || '')
+    }
+    
+    formData.append('bank_account_holder_name', addEmployeeForm.value.account_holder_name || '')
+    formData.append('bank_name', addEmployeeForm.value.bank_name || '')
+    formData.append('bank_account_number', addEmployeeForm.value.account_number || '')
+    formData.append('branch_location', addEmployeeForm.value.branch_location || '')
+    formData.append('swift_code', addEmployeeForm.value.swift_code || '')
+    formData.append('iban_number', addEmployeeForm.value.iban_number || '')
+    
+    formData.append('insurance_policy_type', addEmployeeForm.value.policy_type || '')
+    formData.append('insurance_policy_number', addEmployeeForm.value.policy_number || '')
+    formData.append('insurance_provider', addEmployeeForm.value.insurance_provider || '')
+    formData.append('insurance_start_date', addEmployeeForm.value.insurance_start_date || '')
+    formData.append('insurance_expiry_date', addEmployeeForm.value.insurance_expiry_date || '')
+    
+    if (addEmployeeProfileFile.value) {
+      formData.append('avatar', addEmployeeProfileFile.value)
+    }
+    
+   
+    if (addEmployeeUploadedFile.value) {
+      const docType = selectedDocumentType.value
+      formData.append(`documents.${docType}`, addEmployeeUploadedFile.value)
+      
+      formData.append(`documents.${docType}_names.0`, addEmployeeUploadedFile.value.name)
+    }
+    
+    
+    let result
+    if (isEditEmployeeMode.value && editingEmployeeId.value) {
+      result = await updateEmployee(editingEmployeeId.value, formData)
+      showNotification('Employee updated successfully', 'success')
+    } else {
+      result = await createEmployee(formData)
+      showNotification('Employee created successfully', 'success')
+    }
+    
+    closeAddEmployeeModal()
+    
+    await fetchRealEmployees()
+    
+  } catch (error) {
+    console.error('Error saving employee:', error)
+    showNotification(error.message || 'Failed to save employee', 'error')
+  }
 }
 
 function closeAddEmployeeModal() {
@@ -4826,13 +5235,15 @@ watch(hrSectionTab, (value) => {
 })
 
 // ========== ON MOUNTED ==========
+// ========== ON MOUNTED ==========
 onMounted(async () => {
   console.log('BASE URL:', api.defaults.baseURL)
   restoreHrPageState()
   const d = new Date()
   dateFilter.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   
-  // Fetch real employees first
+  await loadFilterOptions()
+  
   await fetchRealEmployees()
   
   await Promise.all([loadAttendance(), loadAgentData()])
@@ -4840,7 +5251,6 @@ onMounted(async () => {
   window.addEventListener('resize', syncMobileViewport)
   document.addEventListener('click', onDocumentClick)
 })
-
 onBeforeUnmount(() => {
   if (attendanceSearchBlurTimer) clearTimeout(attendanceSearchBlurTimer)
   window.removeEventListener('resize', syncMobileViewport)

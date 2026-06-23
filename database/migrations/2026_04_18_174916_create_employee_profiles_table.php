@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('iban_number')->nullable();
             
             // Insurance Details
-            $table->enum('insurance_policy_type', ['general', 'life', 'health', 'motor'])->nullable();
+            $table->string('insurance_policy_type')->nullable();
             $table->string('insurance_policy_number')->nullable();
             $table->string('insurance_provider')->nullable();
             $table->date('insurance_start_date')->nullable();

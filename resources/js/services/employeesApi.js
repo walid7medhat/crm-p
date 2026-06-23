@@ -127,3 +127,30 @@ export async function fetchEmployeeAssets(userId) {
   const response = await api.get(`/assets/employee/${userId}/assets`)
   return response.data?.data ?? []
 }
+
+
+/**
+ * Create new employee
+ */
+export async function createEmployee(formData) {
+  const response = await api.post('/employees', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data?.data ?? response.data
+}
+
+/**
+ * Update existing employee
+ */
+export async function updateEmployee(id, formData) {
+  const response = await api.post(`/employees/${id}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      'X-HTTP-Method-Override': 'PUT', // أو استخدم api.put
+    },
+  })
+  return response.data?.data ?? response.data
+}
+
