@@ -2724,7 +2724,7 @@ public function getAgents(Request $request)
         $agents = User::query()->whereHas('roles', function($query) {
                 $query->whereNotIn('name', ['admin', 'super_admin']);
             })
-            ->where('status','active')->select('id', 'name', 'email', 'avatar', 'phone');
+            ->where('status','active')->select('id', 'name', 'email', 'avatar', 'phone','display_name');
   // Filter by role
             if ($request->has('role')) {
                 $agents=$agents->whereHas('roles', function($q) use ($request) {
@@ -2736,7 +2736,11 @@ public function getAgents(Request $request)
                 $allowedAgentIds = $user->getAllSubordinatesIds();
                 $agents=$agents->whereIn('id',$allowedAgentIds);
             }
-            $agents=$agents ->get();
+           $agents = $agents->get()->map(function ($agent) {
+                $agent->name = User::resolveDisplayName($agent);
+                return $agent;
+            });
+
         return response()->json([
             'status' => true,
             'data' => $agents,
