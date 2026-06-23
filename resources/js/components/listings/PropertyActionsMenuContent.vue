@@ -11,10 +11,12 @@
     </button>
       <button
           v-if="canViewHistory"
-          class="dropdown-item"
-          @click="$emit('view-history')"
+          type="button"
+          :class="itemClass()"
+          @click="emit('view-history')"
       >
-          <i class="ri-history-line"></i> View History
+          <i class="ri-history-line"></i>
+          <span>View History</span>
       </button>
     <button
       v-if="canApproveListings && property.approved"
@@ -296,29 +298,36 @@ const emit = defineEmits([
 </script>
 
 <style scoped>
+.property-actions-menu {
+  font-family: Montserrat, sans-serif;
+}
+
 .property-actions-menu--dropdown {
   display: flex;
   flex-direction: column;
   width: 100%;
+  padding: 0;
 }
 
-.property-actions-menu--dropdown .dropdown-item {
+.property-actions-menu--dropdown .dropdown-item,
+.property-actions-menu--sheet .property-actions-menu__item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 14px;
+  gap: 14px;
+  padding: 14px 20px;
   min-height: 0;
-  line-height: 1.3;
-  background: none;
+  line-height: 1.35;
+  background: #fff;
   border: none;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
   border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  font-family: Montserrat, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #222;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
   border-radius: 0;
 }
 
@@ -327,70 +336,88 @@ const emit = defineEmits([
   border-bottom: none;
 }
 
-.property-actions-menu--dropdown .dropdown-item:hover:not(:disabled) {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+.property-actions-menu--dropdown .dropdown-item:hover:not(:disabled),
+.property-actions-menu--sheet .property-actions-menu__item:hover:not(:disabled) {
+  background: #f8f8f8;
+  color: #111;
 }
 
-.property-actions-menu--dropdown .dropdown-item:disabled {
-  opacity: 0.6;
+.property-actions-menu--dropdown .dropdown-item:disabled,
+.property-actions-menu--sheet .property-actions-menu__item:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.property-actions-menu--dropdown .dropdown-item i {
-  font-size: 15px;
-  width: 18px;
+.property-actions-menu--dropdown .dropdown-item i,
+.property-actions-menu--sheet .property-actions-menu__item i {
+  font-size: 18px;
+  width: 20px;
+  min-width: 20px;
   text-align: center;
   flex-shrink: 0;
   line-height: 1;
+  color: #222;
+  background: transparent;
+}
+
+.property-actions-menu--dropdown .dropdown-item span,
+.property-actions-menu--sheet .property-actions-menu__item span {
+  flex: 1;
+  min-width: 0;
 }
 
 .property-actions-menu--dropdown .property-actions-menu__group {
   padding: 0;
   margin: 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-top: 1px solid #f0f0f0;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__group:last-child {
-  border-bottom: none;
+.property-actions-menu--dropdown .property-actions-menu__group:first-child {
+  border-top: none;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__status {
+.property-actions-menu--dropdown .property-actions-menu__status,
+.property-actions-menu--sheet .property-actions-menu__status {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
-  padding: 9px 14px;
-  font-size: 13px;
-  line-height: 1.3;
+  gap: 4px;
+  padding: 14px 20px;
+  font-size: 14px;
+  line-height: 1.35;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__status--approved {
-  background: #e8f5e9;
+.property-actions-menu--dropdown .property-actions-menu__status--approved,
+.property-actions-menu--sheet .property-actions-menu__status--approved {
+  background: #f3faf4;
   color: #2e7d32;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__status--pending {
-  background: #fff3e0;
-  color: #f57c00;
+.property-actions-menu--dropdown .property-actions-menu__status--pending,
+.property-actions-menu--sheet .property-actions-menu__status--pending {
+  background: #fffaf0;
+  color: #b45309;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__status-row {
+.property-actions-menu--dropdown .property-actions-menu__status-row,
+.property-actions-menu--sheet .property-actions-menu__status-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   width: 100%;
-  gap: 8px;
+  gap: 12px;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__meta {
-  font-size: 11px;
-  opacity: 0.7;
+.property-actions-menu--dropdown .property-actions-menu__meta,
+.property-actions-menu--sheet .property-actions-menu__meta {
+  font-size: 12px;
+  opacity: 0.75;
   margin-top: 2px;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__cancel {
+.property-actions-menu--dropdown .property-actions-menu__cancel,
+.property-actions-menu--sheet .property-actions-menu__cancel {
   background: #dc3545;
   color: #fff;
   border: none;
@@ -406,12 +433,21 @@ const emit = defineEmits([
   font-size: 12px;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__cancel:hover:not(:disabled) {
+.property-actions-menu--dropdown .property-actions-menu__cancel:hover:not(:disabled),
+.property-actions-menu--sheet .property-actions-menu__cancel:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.property-actions-menu--dropdown .property-actions-menu__cancel:disabled {
+.property-actions-menu--dropdown .property-actions-menu__cancel:disabled,
+.property-actions-menu--sheet .property-actions-menu__cancel:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.property-actions-menu--sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
 }
 </style>

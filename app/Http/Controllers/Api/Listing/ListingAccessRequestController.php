@@ -549,6 +549,67 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
     }
 }
 
+    /**
+     * Approved viewings for a listing (property show sidebar).
+     */
+    public function listingApprovedViewings(Listing $listing): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (! $this->canViewListingViewings($user, $listing)) {
+                return ApiResponse::error('Unauthorized', 403);
+            }
+
+            $viewings = ListingAccessRequest::with('requestedBy')
+                ->where('listing_id', $listing->id)
+                ->where('request_type', 'viewing')
+                ->where('status', 'approved')
+                ->orderByDesc('viewing_date')
+                ->orderByDesc('viewing_time')
+                ->get()
+                ->map(function (ListingAccessRequest $request) {
+                    return [
+                        'id' => $request->id,
+                        'viewing_date' => $request->viewing_date?->format('Y-m-d'),
+                        'viewing_time' => $request->viewing_time
+                            ? $request->viewing_time->format('H:i')
+                            : null,
+                        'formatted_date' => $request->viewing_date?->format('d M Y'),
+                        'formatted_time' => $request->viewing_time?->format('h:i A'),
+                        'responded_at' => $request->responded_at?->format('Y-m-d H:i:s'),
+                        'requested_by' => [
+                            'id' => $request->requestedBy?->id,
+                            'name' => $request->requestedBy
+                                ? User::resolveDisplayName($request->requestedBy)
+                                : 'Unknown',
+                            'avatar' => $request->requestedBy && $request->requestedBy->avatar
+                                ? asset('storage/' . $request->requestedBy->avatar)
+                                : null,
+                        ],
+                    ];
+                })
+                ->values();
+
+            return ApiResponse::success($viewings, 'Approved viewings retrieved');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to fetch approved viewings: ' . $e->getMessage());
+        }
+    }
+
+    private function canViewListingViewings($user, Listing $listing): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasRole('super_admin')
+            || $user->hasRole('admin')
+            || ($user->hasRole('manager') && (int) $user->listing_team === 1)
+            || (int) $listing->agent_id === (int) $user->id
+            || (int) $user->id === 30;
+    }
+
 
     private function canRequestAgain($request)
     {

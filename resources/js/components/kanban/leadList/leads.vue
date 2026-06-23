@@ -773,7 +773,7 @@ import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
-import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
+import { shouldSuppressLeadUpdateNotification, normalizeLeadRealtimeEvent, buildCrmLeadNotificationEvent } from '@/utils/leadRealtimeNotifications.js'
 import Swal from 'sweetalert2'
 
 // Import Bootstrap
@@ -2307,8 +2307,10 @@ const initializeLeadUpdates = () => {
 }
 
 const handleLeadUpdate = (event, eventType = 'unknown') => {
+    const payload = normalizeLeadRealtimeEvent(event)
+
     // Extract lead data - handle different possible structures
-    let leadData = event.lead
+    let leadData = payload.lead
     
     // If lead is wrapped in a data property
     if (leadData?.data) {
@@ -2316,15 +2318,15 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
     }
     
     // If lead is an object with nested structure
-    if (!leadData && event.lead) {
-        leadData = event.lead
+    if (!leadData && payload.lead) {
+        leadData = payload.lead
     }
     
     if (!leadData || !leadData.id) {
         return
     }
     
-    switch (event.action_type) {
+    switch (payload.action_type) {
         case 'created':
             handleNewLead(leadData)
             break
@@ -2332,25 +2334,25 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
             handleUpdatedLead(leadData, 'updated')
             break
         case 'assigned':
-            handleAssignedLead(leadData, event.changes)
+            handleAssignedLead(leadData, payload.changes)
 
             break
         case 'deleted':
             handleDeletedLead(leadData)
             break
         case 'stage_changed':
-            handleStageChanged(leadData, event.changes)
+            handleStageChanged(leadData, payload.changes)
             break
         case 'revert':
             console.log("revert");
-            handleStageChanged(leadData, event.changes)
+            handleStageChanged(leadData, payload.changes)
             break
         default:
             // For unknown action types, try to handle as update
             handleUpdatedLead(leadData, eventType)
     }
     
-    showLeadNotification(event)
+    showLeadNotification(payload)
 }
 const handleAssignedLead = (lead, changes) => {
     const user = JSON.parse(localStorage.getItem('user'))
@@ -2478,6 +2480,9 @@ const handleLeadUpdatedFromModal = (updatedLead) => {
                 updated_at: updatedLead.updated_at || new Date().toISOString(),
             },
             'updated',
+        )
+        showLeadNotification(
+            buildCrmLeadNotificationEvent(updatedLead, 'updated', user.value),
         )
     }
 }
@@ -2745,16 +2750,18 @@ const ensureCrmToastStyles = () => {
 }
 
 const showLeadNotification = (event) => {
-    if (shouldSuppressLeadUpdateNotification(event)) {
+    const payload = normalizeLeadRealtimeEvent(event)
+
+    if (shouldSuppressLeadUpdateNotification(payload)) {
         return
     }
 
     ensureCrmToastStyles()
 
-    const leadData = event.lead?.data || event.lead
+    const leadData = payload.lead?.data || payload.lead
     const leadName = leadData?.lead_name || leadData?.lead_number || 'Unknown Lead'
     const leadNumber = leadData?.lead_number ? `#${leadData.lead_number}` : ''
-    const userName = event.user_name || user.value?.name || 'Someone'
+    const userName = payload.user_name || user.value?.name || 'Someone'
 
     const svg = {
         created:       `<svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5 10.1 7.6z"/><path d="M19 13.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>`,
@@ -2771,7 +2778,7 @@ const showLeadNotification = (event) => {
         stage_changed: { grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)', accent: '#8b5cf6', soft: 'rgba(139,92,246,.13)', ring: 'rgba(139,92,246,.45)', icon: svg.stage_changed, headline: `moved` },
         deleted:       { grad: 'linear-gradient(135deg,#f87171,#dc2626)', accent: '#ef4444', soft: 'rgba(239,68,68,.12)',  ring: 'rgba(239,68,68,.45)',  icon: svg.deleted,       headline: `deleted` },
     }
-    const t = themes[event.action_type] || { grad: 'linear-gradient(135deg,#94a3b8,#475569)', accent: '#64748b', soft: 'rgba(100,116,139,.13)', ring: 'rgba(100,116,139,.45)', icon: svg.default, headline: `Lead updated` }
+    const t = themes[payload.action_type] || { grad: 'linear-gradient(135deg,#94a3b8,#475569)', accent: '#64748b', soft: 'rgba(100,116,139,.13)', ring: 'rgba(100,116,139,.45)', icon: svg.default, headline: `Lead updated` }
 
     const headline = t.headline
     const subtitle = `${leadName}${leadNumber ? ` <span class="crm-toast__chip">${leadNumber}</span>` : ''}`
@@ -3505,6 +3512,13 @@ async function moveLeadWithStageChange(lead, newStageId) {
         if (targetCol && !targetCol.leads.some((l) => l.id === lead.id)) {
             targetCol.leads.push(lead)
         }
+        showLeadNotification(
+            buildCrmLeadNotificationEvent(
+                { ...lead, stage_id: newStageId },
+                'stage_changed',
+                user.value,
+            ),
+        )
     } catch (error) {
         // Revert the UI change if API fails - only refetch if not already fetching
         if (!isFetching.value) {

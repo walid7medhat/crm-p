@@ -674,6 +674,17 @@
         </div>
 
         <div
+          v-if="canViewPropertyViewings && !onlyShow && isMobileViewport && property"
+          class="ps-mobile-approved-viewings"
+        >
+          <PropertyApprovedViewingsPanel
+            mobile
+            :viewings="approvedViewings"
+            :loading="loadingApprovedViewings"
+          />
+        </div>
+
+        <div
           v-if="canViewInternalUpdates && !onlyShow && isMobileViewport && property"
           class="ps-mobile-agent-updates"
         >
@@ -698,7 +709,7 @@
         <div
           ref="propertySidebarStickyRef"
           class="sidebar-sticky-container"
-          :class="{ 'sidebar-sticky-container--has-updates': canViewInternalUpdates && !onlyShow && !isMobileViewport }"
+          :class="{ 'sidebar-sticky-container--has-widgets': sidebarHasExtraWidgets }"
         >
           <div ref="propertySidebarAgentRef" class="agent-sidebar-card">
             <div class="agent-profile" v-if="property && property.agent">
@@ -799,9 +810,12 @@
                 <div class="property-actions-dropdown" :class="{ 'is-open': showActionsDropdown }">
                   <button 
                     class="dropdown-toggle"
+                    type="button"
+                    :aria-expanded="showActionsDropdown"
                     @click="toggleActionsDropdown"
                   >
-                    Property Actions
+                    <span class="dropdown-toggle__label">Property Actions</span>
+                    <i class="ri-arrow-down-s-fill dropdown-arrow" :class="{ rotated: showActionsDropdown }" aria-hidden="true"></i>
                   </button>
                   
                   <div class="dropdown-container" :class="{ expanded: showActionsDropdown }">
@@ -832,6 +846,17 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div
+            v-if="canViewPropertyViewings && !onlyShow && !isMobileViewport"
+            class="sidebar-approved-viewings"
+          >
+            <PropertyApprovedViewingsPanel
+              under-agent
+              :viewings="approvedViewings"
+              :loading="loadingApprovedViewings"
+            />
           </div>
 
           <div
@@ -2109,6 +2134,7 @@ import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar
 import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActionsSheet.vue';
 import PropertyActionsMenuContent from '@/components/listings/PropertyActionsMenuContent.vue';
 import PropertyAgentUpdatesPanel from '@/components/alllisting/PropertyDetails/PropertyAgentUpdatesPanel.vue';
+import PropertyApprovedViewingsPanel from '@/components/alllisting/PropertyDetails/PropertyApprovedViewingsPanel.vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
@@ -2133,6 +2159,7 @@ export default {
     MobilePropertyActionsSheet,
     PropertyActionsMenuContent,
     PropertyAgentUpdatesPanel,
+    PropertyApprovedViewingsPanel,
   },
   data() {
     return {};
@@ -4443,6 +4470,7 @@ const revertFromConverted = async () => {
             currentMainImage.value = getImageUrl(property.value.main_image);
           }
           await fetchInternalUpdates();
+          await fetchApprovedViewings();
           await fetchRequestStatus();
 
            const hasAccess = checkAccessAndRedirect();
@@ -6407,6 +6435,47 @@ const newUpdateText = ref('');
 const submittingUpdate = ref(false);
 const loadingUpdates = ref(false);
 
+// ========== Approved Viewings ==========
+const approvedViewings = ref([]);
+const loadingApprovedViewings = ref(false);
+
+const canViewPropertyViewings = computed(() => {
+  const user = getCurrentUser();
+  if (!user) return false;
+
+  return property.value?.user_permissions?.is_owner ||
+         user.roles?.includes('super_admin') ||
+         user.roles?.includes('admin') ||
+         (user.roles?.includes('manager') && user.is_listing_team) ||
+         user.id === 30;
+});
+
+const sidebarHasExtraWidgets = computed(() => {
+  if (onlyShow.value || isMobileViewport.value) return false;
+  return canViewInternalUpdates.value || canViewPropertyViewings.value;
+});
+
+const fetchApprovedViewings = async () => {
+  if (!property.value?.id) return;
+  if (!canViewPropertyViewings.value) return;
+
+  try {
+    loadingApprovedViewings.value = true;
+    const response = await api.get(
+      `/listings/properties/${property.value.id}/approved-viewings`
+    );
+
+    if (response.data.status) {
+      approvedViewings.value = response.data.data || [];
+    }
+  } catch (error) {
+    console.error('Error fetching approved viewings:', error);
+  } finally {
+    loadingApprovedViewings.value = false;
+    schedulePropertySidebarSync();
+  }
+};
+
 // هل المستخدم يمكنه رؤية التحديثات الداخلية؟
 const canViewInternalUpdates = computed(() => {
   const user = getCurrentUser();
@@ -6831,6 +6900,11 @@ const getHistoryIcon = (event) => {
   submitInternalUpdate,
   deleteInternalUpdate,
   canDeleteUpdate,
+  approvedViewings,
+  loadingApprovedViewings,
+  canViewPropertyViewings,
+  fetchApprovedViewings,
+  sidebarHasExtraWidgets,
      showHistoryModal,
     historyData,
     loadingHistory,
@@ -6919,7 +6993,7 @@ const getHistoryIcon = (event) => {
 .property-actions-dropdown {
   position: relative;
   margin-bottom: 16px;
-  padding:8px;
+  font-family: Montserrat, sans-serif;
 }
 
 .dropdown-toggle {
@@ -6927,30 +7001,50 @@ const getHistoryIcon = (event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  background: #733E87;
-  color: white;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #733e87;
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 13px;
+  border-radius: 8px 8px 0 0;
+  font-family: Montserrat, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
+  box-shadow: none;
+}
+
+.property-actions-dropdown:not(.is-open) .dropdown-toggle {
+  border-radius: 8px;
+}
+
+/* Bootstrap adds a second caret via ::after on .dropdown-toggle */
+.property-actions-dropdown .dropdown-toggle::after {
+  display: none !important;
+  content: none !important;
+}
+
+.dropdown-toggle__label {
+  letter-spacing: 0.01em;
 }
 
 .property-actions-dropdown.is-open .dropdown-toggle {
-  border-radius: 6px 6px 0 0;
+  border-radius: 8px 8px 0 0;
 }
 
 .dropdown-toggle:hover {
-  /* background: #001a57; */
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(11, 7, 54, 0.3);
+  box-shadow: 0 4px 12px rgba(115, 62, 135, 0.3);
 }
 
 .dropdown-arrow {
-  transition: transform 0.3s ease;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  opacity: 1;
 }
 
 .dropdown-arrow.rotated {
@@ -6966,7 +7060,7 @@ const getHistoryIcon = (event) => {
   visibility: hidden;
   max-height: 0;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
   margin: 0;
   padding: 0;
   border: none;
@@ -6978,52 +7072,31 @@ const getHistoryIcon = (event) => {
 .dropdown-menu.show {
   opacity: 1;
   visibility: visible;
-  max-height: 400px;
+  max-height: min(70vh, 480px);
   margin-top: 0;
   padding: 0;
-  border: 1px solid #e9ecef;
+  border: 1px solid #1a1a2e;
   border-top: none;
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow-y: auto;
+  overflow-x: hidden;
   background: #fff;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
 }
 
-.dropdown-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid #f8f9fa;
+.dropdown-menu.show::-webkit-scrollbar {
+  width: 5px;
 }
 
-.dropdown-item:last-child {
-  border-bottom: none;
+.dropdown-menu.show::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
 }
 
-.dropdown-item:hover {
-  background: #f8f9fa;
-  color: #0B0736;
-}
-
-.dropdown-item i {
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
-}
-.dropdown-item:hover{
-      background-color: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+.dropdown-menu.show :deep(.property-actions-menu--dropdown) {
+  padding: 0;
 }
 
 
@@ -7843,6 +7916,14 @@ margin-top: 20px;
   flex-shrink: 0;
 }
 
+.sidebar-approved-viewings {
+  width: 100%;
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
 .sidebar-sticky-container.is-sidebar-fixed {
   position: fixed !important;
   z-index: 45;
@@ -7862,8 +7943,11 @@ margin-top: 20px;
   border-radius: 3px;
 }
 
-.sidebar-sticky-container--has-updates .agent-sidebar-card {
-  max-height: min(420px, 50vh);
+/* Let the sticky column scroll as a whole — do not clip the agent card */
+.sidebar-sticky-container .agent-sidebar-card {
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
@@ -7888,9 +7972,8 @@ margin-top: 20px;
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem);
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 transparent;
   margin-top: 20px;
@@ -9481,6 +9564,80 @@ margin-top: 20px;
   }
 }
 
+/* Tablet sidebar — agent card + widgets share one scrollable column */
+@media (min-width: 769px) and (max-width: 1199px) {
+  .property-show-sidebar-col {
+    margin-top: 4px;
+  }
+
+  .sidebar-sticky-container {
+    gap: 10px;
+    top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.5rem);
+  }
+
+  .sidebar-sticky-container .agent-sidebar-card {
+    margin-top: 12px;
+    padding: 12px;
+    flex-shrink: 0;
+  }
+
+  .agent-profile {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+  }
+
+  .agent-sidebar-name {
+    font-size: 14px;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .btn-show-agent-details {
+    font-size: 11px;
+  }
+
+  .request-actions-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .request-actions-grid .approved-info {
+    padding: 7px 6px;
+    min-width: 0;
+  }
+
+  .request-actions-grid .info-display {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+
+  .request-actions-grid .info-value {
+    font-size: 10px;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  .property-actions-dropdown .dropdown-toggle {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .sidebar-sticky-container--has-widgets .approved-viewings-panel__list {
+    max-height: 108px;
+  }
+
+  .sidebar-sticky-container--has-widgets .agent-updates-panel--under-agent .agent-updates-panel__list {
+    max-height: 140px;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .sidebar-sticky-container.is-sidebar-fixed {
+    max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1rem);
+  }
+}
+
 /* Enhanced Scroll Behavior */
 @media (min-width: 769px) {
   .agent-sidebar-card {
@@ -9585,76 +9742,80 @@ margin-top: 20px;
     height: auto !important;
   }
 }
-/* Sold Out Modal Styles */
+/* Sold Out / Rented option cards */
 .sold-out-options {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .option-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: white;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  background: #fff;
 }
 
 .option-card:hover {
-  border-color: #0B0736;
-  background: #f8f9fa;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #c4b5fd;
+  background: linear-gradient(135deg, #faf8fc 0%, #f8fafc 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(115, 62, 135, 0.12);
 }
 
 .option-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #0B0736;
+  color: #733e87;
+  background: rgba(115, 62, 135, 0.1);
   flex-shrink: 0;
 }
 
-.option-card:nth-child(1) .option-icon {
-  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-}
-
 .option-card:nth-child(2) .option-icon {
-  /* background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); */
+  color: #0b0736;
+  background: rgba(11, 7, 54, 0.08);
 }
 
 .option-content {
   flex: 1;
+  min-width: 0;
 }
 
-.option-content h5 {
-  margin: 0 0 4px 0;
+.option-content h6 {
+  margin: 0 0 3px;
+  font-size: 15px !important;
   font-weight: 600;
-  color: #0B0736;
+  color: #0f172a;
+  line-height: 1.3;
 }
 
 .option-content p {
   margin: 0;
-  font-size: 13px;
-  color: #6c757d;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.4;
 }
 
 .option-arrow {
-  color: #6c757d;
-  font-size: 20px;
+  color: #94a3b8;
+  font-size: 22px;
+  flex-shrink: 0;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .option-card:hover .option-arrow {
-  color: #0B0736;
-  transform: translateX(4px);
+  color: #733e87;
+  transform: translateX(3px);
 }
 .property-actions-dropdown-wrapper {
   position: relative;
@@ -9969,9 +10130,6 @@ margin: 0 2px;
 .modal-header h4{
     font-size:20px !important;
 }
-.option-content h6{
-        font-size:20px !important;
-}
 /* Rejection Alert Styles */
 /* Rejection Alert Styles */
 .rejection-alert-container {
@@ -10204,6 +10362,20 @@ margin: 0 2px;
 }
 
 /* Internal Updates — PropertyAgentUpdatesPanel.vue */
+
+.ps-mobile-approved-viewings {
+  padding: 0 16px;
+  margin-top: 16px;
+  margin-bottom: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 769px) {
+  .ps-mobile-approved-viewings {
+    display: none;
+  }
+}
 
 .ps-mobile-agent-updates {
   padding: 0 16px;
