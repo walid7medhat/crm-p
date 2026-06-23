@@ -99,6 +99,7 @@ import ConvertLeadModal from '../leadList/ConvertLeadModal.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
+import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 
 const props = defineProps({
     modelValue: Boolean,
@@ -601,13 +602,15 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
         }
         
         emit('lead-updated', leadData)
-        
-        const userName = event.user_name || 'Someone'
-        const notificationMessage = eventType === 'assigned' 
-            ? `${userName} assigned this lead` 
-            : `${userName} updated this lead`
-        
-        $showNotification(notificationMessage, 'info')
+
+        if (!shouldSuppressLeadUpdateNotification(event)) {
+            const userName = event.user_name || 'Someone'
+            const notificationMessage = eventType === 'assigned'
+                ? `${userName} assigned this lead`
+                : `${userName} updated this lead`
+
+            $showNotification(notificationMessage, 'info')
+        }
     }
 }
 

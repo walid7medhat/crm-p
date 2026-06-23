@@ -181,7 +181,7 @@ class LeadConversionController extends Controller
             ]);
             
             try {
-                broadcast(new LeadUpdated($lead, 'stage_changed', null, $changes));
+                broadcast(new LeadUpdated($lead, 'stage_changed', auth()->id(), $changes, 'crm'));
                 broadcast(new DealUpdated($deal, 'created'));
             } catch (\Throwable $e) {
                 Log::warning('Broadcast failed during lead conversion', [

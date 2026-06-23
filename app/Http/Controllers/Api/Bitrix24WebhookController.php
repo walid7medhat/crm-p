@@ -90,12 +90,15 @@ class Bitrix24WebhookController extends Controller
         $result = $importer->importOneFast($b24);
         $lead = $result['lead'] ?? null;
 
-        // Fire the event (not just broadcast) so it BOTH pushes live to the Kanban
-        // (Pusher → leads.vue `.lead.updated`) AND runs SendLeadUpdateNotification,
-        // creating a bell notification. userId is null (no actor) → the message
-        // is phrased without a user name (it came from Bitrix24).
+        // Real-time Kanban sync; source=bitrix suppresses toasts and bell notifications.
         if ($lead) {
-            event(new LeadUpdated($lead, $result['created'] ? 'created' : 'updated'));
+            event(new LeadUpdated(
+                $lead,
+                $result['created'] ? 'created' : 'updated',
+                null,
+                null,
+                'bitrix'
+            ));
         }
     }
 

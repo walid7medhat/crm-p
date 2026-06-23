@@ -439,109 +439,7 @@
                 </div>
               </div>
             </div>
-              <!-- Internal Updates Section (للوكيل، التيم ليد، والمدير فقط) -->
-              <div 
-                v-if="canViewInternalUpdates" 
-                class="detailed-info-section mb-16"
-              >
-                <div class="info-section">
-                  <h3 class="section-title mb-20 d-flex align-items-center">
-                    <i class="ri-chat-history-line me-2"></i>
-                    Agent Updates
-                    <span class="badge bg-primary ms-2">{{ internalUpdates.length }}</span>
-                    <small class="text-muted ms-2">(Internal - Team Lead & Manager)</small>
-                  </h3>
-                  
-                  <!-- إضافة تحديث جديد (للوكيل فقط) -->
-                  <div v-if="canAddInternalUpdate" class="add-update-form mb-4">
-                    <div class="card border-primary">
-                      <div class="card-body p-3">
-                        <div class="d-flex gap-2">
-                          <textarea 
-                            v-model="newUpdateText"
-                            class="form-control"
-                            rows="2"
-                            placeholder="Add internal update (visible to team lead & manager)..."
-                            @keydown.ctrl.enter="submitInternalUpdate"
-                            maxlength="5000"
-                          ></textarea>
-                          <button 
-                            class="btn btn-primary"
-                            @click="submitInternalUpdate"
-                            :disabled="!newUpdateText.trim() || submittingUpdate"
-                            style="height: fit-content;"
-                          >
-                            <i class="ri-send-plane-line"></i>
-                          </button>
-                        </div>
-                        <div class="d-flex justify-content-between mt-1">
-                          <small class="text-muted">
-                            {{ newUpdateText.length }}/5000
-                            <span class="ms-2">• Ctrl+Enter to submit</span>
-                          </small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Loading -->
-                  <div v-if="loadingUpdates" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                  </div>
-                  
-                  <!-- No Updates -->
-                  <div v-else-if="internalUpdates.length === 0" class="text-center py-5 text-muted">
-                    <i class="ri-chat-3-line" style="font-size: 48px;"></i>
-                    <p class="mt-2">No internal updates yet</p>
-                  </div>
-                  
-                  <!-- Timeline -->
-                  <div v-else class="internal-timeline">
-                    <div 
-                      v-for="update in internalUpdates" 
-                      :key="update.id" 
-                      class="timeline-item"
-                    >
-                      <!-- Avatar -->
-                      <div class="timeline-avatar">
-                        <img 
-                          :src="update.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
-                          class="update-avatar"
-                          alt="User"
-                        />
-                      </div>
-                      
-                      <!-- Content -->
-                      <div class="timeline-content">
-                        <div class="timeline-header">
-                          <strong>{{ update.user.name }}</strong>
-                          <span class="text-muted ms-2">
-                            <i class="ri-time-line"></i>
-                            {{ update.created_at_human }}
-                          </span>
-                          
-                          <!-- Delete button (only owner or admin) -->
-                          <button 
-                            v-if="canDeleteUpdate(update)"
-                            class="btn btn-sm btn-outline-danger ms-auto"
-                            @click="deleteInternalUpdate(update.id)"
-                          >
-                            <i class="ri-delete-bin-line"></i>
-                          </button>
-                        </div>
-                        
-                        <div class="timeline-body">
-                          <p class="mb-0" style="white-space: pre-wrap; word-break: break-word;">
-                            {{ update.content }}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
               <div class="comment-container" v-if="!onlyShow">
                 <!-- Comments Section -->
                 <div class="comments-section " v-if="property">
@@ -774,33 +672,52 @@
             </div>
           </div>
         </div>
+
+        <div
+          v-if="canViewInternalUpdates && !onlyShow && isMobileViewport && property"
+          class="ps-mobile-agent-updates"
+        >
+          <PropertyAgentUpdatesPanel
+            mobile
+            :updates="internalUpdates"
+            :loading="loadingUpdates"
+            :can-add="canAddInternalUpdate"
+            :new-text="newUpdateText"
+            :submitting="submittingUpdate"
+            :can-delete="canDeleteUpdate"
+            @update:new-text="newUpdateText = $event"
+            @submit="submitInternalUpdate"
+            @delete="deleteInternalUpdate"
+          />
+        </div>
       </div>
 
       <!-- Sidebar -->
       <div ref="propertySidebarColRef" class="col-lg-3 property-show-sidebar-col">
         <div ref="propertySidebarSpacerRef" class="property-sidebar-spacer" aria-hidden="true"></div>
-        <div ref="propertySidebarStickyRef" class="sidebar-sticky-container">
-          <div class="agent-sidebar-card">
-            
-            <!-- Agent Profile Section -->
-        <div class="agent-profile" v-if="property && property.agent">
-          <img 
-            :src="property.agent.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" 
-            alt="Agent" 
-            class="agent-sidebar-avatar" 
-          />
-          <div class="agent-sidebar-info">
-            <h5 class="agent-sidebar-name">{{ property.agent.name || 'Agent Name' }}</h5>
-            <button v-if="!onlyShow"
-              class="btn-show-agent-details" 
-              @click="goToAgentDetails(property.agent.id)"
-            >
-              <i class="ri-user-line me-1"></i>
-              Show Agent Details
-            </button>
-          </div>
-        </div>
-
+        <div
+          ref="propertySidebarStickyRef"
+          class="sidebar-sticky-container"
+          :class="{ 'sidebar-sticky-container--has-updates': canViewInternalUpdates && !onlyShow && !isMobileViewport }"
+        >
+          <div ref="propertySidebarAgentRef" class="agent-sidebar-card">
+            <div class="agent-profile" v-if="property && property.agent">
+              <img 
+                :src="property.agent.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" 
+                alt="Agent" 
+                class="agent-sidebar-avatar" 
+              />
+              <div class="agent-sidebar-info">
+                <h5 class="agent-sidebar-name">{{ property.agent.name || 'Agent Name' }}</h5>
+                <button v-if="!onlyShow"
+                  class="btn-show-agent-details" 
+                  @click="goToAgentDetails(property.agent.id)"
+                >
+                  <i class="ri-user-line me-1"></i>
+                  Show Agent Details
+                </button>
+              </div>
+            </div>
 
             <div class="sidebar-section" v-if="isPropertyOwner ">
                 <br>
@@ -915,6 +832,25 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div
+            v-if="canViewInternalUpdates && !onlyShow && !isMobileViewport"
+            ref="propertySidebarUpdatesRef"
+            class="sidebar-agent-updates-bottom"
+          >
+            <PropertyAgentUpdatesPanel
+              under-agent
+              :updates="internalUpdates"
+              :loading="loadingUpdates"
+              :can-add="canAddInternalUpdate"
+              :new-text="newUpdateText"
+              :submitting="submittingUpdate"
+              :can-delete="canDeleteUpdate"
+              @update:new-text="newUpdateText = $event"
+              @submit="submitInternalUpdate"
+              @delete="deleteInternalUpdate"
+            />
           </div>
         </div>
       </div>
@@ -2172,6 +2108,7 @@ import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.v
 import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
 import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActionsSheet.vue';
 import PropertyActionsMenuContent from '@/components/listings/PropertyActionsMenuContent.vue';
+import PropertyAgentUpdatesPanel from '@/components/alllisting/PropertyDetails/PropertyAgentUpdatesPanel.vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
@@ -2195,6 +2132,7 @@ export default {
     MobilePropertyAgentBar,
     MobilePropertyActionsSheet,
     PropertyActionsMenuContent,
+    PropertyAgentUpdatesPanel,
   },
   data() {
     return {};
@@ -2216,6 +2154,8 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
 
     const propertySidebarColRef = ref(null);
     const propertySidebarStickyRef = ref(null);
+    const propertySidebarAgentRef = ref(null);
+    const propertySidebarUpdatesRef = ref(null);
     const propertySidebarSpacerRef = ref(null);
     let propertySidebarScrollRoot = null;
     let propertySidebarSyncRaf = null;
@@ -6515,6 +6455,7 @@ const fetchInternalUpdates = async () => {
     proxy.$showNotification('Failed to load internal updates', 'error');
   } finally {
     loadingUpdates.value = false;
+    schedulePropertySidebarSync();
   }
 };
 
@@ -6531,7 +6472,11 @@ const submitInternalUpdate = async () => {
     );
     
     if (response.data.status) {
-      internalUpdates.value.unshift(response.data.data);
+      const created = response.data.data;
+      internalUpdates.value.unshift({
+        ...created,
+        created_at_human: formatDateTime(created.created_at),
+      });
       newUpdateText.value = '';
       proxy.$showNotification('Update added successfully!', 'success');
     }
@@ -6635,6 +6580,8 @@ const getHistoryIcon = (event) => {
     return {
       propertySidebarColRef,
       propertySidebarStickyRef,
+      propertySidebarAgentRef,
+      propertySidebarUpdatesRef,
       propertySidebarSpacerRef,
       isMobileViewport,
       mobileGalleryBadges,
@@ -7880,12 +7827,43 @@ margin-top: 20px;
   flex: 0 0 auto;
   align-self: flex-start;
   height: fit-content;
-  border-radius: 20px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-agent-updates-bottom {
+  width: 100%;
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed {
   position: fixed !important;
   z-index: 45;
+  max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 transparent;
+}
+
+.sidebar-sticky-container.is-sidebar-fixed::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-sticky-container.is-sidebar-fixed::-webkit-scrollbar-thumb {
+  background-color: #c1c1c1;
+  border-radius: 3px;
+}
+
+.sidebar-sticky-container--has-updates .agent-sidebar-card {
+  max-height: min(420px, 50vh);
 }
 
 .sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
@@ -7908,6 +7886,8 @@ margin-top: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
   max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem);
   overflow-x: hidden;
   overflow-y: auto;
@@ -10223,72 +10203,20 @@ margin: 0 2px;
     text-transform: capitalize !important;
 }
 
-/* Internal Updates Timeline */
-.internal-timeline {
-  position: relative;
-  padding-left: 20px;
+/* Internal Updates — PropertyAgentUpdatesPanel.vue */
+
+.ps-mobile-agent-updates {
+  padding: 0 16px;
+  margin-top: 20px;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.internal-timeline::before {
-  content: '';
-  position: absolute;
-  left: 20px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #e9ecef;
-}
-
-.timeline-item {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.timeline-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.timeline-avatar {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.update-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e9ecef;
-}
-
-.timeline-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.timeline-header {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 6px;
-}
-
-.timeline-body p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #333;
-}
-
-.add-update-form .card {
-  border: 1px solid #733E87 !important;
-  border-radius: 12px;
-  margin-bottom: 5px !important;
+@media (min-width: 769px) {
+  .ps-mobile-agent-updates {
+    display: none;
+  }
 }
 
 </style>

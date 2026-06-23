@@ -68,6 +68,7 @@ import StageSelector from '../shared/StageSelector.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
+import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 import Swal from 'sweetalert2'
 
 const props = defineProps({
@@ -334,15 +335,17 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
             responsiblePersonId: leadData.responsible_person_id
         })
         emit('lead-updated', leadData)
-        
-        const userName = event.user_name || 'Someone'
-        const notificationMessage = eventType === 'assigned' 
-            ? `${userName} assigned this lead` 
-            : `${userName} updated this lead`
-        
-        console.log('   ✅ TRIGGER: Showing notification')
-        console.log('      - Message:', notificationMessage)
-        $showNotification(notificationMessage, 'info')
+
+        if (!shouldSuppressLeadUpdateNotification(event)) {
+            const userName = event.user_name || 'Someone'
+            const notificationMessage = eventType === 'assigned'
+                ? `${userName} assigned this lead`
+                : `${userName} updated this lead`
+
+            console.log('   ✅ TRIGGER: Showing notification')
+            console.log('      - Message:', notificationMessage)
+            $showNotification(notificationMessage, 'info')
+        }
         
         console.log('   📝 Final Lead State (After Update):', {
             id: lead.value?.id,

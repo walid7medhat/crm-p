@@ -12,6 +12,10 @@ class SendLeadUpdateNotification
 {
     public function handle(LeadUpdated $event)
     {
+        if ($event->source === 'bitrix') {
+            return;
+        }
+
         $lead = $event->lead;
         $user = User::find($event->userId);
         

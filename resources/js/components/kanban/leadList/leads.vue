@@ -773,6 +773,7 @@ import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
+import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 import Swal from 'sweetalert2'
 
 // Import Bootstrap
@@ -2744,13 +2745,13 @@ const ensureCrmToastStyles = () => {
 }
 
 const showLeadNotification = (event) => {
+    if (shouldSuppressLeadUpdateNotification(event)) {
+        return
+    }
+
     ensureCrmToastStyles()
 
     const leadData = event.lead?.data || event.lead
-
-    if (leadData?.bitrix24_id && leadData?.bitrix24_id != null && event.action_type != 'created') {
-        return
-    }
     const leadName = leadData?.lead_name || leadData?.lead_number || 'Unknown Lead'
     const leadNumber = leadData?.lead_number ? `#${leadData.lead_number}` : ''
     const userName = event.user_name || user.value?.name || 'Someone'

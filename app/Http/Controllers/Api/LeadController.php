@@ -448,7 +448,7 @@ class LeadController extends Controller
                 $lead->id,
                 ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
             );
-        broadcast(new LeadUpdated($lead, 'created'));
+        $this->broadcastLeadUpdated($lead, 'created');
 
             return ApiResponse::success(
                 new LeadResource($lead->load([
@@ -615,9 +615,9 @@ class LeadController extends Controller
                 }
 
                 if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
-                    broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
+                    $this->broadcastLeadUpdated($lead, 'assigned', $changes);
                 } else {
-                    broadcast(new LeadUpdated($lead, 'updated'));
+                    $this->broadcastLeadUpdated($lead, 'updated');
                 }
                 // ===================history==============
                 $new = $lead->getAttributes();
@@ -721,7 +721,7 @@ class LeadController extends Controller
             'old_person' => $oldPerson?->name,
             'new_person' => $responsiblePerson?->name
         ];
-        broadcast(new LeadUpdated($lead, 'assigned', null, $changes));
+        $this->broadcastLeadUpdated($lead, 'assigned', $changes);
         //  ==================================hiatory====================
         LeadHistoryHelper::log(
             $lead->id,
@@ -771,7 +771,7 @@ class LeadController extends Controller
                 'integration:id,project_id',
             ]);
 
-            broadcast(new LeadUpdated($fresh, 'updated'));
+            $this->broadcastLeadUpdated($fresh, 'updated');
 
             LeadHistoryHelper::log($fresh->id, [
                 'action' => 'updated',
@@ -897,7 +897,7 @@ class LeadController extends Controller
             if (!($user->hasRole('admin') || $user->hasRole('super_admin')) && $lead->added_by !== $user->id) {
                 return ApiResponse::error('You are not authorized to delete this lead', 403);
             }
-        broadcast(new LeadUpdated($lead, 'deleted'));
+        $this->broadcastLeadUpdated($lead, 'deleted');
 
             $lead->delete();
 
@@ -1017,7 +1017,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 'new_person' => $responsiblePerson?->name,
                 'action' => 'revert'
             ];
-            broadcast(new LeadUpdated($lead, 'assigned', null, $revertChanges));
+            $this->broadcastLeadUpdated($lead, 'assigned', $revertChanges);
             
             LeadHistoryHelper::log(
                 $lead->id,
@@ -1164,7 +1164,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'fields' => $fields
                 ]
             );
-            broadcast(new LeadUpdated($lead, 'updated'));
+            $this->broadcastLeadUpdated($lead, 'updated');
         }
 
         // =================== Broadcast ===================
@@ -1180,9 +1180,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         }
 
         if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
-            broadcast(new LeadUpdated($lead, 'assigned', null, array_merge($changes, $broadcastChanges)));
+            $this->broadcastLeadUpdated($lead, 'assigned', array_merge($changes, $broadcastChanges));
         } else {
-            broadcast(new LeadUpdated($lead, 'stage_changed', null, $broadcastChanges));
+            $this->broadcastLeadUpdated($lead, 'stage_changed', $broadcastChanges);
         }
         
         return ApiResponse::success(
@@ -1265,7 +1265,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 $lead->id,
                 ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
             );
-        broadcast(new LeadUpdated($lead, 'created'));
+        $this->broadcastLeadUpdated($lead, 'created');
 
         return  ApiResponse::success('success' );
 
@@ -1623,5 +1623,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         LeadComment::where('lead_id', $leadId)->delete();
         LeadActivity::where('lead_id', $leadId)->delete();
         LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')->delete();
+    }
+
+    private function broadcastLeadUpdated(Lead $lead, string $actionType, ?array $changes = null): void
+    {
+        broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
     }
 }

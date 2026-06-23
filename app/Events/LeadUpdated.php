@@ -21,23 +21,28 @@ class LeadUpdated implements ShouldBroadcast
     public string $actionType;
     public ?int $userId;
     public ?array $changes;
+    /** @var 'crm'|'bitrix' */
+    public string $source;
 
     /**
      * @param Lead $lead
      * @param string $actionType
      * @param int|null $userId
      * @param array|null $changes
+     * @param string $source 'crm' (default) or 'bitrix'
      */
     public function __construct(
         Lead $lead,
         string $actionType = 'updated',
         ?int $userId = null,
-        ?array $changes = null
+        ?array $changes = null,
+        string $source = 'crm'
     ) {
         $this->lead = $lead;
         $this->actionType = $actionType;
         $this->userId = $userId;
         $this->changes = $changes;
+        $this->source = $source;
 
         $this->lead->loadMissing([
             'stage',
@@ -64,13 +69,16 @@ class LeadUpdated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'lead'        => new \App\Http\Resources\Lead\PusherLeadResource($this->lead),
-            'action_type' => $this->actionType,
-            'user_id'     => $this->userId,
-            'user_name'   => $this->getActorName(),
-            'changes'     => $this->changes,
-            'message'     => $this->getMessage(),
-            'timestamp'   => now()->toISOString(),
+            'lead_id'        => $this->lead->id,
+            'lead'           => new \App\Http\Resources\Lead\PusherLeadResource($this->lead),
+            'action_type'    => $this->actionType,
+            'source'         => $this->source,
+            'user_id'        => $this->userId,
+            'user_name'      => $this->getActorName(),
+            'changes'        => $this->changes,
+            'updated_fields' => $this->changes['updated_fields'] ?? null,
+            'message'        => $this->getMessage(),
+            'timestamp'      => now()->toISOString(),
             /** Semantic type for mobile / Echo clients (Pusher event name stays `lead.updated` for BC). */
             'canonical_event' => $this->resolveCanonicalEvent(),
             /** Flat card DTO — avoids deep nesting on mobile. */
@@ -106,7 +114,7 @@ class LeadUpdated implements ShouldBroadcast
     {
         $userName = $this->getActorName();
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
-\Log::info($this->actionType);
+
         switch ($this->actionType) {
             case 'created':
                 return "{$userName} created a new lead: {$leadName}";
