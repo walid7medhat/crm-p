@@ -40,53 +40,94 @@ class EmployeeController extends Controller
                 'parent',
                 'employeeProfile.designation',
                 'employeeProfile.department',
+                'employeeProfile.companyBranch',
                 'employeeProfile.documents'
             ])->whereHas('employeeProfile');
             
             // Filter by status
-            if ($request->has('status')) {
+            if ($request->filled('status')) {
                 $query->where('status', $request->status);
             }
             
             // Filter by employment status
-            if ($request->has('employment_status')) {
-                $query->whereHas('employeeProfile', function($q) use ($request) {
+            if ($request->filled('employment_status')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
                     $q->where('employment_status', $request->employment_status);
                 });
             }
-            
-            // Filter by designation
-            if ($request->has('designation_id')) {
-                $query->whereHas('employeeProfile', function($q) use ($request) {
+
+            if ($request->filled('department_id')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
+                    $q->where('department_id', $request->department_id);
+                });
+            }
+
+            if ($request->filled('designation_id')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
                     $q->where('designation_id', $request->designation_id);
+                });
+            }
+
+            if ($request->filled('company_branch_id')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
+                    $q->where('company_branch_id', $request->company_branch_id);
+                });
+            }
+
+            if ($request->filled('parent_id')) {
+                $query->where('parent_id', $request->parent_id);
+            }
+
+            if ($request->filled('salary_type')) {
+                $query->where('salary_type', $request->salary_type);
+            }
+
+            if ($request->filled('joining_date_from')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
+                    $q->whereDate('joining_date', '>=', $request->joining_date_from);
+                });
+            }
+
+            if ($request->filled('joining_date_to')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
+                    $q->whereDate('joining_date', '<=', $request->joining_date_to);
                 });
             }
             
             // Filter by role
-            if ($request->has('role_id')) {
-                $query->whereHas('roles', function($q) use ($request) {
+            if ($request->filled('role_id')) {
+                $query->whereHas('roles', function ($q) use ($request) {
                     $q->where('id', $request->role_id);
                 });
             }
             
-            // Search
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
+            // Search — name, ID, email, phone, department, position, manager
+            if ($request->filled('search')) {
+                $search = trim($request->search);
+                $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%")
                       ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhereHas('employeeProfile', function($sub) use ($search) {
+                      ->orWhere('personal_phone', 'like', "%{$search}%")
+                      ->orWhereHas('parent', function ($parent) use ($search) {
+                          $parent->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('employeeProfile', function ($sub) use ($search) {
                           $sub->where('employee_code', 'like', "%{$search}%")
                                ->orWhere('emirates_id_number', 'like', "%{$search}%")
                                ->orWhere('employee_name', 'like', "%{$search}%")
-                               ;
+                               ->orWhereHas('department', function ($dept) use ($search) {
+                                   $dept->where('name', 'like', "%{$search}%");
+                               })
+                               ->orWhereHas('designation', function ($des) use ($search) {
+                                   $des->where('name', 'like', "%{$search}%");
+                               });
                       });
                 });
             }
             
-            $employees = $query->orderBy('created_at', 'desc')
-                               ->paginate($request->per_page ?? 15);
+            $perPage = min((int) ($request->per_page ?? 20), 100);
+            $employees = $query->orderBy('created_at', 'desc')->paginate($perPage);
             
             return ApiResponse::success(
                 EmployeeResource::collection($employees),
@@ -420,6 +461,10 @@ class EmployeeController extends Controller
         try {
             $stats = [
                 'total_employees' => User::whereHas('employeeProfile')->count(),
+                'active_employees' => EmployeeProfile::where('employment_status', 'active')->count(),
+                'new_employees_30d' => EmployeeProfile::where('joining_date', '>=', now()->subDays(30))->count(),
+                'employees_on_leave' => EmployeeProfile::where('employment_status', 'on_leave')->count(),
+                'departments_count' => \App\Models\Department::whereHas('employeeProfiles')->count(),
                 'by_employment_status' => [
                     'active' => EmployeeProfile::where('employment_status', 'active')->count(),
                     'on_leave' => EmployeeProfile::where('employment_status', 'on_leave')->count(),

@@ -102,8 +102,37 @@ class AssetController extends Controller
                 $query->where(function($q) use ($search) {
                     $q->where('asset_code', 'like', "%{$search}%")
                       ->orWhere('name', 'like', "%{$search}%")
-                      ->orWhere('serial_number', 'like', "%{$search}%");
+                      ->orWhere('serial_number', 'like', "%{$search}%")
+                      ->orWhereHas('currentAssignment.user', function ($uq) use ($search) {
+                          $uq->where('name', 'like', "%{$search}%");
+                      });
                 });
+            }
+
+            if ($request->filled('user_id')) {
+                $query->whereHas('currentAssignment', function ($q) use ($request) {
+                    $q->where('user_id', $request->user_id)->where('status', 'active');
+                });
+            }
+
+            if ($request->filled('purchase_date_from')) {
+                $query->whereDate('purchase_date', '>=', $request->purchase_date_from);
+            }
+
+            if ($request->filled('purchase_date_to')) {
+                $query->whereDate('purchase_date', '<=', $request->purchase_date_to);
+            }
+
+            if ($request->filled('warranty_status')) {
+                if ($request->warranty_status === 'expired') {
+                    $query->whereNotNull('warranty_date')->whereDate('warranty_date', '<', now());
+                } elseif ($request->warranty_status === 'active') {
+                    $query->whereNotNull('warranty_date')->whereDate('warranty_date', '>=', now());
+                } elseif ($request->warranty_status === 'expiring_soon') {
+                    $query->whereNotNull('warranty_date')
+                        ->whereDate('warranty_date', '>=', now())
+                        ->whereDate('warranty_date', '<=', now()->addDays(30));
+                }
             }
             
             $assets = $query->orderBy('created_at', 'desc')
@@ -266,8 +295,7 @@ class AssetController extends Controller
         }
     }
     
-    public function returnAsset(Request $request, $id)
-    {
+    public function returnAsset(Request $request, $id){
         $request->validate([
             'return_date' => 'required|date',
             'notes' => 'nullable|string',
@@ -297,6 +325,77 @@ class AssetController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return ApiResponse::error('Failed to return asset: ' . $e->getMessage());
+        }
+    }
+
+    public function transferAsset(Request $request, $id)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'handover_date' => 'required|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $asset = Asset::findOrFail($id);
+            $currentAssignment = $asset->currentAssignment;
+
+            if ($currentAssignment) {
+                $currentAssignment->update([
+                    'return_date' => $request->handover_date,
+                    'status' => 'returned',
+                    'notes' => $request->notes,
+                ]);
+
+                AssetHistory::create([
+                    'asset_id' => $asset->id,
+                    'user_id' => $currentAssignment->user_id,
+                    'action' => 'transferred',
+                    'details' => "Transferred from user ID {$currentAssignment->user_id} to user ID {$request->user_id}",
+                    'performed_by' => Auth::id(),
+                ]);
+            }
+
+            $assignment = $asset->assignments()->create([
+                'user_id' => $request->user_id,
+                'assigned_by' => Auth::id(),
+                'handover_date' => $request->handover_date,
+                'notes' => $request->notes,
+                'status' => 'active',
+            ]);
+
+            $asset->update(['status' => 'assigned']);
+
+            DB::commit();
+
+            return ApiResponse::success($assignment->load(['asset', 'user', 'assignedBy']), 'Asset transferred successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::error('Failed to transfer asset: ' . $e->getMessage());
+        }
+    }
+
+    public function markMaintenance(Request $request, $id){
+        try {
+            $asset = Asset::findOrFail($id);
+            $asset->update([
+                'status' => 'maintenance',
+                'condition' => 'maintenance',
+            ]);
+
+            AssetHistory::create([
+                'asset_id' => $asset->id,
+                'user_id' => $asset->currentAssignment?->user_id,
+                'action' => 'maintenance',
+                'details' => $request->input('notes', 'Marked under maintenance'),
+                'performed_by' => Auth::id(),
+            ]);
+
+            return ApiResponse::success($asset->fresh()->load('assetType'), 'Asset marked under maintenance');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to update asset: ' . $e->getMessage());
         }
     }
     
@@ -335,6 +434,9 @@ class AssetController extends Controller
                 'available' => Asset::where('status', 'available')->count(),
                 'assigned' => Asset::where('status', 'assigned')->count(),
                 'maintenance' => Asset::where('status', 'maintenance')->count(),
+                'lost_assets' => Asset::where(function ($q) {
+                    $q->where('status', 'disposed')->orWhere('condition', 'damaged');
+                })->count(),
                 'disposed' => Asset::where('status', 'disposed')->count(),
                 'by_type' => Asset::select('asset_types.name', DB::raw('count(assets.id) as count'))
                     ->join('asset_types', 'assets.asset_type_id', '=', 'asset_types.id')

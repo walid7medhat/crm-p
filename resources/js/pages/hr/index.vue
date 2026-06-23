@@ -65,7 +65,7 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:trash-2" /></button>
           </template>
           <template v-else-if="activeTab === 'Assets'">
-            <button type="button" class="hr-generate-btn" @click="showAssetCreateModal = true">
+            <button type="button" class="hr-generate-btn" @click="openAssetsPrimaryAction">
               Add New Asset
               <iconify-icon icon="lucide:plus" />
             </button>
@@ -148,95 +148,9 @@
         </div>
       </div>
 
-      <div class="hr-content-card" v-else-if="activeTab === 'Employees'">
-        <div class="hr-content-shell overview-shell">
-          <StatsCards :stats="employeeStats" />
-          <div class="employee-overview-card">
-            <div class="employee-overview-head">
-              <h6 class="overview-section-title">Manage Employees</h6>
-              <div class="employee-overview-actions">
-                <button type="button" class="employee-search-btn" @click="openEmployeeFilters = true">
-                  <iconify-icon icon="lucide:plus" />
-                  Filter and search Employees
-                  <iconify-icon icon="lucide:search" />
-                </button>
-                <button type="button" class="employee-export-btn">
-                  Export Excel
-                  <iconify-icon icon="lucide:file-down" />
-                </button>
-              </div>
-            </div>
-
-            <div class="employee-overview-table-wrap">
-              <table class="table employee-overview-table align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th class="checkbox-col"><input type="checkbox" /></th>
-                    <th class="col-id">ID</th>
-                    <th class="col-person">Responsible Person</th>
-                    <th class="col-designation">Designation</th>
-                    <th class="col-email">Email</th>
-                    <th class="col-department">Department</th>
-                    <th class="employee-extra-col">Joining Date</th>
-                    <th class="employee-extra-col">Visa Validity</th>
-                    <th class="employee-extra-col">Nationality</th>
-                    <th class="employee-extra-col">Passport Number</th>
-                    <th class="employee-extra-col">Status</th>
-                    <th class="col-action">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in filteredEmployeeRows"
-                    :key="`emp-row-${row.id}`"
-                    @click="selectOverviewEmployee(row)"
-                  >
-                    <td class="checkbox-col"><input type="checkbox" /></td>
-                    <td class="emp-id col-id">#EMP-{{ row.id }}</td>
-                    <td class="col-person">
-                      <div class="employee-cell">
-                        <img :src="row.avatar" :alt="row.name" class="employee-thumb" />
-                        <span>{{ row.name }}</span>
-                      </div>
-                    </td>
-                    <td class="col-designation">{{ row.designation }}</td>
-                    <td class="col-email">{{ row.email }}</td>
-                    <td class="col-department">{{ row.department }}</td>
-                    <td class="employee-extra-col">{{ row.joiningDate }}</td>
-                    <td class="employee-extra-col">{{ row.visaValidity }}</td>
-                    <td class="employee-extra-col">{{ row.nationality }}</td>
-                    <td class="employee-extra-col">{{ row.passportNumber }}</td>
-                    <td class="employee-extra-col">
-                      <span class="emp-status-pill" :class="row.statusType === 'active' ? 'active' : 'inactive'">
-                        <i></i>{{ row.statusText }}
-                      </span>
-                    </td>
-                    <td class="employee-row-action-cell col-action">
-                      <button type="button" class="row-action-btn" @click.stop="toggleEmployeeRowMenu(row.id, $event)">
-                        <iconify-icon icon="lucide:more-vertical" />
-                      </button>
-                      <teleport to="body">
-                        <div v-if="openEmployeeRowMenuId === row.id" class="employee-row-menu" :style="employeeRowMenuStyle" @click.stop>
-                          <button type="button" class="employee-row-menu-item" @click.stop="openEditEmployee(row)">
-                            <iconify-icon icon="lucide:pencil" /> Edit Employee
-                          </button>
-                          <button type="button" class="employee-row-menu-item active" @click.stop="openEmployeeDetails(row)">
-                            <iconify-icon icon="lucide:eye" /> View Detail
-                          </button>
-                          <button type="button" class="employee-row-menu-item danger" @click.stop="confirmDeleteEmployee(row)">
-                            <iconify-icon icon="lucide:trash-2" /> Delete Employee
-                          </button>
-                        </div>
-                      </teleport>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="hr-footer">
-              <span>Showing {{ filteredEmployeeRows.length }} Entries</span>
-            </div>
-          </div>
+      <div class="hr-content-card hr-employees-card" v-else-if="activeTab === 'Employees'">
+        <div class="hr-content-shell overview-shell hr-employees-shell">
+          <EmployeesManagement embedded @add="showAddEmployeeModal = true" @edit="openEditEmployee" />
         </div>
       </div>
 
@@ -408,111 +322,19 @@
         </div>
       </div>
 
-      <div class="hr-content-card" v-else-if="activeTab === 'Leave / Attendance'">
-        <div class="hr-content-shell" :class="{ 'hr-content-shell--team': hrSectionTab === 'team' }">
-          <template v-if="leaveSectionMode === 'leave'">
-            <div class="employee-overview-card leave-overview-card">
-              <div class="employee-overview-head">
-                <h6 class="overview-section-title">Manage Leaves</h6>
-                <div class="employee-overview-actions">
-                  <button type="button" class="employee-search-btn assets-search-wrap" @click="showLeaveSearchModal = true">
-                    <iconify-icon icon="lucide:plus" />
-                    <span>{{ leaveSearchSummary }}</span>
-                    <iconify-icon icon="lucide:search" />
-                  </button>
-                  <button type="button" class="employee-export-btn" @click="exportLeaves">
-                    Export Excel
-                    <iconify-icon icon="lucide:file-down" />
-                  </button>
-                </div>
-              </div>
-
-              <div class="leave-table-wrap">
-                <table class="table leave-table align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th class="checkbox-col"><input type="checkbox" /></th>
-                      <th class="col-leave-id">EMP ID</th>
-                      <th class="col-leave-name">Employee Name</th>
-                      <th class="col-leave-type">Leave Type</th>
-                      <th class="col-leave-date">Start Date</th>
-                      <th class="col-leave-date">End Date</th>
-                      <th class="col-leave-days">Days</th>
-                      <th class="col-leave-reason">Reason</th>
-                      <th class="col-action sticky-action-col">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="leave in pagedLeaveRows" :key="`leave-row-${leave.id}`">
-                      <td class="checkbox-col"><input type="checkbox" /></td>
-                      <td class="emp-id col-leave-id">{{ leave.empId }}</td>
-                      <td class="col-leave-name">
-                        <div class="employee-cell">
-                          <img :src="leave.avatar" :alt="leave.employeeName" class="employee-thumb" />
-                          <span>{{ leave.employeeName }}</span>
-                        </div>
-                      </td>
-                      <td class="col-leave-type">{{ leave.leaveType }}</td>
-                      <td class="col-leave-date">{{ leave.startDate }}</td>
-                      <td class="col-leave-date">{{ leave.endDate }}</td>
-                      <td class="col-leave-days">{{ leave.days }}</td>
-                      <td class="col-leave-reason">{{ leave.reason }}</td>
-                      <td class="col-action sticky-action-col">
-                        <button type="button" class="row-action-btn" @click.stop="toggleLeaveRowMenu(leave.id, $event)">
-                          <iconify-icon icon="lucide:more-vertical" />
-                        </button>
-                        <teleport to="body">
-                          <div
-                            v-if="openLeaveRowMenuId === leave.id"
-                            class="leave-row-menu"
-                            :style="leaveRowMenuStyle"
-                            @click.stop
-                          >
-                            <button type="button" class="leave-row-menu-item" @click.stop="openLeaveEdit(leave)">
-                              <iconify-icon icon="lucide:pencil" /> Edit Leave
-                            </button>
-                            <button type="button" class="leave-row-menu-item active" @click.stop="openLeaveDetails(leave)">
-                              <iconify-icon icon="lucide:eye" /> View Details
-                            </button>
-                            <button type="button" class="leave-row-menu-item danger" @click.stop="confirmDeleteLeave(leave)">
-                              <iconify-icon icon="lucide:trash-2" /> Delete Leave
-                            </button>
-                            <button type="button" class="leave-row-menu-item approve" @click.stop="openApproveLeaveModal(leave)">
-                              <iconify-icon icon="lucide:badge-check" /> Approve Leave
-                            </button>
-                            <button type="button" class="leave-row-menu-item reject" @click.stop="openRejectLeaveModal(leave)">
-                              <iconify-icon icon="lucide:ban" /> Reject Leave
-                            </button>
-                          </div>
-                        </teleport>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="hr-footer">
-                <span>Showing {{ leavesStartEntry }} to {{ leavesEndEntry }} of {{ filteredLeaveRows.length }} Entries</span>
-                <div class="hr-pagination">
-                  <button type="button" class="page-btn" :disabled="leavePage === 1" @click="leavePage = Math.max(1, leavePage - 1)">Previous</button>
-                  <template v-for="(item, idx) in leavePaginationItems" :key="item.type === 'page' ? `lp-${item.n}` : `ld-${idx}`">
-                    <span v-if="item.type === 'dots'" class="page-dots">...</span>
-                    <button
-                      v-else
-                      type="button"
-                      class="page-number"
-                      :class="{ active: leavePage === item.n }"
-                      @click="leavePage = item.n"
-                    >
-                      {{ item.n }}
-                    </button>
-                  </template>
-                  <button type="button" class="page-btn" :disabled="leavePage >= leaveTotalPages" @click="leavePage = Math.min(leaveTotalPages, leavePage + 1)">Next</button>
-                </div>
-              </div>
-            </div>
-          </template>
-
+      <div class="hr-content-card hr-la-card" v-else-if="activeTab === 'Leave / Attendance'">
+        <div class="hr-content-shell hr-la-shell">
+          <LeaveAttendanceManagement
+            v-if="leaveSectionMode === 'leave' || leaveSectionMode === 'attendance'"
+            :key="leaveSectionMode"
+            embedded
+            :initial-view="leaveSectionMode === 'attendance' ? 'records' : 'leave'"
+            @apply-leave="showApplyLeaveModal = true"
+            @create-attendance="showCreateAttendanceModal = true"
+            @edit-attendance="openAttendanceEdit"
+            @view-history="openAttendanceDetails"
+            @view-leave="(leave) => openLeaveDetails(mapLeaveForModal(leave))"
+          />
           <template v-else-if="leaveSectionMode === 'announcements'">
             <div class="employee-overview-card leave-overview-card announcement-overview-card">
               <div class="employee-overview-head">
@@ -595,797 +417,19 @@
             </div>
           </template>
 
-          <template v-else-if="leaveSectionMode === 'attendance'">
-          <div class="hr-content-head">
-            <h6 class="hr-heading">Manage Attendance</h6>
-            <div class="hr-head-actions">
-              <div class="hr-date-filter">
-                <label for="hr-attendance-date">Date</label>
-                <input
-                  id="hr-attendance-date"
-                  :value="formatDateDisplay(dateFilter)"
-                  type="text"
-                  placeholder="dd/mm/yyyy"
-                  class="form-control form-control-sm hr-date-input"
-                  readonly
-                  @click="openDatePicker('dateFilter')"
-                />
-              </div>
-              <div ref="attendanceSearchAnchorRef" class="hr-search-anchor position-relative">
-                <div
-                  class="hr-search-wrap hr-search-wrap--kanban"
-                  :class="{
-                    'hr-search-wrap--focused': attendanceSearchInputFocused,
-                    'hr-search-wrap--filtered': hasActiveAttendanceFilters,
-                  }"
-                >
-                  <iconify-icon
-                    icon="lucide:plus"
-                    class="hr-search-plus"
-                    @click.stop="openAttendanceSearchDropdown(true)"
-                  />
-                  <input
-                    ref="attendanceSearchInputRef"
-                    v-model="searchKeyword"
-                    type="text"
-                    class="hr-search-input"
-                    placeholder="Search attendance (name, ID, status, department…)"
-                    autocomplete="off"
-                    @focus="onAttendanceSearchFocus"
-                    @click="onAttendanceSearchFocus"
-                    @blur="onAttendanceSearchBlur"
-                    @input="onAttendanceQuickSearchInput"
-                  />
-                  <iconify-icon
-                    v-if="hasActiveAttendanceFilters || searchKeyword"
-                    icon="lucide:x"
-                    class="hr-search-clear"
-                    @click.stop="clearAttendanceSearch"
-                  />
-                  <iconify-icon
-                    icon="lucide:search"
-                    class="hr-search-icon"
-                    @click.stop="openAttendanceSearchDropdown(true)"
-                  />
-                </div>
-                <div
-                  v-if="showAttendanceSearchModal && !isMobileViewport"
-                  class="hr-attendance-search-dropdown-outer hr-attendance-search-dropdown-outer--desktop"
-                  @mousedown.prevent
-                >
-                  <HrAttendanceSearchDropdown
-                    :filters="attendanceSearchFilters"
-                    :chips="attendanceSearchChips"
-                    :selected-chip="selectedAttendanceSearchChip"
-                    :employee-options="attendanceEmployeeOptions"
-                    :department-options="attendanceDepartmentOptions"
-                    :type-options="attendanceTypeOptions"
-                    :status-options="attendanceStatusOptions"
-                    :date-display="formatDateDisplay(attendanceSearchFilters.attendanceDate)"
-                    @close="showAttendanceSearchModal = false"
-                    @reset="resetAttendanceSearchFilters"
-                    @apply="applyAttendanceSearchFilters"
-                    @select-chip="selectAttendanceSearchChip"
-                    @open-date-picker="openDatePicker('attendanceSearchFilters.attendanceDate')"
-                    @update:filters="onAttendanceSearchFiltersPatch"
-                  />
-                </div>
-              </div>
-              <div v-if="hrSectionTab === 'team'" class="hr-sales-position-filter">
-                <label>Sales Position</label>
-                <SearchableSelect
-                  v-model="salesPositionFilter"
-                  :options="salesPositionOptions"
-                  placeholder="All Sales Positions"
-                />
-              </div>
-              <button type="button" class="hr-export-btn" @click="hrSectionTab === 'team' ? exportSalesAttendanceByManager() : exportAttendance()">
-                Export Excel
-                <iconify-icon icon="lucide:file-down" />
-              </button>
-            </div>
-          </div>
-
-          <div class="hr-inner-tabs">
-            <button type="button" class="hr-inner-tab" :class="{ active: hrSectionTab === 'attendance' }" @click="hrSectionTab = 'attendance'">
-              Attendance
-            </button>
-            <button type="button" class="hr-inner-tab" :class="{ active: hrSectionTab === 'team' }" @click="hrSectionTab = 'team'">
-              TEAM VIEW
-            </button>
-          </div>
-
-          <template v-if="hrSectionTab === 'attendance'">
-          <div class="hr-summary-row">
-            <div class="hr-stat-card">
-              <span>Total Employees</span>
-              <strong>{{ summary.total_employees }}</strong>
-            </div>
-            <div class="hr-stat-card present">
-              <span>Present</span>
-              <strong>{{ summary.present_today }}</strong>
-            </div>
-            <div class="hr-stat-card absent">
-              <span>Absent</span>
-              <strong>{{ summary.absent_today }}</strong>
-            </div>
-            <div class="hr-stat-card late">
-              <span>Late</span>
-              <strong>{{ summary.late_today }}</strong>
-            </div>
-            <div class="hr-chart-card">
-              <ApexCharts type="donut" height="90" :options="chartOptions" :series="chartSeries" />
-            </div>
-          </div>
-
-          <div class="hr-table-wrap">
-            <table class="table hr-table align-middle mb-0">
-              <thead>
-                <tr>
-                  <th class="checkbox-col"><input type="checkbox" /></th>
-                  <th>Date</th>
-                  <th>EMP ID</th>
-                  <th>Employee Name</th>
-                  <th>Status</th>
-                  <th>Check In &amp; Check Out</th>
-                  <th>Break</th>
-                  <th>OT</th>
-                  <th class="col-action sticky-action-col">Action</th>
-                </tr>
-              </thead>
-
-              <tbody v-if="loading">
-                <tr v-for="i in 10" :key="`sk-${i}`">
-                  <td colspan="9"><div class="hr-skeleton"></div></td>
-                </tr>
-              </tbody>
-
-              <tbody v-else-if="filteredRows.length === 0">
-                <tr>
-                  <td colspan="9">
-                    <div class="hr-empty">
-                      <div class="hr-empty-title">No attendance records found</div>
-                      <div class="hr-empty-text">Try another date or filter keyword.</div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-
-              <tbody v-else>
-                <tr v-for="row in pagedRows" :key="`${row.employee_id}-${row.date}`">
-                  <td class="checkbox-col"><input type="checkbox" /></td>
-                  <td>{{ formatDate(row.date) }}</td>
-                  <td class="emp-id">#EMP{{ formatEmpId(row.employee_id) }}</td>
-                  <td>
-                    <div class="employee-cell">
-                      <span class="avatar-circle">{{ initials(row.employee_name) }}</span>
-                      <span>{{ row.employee_name }}</span>
-                    </div>
-                  </td>
-                  <td><span class="status-badge" :class="`status-${row.status}`">{{ row.status }}</span></td>
-                  <td>
-                    <div class="check-flow">
-                      <span class="check-time">{{ formatTime(row.check_in) }}</span>
-                      <span class="check-duration-wrap">
-                        <span class="dur-dot"></span>
-                        <span class="dur-line"></span>
-                        <span class="dur-text">{{ formatDuration(row.check_in, row.check_out) }}</span>
-                        <span class="dur-line"></span>
-                        <span class="dur-dot"></span>
-                      </span>
-                      <span class="check-time">{{ formatTime(row.check_out) }}</span>
-                    </div>
-                  </td>
-                  <td class="text-muted break-col">{{ formatBreakDisplay(row) }}</td>
-                  <td class="text-muted ot-col">{{ formatOtDisplay(row) }}</td>
-                  <td class="attendance-row-action-cell col-action sticky-action-col">
-                    <button type="button" class="row-action-btn" @click.stop="toggleAttendanceRowMenu(attendanceRowKey(row), row, $event)">
-                      <iconify-icon icon="lucide:more-vertical" />
-                    </button>
-                    <teleport to="body">
-                      <div
-                        v-if="openAttendanceRowMenuId === attendanceRowKey(row)"
-                        class="attendance-row-menu"
-                        :style="attendanceRowMenuStyle"
-                        @click.stop
-                      >
-                        <button type="button" class="attendance-row-menu-item" @click.stop="openAttendanceEdit(row)">
-                          <iconify-icon icon="lucide:pencil" /> Edit Leave
-                        </button>
-                        <button type="button" class="attendance-row-menu-item active" @click.stop="openAttendanceDetails(row)">
-                          <iconify-icon icon="lucide:eye" /> View Details
-                        </button>
-                      </div>
-                    </teleport>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="hr-footer">
-            <span>Showing {{ startEntry }} to {{ endEntry }} of {{ filteredRows.length }} Entries</span>
-            <div class="hr-pagination">
-              <button type="button" class="page-btn" :disabled="page === 1" @click="page = Math.max(1, page - 1)">Previous</button>
-              <template v-for="(item, idx) in paginationItems" :key="item.type === 'page' ? `p-${item.n}` : `d-${idx}`">
-                <span v-if="item.type === 'dots'" class="page-dots">...</span>
-                <button
-                  v-else
-                  type="button"
-                  class="page-number"
-                  :class="{ active: page === item.n }"
-                  @click="page = item.n"
-                >
-                  {{ item.n }}
-                </button>
-              </template>
-              <button type="button" class="page-btn" :disabled="page >= totalPages" @click="page = Math.min(totalPages, page + 1)">Next &gt;</button>
-            </div>
-          </div>
-          </template>
-
-          <template v-else>
-            <div class="team-attendance-view">
-              <template v-if="loading">
-                <div class="hr-empty-tab leave-announcement-card">
-                  <h6 class="overview-section-title">Team Attendance</h6>
-                  <p>Loading attendance by team...</p>
-                </div>
-              </template>
-              <template v-else-if="teamAttendanceGroups.length === 0">
-                <div class="hr-empty-tab leave-announcement-card">
-                  <h6 class="overview-section-title">Team Attendance</h6>
-                  <p>No attendance records found for teams.</p>
-                </div>
-              </template>
-              <template v-else>
-                <template v-if="!selectedDepartmentView">
-                  <div class="department-boxes-grid">
-                    <button
-                      v-for="department in departmentAttendanceGroups"
-                      :key="`dept-box-${department.department_name}`"
-                      type="button"
-                      class="department-box-card"
-                      @click="selectedDepartmentView = department.department_name"
-                    >
-                      <strong>{{ department.department_name }}</strong>
-                      <span>{{ department.members.length }} people</span>
-                      <small>{{ department.manager_groups.length }} manager{{ department.manager_groups.length === 1 ? '' : 's' }}</small>
-                    </button>
-                  </div>
-                </template>
-                <template v-else>
-                  <div class="team-attendance-card__head">
-                    <div class="d-flex align-items-center gap-2">
-                      <button type="button" class="page-btn" @click="selectedDepartmentView = ''">Back</button>
-                      <h6 class="overview-section-title mb-0">{{ selectedDepartmentData?.department_name || selectedDepartmentView }}</h6>
-                    </div>
-                    <span class="team-attendance-count">{{ selectedDepartmentData?.members?.length || 0 }} member{{ (selectedDepartmentData?.members?.length || 0) === 1 ? '' : 's' }}</span>
-                  </div>
-                  <div class="team-attendance-table-wrap" v-if="selectedDepartmentData">
-                    <table class="table hr-table align-middle mb-0">
-                      <thead>
-                        <tr>
-                          <th>Employee</th>
-                          <th>Manager</th>
-                          <th>Status</th>
-                          <th>Check In</th>
-                          <th>Check Out</th>
-                          <th>Duration</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <template v-for="managerGroup in selectedDepartmentData.manager_groups" :key="`dept-mgr-${selectedDepartmentData.department_name}-${managerGroup.manager_name}`">
-                          <tr class="manager-group-row">
-                            <td colspan="6">
-                              <strong>{{ managerGroup.manager_name }}</strong>
-                              <span class="manager-group-count"> - {{ managerGroup.members.length }} member{{ managerGroup.members.length === 1 ? '' : 's' }}</span>
-                            </td>
-                          </tr>
-                          <tr v-for="member in managerGroup.members" :key="`dept-member-${selectedDepartmentData.department_name}-${managerGroup.manager_name}-${member.employee_id}-${member.check_in || member.date || 'no-date'}`">
-                            <td>
-                              <div class="employee-cell">
-                                <span class="avatar-circle">{{ initials(member.employee_name) }}</span>
-                                <span>{{ member.employee_name || '--' }}</span>
-                              </div>
-                            </td>
-                            <td>{{ attendanceManagerName(member) }}</td>
-                            <td><span class="status-badge" :class="`status-${member.status}`">{{ member.status || 'absent' }}</span></td>
-                            <td>{{ formatTime(member.check_in) }}</td>
-                            <td>{{ formatTime(member.check_out) }}</td>
-                            <td>{{ formatDuration(member.check_in, member.check_out) }}</td>
-                          </tr>
-                        </template>
-                      </tbody>
-                    </table>
-                  </div>
-                </template>
-              </template>
-            </div>
-          </template>
-          </template>
-
           <div v-if="error" class="alert alert-danger mt-3 mb-0 py-2">{{ error }}</div>
         </div>
       </div>
 
-      <div class="hr-content-card" v-else-if="activeTab === 'Assets'">
-        <div class="hr-content-shell overview-shell">
-          <div class="employee-overview-card assets-overview-card">
-            <div class="employee-overview-head">
-              <h6 class="overview-section-title">Manage Assets</h6>
-              <div class="employee-overview-actions">
-                <button type="button" class="employee-search-btn assets-search-wrap" @click="showAssetSearchModal = true">
-                  <iconify-icon icon="lucide:plus" />
-                  <span>{{ assetSearchSummary }}</span>
-                  <iconify-icon icon="lucide:search" />
-                </button>
-                <button type="button" class="employee-export-btn" @click="exportAssets">
-                  Export Excel
-                  <iconify-icon icon="lucide:file-down" />
-                </button>
-              </div>
-            </div>
-
-            <div class="assets-table-wrap">
-              <table class="table assets-table align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th class="checkbox-col"><input type="checkbox" /></th>
-                    <th class="col-asset-id">Asset ID</th>
-                    <th class="col-asset-type">Type</th>
-                    <th class="col-asset-name">Asset Name</th>
-                    <th class="col-asset-user">Users</th>
-                    <th class="col-handover">Date Of Handover</th>
-                    <th class="asset-extra-col">Brand</th>
-                    <th class="asset-extra-col">Category</th>
-                    <th class="asset-extra-col">Handover To</th>
-                    <th class="asset-extra-col">Serial Number</th>
-                    <th class="asset-extra-col">Status</th>
-                    <th class="col-action sticky-action-col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="asset in pagedAssetsRows" :key="`asset-row-${asset.id}`">
-                    <td class="checkbox-col"><input type="checkbox" /></td>
-                    <td class="emp-id col-asset-id">{{ asset.assetId }}</td>
-                    <td class="col-asset-type">{{ asset.type }}</td>
-                    <td class="col-asset-name">{{ asset.assetName }}</td>
-                    <td class="col-asset-user">
-                      <div class="employee-cell">
-                        <img :src="asset.userAvatar" :alt="asset.userName" class="employee-thumb" />
-                        <span>
-                          {{ asset.userName }}
-                          <small>ID :#{{ asset.userRef }}</small>
-                        </span>
-                      </div>
-                    </td>
-                    <td class="col-handover">{{ asset.handoverDate }}</td>
-                    <td class="asset-extra-col">{{ asset.brand }}</td>
-                    <td class="asset-extra-col">{{ asset.category }}</td>
-                    <td class="asset-extra-col">{{ asset.handoverTo }}</td>
-                    <td class="asset-extra-col">{{ asset.serial }}</td>
-                    <td class="asset-extra-col">{{ asset.status }}</td>
-                    <td class="col-action sticky-action-col">
-                      <button type="button" class="row-action-btn" @click.stop="toggleAssetRowMenu(asset.id, $event)">
-                        <iconify-icon icon="lucide:more-vertical" />
-                      </button>
-                      <teleport to="body">
-                        <div
-                          v-if="openAssetRowMenuId === asset.id"
-                          class="asset-row-menu"
-                          :style="assetRowMenuStyle"
-                          @click.stop
-                        >
-                          <button type="button" class="asset-row-menu-item" @click.stop="openEditAsset(asset)">
-                            <iconify-icon icon="lucide:pencil" /> Edit Asset
-                          </button>
-                          <button type="button" class="asset-row-menu-item active" @click.stop="openAssignAssetUser(asset)">
-                            <iconify-icon icon="lucide:user-round-plus" /> Assign User
-                          </button>
-                          <button type="button" class="asset-row-menu-item danger" @click.stop="confirmDeleteAsset(asset)">
-                            <iconify-icon icon="lucide:trash-2" /> Delete Asset
-                          </button>
-                        </div>
-                      </teleport>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="hr-footer">
-              <span>Showing {{ assetsStartEntry }} to {{ assetsEndEntry }} of {{ filteredAssetsRows.length }} Entries</span>
-              <div class="hr-pagination">
-                <button type="button" class="page-btn" :disabled="assetsPage === 1" @click="assetsPage = Math.max(1, assetsPage - 1)">Previous</button>
-                <template v-for="(item, idx) in assetsPaginationItems" :key="item.type === 'page' ? `ap-${item.n}` : `ad-${idx}`">
-                  <span v-if="item.type === 'dots'" class="page-dots">...</span>
-                  <button
-                    v-else
-                    type="button"
-                    class="page-number"
-                    :class="{ active: assetsPage === item.n }"
-                    @click="assetsPage = item.n"
-                  >
-                    {{ item.n }}
-                  </button>
-                </template>
-                <button type="button" class="page-btn" :disabled="assetsPage >= assetsTotalPages" @click="assetsPage = Math.min(assetsTotalPages, assetsPage + 1)">Next</button>
-              </div>
-            </div>
-          </div>
+      <div class="hr-content-card hr-assets-card" v-else-if="activeTab === 'Assets'">
+        <div class="hr-content-shell overview-shell hr-assets-shell">
+          <AssetsManagement ref="assetsMgmtRef" embedded />
         </div>
       </div>
 
-      <div class="hr-content-card" v-else-if="activeTab === 'Career'">
-        <div class="hr-content-shell overview-shell">
-          <div class="hr-summary-row career-summary-row">
-            <div class="hr-stat-card">
-              <strong>245</strong>
-              <span>Total Applicants</span>
-            </div>
-            <div class="hr-stat-card">
-              <strong>25</strong>
-              <span>Active Job Openings</span>
-            </div>
-            <div class="hr-stat-card">
-              <strong>56</strong>
-              <span>Hired Candidates</span>
-            </div>
-            <div class="hr-stat-card">
-              <strong>182</strong>
-              <span>Candidates in Process</span>
-            </div>
-          </div>
-
-          <div class="employee-overview-card career-overview-card" v-if="careerSectionMode === 'manage-recruitments'">
-            <div class="employee-overview-head">
-              <h6 class="overview-section-title">Manage Job Openings</h6>
-              <div class="employee-overview-actions">
-                <button type="button" class="employee-search-btn assets-search-wrap" @click="showCareerSearchModal = true">
-                  <iconify-icon icon="lucide:plus" />
-                  <input v-model="careerSearchKeyword" type="text" placeholder="Filter and search job openings" class="border-0 bg-transparent flex-grow-1" />
-                  <iconify-icon icon="lucide:search" />
-                </button>
-                <button type="button" class="employee-export-btn" @click="exportCareerJobs">
-                  Export Excel
-                  <iconify-icon icon="lucide:file-down" />
-                </button>
-              </div>
-            </div>
-            <div v-if="showCareerSearchModal" class="edit-overlay" @click.self="showCareerSearchModal = false">
-              <div class="employee-filter-modal career-search-modal">
-                <button type="button" class="employee-filter-close" @click="showCareerSearchModal = false">
-                  <iconify-icon icon="lucide:x" />
-                </button>
-
-                <div class="asset-search-left">
-                  <button
-                      v-for="chip in careerFilterChips"
-                      :key="chip"
-                      type="button"
-                      class="asset-search-chip"
-                      :class="{ active: selectedCareerFilterChip === chip }"
-                      @click="selectedCareerFilterChip = chip"
-                    >
-                      {{ chip }}
-                    </button>
-                 
-                </div>
-                <div class="asset-search-right">
-                  <div class="asset-search-section">
-                <h6>Search Job Tittle</h6>
-                <div class="add-grid-one">
-                  <div class="add-field">
-                    <SearchableSelect v-model="careerSearchFilters.jobTitle" placeholder="Search Job Tittle" :options="careerJobTitleOptions" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="asset-search-section">
-                <h6>Posted Date</h6>
-                <div class="add-grid-one">
-                  <div class="add-field">
-                    <input :value="formatDateDisplay(careerSearchFilters.postedDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('careerSearchFilters.postedDate')" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="asset-search-section">
-                <h6>Closing Date</h6>
-                <div class="add-grid-one">
-                  <div class="add-field">
-                    <input :value="formatDateDisplay(careerSearchFilters.closingDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('careerSearchFilters.closingDate')" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="asset-search-section">
-                <h6>Department</h6>
-                <div class="add-grid-one">
-                  <div class="add-field">
-                    <SearchableSelect v-model="careerSearchFilters.department" placeholder="Select Department" :options="careerDepartmentOptions" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="asset-search-section">
-                <h6>Type</h6>
-                <div class="add-grid-one">
-                  <div class="add-field">
-                    <SearchableSelect v-model="careerSearchFilters.type" placeholder="Select Type" :options="careerTypeOptions" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="asset-search-section">
-                <h6>Status</h6>
-                <div class="add-grid-one">
-                  <div class="add-field">
-                    <SearchableSelect v-model="careerSearchFilters.status" placeholder="Select Status" :options="careerStatusOptions" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="employee-filter-actions mt-2">
-                <button type="button" class="employee-filter-btn ghost" @click="resetCareerSearchFilters">Reset</button>
-                <button type="button" class="employee-filter-btn primary" @click="applyCareerSearchFilters">Search</button>
-              </div>
-                </div>
-                <div class="asset-search-right">
-                  <!-- next step fields -->
-                </div>
-              </div>
-            </div>
-            <div class="leave-table-wrap career-table-wrap">
-              <table class="table leave-table align-middle mb-0 career-table">
-                <thead>
-                  <tr>
-                    <th class="checkbox-col"><input type="checkbox" /></th>
-                    <th>Job Tittle</th>
-                    <th>Department</th>
-                    <th>Branch</th>
-                    <th>Type</th>
-                    <th>Openings</th>
-                    <th>Posted Date</th>
-                    <th>Closing Date</th>
-                    <th>Hiring Manager</th>
-                    <th>Applicants</th>
-                    <th>Status</th>
-                    <th class="col-action sticky-action-col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="job in pagedCareerRows" :key="`career-row-${job.id}`">
-                    <td class="checkbox-col"><input type="checkbox" /></td>
-                    <td>{{ job.title }}</td>
-                    <td>{{ job.department }}</td>
-                    <td>{{ job.branch }}</td>
-                    <td>{{ job.type }}</td>
-                    <td><strong>{{ job.openings }}</strong></td>
-                    <td>{{ job.postedDate }}</td>
-                    <td>{{ job.closingDate }}</td>
-                    <td>
-                      <div class="career-manager-cell">
-                        <img :src="job.hiringManagerAvatar" :alt="job.hiringManager" class="employee-thumb" />
-                        <span>{{ job.hiringManager }}</span>
-                      </div>
-                    </td>
-                    <td>{{ job.applicants }}</td>
-                    <td>
-                      <span class="career-status-pill" :class="`career-status-${String(job.status || '').toLowerCase().replace(/\s+/g, '-')}`">{{ job.status }}</span>
-                    </td>
-                    <td class="col-action sticky-action-col">
-                      <button type="button" class="row-action-btn" @click.stop="toggleCareerRowMenu(job.id, $event)">
-                        <iconify-icon icon="lucide:more-vertical" />
-                      </button>
-                      <teleport to="body">
-                        <div
-                          v-if="openCareerRowMenuId === job.id"
-                          class="leave-row-menu"
-                          :style="careerRowMenuStyle"
-                          @click.stop
-                        >
-                          <button type="button" class="leave-row-menu-item" @click="openCareerApplicants(job)">
-                            <iconify-icon icon="lucide:users" /> View Applicants
-                          </button>
-                          <button type="button" class="leave-row-menu-item">
-                            <iconify-icon icon="lucide:pencil" /> Edit
-                          </button>
-                          <button type="button" class="leave-row-menu-item danger">
-                            <iconify-icon icon="lucide:trash-2" /> Delete
-                          </button>
-                        </div>
-                      </teleport>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="hr-footer">
-              <span>Showing {{ careerStartEntry }} to {{ careerEndEntry }} of {{ filteredCareerRows.length }} Entries</span>
-              <div class="hr-pagination">
-                <button type="button" class="page-btn" :disabled="careerPage === 1" @click="careerPage = Math.max(1, careerPage - 1)">Previous</button>
-                <template v-for="(item, idx) in careerPaginationItems" :key="item.type === 'page' ? `cp-${item.n}` : `cd-${idx}`">
-                  <span v-if="item.type === 'dots'" class="page-dots">...</span>
-                  <button
-                    v-else
-                    type="button"
-                    class="page-number"
-                    :class="{ active: careerPage === item.n }"
-                    @click="careerPage = item.n"
-                  >
-                    {{ item.n }}
-                  </button>
-                </template>
-                <button type="button" class="page-btn" :disabled="careerPage >= careerTotalPages" @click="careerPage = Math.min(careerTotalPages, careerPage + 1)">Next</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="career-applicants-view" v-else-if="careerSectionMode === 'view-applicants'">
-            <div class="career-applicants-head">
-              <div class="career-applicants-head-left">
-                <div class="career-applicants-breadcrumb">
-                  <button type="button" class="career-crumb-link" @click="careerSectionMode = 'manage-recruitments'">Career</button>
-                  <iconify-icon icon="lucide:chevron-right" />
-                  <button type="button" class="career-crumb-link" @click="careerSectionMode = 'manage-recruitments'">Manage Recruitments</button>
-                  <iconify-icon icon="lucide:chevron-right" />
-                  <span>{{ selectedCareerJob?.title || 'Job Applicants' }}</span>
-                </div>
-                <h6 class="career-applicants-page-title">All Applicants</h6>
-              </div>
-              <div class="career-applicants-actions">
-                <button type="button" class="employee-search-btn assets-search-wrap">
-                  <iconify-icon icon="lucide:plus" />
-                  <input v-model="careerApplicantsSearch" type="text" placeholder="Filter and search candidates" class="border-0 bg-transparent flex-grow-1" />
-                  <iconify-icon icon="lucide:search" />
-                </button>
-                <button type="button" class="career-circle-btn"><iconify-icon icon="lucide:download" /></button>
-                <button type="button" class="career-circle-btn"><iconify-icon icon="lucide:trash-2" /></button>
-              </div>
-            </div>
-
-            <div class="career-applicants-card">
-              <div class="career-applicants-title-wrap">
-                <div class="career-company-avatar"><span>O</span></div>
-                <div>
-                  <h6>{{ selectedCareerJob?.title || 'IT Support Specialist -Systems, Network & Security' }}</h6>
-                  <p>{{ selectedCareerJob?.branch || 'Abu Dhabi' }} | {{ selectedCareerJob?.type || 'Full-time' }}</p>
-                </div>
-              </div>
-              <div class="career-applicants-meta-row">
-                <span class="career-meta-pill">Posted Date : {{ selectedCareerJob?.postedDate || '08 Feb 2026' }}</span>
-                <span class="career-meta-pill">Closing Date : {{ selectedCareerJob?.closingDate || '08 Feb 2026' }}</span>
-                <span class="career-count-text">{{ careerApplicantsCount }} Applicants</span>
-              </div>
-            </div>
-
-            <div class="career-applicants-body">
-              <aside class="career-applicant-list-card">
-                <div class="career-applicant-list-head">
-                  <label class="career-check">
-                    <input type="checkbox" />
-                    <span>{{ careerApplicantsCount }} Applicants</span>
-                  </label>
-                  <button type="button" class="career-list-delete"><iconify-icon icon="lucide:trash-2" /></button>
-                </div>
-                <div class="career-applicant-list-scroll">
-                  <button
-                    v-for="applicant in filteredCareerApplicants"
-                    :key="applicant.id"
-                    type="button"
-                    class="career-applicant-list-item"
-                    :class="{ active: selectedCareerApplicantId === applicant.id }"
-                    @click="selectedCareerApplicantId = applicant.id"
-                  >
-                    <img :src="applicant.avatar" alt="applicant avatar" />
-                    <div class="career-applicant-list-info">
-                      <strong>{{ applicant.name }}</strong>
-                      <p>{{ applicant.email }}</p>
-                      <small>{{ applicant.location }}</small>
-                      <div class="career-applicant-row-foot">
-                        <span :class="`career-decision-${String(applicant.decision || 'maybe').toLowerCase().replace(/\s+/g, '-')}`">{{ applicant.decision }}</span>
-                        <i>|</i>
-                        <span>{{ applicant.appliedAgo }}</span>
-                      </div>
-                    </div>
-                    <iconify-icon icon="lucide:mail" />
-                  </button>
-                </div>
-              </aside>
-
-              <section class="career-applicant-detail-card" v-if="selectedCareerApplicant">
-                <div class="career-detail-top">
-                  <div class="career-applicant-profile">
-                    <img :src="selectedCareerApplicant.avatar" alt="profile" />
-                    <div>
-                      <strong>{{ selectedCareerApplicant.name }}</strong>
-                      <p>{{ selectedCareerApplicant.location }}</p>
-                    </div>
-                  </div>
-                  <div class="career-decision-chips">
-                    <button type="button" class="career-decision-chip selected" :class="{ active: selectedCareerApplicant.decision === 'Selected' }" @click="setCareerApplicantDecision('Selected')">Selected</button>
-                    <button type="button" class="career-decision-chip rejected" :class="{ active: selectedCareerApplicant.decision === 'Rejected' }" @click="setCareerApplicantDecision('Rejected')">Rejected</button>
-                    <button type="button" class="career-decision-chip maybe" :class="{ active: selectedCareerApplicant.decision === 'Maybe' }" @click="setCareerApplicantDecision('Maybe')">May be</button>
-                  </div>
-                </div>
-
-                <div class="career-detail-stat-grid">
-                  <div><span>Applied at</span><strong>{{ selectedCareerApplicant.appliedAt }}</strong></div>
-                  <div><span>Availability Status</span><strong>{{ selectedCareerApplicant.availabilityStatus }}</strong></div>
-                  <div><span>Hiring Status</span><strong>{{ selectedCareerApplicant.hiringStatus }}</strong></div>
-                  <div><span>Interview Status</span><strong>{{ selectedCareerApplicant.interviewStatus }}</strong></div>
-                </div>
-
-                <div class="career-detail-quick-actions">
-                  <button type="button"><iconify-icon icon="lucide:calendar-days" /> Schedule Interview</button>
-                  <button type="button"><iconify-icon icon="lucide:mail" /> Send Rejection Mail</button>
-                </div>
-
-                <div class="career-accordion-block">
-                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('details')">
-                    <span>Applicant Details</span>
-                    <iconify-icon :icon="careerApplicantSectionsOpen.details ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
-                  </button>
-                  <div v-if="careerApplicantSectionsOpen.details" class="career-details-grid">
-                    <p><span>Email</span><strong>{{ selectedCareerApplicant.email }}</strong></p>
-                    <p><span>Visa Status</span><strong>{{ selectedCareerApplicant.visaStatus }}</strong></p>
-                    <p><span>Phone</span><strong>{{ selectedCareerApplicant.phone }}</strong></p>
-                    <p><span>Visa Expiry</span><strong>{{ selectedCareerApplicant.visaExpiry }}</strong></p>
-                    <p><span>Gender</span><strong>{{ selectedCareerApplicant.gender }}</strong></p>
-                    <p><span>Notice Period</span><strong>{{ selectedCareerApplicant.noticePeriod }}</strong></p>
-                    <p><span>Date of birth</span><strong>{{ selectedCareerApplicant.dob }}</strong></p>
-                    <p><span>Current Salary</span><strong>{{ selectedCareerApplicant.currentSalary }}</strong></p>
-                    <p><span>Current Location</span><strong>{{ selectedCareerApplicant.location }}</strong></p>
-                    <p><span>Expected Salary</span><strong>{{ selectedCareerApplicant.expectedSalary }}</strong></p>
-                    <p><span>Nationality</span><strong>{{ selectedCareerApplicant.nationality }}</strong></p>
-                    <p><span>Experience in UAE</span><strong>{{ selectedCareerApplicant.uaeExperience }}</strong></p>
-                    <p><span>Total Experience</span><strong>{{ selectedCareerApplicant.totalExperience }}</strong></p>
-                  </div>
-                </div>
-
-                <div class="career-accordion-block">
-                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('resume')">
-                    <span>Resume</span>
-                    <iconify-icon :icon="careerApplicantSectionsOpen.resume ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
-                  </button>
-                  <div v-if="careerApplicantSectionsOpen.resume" class="career-generic-box">
-                    <img :src="selectedCareerApplicant.resumeImage || '/assets/images/placeholder-1.jpg'" alt="resume preview" />
-                  </div>
-                </div>
-
-                <div class="career-accordion-block">
-                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('questions')">
-                    <span>Questions &amp; Answers</span>
-                    <iconify-icon :icon="careerApplicantSectionsOpen.questions ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
-                  </button>
-                  <div v-if="careerApplicantSectionsOpen.questions" class="career-qna-list">
-                    <div v-for="(item, qIdx) in selectedCareerApplicant.questions" :key="`q-${qIdx}`" class="career-qna-item">
-                      <strong>{{ qIdx + 1 }} - {{ item.question }}</strong>
-                      <p>Answer : {{ item.answer }} <span>Idea Answer : {{ item.idealAnswer }}</span></p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="career-accordion-block">
-                  <button type="button" class="career-accordion-title" @click="toggleCareerApplicantSection('notes')">
-                    <span>Applicant Notes</span>
-                    <iconify-icon :icon="careerApplicantSectionsOpen.notes ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
-                  </button>
-                  <div v-if="careerApplicantSectionsOpen.notes" class="career-generic-box">
-                    <p>{{ selectedCareerApplicant.notes }}</p>
-                  </div>
-                </div>
-              </section>
-            </div>
-          </div>
-
-          <div class="hr-empty-tab leave-announcement-card" v-else>
-            <h6 class="overview-section-title">Career</h6>
-            <p>Career module will appear here.</p>
-          </div>
+      <div class="hr-content-card hr-recruitment-card" v-else-if="activeTab === 'Career'">
+        <div class="hr-content-shell overview-shell hr-recruitment-shell">
+          <CareerRecruitmentManagement embedded />
         </div>
       </div>
 
@@ -2694,6 +1738,10 @@ import HrAttendanceSearchDropdown from '@/components/hr/HrAttendanceSearchDropdo
 import StatsCards from '@/components/hr/overview/StatsCards.vue'
 import EmployeesTable from '@/components/hr/overview/EmployeesTable.vue'
 import EmployeeDetails from '@/components/hr/overview/EmployeeDetails.vue'
+import EmployeesManagement from '@/pages/hr/employees/EmployeesManagement.vue'
+import LeaveAttendanceManagement from '@/pages/hr/leave-attendance/LeaveAttendanceManagement.vue'
+import CareerRecruitmentManagement from '@/pages/hr/recruitment/CareerRecruitmentManagement.vue'
+import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
@@ -2876,6 +1924,7 @@ const leavePerPage = 10
 const assetsSearch = ref('')
 const showAssetSearchModal = ref(false)
 const showAssetCreateModal = ref(false)
+const assetsMgmtRef = ref(null)
 const assetsPage = ref(1)
 const assetsPerPage = 10
 const careerSectionMode = ref('manage-recruitments')
@@ -4708,8 +3757,25 @@ function openLeaveEdit(leave) {
   showApplyLeaveModal.value = true
 }
 
+function mapLeaveForModal(leave) {
+  if (!leave) return leave
+  return {
+    id: leave.id,
+    employeeName: leave.employeeName || leave.employee_name,
+    designation: leave.designation || '—',
+    startDate: leave.startDate || leave.start_date,
+    endDate: leave.endDate || leave.end_date,
+    days: leave.duration ?? leave.days,
+    status: leave.statusLabel || leave.status,
+    leaveType: leave.leaveType || leave.leave_type,
+    appliedDate: leave.raw?.created_at || '—',
+    reason: leave.reason || '—',
+    ...leave,
+  }
+}
+
 function openLeaveDetails(leave) {
-  selectedLeaveRow.value = leave
+  selectedLeaveRow.value = mapLeaveForModal(leave)
   showLeaveDetailModal.value = true
   openLeaveRowMenuId.value = null
 }
@@ -5299,6 +4365,10 @@ function openLeaveAttendancePrimaryAction() {
     return
   }
   showApplyLeaveModal.value = true
+}
+
+function openAssetsPrimaryAction() {
+  assetsMgmtRef.value?.openCreate?.()
 }
 
 function closeCreateAttendanceModal() {

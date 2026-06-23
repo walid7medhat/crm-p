@@ -254,7 +254,8 @@ class RecruitmentController extends Controller
                 $query->where('title', 'like', '%' . $request->search . '%');
             }
             
-            $jobs = $query->orderBy('created_at', 'desc')
+            $jobs = $query->withCount('applicants')
+                ->orderBy('created_at', 'desc')
                 ->paginate($request->per_page ?? 15);
             
             return ApiResponse::success($jobs, 'Jobs retrieved successfully');
@@ -353,6 +354,10 @@ class RecruitmentController extends Controller
             
             if ($jobId) {
                 $query->where('job_id', $jobId);
+            }
+
+            if ($request->filled('job_id')) {
+                $query->where('job_id', $request->job_id);
             }
             
             if ($request->has('status')) {
@@ -549,6 +554,15 @@ class RecruitmentController extends Controller
                 'rejected' => Applicant::where('status', 'rejected')->count(),
                 'upcoming_interviews' => Interview::where('status', 'scheduled')
                     ->where('scheduled_at', '>', now())
+                    ->count(),
+                'active_applications' => Applicant::whereIn('status', ['pending', 'shortlisted', 'interview'])->count(),
+                'interviews_scheduled' => Interview::where('status', 'scheduled')->count(),
+                'offers_sent' => Applicant::where('status', 'interview')
+                    ->whereHas('interviews', fn ($q) => $q->where('status', 'completed'))
+                    ->count(),
+                'hires_this_month' => Applicant::where('status', 'hired')
+                    ->whereMonth('updated_at', now()->month)
+                    ->whereYear('updated_at', now()->year)
                     ->count(),
             ];
             

@@ -1,0 +1,174 @@
+import api from '@/plugins/axios'
+import { fetchAttendance, fetchAgentEmployees } from '@/services/hrApi'
+
+function unwrapPaginated(payload) {
+  const root = payload?.data
+  if (root?.data && Array.isArray(root.data)) {
+    return {
+      items: root.data,
+      currentPage: root.current_page ?? 1,
+      lastPage: root.last_page ?? 1,
+      total: root.total ?? root.data.length,
+    }
+  }
+  if (Array.isArray(root)) {
+    return { items: root, currentPage: 1, lastPage: 1, total: root.length }
+  }
+  return { items: [], currentPage: 1, lastPage: 1, total: 0 }
+}
+
+export function normalizeAttendanceRow(row) {
+  if (!row) return null
+  const checkIn = row.check_in ?? row.first_checkin ?? null
+  const checkOut = row.check_out ?? row.last_checkout ?? null
+  return {
+    id: row.employee_id ?? row.user_id ?? row.id,
+    employeeId: row.employee_id ?? row.biometric_code ?? row.emp_code,
+    name: row.employee_name ?? row.name ?? 'Unknown',
+    department: row.department ?? '—',
+    email: row.email ?? '',
+    status: (row.status || 'absent').toLowerCase(),
+    checkIn,
+    checkOut,
+    workingHours: calcWorkingHours(checkIn, checkOut),
+    overtimeHours: formatOt(row.overtime_minutes ?? row.ot_minutes),
+    date: row.date ?? row.attendance_date,
+    avatar: row.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(row.employee_name || 'E')}&background=733e87&color=fff`,
+    raw: row,
+  }
+}
+
+export function normalizeLeaveRow(req) {
+  if (!req) return null
+  const user = req.user || {}
+  return {
+    id: req.id,
+    employeeName: user.name || '—',
+    employeeId: user.id,
+    empCode: user.employee_profile?.employee_code || `EMP-${user.id}`,
+    leaveType: req.leave_type?.name || req.leaveType?.name || '—',
+    leaveTypeId: req.leave_type_id,
+    startDate: req.start_date,
+    endDate: req.end_date,
+    duration: req.days ?? '—',
+    status: req.status,
+    statusLabel: formatLeaveStatus(req.status),
+    reason: req.reason || '—',
+    avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=733e87&color=fff`,
+    canApproveParent: req.status === 'pending_parent',
+    canApproveHr: req.status === 'pending_hr',
+    canReject: ['pending_parent', 'pending_hr'].includes(req.status),
+    raw: req,
+  }
+}
+
+export function formatLeaveStatus(status) {
+  const map = {
+    pending_parent: 'Pending Manager',
+    pending_hr: 'Pending HR',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    cancelled: 'Cancelled',
+  }
+  return map[status] || status || '—'
+}
+
+export function calcWorkingHours(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return '—'
+  const start = parseTimeToMinutes(checkIn)
+  const end = parseTimeToMinutes(checkOut)
+  if (start == null || end == null || end <= start) return '—'
+  const mins = end - start
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m ? `${h}h ${m}m` : `${h}h`
+}
+
+function parseTimeToMinutes(value) {
+  if (!value) return null
+  const s = String(value)
+  const match = s.match(/(\d{1,2}):(\d{2})/)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function formatOt(minutes) {
+  if (!minutes) return '—'
+  const n = Number(minutes)
+  if (!Number.isFinite(n) || n <= 0) return '—'
+  const h = Math.floor(n / 60)
+  const m = n % 60
+  return m ? `${h}h ${m}m` : `${h}h`
+}
+
+export function isEarlyDeparture(checkOut) {
+  const mins = parseTimeToMinutes(checkOut)
+  if (mins == null) return false
+  return mins < 17 * 60
+}
+
+export async function fetchAttendanceRecords(params = {}) {
+  const data = await fetchAttendance(params)
+  const payload = data?.data ?? data
+  const summary = payload?.summary ?? {}
+  const rows = (payload?.employees ?? []).map(normalizeAttendanceRow).filter(Boolean)
+  return { summary, rows, date: payload?.date }
+}
+
+export async function fetchLeaveRequests(params = {}) {
+  const response = await api.get('/leaves', { params })
+  const page = unwrapPaginated(response.data)
+  return {
+    ...page,
+    items: page.items.map(normalizeLeaveRow).filter(Boolean),
+  }
+}
+
+export async function fetchLeaveStatistics() {
+  const response = await api.get('/leaves/statistics')
+  return response.data?.data ?? {}
+}
+
+export async function fetchLeaveTypes() {
+  const response = await api.get('/leaves/types')
+  const data = response.data?.data
+  return Array.isArray(data) ? data : []
+}
+
+export async function approveLeaveParent(id) {
+  await api.post(`/leaves/${id}/approve-parent`)
+}
+
+export async function approveLeaveHr(id) {
+  await api.post(`/leaves/${id}/approve-hr`)
+}
+
+export async function rejectLeaveParent(id, reason) {
+  await api.post(`/leaves/${id}/reject-parent`, { rejection_reason: reason })
+}
+
+export async function rejectLeaveHr(id, reason) {
+  await api.post(`/leaves/${id}/reject-hr`, { rejection_reason: reason })
+}
+
+export async function fetchPeriodReport(startDate, endDate) {
+  const response = await api.get('/attendance/period-report', {
+    params: { start_date: startDate, end_date: endDate },
+  })
+  return response.data?.data ?? response.data ?? {}
+}
+
+export { fetchAgentEmployees }
+
+export function exportCsv(filename, rows, columns) {
+  const header = columns.map((c) => c.label).join(',')
+  const body = rows.map((row) =>
+    columns.map((c) => `"${String(c.value(row) ?? '').replace(/"/g, '""')}"`).join(',')
+  ).join('\n')
+  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}

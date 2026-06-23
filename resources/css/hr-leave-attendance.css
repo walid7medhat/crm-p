@@ -1,0 +1,348 @@
+/* Leave & Attendance module — extends emp-mgmt design system */
+
+.la-mgmt__stats {
+  margin-bottom: 12px;
+}
+
+.la-stats-grid--6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+
+.la-view-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+  scrollbar-width: none;
+}
+
+.la-view-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.la-view-tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e8edf3;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.la-view-tab.is-active {
+  background: #faf5ff;
+  border-color: #733e87;
+  color: #733e87;
+}
+
+.la-date-input {
+  min-height: 46px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #0b0736;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.la-calendar {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+}
+
+.la-calendar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.la-calendar__head strong {
+  font-size: 16px;
+  color: #0b0736;
+}
+
+.la-calendar__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.la-calendar__weekdays span {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.la-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.la-calendar__cell {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  position: relative;
+  padding: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.la-calendar__cell:hover {
+  background: #faf5ff;
+  border-color: #d8b4e2;
+}
+
+.la-calendar__cell.is-outside {
+  opacity: 0.35;
+}
+
+.la-calendar__cell.is-today {
+  border-color: #733e87;
+}
+
+.la-calendar__cell.is-selected {
+  background: #733e87;
+  border-color: #733e87;
+  color: #fff;
+}
+
+.la-calendar__cell.is-selected .la-calendar__day {
+  color: #fff;
+}
+
+.la-calendar__day {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0b0736;
+}
+
+.la-calendar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.la-calendar__dot--present {
+  background: #16a34a;
+}
+
+.la-calendar__dot--leave {
+  background: #ea580c;
+}
+
+.la-calendar__legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.la-calendar__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.la-calendar__schedule {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #e8edf3;
+}
+
+.la-calendar__schedule h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #733e87;
+}
+
+.la-calendar__schedule ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.la-calendar__schedule li {
+  font-size: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #eef2f7;
+}
+
+.la-analytics {
+  display: grid;
+  gap: 12px;
+}
+
+.la-analytics__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.la-chart-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+}
+
+.la-chart-card--wide {
+  grid-column: 1 / -1;
+}
+
+.la-chart-card h3 {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0b0736;
+}
+
+.la-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 12px;
+  min-height: 140px;
+  padding-top: 8px;
+}
+
+.la-bar-chart__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.la-bar-chart__bar {
+  width: 100%;
+  max-width: 48px;
+  border-radius: 8px 8px 4px 4px;
+  min-height: 8px;
+  transition: height 0.3s ease;
+}
+
+.la-bar-chart__item span {
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
+.la-bar-chart__item strong {
+  font-size: 14px;
+  color: #0b0736;
+}
+
+.la-dept-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.la-dept-bar {
+  display: grid;
+  grid-template-columns: 100px 1fr 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.la-dept-bar__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.la-dept-bar__track {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.la-dept-bar__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #733e87, #9333ea);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.la-dept-bar__count {
+  font-size: 11px;
+  color: #64748b;
+  text-align: right;
+}
+
+.hr-la-shell {
+  padding: 12px 14px 20px;
+}
+
+.hr-la-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1200px) {
+  .la-stats-grid--6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .la-stats-grid--6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .la-analytics__row {
+    grid-template-columns: 1fr;
+  }
+
+  .la-dept-bar {
+    grid-template-columns: 80px 1fr 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hr-la-shell {
+    padding: 8px 10px 88px;
+  }
+
+  .la-calendar__cell {
+    min-height: 40px;
+  }
+}

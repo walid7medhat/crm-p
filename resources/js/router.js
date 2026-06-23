@@ -99,6 +99,8 @@ import Email from './pages/email/email.vue'
 import StarredEmail from './pages/email/StarredEmail.vue'
 import EmailViewDetails from './pages/email/VeiwDetails.vue'
 import HrDashboard from './pages/hr/index.vue'
+import EmployeeProfilePage from './pages/hr/employees/EmployeeProfilePage.vue'
+import AssetDetailsPage from './pages/hr/assets/AssetDetailsPage.vue'
 import SalesIntelligence from './pages/sales-intelligence/index.vue'
 
 
@@ -155,6 +157,8 @@ const baseRoutes = [
   { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
   { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/hr/employees/:id', component: EmployeeProfilePage, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/hr/assets/:id', component: AssetDetailsPage, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },

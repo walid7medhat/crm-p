@@ -282,6 +282,8 @@ Route::prefix('assets')->middleware(['auth:api'])->group(function () {
     // Assignment
     Route::post('/{id}/assign', [AssetController::class, 'assignAsset']);
     Route::post('/{id}/return', [AssetController::class, 'returnAsset']);
+    Route::post('/{id}/transfer', [AssetController::class, 'transferAsset']);
+    Route::post('/{id}/maintenance', [AssetController::class, 'markMaintenance']);
     Route::get('/{id}/history', [AssetController::class, 'getAssetHistory']);
     
     // Employee Assets
