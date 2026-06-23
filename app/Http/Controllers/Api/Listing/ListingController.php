@@ -3499,12 +3499,19 @@ public function getActivityLog($listingId)
 
     $data = $activities->map(function ($activity) use ($users, $owners, $importantFields, $featureLabels) {
         $props = $activity->properties;
-        $causerName = $activity->causer?->name ?? 'System';
+        $causerName = $activity->causer
+            ? User::resolveDisplayName($activity->causer)
+            : 'System';
 
         $oldAgentId = $props['old']['agent_id'] ?? null;
         $newAgentId = $props['attributes']['agent_id'] ?? null;
-        $oldAgentName = $oldAgentId ? ($users[$oldAgentId]->name ?? 'Unknown') : null;
-        $newAgentName = $newAgentId ? ($users[$newAgentId]->name ?? 'Unknown') : null;
+        $oldAgentName = $oldAgentId
+            ? User::resolveDisplayName($users[$oldAgentId] ?? null)
+            : null;
+
+        $newAgentName = $newAgentId
+            ? User::resolveDisplayName($users[$newAgentId] ?? null)
+            : null;
         $assignmentChanged = $oldAgentId !== null || $newAgentId !== null;
 
         $oldOwnerId = $props['old']['owner_id'] ?? null;
@@ -3581,9 +3588,22 @@ public function getActivityLog($listingId)
                     $oldValue = $oldValue ? number_format($oldValue, 0) : 'N/A';
                     $newValue = $newValue ? number_format($newValue, 0) : 'N/A';
                 } elseif ($key === 'is_active' || $key === 'approved' || $key === 'is_archived') {
-                    $oldValue = $oldValue ? 'Yes' : 'No';
-                    $newValue = $newValue ? 'Yes' : 'No';
-                } elseif ($key === 'number_of_bedrooms') {
+                        // For is_active
+                        if ($key === 'is_active') {
+                            $oldValue = $oldValue ? 'Active' : 'Not Active';
+                            $newValue = $newValue ? 'Active' : 'Not Active';
+                        }
+                        // For approved
+                        elseif ($key === 'approved') {
+                            $oldValue = $oldValue ? 'Approved' : 'Rejected';
+                            $newValue = $newValue ? 'Approved' : 'Rejected';
+                        }
+                        // For is_archived
+                        elseif ($key === 'is_archived') {
+                            $oldValue = $oldValue ? 'Archived' : 'Published';
+                            $newValue = $newValue ? 'Archived' : 'Published';
+                        }
+                    } elseif ($key === 'number_of_bedrooms') {
                     $oldValue = $oldValue == 0 ? 'Studio' : ($oldValue . ' Bedrooms');
                     $newValue = $newValue == 0 ? 'Studio' : ($newValue . ' Bedrooms');
                 }

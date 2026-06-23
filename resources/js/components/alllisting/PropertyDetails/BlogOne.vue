@@ -6605,9 +6605,9 @@ const loadingHistory = ref(false);
 const canViewHistory = computed(() => {
     const user = getCurrentUser();
     if (!user) return false;
-    return user.roles?.includes('super_admin') ||
+    return (user.roles?.includes('super_admin') ||
            user.roles?.includes('admin') ||
-           (user.roles?.includes('manager') && user.is_listing_team);
+           (user.roles?.includes('manager') && user.is_listing_team) ) && property.value?.user_permissions?.can_assign_agent;
 });
 
 const openHistoryModal = async () => {
