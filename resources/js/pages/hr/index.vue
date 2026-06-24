@@ -1472,7 +1472,10 @@
                     :key="doc.value"
                     type="button"
                     class="doc-chip"
-                    :class="{ active: selectedDocumentType === doc.value }"
+                    :class="{
+                      active: selectedDocumentType === doc.value,
+                      'has-file': hasDocumentFile(doc.value),
+                    }"
                     @click="selectedDocumentType = doc.value"
                   >
                     {{ doc.label }}
@@ -1568,7 +1571,8 @@
                 </template>
 
                 <EmployeeDocumentDropzone
-                  v-model="addEmployeeUploadedFile"
+                  :key="selectedDocumentType"
+                  v-model="currentDocumentFile"
                   class="mt-3"
                   @error="showNotification($event, 'error')"
                 />
@@ -1755,7 +1759,8 @@
               <div class="add-field"><label>Attested Certificate *</label><SearchableSelect v-model="sectionEditForm.attestedCertificate" :options="['Yes','No']" placeholder="Not Selected" /></div>
             </div>
             <EmployeeDocumentDropzone
-              v-model="addEmployeeUploadedFile"
+              :key="`section-${selectedDocumentType}`"
+              v-model="currentDocumentFile"
               class="mt-2"
               @error="showNotification($event, 'error')"
             />
@@ -2033,7 +2038,26 @@ const showSectionEditModal = ref(false)
 const editingSection = ref('')
 const sectionEditForm = ref({})
 const selectedDocumentType = ref('emirates_id')
-const addEmployeeUploadedFile = ref(null)
+const addEmployeeUploadedFiles = ref({})
+
+const currentDocumentFile = computed({
+  get: () => addEmployeeUploadedFiles.value[selectedDocumentType.value] ?? null,
+  set: (file) => setDocumentFile(selectedDocumentType.value, file),
+})
+
+function setDocumentFile(docType, file) {
+  const next = { ...addEmployeeUploadedFiles.value }
+  if (!file) {
+    delete next[docType]
+  } else {
+    next[docType] = file
+  }
+  addEmployeeUploadedFiles.value = next
+}
+
+function hasDocumentFile(docType) {
+  return !!addEmployeeUploadedFiles.value[docType]
+}
 const showRequestDocumentModal = ref(false)
 const showDocumentDetailModal = ref(false)
 const showApproveDocumentModal = ref(false)
@@ -4634,10 +4658,32 @@ function handleProfileImageChange(event) {
 
 function resetAddEmployeeForm() {
   addEmployeeForm.value = defaultAddEmployeeForm()
-  addEmployeeUploadedFile.value = null
+  addEmployeeUploadedFiles.value = {}
   addEmployeeProfileFile.value = null
   addEmployeeProfilePreview.value = ''
   selectedDocumentType.value = 'emirates_id'
+}
+
+function appendEmployeeDocumentFields(formData) {
+  formData.append('emirates_id_number', addEmployeeForm.value.emirates_id_number || '')
+  formData.append('documents_expiry_date', addEmployeeForm.value.documents_expiry_date || '')
+  formData.append('labor_card_number', addEmployeeForm.value.labor_card_number || '')
+  formData.append('labor_card_expiry_date', addEmployeeForm.value.labor_card_expiry_date || '')
+  formData.append('passport_number', addEmployeeForm.value.passport_number || '')
+  formData.append('passport_expiry_date', addEmployeeForm.value.passport_expiry_date || '')
+  formData.append('visa_number', addEmployeeForm.value.visa_number || '')
+  formData.append('visa_expiry_date', addEmployeeForm.value.visa_expiry_date || '')
+  formData.append('iloe_expiry_date', addEmployeeForm.value.iloe_expiry_date || '')
+  formData.append('certificate_name', addEmployeeForm.value.certificate_name || '')
+  formData.append('attestation_status', addEmployeeForm.value.attestation_status || '')
+}
+
+function appendEmployeeDocumentFiles(formData) {
+  Object.entries(addEmployeeUploadedFiles.value).forEach(([docType, file]) => {
+    if (!file) return
+    formData.append(`documents.${docType}`, file)
+    formData.append(`documents.${docType}_names.0`, file.name)
+  })
 }
 
 // In your setup script
@@ -4826,8 +4872,10 @@ async function openEditEmployee(row) {
       console.log('📝 Mapped Form Data:', mappedData)
       
       addEmployeeForm.value = mappedData
+      addEmployeeUploadedFiles.value = {}
       addEmployeeProfileFile.value = null
       addEmployeeProfilePreview.value = employeeData.avatar || ''
+      selectedDocumentType.value = 'emirates_id'
     }
     
     showAddEmployeeModal.value = true
@@ -5058,28 +5106,7 @@ async function saveEmployeeForm() {
     formData.append('visa_quota', addEmployeeForm.value.visa_quota || '')
     formData.append('vehicle', addEmployeeForm.value.vehicle || '')
     
-    if (selectedDocumentType.value === 'emirates_id') {
-      formData.append('emirates_id_number', addEmployeeForm.value.emirates_id_number || '')
-      formData.append('documents_expiry_date', addEmployeeForm.value.documents_expiry_date || '')
-    } else if (selectedDocumentType.value === 'labor_card') {
-      formData.append('labor_card_number', addEmployeeForm.value.labor_card_number || '')
-      formData.append('labor_card_expiry_date', addEmployeeForm.value.labor_card_expiry_date || '')
-    } else if (selectedDocumentType.value === 'passport') {
-      formData.append('passport_number', addEmployeeForm.value.passport_number || '')
-      formData.append('passport_expiry_date', addEmployeeForm.value.passport_expiry_date || '')
-    } else if (selectedDocumentType.value === 'visa') {
-      formData.append('visa_number', addEmployeeForm.value.visa_number || '')
-      formData.append('visa_expiry_date', addEmployeeForm.value.visa_expiry_date || '')
-    } else if (selectedDocumentType.value === 'insurance_card') {
-      formData.append('insurance_provider', addEmployeeForm.value.insurance_provider || '')
-      formData.append('insurance_policy_number', addEmployeeForm.value.policy_number || '')
-      formData.append('insurance_expiry_date', addEmployeeForm.value.insurance_expiry_date || '')
-    } else if (selectedDocumentType.value === 'iloe_certificate') {
-      formData.append('iloe_expiry_date', addEmployeeForm.value.iloe_expiry_date || '')
-    } else if (selectedDocumentType.value === 'attested_certificate') {
-      formData.append('certificate_name', addEmployeeForm.value.certificate_name || '')
-      formData.append('attestation_status', addEmployeeForm.value.attestation_status || '')
-    }
+    appendEmployeeDocumentFields(formData)
     
     formData.append('bank_account_holder_name', addEmployeeForm.value.account_holder_name || '')
     formData.append('bank_name', addEmployeeForm.value.bank_name || '')
@@ -5097,15 +5124,8 @@ async function saveEmployeeForm() {
     if (addEmployeeProfileFile.value) {
       formData.append('avatar', addEmployeeProfileFile.value)
     }
-    
-   
-    if (addEmployeeUploadedFile.value) {
-      const docType = selectedDocumentType.value
-      formData.append(`documents.${docType}`, addEmployeeUploadedFile.value)
-      
-      formData.append(`documents.${docType}_names.0`, addEmployeeUploadedFile.value.name)
-    }
-    
+
+    appendEmployeeDocumentFiles(formData)
     
     let result
     if (isEditEmployeeMode.value && editingEmployeeId.value) {
@@ -7619,6 +7639,14 @@ onBeforeUnmount(() => {
   background: #02014f;
   border-color: #02014f;
   color: #fff;
+}
+.doc-chip.has-file:not(.active) {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+.doc-chip.has-file.active {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 .upload-dropzone {
   margin-top: 8px;
