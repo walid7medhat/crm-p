@@ -12,7 +12,9 @@ class CompanyBranchController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:branches-list', ['only' => ['index', 'show']]);
+        $hrRead = 'role_or_permission:super_admin|admin|hr|hr-view|branches-list';
+
+        $this->middleware($hrRead, ['only' => ['index', 'show']]);
         $this->middleware('permission:branches-create', ['only' => ['store']]);
         $this->middleware('permission:branches-edit', ['only' => ['update']]);
         $this->middleware('permission:branches-delete', ['only' => ['destroy']]);

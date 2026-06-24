@@ -74,16 +74,15 @@
       <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="loadEmployees(1)">Try again</button>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!employees.length" class="emp-empty">
+    <!-- Empty (only when there is truly no data and no active search/filters) -->
+    <div v-else-if="!employees.length && !hasActiveFilters && !searching" class="emp-empty">
       <div class="emp-empty__icon"><iconify-icon icon="lucide:users" /></div>
       <h6>No employees found</h6>
-      <p>{{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first employee to get started.' }}</p>
-      <button v-if="hasActiveFilters" type="button" class="emp-mgmt__toolbar-btn" @click="clearFilters">Clear filters</button>
-      <button v-else type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="$emit('add')">Add Employee</button>
+      <p>Add your first employee to get started.</p>
+      <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="$emit('add')">Add Employee</button>
     </div>
 
-    <!-- Table -->
+    <!-- Table (keep visible during search so the input stays available) -->
     <EmployeesTable
       v-else
       :employees="employees"
@@ -91,12 +90,15 @@
       v-model:per-page="tablePerPage"
       v-model:selected-ids="selectedIds"
       v-model:search-query="searchQuery"
+      :searching="searching"
+      :has-active-filters="hasActiveFilters"
       :total="total"
       :total-pages="lastPage"
       :start-entry="startEntry"
       :end-entry="endEntry"
       :pagination-items="paginationItems"
       @export="exportEmployees"
+      @clear-filters="clearFilters"
       @view="onView"
       @edit="onEdit"
       @assets="onAssets"
@@ -167,6 +169,7 @@ const tablePerPage = ref(10)
 const {
   employees,
   loading,
+  searching,
   error,
   searchQuery,
   filters,

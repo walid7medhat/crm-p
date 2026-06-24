@@ -1,18 +1,20 @@
 <template>
-  <div class="emp-directory-table">
+  <div class="emp-directory-table" :class="{ 'is-searching': searching }">
     <div class="emp-directory-table__head">
       <h6 class="emp-directory-table__title">Manage Employees</h6>
       <div class="emp-directory-table__head-actions">
-        <div class="emp-directory-table__search">
+        <label class="emp-directory-table__search">
           <input
-            :value="searchQuery"
+            v-model="draftSearch"
             type="search"
-            placeholder="+ Filter and search Employees"
+            placeholder="Filter and search employees"
             autocomplete="off"
-            @input="$emit('update:searchQuery', $event.target.value)"
+            @keydown.enter.prevent="commitSearch"
           />
-          <iconify-icon icon="lucide:search" />
-        </div>
+          <span class="emp-directory-table__search-icon" aria-hidden="true">
+            <iconify-icon icon="lucide:search" />
+          </span>
+        </label>
         <button type="button" class="emp-directory-table__export" @click="$emit('export')">
           <iconify-icon icon="lucide:file-spreadsheet" />
           <span>Export Excel</span>
@@ -20,86 +22,80 @@
       </div>
     </div>
 
-    <div class="emp-directory-table__frame">
-      <div class="emp-directory-table__scroll" ref="scrollRef">
-        <table class="emp-directory-table__data">
-          <thead>
-            <tr>
-              <th class="col-check">
-                <input
-                  type="checkbox"
-                  :checked="allSelected"
-                  :indeterminate.prop="someSelected && !allSelected"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th class="col-id">ID</th>
-              <th class="col-name">Name</th>
-              <th class="col-designation">Designation</th>
-              <th class="col-email">Email</th>
-              <th class="col-department">Department</th>
-              <th class="col-phone">Phone</th>
-              <th class="col-branch">Branch</th>
-              <th class="col-manager">Manager</th>
-              <th class="col-joined">Joining Date</th>
-              <th class="col-status">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="employee in employees" :key="employee.id">
-              <td class="col-check">
-                <input
-                  type="checkbox"
-                  :checked="selectedIds.includes(employee.id)"
-                  @change="toggleRow(employee.id)"
-                />
-              </td>
-              <td class="col-id">#{{ employee.employeeCode }}</td>
-              <td class="col-name">
-                <div class="emp-directory-table__person">
-                  <img :src="employee.avatar" :alt="employee.name" loading="lazy" />
-                  <span>{{ employee.name }}</span>
-                </div>
-              </td>
-              <td class="col-designation">{{ employee.designation }}</td>
-              <td class="col-email">{{ employee.email }}</td>
-              <td class="col-department">{{ employee.department }}</td>
-              <td class="col-phone">{{ employee.phone }}</td>
-              <td class="col-branch">{{ employee.branch }}</td>
-              <td class="col-manager">{{ employee.manager }}</td>
-              <td class="col-joined">{{ formatDate(employee.joiningDate) }}</td>
-              <td class="col-status">
-                <span class="emp-directory-table__status" :class="statusClass(employee)">
-                  {{ statusLabel(employee) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="emp-directory-table__actions">
-        <table class="emp-directory-table__action-grid">
-          <thead>
-            <tr>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="employee in employees" :key="`action-${employee.id}`">
-              <td>
-                <button
-                  type="button"
-                  class="emp-directory-table__menu-btn"
-                  @click.stop="openMenu(employee, $event)"
-                >
-                  <iconify-icon icon="lucide:more-vertical" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="emp-directory-table__wrap">
+      <table class="emp-directory-table__grid">
+        <thead>
+          <tr>
+            <th class="col-check">
+              <input
+                type="checkbox"
+                :checked="allSelected"
+                :indeterminate.prop="someSelected && !allSelected"
+                @change="toggleSelectAll"
+              />
+            </th>
+            <th class="col-id">ID</th>
+            <th class="col-name">Name</th>
+            <th class="col-designation">Designation</th>
+            <th class="col-email">Email</th>
+            <th class="col-department">Department</th>
+            <th class="col-phone">Phone</th>
+            <th class="col-branch">Branch</th>
+            <th class="col-manager">Manager</th>
+            <th class="col-joined">Joining Date</th>
+            <th class="col-status">Status</th>
+            <th class="col-action">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="!employees.length">
+            <td colspan="12" class="emp-directory-table__empty">
+              <iconify-icon icon="lucide:search-x" />
+              <p>{{ hasActiveFilters ? 'No employees match your search or filters.' : 'No employees to display.' }}</p>
+              <button v-if="hasActiveFilters" type="button" class="emp-directory-table__clear-btn" @click="$emit('clear-filters')">
+                Clear search &amp; filters
+              </button>
+            </td>
+          </tr>
+          <tr v-for="employee in employees" :key="employee.id">
+            <td class="col-check">
+              <input
+                type="checkbox"
+                :checked="selectedIds.includes(employee.id)"
+                @change="toggleRow(employee.id)"
+              />
+            </td>
+            <td class="col-id">#{{ employee.employeeCode }}</td>
+            <td class="col-name">
+              <div class="emp-directory-table__person">
+                <img :src="employee.avatar" :alt="employee.name" loading="lazy" />
+                <span>{{ employee.name }}</span>
+              </div>
+            </td>
+            <td class="col-designation">{{ employee.designation }}</td>
+            <td class="col-email">{{ employee.email }}</td>
+            <td class="col-department">{{ employee.department }}</td>
+            <td class="col-phone">{{ employee.phone }}</td>
+            <td class="col-branch">{{ employee.branch }}</td>
+            <td class="col-manager">{{ employee.manager }}</td>
+            <td class="col-joined">{{ formatDate(employee.joiningDate) }}</td>
+            <td class="col-status">
+              <span class="emp-directory-table__status" :class="statusClass(employee)">
+                {{ statusLabel(employee) }}
+              </span>
+            </td>
+            <td class="col-action">
+              <button
+                type="button"
+                class="emp-directory-table__menu-btn"
+                @click.stop="openMenu(employee, $event)"
+              >
+                <iconify-icon icon="lucide:more-vertical" />
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="emp-directory-table__footer">
@@ -172,7 +168,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   employees: { type: Array, default: () => [] },
@@ -185,6 +181,8 @@ const props = defineProps({
   paginationItems: { type: Array, default: () => [] },
   selectedIds: { type: Array, default: () => [] },
   searchQuery: { type: String, default: '' },
+  searching: { type: Boolean, default: false },
+  hasActiveFilters: { type: Boolean, default: false },
 })
 
 const emit = defineEmits([
@@ -192,6 +190,7 @@ const emit = defineEmits([
   'update:perPage',
   'update:selectedIds',
   'update:searchQuery',
+  'clear-filters',
   'export',
   'view',
   'edit',
@@ -202,15 +201,35 @@ const emit = defineEmits([
 ])
 
 const perPageOptions = [10, 25, 50, 100]
-const scrollRef = ref(null)
+const draftSearch = ref(props.searchQuery)
 const openMenuId = ref(null)
 const menuEmployee = ref(null)
 const menuStyle = ref({})
+let searchTimer = null
 
 const allSelected = computed(
   () => props.employees.length > 0 && props.employees.every((e) => props.selectedIds.includes(e.id))
 )
 const someSelected = computed(() => props.selectedIds.length > 0)
+
+watch(
+  () => props.searchQuery,
+  (value) => {
+    if (value !== draftSearch.value) draftSearch.value = value
+  }
+)
+
+watch(draftSearch, (value) => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    if (value !== props.searchQuery) emit('update:searchQuery', value)
+  }, 500)
+})
+
+function commitSearch() {
+  clearTimeout(searchTimer)
+  if (draftSearch.value !== props.searchQuery) emit('update:searchQuery', draftSearch.value)
+}
 
 function formatDate(value) {
   if (!value) return '—'
@@ -279,5 +298,8 @@ function onDocClick() {
 }
 
 onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  clearTimeout(searchTimer)
+})
 </script>

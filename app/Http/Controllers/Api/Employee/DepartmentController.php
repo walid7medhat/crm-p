@@ -12,7 +12,9 @@ class DepartmentController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:departments-list', ['only' => ['index', 'show']]);
+        $hrRead = 'role_or_permission:super_admin|admin|hr|hr-view|departments-list';
+
+        $this->middleware($hrRead, ['only' => ['index', 'show']]);
         $this->middleware('permission:departments-create', ['only' => ['store']]);
         $this->middleware('permission:departments-edit', ['only' => ['update']]);
         $this->middleware('permission:departments-delete', ['only' => ['destroy']]);

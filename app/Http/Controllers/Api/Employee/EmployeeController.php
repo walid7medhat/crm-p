@@ -22,9 +22,11 @@ class EmployeeController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:employees-list', ['only' => ['index', 'show']]);
+        $hrRead = 'role_or_permission:super_admin|admin|hr|hr-view|employees-list';
+
+        $this->middleware($hrRead, ['only' => ['index', 'show', 'getStatistics', 'getDocuments']]);
         $this->middleware('permission:employees-create', ['only' => ['store']]);
-        $this->middleware('permission:employees-edit', ['only' => ['update']]);
+        $this->middleware('permission:employees-edit', ['only' => ['update', 'deleteDocument']]);
         $this->middleware('permission:employees-delete', ['only' => ['destroy']]);
     }
 

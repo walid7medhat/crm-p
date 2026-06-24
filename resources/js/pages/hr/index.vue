@@ -1315,17 +1315,18 @@
             <div class="add-employee-profile-grid">
               <div class="profile-photo-block">
                 <div class="profile-photo-wrap">
-                  <div class="profile-photo-avatar">
+                  <button type="button" class="profile-photo-avatar" @click="triggerProfileImageUpload">
                     <img v-if="addEmployeeProfilePreview" :src="addEmployeeProfilePreview" alt="Profile preview" />
                     <iconify-icon v-else icon="lucide:user-round" />
-                  </div>
+                  </button>
                   <button type="button" class="profile-photo-edit-btn" @click="triggerProfileImageUpload">
                     <iconify-icon icon="lucide:camera" />
                   </button>
                 </div>
-                <input ref="profileImageInputRef" type="file" class="d-none" accept="image/*" @change="handleProfileImageChange" />
                 <span>Profile Photo</span>
+                <small class="profile-photo-hint">Click photo to upload</small>
               </div>
+              <input ref="profileImageInputRef" type="file" class="d-none" accept="image/*" @change="handleProfileImageChange" />
 
               <div class="profile-form-grid">
                 <div class="add-field">
@@ -1566,27 +1567,11 @@
                   </div>
                 </template>
 
-                <!-- 🔥 رفع الملف (يظهر دائماً) -->
-                <div class="upload-dropzone mt-3">
-                  <div>
-                    <strong>Drag and drop your files</strong>
-                    <small>JPEG, PNG and PDF formats, up to 50MB</small>
-                  </div>
-                  <label class="select-file-btn">
-                    Select File
-                    <input type="file" class="d-none" @change="handleAddEmployeeFileChange" />
-                  </label>
-                </div>
-                <div v-if="addEmployeeUploadedFile" class="uploaded-doc-card">
-                  <iconify-icon icon="lucide:file-text" />
-                  <div>
-                    <p>{{ addEmployeeUploadedFile.name }}</p>
-                    <small>{{ `${Math.max(1, Math.round(addEmployeeUploadedFile.size / 1024))}KB` }}</small>
-                  </div>
-                  <button type="button" @click="removeAddEmployeeFile">
-                    <iconify-icon icon="lucide:x-circle" />
-                  </button>
-                </div>
+                <EmployeeDocumentDropzone
+                  v-model="addEmployeeUploadedFile"
+                  class="mt-3"
+                  @error="showNotification($event, 'error')"
+                />
               </section>
 
           <section class="add-employee-section">
@@ -1769,16 +1754,11 @@
               <div class="add-field"><label>Emirates ID Number *</label><input v-model="sectionEditForm.emiratesId" type="text" /></div>
               <div class="add-field"><label>Attested Certificate *</label><SearchableSelect v-model="sectionEditForm.attestedCertificate" :options="['Yes','No']" placeholder="Not Selected" /></div>
             </div>
-            <div class="upload-dropzone mt-2">
-              <div>
-                <strong>Drag and drop your files</strong>
-                <small>JPEG, PNG and PDF formats, up to 50MB</small>
-              </div>
-              <label class="select-file-btn">
-                Select File
-                <input type="file" class="d-none" @change="handleAddEmployeeFileChange" />
-              </label>
-            </div>
+            <EmployeeDocumentDropzone
+              v-model="addEmployeeUploadedFile"
+              class="mt-2"
+              @error="showNotification($event, 'error')"
+            />
           </template>
           <template v-else>
             <div class="add-grid-two">
@@ -1822,6 +1802,7 @@ import StatsCards from '@/components/hr/overview/StatsCards.vue'
 import EmployeesTable from '@/components/hr/overview/EmployeesTable.vue'
 import EmployeeDetails from '@/components/hr/overview/EmployeeDetails.vue'
 import EmployeesManagement from '@/pages/hr/employees/EmployeesManagement.vue'
+import EmployeeDocumentDropzone from '@/components/hr/employees/EmployeeDocumentDropzone.vue'
 import LeaveAttendanceManagement from '@/pages/hr/leave-attendance/LeaveAttendanceManagement.vue'
 import CareerRecruitmentManagement from '@/pages/hr/recruitment/CareerRecruitmentManagement.vue'
 import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
@@ -4640,12 +4621,6 @@ function resetEmployeeFilters() {
   }
 }
 
-function handleAddEmployeeFileChange(event) {
-  const file = event?.target?.files?.[0]
-  if (!file) return
-  addEmployeeUploadedFile.value = file
-}
-
 function triggerProfileImageUpload() {
   profileImageInputRef.value?.click()
 }
@@ -4657,16 +4632,12 @@ function handleProfileImageChange(event) {
   addEmployeeProfilePreview.value = URL.createObjectURL(file)
 }
 
-function removeAddEmployeeFile() {
-  addEmployeeUploadedFile.value = null
-}
-
 function resetAddEmployeeForm() {
   addEmployeeForm.value = defaultAddEmployeeForm()
   addEmployeeUploadedFile.value = null
   addEmployeeProfileFile.value = null
   addEmployeeProfilePreview.value = ''
-  selectedDocumentType.value = 'Emirates ID'
+  selectedDocumentType.value = 'emirates_id'
 }
 
 // In your setup script
@@ -4855,6 +4826,7 @@ async function openEditEmployee(row) {
       console.log('📝 Mapped Form Data:', mappedData)
       
       addEmployeeForm.value = mappedData
+      addEmployeeProfileFile.value = null
       addEmployeeProfilePreview.value = employeeData.avatar || ''
     }
     
@@ -5086,25 +5058,25 @@ async function saveEmployeeForm() {
     formData.append('visa_quota', addEmployeeForm.value.visa_quota || '')
     formData.append('vehicle', addEmployeeForm.value.vehicle || '')
     
-    if (selectedDocumentType.value === 'Emirates ID') {
+    if (selectedDocumentType.value === 'emirates_id') {
       formData.append('emirates_id_number', addEmployeeForm.value.emirates_id_number || '')
       formData.append('documents_expiry_date', addEmployeeForm.value.documents_expiry_date || '')
-    } else if (selectedDocumentType.value === 'Labor Card') {
+    } else if (selectedDocumentType.value === 'labor_card') {
       formData.append('labor_card_number', addEmployeeForm.value.labor_card_number || '')
       formData.append('labor_card_expiry_date', addEmployeeForm.value.labor_card_expiry_date || '')
-    } else if (selectedDocumentType.value === 'Passport') {
+    } else if (selectedDocumentType.value === 'passport') {
       formData.append('passport_number', addEmployeeForm.value.passport_number || '')
       formData.append('passport_expiry_date', addEmployeeForm.value.passport_expiry_date || '')
-    } else if (selectedDocumentType.value === 'Visa') {
+    } else if (selectedDocumentType.value === 'visa') {
       formData.append('visa_number', addEmployeeForm.value.visa_number || '')
       formData.append('visa_expiry_date', addEmployeeForm.value.visa_expiry_date || '')
-    } else if (selectedDocumentType.value === 'Insurance Card') {
+    } else if (selectedDocumentType.value === 'insurance_card') {
       formData.append('insurance_provider', addEmployeeForm.value.insurance_provider || '')
       formData.append('insurance_policy_number', addEmployeeForm.value.policy_number || '')
       formData.append('insurance_expiry_date', addEmployeeForm.value.insurance_expiry_date || '')
-    } else if (selectedDocumentType.value === 'ILOE Certificate') {
+    } else if (selectedDocumentType.value === 'iloe_certificate') {
       formData.append('iloe_expiry_date', addEmployeeForm.value.iloe_expiry_date || '')
-    } else if (selectedDocumentType.value === 'Attested Certificates') {
+    } else if (selectedDocumentType.value === 'attested_certificate') {
       formData.append('certificate_name', addEmployeeForm.value.certificate_name || '')
       formData.append('attestation_status', addEmployeeForm.value.attestation_status || '')
     }
@@ -5250,6 +5222,12 @@ onMounted(async () => {
   syncMobileViewport()
   window.addEventListener('resize', syncMobileViewport)
   document.addEventListener('click', onDocumentClick)
+
+  const editId = route.query.edit
+  if (editId) {
+    activeTab.value = 'Employees'
+    await openEditEmployee({ id: editId })
+  }
 })
 onBeforeUnmount(() => {
   if (attendanceSearchBlurTimer) clearTimeout(attendanceSearchBlurTimer)
@@ -7513,6 +7491,13 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-size: 44px;
   overflow: hidden;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.profile-photo-hint {
+  font-size: 10px;
+  color: #94a3b8;
 }
 .profile-photo-avatar img {
   width: 100%;
@@ -7643,6 +7628,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
 }
 .upload-dropzone strong {
   display: block;

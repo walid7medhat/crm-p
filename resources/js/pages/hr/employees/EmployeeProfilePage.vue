@@ -1,121 +1,128 @@
 <template>
   <div class="dashboard-main-body hr-screen emp-profile-page">
     <div class="emp-profile">
-      <button type="button" class="emp-mgmt__toolbar-btn" style="margin-bottom:12px;" @click="goBack">
+      <button type="button" class="emp-profile-page__back" @click="goBack">
         <iconify-icon icon="lucide:arrow-left" />
         <span>Back to employees</span>
       </button>
 
-      <div v-if="loading" class="emp-skeleton" style="min-height:120px;margin-bottom:16px;" />
+      <div v-if="loading" class="emp-profile-page__loading">
+        <div class="emp-skeleton" style="min-height:520px;" />
+      </div>
+
       <div v-else-if="error" class="emp-error">
         <h6>{{ error }}</h6>
         <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="load">Retry</button>
       </div>
 
-      <template v-else-if="employee">
-        <header class="emp-profile__hero">
-          <img :src="employee.avatar" :alt="employee.name" class="emp-profile__hero-avatar" />
-          <div>
-            <h6>{{ employee.name }}</h6>
-            <p>{{ employee.employeeCode }} · {{ employee.designation }} · {{ employee.department }}</p>
-            <span class="emp-card__badge" :class="badgeClass" style="margin-top:8px;">{{ statusLabel }}</span>
+      <div v-else-if="employee" class="emp-profile-page__layout">
+        <aside class="emp-profile-page__side">
+          <div class="emp-profile-page__side-head">
+            <img :src="employee.avatar" :alt="employee.name" class="emp-profile-page__avatar" />
+            <p class="emp-profile-page__name">{{ employee.name }}</p>
+            <p class="emp-profile-page__meta">{{ employee.employeeCode }}</p>
+            <p class="emp-profile-page__role">{{ employee.designation }} · {{ employee.department }}</p>
+            <span class="emp-card__badge" :class="badgeClass">{{ statusLabel }}</span>
           </div>
-        </header>
 
-        <div class="emp-profile__sections">
-          <section class="emp-profile__section">
-            <h6>Personal information</h6>
-            <div class="emp-profile__grid">
-              <div class="emp-profile__field"><label>Full name</label><span>{{ employee.name }}</span></div>
-              <div class="emp-profile__field"><label>Nationality</label><span>{{ employee.nationality }}</span></div>
-              <div class="emp-profile__field"><label>Employee ID</label><span>{{ employee.employeeCode }}</span></div>
-              <div class="emp-profile__field"><label>Role</label><span>{{ employee.role }}</span></div>
-            </div>
-          </section>
+          <div class="emp-profile-page__side-list">
+            <p><span>Work email</span><strong>{{ employee.email }}</strong></p>
+            <p><span>Phone</span><strong>{{ employee.phone }}</strong></p>
+            <p><span>Personal phone</span><strong>{{ employee.personalPhone }}</strong></p>
+            <p><span>Manager</span><strong>{{ employee.manager }}</strong></p>
+            <p><span>Branch</span><strong>{{ employee.branch }}</strong></p>
+            <p><span>Joining date</span><strong>{{ formatDate(employee.joiningDate) }}</strong></p>
+          </div>
 
-          <section class="emp-profile__section">
-            <h6>Contact information</h6>
-            <div class="emp-profile__grid">
-              <div class="emp-profile__field"><label>Work email</label><span>{{ employee.email }}</span></div>
-              <div class="emp-profile__field"><label>Phone</label><span>{{ employee.phone }}</span></div>
-              <div class="emp-profile__field"><label>Personal phone</label><span>{{ employee.personalPhone }}</span></div>
-              <div class="emp-profile__field"><label>Manager</label><span>{{ employee.manager }}</span></div>
-            </div>
-          </section>
+          <div class="emp-profile-page__side-actions">
+            <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="editEmployee">
+              <iconify-icon icon="lucide:pencil" /> Edit employee
+            </button>
+            <button type="button" class="emp-mgmt__toolbar-btn" @click="goAttendance">
+              <iconify-icon icon="lucide:clock" /> Attendance
+            </button>
+          </div>
+        </aside>
 
-          <section class="emp-profile__section">
-            <h6>Employment details</h6>
-            <div class="emp-profile__grid">
-              <div class="emp-profile__field"><label>Department</label><span>{{ employee.department }}</span></div>
-              <div class="emp-profile__field"><label>Position</label><span>{{ employee.designation }}</span></div>
-              <div class="emp-profile__field"><label>Branch</label><span>{{ employee.branch }}</span></div>
-              <div class="emp-profile__field"><label>Joining date</label><span>{{ formatDate(employee.joiningDate) }}</span></div>
-              <div class="emp-profile__field"><label>Employment type</label><span>{{ employee.salaryType || '—' }}</span></div>
-              <div class="emp-profile__field"><label>Status</label><span>{{ statusLabel }}</span></div>
-            </div>
-          </section>
-
-          <section v-if="activeTab === 'leave' || !activeTab" class="emp-profile__section">
-            <h6>Leave summary</h6>
-            <div v-if="leaveLoading" class="emp-skeleton" style="min-height:60px;" />
-            <div v-else-if="!leaveBalance.length" class="emp-empty" style="padding:20px;">
-              <p style="margin:0;color:#64748b;">No leave balance data</p>
-            </div>
-            <div v-else class="emp-profile__grid">
-              <div v-for="bal in leaveBalance" :key="bal.id" class="emp-profile__field">
-                <label>{{ bal.leave_type?.name || 'Leave' }}</label>
-                <span>{{ bal.remaining_days ?? bal.balance ?? 0 }} days left</span>
+        <main class="emp-profile-page__main">
+          <div class="emp-profile-page__grid">
+            <section class="emp-profile-page__card">
+              <h6>Personal information</h6>
+              <div class="emp-profile-page__fields">
+                <div class="emp-profile-page__field"><label>Full name</label><span>{{ employee.name }}</span></div>
+                <div class="emp-profile-page__field"><label>Nationality</label><span>{{ employee.nationality }}</span></div>
+                <div class="emp-profile-page__field"><label>Employee ID</label><span>{{ employee.employeeCode }}</span></div>
+                <div class="emp-profile-page__field"><label>Role</label><span>{{ employee.role }}</span></div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section v-if="activeTab === 'assets' || !activeTab" class="emp-profile__section">
-            <h6>Assigned assets</h6>
-            <div v-if="assetsLoading" class="emp-skeleton" style="min-height:60px;" />
-            <div v-else-if="!assets.length" class="emp-empty" style="padding:20px;">
-              <p style="margin:0;color:#64748b;">No assets assigned</p>
-            </div>
-            <ul v-else style="margin:0;padding:0;list-style:none;display:grid;gap:8px;">
-              <li
-                v-for="asset in assets"
-                :key="asset.id"
-                style="padding:10px 12px;border:1px solid #e8edf3;border-radius:10px;font-size:13px;"
-              >
-                <strong>{{ asset.name || asset.asset_name }}</strong>
-                <span style="color:#64748b;display:block;font-size:12px;">{{ asset.asset_type?.name || asset.type }}</span>
-              </li>
-            </ul>
-          </section>
-
-          <section class="emp-profile__section">
-            <h6>Documents</h6>
-            <div v-if="documentGroups.length" class="emp-profile__grid">
-              <div v-for="group in documentGroups" :key="group.type" class="emp-profile__field">
-                <label>{{ formatDocType(group.type) }}</label>
-                <span>{{ group.count }} file(s)</span>
+            <section class="emp-profile-page__card">
+              <h6>Contact information</h6>
+              <div class="emp-profile-page__fields">
+                <div class="emp-profile-page__field"><label>Work email</label><span>{{ employee.email }}</span></div>
+                <div class="emp-profile-page__field"><label>Phone</label><span>{{ employee.phone }}</span></div>
+                <div class="emp-profile-page__field"><label>Personal phone</label><span>{{ employee.personalPhone }}</span></div>
+                <div class="emp-profile-page__field"><label>Manager</label><span>{{ employee.manager }}</span></div>
               </div>
-            </div>
-            <p v-else style="margin:0;color:#64748b;font-size:13px;">No documents uploaded</p>
-          </section>
+            </section>
 
-          <section class="emp-profile__section">
-            <h6>Activity timeline</h6>
-            <p style="margin:0;color:#64748b;font-size:13px;">
-              Joined {{ formatDate(employee.joiningDate) }}
-              <span v-if="employee.raw?.updated_at"> · Last updated {{ formatDateTime(employee.raw.updated_at) }}</span>
-            </p>
-          </section>
-        </div>
+            <section class="emp-profile-page__card">
+              <h6>Employment details</h6>
+              <div class="emp-profile-page__fields">
+                <div class="emp-profile-page__field"><label>Department</label><span>{{ employee.department }}</span></div>
+                <div class="emp-profile-page__field"><label>Position</label><span>{{ employee.designation }}</span></div>
+                <div class="emp-profile-page__field"><label>Branch</label><span>{{ employee.branch }}</span></div>
+                <div class="emp-profile-page__field"><label>Joining date</label><span>{{ formatDate(employee.joiningDate) }}</span></div>
+                <div class="emp-profile-page__field"><label>Employment type</label><span>{{ employee.salaryType || '—' }}</span></div>
+                <div class="emp-profile-page__field"><label>Status</label><span>{{ statusLabel }}</span></div>
+              </div>
+            </section>
 
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
-          <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="editEmployee">
-            <iconify-icon icon="lucide:pencil" /> Edit employee
-          </button>
-          <button type="button" class="emp-mgmt__toolbar-btn" @click="goAttendance">
-            <iconify-icon icon="lucide:clock" /> Attendance
-          </button>
-        </div>
-      </template>
+            <section v-if="activeTab === 'leave' || !activeTab" class="emp-profile-page__card">
+              <h6>Leave summary</h6>
+              <div v-if="leaveLoading" class="emp-skeleton" style="min-height:60px;" />
+              <div v-else-if="!leaveBalance.length" class="emp-profile-page__empty">No leave balance data</div>
+              <div v-else class="emp-profile-page__fields">
+                <div v-for="bal in leaveBalance" :key="bal.id" class="emp-profile-page__field">
+                  <label>{{ bal.leave_type?.name || 'Leave' }}</label>
+                  <span>{{ bal.remaining_days ?? bal.balance ?? 0 }} days left</span>
+                </div>
+              </div>
+            </section>
+
+            <section v-if="activeTab === 'assets' || !activeTab" class="emp-profile-page__card">
+              <h6>Assigned assets</h6>
+              <div v-if="assetsLoading" class="emp-skeleton" style="min-height:60px;" />
+              <div v-else-if="!assets.length" class="emp-profile-page__empty">No assets assigned</div>
+              <ul v-else class="emp-profile-page__asset-list">
+                <li v-for="asset in assets" :key="asset.id">
+                  <strong>{{ asset.name || asset.asset_name }}</strong>
+                  <span>{{ asset.asset_type?.name || asset.type }}</span>
+                </li>
+              </ul>
+            </section>
+
+            <section class="emp-profile-page__card">
+              <h6>Documents</h6>
+              <div v-if="documentGroups.length" class="emp-profile-page__fields">
+                <div v-for="group in documentGroups" :key="group.type" class="emp-profile-page__field">
+                  <label>{{ formatDocType(group.type) }}</label>
+                  <span>{{ group.count }} file(s)</span>
+                </div>
+              </div>
+              <p v-else class="emp-profile-page__empty">No documents uploaded</p>
+            </section>
+
+            <section class="emp-profile-page__card emp-profile-page__card--wide">
+              <h6>Activity timeline</h6>
+              <p class="emp-profile-page__timeline">
+                Joined {{ formatDate(employee.joiningDate) }}
+                <span v-if="employee.raw?.updated_at"> · Last updated {{ formatDateTime(employee.raw.updated_at) }}</span>
+              </p>
+            </section>
+          </div>
+        </main>
+      </div>
     </div>
   </div>
 </template>
@@ -225,10 +232,4 @@ watch(() => route.params.id, load)
 
 <style>
 @import '../../../../css/hr-employees.css';
-
-.emp-profile-page {
-  padding: 16px;
-  max-width: 960px;
-  margin: 0 auto;
-}
 </style>

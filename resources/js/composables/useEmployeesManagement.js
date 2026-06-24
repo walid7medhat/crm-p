@@ -25,6 +25,7 @@ export function useEmployeesManagement() {
   const employees = ref([])
   const statistics = ref(null)
   const loading = ref(false)
+  const searching = ref(false)
   const loadingMore = ref(false)
   const error = ref('')
   const searchQuery = ref('')
@@ -135,8 +136,13 @@ export function useEmployeesManagement() {
     }
   }
 
-  async function loadEmployees(page = currentPage.value) {
-    loading.value = true
+  async function loadEmployees(page = currentPage.value, options = {}) {
+    const { silent = false } = options
+    if (silent) {
+      searching.value = true
+    } else {
+      loading.value = true
+    }
     error.value = ''
 
     try {
@@ -147,9 +153,10 @@ export function useEmployeesManagement() {
       total.value = result.total
     } catch (e) {
       error.value = e?.response?.data?.message || e?.message || 'Failed to load employees'
-      employees.value = []
+      if (!silent) employees.value = []
     } finally {
       loading.value = false
+      searching.value = false
       loadingMore.value = false
     }
   }
@@ -191,7 +198,10 @@ export function useEmployeesManagement() {
 
   watch(searchQuery, () => {
     clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => loadEmployees(1), 300)
+    searchTimer = setTimeout(() => {
+      currentPage.value = 1
+      loadEmployees(1, { silent: employees.value.length > 0 })
+    }, 500)
   })
 
   onMounted(async () => {
@@ -202,6 +212,7 @@ export function useEmployeesManagement() {
     employees,
     statistics,
     loading,
+    searching,
     loadingMore,
     error,
     searchQuery,
