@@ -1820,7 +1820,8 @@ import {
   fetchDepartments,
   fetchDesignations,
   fetchBranches,
-  fetchManagers,fetchEmployee
+  fetchManagers,fetchEmployee,fetchLeaveTypes,    
+  fetchAssetTypes
 } from '@/services/employeesApi'
 const {
   loading,
@@ -1855,6 +1856,30 @@ const hrDebugUi = computed(() => {
   void route.fullPath
   return hrPipelineDebugEnabled()
 })
+
+const leaveTypesData = ref([])
+const loadLeaveTypes = async () => {
+  try {
+    const result = await fetchLeaveTypes()
+    leaveTypesData.value = Array.isArray(result) ? result : []
+    console.log('✅ Leave types loaded:', leaveTypesData.value.length)
+  } catch (error) {
+    console.error('❌ Failed to load leave types:', error)
+    leaveTypesData.value = []
+  }
+}
+
+const assetTypesData = ref([])
+const loadAssetTypes = async () => {
+  try {
+    const result = await fetchAssetTypes()
+    assetTypesData.value = Array.isArray(result) ? result : []
+    console.log('✅ Asset types loaded:', assetTypesData.value.length)
+  } catch (error) {
+    console.error('❌ Failed to load asset types:', error)
+    assetTypesData.value = []
+  }
+}
 
 // ========== EMPLOYEES DATA FROM API ==========
 const employeesDirectory = ref([])
@@ -2142,7 +2167,22 @@ const defaultAssetSearchFilters = () => ({
 })
 
 const assetSearchFilters = ref(defaultAssetSearchFilters())
-const assetTypeOptions = ['Laptop', 'Phone', 'Printer', 'SIM', 'Charger', 'DeskTop']
+const assetTypeOptions = computed(() => {
+  if (assetTypesData.value.length > 0) {
+    return assetTypesData.value.map(type => ({
+      id: type.id,
+      name: type.name || type.label || type
+    }))
+  }
+  return [
+    { id: 'laptop', name: 'Laptop' },
+    { id: 'phone', name: 'Phone' },
+    { id: 'printer', name: 'Printer' },
+    { id: 'sim', name: 'SIM' },
+    { id: 'charger', name: 'Charger' },
+    { id: 'desktop', name: 'DeskTop' },
+  ]
+})
 const assetStatusOptions = ['Assigned', 'Not Assigned', 'Working', 'In Repair', 'Used', 'New']
 const assetConditionOptions = ['New', 'Used', 'Working']
 const assetUserOptions = computed(() => Array.from(new Set(assetsRows.value.map((row) => row.userName))).filter(Boolean))
@@ -2462,22 +2502,58 @@ const employeeDocumentTypes = [
   { label: 'Attested Certificates', value: 'attested_certificate' },
 ]
 const statusOptions = ['Active', 'In Active', 'Blocked']
-const leaveTypeOptions = [
-  'Annual Leave (Paid Leave)',
-  'Sick Leave (2/10)',
-  'Casual Leave',
-  'Maternity Leave',
-  'Paternity Leave',
-  'Unpaid Leave (Leave Without Pay - LOP)',
-  'Bereavement Leave',
-  'Compensatory Off (Comp Off)',
-  'Public Holiday / Company Holiday',
-  'Study Leave / Training Leave',
-]
-const leaveTypeFilterOptions = ['Annual', 'Sick', 'Casual', 'Maternity', 'Paternity']
+
+const leaveTypeOptions = computed(() => {
+  if (leaveTypesData.value.length > 0) {
+    return leaveTypesData.value.map(t => ({
+    value: t.id,
+    label: t.name || t
+  }))
+  }
+  // Fallback لو فشل الـ API
+  return [
+    'Annual Leave (Paid Leave)',
+    'Sick Leave (2/10)',
+    'Casual Leave',
+    'Maternity Leave',
+    'Paternity Leave',
+    'Unpaid Leave (Leave Without Pay - LOP)',
+    'Bereavement Leave',
+    'Compensatory Off (Comp Off)',
+    'Public Holiday / Company Holiday',
+    'Study Leave / Training Leave',
+  ]
+})
+
+const leaveTypeFilterOptions = computed(() => {
+  if (leaveTypesData.value.length > 0) {
+    return leaveTypesData.value.map(type => ({
+      id: type.id,
+      name: type.name || type.label || type
+    }))
+  }
+  return [
+    { id: 'annual', name: 'Annual' },
+    { id: 'sick', name: 'Sick' },
+    { id: 'casual', name: 'Casual' },
+    { id: 'maternity', name: 'Maternity' },
+    { id: 'paternity', name: 'Paternity' },
+  ]
+})
+
 const leaveStatusOptions = ['Approved', 'Pending', 'Rejected']
-const announcementBranchOptions = ['All', 'Abu Dhabi', 'Dubai']
-const announcementDepartmentOptions = ['All', 'Marketing', 'HR Department', 'Finance', 'Operations', 'Sales']
+const announcementBranchOptions = computed(() => {
+  return branchesList.value.map(b => ({
+    value: b.id,
+    label: b.name || b
+  }))
+})
+const announcementDepartmentOptions = computed(() => {
+  return departmentsList.value.map(d => ({
+    value: d.id,
+    label: d.name || d
+  }))
+})
 const leaveSearchChips = ['Approved', 'Pending', 'Rejected']
 const selectedLeaveSearchChip = ref('Rejected')
 const defaultLeaveSearchFilters = () => ({
@@ -4681,8 +4757,9 @@ function appendEmployeeDocumentFields(formData) {
 function appendEmployeeDocumentFiles(formData) {
   Object.entries(addEmployeeUploadedFiles.value).forEach(([docType, file]) => {
     if (!file) return
-    formData.append(`documents.${docType}`, file)
-    formData.append(`documents.${docType}_names.0`, file.name)
+
+    formData.append(`documents[${docType}][]`, file)
+    formData.append(`documents[${docType}_names][]`, file.name)
   })
 }
 
@@ -5141,9 +5218,20 @@ async function saveEmployeeForm() {
     await fetchRealEmployees()
     
   } catch (error) {
-    console.error('Error saving employee:', error)
+  console.error('Error saving employee:', error)
+
+  if (error.response?.status === 422) {
+    const errors = error.response.data.errors
+
+    const messages = Object.values(errors)
+      .flat()
+      .map(msg => `• ${msg}`)
+      .join('\n')
+    showNotification(messages, 'error')
+  } else {
     showNotification(error.message || 'Failed to save employee', 'error')
   }
+}
 }
 
 function closeAddEmployeeModal() {
@@ -5237,7 +5325,8 @@ onMounted(async () => {
   await loadFilterOptions()
   
   await fetchRealEmployees()
-  
+    await Promise.all([loadLeaveTypes(), loadAssetTypes()])
+
   await Promise.all([loadAttendance(), loadAgentData()])
   syncMobileViewport()
   window.addEventListener('resize', syncMobileViewport)

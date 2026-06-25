@@ -145,12 +145,38 @@ export async function createEmployee(formData) {
  * Update existing employee
  */
 export async function updateEmployee(id, formData) {
-  const response = await api.post(`/employees/${id}`, formData, {
+  const response = await api.post(`/employees/${id}/?_method=PUT`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
-      'X-HTTP-Method-Override': 'PUT', // أو استخدم api.put
     },
   })
   return response.data?.data ?? response.data
 }
 
+
+export const fetchLeaveTypes = async (search = '') => {
+  try {
+    const response = await api.get('/leaves/types', {
+      params: { search }
+    })
+    const data = response?.data?.data || response?.data || []
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('❌ Failed to fetch leave types:', error)
+    return []
+  }
+}
+
+
+export const fetchAssetTypes = async (search = '') => {
+  try {
+    const response = await api.get('/asset-types', {
+      params: { search }
+    })
+    const data = response?.data?.data || response?.data || []
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('❌ Failed to fetch asset types:', error)
+    return []
+  }
+}

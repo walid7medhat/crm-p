@@ -53,6 +53,9 @@
                 <div class="emp-profile-page__field"><label>Nationality</label><span>{{ employee.nationality }}</span></div>
                 <div class="emp-profile-page__field"><label>Employee ID</label><span>{{ employee.employeeCode }}</span></div>
                 <div class="emp-profile-page__field"><label>Role</label><span>{{ employee.role }}</span></div>
+                <div class="emp-profile-page__field"><label>Father name</label><span>{{ employee.raw?.employee_profile?.father_name || '—' }}</span></div>
+                <div class="emp-profile-page__field"><label>Mother name</label><span>{{ employee.raw?.employee_profile?.mother_name || '—' }}</span></div>
+                <div class="emp-profile-page__field"><label>Religion</label><span>{{ employee.raw?.employee_profile?.religion || '—' }}</span></div>
               </div>
             </section>
 
@@ -63,9 +66,23 @@
                 <div class="emp-profile-page__field"><label>Phone</label><span>{{ employee.phone }}</span></div>
                 <div class="emp-profile-page__field"><label>Personal phone</label><span>{{ employee.personalPhone }}</span></div>
                 <div class="emp-profile-page__field"><label>Manager</label><span>{{ employee.manager }}</span></div>
+                <div class="emp-profile-page__field"><label>Home country phone</label><span>{{ employee.raw?.employee_profile?.home_country_phone || '—' }}</span></div>
               </div>
             </section>
+            <section class="emp-profile-page__card">
+                  <h6>Bank details</h6>
+                  <div class="emp-profile-page__fields">
+                    <div class="emp-profile-page__field">
+                      <label>Bank</label>
+                      <span>{{ employee.raw?.employee_profile?.bank_details?.bank_name || '—' }}</span>
+                    </div>
 
+                    <div class="emp-profile-page__field">
+                      <label>IBAN</label>
+                      <span>{{ employee.raw?.employee_profile?.bank_details?.iban_number || '—' }}</span>
+                    </div>
+                  </div>
+                </section>
             <section class="emp-profile-page__card">
               <h6>Employment details</h6>
               <div class="emp-profile-page__fields">
@@ -75,6 +92,8 @@
                 <div class="emp-profile-page__field"><label>Joining date</label><span>{{ formatDate(employee.joiningDate) }}</span></div>
                 <div class="emp-profile-page__field"><label>Employment type</label><span>{{ employee.salaryType || '—' }}</span></div>
                 <div class="emp-profile-page__field"><label>Status</label><span>{{ statusLabel }}</span></div>
+                <div class="emp-profile-page__field"><label>Contract end</label><span>{{ formatDate(employee.raw?.employee_profile?.contract_end_date) }}</span></div>
+                <div class="emp-profile-page__field"><label>Probation end</label><span>{{ formatDate(employee.raw?.employee_profile?.probation_end_date) }}</span></div>
               </div>
             </section>
 
@@ -102,14 +121,30 @@
               </ul>
             </section>
 
+            <!-- ✅ Documents (FIXED 🔥) -->
             <section class="emp-profile-page__card">
               <h6>Documents</h6>
-              <div v-if="documentGroups.length" class="emp-profile-page__fields">
-                <div v-for="group in documentGroups" :key="group.type" class="emp-profile-page__field">
-                  <label>{{ formatDocType(group.type) }}</label>
-                  <span>{{ group.count }} file(s)</span>
+
+              <div v-if="employee.raw?.employee_profile?.documents">
+                <div
+                  v-for="(docs, type) in employee.raw.employee_profile.documents"
+                  :key="type"
+                  class="emp-profile-page__field"
+                >
+                  <label>{{ formatDocType(type) }}</label>
+
+                  <div v-if="docs.length">
+                    <div v-for="doc in docs" :key="doc.id">
+                      <a :href="doc.file_url" target="_blank">
+                        {{ doc.original_name }}
+                      </a>
+                    </div>
+                  </div>
+
+                  <span v-else>—</span>
                 </div>
               </div>
+
               <p v-else class="emp-profile-page__empty">No documents uploaded</p>
             </section>
 
