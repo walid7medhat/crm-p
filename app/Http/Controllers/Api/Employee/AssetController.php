@@ -445,10 +445,7 @@ class AssetController extends Controller
                 'by_condition' => Asset::select('condition', DB::raw('count(*) as count'))
                     ->groupBy('condition')
                     ->get(),
-                'recent_assignments' => AssetAssignment::with(['asset', 'user'])
-                    ->latest()
-                    ->limit(10)
-                    ->get(),
+                
             ];
             
             return ApiResponse::success($stats, 'Statistics retrieved successfully');

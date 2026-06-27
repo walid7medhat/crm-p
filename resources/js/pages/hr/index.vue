@@ -2295,7 +2295,10 @@ const assetTypeOptions = computed(() => {
 })
 const assetStatusOptions = ['Assigned', 'Not Assigned', 'Working', 'In Repair', 'Used', 'New']
 const assetConditionOptions = ['New', 'Used', 'Working']
-const assetUserOptions = computed(() => Array.from(new Set(assetsRows.value.map((row) => row.userName))).filter(Boolean))
+const assetUserOptions = computed(() => {
+  if (!assetsRows.value || !Array.isArray(assetsRows.value)) return []
+  return Array.from(new Set(assetsRows.value.map((row) => row.userName))).filter(Boolean)
+})
 const assetResponsiblePersons = ref([])
 const showAssetUserPicker = ref(false)
 const assetUserSearchQuery = ref('')
@@ -2983,7 +2986,12 @@ function handleDatePickerApply(date) {
 
 // ========== FILTERED ASSETS ==========
 const filteredAssetsRows = computed(() => {
+  if (!assetsRows.value || !Array.isArray(assetsRows.value)) {
+    return []
+  }
   const keyword = assetsSearch.value.trim().toLowerCase()
+
+  
   return assetsRows.value.filter((asset) => {
     const matchesKeyword = !keyword || [
       asset.assetId,
@@ -3162,13 +3170,32 @@ const assetSearchSummary = computed(() => {
   return 'Filter and search Assets'
 })
 
-const assetsTotalPages = computed(() => Math.max(1, Math.ceil(filteredAssetsRows.value.length / assetsPerPage)))
+const assetsTotalPages = computed(() => {
+  if (!filteredAssetsRows.value || !Array.isArray(filteredAssetsRows.value)) {
+    return 1
+  }
+  return Math.max(1, Math.ceil(filteredAssetsRows.value.length / assetsPerPage))
+})
 const pagedAssetsRows = computed(() => {
+    if (!filteredAssetsRows.value || !Array.isArray(filteredAssetsRows.value)) {
+    return []
+  }
   const start = (assetsPage.value - 1) * assetsPerPage
   return filteredAssetsRows.value.slice(start, start + assetsPerPage)
 })
-const assetsStartEntry = computed(() => (filteredAssetsRows.value.length ? (assetsPage.value - 1) * assetsPerPage + 1 : 0))
-const assetsEndEntry = computed(() => Math.min(assetsPage.value * assetsPerPage, filteredAssetsRows.value.length))
+const assetsStartEntry = computed(() => {
+  if (!filteredAssetsRows.value || !Array.isArray(filteredAssetsRows.value)) {
+    return 0
+  }
+  return filteredAssetsRows.value.length ? (assetsPage.value - 1) * assetsPerPage + 1 : 0
+})
+
+const assetsEndEntry = computed(() => {
+  if (!filteredAssetsRows.value || !Array.isArray(filteredAssetsRows.value)) {
+    return 0
+  }
+  return Math.min(assetsPage.value * assetsPerPage, filteredAssetsRows.value.length)
+})
 const assetsPaginationItems = computed(() => {
   const total = assetsTotalPages.value
   const current = assetsPage.value
@@ -4562,33 +4589,53 @@ function exportLeaves() {
   URL.revokeObjectURL(link.href)
 }
 
-function openEditAsset(asset) {
-  editingAssetId.value = asset.id
-  assetEditForm.value = {
-    assetId: asset.assetId || '',
-    assetType: asset.type || '',
-    assetName: asset.assetName || '',
-    serialNumber: asset.serial || '',
-    modelNumber: asset.brand || '',
-    rdpNumber: '',
-    remarks: '',
-    description: '',
-    assetUser: null,
-    handoverDate: asset.handoverDate || '',
-    returnDate: asset.returnDate || '',
-    branchLocation: asset.branchLocation || '',
-    department: asset.department || '',
-    status: asset.status || '',
-    purchaseDate: asset.purchaseDate || '',
-    supplierName: asset.supplierName || '',
-    warrantyDate: '',
-    condition: asset.condition || '',
-    unitPrice: asset.unitPrice || '',
-    currency: asset.currency || 'UAE Dirham',
-    qty: Number(asset.qty) || 1,
+const openEditAsset = async (asset) => {
+  try {
+    editingAssetId.value = asset.id
+    
+    const result = await getAsset(asset.id)
+    
+    if (result) {
+      assetEditForm.value = {
+        assetId: result.asset_code || asset.assetId || '',
+        assetType: result.asset_type_id || '',
+        assetName: result.name || asset.assetName || '',
+        serialNumber: result.serial_number || asset.serial || '',
+        modelNumber: result.model_number || asset.brand || '',
+        rdpNumber: result.rdp_number || '',
+        remarks: result.remarks || '',
+        description: result.description || '',
+        assetUser: result.current_assignment?.user_id || null,
+        handoverDate: result.current_assignment?.handover_date || '',
+        returnDate: result.current_assignment?.return_date || '',
+        branchLocation: result.branch_id || '',
+        department: result.department_id || '',
+        status: result.status || 'available',
+        purchaseDate: result.purchase_date || '',
+        supplierName: result.supplier_name || '',
+        warrantyDate: result.warranty_date || '',
+        condition: result.condition || 'new',
+        unitPrice: result.unit_price || '',
+        currency: 'UAE Dirham',
+        qty: result.quantity || 1,
+      }
+      
+      if (result.current_assignment?.user_id) {
+        const user = assetResponsiblePersons.value.find(
+          p => Number(p.id) === Number(result.current_assignment.user_id)
+        )
+        if (user) {
+          assetEditForm.value.assetUser = Number(user.id)
+        }
+      }
+    }
+    
+    showAssetEditModal.value = true
+    openAssetRowMenuId.value = null
+  } catch (error) {
+    console.error('Failed to fetch asset details:', error)
+    showNotification('Failed to load asset details', 'error')
   }
-  showAssetEditModal.value = true
-  openAssetRowMenuId.value = null
 }
 
 function openAssignAssetUser() {
@@ -4691,38 +4738,67 @@ function incrementAssetEditQty() {
 
 
 
-function saveAssetCreate() {
-  const selectedUser = selectedAssetResponsiblePerson.value
-  const selectedUserName = selectedUser?.name || selectedUser?.full_name || '-'
-  const nextId = assetsRows.value.length ? Math.max(...assetsRows.value.map((row) => Number(row.id) || 0)) + 1 : 1
-  assetsRows.value.unshift({
-    id: nextId,
-    assetId: `#AST-${String(nextId).padStart(3, '0')}`,
-    type: assetCreateForm.value.assetType || '-',
-    assetName: assetCreateForm.value.assetName || '-',
-    userName: selectedUserName,
-    userRef: String(nextId).padStart(6, '0'),
-    userAvatar: 'https://i.pravatar.cc/80?img=68',
-    handoverDate: assetCreateForm.value.handoverDate || '-',
-    returnDate: assetCreateForm.value.returnDate || '-',
-    brand: assetCreateForm.value.modelNumber || '-',
-    category: assetCreateForm.value.condition || '-',
-    handoverTo: selectedUserName,
-    serial: assetCreateForm.value.serialNumber || '-',
-    status: assetCreateForm.value.status || 'Not Assigned',
-    branchLocation: assetCreateForm.value.branchLocation || '',
-    department: assetCreateForm.value.department || '',
-    createdOn: '',
-    purchaseDate: assetCreateForm.value.purchaseDate || '',
-    supplierName: assetCreateForm.value.supplierName || '',
-    condition: assetCreateForm.value.condition || '',
-    unitPrice: assetCreateForm.value.unitPrice || '',
-    currency: assetCreateForm.value.currency || 'UAE Dirham',
-    qty: Number(assetCreateForm.value.qty) || 1,
-  })
-  assetsPage.value = 1
-  closeAssetCreateModal()
-  resetAssetCreateForm()
+const saveAssetCreate = async () => {
+  try {
+    if (!assetCreateForm.value.assetType) {
+      showNotification('Please select an asset type', 'error')
+      return
+    }
+    
+    if (!assetCreateForm.value.assetName) {
+      showNotification('Please enter an asset name', 'error')
+      return
+    }
+    
+    if (!assetCreateForm.value.status) {
+      showNotification('Please select a status', 'error')
+      return
+    }
+    
+    const data = {
+      name: assetCreateForm.value.assetName,
+      asset_type_id: Number(assetCreateForm.value.assetType),
+      serial_number: assetCreateForm.value.serialNumber || null,
+      model_number: assetCreateForm.value.modelNumber || null,
+      rdp_number: assetCreateForm.value.rdpNumber || null,
+      description: assetCreateForm.value.description || null,
+      remarks: assetCreateForm.value.remarks || null,
+      purchase_date: assetCreateForm.value.purchaseDate || null,
+      warranty_date: assetCreateForm.value.warrantyDate || null,
+      unit_price: assetCreateForm.value.unitPrice || null,
+      supplier_name: assetCreateForm.value.supplierName || null,
+      quantity: Number(assetCreateForm.value.qty) || 1,
+      condition: assetCreateForm.value.condition || 'new',
+      branch_id: assetCreateForm.value.branchLocation || null,
+      department_id: assetCreateForm.value.department || null,
+    }
+    
+    console.log('📤 Creating asset:', data)
+    
+    const result = await createAsset(data)
+    
+    if (result) {
+      showNotification('Asset created successfully!', 'success')
+      closeAssetCreateModal()
+      resetAssetCreateForm()
+      await fetchAssetsData()
+    }
+  } catch (error) {
+    console.error('❌ Failed to create asset:', error)
+    
+    let errorMessage = 'Failed to create asset'
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const messages = Object.values(errors).flat()
+      errorMessage = messages.join('\n')
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    showNotification(errorMessage, 'error')
+  }
 }
 
 function closeApplyLeaveModal() {
@@ -5026,44 +5102,109 @@ function closeAssetEditModal() {
   closeAssetUserEditPicker()
 }
 
-function saveAssetEdit() {
-  const idx = assetsRows.value.findIndex((row) => row.id === editingAssetId.value)
-  if (idx === -1) {
-    closeAssetEditModal()
-    return
+const saveAssetEdit = async () => {
+  try {
+    if (!editingAssetId.value) {
+      showNotification('No asset selected for editing', 'error')
+      return
+    }
+    
+    if (!assetEditForm.value.assetType) {
+      showNotification('Please select an asset type', 'error')
+      return
+    }
+    
+    if (!assetEditForm.value.assetName) {
+      showNotification('Please enter an asset name', 'error')
+      return
+    }
+    
+    if (!assetEditForm.value.status) {
+      showNotification('Please select a status', 'error')
+      return
+    }
+    
+    const data = {
+      name: assetEditForm.value.assetName,
+      asset_type_id: Number(assetEditForm.value.assetType),
+      serial_number: assetEditForm.value.serialNumber || null,
+      model_number: assetEditForm.value.modelNumber || null,
+      description: assetEditForm.value.description || null,
+      remarks: assetEditForm.value.remarks || null,
+      unit_price: assetEditForm.value.unitPrice || null,
+      quantity: Number(assetEditForm.value.qty) || 1,
+      condition: assetEditForm.value.condition || 'new',
+      status: assetEditForm.value.status?.toLowerCase() || 'available',
+      branch_id: assetEditForm.value.branchLocation || null,
+      department_id: assetEditForm.value.department || null,
+      purchase_date: assetEditForm.value.purchaseDate || null,
+      warranty_date: assetEditForm.value.warrantyDate || null,
+      supplier_name: assetEditForm.value.supplierName || null,
+    }
+    
+    console.log('📤 Updating asset:', data)
+    
+    const result = await updateAsset(editingAssetId.value, data)
+    
+    if (result) {
+       if (assetEditForm.value.assetUser) {
+        await assignAsset(editingAssetId.value, {
+          user_id: Number(assetEditForm.value.assetUser),
+          handover_date: assetEditForm.value.handoverDate || new Date().toISOString().slice(0, 10),
+          notes: 'Assigned via edit form',
+        })
+      }
+      showNotification('Asset updated successfully!', 'success')
+      closeAssetEditModal()
+      await fetchAssetsData()
+    }
+  } catch (error) {
+    console.error('❌ Failed to update asset:', error)
+    
+    let errorMessage = 'Failed to update asset'
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const messages = Object.values(errors).flat()
+      errorMessage = messages.join('\n')
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    showNotification(errorMessage, 'error')
   }
-  const selectedUser = selectedAssetResponsiblePersonEdit.value
-  const selectedUserName = selectedUser?.name || assetsRows.value[idx].userName || '-'
-  assetsRows.value[idx] = {
-    ...assetsRows.value[idx],
-    assetId: assetEditForm.value.assetId || assetsRows.value[idx].assetId,
-    type: assetEditForm.value.assetType || '-',
-    assetName: assetEditForm.value.assetName || '-',
-    userName: selectedUserName,
-    handoverTo: selectedUserName,
-    handoverDate: assetEditForm.value.handoverDate || '-',
-    returnDate: assetEditForm.value.returnDate || '-',
-    brand: assetEditForm.value.modelNumber || '-',
-    category: assetEditForm.value.condition || '-',
-    serial: assetEditForm.value.serialNumber || '-',
-    status: assetEditForm.value.status || 'Not Assigned',
-    branchLocation: assetEditForm.value.branchLocation || '',
-    department: assetEditForm.value.department || '',
-    purchaseDate: assetEditForm.value.purchaseDate || '',
-    supplierName: assetEditForm.value.supplierName || '',
-    condition: assetEditForm.value.condition || '',
-    unitPrice: assetEditForm.value.unitPrice || '',
-    currency: assetEditForm.value.currency || 'UAE Dirham',
-    qty: Number(assetEditForm.value.qty) || 1,
-  }
-  closeAssetEditModal()
 }
 
-function confirmDeleteAsset(asset) {
-  const shouldDelete = window.confirm(`Are you sure you want to delete asset "${asset.assetName}"?`)
+const confirmDeleteAsset = async (asset) => {
+  const shouldDelete = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete asset "${asset.assetName}". This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => resolve(result.isConfirmed))
+    } else {
+      resolve(window.confirm(`Are you sure you want to delete asset "${asset.assetName}"?`))
+    }
+  })
+  
   if (!shouldDelete) return
-  assetsRows.value = assetsRows.value.filter((row) => row.id !== asset.id)
-  openAssetRowMenuId.value = null
+  
+  try {
+    await deleteAsset(asset.id)
+    showNotification('Asset deleted successfully', 'success')
+    openAssetRowMenuId.value = null
+    await fetchAssetsData()
+  } catch (error) {
+    console.error('Failed to delete asset:', error)
+    showNotification(error.response?.data?.message || 'Failed to delete asset', 'error')
+  }
 }
 
 function resetEmployeeFilters() {
@@ -5777,10 +5918,18 @@ const fetchAssetsData = async () => {
         warrantyDate: formatDate(row.warranty_date),
         description: row.description || '—',
         remarks: row.remarks || '—',
-        raw: row
+        raw: row,
+        asset_type_id: row.asset_type_id,
+        branch_id: row.branch_id,
+        department_id: row.department_id,
+        current_assignment: row.current_assignment,
+        current_user: row.current_user,
       }))
+    }else{
+      assetsRows.value = [] 
     }
   } catch (error) {
+    assetsRows.value = [] 
     console.error('Failed to fetch assets:', error)
     showNotification('Failed to load assets', 'error')
   }
