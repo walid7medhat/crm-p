@@ -30,6 +30,7 @@ use Auth;
 
     use App\Exports\LeadsExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelFormat;
 class LeadController extends Controller
 {
     public function __construct()
@@ -1636,5 +1637,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
 
 public function export()
 {
-return Excel::download(new LeadsExport, 'leads.csv', Excel::CSV);}
+    return Excel::download(
+        new LeadsExport,
+        'leads.csv',
+        ExcelFormat::CSV
+    );
+    }
 }
