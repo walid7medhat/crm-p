@@ -154,29 +154,6 @@ export async function updateEmployee(id, formData) {
 }
 
 
-export const fetchLeaveTypes = async (search = '') => {
-  try {
-    const response = await api.get('/leaves/types', {
-      params: { search }
-    })
-    const data = response?.data?.data || response?.data || []
-    return Array.isArray(data) ? data : []
-  } catch (error) {
-    console.error('❌ Failed to fetch leave types:', error)
-    return []
-  }
-}
 
 
-export const fetchAssetTypes = async (search = '') => {
-  try {
-    const response = await api.get('/asset-types', {
-      params: { search }
-    })
-    const data = response?.data?.data || response?.data || []
-    return Array.isArray(data) ? data : []
-  } catch (error) {
-    console.error('❌ Failed to fetch asset types:', error)
-    return []
-  }
-}
+

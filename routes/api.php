@@ -68,7 +68,7 @@ use App\Http\Controllers\Api\Employee\AnnouncementController;
 use App\Http\Controllers\Api\Employee\RecruitmentController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
 use App\Http\Controllers\Api\Listing\InternalUpdateController;
-
+use App\Http\Controllers\Api\Employee\EmployeeAttendanceController;
 Route::get('/test-email', function () {
     try {
         // Test basic email
@@ -464,6 +464,14 @@ Route::middleware('jwt.auth')->group(function () {
             // 🔹 monthly report
             Route::get('/monthly-report', [AttendanceController::class, 'generateMonthlyReport']);
             Route::get('/period-report', [AttendanceController::class, 'generatePeriodReport']);
+
+              Route::get('/summary', [EmployeeAttendanceController::class, 'summary']);
+            Route::get('/daily-stats', [EmployeeAttendanceController::class, 'dailyStats']);
+            Route::get('/', [EmployeeAttendanceController::class, 'index']);
+            Route::post('/', [EmployeeAttendanceController::class, 'store']);
+            Route::get('/{id}', [EmployeeAttendanceController::class, 'show']);
+            Route::put('/{id}', [EmployeeAttendanceController::class, 'update']);
+            Route::delete('/{id}', [EmployeeAttendanceController::class, 'destroy']);
 
 
         });

@@ -676,8 +676,8 @@
         <div class="leave-detail-grid">
           <p><span>Employee</span><strong>{{ selectedLeaveRow.employeeName }}</strong></p>
           <p><span>Designation</span><strong>{{ selectedLeaveRow.designation }}</strong></p>
-          <p><span>Start Date</span><strong>{{ selectedLeaveRow.startDate }}</strong></p>
-          <p><span>End Date</span><strong>{{ selectedLeaveRow.endDate }}</strong></p>
+          <p><span>Start Date</span><strong>{{ formatDate(selectedLeaveRow.startDate) }}</strong></p>
+          <p><span>End Date</span><strong>{{ formatDate(selectedLeaveRow.endDate) }}</strong></p>
           <p><span>Leave Days</span><strong>{{ selectedLeaveRow.days }} Day(s)</strong></p>
           <p><span>Status</span><strong :class="`leave-txt-${selectedLeaveRow.status.toLowerCase()}`">{{ selectedLeaveRow.status }}</strong></p>
           <p><span>Leave Type</span><strong>{{ selectedLeaveRow.leaveType }}</strong></p>
@@ -687,9 +687,12 @@
           <span>Leave Reason</span>
           <p>{{ selectedLeaveRow.reason }}</p>
         </div>
-        <div class="leave-detail-actions">
+        <div v-if="selectedLeaveRow.status.toLowerCase() === 'pending_hr'" class="leave-detail-actions">
           <button type="button" class="leave-approve-btn" @click="openApproveLeaveModal(selectedLeaveRow)">Approve Leave</button>
           <button type="button" class="leave-reject-btn" @click="openRejectLeaveModal(selectedLeaveRow)">Reject Leave</button>
+        </div>
+        <div v-else class="leave-detail-status-message">
+          <p>This leave request has been <strong>{{ selectedLeaveRow.status }}</strong></p>
         </div>
       </div>
     </div>
@@ -1102,6 +1105,28 @@
                 <label>End Date</label>
                 <input :value="formatDateDisplay(applyLeaveForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('applyLeaveForm.endDate')" />
               </div>
+              <div class="add-field add-field-full">
+                  <div class="leave-half-day-checkbox">
+                    <label class="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        v-model="applyLeaveForm.isHalfDay" 
+                        @change="onHalfDayChange"
+                      />
+                      <span>Half Day Leaves</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Half Day Type (checkbox) -->
+                <div v-if="applyLeaveForm.isHalfDay" class="add-field add-field-full">
+                  <label>Half Day Type *</label>
+                  <SearchableSelect
+                    v-model="applyLeaveForm.halfDayType"
+                    :options="halfDayTypeOptions"
+                    placeholder="Select Half Day Type"
+                  />
+                </div>
               <div class="add-field add-field-full">
                 <label>Leave Reason</label>
                 <textarea v-model="applyLeaveForm.reason" placeholder="Enter Reason"></textarea>
@@ -1820,9 +1845,59 @@ import {
   fetchDepartments,
   fetchDesignations,
   fetchBranches,
-  fetchManagers,fetchEmployee,fetchLeaveTypes,    
-  fetchAssetTypes
+  fetchManagers,fetchEmployee,  
 } from '@/services/employeesApi'
+
+import {
+  createAttendance,
+  updateAttendance,
+  deleteAttendance,
+  fetchAttendance,
+  fetchEmployeeAttendance,
+  fetchAttendanceSummary,
+  getAttendance,
+  recordCheckInOut,
+  fetchDailyAttendanceStats,
+} from '@/services/attendancesApi'
+import {
+  fetchLeaveTypes,
+  createLeaveType,
+  updateLeaveType,
+  deleteLeaveType,
+  fetchMyLeaveBalance,
+  fetchEmployeeLeaveBalance,
+  fetchLeaveRequests,
+  createLeaveRequest,
+  updateLeaveRequest,
+  getLeaveRequest,
+  cancelLeaveRequest,
+  approveByParent,
+  rejectByParent,
+  approveByHr,
+  rejectByHr,
+  fetchLeaveStatistics,
+  exportLeaveRequests
+} from '@/services/leaveApi'
+
+import {
+  fetchAssetTypes,
+  createAssetType,
+  updateAssetType,
+  deleteAssetType,
+  fetchAssets,
+  createAsset,
+  getAsset,
+  updateAsset,
+  deleteAsset,
+  assignAsset,
+  returnAsset,
+  transferAsset,
+  markAssetMaintenance,
+  getAssetHistory,
+  getEmployeeAssets,
+  fetchAssetStatistics,
+  fetchResponsiblePersons,
+} from '@/services/assetsApi'
 const {
   loading,
   error,
@@ -1856,7 +1931,42 @@ const hrDebugUi = computed(() => {
   void route.fullPath
   return hrPipelineDebugEnabled()
 })
+const onHalfDayChange = () => {
+  if (!applyLeaveForm.value.isHalfDay) {
+    applyLeaveForm.value.halfDayType = null
+  }
+}
+const halfDayTypeOptions = [
+  { value: 'morning', label: 'Morning' },
+  { value: 'afternoon', label: 'Afternoon' },
+]
+const attendanceStats = ref({
+  total_employees: 0,
+  present: 0,
+  absent: 0,
+  late: 0,
+  on_leave: 0,
+  half_day: 0,
+  holiday: 0,
+})
 
+const dailyStats = ref({
+  check_in_count: 0,
+  check_out_count: 0,
+  average_check_in: '--',
+  average_check_out: '--',
+})
+
+const attendanceSummaryData  = ref({
+  total_employees: 0,
+  present_today: 0,
+  absent_today: 0,
+  late_today: 0,
+  half_day: 0,
+})
+const submitAttendanceEdit = () => {
+  saveAttendanceEdit()
+}
 const leaveTypesData = ref([])
 const loadLeaveTypes = async () => {
   try {
@@ -2510,19 +2620,7 @@ const leaveTypeOptions = computed(() => {
     label: t.name || t
   }))
   }
-  // Fallback لو فشل الـ API
-  return [
-    'Annual Leave (Paid Leave)',
-    'Sick Leave (2/10)',
-    'Casual Leave',
-    'Maternity Leave',
-    'Paternity Leave',
-    'Unpaid Leave (Leave Without Pay - LOP)',
-    'Bereavement Leave',
-    'Compensatory Off (Comp Off)',
-    'Public Holiday / Company Holiday',
-    'Study Leave / Training Leave',
-  ]
+ 
 })
 
 const leaveTypeFilterOptions = computed(() => {
@@ -2626,6 +2724,8 @@ const defaultApplyLeaveForm = () => ({
   startDate: '',
   endDate: '',
   reason: '',
+  isHalfDay: false,  
+  halfDayType: null,
 })
 const applyLeaveForm = ref(defaultApplyLeaveForm())
 const applyLeaveAttachment = ref(null)
@@ -3519,16 +3619,16 @@ function resolveAttendanceDate(row) {
   return ''
 }
 
-function populateAttendanceEditForm(row) {
+const populateAttendanceEditForm = (row) => {
   const resolvedDate = resolveAttendanceDate(row)
   attendanceEditForm.value = {
     date: resolvedDate,
     checkIn: toTimeInputValue(row?.check_in),
     checkOut: toTimeInputValue(row?.check_out),
     status: row?.status || '',
-    breakLabel: formatBreakDisplay(row || {}),
-    otLabel: formatOtDisplay(row || {}),
-    description: '',
+    breakLabel: row?.break_label || row?.break_duration || '0',
+    otLabel: row?.ot_label || row?.overtime || '0',
+    description: row?.description || '',
   }
 }
 
@@ -3575,12 +3675,24 @@ function openAttendanceDetails(row) {
   openAttendanceRowMenuId.value = null
 }
 
-function openAttendanceEdit(row) {
-  selectedAttendanceRow.value = row
-  populateAttendanceEditForm(row)
-  attendanceDetailMode.value = 'edit'
-  showAttendanceDetailModal.value = true
-  openAttendanceRowMenuId.value = null
+const openAttendanceEdit = async (row) => {
+  try {
+    const result = await getAttendance(row.id)
+    
+    if (result) {
+      selectedAttendanceRow.value = {
+        ...row,
+        ...result
+      }
+      populateAttendanceEditForm(result)
+      attendanceDetailMode.value = 'edit'
+      showAttendanceDetailModal.value = true
+      openAttendanceRowMenuId.value = null
+    }
+  } catch (error) {
+    console.error('Failed to fetch attendance details:', error)
+    showNotification('Failed to load attendance details', 'error')
+  }
 }
 
 function switchAttendanceDetailToEdit() {
@@ -3595,29 +3707,56 @@ function closeAttendanceDetailModal() {
   attendanceDetailMode.value = 'view'
 }
 
-function saveAttendanceEdit() {
+const saveAttendanceEdit = async () => {
   if (!selectedAttendanceRow.value) return
-  const targetKey = attendanceRowKey(selectedAttendanceRow.value)
-  employees.value = employees.value.map((row) => {
-    if (attendanceRowKey(row) !== targetKey) return row
-    return {
-      ...row,
-      date: attendanceEditForm.value.date || row.date,
-      status: (attendanceEditForm.value.status || row.status || '').toLowerCase(),
-      check_in: withTime(attendanceEditForm.value.date || row.date, attendanceEditForm.value.checkIn, row.check_in),
-      check_out: withTime(attendanceEditForm.value.date || row.date, attendanceEditForm.value.checkOut, row.check_out),
-      break_label: attendanceEditForm.value.breakLabel || row.break_label,
-      ot_label: attendanceEditForm.value.otLabel || row.ot_label,
+  
+  try {
+    // التحقق من صحة البيانات
+    if (!attendanceEditForm.value.date) {
+      showNotification('Please select a date', 'error')
+      return
     }
-  })
-  selectedAttendanceRow.value = employees.value.find((row) => attendanceRowKey(row) === targetKey) || null
-  showAttendanceDetailModal.value = false
-  attendanceDetailMode.value = 'view'
+    
+    if (!attendanceEditForm.value.checkIn) {
+      showNotification('Please enter check-in time', 'error')
+      return
+    }
+    
+    if (!attendanceEditForm.value.checkOut) {
+      showNotification('Please enter check-out time', 'error')
+      return
+    }
+    
+    const data = {
+      date: attendanceEditForm.value.date,
+      check_in: attendanceEditForm.value.checkIn,
+      check_out: attendanceEditForm.value.checkOut,
+      status: String(attendanceEditForm.value.status || 'present').toLowerCase(),
+      break_duration: attendanceEditForm.value.breakLabel || '0',
+      overtime: attendanceEditForm.value.otLabel || '0',
+      description: attendanceEditForm.value.description || '',
+    }
+    
+    const result = await updateAttendance(selectedAttendanceRow.value.id, data)
+    
+    if (result) {
+      showNotification('Attendance record updated successfully', 'success')
+      closeAttendanceDetailModal()
+      await fetchAttendanceData()
+      await loadAttendanceSummary()
+    }
+  } catch (error) {
+    console.error('Failed to update attendance:', error)
+    showNotification(error.response?.data?.message || 'Failed to update attendance', 'error')
+  }
 }
 
-async function onAttendanceDateChange() {
+
+const onAttendanceDateChange = async () => {
   page.value = 1
-  await loadAttendance()
+  await fetchAttendanceData()
+  await loadAttendanceSummary()
+  await loadDailyAttendanceStats()
 }
 // ========== LOAD FILTER OPTIONS ==========
 async function loadFilterOptions() {
@@ -3649,6 +3788,65 @@ async function loadFilterOptions() {
     managersList.value = []
   } finally {
     filterOptionsLoading.value = false
+  }
+}
+const deleteAttendanceRecord = async (row) => {
+  const confirmed = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete attendance record for ${row.employee_name} on ${formatDate(row.date)}. This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      }).then((result) => resolve(result.isConfirmed))
+    } else {
+      resolve(window.confirm(`Delete attendance record for ${row.employee_name}?`))
+    }
+  })
+  
+  if (!confirmed) return
+  
+  try {
+    await deleteAttendance(row.id)
+    showNotification('Attendance record deleted successfully', 'success')
+    openAttendanceRowMenuId.value = null
+    await fetchAttendanceData()
+    await loadAttendanceSummary()
+  } catch (error) {
+    console.error('Failed to delete attendance:', error)
+    showNotification(error.response?.data?.message || 'Failed to delete attendance', 'error')
+  }
+}
+const loadAttendanceSummary = async () => {
+  try {
+    const summary = await fetchAttendanceSummary(dateFilter.value)
+    if (summary) {
+      attendanceStats.value = {
+        total_employees: summary.total_employees || 0,
+        present: summary.present || 0,
+        absent: summary.absent || 0,
+        late: summary.late || 0,
+        on_leave: summary.on_leave || 0,
+        half_day: summary.half_day || 0,
+        holiday: summary.holiday || 0,
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load attendance summary:', error)
+  }
+}
+const loadDailyAttendanceStats = async () => {
+  try {
+    const stats = await fetchDailyAttendanceStats(dateFilter.value)
+    if (stats) {
+      dailyStats.value = stats
+    }
+  } catch (error) {
+    console.error('Failed to load daily attendance stats:', error)
   }
 }
 function exportAttendance() {
@@ -3995,8 +4193,8 @@ function mapLeaveForModal(leave) {
     id: leave.id,
     employeeName: leave.employeeName || leave.employee_name,
     designation: leave.designation || '—',
-    startDate: leave.startDate || leave.start_date,
-    endDate: leave.endDate || leave.end_date,
+     startDate: formatDateDisplay(leave.startDate || leave.start_date),
+    endDate: formatDateDisplay(leave.endDate || leave.end_date),
     days: leave.duration ?? leave.days,
     status: leave.statusLabel || leave.status,
     leaveType: leave.leaveType || leave.leave_type,
@@ -4311,14 +4509,15 @@ function resetAttendanceSearchFilters() {
   page.value = 1
 }
 
-async function applyAttendanceSearchFilters() {
+const applyAttendanceSearchFilters = async () => {
   const filterDate = String(attendanceSearchFilters.value.attendanceDate || '').trim()
   if (filterDate && filterDate !== dateFilter.value) {
     dateFilter.value = filterDate
-    await loadAttendance()
   }
   page.value = 1
   showAttendanceSearchModal.value = false
+  await fetchAttendanceData()
+  await loadAttendanceSummary()
 }
 function resetCareerSearchFilters() {
   careerSearchFilters.value = {
@@ -4490,23 +4689,7 @@ function incrementAssetEditQty() {
   assetEditForm.value.qty = current + 1
 }
 
-async function fetchAssetResponsiblePersons() {
-  if (assetResponsiblePersons.value.length) return
-  try {
-    const response = await api.get('/available-responsible-persons')
-    const rawPersons = response?.data?.data || response?.data || []
-    assetResponsiblePersons.value = Array.isArray(rawPersons)
-      ? rawPersons.map((person) => ({
-          ...person,
-          id: Number(person.id),
-          name: person.name || person.full_name || '-',
-          email: person.email || '',
-        }))
-      : []
-  } catch (error) {
-    console.error('Failed to load responsible persons for asset picker', error)
-  }
-}
+
 
 function saveAssetCreate() {
   const selectedUser = selectedAssetResponsiblePerson.value
@@ -4547,7 +4730,15 @@ function closeApplyLeaveModal() {
 }
 
 function resetApplyLeaveForm() {
-  applyLeaveForm.value = defaultApplyLeaveForm()
+  applyLeaveForm.value = {
+    employee: '',
+    leaveType: '',
+    startDate: '',
+    endDate: '',
+    reason: '',
+    isHalfDay: false,
+    halfDayType: null,
+  }
   applyLeaveAttachment.value = null
 }
 
@@ -4566,26 +4757,91 @@ function removeApplyLeaveFile() {
   applyLeaveAttachment.value = null
 }
 
-function submitApplyLeave() {
-  if (selectedLeaveRow.value) {
-    leaveRows.value = leaveRows.value.map((row) =>
-      row.id === selectedLeaveRow.value.id
-        ? {
-            ...row,
-            employeeName: String(applyLeaveForm.value.employee || row.employeeName).replace(/^#\w+\s+/, '') || row.employeeName,
-            leaveType: applyLeaveForm.value.leaveType || row.leaveType,
-            startDate: formatDate(applyLeaveForm.value.startDate) || row.startDate,
-            endDate: formatDate(applyLeaveForm.value.endDate) || row.endDate,
-            reason: applyLeaveForm.value.reason || '--',
-          }
-        : row,
+const submitApplyLeave = async () => {
+  try {
+    if (!applyLeaveForm.value.employee) {
+      showNotification('Please select an employee', 'error')
+      return
+    }
+    
+    if (!applyLeaveForm.value.leaveType) {
+      showNotification('Please select a leave type', 'error')
+      return
+    }
+    
+    if (!applyLeaveForm.value.startDate) {
+      showNotification('Please select a start date', 'error')
+      return
+    }
+    
+    if (!applyLeaveForm.value.endDate) {
+      showNotification('Please select an end date', 'error')
+      return
+    }
+    
+    const selectedEmployeeText = String(applyLeaveForm.value.employee || '')
+    let linkedEmployee = null
+    
+    linkedEmployee = employeesDirectory.value.find(
+      (emp) => `#${emp.employee_code} ${emp.name}` === selectedEmployeeText
     )
-    selectedLeaveRow.value = null
+    
+    if (!linkedEmployee) {
+      const employeeName = selectedEmployeeText.replace(/^#\w+\s+/, '').trim()
+      linkedEmployee = employeesDirectory.value.find(
+        (emp) => emp.name === employeeName
+      )
+    }
+    
+    if (!linkedEmployee) {
+      showNotification('Employee not found. Please select a valid employee.', 'error')
+      return
+    }
+    
+    const data = {
+       user_id: linkedEmployee.id,
+      leave_type_id: Number(applyLeaveForm.value.leaveType), 
+      start_date: applyLeaveForm.value.startDate,
+      end_date: applyLeaveForm.value.endDate,
+      reason: applyLeaveForm.value.reason || '',
+      is_half_day: false, 
+      half_day_type: null, 
+    }
+    
+    console.log('📤 Sending leave request data:', data)
+    
+    if (applyLeaveAttachment.value) {
+      data.attachment = applyLeaveAttachment.value
+    }
+    
+    const result = await createLeaveRequest(data)
+    
+    console.log('✅ Leave request result:', result)
+    
+    if (result) {
+      showNotification('Leave request submitted successfully!', 'success')
+      closeApplyLeaveModal()
+      resetApplyLeaveForm()
+      await fetchLeaveRequestsData()
+    }
+  } catch (error) {
+    console.error('❌ Failed to submit leave request:', error)
+    
+    let errorMessage = 'Failed to submit leave request'
+    
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const messages = Object.values(errors).flat()
+      errorMessage = messages.join('\n')
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    showNotification(errorMessage, 'error')
   }
-  closeApplyLeaveModal()
-  resetApplyLeaveForm()
 }
-
 function openLeaveAttendancePrimaryAction() {
   if (leaveSectionMode.value === 'attendance') {
     createAttendanceForm.value.date = dateFilter.value || createAttendanceForm.value.date
@@ -4628,40 +4884,140 @@ function removeCreateAttendanceFile() {
   createAttendanceAttachment.value = null
 }
 
-function refreshAttendanceSummaryFromRows() {
+const refreshAttendanceSummaryFromRows = () => {
   const rows = Array.isArray(employees.value) ? employees.value : []
-  summary.value = {
+  attendanceSummaryData.value = {
     total_employees: rows.length,
     present_today: rows.filter((e) => String(e.status || '').toLowerCase() === 'present').length,
     absent_today: rows.filter((e) => String(e.status || '').toLowerCase() === 'absent').length,
     late_today: rows.filter((e) => String(e.status || '').toLowerCase() === 'late').length,
+    half_day: rows.filter((e) => String(e.status || '').toLowerCase() === 'half_day').length,
   }
 }
-
-function submitCreateAttendance() {
-  const selectedEmployeeText = String(createAttendanceForm.value.employee || '')
-  const employeeCodeMatch = selectedEmployeeText.match(/^#?([^ ]+)\s+/)
-  const employeeName = selectedEmployeeText.replace(/^#?[^ ]+\s+/, '').trim() || 'Unknown'
-  const linkedEmployee = employeesDirectory.value.find((emp) => `#${emp.employee_code} ${emp.name}` === selectedEmployeeText)
-  const employeeId = linkedEmployee?.id || Number(employeeCodeMatch?.[1]?.replace(/\D/g, '')) || Date.now()
-  const baseDate = createAttendanceForm.value.date || dateFilter.value || new Date().toISOString().slice(0, 10)
-
-  const newRow = {
-    employee_id: employeeId,
-    employee_name: linkedEmployee?.name || employeeName,
-    status: String(createAttendanceForm.value.status || 'present').toLowerCase(),
-    date: baseDate,
-    check_in: withTime(baseDate, createAttendanceForm.value.checkIn, null),
-    check_out: withTime(baseDate, createAttendanceForm.value.checkOut, null),
-    break_label: createAttendanceForm.value.breakLabel || null,
-    ot_label: createAttendanceForm.value.otLabel || null,
+const fetchAttendanceData = async () => {
+  try {
+    const params = {
+      per_page: perPage,
+      page: page.value,
+      date: dateFilter.value || undefined,
+    }
+    
+    // إضافة الفلاتر
+    if (attendanceSearchFilters.value.employee) {
+      // البحث عن الموظف
+      const employeeMatch = attendanceSearchFilters.value.employee.match(/#([^\s]+)\s+(.+)/)
+      if (employeeMatch) {
+        params.search = employeeMatch[2]
+      }
+    }
+    
+    if (attendanceSearchFilters.value.department) {
+      params.department = attendanceSearchFilters.value.department
+    }
+    
+    if (attendanceSearchFilters.value.status) {
+      params.status = attendanceSearchFilters.value.status.toLowerCase()
+    }
+    
+    if (selectedAttendanceSearchChip.value) {
+      params.status = selectedAttendanceSearchChip.value.toLowerCase()
+    }
+    
+    const result = await fetchAttendance(params)
+    
+    if (result?.data) {
+      employees.value = result.data.map(row => ({
+        employee_id: row.user_id,
+        employee_name: row.user?.name || 'Unknown',
+        avatar: row.user?.avatar || 'https://i.pravatar.cc/40?img=1',
+        status: row.status || 'present',
+        date: row.date,
+        check_in: row.check_in,
+        check_out: row.check_out,
+        break_label: row.break_duration || row.break_label,
+        ot_label: row.overtime || row.ot_label,
+        attendance_type: row.attendance_type || 'office',
+        department: row.user?.employee_profile?.department?.name || row.department || '—',
+        description: row.description || '—',
+        raw: row,
+        id: row.id,
+        break_minutes: row.break_minutes || null,
+        overtime_minutes: row.overtime_minutes || null,
+      }))
+      
+      if (result.meta || result.pagination) {
+        totalPages.value = result.meta?.last_page || result.pagination?.last_page || 1
+      }
+    }
+    
+    refreshAttendanceSummaryFromRows()
+  } catch (error) {
+    console.error('Failed to fetch attendance:', error)
+    showNotification('Failed to load attendance data', 'error')
   }
-
-  employees.value = [newRow, ...employees.value]
-  page.value = 1
-  refreshAttendanceSummaryFromRows()
-  closeCreateAttendanceModal()
-  resetCreateAttendanceForm()
+}
+const submitCreateAttendance = async () => {
+  try {
+    if (!createAttendanceForm.value.employee) {
+      showNotification('Please select an employee', 'error')
+      return
+    }
+    
+    if (!createAttendanceForm.value.date) {
+      showNotification('Please select a date', 'error')
+      return
+    }
+    
+    if (!createAttendanceForm.value.checkIn) {
+      showNotification('Please enter check-in time', 'error')
+      return
+    }
+    
+    if (!createAttendanceForm.value.checkOut) {
+      showNotification('Please enter check-out time', 'error')
+      return
+    }
+    
+    const selectedEmployeeText = String(createAttendanceForm.value.employee || '')
+    const linkedEmployee = employeesDirectory.value.find(
+      (emp) => `#${emp.employee_code} ${emp.name}` === selectedEmployeeText
+    )
+    
+    if (!linkedEmployee) {
+      showNotification('Employee not found', 'error')
+      return
+    }
+    
+    const data = {
+      user_id: linkedEmployee.id,
+      date: createAttendanceForm.value.date,
+      check_in: createAttendanceForm.value.checkIn,
+      check_out: createAttendanceForm.value.checkOut,
+      status: String(createAttendanceForm.value.status || 'present').toLowerCase(),
+      attendance_type: createAttendanceForm.value.type || 'office',
+      break_duration: createAttendanceForm.value.breakLabel || '0',
+      overtime: createAttendanceForm.value.otLabel || '0',
+      description: createAttendanceForm.value.description || '',
+    }
+    
+    if (createAttendanceAttachment.value) {
+      data.attachment = createAttendanceAttachment.value
+    }
+    
+    const result = await createAttendance(data)
+    
+    if (result) {
+      showNotification('Attendance record created successfully', 'success')
+      closeCreateAttendanceModal()
+      resetCreateAttendanceForm()
+      await fetchAttendanceData()
+      await loadAttendanceSummary()
+    }
+  } catch (error) {
+    console.error('Failed to create attendance:', error)
+    const message = error.response?.data?.message || 'Failed to create attendance record'
+    showNotification(message, 'error')
+  }
 }
 
 function closeAssetEditModal() {
@@ -5314,7 +5670,154 @@ watch(hrSectionTab, (value) => {
   window.localStorage.setItem(HR_LEAVE_INNER_TAB_STORAGE_KEY, value)
 })
 
-// ========== ON MOUNTED ==========
+// ==================== LEAVE REQUESTS DATA ====================
+const fetchLeaveRequestsData = async () => {
+  try {
+    const params = {
+      per_page: leavePerPage,
+      page: leavePage.value
+    }
+    
+    if (selectedLeaveSearchChip.value) {
+      params.status = selectedLeaveSearchChip.value.toLowerCase()
+    }
+    
+    if (leaveSearchFilters.value.employee) {
+      const match = leaveSearchFilters.value.employee.match(/#([^\s]+)\s+(.+)/)
+      if (match) {
+        params.search = match[2]
+      }
+    }
+    
+    if (leaveSearchFilters.value.leaveType) {
+      params.leave_type_id = leaveSearchFilters.value.leaveType
+    }
+    
+    const result = await fetchLeaveRequests(params)
+    
+    if (result?.data) {
+      leaveRows.value = result.data.map(row => ({
+        id: row.id,
+        empId: `#EMP${String(row.user_id).padStart(4, '0')}`,
+        employeeName: row.user?.name || 'Unknown',
+        avatar: row.user?.avatar || 'https://i.pravatar.cc/80?img=1',
+        designation: row.user?.employee_profile?.designation?.name || '—',
+        leaveType: row.leave_type?.name || '—',
+        startDate: formatDate(row.start_date),
+        endDate: formatDate(row.end_date),
+        days: row.days,
+        reason: row.reason || '—',
+        appliedDate: formatDate(row.created_at),
+        status: row.status_label || row.status,
+        approvedBy: row.hr?.name || row.parent?.name || '—',
+        raw: row
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch leave requests:', error)
+    showNotification('Failed to load leave requests', 'error')
+  }
+}
+
+// ==================== ASSETS DATA ====================
+const fetchAssetsData = async () => {
+  try {
+    const params = {
+      per_page: assetsPerPage,
+      page: assetsPage.value
+    }
+    
+    if (assetSearchFilters.value.assetType) {
+      params.asset_type_id = assetSearchFilters.value.assetType
+    }
+    
+    if (assetSearchFilters.value.assetName) {
+      params.search = assetSearchFilters.value.assetName
+    }
+    
+    if (assetSearchFilters.value.status) {
+      params.status = assetSearchFilters.value.status.toLowerCase()
+    }
+    
+    if (assetSearchFilters.value.branchLocation) {
+      params.branch_id = assetSearchFilters.value.branchLocation
+    }
+    
+    if (assetSearchFilters.value.department) {
+      params.department_id = assetSearchFilters.value.department
+    }
+    
+    const result = await fetchAssets(params)
+    
+    if (result?.data) {
+      assetsRows.value = result.data.map(row => ({
+        id: row.id,
+        assetId: row.asset_code || `#AST-${String(row.id).padStart(3, '0')}`,
+        type: row.asset_type?.name || '—',
+        assetName: row.name || '—',
+        userName: row.current_user?.name || '—',
+        userRef: row.current_user?.employee_code || '—',
+        userAvatar: row.current_user?.avatar || 'https://i.pravatar.cc/80?img=1',
+        handoverDate: formatDate(row.current_assignment?.handover_date),
+        returnDate: formatDate(row.current_assignment?.return_date),
+        brand: row.model_number || '—',
+        category: row.condition || '—',
+        handoverTo: row.current_user?.name || '—',
+        serial: row.serial_number || '—',
+        status: row.status_label || row.status || 'Available',
+        branchLocation: row.branch?.name || '—',
+        department: row.department?.name || '—',
+        createdOn: formatDate(row.created_at),
+        purchaseDate: formatDate(row.purchase_date),
+        supplierName: row.supplier_name || '—',
+        condition: row.condition || '—',
+        unitPrice: row.unit_price || '—',
+        currency: 'UAE Dirham',
+        qty: row.quantity || 1,
+        warrantyDate: formatDate(row.warranty_date),
+        description: row.description || '—',
+        remarks: row.remarks || '—',
+        raw: row
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch assets:', error)
+    showNotification('Failed to load assets', 'error')
+  }
+}
+
+// ==================== LEAVE STATISTICS ====================
+const loadLeaveStatistics = async () => {
+  try {
+    const stats = await fetchLeaveStatistics()
+    console.log('Leave statistics:', stats)
+  } catch (error) {
+    console.error('Failed to load leave statistics:', error)
+  }
+}
+
+// ==================== ASSET STATISTICS ====================
+const loadAssetStatistics = async () => {
+  try {
+    const stats = await fetchAssetStatistics()
+    console.log('Asset statistics:', stats)
+  } catch (error) {
+    console.error('Failed to load asset statistics:', error)
+  }
+}
+
+// ==================== FETCH RESPONSIBLE PERSONS ====================
+const fetchAssetResponsiblePersons = async () => {
+  if (assetResponsiblePersons.value.length) return
+  try {
+    const persons = await fetchResponsiblePersons()
+    assetResponsiblePersons.value = Array.isArray(persons) ? persons : []
+  } catch (error) {
+    console.error('Failed to load responsible persons:', error)
+    assetResponsiblePersons.value = []
+  }
+}
+
 // ========== ON MOUNTED ==========
 onMounted(async () => {
   console.log('BASE URL:', api.defaults.baseURL)
@@ -5323,11 +5826,22 @@ onMounted(async () => {
   dateFilter.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   
   await loadFilterOptions()
-  
   await fetchRealEmployees()
-    await Promise.all([loadLeaveTypes(), loadAssetTypes()])
+  await Promise.all([loadLeaveTypes(), loadAssetTypes()])
 
-  await Promise.all([loadAttendance(), loadAgentData()])
+  // Load leave and asset data
+  await fetchLeaveRequestsData()
+  await fetchAssetsData()
+  await loadLeaveStatistics()
+  await loadAssetStatistics()
+  await fetchAssetResponsiblePersons()
+
+  // Load attendance data
+  await fetchAttendanceData()
+  await loadAttendanceSummary()
+  await loadDailyAttendanceStats()
+
+  await loadAgentData()
   syncMobileViewport()
   window.addEventListener('resize', syncMobileViewport)
   document.addEventListener('click', onDocumentClick)
@@ -8895,6 +9409,38 @@ onBeforeUnmount(() => {
   .employee-mini-grid {
     grid-template-columns: 1fr;
   }
+}
+/* أضف هذا في نهاية ملف style */
+.leave-half-day-checkbox {
+  margin-top: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--hr-secondary);
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  accent-color: var(--hr-secondary);
+}
+
+.checkbox-label span {
+  font-weight: 500;
+  color: #1f2937;
 }
 </style>
 

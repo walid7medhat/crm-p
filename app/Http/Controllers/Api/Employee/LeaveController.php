@@ -235,7 +235,7 @@ class LeaveController extends Controller
         try {
             DB::beginTransaction();
             
-            $user = Auth::user();
+            $user =User::find($request->user_id)?? Auth::user();
             $employeeProfile = $user->employeeProfile;
             
             // Check if employee has completed 6 months
@@ -259,7 +259,7 @@ class LeaveController extends Controller
                 ->where('year', date('Y'))
                 ->first();
             
-            if (!$balance || !$balance->hasEnoughBalance($days)) {
+            if ($balance && !$balance->hasEnoughBalance($days)) {
                 return ApiResponse::error('Insufficient leave balance', 422);
             }
             
@@ -429,7 +429,7 @@ class LeaveController extends Controller
     public function rejectByParent(Request $request, $id)
     {
         $request->validate([
-            'rejection_reason' => 'required|string|min:5|max:500',
+            'rejection_reason' => 'required|string|min:4|max:500',
         ]);
         
         try {
@@ -474,7 +474,7 @@ class LeaveController extends Controller
             }
             
             $leaveRequest->approveByHr();
-            
+             $this->updateLeaveBalance($leaveRequest);
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request approved by HR successfully');
@@ -487,7 +487,7 @@ class LeaveController extends Controller
     public function rejectByHr(Request $request, $id)
     {
         $request->validate([
-            'rejection_reason' => 'required|string|min:5|max:500',
+            'rejection_reason' => 'required|string|min:4|max:500',
         ]);
         
         try {
@@ -568,4 +568,53 @@ class LeaveController extends Controller
             return ApiResponse::error('Failed to retrieve statistics: ' . $e->getMessage());
         }
     }
+  private function updateLeaveBalance($leaveRequest)
+{
+    try {
+        // جلب أو إنشاء البالانس
+        $balance = $this->getOrCreateBalance(
+            $leaveRequest->user_id, 
+            $leaveRequest->leave_type_id
+        );
+        
+        if ($balance) {
+            // تحديث الأيام المستخدمة
+            $balance->used_days += $leaveRequest->days;
+            $balance->remaining_days = $balance->total_days - $balance->used_days;
+            $balance->save();
+        }
+    } catch (\Exception $e) {
+        \Log::error('Failed to update leave balance: ' . $e->getMessage());
+    }
+}
+private function getOrCreateBalance($userId, $leaveTypeId)
+{
+    $currentYear = date('Y');
+    
+    // حاول جلب البالانس
+    $balance = LeaveBalance::where('user_id', $userId)
+        ->where('leave_type_id', $leaveTypeId)
+        ->where('year', $currentYear)
+        ->first();
+    
+    // لو مش موجود، حاول تعمله
+    if (!$balance) {
+        // جلب نوع الإجازة
+        $leaveType = LeaveType::find($leaveTypeId);
+        
+        if ($leaveType) {
+            // إنشاء بالانس جديد
+            $balance = LeaveBalance::create([
+                'user_id' => $userId,
+                'leave_type_id' => $leaveTypeId,
+                'year' => $currentYear,
+                'total_days' => $leaveType->default_days ?? 0,
+                'used_days' => 0,
+                'remaining_days' => $leaveType->default_days ?? 0,
+            ]);
+        }
+    }
+    
+    return $balance;
+}
 }
