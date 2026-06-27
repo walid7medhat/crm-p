@@ -27,6 +27,9 @@ use App\Models\LeadHistory;
 use App\Models\LeadComment;
 use Illuminate\Support\Str;
 use Auth;
+
+    use App\Exports\LeadsExport;
+use Maatwebsite\Excel\Facades\Excel;
 class LeadController extends Controller
 {
     public function __construct()
@@ -1629,4 +1632,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     {
         broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
     }
+
+
+public function export()
+{
+    return Excel::download(new LeadsExport, 'leads.xlsx');
+}
 }

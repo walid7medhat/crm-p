@@ -3,17 +3,13 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\IntegrationController;
-
-
-
-
-
+use App\Http\Controllers\Api\LeadController;
 use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\Listing;
 use Illuminate\Support\Str;
 use App\Http\Controllers\Api\Listing\ListingController;
-
+Route::get('/leads/export', [LeadController::class, 'export'])->name('leads.export');
 Route::get('/image/watermark', [ListingController::class, 'watermark'])
     ->name('image.watermark');
 
