@@ -14,7 +14,7 @@ class LeadsExport implements FromCollection, WithHeadings
             'lead_name',
             'first_name',
             'work_phone'
-        )        ->limit(500)->get();
+        )        ->limit(5000)->get();
     }
 
     public function headings(): array

@@ -1636,6 +1636,5 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
 
 public function export()
 {
-    return Excel::download(new LeadsExport, 'leads.xlsx');
-}
+return Excel::download(new LeadsExport, 'leads.csv', Excel::CSV);}
 }
