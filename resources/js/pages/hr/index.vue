@@ -2295,10 +2295,8 @@ const assetTypeOptions = computed(() => {
 })
 const assetStatusOptions = ['Assigned', 'Not Assigned', 'Working', 'In Repair', 'Used', 'New']
 const assetConditionOptions = ['New', 'Used', 'Working']
-const assetUserOptions = computed(() => {
-  if (!assetsRows.value || !Array.isArray(assetsRows.value)) return []
-  return Array.from(new Set(assetsRows.value.map((row) => row.userName))).filter(Boolean)
-})
+
+const assetsRows = ref([])
 const assetResponsiblePersons = ref([])
 const showAssetUserPicker = ref(false)
 const assetUserSearchQuery = ref('')
@@ -2306,6 +2304,23 @@ const assetUserPickerRef = ref(null)
 const showAssetUserEditPicker = ref(false)
 const assetUserEditSearchQuery = ref('')
 const assetUserEditPickerRef = ref(null)
+const assetUserOptions = computed(() => {
+  if (!assetsRows.value || !Array.isArray(assetsRows.value)) {
+    return []
+  }
+  
+  if (assetsRows.value.length === 0) {
+    return []
+  }
+  
+  return Array.from(
+    new Set(
+      assetsRows.value
+        .map((row) => row.userName)
+        .filter((name) => name && name !== '—' && name !== '')
+    )
+  )
+})
 const defaultPersonAvatar = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
 const defaultAssetCreateForm = () => ({
   assetType: '',
@@ -2334,22 +2349,38 @@ const selectedAssetResponsiblePerson = computed(() =>
   assetResponsiblePersons.value.find((person) => Number(person.id) === Number(assetCreateForm.value.assetUser)) || null,
 )
 const filteredAssetResponsiblePersons = computed(() => {
+  if (!Array.isArray(assetResponsiblePersons.value) || assetResponsiblePersons.value.length === 0) {
+    return []
+  }
+  
   const query = assetUserSearchQuery.value.trim().toLowerCase()
-  if (!query) return assetResponsiblePersons.value
+  
+  if (!query) {
+    return assetResponsiblePersons.value
+  }
+  console.log('DEBUG:', assetResponsiblePersons.value)
   return assetResponsiblePersons.value.filter((person) =>
     String(person.name || '').toLowerCase().includes(query) ||
-    String(person.email || '').toLowerCase().includes(query),
+    String(person.email || '').toLowerCase().includes(query)
   )
 })
 const selectedAssetResponsiblePersonEdit = computed(() =>
   assetResponsiblePersons.value.find((person) => Number(person.id) === Number(assetEditForm.value.assetUser)) || null,
 )
 const filteredAssetEditResponsiblePersons = computed(() => {
+  if (!Array.isArray(assetResponsiblePersons.value) || assetResponsiblePersons.value.length === 0) {
+    return []
+  }
+  
   const query = assetUserEditSearchQuery.value.trim().toLowerCase()
-  if (!query) return assetResponsiblePersons.value
+  
+  if (!query) {
+    return assetResponsiblePersons.value
+  }
+  console.log('DEBUG:', assetResponsiblePersons.value)
   return assetResponsiblePersons.value.filter((person) =>
     String(person.name || '').toLowerCase().includes(query) ||
-    String(person.email || '').toLowerCase().includes(query),
+    String(person.email || '').toLowerCase().includes(query)
   )
 })
 const assetEditForm = ref({
@@ -2778,10 +2809,6 @@ const announcementsPage = ref(1)
 const announcementsPerPage = 10
 
 // ========== ASSETS ROWS ==========
-const assetsRows = ref([
-  { id: 1, assetId: '#AST-001', type: 'Laptop', assetName: 'Dell Laptop', userName: 'Maria Guan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=47', handoverDate: '05 Feb 2023', rValue: '--', brand: 'Dell', category: 'IT Equipment', handoverTo: 'Maria Guan', serial: 'DL-ASS-001', status: 'Assigned' },
-  { id: 2, assetId: '#AST-002', type: 'Charger', assetName: 'Laptop Charger HP', userName: 'Omar Moradan', userRef: '455845', userAvatar: 'https://i.pravatar.cc/80?img=15', handoverDate: '10 Feb 2023', rValue: '--', brand: 'HP', category: 'Accessory', handoverTo: 'Omar Moradan', serial: 'HP-CHR-002', status: 'Assigned' },
-])
 
 const defaultAddEmployeeForm = () => ({
   full_name: '',
@@ -2986,7 +3013,9 @@ function handleDatePickerApply(date) {
 
 // ========== FILTERED ASSETS ==========
 const filteredAssetsRows = computed(() => {
-  if (!assetsRows.value || !Array.isArray(assetsRows.value)) {
+ const rows = Array.isArray(assetsRows.value) ? assetsRows.value : []
+  
+  if (!rows.length) {
     return []
   }
   const keyword = assetsSearch.value.trim().toLowerCase()
@@ -5889,9 +5918,15 @@ const fetchAssetsData = async () => {
     }
     
     const result = await fetchAssets(params)
+    console.log("📦 Full Result:", result)
+    console.log("📦 Result.data:", result?.data)
+    console.log("📦 Result.data.data:", result?.data?.data)
     
-    if (result?.data) {
-      assetsRows.value = result.data.map(row => ({
+    // ✅ استخراج المصفوفة من result.data.data
+    const assetsData = result?.data?.data || []
+    
+    if (Array.isArray(assetsData) && assetsData.length > 0) {
+      assetsRows.value = assetsData.map(row => ({
         id: row.id,
         assetId: row.asset_code || `#AST-${String(row.id).padStart(3, '0')}`,
         type: row.asset_type?.name || '—',
@@ -5925,12 +5960,14 @@ const fetchAssetsData = async () => {
         current_assignment: row.current_assignment,
         current_user: row.current_user,
       }))
-    }else{
-      assetsRows.value = [] 
+    } else {
+      assetsRows.value = []
     }
+    
+    console.log("✅ Assets loaded:", assetsRows.value.length)
   } catch (error) {
-    assetsRows.value = [] 
-    console.error('Failed to fetch assets:', error)
+    assetsRows.value = []
+    console.error('❌ Failed to fetch assets:', error)
     showNotification('Failed to load assets', 'error')
   }
 }

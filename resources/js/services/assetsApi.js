@@ -87,7 +87,7 @@ export const deleteAssetType = async (id) => {
 export const fetchAssets = async (params = {}) => {
   try {
     const response = await api.get('/assets', { params })
-    return response.data.data
+    return response.data
   } catch (error) {
     console.error('Error fetching assets:', error)
     throw error
