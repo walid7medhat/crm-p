@@ -3703,8 +3703,7 @@ public function duplicate($id)
             'galleryImages',
             'floorPlans',
             'additionalDocuments',
-            'features', // many-to-many
-            'owner',    // لو موجود
+            'owner',   
         ])->findOrFail($id);
 
         // 1️⃣ Duplicate main listing
@@ -3786,8 +3785,7 @@ public function duplicate($id)
             'data' => $newListing->load([
                 'galleryImages',
                 'floorPlans',
-                'additionalDocuments',
-                'features'
+                'additionalDocuments'
             ])
         ]);
 
