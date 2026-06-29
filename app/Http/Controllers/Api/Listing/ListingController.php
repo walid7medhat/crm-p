@@ -3711,7 +3711,7 @@ public function duplicate($id)
 
         $newListing->reference_number = 'REF-' . Str::upper(Str::random(6));
         $newListing->status = 'draft';
-        $newListing->parent_id = $listing->id;
+        // $newListing->parent_id = $listing->id;
         $newListing->created_at = now();
         $newListing->updated_at = now();
 
@@ -3764,12 +3764,7 @@ public function duplicate($id)
             ]);
         }
 
-        // 5️⃣ Duplicate Features (Many-to-Many)
-        if ($listing->features) {
-            $newListing->features()->sync(
-                $listing->features->pluck('id')->toArray()
-            );
-        }
+    
 
         // 6️⃣ Duplicate Owner (اختياري حسب السيستم)
         if ($listing->owner_id) {
