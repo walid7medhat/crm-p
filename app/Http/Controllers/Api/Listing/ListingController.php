@@ -3743,8 +3743,8 @@ public function duplicate($id)
 
             $newListing->floorPlans()->create([
                 'image_path' => $newPath,
-                'title'      => $plan->title,
-                'size'       => $plan->size,
+                'name'      => $plan->name,
+                'order'       => $plan->order,
             ]);
         }
 
