@@ -712,7 +712,7 @@ Route::delete('/search-alerts/{searchAlert}',[ListingController::class, 'destroy
     });
 
 Route::prefix('listings')->group(function(){
-
+Route::post('{id}/duplicate', [ListingController::class, 'duplicate']);
     Route::get('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'index']);
     Route::post('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'store']);
     Route::delete('/properties/{listing}/internal-updates/{update}', [InternalUpdateController::class, 'destroy']);

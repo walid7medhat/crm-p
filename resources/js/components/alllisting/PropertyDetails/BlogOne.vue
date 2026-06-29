@@ -5884,218 +5884,53 @@ const createPaymentDetailsSlide = () => {
 
   const installments = parseList(p.payment_breakdown);
   const expenses = parseList(p.assignment_expense_lines);
+
   const sellingPrice = toNum(p.price ?? p.selling_price);
   const rawOriginalPrice = toNum(p.original_price);
   const originalPrice = rawOriginalPrice || sellingPrice;
   const premium = sellingPrice - originalPrice;
-  const nocFixedAmount = toNum(p.noc_fixed_amount);
-  const nocPct = originalPrice > 0 ? Math.max(0, Math.min(100, (nocFixedAmount / originalPrice) * 100)) : 0;
-
-  // Only render the breakdown slide when ALL of the following hold:
-  //   1) the listing has at least one installment in its payment breakdown,
-  //   2) the completion status is Under Construction (case-insensitive),
-  //   3) a real original_price is set (selling-price fallback doesn't count).
-  const completionStr = String(p.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
-  const hasInstallments = installments.length > 0;
-  const hasOriginalPrice = rawOriginalPrice > 0;
-  // if (!(hasInstallments && isUnderConstruction && hasOriginalPrice)) {
-  //   return '';
-  // }
-
-  let planLabel = '';
-  if (p.payment_plan) {
-    let raw = p.payment_plan;
-    if (typeof raw === 'string') {
-      try { raw = JSON.parse(raw); } catch { /* keep string */ }
-    }
-    if (Array.isArray(raw)) planLabel = String(raw[0] || '');
-    else if (raw && typeof raw === 'object') planLabel = String(raw.label || '');
-    else planLabel = String(raw || '');
-  }
-  const planMatch = String(planLabel).match(/(\d+)\s*\/\s*(\d+)/);
-  const initialPct = planMatch ? Math.max(0, Math.min(100, Number(planMatch[1]))) : 0;
-  const handoverPct = Math.max(0, 100 - initialPct);
-  const handoverAmount = originalPrice - (originalPrice * initialPct) / 100;
-
-  const startOfDay = (v) => {
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return null;
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  };
-  const today = startOfDay(new Date());
-  const isPaid = (d) => {
-    const t = startOfDay(d);
-    return t !== null && today !== null && t <= today;
-  };
-
-  const installmentAmount = (entry) => {
-    if (!entry) return 0;
-    if (entry.type === 'percentage') {
-      return (originalPrice * toNum(entry.value)) / 100;
-    }
-    return toNum(entry.value);
-  };
-
-  const scheduledAed = installments.reduce((s, e) => s + installmentAmount(e), 0);
-  const paidAed = installments.reduce((s, e) => (isPaid(e?.date) ? s + installmentAmount(e) : s), 0);
-  const nocRequired = (originalPrice * nocPct) / 100;
-  const nocRemaining = Math.max(0, nocRequired - scheduledAed);
-  const nocMet = nocPct <= 0 || scheduledAed >= nocRequired - 0.01;
 
   const fmtAed = (v) =>
-    new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(toNum(v));
+    new Intl.NumberFormat('en-AE', {
+      style: 'currency',
+      currency: 'AED',
+      maximumFractionDigits: 0,
+    }).format(toNum(v));
 
-  const fmtDate = (d) => {
-    if (!d) return '—';
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return '—';
-    return dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
-  const badgeStyle = (status) => {
-    if (status === 'Paid') return 'background:#22c55e;color:#fff;';
-    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
-    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
-    return 'background:#fecdd3;color:#9f1239;';
-  };
-
-  const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
-  let cumulative = 0;
-  const installmentRows = sorted.map((entry) => {
-    const amount = installmentAmount(entry);
-    cumulative += amount;
-    let status = 'Upcoming';
-    if (isPaid(entry?.date)) status = 'Paid';
-    else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
-    const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
+  const installmentRows = installments.map((entry) => {
     return `
       <tr>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">Installment</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${pct}%</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtAed(amount)}</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtDate(entry?.date)}</td>
-        <td style="padding:2mm 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(status)}">${status}</span></td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;">Installment</td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;">—</td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;">${fmtAed(entry.value)}</td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;">${entry.date || '—'}</td>
+        <td style="padding:1.2mm 1mm;font-size:2mm;">Upcoming</td>
       </tr>`;
   }).join('');
 
-  const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Upcoming';
-  const premiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction
-    ? `<tr style="background:#f8fafc;">
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">Premium</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">—</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">—</td>
-        <td style="padding:2mm 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(premiumStatus)}">${premiumStatus}</span></td>
-      </tr>`
-    : '';
-
-  const handoverRow = Math.abs(handoverAmount) > 0.01
-    ? `<tr>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">Handover (${handoverPct.toFixed(0)}%)</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${handoverPct.toFixed(2)}%</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtAed(handoverAmount)}</td>
-        <td style="padding:2mm 1.5mm;font-size:2.6mm;">${fmtDate(p.handover_date)}</td>
-        <td style="padding:2mm 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
-      </tr>`
-    : '';
-
-  const totalAmount = (installments.reduce((s, e) => s + installmentAmount(e), 0))
-    + (installments.length > 0 || originalPrice > 0 || sellingPrice > 0 ? premium : 0)
-    + (Math.abs(handoverAmount) > 0.01 ? handoverAmount : 0);
-
-  const baseLabels = { op: 'OP', sp: 'SP', premium: 'premium' };
-  const baseAmount = (b) => b === 'op' ? originalPrice : b === 'sp' ? sellingPrice : b === 'premium' ? premium : 0;
-  const expLineAmount = (l) => {
-    const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
-    if (calc === 'percentage') return (baseAmount(l?.base) * toNum(l?.value)) / 100;
-    return toNum(l?.value);
-  };
-
-  let expSubtotal = 0;
-  let expVatTotal = 0;
-  let expGrand = 0;
   const expenseRows = expenses.map((l) => {
-    const amt = expLineAmount(l);
-    const vat = l?.vatEnabled ? amt * 0.05 : 0;
-    const total = amt + vat;
-    expSubtotal += amt;
-    expVatTotal += vat;
-    expGrand += total;
-    const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
-    const detail = calc === 'percentage'
-      ? `${toNum(l?.value)}% of ${baseLabels[l?.base] || 'OP'}`
-      : fmtAed(toNum(l?.value));
     return `
       <tr>
-        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;">${l?.label || '—'}</td>
-        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;color:#64748b;">${detail}</td>
-        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;">${fmtAed(amt)}</td>
-        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;">${l?.vatEnabled ? fmtAed(vat) : '—'}</td>
-        <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:600;">${fmtAed(total)}</td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;">${l.label || '—'}</td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;">—</td>
+        <td style="padding:1.2mm 1mm;font-size:2.2mm;text-align:right;">${fmtAed(l.value)}</td>
       </tr>`;
   }).join('');
 
   const expensesBlock = expenses.length > 0 ? `
-    <div style="margin-top:3mm;">
-      <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Assignment deal costs</div>
-      <div style="background:#ffffff;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
-        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
+    <div style="margin-top:1.5mm;">
+      <div style="font-size:2.2mm;font-weight:700;margin-bottom:1mm;">Assignment deal costs</div>
+      <div style="background:#fff;border-radius:2mm;padding:1mm;">
+        <table style="width:100%;border-collapse:separate;font-size:2.2mm;">
           <thead>
             <tr>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Label</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Detail</span></th>
-              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
-              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">VAT</span></th>
-              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Total</span></th>
+              <th style="padding:0.8mm 1mm;font-size:2mm;">Label</th>
+              <th style="padding:0.8mm 1mm;font-size:2mm;">Detail</th>
+              <th style="padding:0.8mm 1mm;font-size:2mm;">Amount</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRows}
-            <tr style="background:#f1f5f9;">
-              <td colspan="2" style="padding:1.8mm 1.5mm;font-size:2.6mm;font-weight:700;">Total</td>
-              <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expSubtotal)}</td>
-              <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expVatTotal)}</td>
-              <td style="padding:1.8mm 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expGrand)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  ` : '';
-
-  const nocStrip = nocPct > 0 ? `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 5mm;background:#ffffff;border-radius:3mm;padding:1.6mm 2mm;margin-bottom:2mm;font-size:2.6mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
-      <span>NOC <strong>${fmtAed(nocFixedAmount)}</strong></span>
-      <span>Paid <strong>${fmtAed(paidAed)}</strong></span>
-      <span>Remaining <strong>${fmtAed(nocRemaining)}</strong></span>
-      <span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;font-size:2.4mm;${nocMet ? 'background:#22c55e;color:#fff;' : 'background:#fecdd3;color:#9f1239;'}">${nocMet ? 'NOC met' : 'Below NOC'}</span>
-    </div>
-  ` : '';
-
-  const installmentTable = (installmentRows || premiumRow || handoverRow) && hasInstallments ? `
-    <div style="margin-bottom:2.5mm;">
-      <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Installment breakdown</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
-        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
-          <thead>
-            <tr>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Payment type</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Percentage</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Date</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Status</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${installmentRows}
-            ${premiumRow}
-            ${handoverRow}
-            <tr style="background:#f1f5f9;">
-              <td style="padding:2mm 1.5mm;font-size:2.6mm;font-weight:700;" colspan="2">Total</td>
-              <td style="padding:2mm 1.5mm;font-size:2.6mm;font-weight:700;">${fmtAed(totalAmount)}</td>
-              <td colspan="2"></td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -6103,41 +5938,51 @@ const createPaymentDetailsSlide = () => {
   ` : '';
 
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
-    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
-      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
-    </div>
-    <div style="position:relative !important; z-index:5 !important; padding:10mm 12mm 16mm 12mm !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <div style="margin-bottom:4mm;">
-        <div style="font-size:5mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:1.5mm;"></div>
+  <div style="width:210mm;height:140mm;overflow:hidden;background:#f4f6f9;">
+    <div style="padding:8mm 10mm;">
+      
+      <div style="margin-bottom:2mm;">
+        <div style="font-size:4mm;font-weight:700;">Payment details</div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2mm;margin-bottom:2.5mm;">
-        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;opacity:0.88;margin-bottom:1mm;">Selling price</div>
-          <div style="font-size:3.5mm;font-weight:700;">${fmtAed(sellingPrice)}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5mm;margin-bottom:2mm;">
+        <div style="background:#0f1f3a;color:#fff;border-radius:2mm;padding:1.5mm;">
+          <div style="font-size:2mm;">Selling price</div>
+          <div style="font-size:3mm;font-weight:700;">${fmtAed(sellingPrice)}</div>
         </div>
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;margin-bottom:1mm;">Original price (OP)</div>
-          <div style="font-size:3.5mm;font-weight:700;">${fmtAed(originalPrice)}</div>
+        <div style="background:#e8ecf2;border-radius:2mm;padding:1.5mm;">
+          <div style="font-size:2mm;">Original price</div>
+          <div style="font-size:3mm;font-weight:700;">${fmtAed(originalPrice)}</div>
         </div>
-           ${planLabel ? `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;margin-bottom:1mm;">Payment plan</div>
-          <div style="font-size:3.5mm;font-weight:700;">${planLabel || '—'}</div>
-        </div>    ` : ''}
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;margin-bottom:1mm;">Premium</div>
-          <div style="font-size:3.5mm;font-weight:700;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
+        <div style="background:#e8ecf2;border-radius:2mm;padding:1.5mm;">
+          <div style="font-size:2mm;">Premium</div>
+          <div style="font-size:3mm;font-weight:700;">${fmtAed(premium)}</div>
         </div>
       </div>
 
-      ${nocStrip}
-      ${installmentTable}
+      <div style="margin-bottom:1.5mm;">
+        <div style="font-size:2.2mm;font-weight:700;margin-bottom:1mm;">Installments</div>
+        <div style="background:#fff;border-radius:2mm;padding:1mm;">
+          <table style="width:100%;font-size:2.2mm;">
+            <thead>
+              <tr>
+                <th style="padding:0.8mm 1mm;">Type</th>
+                <th style="padding:0.8mm 1mm;">%</th>
+                <th style="padding:0.8mm 1mm;">Amount</th>
+                <th style="padding:0.8mm 1mm;">Date</th>
+                <th style="padding:0.8mm 1mm;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${installmentRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       ${expensesBlock}
+
     </div>
-    ${createFooter()}
   </div>
   `;
 };

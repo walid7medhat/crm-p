@@ -44,6 +44,7 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManagerStatic as Image;
 
+use Illuminate\Support\Str;
 class ListingController extends Controller
 {
     use HotDealNotifiable;
@@ -3690,5 +3691,114 @@ public function getActivityLog($listingId)
 }
 
     return ApiResponse::success($data, 'Activity log retrieved successfully');
+}
+
+
+public function duplicate($id)
+{
+    DB::beginTransaction();
+
+    try {
+        $listing = Listing::with([
+            'galleryImages',
+            'floorPlans',
+            'additionalDocuments',
+            'features', // many-to-many
+            'owner',    // لو موجود
+        ])->findOrFail($id);
+
+        // 1️⃣ Duplicate main listing
+        $newListing = $listing->replicate();
+
+        $newListing->reference_number = 'REF-' . Str::upper(Str::random(6));
+        $newListing->status = 'draft';
+        $newListing->parent_id = $listing->id;
+        $newListing->created_at = now();
+        $newListing->updated_at = now();
+
+        $newListing->save();
+
+        // 2️⃣ Duplicate Gallery Images (WITH FILE COPY)
+        foreach ($listing->galleryImages as $image) {
+
+            $newPath = 'listings/' . uniqid() . '_' . basename($image->image_path);
+
+            if (Storage::exists($image->image_path)) {
+                Storage::copy($image->image_path, $newPath);
+            }
+
+            $newListing->galleryImages()->create([
+                'image_path' => $newPath,
+            ]);
+        }
+
+        // 3️⃣ Duplicate Floor Plans (WITH IMAGE COPY)
+        foreach ($listing->floorPlans as $plan) {
+
+            $newPath = null;
+
+            if ($plan->image_path && Storage::exists($plan->image_path)) {
+                $newPath = 'floorplans/' . uniqid() . '_' . basename($plan->image_path);
+                Storage::copy($plan->image_path, $newPath);
+            }
+
+            $newListing->floorPlans()->create([
+                'image_path' => $newPath,
+                'title'      => $plan->title,
+                'size'       => $plan->size,
+            ]);
+        }
+
+        // 4️⃣ Duplicate Documents (WITH FILE COPY)
+        foreach ($listing->additionalDocuments as $doc) {
+
+            $newPath = null;
+
+            if ($doc->file_path && Storage::exists($doc->file_path)) {
+                $newPath = 'documents/' . uniqid() . '_' . basename($doc->file_path);
+                Storage::copy($doc->file_path, $newPath);
+            }
+
+            $newListing->additionalDocuments()->create([
+                'file_path' => $newPath,
+                'title'     => $doc->title,
+            ]);
+        }
+
+        // 5️⃣ Duplicate Features (Many-to-Many)
+        if ($listing->features) {
+            $newListing->features()->sync(
+                $listing->features->pluck('id')->toArray()
+            );
+        }
+
+        // 6️⃣ Duplicate Owner (اختياري حسب السيستم)
+        if ($listing->owner_id) {
+            $newListing->owner_id = $listing->owner_id;
+            $newListing->save();
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'status' => true,
+            'message' => '🔥 Listing duplicated بالكامل بكل العلاقات',
+            'data' => $newListing->load([
+                'galleryImages',
+                'floorPlans',
+                'additionalDocuments',
+                'features'
+            ])
+        ]);
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ], 500);
+    }
 }
 }
