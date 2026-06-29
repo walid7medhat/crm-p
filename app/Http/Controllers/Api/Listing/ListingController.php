@@ -3752,11 +3752,11 @@ public function duplicate($id)
         // 4️⃣ Duplicate Documents (WITH FILE COPY)
         foreach ($listing->additionalDocuments as $doc) {
 
-            $newPath = null;
+            $newPath = $doc->path;
 
-            if ($doc->file_path && Storage::exists($doc->file_path)) {
-                $newPath = 'documents/' . uniqid() . '_' . basename($doc->file_path);
-                Storage::copy($doc->file_path, $newPath);
+            if ($doc->path && Storage::exists($doc->path)) {
+                $newPath = 'documents/' . uniqid() . '_' . basename($doc->path);
+                Storage::copy($doc->path, $newPath);
             }
 
             $newListing->additionalDocuments()->create([
