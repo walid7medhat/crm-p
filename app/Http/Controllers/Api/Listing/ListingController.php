@@ -830,7 +830,7 @@ public function getMatchingListings(Request $request)
     }
 
     // -----------------------------
-    // 📦 FINAL RESULT
+    // 📦 FINAL RESULTstore
     // -----------------------------
     $listings = $finalQuery
         ->orderBy('created_at', 'desc')
@@ -3734,7 +3734,7 @@ public function duplicate($id)
         // 3️⃣ Duplicate Floor Plans (WITH IMAGE COPY)
         foreach ($listing->floorPlans as $plan) {
 
-            $newPath = null;
+            $newPath = $plan->image_path; // fallback
 
             if ($plan->image_path && Storage::exists($plan->image_path)) {
                 $newPath = 'floorplans/' . uniqid() . '_' . basename($plan->image_path);
@@ -3743,8 +3743,9 @@ public function duplicate($id)
 
             $newListing->floorPlans()->create([
                 'image_path' => $newPath,
-                'name'      => $plan->name,
-                'order'       => $plan->order,
+                'name'       => $plan->name,
+                'order'      => $plan->order,
+                'project_floor_plan_id' => $plan->project_floor_plan_id,
             ]);
         }
 
@@ -3759,8 +3760,8 @@ public function duplicate($id)
             }
 
             $newListing->additionalDocuments()->create([
-                'file_path' => $newPath,
-                'title'     => $doc->title,
+                'path' => $newPath,
+                'original_name'     => $doc->title,
             ]);
         }
 
