@@ -6107,27 +6107,27 @@ const createPaymentDetailsSlide = () => {
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:relative !important; z-index:5 !important; padding:10mm 12mm 16mm 12mm !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
+    <div style="position:relative !important; z-index:5 !important; padding:8mm 12mm 8mm 12mm !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin-bottom:4mm;">
         <div style="font-size:5mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
         <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:1.5mm;"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2mm;margin-bottom:2.5mm;">
-        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2mm;margin-bottom:1.5mm;">
+        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
           <div style="font-size:2.4mm;opacity:0.88;margin-bottom:1mm;">Selling price</div>
           <div style="font-size:3.5mm;font-weight:700;">${fmtAed(sellingPrice)}</div>
         </div>
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
           <div style="font-size:2.4mm;margin-bottom:1mm;">Original price (OP)</div>
           <div style="font-size:3.5mm;font-weight:700;">${fmtAed(originalPrice)}</div>
         </div>
            ${planLabel ? `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
           <div style="font-size:2.4mm;margin-bottom:1mm;">Payment plan</div>
           <div style="font-size:3.5mm;font-weight:700;">${planLabel || '—'}</div>
         </div>    ` : ''}
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:2.5mm 2.5mm 2.8mm;">
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
           <div style="font-size:2.4mm;margin-bottom:1mm;">Premium</div>
           <div style="font-size:3.5mm;font-weight:700;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
         </div>
