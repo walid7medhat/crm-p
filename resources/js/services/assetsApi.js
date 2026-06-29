@@ -1,6 +1,108 @@
 // services/assetsApi.js
 import api from '@/plugins/axios'
 
+const STATUS_LABELS = {
+  available: 'Available',
+  assigned: 'Assigned',
+  maintenance: 'Under Maintenance',
+  disposed: 'Lost / Disposed',
+}
+
+const CONDITION_LABELS = {
+  new: 'New',
+  used: 'Used',
+  working: 'Working',
+  damaged: 'Damaged',
+  maintenance: 'Maintenance',
+}
+
+function unwrapPaginated(payload) {
+  const root = payload?.data
+  if (root?.data && Array.isArray(root.data)) {
+    return {
+      items: root.data,
+      currentPage: root.current_page ?? 1,
+      lastPage: root.last_page ?? 1,
+      total: root.total ?? root.data.length,
+      perPage: root.per_page ?? root.data.length,
+    }
+  }
+  if (Array.isArray(root)) {
+    return {
+      items: root,
+      currentPage: 1,
+      lastPage: 1,
+      total: root.length,
+      perPage: root.length,
+    }
+  }
+  return {
+    items: [],
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    perPage: 0,
+  }
+}
+
+export function resolveWarrantyStatus(warrantyDate) {
+  if (!warrantyDate) {
+    return { key: 'none', label: 'No warranty' }
+  }
+
+  const end = new Date(warrantyDate)
+  if (Number.isNaN(end.getTime())) {
+    return { key: 'none', label: 'No warranty' }
+  }
+
+  const daysLeft = Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  if (daysLeft < 0) {
+    return { key: 'expired', label: 'Expired' }
+  }
+  if (daysLeft <= 30) {
+    return { key: 'expiring_soon', label: 'Expiring soon' }
+  }
+  return { key: 'active', label: 'Active' }
+}
+
+export function normalizeAsset(row) {
+  if (!row) return null
+
+  const status = row.status || 'available'
+  const condition = row.condition || 'new'
+
+  return {
+    id: row.id,
+    name: row.name || '—',
+    assetId: row.asset_code || `AST-${String(row.id).padStart(3, '0')}`,
+    serialNumber: row.serial_number || '—',
+    modelNumber: row.model_number || '—',
+    category: row.asset_type?.name || '—',
+    assetTypeId: row.asset_type_id || row.asset_type?.id || null,
+    assignedEmployee: row.current_user?.name || '—',
+    assignedAvatar: row.current_user?.avatar || null,
+    department: row.department?.name || '—',
+    departmentId: row.department_id || row.department?.id || null,
+    branch: row.branch?.name || '—',
+    branchId: row.branch_id || row.branch?.id || null,
+    status,
+    statusLabel: row.status_label || STATUS_LABELS[status] || status,
+    condition,
+    conditionLabel: CONDITION_LABELS[condition] || condition,
+    purchaseDate: row.purchase_date || null,
+    warrantyDate: row.warranty_date || null,
+    warrantyStatus: resolveWarrantyStatus(row.warranty_date),
+    handoverDate: row.current_assignment?.handover_date || null,
+    supplierName: row.supplier_name || '—',
+    unitPrice: row.unit_price ?? null,
+    quantity: row.quantity ?? 1,
+    description: row.description || '',
+    remarks: row.remarks || '',
+    imageIcon: 'lucide:package',
+    raw: row,
+  }
+}
+
 // ==================== Asset Types ====================
 
 /**
@@ -87,7 +189,11 @@ export const deleteAssetType = async (id) => {
 export const fetchAssets = async (params = {}) => {
   try {
     const response = await api.get('/assets', { params })
-    return response.data
+    const page = unwrapPaginated(response.data)
+    return {
+      ...page,
+      items: page.items.map(normalizeAsset).filter(Boolean),
+    }
   } catch (error) {
     console.error('Error fetching assets:', error)
     throw error

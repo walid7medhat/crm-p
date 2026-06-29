@@ -5918,15 +5918,12 @@ const fetchAssetsData = async () => {
     }
     
     const result = await fetchAssets(params)
-    console.log("📦 Full Result:", result)
-    console.log("📦 Result.data:", result?.data)
-    console.log("📦 Result.data.data:", result?.data?.data)
-    
-    // ✅ استخراج المصفوفة من result.data.data
-    const assetsData = result?.data?.data || []
-    
-    if (Array.isArray(assetsData) && assetsData.length > 0) {
-      assetsRows.value = assetsData.map(row => ({
+    const assetsData = Array.isArray(result?.items) ? result.items : []
+
+    if (assetsData.length > 0) {
+      assetsRows.value = assetsData.map((item) => {
+        const row = item.raw || item
+        return {
         id: row.id,
         assetId: row.asset_code || `#AST-${String(row.id).padStart(3, '0')}`,
         type: row.asset_type?.name || '—',
@@ -5959,7 +5956,8 @@ const fetchAssetsData = async () => {
         department_id: row.department_id,
         current_assignment: row.current_assignment,
         current_user: row.current_user,
-      }))
+      }
+      })
     } else {
       assetsRows.value = []
     }

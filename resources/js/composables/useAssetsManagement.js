@@ -57,7 +57,8 @@ export function useAssetsManagement() {
 
   const filteredAssets = computed(() => {
     const q = searchQuery.value.trim().toLowerCase()
-    return assets.value.filter((asset) => {
+    const list = Array.isArray(assets.value) ? assets.value : []
+    return list.filter((asset) => {
       if (q) {
         const haystack = [
           asset.name,
@@ -75,9 +76,10 @@ export function useAssetsManagement() {
     })
   })
 
-  const warrantyAlerts = computed(() =>
-    assets.value.filter((a) => ['expiring_soon', 'expired'].includes(a.warrantyStatus?.key))
-  )
+  const warrantyAlerts = computed(() => {
+    const list = Array.isArray(assets.value) ? assets.value : []
+    return list.filter((a) => ['expiring_soon', 'expired'].includes(a.warrantyStatus?.key))
+  })
 
   async function loadOptions() {
     try {
@@ -126,14 +128,15 @@ export function useAssetsManagement() {
     error.value = ''
     try {
       const result = await fetchAssets(buildParams(currentPage.value))
+      const items = Array.isArray(result?.items) ? result.items : []
       if (reset) {
-        assets.value = result.items
+        assets.value = items
       } else {
-        assets.value = [...assets.value, ...result.items]
+        assets.value = [...(Array.isArray(assets.value) ? assets.value : []), ...items]
       }
-      currentPage.value = result.currentPage
-      lastPage.value = result.lastPage
-      total.value = result.total
+      currentPage.value = result?.currentPage ?? 1
+      lastPage.value = result?.lastPage ?? 1
+      total.value = result?.total ?? items.length
       await loadStatistics()
     } catch (e) {
       error.value = e?.response?.data?.message || e?.message || 'Failed to load assets'

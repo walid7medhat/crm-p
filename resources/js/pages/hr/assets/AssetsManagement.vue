@@ -95,7 +95,7 @@
     </div>
 
     <template v-else-if="activeView === 'inventory'">
-      <div v-if="!filteredAssets && !filteredAssets.length" class="emp-empty">
+      <div v-if="!filteredAssets.length" class="emp-empty">
         <div class="emp-empty__icon"><iconify-icon icon="lucide:package" /></div>
         <h6>No assets found</h6>
         <p>{{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first asset to get started.' }}</p>
