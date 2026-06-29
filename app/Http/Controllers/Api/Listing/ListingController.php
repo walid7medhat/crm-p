@@ -3399,50 +3399,71 @@ public function getActivityLog($listingId)
 {
     $listing = Listing::findOrFail($listingId);
 
-    // قائمة الميزات (نسخة من ListingResource::FEATURE_LABELS)
-    $featureLabels = [
-        'maid' => "Maid's Room",
-        'storage' => 'Storage Areas',
-        'study' => 'Study Room',
-        'laundry' => 'Laundry Room',
-        'driver' => 'Driver Room',
-        'swimming_pool' => 'Swimming Pool',
-        'gym' => 'Fully Equipped Gymnasium',
-        'kids_play_area' => 'Kids Play Area',
-        'garden' => 'Landscaped Gardens',
-        'bbq' => 'BBQ Area',
-        'jogging' => 'Jogging & Cycling Tracks',
-        'sauna' => 'Sauna & Steam Room',
-        'jacuzzi' => 'Jacuzzi',
-        'community_parks' => 'Community Parks',
-        'multi_purpose_courts' => 'Multi-Purpose Courts',
-        'community_center' => 'Community Center',
-        'pet_friendly' => 'Pet-Friendly Community',
-        'family_oriented' => 'Family-Oriented Environment',
-        'cafes_restaurants' => 'Cafés & Restaurants',
-        'retail_shops' => 'Retail Shops & Supermarkets',
-        'mosque' => 'Mosque',
-        'day_care' => 'Day Care Center',
-        'easy_access_roads' => 'Easy Access to Major Roads',
-        'close_to_essentials' => 'Close to Schools, Hospitals & Shopping Malls',
-        'balcony' => 'Balcony / Terrace',
-        'spacious_living' => 'Spacious Living Areas',
-        'wardrobes' => 'Built-in Wardrobes',
-        'high_quality_finishes' => 'High-Quality Finishes',
-        'central_ac' => 'Central Air Conditioning',
-        'double_glazed_windows' => 'Double-Glazed Windows',
-        'elevators' => 'High-Speed Elevators',
-        'lobby' => 'Elegant Lobby & Reception Area',
-        'covered_parking' => 'Covered Parking',
-        'visitor_parking' => 'Visitor Parking Available',
-        'broadband' => 'Broadband Internet Ready',
-        'satellite_tv' => 'Satellite/Cable TV Connection',
-        'intercom' => 'Intercom System',
-        'security_24_7' => '24/7 Security',
-        'cctv' => 'CCTV Surveillance',
-        'concierge' => 'Concierge Services',
-        'maintenance' => 'Maintenance Services',
-        'waste_disposal' => 'Waste Disposal Facilities',
+        $featureLabels = [
+
+        // Layout / Position
+        'corner_unit'        => 'Corner Unit',
+        'end_unit'           => 'End Unit',
+        'mid_unit'           => 'Mid Unit',
+        'double_row'         => 'Double Row',
+        'single_row'         => 'Single Row',
+
+        // Floor
+        'mid_floor'          => 'Mid Floor',
+        'high_floor'         => 'High Floor',
+        'low_floor'          => 'Low Floor',
+        'ground_floor'       => 'Ground Floor',
+
+        // Views
+        'sea_view'           => 'Sea View',
+        'partial_sea_view'   => 'Partial Sea View',
+        'canal_view'         => 'Canal View',
+        'partial_canal_view' => 'Partial Canal View',
+        'museum_view'        => 'Museum View',
+        'park_view'          => 'Park View',
+        'partial_park_view'  => 'Partial Park View',
+        'city_view'          => 'City View',
+        'community_view'     => 'Community View',
+        'road_view'          => 'Road View',
+        'mall_view'          => 'Mall View',
+        'mangrove_view'      => 'Mangrove View',
+        'university_view'    => 'University View',
+        'pool_view'          => 'Pool View',
+        'fountain_view'      => 'Fountain View',
+
+        // Rooms
+        'maid_room'          => 'Maid Room',
+        'guest_room'         => 'Guest Room',
+        'laundry_room'       => 'Laundry Room',
+        'study_room'         => 'Study Room',
+        'utility_room'       => 'Utility Room',
+        'storage_room'       => 'Storage Room',
+        'powder_room'        => 'Powder Room',
+        'driver_room'        => 'Driver Room',
+        'majles'             => 'Majles',
+        'dressing_room'      => 'Dressing Room',
+
+        // Outdoor / Spaces
+        'balcony'            => 'Balcony',
+        'terrace'            => 'Terrace',
+        'basement'           => 'Basement',
+        'pod'                => 'Pod',
+
+        // Kitchen
+        'open_kitchen'           => 'Open Kitchen',
+        'semi_closed_kitchen'    => 'Semi Closed Kitchen',
+        'closed_kitchen'         => 'Closed Kitchen',
+        'pantry'                 => 'Pantry',
+        'kitchen_appliances'     => 'Kitchen Appliances',
+
+        // Furnishing
+        'furnished'          => 'Furnished',
+        'fully_furnished'    => 'Fully Furnished',
+        'semi_furnished'     => 'Semi Furnished',
+
+        // Extras
+        'private_pool'       => 'Private Pool',
+        'private_gym'        => 'Private Gym',
     ];
 
     $importantFields = [
