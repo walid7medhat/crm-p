@@ -152,80 +152,189 @@
       </div>
     </Teleport>
 
-    <!-- Create / Edit modal -->
+    <!-- ===== MODIFIED: Create/Edit Modal with full fields matching the external modal ===== -->
     <Teleport to="body">
-      <div v-if="showFormModal" class="ast-modal-overlay" @click.self="closeFormModal">
-        <div class="ast-modal ast-modal--wide">
-          <h6>{{ editingId ? 'Edit Asset' : 'Add New Asset' }}</h6>
-          <div class="ast-form-grid">
-            <label>
-              Asset type *
-              <select v-model="form.asset_type_id">
-                <option value="">Select type</option>
-                <option v-for="t in assetTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
-              </select>
-            </label>
-            <label>
-              Asset name *
-              <input v-model="form.name" type="text" placeholder="Asset name" />
-            </label>
-            <label>
-              Serial number
-              <input v-model="form.serial_number" type="text" />
-            </label>
-            <label>
-              Model number
-              <input v-model="form.model_number" type="text" />
-            </label>
-            <label>
-              Department
-              <select v-model="form.department_id">
-                <option value="">Select department</option>
-                <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-              </select>
-            </label>
-            <label>
-              Branch
-              <select v-model="form.branch_id">
-                <option value="">Select branch</option>
-                <option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option>
-              </select>
-            </label>
-            <label>
-              Purchase date
-              <input v-model="form.purchase_date" type="date" />
-            </label>
-            <label>
-              Warranty date
-              <input v-model="form.warranty_date" type="date" />
-            </label>
-            <label>
-              Condition
-              <select v-model="form.condition">
-                <option value="new">New</option>
-                <option value="used">Used</option>
-                <option value="working">Working</option>
-                <option value="damaged">Damaged</option>
-                <option value="maintenance">Maintenance</option>
-              </select>
-            </label>
-            <label>
-              Status
-              <select v-model="form.status">
-                <option value="available">Available</option>
-                <option value="assigned">Assigned</option>
-                <option value="maintenance">Under Maintenance</option>
-                <option value="disposed">Lost / Disposed</option>
-              </select>
-            </label>
-            <label class="ast-form-full">
-              Description
-              <textarea v-model="form.description" rows="3" />
-            </label>
+      <div v-if="showFormModal" class="edit-overlay add-employee-overlay" @click.self="closeFormModal">
+        <div class="add-employee-modal asset-create-modal">
+          <div class="add-employee-head">
+            <h6>{{ editingId ? 'Edit Asset' : 'Create New Asset' }}</h6>
+            <button type="button" class="add-employee-close" @click="closeFormModal">
+              <iconify-icon icon="lucide:x" />
+            </button>
           </div>
-          <div class="ast-modal__actions">
-            <button type="button" class="emp-filter-sheet__clear" @click="closeFormModal">Cancel</button>
-            <button type="button" class="emp-filter-sheet__apply" :disabled="saving" @click="saveAsset">
+
+          <div class="add-employee-body">
+            <!-- Asset Details Section -->
+            <section class="add-employee-section">
+              <h6>Asset Details</h6>
+              <div class="add-grid-two">
+                <div class="add-field">
+                  <label>Asset Type *</label>
+                  <SearchableSelect 
+                    v-model="form.asset_type_id" 
+                    :options="assetTypeOptions" 
+                    placeholder="Not Selected" 
+                  />
+                </div>
+                <div class="add-field">
+                  <label>Asset Name *</label>
+                  <input v-model="form.name" type="text" placeholder="Enter Asset Name" />
+                </div>
+                <div class="add-field">
+                  <label>Serial Number</label>
+                  <input v-model="form.serial_number" type="text" placeholder="Enter Serial Number" />
+                </div>
+                <div class="add-field">
+                  <label>Model Number</label>
+                  <input v-model="form.model_number" type="text" placeholder="Enter Model Number" />
+                </div>
+                <div class="add-field">
+                  <label>RDP Number</label>
+                  <input v-model="form.rdp_number" type="text" placeholder="Enter reference number" />
+                </div>
+                <div class="add-field">
+                  <label>Remarks</label>
+                  <input v-model="form.remarks" type="text" placeholder="Enter Remarks" />
+                </div>
+                <div class="add-field add-field-full">
+                  <label>Description</label>
+                  <textarea v-model="form.description" placeholder="Enter Description"></textarea>
+                </div>
+              </div>
+            </section>
+
+            <!-- User Details Section -->
+            <section class="add-employee-section">
+              <h6>User Details</h6>
+              <div class="add-grid-two">
+                <div ref="assetUserPickerRef" class="add-field asset-user-picker-field">
+                  <label>Asset User</label>
+                  <button type="button" class="asset-user-trigger" @click.stop="toggleAssetUserPicker">
+                    <span>{{ selectedAssetResponsiblePerson?.name || 'Not Selected' }}</span>
+                    <iconify-icon icon="lucide:chevron-down" />
+                  </button>
+                  <div v-if="showAssetUserPicker" class="asset-user-dropdown" @click.stop>
+                    <div class="asset-user-dropdown-head">
+                      <span>Person</span>
+                      <button type="button" class="asset-user-close-btn" @click="closeAssetUserPicker">
+                        <iconify-icon icon="lucide:x" />
+                      </button>
+                    </div>
+                    <div class="search-input-wrapper mb-2">
+                      <input v-model="assetUserSearchQuery" type="text" class="asset-user-search-input" placeholder="Search Responsible Person" />
+                      <iconify-icon icon="lucide:search" class="search-icon" />
+                    </div>
+                    <div class="asset-user-list-scroll">
+                      <button
+                        v-for="person in filteredAssetResponsiblePersons"
+                        :key="person.id"
+                        type="button"
+                        class="asset-user-item"
+                        :class="{ selected: Number(form.asset_user_id) === Number(person.id) }"
+                        @click="selectAssetResponsiblePerson(person)"
+                      >
+                        <img :src="person.avatar || defaultPersonAvatar" class="asset-user-avatar" alt="user avatar" />
+                        <div class="asset-user-info">
+                          <div class="asset-user-head">
+                            <span class="asset-user-name">{{ person.name }}</span>
+                            <span v-if="person.role_name" class="user-position-badge">{{ person.role_name }}</span>
+                          </div>
+                          <div class="user-item-meta-line">
+                            <span class="meta-value">{{ person.parent_name || person.team_lead_name || '—' }}</span>
+                            <span class="meta-divider">|</span>
+                            <span class="meta-value">{{ person.branch_name || person.office_name || '—' }}</span>
+                          </div>
+                        </div>
+                      </button>
+                      <div v-if="!filteredAssetResponsiblePersons.length" class="text-center text-muted py-2">No persons found</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="add-field">
+                  <label>Date Of Handover</label>
+                  <input :value="formatDateDisplay(form.handover_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.handover_date')" />
+                </div>
+                <div class="add-field">
+                  <label>Branch Location</label>
+                  <SearchableSelect 
+                    v-model="form.branch_id" 
+                    :options="branchOptions" 
+                    placeholder="Not Selected" 
+                  />
+                </div>
+                <div class="add-field">
+                  <label>Department</label>
+                  <SearchableSelect 
+                    v-model="form.department_id" 
+                    :options="departmentOptions" 
+                    placeholder="Not Selected" 
+                  />
+                </div>
+                <div class="add-field">
+                  <label>Status *</label>
+                  <SearchableSelect 
+                    v-model="form.status" 
+                    :options="statusOptions" 
+                    placeholder="Not Selected" 
+                  />
+                </div>
+                <div class="add-field">
+                  <label>Date Of Return</label>
+                  <input :value="formatDateDisplay(form.return_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.return_date')" />
+                </div>
+              </div>
+            </section>
+
+            <!-- Purchase Details Section -->
+            <section class="add-employee-section">
+              <h6>Purchase Details</h6>
+              <div class="add-grid-two">
+                <div class="add-field">
+                  <label>Purchase Date *</label>
+                  <input :value="formatDateDisplay(form.purchase_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.purchase_date')" />
+                </div>
+                <div class="add-field">
+                  <label>Supplier Name</label>
+                  <input v-model="form.supplier_name" type="text" placeholder="Enter Supplier Name" />
+                </div>
+                <div class="add-field">
+                  <label>Warranty Date</label>
+                  <input :value="formatDateDisplay(form.warranty_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.warranty_date')" />
+                </div>
+                <div class="add-field">
+                  <label>Condition *</label>
+                  <SearchableSelect 
+                    v-model="form.condition" 
+                    :options="conditionOptions" 
+                    placeholder="Not Selected" 
+                  />
+                </div>
+                <div class="add-field">
+                  <label>Unit Price</label>
+                  <div class="asset-price-group">
+                    <input v-model="form.unit_price" type="text" placeholder="Enter Amount" />
+                    <select v-model="form.currency">
+                      <option value="UAE Dirham">UAE Dirham</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="add-field">
+                  <label>QTY *</label>
+                  <div class="asset-qty-group">
+                    <input v-model.number="form.quantity" type="number" min="1" placeholder="Enter item quantity" />
+                    <button type="button" class="asset-qty-btn" @click="decrementQty">-</button>
+                    <button type="button" class="asset-qty-btn" @click="incrementQty">+</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="add-employee-footer">
+            <button type="button" class="add-employee-clear-btn" @click="closeFormModal">Cancel</button>
+            <button type="button" class="add-employee-save-btn" :disabled="saving" @click="saveAsset">
               {{ saving ? 'Saving…' : 'Save' }}
             </button>
           </div>
@@ -238,7 +347,7 @@
       <div v-if="showAssignModal" class="ast-modal-overlay" @click.self="showAssignModal = false">
         <div class="ast-modal">
           <h6>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h6>
-          <p v-if="actionAsset">{{ actionAsset.name }} ({{ actionAsset.assetId }})</p>
+          <p v-if="actionAsset">{{ actionAsset.name }} ({{ actionAsset.assetCode }})</p>
           <div class="ast-form-grid">
             <label>
               Employee *
@@ -265,11 +374,20 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Date Picker -->
+    <DateTimePicker
+      :show="showUnifiedDatePicker"
+      :model-value="datePickerValue"
+      :date-only="true"
+      @update:show="showUnifiedDatePicker = $event"
+      @apply="handleDatePickerApply"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useAssetsManagement } from '@/composables/useAssetsManagement'
@@ -283,10 +401,16 @@ import {
   transferAsset,
   markAssetMaintenance,
   exportAssetsCsv,
+  fetchAssetTypes,
+  fetchResponsiblePersons,
+  fetchAssetStatistics,
 } from '@/services/assetsApi'
+import { fetchDepartments, fetchBranches } from '@/services/employeesApi'
 import AssetCard from '@/components/hr/assets/AssetCard.vue'
 import AssetsFilterFields from '@/components/hr/assets/AssetsFilterFields.vue'
 import AssetTrackingPanel from '@/components/hr/assets/AssetTrackingPanel.vue'
+import SearchableSelect from '@/components/ui/SearchableSelect.vue'
+import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 
 defineProps({
   embedded: { type: Boolean, default: true },
@@ -304,6 +428,36 @@ const actionAsset = ref(null)
 const assignMode = ref('assign')
 const saving = ref(false)
 
+// ===== Asset User Picker =====
+const showAssetUserPicker = ref(false)
+const assetUserSearchQuery = ref('')
+const assetUserPickerRef = ref(null)
+const assetResponsiblePersons = ref([])
+const defaultPersonAvatar = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
+
+// ===== Date Picker =====
+const showUnifiedDatePicker = ref(false)
+const datePickerValue = ref(null)
+const activeDateField = ref('')
+
+// ===== Options =====
+const assetTypeOptions = ref([])
+const departmentOptions = ref([])
+const branchOptions = ref([])
+const statusOptions = [
+  { value: 'available', label: 'Available' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'maintenance', label: 'Under Maintenance' },
+  { value: 'disposed', label: 'Lost / Disposed' },
+]
+const conditionOptions = [
+  { value: 'new', label: 'New' },
+  { value: 'used', label: 'Used' },
+  { value: 'working', label: 'Working' },
+  { value: 'damaged', label: 'Damaged' },
+  { value: 'maintenance', label: 'Maintenance' },
+]
+
 const viewTabs = [
   { id: 'inventory', label: 'Inventory', icon: 'lucide:layout-grid' },
   { id: 'tracking', label: 'Tracking', icon: 'lucide:radar' },
@@ -320,13 +474,22 @@ const defaultForm = () => ({
   asset_type_id: '',
   serial_number: '',
   model_number: '',
-  department_id: '',
+  rdp_number: '',
+  remarks: '',
+  description: '',
+  asset_user_id: null,
+  handover_date: '',
+  return_date: '',
   branch_id: '',
+  department_id: '',
+  status: 'available',
   purchase_date: '',
+  supplier_name: '',
   warranty_date: '',
   condition: 'new',
-  status: 'available',
-  description: '',
+  unit_price: '',
+  currency: 'UAE Dirham',
+  quantity: 1,
 })
 
 const form = ref(defaultForm())
@@ -355,6 +518,79 @@ const {
   loadMore,
   clearFilters,
 } = useAssetsManagement()
+
+// ===== Computed =====
+const selectedAssetResponsiblePerson = computed(() =>
+  assetResponsiblePersons.value.find((person) => Number(person.id) === Number(form.value.asset_user_id)) || null,
+)
+
+const filteredAssetResponsiblePersons = computed(() => {
+  if (!Array.isArray(assetResponsiblePersons.value) || assetResponsiblePersons.value.length === 0) {
+    return []
+  }
+  const query = assetUserSearchQuery.value.trim().toLowerCase()
+  if (!query) return assetResponsiblePersons.value
+  return assetResponsiblePersons.value.filter((person) =>
+    String(person.name || '').toLowerCase().includes(query) ||
+    String(person.email || '').toLowerCase().includes(query)
+  )
+})
+
+// ===== Helper Functions =====
+function toDateValue(value) {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T12:00:00`)
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function toIsoDate(value) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return ''
+  const y = value.getFullYear()
+  const m = String(value.getMonth() + 1).padStart(2, '0')
+  const d = String(value.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatDateDisplay(value) {
+  if (!value) return ''
+  const dt = toDateValue(value)
+  if (!dt) return ''
+  const d = String(dt.getDate()).padStart(2, '0')
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const y = dt.getFullYear()
+  return `${d}/${m}/${y}`
+}
+
+function getFieldValueByPath(path) {
+  if (path === 'form.handover_date') return form.value.handover_date
+  if (path === 'form.return_date') return form.value.return_date
+  if (path === 'form.purchase_date') return form.value.purchase_date
+  if (path === 'form.warranty_date') return form.value.warranty_date
+  return ''
+}
+
+function setFieldValueByPath(path, value) {
+  if (path === 'form.handover_date') form.value.handover_date = value
+  else if (path === 'form.return_date') form.value.return_date = value
+  else if (path === 'form.purchase_date') form.value.purchase_date = value
+  else if (path === 'form.warranty_date') form.value.warranty_date = value
+}
+
+function openDatePicker(path) {
+  activeDateField.value = path
+  datePickerValue.value = toDateValue(getFieldValueByPath(path))
+  showUnifiedDatePicker.value = true
+}
+
+function handleDatePickerApply(date) {
+  const targetPath = activeDateField.value
+  if (!targetPath) return
+  setFieldValueByPath(targetPath, toIsoDate(date))
+}
 
 function syncMobile() {
   isMobile.value = window.innerWidth <= MOBILE_LAYOUT_MAX_WIDTH
@@ -393,51 +629,161 @@ function openCreate() {
   editingId.value = null
   form.value = defaultForm()
   showFormModal.value = true
+  fetchAssetResponsiblePersons()
 }
 
 function openEdit(asset) {
   editingId.value = asset.id
   form.value = {
-    name: asset.name,
-    asset_type_id: asset.assetTypeId || '',
-    serial_number: asset.serialNumber === '—' ? '' : asset.serialNumber,
-    model_number: asset.modelNumber === '—' ? '' : asset.modelNumber,
-    department_id: asset.departmentId || '',
-    branch_id: asset.branchId || '',
-    purchase_date: asset.purchaseDate ? String(asset.purchaseDate).slice(0, 10) : '',
-    warranty_date: asset.warrantyDate ? String(asset.warrantyDate).slice(0, 10) : '',
-    condition: asset.condition || 'new',
-    status: asset.status || 'available',
+    name: asset.name || '',
+    asset_type_id: asset.assetTypeId || asset.asset_type_id || '',
+    serial_number: asset.serialNumber === '—' ? '' : asset.serialNumber || asset.serial_number || '',
+    model_number: asset.modelNumber === '—' ? '' : asset.modelNumber || asset.model_number || '',
+    rdp_number: asset.rdpNumber || asset.rdp_number || '',
+    remarks: asset.remarks || '',
     description: asset.description || '',
+    asset_user_id: asset.assetUserId || asset.current_user?.id || null,
+    handover_date: asset.handoverDate ? String(asset.handoverDate).slice(0, 10) : asset.current_assignment?.handover_date || '',
+    return_date: asset.returnDate ? String(asset.returnDate).slice(0, 10) : asset.current_assignment?.return_date || '',
+    branch_id: asset.branchId || asset.branch_id || '',
+    department_id: asset.departmentId || asset.department_id || '',
+    status: asset.status || 'available',
+    purchase_date: asset.purchaseDate ? String(asset.purchaseDate).slice(0, 10) : asset.purchase_date || '',
+    supplier_name: asset.supplierName || asset.supplier_name || '',
+    warranty_date: asset.warrantyDate ? String(asset.warrantyDate).slice(0, 10) : asset.warranty_date || '',
+    condition: asset.condition || 'new',
+    unit_price: asset.unitPrice || asset.unit_price || '',
+    currency: asset.currency || 'UAE Dirham',
+    quantity: asset.quantity || 1,
   }
   showFormModal.value = true
+  fetchAssetResponsiblePersons()
 }
 
 function closeFormModal() {
   showFormModal.value = false
   editingId.value = null
+  closeAssetUserPicker()
 }
 
 async function saveAsset() {
+  // Validation
   if (!form.value.name || !form.value.asset_type_id) {
-    Swal.fire({ icon: 'warning', title: 'Required fields', text: 'Asset name and type are required.' })
+    Swal.fire({ 
+      icon: 'warning', 
+      title: 'Required fields', 
+      text: 'Asset name and type are required.' 
+    })
     return
   }
+
+  // If status is 'assigned' but no user selected
+  if (form.value.status === 'assigned' && !form.value.asset_user_id) {
+    Swal.fire({ 
+      icon: 'warning', 
+      title: 'User required', 
+      text: 'Please select an employee to assign this asset.' 
+    })
+    return
+  }
+
   saving.value = true
   try {
-    const payload = { ...form.value }
-    if (editingId.value) await updateAsset(editingId.value, payload)
-    else await createAsset(payload)
-    Swal.fire({ icon: 'success', title: 'Saved', timer: 1600, showConfirmButton: false, toast: true, position: 'top-end' })
+    const payload = {
+      name: form.value.name,
+      asset_type_id: Number(form.value.asset_type_id),
+      serial_number: form.value.serial_number || null,
+      model_number: form.value.model_number || null,
+      rdp_number: form.value.rdp_number || null,
+      description: form.value.description || null,
+      remarks: form.value.remarks || null,
+      purchase_date: form.value.purchase_date || null,
+      warranty_date: form.value.warranty_date || null,
+      unit_price: form.value.unit_price || null,
+      supplier_name: form.value.supplier_name || null,
+      quantity: Number(form.value.quantity) || 1,
+      condition: form.value.condition || 'new',
+      status: form.value.status || 'available',
+      branch_id: form.value.branch_id || null,
+      department_id: form.value.department_id || null,
+    }
+
+    let result
+    if (editingId.value) {
+      result = await updateAsset(editingId.value, payload)
+    } else {
+      result = await createAsset(payload)
+    }
+
+    // If asset user is selected, assign the asset
+    if (form.value.asset_user_id && result?.id) {
+      await assignAsset(result.id, {
+        user_id: Number(form.value.asset_user_id),
+        handover_date: form.value.handover_date || new Date().toISOString().slice(0, 10),
+        notes: form.value.remarks || 'Assigned during creation',
+      })
+    }
+
+    Swal.fire({ 
+      icon: 'success', 
+      title: 'Saved', 
+      timer: 1600, 
+      showConfirmButton: false, 
+      toast: true, 
+      position: 'top-end' 
+    })
+    
     closeFormModal()
     await loadAssets(true)
   } catch (e) {
-    Swal.fire({ icon: 'error', title: 'Failed', text: e?.response?.data?.message || e?.message })
+    let errorMessage = 'Failed to save asset'
+    let errorDetails = null
+    
+    if (e?.response?.data) {
+      const data = e.response.data
+      
+      // Check for validation errors
+      if (data.errors) {
+        errorDetails = data.errors
+        // Get first error message
+        const firstError = Object.values(data.errors)[0]
+        errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError)
+      } else if (data.message) {
+        errorMessage = data.message
+      }
+    } else if (e?.message) {
+      errorMessage = e.message
+    }
+    
+    // Show detailed validation errors if available
+    if (errorDetails) {
+      let errorHtml = '<div style="text-align:left;">'
+      Object.entries(errorDetails).forEach(([field, messages]) => {
+        if (Array.isArray(messages)) {
+          messages.forEach(msg => {
+            errorHtml += `<p style="margin:4px 0;"><strong>${field}:</strong> ${msg}</p>`
+          })
+        }
+      })
+      errorHtml += '</div>'
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        html: errorHtml,
+        confirmButtonColor: '#733e87'
+      })
+    } else {
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Failed', 
+        text: errorMessage 
+      })
+    }
   } finally {
     saving.value = false
   }
 }
-
 function openAssign(asset, mode = 'assign') {
   actionAsset.value = asset
   assignMode.value = mode
@@ -451,21 +797,47 @@ function openAssign(asset, mode = 'assign') {
 
 async function confirmAssign() {
   if (!actionAsset.value || !assignForm.value.user_id || !assignForm.value.handover_date) {
-    Swal.fire({ icon: 'warning', title: 'Missing fields', text: 'Select employee and handover date.' })
+    Swal.fire({ 
+      icon: 'warning', 
+      title: 'Missing fields', 
+      text: 'Select employee and handover date.' 
+    })
     return
   }
+  
   saving.value = true
   try {
     if (assignMode.value === 'transfer') {
-      await transferAsset(actionAsset.value.id, assignForm.value)
+      await transferAsset(actionAsset.value.id, {
+        user_id: Number(assignForm.value.user_id),
+        handover_date: assignForm.value.handover_date,
+        notes: assignForm.value.notes,
+      })
     } else {
-      await assignAsset(actionAsset.value.id, assignForm.value)
+      await assignAsset(actionAsset.value.id, {
+        user_id: Number(assignForm.value.user_id),
+        handover_date: assignForm.value.handover_date,
+        notes: assignForm.value.notes,
+      })
     }
-    Swal.fire({ icon: 'success', title: 'Updated', timer: 1600, showConfirmButton: false, toast: true, position: 'top-end' })
+    
+    Swal.fire({ 
+      icon: 'success', 
+      title: 'Updated', 
+      timer: 1600, 
+      showConfirmButton: false, 
+      toast: true, 
+      position: 'top-end' 
+    })
+    
     showAssignModal.value = false
     await loadAssets(true)
   } catch (e) {
-    Swal.fire({ icon: 'error', title: 'Failed', text: e?.response?.data?.message || e?.message })
+    Swal.fire({ 
+      icon: 'error', 
+      title: 'Failed', 
+      text: e?.response?.data?.message || e?.message 
+    })
   } finally {
     saving.value = false
   }
@@ -480,38 +852,152 @@ async function onMaintenance(asset) {
     showCancelButton: true,
     confirmButtonColor: '#ea580c',
   })
+  
   if (!result.isConfirmed) return
+  
   try {
     await markAssetMaintenance(asset.id, result.value || '')
-    Swal.fire({ icon: 'success', title: 'Marked under maintenance', timer: 1600, showConfirmButton: false, toast: true, position: 'top-end' })
+    Swal.fire({ 
+      icon: 'success', 
+      title: 'Marked under maintenance', 
+      timer: 1600, 
+      showConfirmButton: false, 
+      toast: true, 
+      position: 'top-end' 
+    })
     await loadAssets(true)
   } catch (e) {
-    Swal.fire({ icon: 'error', title: 'Failed', text: e?.response?.data?.message || e?.message })
+    Swal.fire({ 
+      icon: 'error', 
+      title: 'Failed', 
+      text: e?.response?.data?.message || e?.message 
+    })
   }
 }
 
 function exportList() {
   if (!filteredAssets.value || !filteredAssets.value.length) {
-    Swal.fire({ icon: 'warning', title: 'No data', text: 'There are no assets to export.' })
+    Swal.fire({ 
+      icon: 'warning', 
+      title: 'No data', 
+      text: 'There are no assets to export.' 
+    })
     return
   }
+  
   exportAssetsCsv('assets.csv', filteredAssets.value, [
-    { label: 'Asset ID', value: (r) => r.assetId },
+    { label: 'Asset ID', value: (r) => r.assetCode || r.assetId },
     { label: 'Name', value: (r) => r.name },
-    { label: 'Category', value: (r) => r.category },
-    { label: 'Assigned To', value: (r) => r.assignedEmployee },
-    { label: 'Status', value: (r) => r.statusLabel },
-    { label: 'Purchase Date', value: (r) => r.purchaseDate },
-    { label: 'Serial', value: (r) => r.serialNumber },
+    { label: 'Category', value: (r) => r.assetType?.name || r.category },
+    { label: 'Assigned To', value: (r) => r.current_user?.name || r.assignedEmployee },
+    { label: 'Status', value: (r) => r.statusLabel || r.status },
+    { label: 'Purchase Date', value: (r) => r.purchase_date || r.purchaseDate },
+    { label: 'Serial', value: (r) => r.serial_number || r.serialNumber },
   ])
 }
 
-defineExpose({ openCreate })
+// ===== Asset User Picker Functions =====
+async function fetchAssetResponsiblePersons() {
+  if (assetResponsiblePersons.value.length) return
+  try {
+    const persons = await fetchResponsiblePersons()
+    assetResponsiblePersons.value = Array.isArray(persons) ? persons : []
+    console.log('✅ Responsible persons loaded:', assetResponsiblePersons.value.length)
+  } catch (error) {
+    console.error('❌ Failed to load responsible persons:', error)
+    assetResponsiblePersons.value = []
+  }
+}
 
-onMounted(() => {
+function closeAssetUserPicker() {
+  showAssetUserPicker.value = false
+  assetUserSearchQuery.value = ''
+}
+
+async function toggleAssetUserPicker() {
+  if (!showAssetUserPicker.value) {
+    await fetchAssetResponsiblePersons()
+  }
+  showAssetUserPicker.value = !showAssetUserPicker.value
+}
+
+function selectAssetResponsiblePerson(person) {
+  form.value.asset_user_id = Number(person.id)
+  
+  // Auto-fill department if not set
+  if (!form.value.department_id && person.department_name) {
+    const dept = departmentOptions.value.find(d => d.label === person.department_name)
+    if (dept) form.value.department_id = dept.value
+  }
+  
+  // Auto-fill branch if not set
+  if (!form.value.branch_id) {
+    const branchName = person.branch_name || person.office_name || ''
+    const branch = branchOptions.value.find(b => b.label === branchName)
+    if (branch) form.value.branch_id = branch.value
+  }
+  
+  closeAssetUserPicker()
+}
+
+// ===== QTY Functions =====
+function decrementQty() {
+  const current = Number(form.value.quantity) || 1
+  form.value.quantity = Math.max(1, current - 1)
+}
+
+function incrementQty() {
+  const current = Number(form.value.quantity) || 1
+  form.value.quantity = current + 1
+}
+
+// ===== Load Options =====
+async function loadOptions() {
+  try {
+    // Load asset types
+    const types = await fetchAssetTypes()
+    assetTypeOptions.value = Array.isArray(types) ? types.map(t => ({
+      value: t.id,
+      label: t.name || t.label || t
+    })) : []
+    console.log('✅ Asset types loaded:', assetTypeOptions.value.length)
+
+    // Load departments
+    const depts = await fetchDepartments()
+    departmentOptions.value = Array.isArray(depts) ? depts.map(d => ({
+      value: d.id,
+      label: d.name || d
+    })) : []
+    console.log('✅ Departments loaded:', departmentOptions.value.length)
+
+    // Load branches
+    const brs = await fetchBranches()
+    branchOptions.value = Array.isArray(brs) ? brs.map(b => ({
+      value: b.id,
+      label: b.name || b
+    })) : []
+    console.log('✅ Branches loaded:', branchOptions.value.length)
+  } catch (error) {
+    console.error('❌ Failed to load options:', error)
+  }
+}
+
+// ===== Expose for parent component =====
+defineExpose({ 
+  openCreate,
+  openEdit,
+  loadAssets,
+  refresh: loadAssets 
+})
+
+// ===== Lifecycle =====
+onMounted(async () => {
   syncMobile()
   window.addEventListener('resize', syncMobile)
-  localFilters.value = { ...filters.value }
+  
+  await loadOptions()
+  await fetchAssetResponsiblePersons()
+  await loadAssets(true)
 })
 
 onUnmounted(() => {
@@ -522,4 +1008,413 @@ onUnmounted(() => {
 <style>
 @import '../../../../css/hr-employees.css';
 @import '../../../../css/hr-assets.css';
+
+/* ===== Asset Modal Styles ===== */
+.asset-create-modal {
+  width: min(1320px, 96vw);
+  max-height: calc(100vh - 32px);
+}
+.asset-create-modal .add-employee-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+.asset-create-modal .add-employee-section h6 {
+  font-size: 15px !important;
+  font-weight: 600;
+  color: #111827;
+}
+.asset-create-modal textarea {
+  width: 100%;
+  min-height: 96px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #4b5563;
+  resize: vertical;
+}
+.asset-create-modal .add-field-full {
+  grid-column: 1 / -1;
+}
+.asset-create-modal .add-field :deep(.vs__dropdown-toggle) {
+  height: 38px;
+  min-height: 38px;
+  border-radius: 8px;
+}
+.asset-create-modal .add-field :deep(.vs__actions) {
+  height: 100%;
+  min-height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.asset-create-modal .add-field :deep(.vs__open-indicator) {
+  position: static !important;
+  top: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+  width: 12px;
+  height: 12px;
+  line-height: 1;
+  color: #9ca3af;
+}
+.asset-create-modal .asset-user-picker-field {
+  position: relative;
+}
+.asset-create-modal .asset-user-trigger {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #4b5563;
+}
+.asset-create-modal .asset-user-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+}
+.asset-create-modal .asset-user-dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.asset-create-modal .asset-user-close-btn {
+  background: transparent;
+  border: none;
+  color: #0f172a;
+  font-size: 18px;
+}
+.asset-create-modal .asset-user-search-input {
+  width: 100%;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  padding: 0 38px 0 14px;
+  font-size: 12px;
+}
+.asset-create-modal .search-input-wrapper {
+  position: relative;
+}
+.asset-create-modal .search-input-wrapper .search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+.asset-create-modal .asset-user-list-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.asset-create-modal .asset-user-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border-radius: 8px;
+  padding: 8px;
+}
+.asset-create-modal .asset-user-item:hover {
+  background: #f8fafc;
+}
+.asset-create-modal .asset-user-item.selected {
+  background: #fff7e6;
+}
+.asset-create-modal .asset-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+.asset-create-modal .asset-user-info {
+  min-width: 0;
+}
+.asset-create-modal .asset-user-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.asset-create-modal .asset-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.asset-create-modal .user-position-badge {
+  font-size: 10px;
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.asset-create-modal .user-item-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+.asset-create-modal .user-item-meta-line .meta-divider {
+  color: #cbd5e1;
+}
+.asset-create-modal .asset-price-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+}
+.asset-create-modal .asset-price-group input {
+  border-radius: 8px 0 0 8px;
+}
+.asset-create-modal .asset-price-group select {
+  border: 1px solid #d9dee7;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #4b5563;
+  background: #fff;
+}
+.asset-create-modal .asset-qty-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  gap: 4px;
+  align-items: center;
+}
+.asset-create-modal .asset-qty-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  line-height: 1;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.asset-create-modal .asset-qty-btn:hover {
+  background: #f1f5f9;
+}
+
+/* ===== Edit Overlay ===== */
+.edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-employee-overlay {
+  align-items: flex-start;
+  padding: 16px 0;
+  overflow-y: auto;
+}
+.add-employee-modal {
+  width: min(1320px, 96vw);
+  max-height: calc(100vh - 32px);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6eaf2;
+  display: flex;
+  flex-direction: column;
+}
+.add-employee-head {
+  padding: 12px 18px;
+  border-bottom: 1px solid #edf1f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.add-employee-head h6 {
+  margin: 0;
+  font-size: 18px !important;
+  font-weight: 600;
+  color: #111827;
+}
+.add-employee-close {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 20px;
+}
+.add-employee-body {
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+.add-employee-section {
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.add-employee-section h6 {
+  margin: 0 0 10px;
+  font-size: 14px !important;
+  font-weight: 600;
+  color: #111827;
+}
+.add-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.add-field label {
+  display: block;
+  margin: 0 0 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.add-field input,
+.add-field textarea {
+  width: 100%;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #4b5563;
+}
+.add-field input {
+  height: 38px;
+}
+.add-field textarea {
+  min-height: 80px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+.add-field input::placeholder,
+.add-field textarea::placeholder {
+  color: #9ca3af;
+}
+.add-field :deep(.vs__dropdown-toggle) {
+  height: 38px;
+  min-height: 38px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  padding: 0 8px 0 10px;
+  display: flex;
+  align-items: center;
+}
+.add-field :deep(.vs__selected-options) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 100%;
+}
+.add-field :deep(.vs__actions) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-right: 4px;
+}
+.add-field :deep(.vs__clear) {
+  display: none !important;
+}
+.add-field :deep(.vs__open-indicator) {
+  margin-top: 0;
+  transform: none;
+  color: #9ca3af;
+}
+.add-field :deep(.vs__dropdown-menu) {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+  padding: 6px;
+  margin-top: 4px;
+  max-height: 180px;
+}
+.add-field :deep(.vs__dropdown-option) {
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #4b5563;
+  font-size: 12px;
+}
+.add-field :deep(.vs__dropdown-option--highlight) {
+  background: #f3f4f6;
+  color: #111827;
+}
+.add-field :deep(.vs__dropdown-option--selected) {
+  background: #ffffff;
+  color: #111827;
+  font-weight: 600;
+}
+.add-employee-footer {
+  padding: 12px 18px 14px;
+  border-top: 1px solid #edf1f6;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.add-employee-clear-btn,
+.add-employee-save-btn {
+  min-width: 90px;
+  height: 38px;
+  border-radius: 999px;
+  border: none;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-align: center;
+  padding: 0 16px;
+}
+.add-employee-clear-btn {
+  background: #f3f4f6;
+  color: #111827;
+}
+.add-employee-save-btn {
+  background: #02014f;
+  color: #fff;
+}
+.add-employee-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 768px) {
+  .add-grid-two {
+    grid-template-columns: 1fr;
+  }
+  .asset-create-modal .asset-price-group {
+    grid-template-columns: 1fr;
+  }
+  .asset-create-modal .asset-price-group input {
+    border-radius: 8px 8px 0 0;
+  }
+  .asset-create-modal .asset-price-group select {
+    border-left: 1px solid #d9dee7;
+    border-radius: 0 0 8px 8px;
+    height: 38px;
+  }
+}
 </style>
