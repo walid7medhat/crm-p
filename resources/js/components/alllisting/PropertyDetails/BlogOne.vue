@@ -709,9 +709,16 @@
         <div
           ref="propertySidebarStickyRef"
           class="sidebar-sticky-container"
-          :class="{ 'sidebar-sticky-container--has-widgets': sidebarHasExtraWidgets }"
+          :class="{
+            'sidebar-sticky-container--has-widgets': sidebarHasExtraWidgets,
+            'sidebar-sticky-container--actions-open': showActionsDropdown,
+          }"
         >
-          <div ref="propertySidebarAgentRef" class="agent-sidebar-card">
+          <div
+            ref="propertySidebarAgentRef"
+            class="agent-sidebar-card"
+            :class="{ 'agent-sidebar-card--actions-open': showActionsDropdown }"
+          >
             <div class="agent-profile" v-if="property && property.agent">
               <img 
                 :src="property.agent.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" 
@@ -805,22 +812,20 @@
               </div>
             </div>
            <!-- Property Actions Dropdown -->
-            <div class="sidebar-section " v-if="!onlyShow">
-              <div class="property-actions-dropdown-wrapper">
-                <div class="property-actions-dropdown" :class="{ 'is-open': showActionsDropdown }">
-                  <button 
-                    class="dropdown-toggle"
-                    type="button"
-                    :aria-expanded="showActionsDropdown"
-                    @click="toggleActionsDropdown"
-                  >
-                    <span class="dropdown-toggle__label">Property Actions</span>
-                    <i class="ri-arrow-down-s-fill dropdown-arrow" :class="{ rotated: showActionsDropdown }" aria-hidden="true"></i>
-                  </button>
-                  
-                  <div class="dropdown-container" :class="{ expanded: showActionsDropdown }">
-                    <div class="dropdown-menu" :class="{ show: showActionsDropdown }">
-                      <PropertyActionsMenuContent
+            <div class="sidebar-section sidebar-section--property-actions" v-if="!onlyShow">
+              <div class="property-actions-accordion" :class="{ 'is-open': showActionsDropdown }">
+                <button
+                  class="property-actions-accordion__header"
+                  type="button"
+                  :aria-expanded="showActionsDropdown"
+                  @click="toggleActionsDropdown"
+                >
+                  <span class="property-actions-accordion__title">Property Actions</span>
+                  <i class="ri-arrow-down-s-fill property-actions-accordion__chevron" :class="{ 'is-up': showActionsDropdown }" aria-hidden="true"></i>
+                </button>
+
+                <div v-if="showActionsDropdown" ref="propertyActionsPanelRef" class="property-actions-accordion__body">
+                  <PropertyActionsMenuContent
                         variant="dropdown"
                         :property="property"
                         :request-status="requestStatus"
@@ -840,9 +845,7 @@
                         :format-time="formatTime"
                         v-on="propertyMenuHandlers"
                          :can-view-history="canViewHistory"
-                      />
-                    </div>
-                  </div>
+                  />
                 </div>
               </div>
             </div>
@@ -2182,6 +2185,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     const propertySidebarColRef = ref(null);
     const propertySidebarStickyRef = ref(null);
     const propertySidebarAgentRef = ref(null);
+    const propertyActionsPanelRef = ref(null);
     const propertySidebarUpdatesRef = ref(null);
     const propertySidebarSpacerRef = ref(null);
     let propertySidebarScrollRoot = null;
@@ -3101,26 +3105,28 @@ const canMarkAsConverted = computed(() => {
     };
 
     // Dropdown Methods
-  const toggleActionsDropdown = () => {
+  const toggleActionsDropdown = async () => {
   showActionsDropdown.value = !showActionsDropdown.value;
-  
-  const card = document.querySelector('.agent-sidebar-card');
-  if (card) {
-    if (showActionsDropdown.value) {
-      card.classList.add('expanding');
-    } else {
-      card.classList.remove('expanding');
-    }
+
+  if (showActionsDropdown.value) {
+    document.body.classList.add('property-actions-open');
+  } else {
+    document.body.classList.remove('property-actions-open');
   }
+
+  await nextTick();
+  schedulePropertySidebarSync();
+  setTimeout(schedulePropertySidebarSync, 50);
+  setTimeout(schedulePropertySidebarSync, 200);
 };
 
-const closeActionsDropdown = () => {
+const closeActionsDropdown = async () => {
   showActionsDropdown.value = false;
-  
-  const card = document.querySelector('.agent-sidebar-card');
-  if (card) {
-    card.classList.remove('expanding');
-  }
+  document.body.classList.remove('property-actions-open');
+
+  await nextTick();
+  schedulePropertySidebarSync();
+  setTimeout(schedulePropertySidebarSync, 50);
 };
 
 const mobilePropertyActionsOpen = ref(false);
@@ -5614,49 +5620,60 @@ const createSlide2 = () => {
   // Slide 2 uses the project's multi-image at order 1 (fallback to current image).
   const bgImage = getProjectImageBySlot(1);
   const propertyType = property.value?.property_type?.name || 'N/A';
-  const furnitureStatus = property.value?.furnished_status || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
   const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
+  const features = additionalFeaturesList.value || [];
+  const featuresBlock = features.length > 0 ? `
+    <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
+      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
+        ${features.map((feature) => `
+          <span style="color:#fff !important; font-size:2.9mm !important; font-weight:700 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important; text-transform:uppercase !important;">${feature}</span>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
 
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
-    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:12mm 16mm 10mm 16mm !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important;">
-      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important;">
-        <h1 style="color:#fff !important; font-size:7mm !important; font-weight:700 !important; margin:0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Property<br>Details</h1>
+    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:10mm 14mm 8mm 14mm !important; display:flex !important; flex-direction:column !important;">
+      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; flex-shrink:0 !important;">
+        <h1 style="color:#fff !important; font-size:7mm !important; font-weight:700 !important; margin:0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">Property<br>Details</h1>
         <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
       </div>
-      <div style="width:100% !important;">
-        <div style="display:flex !important; padding-bottom:5mm !important; margin-bottom:5mm !important;">
-          <div style="flex:1 !important; padding-right:6mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;  font-family: 'Montserrat', sans-serif;">Property Type</p>
-            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif;">${propertyType}</p>
+
+      <div style="width:100% !important; margin-top:7mm !important; flex-shrink:0 !important;">
+        <div style="display:flex !important; padding-bottom:4mm !important; margin-bottom:4mm !important; border-bottom:0.3mm solid rgba(255,255,255,0.22) !important;">
+          <div style="flex:1 !important; padding-right:5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Property Type</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${propertyType}</p>
           </div>
-          <div style="flex:1 !important; padding:0 6mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif;">Bedrooms</p>
-            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif;">${bedrooms}</p>
+          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bedrooms</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${bedrooms}</p>
           </div>
-          <div style="flex:1 !important; padding:0 6mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif;">Bathrooms</p>
-            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important;font-family: 'Montserrat', sans-serif;">${bathrooms}</p>
+          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
           </div>
-          <div style="flex:1 !important; padding-left:6mm !important;">
-            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif;">Area Size</p>
-            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important;font-family: 'Montserrat', sans-serif;">${areaSize}</p>
+          <div style="flex:1 !important; padding-left:5mm !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
           </div>
         </div>
         <div style="display:flex !important;">
-         
-          <div style="flex:1 !important;  border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:#fff !important; font-size:2.8mm !important; margin:0 0 2mm 0 !important;font-family: 'Montserrat', sans-serif !important;">Completion Status</p>
-            <p style="color:#fff !important; font-size:4.5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">${completionStatus}</p>
+          <div style="flex:1 !important; max-width:25% !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Completion Status</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${completionStatus}</p>
           </div>
-
         </div>
       </div>
+
+      ${featuresBlock}
     </div>
     ${createFooter()}
   </div>
@@ -5961,6 +5978,47 @@ const createPaymentDetailsSlide = () => {
   };
 
   const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
+  const hasPremiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction;
+  const hasHandoverRow = Math.abs(handoverAmount) > 0.01;
+  const breakdownRowCount = sorted.length + (hasPremiumRow ? 1 : 0) + (hasHandoverRow ? 1 : 0) + 1;
+  const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
+  const contentPressure = breakdownRowCount + expenseRowCount;
+  const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
+  const d = {
+    normal: {
+      fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2.2mm',
+      pad: '1.05mm 0.8mm', padHead: '0.25mm', padBadge: '0.45mm 1.6mm',
+      sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
+      titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
+      cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
+      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1mm 0 0.8mm 0', pagePad: '7mm 7mm 14mm 7mm',
+      pillH: '4.6mm', rowGap: '0.2mm',
+    },
+    compact: {
+      fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '2mm',
+      pad: '0.85mm 0.7mm', padHead: '0.2mm', padBadge: '0.35mm 1.4mm',
+      sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
+      titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
+      cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
+      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.8mm 0 0.6mm 0', pagePad: '6mm 6mm 13mm 6mm',
+      pillH: '4.2mm', rowGap: '0.15mm',
+    },
+    tight: {
+      fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.85mm',
+      pad: '0.7mm 0.6mm', padHead: '0.15mm', padBadge: '0.3mm 1.2mm',
+      sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
+      titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
+      cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
+      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.7mm 0 0.5mm 0', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
+      pillH: '3.8mm', rowGap: '0.1mm',
+    },
+  }[densityTier];
+
+  const thCell = `padding:${d.padHead};text-align:center;vertical-align:middle;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;`;
+  const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
+  const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
+
   let cumulative = 0;
   const installmentRows = sorted.map((entry) => {
     const amount = installmentAmount(entry);
@@ -5971,32 +6029,32 @@ const createPaymentDetailsSlide = () => {
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
     return `
       <tr>
-        <td style="padding:1.5mm;font-size:2.6mm;">Installment</td>
-        <td style="padding:1.5mm;font-size:2.6mm;">${pct}%</td>
-        <td style="padding:1.5mm;font-size:2.6mm;">${fmtAed(amount)}</td>
-        <td style="padding:1.5mm;font-size:2.6mm;">${fmtDate(entry?.date)}</td>
-        <td style="padding:1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(status)}">${status}</span></td>
+        <td style="${tdCell}">Installment</td>
+        <td style="${tdCell}">${pct}%</td>
+        <td style="${tdCell}">${fmtAed(amount)}</td>
+        <td style="${tdCell}">${fmtDate(entry?.date)}</td>
+        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(status)}">${status}</span></td>
       </tr>`;
   }).join('');
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Upcoming';
-  const premiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction
+  const premiumRow = hasPremiumRow
     ? `<tr style="background:#f8fafc;">
-        <td style="padding: 1.5mm;font-size:2.6mm;">Premium</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;">—</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;">—</td>
-        <td style="padding: 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(premiumStatus)}">${premiumStatus}</span></td>
+        <td style="${tdCell}">Premium</td>
+        <td style="${tdCell}">—</td>
+        <td style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
+        <td style="${tdCell}">—</td>
+        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(premiumStatus)}">${premiumStatus}</span></td>
       </tr>`
     : '';
 
-  const handoverRow = Math.abs(handoverAmount) > 0.01
+  const handoverRow = hasHandoverRow
     ? `<tr>
-        <td style="padding: 1.5mm;font-size:2.6mm;">Handover (${handoverPct.toFixed(0)}%)</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;">${handoverPct.toFixed(2)}%</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;">${fmtAed(handoverAmount)}</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;">${fmtDate(p.handover_date)}</td>
-        <td style="padding: 1.5mm;font-size:2.4mm;"><span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
+        <td style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
+        <td style="${tdCell}">${handoverPct.toFixed(2)}%</td>
+        <td style="${tdCell}">${fmtAed(handoverAmount)}</td>
+        <td style="${tdCell}">${fmtDate(p.handover_date)}</td>
+        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
       </tr>`
     : '';
 
@@ -6028,35 +6086,35 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     return `
       <tr>
-        <td style="padding: 1.5mm;font-size:2.6mm;">${l?.label || '—'}</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;color:#64748b;">${detail}</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;text-align:right;">${fmtAed(amt)}</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;text-align:right;">${l?.vatEnabled ? fmtAed(vat) : '—'}</td>
-        <td style="padding: 1.5mm;font-size:2.6mm;text-align:right;font-weight:600;">${fmtAed(total)}</td>
+        <td style="${tdCell}">${l?.label || '—'}</td>
+        <td style="${tdCell}color:#64748b;">${detail}</td>
+        <td style="${tdCell}text-align:right;">${fmtAed(amt)}</td>
+        <td style="${tdCell}text-align:right;">${l?.vatEnabled ? fmtAed(vat) : '—'}</td>
+        <td style="${tdCell}text-align:right;font-weight:600;">${fmtAed(total)}</td>
       </tr>`;
   }).join('');
 
   const expensesBlock = expenses.length > 0 ? `
-    <div style="margin-top:3mm;">
-      <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Assignment deal costs</div>
-      <div style="background:#ffffff;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);">
-        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
+    <div style="margin-top:${d.blockMt};width:100%;">
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Assignment deal costs</div>
+      <div style="background:#ffffff;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
+        <table style="${tableStyle}">
           <thead>
             <tr>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Label</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Detail</span></th>
-              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
-              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">VAT</span></th>
-              <th style="padding:1mm 1.5mm;text-align:right;font-size:2.4mm;"><span style="display:inline-block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Total</span></th>
+              <th style="${thCell}width:18%;">${thPill('Label')}</th>
+              <th style="${thCell}width:24%;">${thPill('Detail')}</th>
+              <th style="${thCell}width:20%;">${thPill('Amount')}</th>
+              <th style="${thCell}width:16%;">${thPill('VAT')}</th>
+              <th style="${thCell}width:22%;">${thPill('Total')}</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRows}
             <tr style="background:#f1f5f9;">
-              <td colspan="2" style="padding: 1.5mm;font-size:2.6mm;font-weight:700;">Total</td>
-              <td style="padding: 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expSubtotal)}</td>
-              <td style="padding: 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expVatTotal)}</td>
-              <td style="padding: 1.5mm;font-size:2.6mm;text-align:right;font-weight:700;">${fmtAed(expGrand)}</td>
+              <td colspan="2" style="${tdCell}font-weight:700;">Total</td>
+              <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expSubtotal)}</td>
+              <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expVatTotal)}</td>
+              <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expGrand)}</td>
             </tr>
           </tbody>
         </table>
@@ -6065,26 +6123,26 @@ const createPaymentDetailsSlide = () => {
   ` : '';
 
   const nocStrip = nocPct > 0 ? `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 5mm;background:#ffffff;border-radius:3mm;padding:1.6mm 2mm;margin-bottom:2mm;font-size:2.6mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.2mm 4mm;background:#ffffff;border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};font-size:${d.fs};box-shadow:inset 0 0 0 0.2mm #ffffff;">
       <span>NOC <strong>${fmtAed(nocFixedAmount)}</strong></span>
       <span>Paid <strong>${fmtAed(paidAed)}</strong></span>
       <span>Remaining <strong>${fmtAed(nocRemaining)}</strong></span>
-      <span style="display:inline-block;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;font-size:2.4mm;${nocMet ? 'background:#22c55e;color:#fff;' : 'background:#fecdd3;color:#9f1239;'}">${nocMet ? 'NOC met' : 'Below NOC'}</span>
+      <span style="display:inline-block;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};${nocMet ? 'background:#22c55e;color:#fff;' : 'background:#fecdd3;color:#9f1239;'}">${nocMet ? 'NOC met' : 'Below NOC'}</span>
     </div>
   ` : '';
 
   const installmentTable = (installmentRows || premiumRow || handoverRow) && hasInstallments ? `
-    <div style="margin-bottom:2.5mm;">
-      <div style="font-size:2.6mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;margin-bottom:1.5mm;">Installment breakdown</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:1.5mm 1.5mm 1mm;box-shadow:inset 0 0 0 0.2mm #ffffff;">
-        <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:2.6mm;">
+    <div style="margin-bottom:${d.sectionMb};width:100%;">
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
+      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm #ffffff;width:100%;box-sizing:border-box;">
+        <table style="${tableStyle}">
           <thead>
             <tr>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Payment type</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Percentage</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Amount</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Date</span></th>
-              <th style="padding:1mm 1.5mm;text-align:left;font-size:2.4mm;"><span style="display:block;background:#0f1f3a;color:#fff;padding:0.6mm 2mm;border-radius:6mm;font-weight:700;">Status</span></th>
+              <th style="${thCell}width:22%;">${thPill('Payment type')}</th>
+              <th style="${thCell}width:13%;">${thPill('Percentage')}</th>
+              <th style="${thCell}width:24%;">${thPill('Amount')}</th>
+              <th style="${thCell}width:18%;">${thPill('Date')}</th>
+              <th style="${thCell}width:15%;">${thPill('Status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -6092,8 +6150,8 @@ const createPaymentDetailsSlide = () => {
             ${premiumRow}
             ${handoverRow}
             <tr style="background:#f1f5f9;">
-              <td style="padding: 1.5mm;font-size:2.6mm;font-weight:700;" colspan="2">Total</td>
-              <td style="padding: 1.5mm;font-size:2.6mm;font-weight:700;">${fmtAed(totalAmount)}</td>
+              <td style="${tdCell}font-weight:700;" colspan="2">Total</td>
+              <td style="${tdCell}font-weight:700;">${fmtAed(totalAmount)}</td>
               <td colspan="2"></td>
             </tr>
           </tbody>
@@ -6107,29 +6165,29 @@ const createPaymentDetailsSlide = () => {
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:relative !important; z-index:5 !important; padding:8mm 12mm 8mm 12mm !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <div style="margin-bottom:4mm;">
-        <div style="font-size:5mm;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:1.5mm;"></div>
+    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
+      <div style="margin-bottom:${d.headerMb};">
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:${d.accentMb};"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2mm;margin-bottom:1.5mm;">
-        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;opacity:0.88;margin-bottom:1mm;">Selling price</div>
-          <div style="font-size:3.5mm;font-weight:700;">${fmtAed(sellingPrice)}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
+        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
         </div>
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;margin-bottom:1mm;">Original price (OP)</div>
-          <div style="font-size:3.5mm;font-weight:700;">${fmtAed(originalPrice)}</div>
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price (OP)</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(originalPrice)}</div>
         </div>
            ${planLabel ? `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;margin-bottom:1mm;">Payment plan</div>
-          <div style="font-size:3.5mm;font-weight:700;">${planLabel || '—'}</div>
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Payment plan</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${planLabel || '—'}</div>
         </div>    ` : ''}
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:1.5mm 2.5mm 2.8mm;">
-          <div style="font-size:2.4mm;margin-bottom:1mm;">Premium</div>
-          <div style="font-size:3.5mm;font-weight:700;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Premium</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
         </div>
       </div>
 
@@ -6193,7 +6251,7 @@ const windowWidth = ref(window.innerWidth);
       document.addEventListener('keydown', handleKeydown);
       // fetchInternalUpdates();
       document.addEventListener('click', (e) => {
-        if (!e.target.closest('.property-actions-dropdown')) {
+        if (!e.target.closest('.property-actions-accordion')) {
           closeActionsDropdown();
         }
       });
@@ -6991,113 +7049,117 @@ const getHistoryIcon = (event) => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
-.property-actions-dropdown {
-  position: relative;
-  margin-bottom: 16px;
-  font-family: Montserrat, sans-serif;
-}
-
-.dropdown-toggle {
+.property-actions-accordion {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #733e87;
-  color: #fff;
-  border: none;
-  border-radius: 8px 8px 0 0;
+  margin: 0;
+  padding: 0;
   font-family: Montserrat, sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  box-shadow: none;
 }
 
-.property-actions-dropdown:not(.is-open) .dropdown-toggle {
+.sidebar-section--property-actions {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.property-actions-accordion__header {
+  width: 100%;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 1fr 20px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 0;
+  border: none !important;
   border-radius: 8px;
+  background-color: #733e87 !important;
+  color: #ffffff !important;
+  font-family: Montserrat, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
 }
 
-/* Bootstrap adds a second caret via ::after on .dropdown-toggle */
-.property-actions-dropdown .dropdown-toggle::after {
-  display: none !important;
-  content: none !important;
+.property-actions-accordion__header:hover,
+.property-actions-accordion__header:focus,
+.property-actions-accordion__header:active {
+  background-color: #623274 !important;
+  color: #ffffff !important;
+  outline: none;
 }
 
-.dropdown-toggle__label {
-  letter-spacing: 0.01em;
-}
-
-.property-actions-dropdown.is-open .dropdown-toggle {
+.property-actions-accordion.is-open .property-actions-accordion__header {
   border-radius: 8px 8px 0 0;
+  background-color: #733e87 !important;
+  color: #ffffff !important;
 }
 
-.dropdown-toggle:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(115, 62, 135, 0.3);
+.property-actions-accordion__title {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  text-align: center;
+  color: #ffffff !important;
+  pointer-events: none;
 }
 
-.dropdown-arrow {
-  font-size: 14px;
+.property-actions-accordion__chevron {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  font-size: 16px;
   line-height: 1;
+  color: #ffffff !important;
   transition: transform 0.2s ease;
-  opacity: 1;
 }
 
-.dropdown-arrow.rotated {
+.property-actions-accordion__chevron.is-up {
   transform: rotate(180deg);
 }
 
-.dropdown-menu {
-  position: relative;
-  top: auto;
-  left: auto;
-  right: auto;
-  opacity: 0;
-  visibility: hidden;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.25s ease, opacity 0.2s ease;
+.property-actions-accordion__body {
+  width: 100%;
   margin: 0;
   padding: 0;
-  border: none;
-  box-shadow: none;
-  transform: none;
-  background: transparent;
-}
-
-.dropdown-menu.show {
-  opacity: 1;
-  visibility: visible;
-  max-height: min(70vh, 480px);
-  margin-top: 0;
-  padding: 0;
-  border: 1px solid #1a1a2e;
-  border-top: none;
+  background: #ffffff;
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: #fff;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.dropdown-menu.show::-webkit-scrollbar {
-  width: 5px;
-}
-
-.dropdown-menu.show::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
-
-.dropdown-menu.show :deep(.property-actions-menu--dropdown) {
+.property-actions-accordion__body :deep(.property-actions-menu--dropdown) {
   padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.agent-sidebar-card--actions-open :deep(.property-actions-menu--dropdown .property-actions-menu__item) {
+  padding: 10px 12px;
+  font-size: 12px;
+  min-height: 34px;
+}
+
+.agent-sidebar-card--actions-open :deep(.property-actions-menu--dropdown .property-actions-menu__item i) {
+  font-size: 15px;
+}
+
+.agent-sidebar-card--actions-open {
+  height: auto !important;
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.sidebar-sticky-container--actions-open {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.sidebar-sticky-container--actions-open .sidebar-approved-viewings {
+  margin-top: 12px;
 }
 
 
@@ -7136,17 +7198,6 @@ const getHistoryIcon = (event) => {
 }
 
 @media (max-width: 768px) {
-  .dropdown-menu[style*="position: fixed"] {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    transform: none !important;
-    width: 100% !important;
-    max-width: none !important;
-    max-height: 400px !important;
-    margin-top: 8px !important;
-  }
-  
   .dropdown-backdrop-mobile {
     position: fixed;
     top: 0;
@@ -7156,17 +7207,12 @@ const getHistoryIcon = (event) => {
     background: rgba(0, 0, 0, 0.5);
     z-index: 9999;
   }
-  .property-actions-dropdown-wrapper {
-  position: relative;
-  z-index: 1000;
-  top: 0px;
-}
 }
 
 .agent-sidebar-card {
   position: relative;
   overflow: visible !important;
-  top:0px
+  top: 0;
 }
 
 .sidebar-section {
@@ -7181,21 +7227,12 @@ padding:0px !important;
 }
 
 .agent-sidebar-card {
-  /* position: relative; */
-  transition: all 0.3s ease;
+  transition: min-height 0.2s ease;
 }
 
-.agent-sidebar-card.expanding {
-  min-height: 400px; 
-}
-.property-actions-dropdown-wrapper {
-  position: relative;
-  margin-bottom: 0;
-}
-
-.property-actions-dropdown {
-  position: relative;
-  display: block;
+.agent-sidebar-card--actions-open {
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 .dropdown-item-btn {
@@ -7947,8 +7984,7 @@ margin-top: 20px;
 /* Let the sticky column scroll as a whole — do not clip the agent card */
 .sidebar-sticky-container .agent-sidebar-card {
   max-height: none;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow: visible !important;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
@@ -7974,8 +8010,7 @@ margin-top: 20px;
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow: visible;
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 transparent;
   margin-top: 20px;
@@ -9323,6 +9358,17 @@ margin-top: 20px;
     margin-bottom: 16px;
     max-height: none;
   }
+
+  .agent-sidebar-card--actions-open {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto;
+  }
+
+  .sidebar-sticky-container--actions-open {
+    overflow: visible !important;
+    max-height: none !important;
+  }
   
   .agent-profile {
     flex-direction: row;
@@ -9461,7 +9507,12 @@ margin-top: 20px;
   .agent-sidebar-card {
     padding: 12px;
   }
-  
+
+  .sidebar-section--property-actions {
+    width: 100%;
+    margin: 0;
+  }
+
   .agent-profile {
     gap: 8px;
   }
@@ -9547,6 +9598,11 @@ margin-top: 20px;
   .agent-sidebar-card {
     padding: 10px;
   }
+
+  .sidebar-section--property-actions {
+    width: 100%;
+    margin: 0;
+  }
   
   .agent-sidebar-name {
     font-size: 12px;
@@ -9581,6 +9637,11 @@ margin-top: 20px;
     margin-top: 12px;
     padding: 12px;
     flex-shrink: 0;
+  }
+
+  .sidebar-section--property-actions {
+    width: 100%;
+    margin: 0;
   }
 
   .agent-profile {
@@ -9620,9 +9681,15 @@ margin-top: 20px;
     word-break: break-word;
   }
 
-  .property-actions-dropdown .dropdown-toggle {
-    padding: 10px 12px;
+  .property-actions-accordion__header {
     font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  .agent-sidebar-card--actions-open {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto;
   }
 
   .sidebar-sticky-container--has-widgets .approved-viewings-panel__list {
@@ -9698,7 +9765,7 @@ margin-top: 20px;
     grid-template-rows: 150px 50px;
   }
   
-  .agent-sidebar-card {
+  .agent-sidebar-card:not(.agent-sidebar-card--actions-open) {
     max-height: 80vh;
   }
 }
@@ -9818,16 +9885,6 @@ margin-top: 20px;
 .option-card:hover .option-arrow {
   color: #733e87;
   transform: translateX(3px);
-}
-.property-actions-dropdown-wrapper {
-  position: relative;
-  /* z-index: 1000; */
-  /* top: 10px; */
-
-}
-
-.property-actions-dropdown {
-  position: relative;
 }
 .request-actions-grid {
   display: grid;
@@ -10395,6 +10452,32 @@ margin: 0 2px;
 
 </style>
 <style>
+/* Property actions open — allow sidebar to grow, keep same width/position */
+body.property-actions-open .sidebar-sticky-container {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body.property-actions-open .agent-sidebar-card {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body.property-actions-open .property-actions-accordion__header {
+  background-color: #733e87 !important;
+  color: #ffffff !important;
+}
+
+body.property-actions-open .property-actions-accordion__title,
+body.property-actions-open .property-actions-accordion__chevron {
+  color: #ffffff !important;
+}
+
+body.property-actions-open .sidebar-approved-viewings {
+  margin-top: 12px;
+}
+
 .property-show-inner{
   padding:0 1rem 1rem 1rem !important;
 }

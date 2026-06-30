@@ -266,12 +266,13 @@ const props = defineProps({
 })
 
 const itemClass = (modifier) => {
+  const base = 'property-actions-menu__item'
   if (props.variant === 'dropdown') {
-    return modifier ? ['dropdown-item', modifier] : 'dropdown-item'
+    return modifier ? [base, `${base}--${modifier}`] : base
   }
   return modifier
-    ? ['property-actions-menu__item', `property-actions-menu__item--${modifier}`]
-    : 'property-actions-menu__item'
+    ? [base, `${base}--${modifier}`]
+    : base
 }
 
 const emit = defineEmits([
@@ -309,50 +310,51 @@ const emit = defineEmits([
   padding: 0;
 }
 
-.property-actions-menu--dropdown .dropdown-item,
+.property-actions-menu--dropdown .property-actions-menu__item,
 .property-actions-menu--sheet .property-actions-menu__item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 20px;
-  min-height: 0;
-  line-height: 1.35;
+  gap: 8px;
+  padding: 10px 14px;
+  min-height: 34px;
+  line-height: 1.3;
   background: #fff;
   border: none;
   border-bottom: 1px solid #f0f0f0;
   text-align: left;
   font-family: Montserrat, sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: #222;
   cursor: pointer;
   transition: background-color 0.15s ease;
   border-radius: 0;
+  box-sizing: border-box;
 }
 
-.property-actions-menu--dropdown > .dropdown-item:last-of-type,
-.property-actions-menu--dropdown .property-actions-menu__group:last-child .dropdown-item:last-child {
+.property-actions-menu--dropdown > .property-actions-menu__item:last-of-type,
+.property-actions-menu--dropdown .property-actions-menu__group:last-child .property-actions-menu__item:last-child {
   border-bottom: none;
 }
 
-.property-actions-menu--dropdown .dropdown-item:hover:not(:disabled),
+.property-actions-menu--dropdown .property-actions-menu__item:hover:not(:disabled),
 .property-actions-menu--sheet .property-actions-menu__item:hover:not(:disabled) {
-  background: #f8f8f8;
+  background: #f7f2fa;
   color: #111;
 }
 
-.property-actions-menu--dropdown .dropdown-item:disabled,
+.property-actions-menu--dropdown .property-actions-menu__item:disabled,
 .property-actions-menu--sheet .property-actions-menu__item:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.property-actions-menu--dropdown .dropdown-item i,
+.property-actions-menu--dropdown .property-actions-menu__item i,
 .property-actions-menu--sheet .property-actions-menu__item i {
-  font-size: 18px;
-  width: 20px;
-  min-width: 20px;
+  font-size: 15px;
+  width: 16px;
+  min-width: 16px;
   text-align: center;
   flex-shrink: 0;
   line-height: 1;
@@ -360,7 +362,7 @@ const emit = defineEmits([
   background: transparent;
 }
 
-.property-actions-menu--dropdown .dropdown-item span,
+.property-actions-menu--dropdown .property-actions-menu__item span,
 .property-actions-menu--sheet .property-actions-menu__item span {
   flex: 1;
   min-width: 0;
