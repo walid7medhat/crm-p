@@ -194,6 +194,7 @@ Route::prefix('settings')->middleware(['jwt.auth'])->group(function () {
   Route::get('/kanban', [KanbanSettingsController::class, 'getSettings']);
     Route::post('/kanban/card-fields', [KanbanSettingsController::class, 'updateCardFields']);
     Route::post('/kanban/revert-hours', [KanbanSettingsController::class, 'updateRevertHours']);
+ 
 });
 
 Route::middleware(['jwt.auth'])->group(function () {

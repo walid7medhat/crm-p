@@ -105,6 +105,37 @@
                                 class="form-control form-control-color stage-color-input"
                                 title="Select stage color"
                             />
+                                    
+                                   <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                role="switch"
+                                                :id="'auto_revert_' + stage.id"
+                                                v-model="stageDrafts[stage.id].auto_revert"
+                                            >
+                                            <label
+                                                class="form-check-label small text-muted"
+                                                :for="'auto_revert_' + stage.id"
+                                            >
+                                                Auto revert
+                                            </label>
+                                    </div>
+
+                                    <input
+                                        v-model="stageDrafts[stage.id].revert_after_hours"
+                                        type="number"
+                                        class="form-control form-control-sm"
+                                        placeholder="Revert after (hours)"
+                                    />
+
+                                    <input
+                                        v-model="stageDrafts[stage.id].notify_before_minutes"
+                                        type="number"
+                                        class="form-control form-control-sm"
+                                        placeholder="Notify before (min)"
+                                    />
+
                             <button
                                 class="btn btn-outline-secondary btn-sm"
                                 :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
@@ -119,6 +150,7 @@
                             >
                                 {{ savingStageMap[stage.id] ? 'Saving…' : 'Save' }}
                             </button>
+                            
                         </div>
                     </div>
                 </div>
@@ -389,6 +421,9 @@ const fetchSettings = async () => {
             stageDrafts.value[stage.id] = {
                 name: stage.name || '',
                 color: stage.color || '#3b82f6',
+                auto_revert: stage.auto_revert || false,
+                revert_after_hours: stage.revert_after_hours || null,
+                notify_before_minutes: stage.notify_before_minutes || 30,
             }
         })
         
@@ -531,17 +566,24 @@ const saveAllSettings = async () => {
 const isStageDirty = (stage) => {
     const draft = stageDrafts.value[stage.id]
     if (!draft) return false
-    const originalName = (stage.name || '').trim()
-    const originalColor = (stage.color || '').toLowerCase()
-    const draftName = (draft.name || '').trim()
-    const draftColor = (draft.color || '').toLowerCase()
-    return draftName !== originalName || draftColor !== originalColor
+
+    return (
+        (draft.name || '').trim() !== (stage.name || '').trim() ||
+        (draft.color || '').toLowerCase() !== (stage.color || '').toLowerCase() ||
+
+        Boolean(draft.auto_revert) !== Boolean(stage.auto_revert) ||
+        Number(draft.revert_after_hours || 0) !== Number(stage.revert_after_hours || 0) ||
+        Number(draft.notify_before_minutes || 0) !== Number(stage.notify_before_minutes || 0)
+    )
 }
 
 const resetStageDraft = (stage) => {
     stageDrafts.value[stage.id] = {
         name: stage.name || '',
         color: stage.color || '#3b82f6',
+         auto_revert: stage.auto_revert || false,
+        revert_after_hours: stage.revert_after_hours || null,
+        notify_before_minutes: stage.notify_before_minutes || 30,
     }
 }
 
@@ -562,10 +604,16 @@ const saveStageMeta = async (stage) => {
         await api.put(`/stages/${stage.id}`, {
             name: draft.name.trim(),
             color: draft.color || stage.color,
+            auto_revert: draft.auto_revert,
+            revert_after_hours: draft.revert_after_hours,
+            notify_before_minutes: draft.notify_before_minutes,
         })
 
         stage.name = draft.name.trim()
         stage.color = draft.color || stage.color
+        stage.auto_revert = draft.auto_revert
+        stage.revert_after_hours = draft.revert_after_hours
+        stage.notify_before_minutes = draft.notify_before_minutes
 
         Swal.fire({
             icon: 'success',

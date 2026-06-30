@@ -588,6 +588,7 @@ class LeadController extends Controller
 
                 if ($request->has('stage_id') && $lead->stage_id != $request->stage_id) {
                     $leadData['last_stage_change_at'] = now();
+                    $leadData['notified_revert']=false;
                 }
 
                 if ($request->has('budget_from') || $request->has('budget_to')) {
@@ -1033,11 +1034,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 ]
             );
         }
-        
         // تجهيز بيانات التحديث
         $updateData = [
             'stage_id' => $request->stage_id,
             'last_stage_change_at' => now(),
+            'notified_revert'=>false
         ];
 
         // إضافة جميع الحقول حسب المرحلة

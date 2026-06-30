@@ -31,6 +31,9 @@ class StageRequest extends FormRequest
             'color' => 'nullable|string|max:255',
             'stage_type'=>'nullable',
             'deal_type'=>'nullable',
+            'auto_revert' => 'boolean',
+            'revert_after_hours' => 'nullable|integer|min:1',
+            'notify_before_minutes' => 'nullable|integer|min:1',
         ];
     }
 

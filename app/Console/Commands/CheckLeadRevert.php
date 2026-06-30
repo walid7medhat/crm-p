@@ -6,7 +6,8 @@ use Illuminate\Console\Command;
 use App\Models\Lead;
 use Illuminate\Support\Facades\Log;
 use App\Events\LeadUpdated;
-
+use App\Notifications\LeadRevertWarningNotification;
+use Illuminate\Support\Facades\Notification;
 class CheckLeadRevert extends Command
 {
     /**
@@ -26,35 +27,59 @@ class CheckLeadRevert extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): void
+  public function handle(): void
     {
-        $leadsToRevert = Lead::needsRevert()->get();
-        
-        $revertedCount = 0;
-        
-        foreach ($leadsToRevert as $lead) {
-            $oldStage=$lead->stage;
-            $oldPerson=$lead->responsiblePerson;
-            $lead->revertToStageOne();
-            $lead->refresh();
-            $revertedCount++;
-            $newStage=$lead->stage;
-            $this->info("Lead ID {$lead->id} reverted to stage 1");
-               $changes = [
-                'old_stage' => $oldStage->name,
-                'new_stage' => $newStage->name,
-                 'old_person' => $oldPerson?->name,
-                    'new_person' => $lead->initialResponsiblePerson?->name,
-            ];
-            
-            // broadcast(new LeadUpdated($lead, 'revert', null, $changes));
-            Log::info("Lead ID {$lead->id} reverted to stage 1 due to inactivity");
-        }
+        // 🔄 Revert
+        Lead::with('stage')
+            ->whereHas('stage', function ($q) {
+                $q->where('auto_revert', true);
+            })
+            ->whereNotNull('last_stage_change_at')
+            ->chunkById(100, function ($leads) {
 
-        $this->info("Successfully reverted {$revertedCount} leads to stage 1");
-        
-        if ($revertedCount > 0) {
-            Log::info("Lead revert job executed. Reverted {$revertedCount} leads to stage 1");
-        }
+                foreach ($leads as $lead) {
+                    if ($lead->shouldAutoRevert()) {
+
+                        $lead->revertToPreviousStage();
+
+                        $this->info("Lead {$lead->id} reverted");
+                    }
+                }
+            });
+
+        // 🔔 Notification
+        Lead::with('stage')
+            ->whereHas('stage', function ($q) {
+                $q->where('auto_revert', true);
+            })
+            ->where('notified_revert', false)
+            ->chunkById(100, function ($leads) {
+
+                foreach ($leads as $lead) {
+                 if ($lead->shouldSendRevertNotification()) {
+
+                    $previousStage = $lead->getPreviousStage();
+
+                    $users = collect([$lead->responsiblePerson])
+                        ->merge($lead->observingUsers)
+                        ->filter();
+
+                    Notification::send(
+                        $users,
+                        new LeadRevertWarningNotification(
+                            $lead,
+                            $previousStage?->name ?? 'previous stage',
+                            $lead->stage->notify_before_minutes
+                        )
+                    );
+
+                    $lead->updateQuietly([
+                        'notified_revert' => true
+                    ]);
+
+                    $this->info("Lead {$lead->id} notified before revert");
+                }
+                }
+            });
     }
 }

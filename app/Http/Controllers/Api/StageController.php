@@ -1157,8 +1157,9 @@ public function getOffices()
             $settings = DB::table('stage_visibility')->get();
              $allStages = Stage::where('stage_type', 'lead')
             ->orderBy('order')
-            ->get(['id', 'name', 'color', 'order']);
-            
+            ->get(['id', 'name', 'color', 'order','auto_revert','revert_after_hours','notify_before_minutes']);
+    
+
             return ApiResponse::success([
                 'settings' => $settings,
                 'all_stages' => $allStages,

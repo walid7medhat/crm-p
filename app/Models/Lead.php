@@ -297,4 +297,83 @@ public function activitiesWithTrashed()
         {
             return $this->belongsTo(PropertyType::class);
         }
+
+        public function shouldAutoRevert(): bool
+        {
+            if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
+                return false;
+            }
+
+            $hours = $this->stage->revert_after_hours ?? 0;
+
+            if ($hours <= 0) return false;
+
+            return $this->last_stage_change_at
+                ->addHours($hours)
+                ->lessThanOrEqualTo(now());
+        }
+        public function getPreviousStage()
+        {
+            return \App\Models\Stage::where('order', '<', $this->stage->order)
+                ->orderBy('order', 'desc')
+                ->first();
+        }
+        public function revertToPreviousStage(): void
+                {
+                    $previousStage = $this->getPreviousStage();
+
+                    if (!$previousStage) return;
+
+                    // ✅ الحالة المهمة
+                    if ($previousStage->order == 1) {
+                        $this->revertToStageOne();
+                        return;
+                    }
+
+                    // 🔹 باقي الحالات (revert عادي)
+                    $oldStage = $this->stage;
+                    $oldPerson = $this->responsiblePerson;
+
+                    $this->updateQuietly([
+                        'stage_id' => $previousStage->id,
+                        'last_stage_change_at' => now(),
+                        'revert' => now(),
+                        'notified_revert' => false,
+                    ]);
+
+                    $this->refresh();
+
+                    LeadHistoryHelper::log(
+                        $this->id,
+                        [
+                            'action' => 'revert',
+                            'old_stage' => $oldStage?->name,
+                            'new_stage' => $this->stage?->name,
+                            'old_person_id' => $oldPerson?->id,
+                        ]
+                    );
+
+                    $changes = [
+                        'old_stage' => $oldStage?->name,
+                        'new_stage' => $this->stage?->name,
+                        'old_person_id' => $oldPerson?->id,
+                    ];
+
+                    broadcast(new LeadUpdated($this, 'revert', null, $changes));
+                }
+        public function shouldSendRevertNotification(): bool
+            {
+                if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
+                    return false;
+                }
+
+                $hours = $this->stage->revert_after_hours ?? 0;
+                $notifyBefore = $this->stage->notify_before_minutes ?? 30;
+
+                $revertTime = $this->last_stage_change_at->copy()->addHours($hours);
+                $notifyTime = $revertTime->copy()->subMinutes($notifyBefore);
+
+                return now()->between($notifyTime, $revertTime)
+                    && !$this->notified_revert;
+            }
 }

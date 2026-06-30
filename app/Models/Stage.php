@@ -10,7 +10,11 @@ class Stage extends Model
 {
      use HasFactory;
    use LogsActivity;
-
+protected $casts = [
+    'auto_revert' => 'boolean',
+    'revert_after_hours' => 'integer',
+    'notify_before_minutes' => 'integer',
+];
     public function getActivitylogOptions(): LogOptions
     {
         // use $listing->activities
