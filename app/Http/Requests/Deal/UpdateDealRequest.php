@@ -68,6 +68,13 @@ class UpdateDealRequest extends FormRequest
             'payment_proof.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             'spa_document' => 'nullable|array',
             'spa_document.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                 'eoi_date' => 'nullable|date',
+            'booking_date' => 'nullable|date',
+            'spa_date' => 'nullable|date',
+            'security_deposit_date' => 'nullable|date',
+            'mou_date' => 'nullable|date',
+            'noc_date' => 'nullable|date',
+            'won_date' => 'nullable|date',
         ];
     }
     

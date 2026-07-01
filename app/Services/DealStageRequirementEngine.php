@@ -56,6 +56,8 @@ class DealStageRequirementEngine
 
             if ($targetOrder >= 2) {
                 $required[] = 'at_least_one_property';
+                 $stageDates = $this->getPreviousStageDatesRequired($targetOrder, $deal);
+            $required = array_merge($required, $stageDates);
             }
 
             // ✅ تصحيح: إضافة الحقول لكل property موجودة
@@ -214,6 +216,18 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             $buyer = $deal->parties->first(fn ($party) => $party->party_type === 'buyer');
             if (!$this->buyerIsNonResident($buyer)) {
                 $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'national_id'));
+            }
+             $dateField = $this->getStageDateField($order, 'primary');
+            if ($dateField && empty($deal->$dateField)) {
+                $missing[] = "stage_date_{$dateField}";
+            }
+        }
+          if ($order >= 3) {
+            for ($prevOrder = 2; $prevOrder < $order; $prevOrder++) {
+                $dateField = $this->getStageDateField($prevOrder, 'primary');
+                if ($dateField && empty($deal->$dateField)) {
+                    $missing[] = "stage_date_{$dateField}";
+                }
             }
         }
 
@@ -582,4 +596,56 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
 
         return false;
     }
+      public function getStageDateField(int $stageOrder, string $dealType): ?string
+    {
+        $dateFieldMap = [
+            'primary' => [
+                2 => 'eoi_date',      // EOI
+                3 => 'booking_date',   // Booking
+                4 => 'spa_date',       // SPA
+                5 => 'won_date',       // Won
+            ],
+            'secondary' => [
+                2 => 'security_deposit_date', // Security Deposit
+                3 => 'mou_date',              // MOU
+                4 => 'noc_date',              // NOC
+                5 => 'won_date',              // Won
+            ],
+            // 'rental' => [
+            //     2 => 'application_date',
+            //     3 => 'contract_date',
+            //     4 => 'ejari_date',
+            //     5 => 'won_date',
+            // ],
+        ];
+
+        return $dateFieldMap[$dealType][$stageOrder] ?? null;
+    }
+     private function hasStageDate(Deal $deal, int $stageOrder, string $dealType): bool
+    {
+        $field = $this->getStageDateField($stageOrder, $dealType);
+        if (!$field) {
+            return true; 
+        }
+
+        $value = $deal->$field ?? null;
+        return !empty($value);
+    }
+
+  
+    private function getPreviousStageDatesRequired(int $targetOrder, Deal $deal): array
+    {
+        $required = [];
+        $dealType = $deal->deal_type;
+
+        for ($order = 2; $order <= $targetOrder; $order++) {
+            $field = $this->getStageDateField($order, $dealType);
+            if ($field && empty($deal->$field)) {
+                $required[] = "stage_date_{$field}";
+            }
+        }
+
+        return $required;
+    }
+
 }

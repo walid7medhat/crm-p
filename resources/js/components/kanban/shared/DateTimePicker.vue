@@ -18,6 +18,8 @@
                         append-to-body
                         class="dob-v-select"
                         aria-label="Month"
+                          @mousedown.stop
+                             @click.stop
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -40,6 +42,8 @@
                         append-to-body
                         class="dob-v-select"
                         aria-label="Day"
+                          @mousedown.stop
+                         @click.stop
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -61,6 +65,8 @@
                         append-to-body
                         class="dob-v-select"
                         aria-label="Year"
+                          @mousedown.stop
+                          @click.stop
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -896,5 +902,44 @@ const handleCancel = () => {
 
 .btn-apply-picker:hover {
     background: #152547;
+}
+/* ✅ Fix for vue-select dropdown closing issue */
+.date-time-picker-modal .vs__dropdown-menu {
+  z-index: 100000 !important;
+  position: fixed !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+}
+
+.date-time-picker-modal .vs__dropdown-toggle {
+  cursor: pointer;
+}
+
+.date-time-picker-modal .vs__dropdown-toggle:focus {
+  outline: none;
+}
+
+/* Prevent click propagation from dropdown items */
+.date-time-picker-modal .vs__dropdown-option {
+  cursor: pointer;
+  padding: 6px 12px;
+}
+
+.date-time-picker-modal .vs__dropdown-option:hover {
+  background: #f1f5f9;
+}
+
+.date-time-picker-modal .vs__dropdown-option--highlight {
+  background: #e2e8f0;
+}
+:deep(.vs__dropdown-menu, .flatpickr-calendar, [data-popper-placement] ){
+    z-index: 45004 !important;
+        max-width: 100px !important;
+
+}
+.vs__dropdown-menu, .flatpickr-calendar, [data-popper-placement] {
+    z-index: 45004 !important;
+        max-width: 100px !important;
+
 }
 </style>

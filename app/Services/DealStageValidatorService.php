@@ -47,7 +47,13 @@ class DealStageValidatorService
     // ✅ تصفية property document fields (إذا كانت المستندات موجودة مسبقاً)
     $missingFields = $this->filterPropertyDocumentFields($missingFields, $deal);
     $missingByStage = $this->filterMissingByStagePropertyDocuments($missingByStage, $deal);
-    
+      $stageDateRequirements = $this->getRequiredStageDates($deal, $targetStageId, $resolvedType);
+        
+        foreach ($stageDateRequirements as $dateField) {
+            if (!in_array($dateField, $missingFields)) {
+                $missingFields[] = $dateField;
+            }
+        }
     // ✅ تصفية budget fields حسب المرحلة (قبل أي تصفية أخرى)
     // $missingFields = $this->filterBudgetFieldsByStage($missingFields, $targetStageId);
     // $missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
@@ -714,4 +720,74 @@ private function filterMissingByStageBedroomsFields(array $missingByStage, Deal 
     
     return $filteredStages;
 }
+  private function getStageDateField(int $stageOrder, string $dealType): ?string
+    {
+        $dateFieldMap = [
+            'primary' => [
+                2 => 'eoi_date',
+                3 => 'booking_date',
+                4 => 'spa_date',
+                5 => 'won_date',
+            ],
+            'secondary' => [
+                2 => 'security_deposit_date',
+                3 => 'mou_date',
+                4 => 'noc_date',
+                5 => 'won_date',
+            ],
+            // 'rental' => [
+            //     2 => 'application_date',
+            //     3 => 'contract_date',
+            //     4 => 'ejari_date',
+            //     5 => 'won_date',
+            // ],
+        ];
+
+        return $dateFieldMap[$dealType][$stageOrder] ?? null;
+    }
+
+    /**
+     * التحقق من وجود تاريخ المرحلة
+     */
+    private function hasStageDate(Deal $deal, int $stageOrder, string $dealType): bool
+    {
+        $field = $this->getStageDateField($stageOrder, $dealType);
+        if (!$field) {
+            return true;
+        }
+
+        $value = $deal->$field ?? null;
+        return !empty($value);
+    }
+
+    /**
+     * الحصول على تواريخ المراحل المطلوبة
+     */
+    private function getRequiredStageDates(Deal $deal, int $targetStageId, string $dealType): array
+    {
+        $stage = \App\Models\Stage::find($targetStageId);
+        if (!$stage) {
+            return [];
+        }
+
+        $targetOrder = (int) $stage->order;
+        $requiredDates = [];
+
+        // التحقق من تاريخ المرحلة الحالية
+        $currentDateField = $this->getStageDateField($targetOrder, $dealType);
+        if ($currentDateField && empty($deal->$currentDateField)) {
+            $requiredDates[] = "stage_date_{$currentDateField}";
+        }
+
+        // التحقق من تواريخ المراحل السابقة
+        for ($order = 2; $order < $targetOrder; $order++) {
+            $dateField = $this->getStageDateField($order, $dealType);
+            if ($dateField && empty($deal->$dateField)) {
+                $requiredDates[] = "stage_date_{$dateField}";
+            }
+        }
+
+        return $requiredDates;
+    }
+
 }

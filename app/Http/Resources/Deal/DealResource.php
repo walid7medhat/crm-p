@@ -160,6 +160,13 @@ class DealResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'converted_at' => $this->lead?->converted_at?->format('Y-m-d H:i:s'),
+             'eoi_date' => $this->eoi_date?->toDateTimeString(),
+            'booking_date' => $this->booking_date?->toDateTimeString(),
+            'spa_date' => $this->spa_date?->toDateTimeString(),
+            'security_deposit_date' => $this->security_deposit_date?->toDateTimeString(),
+            'mou_date' => $this->mou_date?->toDateTimeString(),
+            'noc_date' => $this->noc_date?->toDateTimeString(),
+            'won_date' => $this->won_date?->toDateTimeString(),
             
         ];
     }

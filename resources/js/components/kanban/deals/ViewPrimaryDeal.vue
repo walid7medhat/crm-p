@@ -79,6 +79,61 @@
 
    <!-- Buyer Details -->
     <div class="col-12">
+ <!-- ✅ Stage Dates Section -->
+    <div class="col-12">
+      <div class="view-card p-3 radius-12 mb-3" :class="{ 'section-highlight': activeEditSection === 'stage_dates' }">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Stage Dates</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('stage_dates')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
+        
+        <InlineSectionEditor
+          v-if="isEditingSection('stage_dates')"
+          :model-value="inlineEditData"
+          section-key="stage_dates"
+          :deal-type="deal?.deal_type || 'primary'"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+        />
+        
+        <div v-else>
+          <div v-if="stageDates.length > 0" class="row g-2">
+            <div 
+              v-for="date in stageDates" 
+              :key="date.key"
+              class="col-md-4 "
+            >
+            <!-- :class="date.class" -->
+              <div class="stage-date-display" >
+                <div class="stage-date-label">{{ date.label }}</div>
+                <div class="stage-date-value">
+                  <iconify-icon :icon="date.icon" class="me-1" width="16"></iconify-icon>
+                  {{ date.value }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-muted text-center py-3">
+            <iconify-icon icon="lucide:calendar" class="me-1"></iconify-icon>
+            No stage dates available yet
+          </div>
+        </div>
+      </div>
+    </div>
 
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'buyer_details' }">
           <div class="section-head mb-3">
@@ -490,7 +545,19 @@ function requestEdit(sectionKey) {
 }
 
 function isEditingSection(...keys) {
-  return !!props.activeEditSection && keys.includes(props.activeEditSection)
+  console.log("🔍 isEditingSection - keys:", keys)
+  console.log("🔍 isEditingSection - props.activeEditSection:", props.activeEditSection)
+  
+  // التحقق من وجود activeEditSection
+  if (!props.activeEditSection) {
+    console.log("🔍 isEditingSection - no active section, returning false")
+    return false
+  }
+  
+  // التحقق من أن activeEditSection موجود في keys
+  const result = keys.includes(props.activeEditSection)
+  console.log("🔍 isEditingSection - result:", result)
+  return result
 }
 
 function handlePropertyUpdated(updatedProperty) {
@@ -575,6 +642,81 @@ watch(() => props.inlineEditLookup, (newVal) => {
     developers: newVal?.developers?.length
   })
 }, { deep: true, immediate: true })
+// ✅ Stage Dates Configuration
+const stageDateConfig = {
+  primary: [
+    { key: 'eoi_date', label: 'EOI Date', icon: 'lucide:file-text', order: 2 },
+    { key: 'booking_date', label: 'Booking Date', icon: 'lucide:calendar-check', order: 3 },
+    { key: 'spa_date', label: 'SPA Date', icon: 'lucide:file-signature', order: 4 },
+    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
+  ],
+  secondary: [
+    { key: 'security_deposit_date', label: 'Security Deposit Date', icon: 'lucide:shield-check', order: 2 },
+    { key: 'mou_date', label: 'MOU Date', icon: 'lucide:file-check', order: 3 },
+    { key: 'noc_date', label: 'NOC Date', icon: 'lucide:file-check-2', order: 4 },
+    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
+  ],
+  rental: [
+    { key: 'application_date', label: 'Application Date', icon: 'lucide:file-text', order: 2 },
+    { key: 'contract_date', label: 'Contract Date', icon: 'lucide:file-signature', order: 3 },
+    { key: 'ejari_date', label: 'Ejari Date', icon: 'lucide:file-check', order: 4 },
+    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
+  ]
+}
+
+const stageDateColors = {
+  'eoi_date': 'date-eoi',
+  'booking_date': 'date-booking',
+  'spa_date': 'date-spa',
+  'security_deposit_date': 'date-security',
+  'mou_date': 'date-mou',
+  'noc_date': 'date-noc',
+  'won_date': 'date-won',
+  'application_date': 'date-application',
+  'contract_date': 'date-contract',
+  'ejari_date': 'date-ejari'
+}
+
+// ✅ Stage Dates Computed - مع التحقق من وجود deal
+const stageDates = computed(() => {
+  // ✅ التحقق من وجود deal
+  if (!props.deal) return []
+  
+  const dealType = props.deal?.deal_type || 'primary'
+  const config = stageDateConfig[dealType] || stageDateConfig.primary
+  
+  const dates = []
+  const deal = props.deal || {}
+  
+  config.forEach(field => {
+    const value = deal[field.key]
+    if (value) {
+      dates.push({
+        ...field,
+        value: formatDateDisplay(value),
+        class: stageDateColors[field.key] || ''
+      })
+    }
+  })
+  
+  return dates
+})
+
+function formatDateDisplay(dateValue) {
+  if (!dateValue) return '—'
+  try {
+    const date = new Date(dateValue)
+    if (isNaN(date.getTime())) return '—'
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch {
+    return '—'
+  }
+}
+
 </script>
 <style scoped>
 .section-title,
@@ -666,5 +808,61 @@ h6.section-title {
 .property-inline-add-highlight {
   border: 2px solid rgba(252, 182, 0, 0.55);
   box-shadow: 0 0 0 4px rgba(252, 182, 0, 0.1);
+}
+/* ✅ Stage Dates Display */
+.stage-date-display {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+  height: 100%;
+}
+
+.stage-date-display:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.stage-date-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-bottom: 4px;
+   overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.stage-date-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0B0736;
+  display: flex;
+  align-items: center;
+}
+
+/* Stage Date Colors */
+.date-eoi .stage-date-label { color: #0369a1; }
+.date-eoi .stage-date-value { color: #0369a1; }
+.date-booking .stage-date-label { color: #b45309; }
+.date-booking .stage-date-value { color: #b45309; }
+.date-spa .stage-date-label { color: #1d4ed8; }
+.date-spa .stage-date-value { color: #1d4ed8; }
+.date-security .stage-date-label { color: #be185d; }
+.date-security .stage-date-value { color: #be185d; }
+.date-mou .stage-date-label { color: #065f46; }
+.date-mou .stage-date-value { color: #065f46; }
+.date-noc .stage-date-label { color: #4338ca; }
+.date-noc .stage-date-value { color: #4338ca; }
+.date-won .stage-date-label { color: #166534; }
+.date-won .stage-date-value { color: #166534; }
+
+@media (max-width: 768px) {
+  .stage-date-display { padding: 10px 12px; }
+  .stage-date-value { font-size: 13px; }
 }
 </style>

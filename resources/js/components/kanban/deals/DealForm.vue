@@ -27,7 +27,107 @@
         </div>
       </div>
     </section>
+  <!-- ✅ Stage Dates Section -->
+    <section v-if="isSectionVisible('stage_dates')  " class="form-section">
+      <h6 class="section-title mb-3">Stage Dates</h6>
+      <div class="form-card p-3 radius-12">
+        <div class="row g-3">
+          <!-- Primary Stages -->
+          <template v-if="dealType === 'primary'">
+            <div class="col-md-4" v-if="shouldShowStageDate('eoi_date')">
+              <label class="form-label-custom">EOI Date</label>
+              <AdvancedDatePicker 
+                v-model="form.eoi_date" 
+                date-only 
+                 dob-layout
+                placeholder="Select EOI date"
+                class="custom-input"
+                :clearable="true"
+                :disabled="false"
+              />
+            </div>
+            <div class="col-md-4" v-if="shouldShowStageDate('booking_date')">
+              <label class="form-label-custom">Booking Date</label>
+              <AdvancedDatePicker 
+                v-model="form.booking_date" 
+                date-only 
+                 dob-layout
+                placeholder="Select Booking date"
+                class="custom-input"
+                :clearable="true"
+                :disabled="false"
+              />
+            </div>
+            <div class="col-md-4" v-if="shouldShowStageDate('spa_date')">
+              <label class="form-label-custom">SPA Date</label>
+              <AdvancedDatePicker 
+                v-model="form.spa_date" 
+                date-only 
+                 dob-layout
+                placeholder="Select SPA date"
+                class="custom-input"
+                :clearable="true"
+                :disabled="false"
+              />
+            </div>
+          </template>
 
+          <!-- Secondary Stages -->
+          <template v-else-if="dealType === 'secondary'">
+            <div class="col-md-4" v-if="shouldShowStageDate('security_deposit_date')">
+              <label class="form-label-custom">Security Deposit Date</label>
+              <AdvancedDatePicker 
+                v-model="form.security_deposit_date" 
+                date-only 
+                 dob-layout
+                placeholder="Select Security Deposit date"
+                class="custom-input"
+                :clearable="true"
+                :disabled="false"
+              />
+            </div>
+            <div class="col-md-4" v-if="shouldShowStageDate('mou_date')">
+              <label class="form-label-custom">MOU Date</label>
+              <AdvancedDatePicker 
+                v-model="form.mou_date" 
+                date-only 
+                 dob-layout
+                placeholder="Select MOU date"
+                class="custom-input"
+                :clearable="true"
+                :disabled="false"
+              />
+            </div>
+            <div class="col-md-4" v-if="shouldShowStageDate('noc_date')">
+              <label class="form-label-custom">NOC Date</label>
+              <AdvancedDatePicker 
+                v-model="form.noc_date" 
+                date-only 
+                 dob-layout
+                placeholder="Select NOC date"
+                class="custom-input"
+                :clearable="true"
+                :disabled="false"
+              />
+            </div>
+          </template>
+
+          <!-- Won Date (all types) -->
+          <div class="col-md-4" v-if="shouldShowStageDate('won_date')">
+            <label class="form-label-custom">Won Date</label>
+            <AdvancedDatePicker 
+              v-model="form.won_date" 
+              date-only 
+               dob-layout
+              placeholder="Select Won date"
+              class="custom-input"
+              :clearable="true"
+                :disabled="false"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
     <!-- Buyer Section -->
     <section v-if="(dealType === 'primary' || dealType === 'secondary') && isSectionVisible('buyer_details')" class="form-section">
       <h6 class="section-title mb-3">Buyer Details</h6>
@@ -1036,12 +1136,26 @@ const sectionAliases = {
   landlord_details: ['landlord_details', 'landlord_documents'],
   property_details: ['property_details', 'property_documents'],
   deal_financials: ['deal_financials'],
+   stage_dates: ['stage_dates'], 
 }
 
+// function isSectionVisible(sectionName) {
+//   const active = props.activeEditSection
+//   if (!active) return true
+//   return (sectionAliases[sectionName] || [sectionName]).includes(active)
+// }
 function isSectionVisible(sectionName) {
   const active = props.activeEditSection
-  if (!active) return true
-  return (sectionAliases[sectionName] || [sectionName]).includes(active)
+  console.log(`🟣 isSectionVisible(${sectionName}) - activeEditSection: "${active}"`)
+  if (!active) {
+    console.log('  - no active section, returns true')
+    return true
+  }
+  const aliases = sectionAliases[sectionName] || [sectionName]
+  const result = aliases.includes(active)
+  console.log(`  - aliases:`, aliases)
+  console.log(`  - result: ${result}`)
+  return result
 }
 
 function isDocumentEditMode(documentSectionKey) {
@@ -1821,6 +1935,137 @@ const showBedroomsFieldInProperty = computed(() => {
   
   return true
 })
+
+const stageDates = computed(() => {
+  console.log('🔵🔵🔵 DealForm.stageDates - START 🔵🔵🔵')
+  console.log('1. props.dealType:', props.dealType)
+  console.log('2. props.activeEditSection:', props.activeEditSection)
+  console.log('3. form.value (props.modelValue):', JSON.stringify(form.value, null, 2))
+  console.log('4. form.value.eoi_date:', form.value.eoi_date)
+  console.log('5. form.value.booking_date:', form.value.booking_date)
+  console.log('6. form.value.spa_date:', form.value.spa_date)
+  
+  const dealType = props.dealType || 'primary'
+  const config = stageDateConfig[dealType] || stageDateConfig.primary
+  
+  console.log('7. config:', config)
+  
+  const dates = []
+  
+  config.forEach(field => {
+    const value = form.value[field.key]
+    console.log(`8. field ${field.key}:`, value)
+    if (value) {
+      dates.push({
+        ...field,
+        value: formatDateDisplay(value),
+        class: stageDateColors[field.key] || ''
+      })
+    }
+  })
+  
+  console.log('9. final dates:', dates)
+  console.log('🔵🔵🔵 DealForm.stageDates - END 🔵🔵🔵')
+  return dates
+})
+
+function shouldShowStageDate(dateKey) {
+  console.log(`🟢 shouldShowStageDate(${dateKey})`)
+  console.log('  - form.value[dateKey]:', form.value[dateKey])
+  
+  if (form.value[dateKey]) {
+    console.log('  ✅ returns true (has value)')
+    return true
+  }
+  
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  const order = Number(props.selectedStageOrder) || 0
+  
+  console.log(`  - stageName: "${stageName}", order: ${order}`)
+  
+  const stageDateMap = {
+    'eoi_date': { stages: ['eoi'], minOrder: 2 },
+    'booking_date': { stages: ['booking'], minOrder: 3 },
+    'spa_date': { stages: ['spa'], minOrder: 4 },
+    'security_deposit_date': { stages: ['security', 'deposit'], minOrder: 2 },
+    'mou_date': { stages: ['mou'], minOrder: 3 },
+    'noc_date': { stages: ['noc'], minOrder: 4 },
+    'won_date': { stages: ['won', 'deal won', 'closed', 'completed'], minOrder: 5 }
+  }
+  
+  const config = stageDateMap[dateKey]
+  if (!config) {
+    console.log('  ❌ no config for', dateKey)
+    return false
+  }
+  
+  const stageMatch = config.stages.some(s => stageName.includes(s))
+  console.log(`  - stageMatch: ${stageMatch}`)
+  
+  if (stageMatch) {
+    console.log('  ✅ returns true (stage name match)')
+    return true
+  }
+  
+  const orderMatch = order >= config.minOrder
+  console.log(`  - orderMatch: ${orderMatch} (${order} >= ${config.minOrder})`)
+  
+  if (orderMatch) {
+    console.log('  ✅ returns true (order match)')
+    return true
+  }
+  
+  console.log('  ❌ returns false')
+  return false
+}
+const stageDateConfig = {
+  primary: [
+    { key: 'eoi_date', label: 'EOI Date', icon: 'lucide:file-text', order: 2 },
+    { key: 'booking_date', label: 'Booking Date', icon: 'lucide:calendar-check', order: 3 },
+    { key: 'spa_date', label: 'SPA Date', icon: 'lucide:file-signature', order: 4 },
+    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
+  ],
+  secondary: [
+    { key: 'security_deposit_date', label: 'Security Deposit Date', icon: 'lucide:shield-check', order: 2 },
+    { key: 'mou_date', label: 'MOU Date', icon: 'lucide:file-check', order: 3 },
+    { key: 'noc_date', label: 'NOC Date', icon: 'lucide:file-check-2', order: 4 },
+    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
+  ],
+  rental: [
+    { key: 'application_date', label: 'Application Date', icon: 'lucide:file-text', order: 2 },
+    { key: 'contract_date', label: 'Contract Date', icon: 'lucide:file-signature', order: 3 },
+    { key: 'ejari_date', label: 'Ejari Date', icon: 'lucide:file-check', order: 4 },
+    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
+  ]
+}
+
+const stageDateColors = {
+  'eoi_date': 'date-eoi',
+  'booking_date': 'date-booking',
+  'spa_date': 'date-spa',
+  'security_deposit_date': 'date-security',
+  'mou_date': 'date-mou',
+  'noc_date': 'date-noc',
+  'won_date': 'date-won',
+  'application_date': 'date-application',
+  'contract_date': 'date-contract',
+  'ejari_date': 'date-ejari'
+}
+
+function formatDateDisplay(dateValue) {
+  if (!dateValue) return '—'
+  try {
+    const date = new Date(dateValue)
+    if (isNaN(date.getTime())) return '—'
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch {
+    return '—'
+  }
+}
 onMounted(async () => {
   // fetchProjects()
   getCurrentUser()
@@ -2118,4 +2363,57 @@ removeBudgetDropdownListeners()
   color: #94a3b8 !important;
   font-size: 11px !important;
   line-height: 38px !important;
+}
+/* ✅ Stage Dates Display */
+.stage-date-display {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+  height: 100%;
+}
+
+.stage-date-display:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.stage-date-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stage-date-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0B0736;
+  display: flex;
+  align-items: center;
+}
+
+/* Stage Date Colors */
+.date-eoi .stage-date-label { color: #0369a1; }
+.date-eoi .stage-date-value { color: #0369a1; }
+.date-booking .stage-date-label { color: #b45309; }
+.date-booking .stage-date-value { color: #b45309; }
+.date-spa .stage-date-label { color: #1d4ed8; }
+.date-spa .stage-date-value { color: #1d4ed8; }
+.date-security .stage-date-label { color: #be185d; }
+.date-security .stage-date-value { color: #be185d; }
+.date-mou .stage-date-label { color: #065f46; }
+.date-mou .stage-date-value { color: #065f46; }
+.date-noc .stage-date-label { color: #4338ca; }
+.date-noc .stage-date-value { color: #4338ca; }
+.date-won .stage-date-label { color: #166534; }
+.date-won .stage-date-value { color: #166534; }
+
+@media (max-width: 768px) {
+  .stage-date-display { padding: 10px 12px; }
+  .stage-date-value { font-size: 13px; }
 }</style>

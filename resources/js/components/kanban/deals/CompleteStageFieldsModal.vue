@@ -55,7 +55,50 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
-            
+              <div class="stage-dates-section px-3 py-2" v-if="stageDateFields.length > 0">
+                   <span class="stage-dates-label">
+                      <iconify-icon icon="lucide:calendar-days" class="me-1"></iconify-icon>
+                      Stage Dates:
+                    </span>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                 
+                    
+                    <div 
+                      v-for="field in stageDateFields" 
+                      :key="field.key"
+                      class="stage-date-item"
+                      :class="{
+                        'is-required': isStageDateRequired(field.key),
+                        'has-value': formData[field.key]
+                      }"
+                    >
+                      <label class="stage-date-label">
+                        {{ field.label }}
+                        <span v-if="isStageDateRequired(field.key)" class="text-danger">*</span>
+                        <span v-if="formData[field.key]" class="stage-date-status">
+                          <iconify-icon icon="lucide:check-circle" class="text-success"></iconify-icon>
+                        </span>
+                        <span v-else-if="isStageDateRequired(field.key)" class="stage-date-required">
+                          <iconify-icon icon="lucide:alert-circle" class="text-danger"></iconify-icon>
+                        </span>
+                      </label>
+                      
+                      <AdvancedDatePicker
+                        :model-value="formData[field.key]"
+                        @update:modelValue="(val) => formData[field.key] = val"
+                        date-only
+                        dob-layout
+                        :placeholder="isStageDateRequired(field.key) ? 'Required' : 'Optional'"
+                        :clearable="true"
+                        class="stage-date-picker"
+                        :disabled="!isStageDateEditable(field.key)"
+                      />
+                      
+                      
+                    </div>
+                  </div>
+                </div>
+
             <!-- Lost Reason Section -->
             <section v-if="shouldShowField('lost_reason')" class="form-section">
               <div class="form-card p-3 radius-12">
@@ -2870,7 +2913,6 @@ function forceRefreshPropertyDocuments() {
     }, 100)
 }
 // Initialize form
-// دالة لتنسيق التاريخ إلى YYYY-MM-DD
 function formatDateForPicker(dateValue) {
   if (!dateValue) return null;
   
@@ -2892,6 +2934,139 @@ function formatDateForPicker(dateValue) {
   } catch (error) {
     console.warn('Error formatting date:', dateValue, error);
     return null;
+  }
+}
+const stageDateFields = computed(() => {
+  const dealType = normalizedDealType.value;
+  const allFields = [];
+  
+  // تحديد المرحلة الحالية
+  const currentStageName = String(props.targetStageName || '').toLowerCase();
+  const currentOrder = getStageOrder(currentStageName);
+  
+  // إذا لم يتم تحديد مرحلة حالية، لا نعرض أي تواريخ
+  if (currentOrder === 0) return [];
+  
+  if (dealType === 'primary') {
+    // تعريف جميع التواريخ مع رقم المرحلة الخاصة بها
+    const fields = [
+      { key: 'eoi_date', label: 'EOI Date', stage: 'eoi', order: 2 },
+      { key: 'booking_date', label: 'Booking Date', stage: 'booking', order: 3 },
+      { key: 'spa_date', label: 'SPA Date', stage: 'spa', order: 4 },
+      { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
+    ];
+    
+    // ✅ فقط التواريخ التي تم الوصول إلى مراحلها (order <= currentOrder)
+    allFields.push(...fields.filter(f => f.order <= currentOrder));
+    
+  } else if (dealType === 'secondary') {
+    const fields = [
+      { key: 'security_deposit_date', label: 'Security Deposit Date', stage: 'security', order: 2 },
+      { key: 'mou_date', label: 'MOU Date', stage: 'mou', order: 3 },
+      { key: 'noc_date', label: 'NOC Date', stage: 'noc', order: 4 },
+      { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
+    ];
+    
+    allFields.push(...fields.filter(f => f.order <= currentOrder));
+    
+  } else if (dealType === 'rental') {
+    const fields = [
+      { key: 'application_date', label: 'Application Date', stage: 'application', order: 2 },
+      { key: 'contract_date', label: 'Contract Date', stage: 'contract', order: 3 },
+      { key: 'ejari_date', label: 'Ejari Date', stage: 'ejari', order: 4 },
+      { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
+    ];
+    
+    allFields.push(...fields.filter(f => f.order <= currentOrder));
+  }
+  
+  return allFields;
+});
+
+// ✅ دالة للحصول على رقم المرحلة من اسم المرحلة
+function getStageOrder(stageName) {
+  const stageOrderMap = {
+    'eoi': 2,
+    'booking': 3,
+    'spa': 4,
+    'security': 2,
+    'deposit': 2,
+    'mou': 3,
+    'noc': 4,
+    'application': 2,
+    'contract': 3,
+    'ejari': 4,
+    'won': 5,
+    'closed': 5,
+    'completed': 5,
+    'lost': 6
+  };
+  
+  // البحث عن الكلمة المفتاحية في اسم المرحلة
+  const lowerName = stageName.toLowerCase();
+  for (const [key, value] of Object.entries(stageOrderMap)) {
+    if (lowerName.includes(key)) {
+      return value;
+    }
+  }
+  
+  // محاولة استخراج الرقم من اسم المرحلة (مثلاً "Stage 2" → 2)
+  const numberMatch = lowerName.match(/\d+/);
+  if (numberMatch) {
+    const num = parseInt(numberMatch[0]);
+    if (num >= 1 && num <= 6) return num;
+  }
+  
+  return 0; // إذا لم يتم العثور على المرحلة
+}
+
+function isStageDateEditable(dateKey) {
+  const deal = currentDealData.value || props.deal;
+  if (!deal) return false;
+  
+  if (deal[dateKey] || (formData.value[dateKey] && formData.value[dateKey] !== '')) {
+    return true;
+  }
+  
+  if (isStageDateRequired(dateKey)) return true;
+  
+  const dateField = stageDateFields.value.find(f => f.key === dateKey);
+  if (!dateField) return false;
+  
+  const currentStageName = String(props.targetStageName || '').toLowerCase();
+  const currentOrder = getStageOrder(currentStageName);
+  
+  return currentOrder >= dateField.order;
+}
+
+function isStageDateRequired(dateKey) {
+  const missingKeys = effectiveMissingFields.value || [];
+  
+  const dateField = stageDateFields.value.find(f => f.key === dateKey);
+  if (!dateField) return false;
+  
+  const currentStageName = String(props.targetStageName || '').toLowerCase();
+  const currentOrder = getStageOrder(currentStageName);
+  
+  if (currentOrder < dateField.order) return false;
+  
+  if (formData.value[dateKey]) return false;
+  
+  return missingKeys.some(key => key === `stage_date_${dateKey}`);
+}
+
+function formatStageDate(dateValue) {
+  if (!dateValue) return '';
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return '';
   }
 }
 async function initializeForm() {
@@ -2950,7 +3125,16 @@ async function initializeForm() {
         initial.subcommunity_id = deal.subcommunity.id
       }
     }
+    const dateFields = [
+      'eoi_date', 'booking_date', 'spa_date', 
+      'security_deposit_date', 'mou_date', 'noc_date', 'won_date'
+    ];
     
+    dateFields.forEach(field => {
+      if (deal?.[field]) {
+        formData.value[field] = formatDateForPicker(deal[field]);
+      }
+    });
     missingFieldKeys.forEach(key => {
       if (!key.includes('_document_') && !key.includes('property_') && initial[key] === undefined) {
         initial[key] = getExistingFieldValue(key)
@@ -3772,10 +3956,26 @@ const unresolvedMissingKeys = computed(() => {
   const missingKeys = effectiveMissingFields.value || []
   
   missingKeys.forEach(key => {
+     if (key.startsWith('stage_date_')) {
+      const dateField = key.replace('stage_date_', '');
+      const value = formData.value?.[dateField];
+      const hasValue = value && value !== '' && value !== null && value !== undefined;
+      
+      if (hasValue) {
+        return; 
+      }
+      const deal = currentDealData.value || props.deal;
+      if (deal && deal[dateField]) {
+        return; 
+      }
+      
+      if (!unresolved.includes(key)) {
+        unresolved.push(key);
+      }
+    }
 if (key.startsWith('property_document_')) {
   const rawDocType = key.replace('property_document_', '')
   
-  // ✅ توحيد أسماء أنواع المستندات
   let normalizedDocType = rawDocType
   if (rawDocType === 'spa') {
     normalizedDocType = 'spa_document'
@@ -4182,6 +4382,17 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
 
   const payload = {}
   const documents = []
+  const allowedDateFields = [
+    'eoi_date', 'booking_date', 'spa_date', 
+    'security_deposit_date', 'mou_date', 'noc_date', 'won_date'
+  ];
+
+  // جمع التواريخ
+  allowedDateFields.forEach(key => {
+    if (formData.value[key]) {
+      payload[key] = formData.value[key];
+    }
+  });
   const allowedPayloadKeys = new Set([
     'source',
     'deal_name',
@@ -4487,7 +4698,22 @@ watch(
   },
   { deep: true },
 )
-
+watch(
+  () => [
+    formData.value.eoi_date,
+    formData.value.booking_date,
+    formData.value.spa_date,
+    formData.value.security_deposit_date,
+    formData.value.mou_date,
+    formData.value.noc_date,
+    formData.value.won_date
+  ],
+  () => {
+   
+    console.log('Stage dates changed, recalculating...');
+  },
+  { deep: true }
+);
 watch(
   () => [props.dealId, props.targetStageId],
   () => {
@@ -5436,5 +5662,118 @@ textarea.is-invalid {
  textarea:focus, textarea:active{
    border: none !important;
     width: 100% !important;
+}
+.stage-dates-section {
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 16px;
+}
+
+.stage-dates-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0B0736;
+  white-space: nowrap;
+  margin-bottom:10px;
+}
+
+.stage-date-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+      flex-direction: column;
+}
+
+.stage-date-item:hover {
+  border-color: #cbd5e1;
+}
+
+.stage-date-item:has(.stage-date-picker:disabled) {
+  opacity: 0.7;
+}
+
+.stage-date-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+  min-width: 40px;
+}
+
+.stage-date-picker {
+  width: 140px;
+}
+
+.stage-date-picker :deep(.advanced-date-trigger) {
+  height: 32px !important;
+  min-height: 32px !important;
+  font-size: 12px !important;
+  padding: 0 8px !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.stage-date-picker :deep(.advanced-date-trigger:hover) {
+  background: #f1f5f9 !important;
+}
+
+.stage-date-picker :deep(.advanced-date-trigger:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stage-date-pending {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.stage-date-status {
+  font-size: 14px;
+}
+
+/* Colors for different stages */
+.date-eoi .stage-date-label { color: #0369a1; }
+.date-booking .stage-date-label { color: #b45309; }
+.date-spa .stage-date-label { color: #1d4ed8; }
+.date-security .stage-date-label { color: #be185d; }
+.date-mou .stage-date-label { color: #065f46; }
+.date-noc .stage-date-label { color: #4338ca; }
+.date-won .stage-date-label { color: #166534; }
+.date-application .stage-date-label { color: #0d9488; }
+.date-contract .stage-date-label { color: #7c3aed; }
+.date-ejari .stage-date-label { color: #db2777; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stage-dates-section .d-flex {
+    gap: 8px !important;
+  }
+  
+  .stage-date-item {
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    width: 100%;
+  }
+  
+  .stage-date-picker {
+    width: 100%;
+    min-width: 120px;
+    flex: 1;
+  }
+  
+  .stage-dates-label {
+    width: 100%;
+  }
+  
+  .stage-date-label {
+    min-width: 80px;
+  }
 }
 </style>

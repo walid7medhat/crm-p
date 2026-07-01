@@ -122,7 +122,9 @@ class DealController extends Controller
                 'company_share',
                 'property_link',
                 'lost_reason',
-                'listing_id'
+                'listing_id',
+                  'eoi_date', 'booking_date', 'spa_date', 
+            'security_deposit_date', 'mou_date', 'noc_date'
             ]));
 
             if ($deal->getChanges()) {
@@ -945,6 +947,7 @@ class DealController extends Controller
             $oldStageId = $deal->stage_id;
             $deal->stage_id = $newStageId;
             $deal->save();
+        $this->updateStageDate($deal, $newStageId);
 
             DealHistoryHelper::log($deal->id, [
                 'action' => 'stage_changed',
@@ -1000,7 +1003,8 @@ class DealController extends Controller
             $dealFields = [
                 'source', 'deal_name', 'deal_total_amount', 'deal_commission', 
                 'agent_share', 'company_share', 'currency', 'responsible_person_id',
-                'property_link', 'property_reference', 'lost_reason'
+                'property_link', 'property_reference', 'lost_reason', 'eoi_date', 'booking_date', 'spa_date', 
+            'security_deposit_date', 'mou_date', 'noc_date'
             ];
             
             foreach ($dealFields as $field) {
@@ -1093,6 +1097,7 @@ class DealController extends Controller
 
                 $deal->stage_id = $request->stage_id;
                 $deal->save();
+                  $this->updateStageDate($deal, (int) $request->stage_id);
             }
 
             // 6. تسجيل التاريخ
@@ -1932,4 +1937,56 @@ private function extractPropertyFiles(Request $request, string $key, int $index)
 
     return $this->flattenValidUploadedFiles($fileGroup);
 }
+   private function getStageDateField(int $stageOrder, string $dealType): ?string
+    {
+        $dateFieldMap = [
+            'primary' => [
+                2 => 'eoi_date',
+                3 => 'booking_date',
+                4 => 'spa_date',
+                5 => 'won_date',
+            ],
+            'secondary' => [
+                2 => 'security_deposit_date',
+                3 => 'mou_date',
+                4 => 'noc_date',
+                5 => 'won_date',
+            ],
+            // 'rental' => [
+            //     2 => 'application_date',
+            //     3 => 'contract_date',
+            //     4 => 'ejari_date',
+            //     5 => 'won_date',
+            // ],
+        ];
+
+        return $dateFieldMap[$dealType][$stageOrder] ?? null;
+    }
+
+    /**
+     * تحديث تاريخ المرحلة تلقائياً عند الوصول إليها
+     */
+    private function updateStageDate(Deal $deal, int $newStageId)
+    {
+        $stage = Stage::find($newStageId);
+        if (!$stage) {
+            return;
+        }
+
+        $stageOrder = (int) $stage->order;
+        $dealType = $deal->deal_type;
+        $dateField = $this->getStageDateField($stageOrder, $dealType);
+
+        if ($dateField && empty($deal->$dateField)) {
+            $deal->$dateField = Carbon::now();
+            $deal->save();
+
+            Log::info('Stage date auto-updated', [
+                'deal_id' => $deal->id,
+                'stage' => $stage->name,
+                'field' => $dateField,
+                'date' => $deal->$dateField
+            ]);
+        }
+    }
 }

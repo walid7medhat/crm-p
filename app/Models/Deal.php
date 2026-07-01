@@ -31,6 +31,13 @@ class Deal extends Model
         'metadata',
         'lost_reason',
         'listing_id',
+        'eoi_date',
+        'booking_date',
+        'spa_date',
+        'security_deposit_date',
+        'mou_date',
+        'noc_date',
+        'won_date',
     ];
 
     protected $casts = [
@@ -39,6 +46,13 @@ class Deal extends Model
         'deal_commission' => 'decimal:2',
         'agent_share' => 'decimal:2',
         'company_share' => 'decimal:2',
+        'eoi_date' => 'datetime',
+        'booking_date' => 'datetime',
+        'spa_date' => 'datetime',
+        'security_deposit_date' => 'datetime',
+        'mou_date' => 'datetime',
+        'noc_date' => 'datetime',
+        'won_date' => 'datetime',
     ];
 
     // ========== Relationships ==========

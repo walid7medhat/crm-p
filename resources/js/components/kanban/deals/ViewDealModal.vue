@@ -701,6 +701,14 @@ function dealToFormData(deal) {
     property_id: firstProp?.id ?? null,
     payment_proof: mapPropertyDocsForUpload(firstProp?.payment_proof, 'payment_proof'),
     spa_document: mapPropertyDocsForUpload(firstProp?.spa_document, 'spa'),
+
+    eoi_date: deal.eoi_date ?? null,
+    booking_date: deal.booking_date ?? null,
+    spa_date: deal.spa_date ?? null,
+    security_deposit_date: deal.security_deposit_date ?? null,
+    mou_date: deal.mou_date ?? null,
+    noc_date: deal.noc_date ?? null,
+    won_date: deal.won_date ?? null,
   }
 }
 
