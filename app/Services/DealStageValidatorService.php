@@ -727,13 +727,13 @@ private function filterMissingByStageBedroomsFields(array $missingByStage, Deal 
                 2 => 'eoi_date',
                 3 => 'booking_date',
                 4 => 'spa_date',
-                5 => 'won_date',
+                // 5 => 'won_date',
             ],
             'secondary' => [
                 2 => 'security_deposit_date',
                 3 => 'mou_date',
                 4 => 'noc_date',
-                5 => 'won_date',
+                // 5 => 'won_date',
             ],
             // 'rental' => [
             //     2 => 'application_date',

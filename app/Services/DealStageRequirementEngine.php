@@ -603,13 +603,13 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 2 => 'eoi_date',      // EOI
                 3 => 'booking_date',   // Booking
                 4 => 'spa_date',       // SPA
-                5 => 'won_date',       // Won
+                // 5 => 'won_date',       // Won
             ],
             'secondary' => [
                 2 => 'security_deposit_date', // Security Deposit
                 3 => 'mou_date',              // MOU
                 4 => 'noc_date',              // NOC
-                5 => 'won_date',              // Won
+                // 5 => 'won_date',              // Won
             ],
             // 'rental' => [
             //     2 => 'application_date',

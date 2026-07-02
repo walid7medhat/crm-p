@@ -61,12 +61,14 @@
                   <span>Stage Dates</span>
                 </div>
                 <div class="stage-dates-grid">
+                  <!-- date-${field.stage} class for diffrent style added to parent div -->
                   <div
                     v-for="field in stageDateFields"
                     :key="field.key"
                     class="stage-date-field"
+                    
                     :class="[
-                      `date-${field.stage}`,
+                      ``,
                       {
                         'is-required-empty': isStageDateRequired(field.key) && !formData[field.key],
                         'has-value': !!formData[field.key],
@@ -2947,7 +2949,7 @@ const stageDateFields = computed(() => {
       { key: 'eoi_date', label: 'EOI Date', stage: 'eoi', order: 2 },
       { key: 'booking_date', label: 'Booking Date', stage: 'booking', order: 3 },
       { key: 'spa_date', label: 'SPA Date', stage: 'spa', order: 4 },
-      { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
+      // { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
     ];
     
     // ✅ فقط التواريخ التي تم الوصول إلى مراحلها (order <= currentOrder)
@@ -2958,7 +2960,7 @@ const stageDateFields = computed(() => {
       { key: 'security_deposit_date', label: 'Security Deposit Date', stage: 'security', order: 2 },
       { key: 'mou_date', label: 'MOU Date', stage: 'mou', order: 3 },
       { key: 'noc_date', label: 'NOC Date', stage: 'noc', order: 4 },
-      { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
+      // { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
     ];
     
     allFields.push(...fields.filter(f => f.order <= currentOrder));
@@ -2968,7 +2970,7 @@ const stageDateFields = computed(() => {
       { key: 'application_date', label: 'Application Date', stage: 'application', order: 2 },
       { key: 'contract_date', label: 'Contract Date', stage: 'contract', order: 3 },
       { key: 'ejari_date', label: 'Ejari Date', stage: 'ejari', order: 4 },
-      { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
+      // { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
     ];
     
     allFields.push(...fields.filter(f => f.order <= currentOrder));
@@ -3121,7 +3123,7 @@ async function initializeForm() {
     }
     const dateFields = [
       'eoi_date', 'booking_date', 'spa_date', 
-      'security_deposit_date', 'mou_date', 'noc_date', 'won_date'
+      'security_deposit_date', 'mou_date', 'noc_date'
     ];
     
     dateFields.forEach(field => {
@@ -4378,7 +4380,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
   const documents = []
   const allowedDateFields = [
     'eoi_date', 'booking_date', 'spa_date', 
-    'security_deposit_date', 'mou_date', 'noc_date', 'won_date'
+    'security_deposit_date', 'mou_date', 'noc_date'
   ];
 
   // جمع التواريخ
@@ -4700,7 +4702,7 @@ watch(
     formData.value.security_deposit_date,
     formData.value.mou_date,
     formData.value.noc_date,
-    formData.value.won_date
+    // formData.value.won_date
   ],
   () => {
    

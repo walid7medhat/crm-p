@@ -802,20 +802,13 @@ const stageDateConfig = {
     { key: 'eoi_date', label: 'EOI Date', icon: 'lucide:file-text', order: 2 },
     { key: 'booking_date', label: 'Booking Date', icon: 'lucide:calendar-check', order: 3 },
     { key: 'spa_date', label: 'SPA Date', icon: 'lucide:file-signature', order: 4 },
-    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
   ],
   secondary: [
     { key: 'security_deposit_date', label: 'Security Deposit Date', icon: 'lucide:shield-check', order: 2 },
     { key: 'mou_date', label: 'MOU Date', icon: 'lucide:file-check', order: 3 },
     { key: 'noc_date', label: 'NOC Date', icon: 'lucide:file-check-2', order: 4 },
-    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
   ],
-  rental: [
-    { key: 'application_date', label: 'Application Date', icon: 'lucide:file-text', order: 2 },
-    { key: 'contract_date', label: 'Contract Date', icon: 'lucide:file-signature', order: 3 },
-    { key: 'ejari_date', label: 'Ejari Date', icon: 'lucide:file-check', order: 4 },
-    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
-  ]
+
 }
 
 const stageDateColors = {

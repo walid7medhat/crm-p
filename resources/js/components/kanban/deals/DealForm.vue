@@ -146,19 +146,7 @@
             </div>
           </template>
 
-          <!-- Won Date (all types) -->
-          <div class="col-md-4" v-if="shouldShowStageDate('won_date')">
-            <label class="form-label-custom">Won Date</label>
-            <AdvancedDatePicker 
-              v-model="form.won_date" 
-              date-only 
-               dob-layout
-              placeholder="Select Won date"
-              class="custom-input"
-              :clearable="true"
-                :disabled="false"
-            />
-          </div>
+       
         </div>
       </div>
     </section>
@@ -2005,9 +1993,9 @@ const stageDates = computed(() => {
 
 function shouldShowStageDate(dateKey) {
   const stageDatesByDealType = {
-    primary: ['eoi_date', 'booking_date', 'spa_date', 'won_date'],
-    secondary: ['security_deposit_date', 'mou_date', 'noc_date', 'won_date'],
-    rental: ['application_date', 'contract_date', 'ejari_date', 'won_date'],
+    primary: ['eoi_date', 'booking_date', 'spa_date'],
+    secondary: ['security_deposit_date', 'mou_date', 'noc_date'],
+    rental: ['application_date', 'contract_date', 'ejari_date'],
   }
 
   // Inline Stage Dates edit: always show all date fields for this deal type
@@ -2033,7 +2021,6 @@ function shouldShowStageDate(dateKey) {
     'application_date': { stages: ['application'], minOrder: 2 },
     'contract_date': { stages: ['contract'], minOrder: 3 },
     'ejari_date': { stages: ['ejari'], minOrder: 4 },
-    'won_date': { stages: ['won', 'deal won', 'closed', 'completed'], minOrder: 5 }
   }
 
   const config = stageDateMap[dateKey]
@@ -2053,20 +2040,13 @@ const stageDateConfig = {
     { key: 'eoi_date', label: 'EOI Date', icon: 'lucide:file-text', order: 2 },
     { key: 'booking_date', label: 'Booking Date', icon: 'lucide:calendar-check', order: 3 },
     { key: 'spa_date', label: 'SPA Date', icon: 'lucide:file-signature', order: 4 },
-    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
   ],
   secondary: [
     { key: 'security_deposit_date', label: 'Security Deposit Date', icon: 'lucide:shield-check', order: 2 },
     { key: 'mou_date', label: 'MOU Date', icon: 'lucide:file-check', order: 3 },
     { key: 'noc_date', label: 'NOC Date', icon: 'lucide:file-check-2', order: 4 },
-    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
   ],
-  rental: [
-    { key: 'application_date', label: 'Application Date', icon: 'lucide:file-text', order: 2 },
-    { key: 'contract_date', label: 'Contract Date', icon: 'lucide:file-signature', order: 3 },
-    { key: 'ejari_date', label: 'Ejari Date', icon: 'lucide:file-check', order: 4 },
-    { key: 'won_date', label: 'Won Date', icon: 'lucide:trophy', order: 5 }
-  ]
+ 
 }
 
 const stageDateColors = {
