@@ -9,11 +9,17 @@ use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Mail\Events\MessageFailed;
 use App\Models\Deal;
+use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Models\LeadComment;
 use App\Observers\DealAssignmentLearningObserver;
 use App\Observers\LeadFirstContactObserver;
 use App\Observers\SalesIntelligenceDealObserver;
 use App\Observers\SalesIntelligenceLeadActivityObserver;
+use App\Observers\AiSalesIntelligence\AiSalesIntelligenceDealObserver;
+use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadActivityObserver;
+use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadCommentObserver;
+use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadObserver;
 use App\Support\InfrastructureBootstrap;
 
 class AppServiceProvider extends ServiceProvider
@@ -55,8 +61,12 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Deal::observe(SalesIntelligenceDealObserver::class);
+        Deal::observe(AiSalesIntelligenceDealObserver::class);
         Deal::observe(DealAssignmentLearningObserver::class);
+        Lead::observe(AiSalesIntelligenceLeadObserver::class);
         LeadActivity::observe(SalesIntelligenceLeadActivityObserver::class);
+        LeadActivity::observe(AiSalesIntelligenceLeadActivityObserver::class);
         LeadActivity::observe(LeadFirstContactObserver::class);
+        LeadComment::observe(AiSalesIntelligenceLeadCommentObserver::class);
     }
 }

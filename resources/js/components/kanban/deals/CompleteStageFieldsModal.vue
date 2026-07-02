@@ -55,49 +55,43 @@
 
           <!-- Form Sections -->
           <div v-else class="complete-fields-form">
-              <div class="stage-dates-section px-3 py-2" v-if="stageDateFields.length > 0">
-                   <span class="stage-dates-label">
-                      <iconify-icon icon="lucide:calendar-days" class="me-1"></iconify-icon>
-                      Stage Dates:
-                    </span>
-                  <div class="d-flex flex-wrap gap-2 align-items-center">
-                 
-                    
-                    <div 
-                      v-for="field in stageDateFields" 
-                      :key="field.key"
-                      class="stage-date-item"
-                      :class="{
-                        'is-required': isStageDateRequired(field.key),
-                        'has-value': formData[field.key]
-                      }"
-                    >
-                      <label class="stage-date-label">
-                        {{ field.label }}
-                        <span v-if="isStageDateRequired(field.key)" class="text-danger">*</span>
-                        <span v-if="formData[field.key]" class="stage-date-status">
-                          <iconify-icon icon="lucide:check-circle" class="text-success"></iconify-icon>
-                        </span>
-                        <span v-else-if="isStageDateRequired(field.key)" class="stage-date-required">
-                          <iconify-icon icon="lucide:alert-circle" class="text-danger"></iconify-icon>
-                        </span>
-                      </label>
-                      
-                      <AdvancedDatePicker
-                        :model-value="formData[field.key]"
-                        @update:modelValue="(val) => formData[field.key] = val"
-                        date-only
-                        dob-layout
-                        :placeholder="isStageDateRequired(field.key) ? 'Required' : 'Optional'"
-                        :clearable="true"
-                        class="stage-date-picker"
-                        :disabled="!isStageDateEditable(field.key)"
-                      />
-                      
-                      
-                    </div>
+              <div class="stage-dates-section" v-if="stageDateFields.length > 0">
+                <div class="stage-dates-header">
+                  <iconify-icon icon="lucide:calendar-days" class="stage-dates-header-icon" aria-hidden="true" />
+                  <span>Stage Dates</span>
+                </div>
+                <div class="stage-dates-grid">
+                  <div
+                    v-for="field in stageDateFields"
+                    :key="field.key"
+                    class="stage-date-field"
+                    :class="[
+                      `date-${field.stage}`,
+                      {
+                        'is-required-empty': isStageDateRequired(field.key) && !formData[field.key],
+                        'has-value': !!formData[field.key],
+                        'is-disabled': !isStageDateEditable(field.key),
+                      },
+                    ]"
+                  >
+                    <label class="stage-date-field-label">
+                      {{ field.label }}
+                      <span v-if="isStageDateRequired(field.key)" class="text-danger">*</span>
+                    </label>
+                    <AdvancedDatePicker
+                      :model-value="formData[field.key]"
+                      @update:modelValue="(val) => formData[field.key] = val"
+                      date-only
+                      dob-layout
+                      :block-future-dates="false"
+                      :placeholder="isStageDateRequired(field.key) ? 'Select date' : 'Optional'"
+                      :invalid="isStageDateRequired(field.key) && !formData[field.key]"
+                      class="stage-date-picker"
+                      :disabled="!isStageDateEditable(field.key)"
+                    />
                   </div>
                 </div>
+              </div>
 
             <!-- Lost Reason Section -->
             <section v-if="shouldShowField('lost_reason')" class="form-section">
@@ -5146,13 +5140,13 @@ onMounted(async () => {
     
      const style = document.createElement('style');
     style.textContent = `
-        .vs__dropdown-menu {
+        body.complete-stage-open .vs__dropdown-menu {
             z-index: 46200 !important;
         }
-        .flatpickr-calendar {
+        body.complete-stage-open .flatpickr-calendar {
             z-index: 46200 !important;
         }
-        [data-popper-placement] {
+        body.complete-stage-open [data-popper-placement] {
             z-index: 46200 !important;
         }
     `;
@@ -5664,116 +5658,129 @@ textarea.is-invalid {
     width: 100% !important;
 }
 .stage-dates-section {
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin: 0 12px 16px;
+  padding: 14px 16px;
 }
 
-.stage-dates-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0B0736;
-  white-space: nowrap;
-  margin-bottom:10px;
-}
-
-.stage-date-item {
+.stage-dates-header {
   display: flex;
   align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0b0736;
+  margin-bottom: 12px;
+}
+
+.stage-dates-header-icon {
+  font-size: 16px;
+  color: #1a2f5b;
+}
+
+.stage-dates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px 16px;
+}
+
+.stage-date-field {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  transition: all 0.2s;
-      flex-direction: column;
+  min-width: 0;
 }
 
-.stage-date-item:hover {
-  border-color: #cbd5e1;
-}
-
-.stage-date-item:has(.stage-date-picker:disabled) {
-  opacity: 0.7;
-}
-
-.stage-date-label {
-  font-size: 11px;
+.stage-date-field-label {
+  font-size: 12px;
   font-weight: 500;
   color: #64748b;
-  white-space: nowrap;
-  min-width: 40px;
+  margin: 0;
+  line-height: 1.3;
 }
 
 .stage-date-picker {
-  width: 140px;
+  width: 100%;
 }
 
 .stage-date-picker :deep(.advanced-date-trigger) {
-  height: 32px !important;
-  min-height: 32px !important;
+  width: 100%;
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 8px 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+}
+
+.stage-date-picker :deep(.advanced-date-text) {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+}
+
+.stage-date-picker :deep(.advanced-date-text.is-empty) {
   font-size: 12px !important;
-  padding: 0 8px !important;
-  border: none !important;
-  background: transparent !important;
+  font-weight: 400 !important;
+  color: #94a3b8 !important;
 }
 
-.stage-date-picker :deep(.advanced-date-trigger:hover) {
-  background: #f1f5f9 !important;
+.stage-date-picker :deep(.advanced-date-icon) {
+  font-size: 15px !important;
+  color: #64748b !important;
 }
 
-.stage-date-picker :deep(.advanced-date-trigger:disabled) {
-  opacity: 0.6;
+.stage-date-picker :deep(.advanced-date-trigger:hover:not(:disabled)) {
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+}
+
+.stage-date-picker :deep(.advanced-date-trigger.is-invalid) {
+  border-color: #f87171 !important;
+  background: #fffbfb !important;
+}
+
+.stage-date-field.has-value :deep(.advanced-date-trigger:not(.is-invalid)) {
+  border-color: #86efac !important;
+  background: #f0fdf4 !important;
+}
+
+.stage-date-field.has-value :deep(.advanced-date-icon) {
+  color: #16a34a !important;
+}
+
+.stage-date-field.is-disabled :deep(.advanced-date-trigger) {
+  background: #f8fafc !important;
+  opacity: 0.72;
   cursor: not-allowed;
 }
 
-.stage-date-pending {
-  font-size: 11px;
-  color: #94a3b8;
-  font-style: italic;
-  white-space: nowrap;
-}
-
-.stage-date-status {
-  font-size: 14px;
-}
-
 /* Colors for different stages */
-.date-eoi .stage-date-label { color: #0369a1; }
-.date-booking .stage-date-label { color: #b45309; }
-.date-spa .stage-date-label { color: #1d4ed8; }
-.date-security .stage-date-label { color: #be185d; }
-.date-mou .stage-date-label { color: #065f46; }
-.date-noc .stage-date-label { color: #4338ca; }
-.date-won .stage-date-label { color: #166534; }
-.date-application .stage-date-label { color: #0d9488; }
-.date-contract .stage-date-label { color: #7c3aed; }
-.date-ejari .stage-date-label { color: #db2777; }
+.date-eoi .stage-date-field-label { color: #0369a1; }
+.date-booking .stage-date-field-label { color: #b45309; }
+.date-spa .stage-date-field-label { color: #1d4ed8; }
+.date-security .stage-date-field-label { color: #be185d; }
+.date-mou .stage-date-field-label { color: #065f46; }
+.date-noc .stage-date-field-label { color: #4338ca; }
+.date-won .stage-date-field-label { color: #166534; }
+.date-application .stage-date-field-label { color: #0d9488; }
+.date-contract .stage-date-field-label { color: #7c3aed; }
+.date-ejari .stage-date-field-label { color: #db2777; }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .stage-dates-section .d-flex {
-    gap: 8px !important;
+  .stage-dates-section {
+    margin: 0 8px 12px;
+    padding: 12px;
   }
-  
-  .stage-date-item {
-    flex-wrap: wrap;
-    padding: 6px 10px;
-    width: 100%;
-  }
-  
-  .stage-date-picker {
-    width: 100%;
-    min-width: 120px;
-    flex: 1;
-  }
-  
-  .stage-dates-label {
-    width: 100%;
-  }
-  
-  .stage-date-label {
-    min-width: 80px;
+
+  .stage-dates-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
 </style>

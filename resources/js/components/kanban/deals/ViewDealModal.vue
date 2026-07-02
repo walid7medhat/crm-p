@@ -8,9 +8,7 @@
     centered
     body-class="p-0 view-lead-modal"
     dialog-class="kanban-mobile-fullscreen-modal"
-    :z-index="1040"
-    :no-enforce-focus="true"
-    :trap-focus="false"
+    :no-focus="true"
   >
     <div v-if="show" class="view-lead-modal-content p-3 pb-0">
       <!-- Header — same structure as ViewLeadModal -->

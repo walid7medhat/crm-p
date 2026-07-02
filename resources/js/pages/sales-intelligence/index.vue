@@ -1,613 +1,870 @@
 <template>
-  <div class="dashboard-main-body sales-intelligence-page">
-    <div class="si-shell">
-    <SiTopBar
-      :rules="rules"
-      :active-tab="activeTab"
-      :system-busy="systemBusy"
-      :data-stale="dataStale"
-      @distribute="goTab('distribution')"
-      @ai-suggest="goTab('ai')"
-      @pick-agent="onPickAgent"
-      @pick-lead="onPickLead"
-      @pick-rule="onPickRule"
-      @palette-exec="onPaletteExec"
-    />
+  <div class="dashboard-main-body asi-page" :class="{ 'asi-page--dark': isDark }">
+    <header class="asi-header">
+      <div class="asi-header__title">
+        <Icon icon="lucide:brain-circuit" class="asi-header__icon" />
+        <div>
+          <h1 class="asi-title-lg">AI Sales Intelligence</h1>
+          <p class="asi-subtitle">Behavioral sales manager — pipeline discipline, follow-up quality, and lead neglect detection.</p>
+        </div>
+      </div>
+      <div class="asi-header__actions">
+        <select v-model="selectedAgentId" class="asi-select" @change="onAgentFilter">
+          <option value="">All agents</option>
+          <option v-for="a in agentOptions" :key="a.id" :value="a.id">{{ a.name }}</option>
+        </select>
+        <button type="button" class="asi-btn asi-btn--ghost" @click="activeView = activeView === 'scoring' ? 'dashboard' : 'scoring'">
+          {{ activeView === 'scoring' ? 'Dashboard' : 'Scoring Rules' }}
+        </button>
+        <button type="button" class="asi-btn asi-btn--ghost" :disabled="recalculating" @click="toggleDark">
+          <Icon :icon="isDark ? 'lucide:sun' : 'lucide:moon'" />
+        </button>
+        <button type="button" class="asi-btn asi-btn--primary" :disabled="recalculating" @click="runRecalculate">
+          {{ recalculating ? 'Recalculating…' : 'Recalculate' }}
+        </button>
+      </div>
+    </header>
 
-    <SiTabsBar v-model="activeTab" />
+    <p v-if="error" class="asi-alert">{{ error }}</p>
+    <p v-if="saveMsg" class="asi-success">{{ saveMsg }}</p>
+    <p v-if="loading" class="asi-loading">Loading AI intelligence…</p>
 
-    <p v-if="bootError" class="si-app__alert">{{ bootError }}</p>
+    <!-- Scoring customization -->
+    <section v-if="activeView === 'scoring' && !loading" class="asi-panel asi-scoring">
+      <div class="asi-scoring__head">
+        <div>
+          <h2 class="asi-title">AI Scoring Rules</h2>
+          <p class="asi-subtitle">Default weights used for every agent. Adjust and save, then recalculate.</p>
+        </div>
+        <div class="asi-scoring__actions">
+          <button type="button" class="asi-btn asi-btn--ghost" :disabled="rulesSaving" @click="resetRules">Reset defaults</button>
+          <button type="button" class="asi-btn asi-btn--primary" :disabled="rulesSaving" @click="saveRules">
+            {{ rulesSaving ? 'Saving…' : 'Save rules' }}
+          </button>
+        </div>
+      </div>
 
-    <div class="si-app__body">
-      <main class="si-app__main">
-        <div v-if="tabState.loadingTab" class="si-app__tabload">Loading {{ tabState.loadingTab }}…</div>
+      <div v-for="group in scoringGroups" :key="group.key" class="asi-scoring__group">
+        <h3 class="asi-title-sm">{{ group.label }}</h3>
+        <p v-if="group.hint" class="asi-subtitle">{{ group.hint }}</p>
+        <div class="asi-scoring__grid">
+          <article v-for="rule in group.rules" :key="rule.id" class="asi-rule-card">
+            <div class="asi-rule-card__top">
+              <span class="asi-rule-card__name">{{ rule.label }}</span>
+              <span class="asi-rule-card__val">{{ formatRuleValue(rule) }}</span>
+            </div>
+            <p v-if="rule.description" class="asi-rule-card__desc">{{ rule.description }}</p>
+            <input
+              v-model.number="rule.weight"
+              type="range"
+              :min="group.key === 'overall' || group.key === 'behavior' ? 0 : 0"
+              :max="group.key === 'overall' || group.key === 'behavior' ? 1 : 100"
+              :step="group.key === 'overall' || group.key === 'behavior' ? 0.01 : 1"
+              class="asi-range"
+            />
+          </article>
+        </div>
+      </div>
+    </section>
 
-        <section v-show="activeTab === 'overview'" v-if="loaded.overview" class="si-pane">
-          <OverviewCards
-            :overview="overview"
-            :distributions-today="distributionsToday"
-            :loading="tabState.loadingTab === 'overview'"
-          />
+    <template v-else-if="dashboard">
+      <!-- Summary -->
+      <section class="asi-summary">
+        <article v-for="card in summaryCards" :key="card.key" class="asi-card">
+          <span class="asi-card__label">{{ card.label }}</span>
+          <strong class="asi-card__value">{{ card.value }}</strong>
+          <span class="asi-card__hint">{{ card.hint }}</span>
+        </article>
+      </section>
+
+      <!-- Agent Health Overview + Team Ranking -->
+      <div class="asi-grid asi-grid--2">
+        <section class="asi-panel">
+          <h2 class="asi-title">Agent Health Overview</h2>
+          <div class="asi-table-wrap">
+            <table class="asi-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>AI Score</th>
+                  <th>Status</th>
+                  <th>Risk</th>
+                  <th>Behavior</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="agent in agentsList"
+                  :key="agent.user_id"
+                  :class="{ 'asi-table__row--active': selectedAgentId == agent.user_id }"
+                  @click="selectAgent(agent.user_id)"
+                >
+                  <td>{{ agent.user?.name || `User #${agent.user_id}` }}</td>
+                  <td><span class="asi-score" :class="scoreClass(agent.overall_ai_score)">{{ agent.overall_ai_score }}</span></td>
+                  <td><span class="asi-badge" :class="`asi-badge--${agent.status}`">{{ formatStatus(agent.status) }}</span></td>
+                  <td><span class="asi-risk" :class="`asi-risk--${agent.risk_level}`">{{ agent.risk_level }}</span></td>
+                  <td>{{ agent.scores?.behavior ?? '—' }}</td>
+                  <td><button type="button" class="asi-link" @click.stop="selectAgent(agent.user_id)">View</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
-        <section v-show="activeTab === 'agents'" v-if="loaded.agents" class="si-pane">
-          <AgentTable
-            v-model:filter="agentFilterQuery"
-            :agents="pagedAgents"
-            :loading="agentsLoading"
-            :page="agentPage"
-            :total-pages="agentTotalPages"
-            :total="agentsSorted.length"
-            :sort-key="agentSortKey"
-            :sort-dir="agentSortDir"
-            :recommended-id="recommendedAgentId"
-            :selected-id="drawerAgent?.id ?? null"
-            :pulse-ids="pulseAgentIds"
-            :assist-line="agentTableAssistLine"
-            @select="openDrawer"
-            @page-change="agentPage = $event"
-            @sort-change="onAgentSort"
-          />
+        <section class="asi-panel">
+          <h2 class="asi-title">Team Ranking</h2>
+          <div class="asi-ranking">
+            <div v-for="(r, idx) in topRankings" :key="r.user_id" class="asi-ranking__row">
+              <span class="asi-ranking__pos">#{{ r.overall_rank || idx + 1 }}</span>
+              <span class="asi-ranking__name">{{ rankingName(r.user_id) }}</span>
+              <span class="asi-ranking__score">{{ r.scores?.overall_ai_score ?? '—' }}</span>
+            </div>
+            <p v-if="!topRankings.length" class="asi-empty">Run recalculation to populate rankings.</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Risk Alerts -->
+      <section class="asi-panel">
+        <h2 class="asi-title">Risk Alerts</h2>
+        <div class="asi-alerts">
+          <article v-for="alert in alertsList" :key="alert.id" class="asi-alert-card" :class="`asi-alert-card--${alert.severity}`">
+            <strong>{{ alert.title }}</strong>
+            <p>{{ alert.message }}</p>
+            <span class="asi-alert-card__meta">{{ alert.user?.name }} · {{ formatDate(alert.created_at) }}</span>
+          </article>
+          <p v-if="!alertsList.length" class="asi-empty">No active risk alerts.</p>
+        </div>
+      </section>
+
+      <!-- Agent detail sections -->
+      <template v-if="agentDetail">
+        <section class="asi-panel asi-panel--highlight">
+          <h2 class="asi-title">AI Executive Summary</h2>
+          <p class="asi-summary-text">{{ agentDetail.agent?.executive_summary || 'No summary yet.' }}</p>
         </section>
 
-        <section v-show="activeTab === 'rules'" v-if="loaded.rules" class="si-pane">
-          <ScoringRules
-            v-model:rules="rules"
-            :loading="rulesLoading"
-            :live-preview="preview.preview"
-            :live-preview-loading="preview.loading"
-            :impact-user-id="liveUserId"
-            :impact-user-label="impactUserLabel"
-            @rules-changed="onRulesChanged"
-          />
+        <div class="asi-grid asi-grid--3">
+          <section class="asi-panel" v-for="block in metricBlocks" :key="block.key">
+            <h3 class="asi-title-sm">{{ block.title }}</h3>
+            <ul class="asi-metrics-list">
+              <li v-for="item in block.items" :key="item.label">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+              </li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="asi-grid asi-grid--2">
+          <section class="asi-panel">
+            <h2 class="asi-title">AI Behavior Analysis</h2>
+            <ul class="asi-obs-list">
+              <li v-for="(obs, i) in observations" :key="i" :class="`asi-obs--${obs.severity}`">
+                {{ obs.observation }}
+              </li>
+              <li v-if="!observations.length" class="asi-empty">No observations for this agent.</li>
+            </ul>
+          </section>
+
+          <section class="asi-panel">
+            <h2 class="asi-title">AI Coaching</h2>
+            <div class="asi-coaching">
+              <article v-for="(card, i) in coachingCards" :key="i" class="asi-coach-card" :class="`asi-coach-card--${card.priority}`">
+                <h4>{{ card.title }}</h4>
+                <p>{{ card.body }}</p>
+              </article>
+              <p v-if="!coachingCards.length" class="asi-empty">No coaching cards yet.</p>
+            </div>
+          </section>
+        </div>
+
+        <section class="asi-panel">
+          <h2 class="asi-title">Lead Neglect Detection</h2>
+          <div class="asi-table-wrap">
+            <table class="asi-table">
+              <thead>
+                <tr>
+                  <th>Lead</th>
+                  <th>Stage</th>
+                  <th>Reasons</th>
+                  <th>Last update</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="lead in neglectedLeads" :key="lead.lead_id">
+                  <td>{{ lead.lead_name || lead.lead_number }}</td>
+                  <td>{{ lead.stage_name }}</td>
+                  <td><span v-for="r in lead.reasons" :key="r" class="asi-tag">{{ r }}</span></td>
+                  <td>{{ formatDate(lead.updated_at) }}</td>
+                </tr>
+                <tr v-if="!neglectedLeads.length">
+                  <td colspan="4" class="asi-empty">No neglected leads detected.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
-        <section v-show="activeTab === 'distribution'" v-if="loaded.distribution" class="si-pane">
-          <DistributionPanel
-            :server-max-leads="settings?.max_leads_per_agent_per_day ?? 15"
-            :external-lead-id="prefillLeadId"
-            :agents="agents"
-            :recommended-user-id="recommendedAgentId"
-            :recommended-label="recommendedAgentName"
-            recommended-reason="Highest composite in loaded pool (client heuristic)."
-          />
+        <section class="asi-panel">
+          <h2 class="asi-title">Lead Drilldown</h2>
+          <div class="asi-drilldown">
+            <div v-for="group in drilldownGroups" :key="group.key" class="asi-drilldown__group">
+              <h4>{{ group.label }} ({{ group.leads.length }})</h4>
+              <ul>
+                <li v-for="l in group.leads.slice(0, 5)" :key="l.lead_id">{{ l.lead_name || l.lead_number }}</li>
+              </ul>
+            </div>
+          </div>
         </section>
 
-        <section v-show="activeTab === 'ai'" v-if="loaded.ai" class="si-pane">
-          <AIPanel :server-mode="settings?.ai_mode || 'hybrid'" />
+        <section class="asi-panel">
+          <h2 class="asi-title">Weekly Trends</h2>
+          <ApexChart type="bar" height="260" :options="weeklyChartOptions" :series="weeklyChartSeries" />
         </section>
-
-        <section v-show="activeTab === 'logs'" v-if="loaded.logs" class="si-pane">
-          <LogsTimeline :logs="logs" :agents="agents" :loading="logsLoading" @reload="loadLogs" />
-        </section>
-      </main>
-
-      <aside class="si-app__rail">
-        <SiInsightsRail
-          v-model:live-user-id="liveUserId"
-          :agents="agents"
-          :overview="overview"
-          :distributions-today="distributionsToday"
-          :preview="preview.preview"
-          :preview-loading="preview.loading"
-          @go-ai="goTab('ai')"
-        />
-      </aside>
-    </div>
-
-    <AgentDrawer
-      :open="!!drawerAgent"
-      :agent="drawerAgent"
-      :preview="drawerPreview"
-      :previous-preview="drawerPreviewPrevious"
-      :loading="drawerLoading"
-      @close="closeDrawer"
-    />
-    </div>
+      </template>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
-import SiTopBar from './components/SiTopBar.vue'
-import SiTabsBar from './components/SiTabsBar.vue'
-import SiInsightsRail from './components/SiInsightsRail.vue'
-import OverviewCards from './components/OverviewCards.vue'
-import AgentTable from './components/AgentTable.vue'
-import AgentDrawer from './components/AgentDrawer.vue'
-import ScoringRules from './components/ScoringRules.vue'
-import DistributionPanel from './components/DistributionPanel.vue'
-import AIPanel from './components/AIPanel.vue'
-import LogsTimeline from './components/LogsTimeline.vue'
-import { useAgents } from '@/composables/useAgents'
-import { useScoring } from '@/composables/useScoring'
-import { useDistribution } from '@/composables/useDistribution'
-import { useSalesIntelligencePreview } from '@/composables/useSalesIntelligencePreview'
-import { salesIntelligenceApi } from '@/services/salesIntelligenceApi'
+import { computed, onMounted, ref } from 'vue'
+import { Icon } from '@iconify/vue'
+import ApexChart from 'vue3-apexcharts'
+import { aiSalesIntelligenceApi } from '@/services/aiSalesIntelligenceApi'
 
-const { agents, loading: agentsLoading, fetchAgents } = useAgents()
-const { rules, loading: rulesLoading, fetchRules } = useScoring()
-const { logsRaw, loadingLogs: logsLoading, fetchLogs } = useDistribution()
+const loading = ref(true)
+const error = ref('')
+const saveMsg = ref('')
+const recalculating = ref(false)
+const rulesSaving = ref(false)
+const isDark = ref(false)
+const activeView = ref('dashboard')
+const dashboard = ref(null)
+const agentDetail = ref(null)
+const selectedAgentId = ref('')
+const agentOptions = ref([])
+const scoringRules = ref([])
 
-const overview = ref({})
-const settings = ref(null)
-const bootError = ref('')
-
-const activeTab = ref('overview')
-const loaded = reactive({
-  overview: false,
-  agents: false,
-  rules: false,
-  distribution: false,
-  ai: false,
-  logs: false,
+const summary = computed(() => dashboard.value?.summary || {})
+const agentsList = computed(() => {
+  const agents = dashboard.value?.agents || []
+  return Array.isArray(agents) ? agents : agents.data || []
 })
-const tabState = reactive({ loadingTab: null })
+const rankings = computed(() => dashboard.value?.rankings || [])
+const alertsList = computed(() => dashboard.value?.alerts || [])
+const observations = computed(() => agentDetail.value?.observations || [])
+const coachingCards = computed(() => agentDetail.value?.agent?.coaching_cards || [])
+const neglectedLeads = computed(() => agentDetail.value?.agent?.neglect_metrics?.neglected_leads || [])
 
-const liveUserId = ref('')
-const preview = useSalesIntelligencePreview(rules, 400)
+const topRankings = computed(() => rankings.value.slice(0, 8))
 
-const drawerAgent = ref(null)
-const drawerPreview = ref(null)
-const drawerPreviewPrevious = ref(null)
-const drawerLoading = ref(false)
-
-const pulseAgentIds = ref([])
-let agentsScoreSig = ''
-
-const recommendedAgentId = computed(() => {
-  const list = (agents.value || []).filter((a) => a.score != null && !Number.isNaN(Number(a.score)))
-  if (!list.length) return null
-  const top = list.reduce((a, b) => (Number(a.score) >= Number(b.score) ? a : b))
-  return top.id
-})
-
-const recommendedAgentName = computed(() => {
-  const id = recommendedAgentId.value
-  if (id == null) return ''
-  const a = (agents.value || []).find((x) => x.id === id)
-  return a?.name || ''
-})
-
-const agentTableAssistLine = computed(() => {
-  const d = drawerAgent.value
-  const rid = recommendedAgentId.value
-  if (!d || rid == null || d.id === rid) return ''
-  const rec = (agents.value || []).find((a) => a.id === rid)
-  if (!rec) return ''
-  const da = Number(d.score)
-  const dr = Number(rec.score)
-  if (Number.isNaN(da) || Number.isNaN(dr)) return ''
-  const diff = Math.round(da - dr)
-  if (diff === 0) return `Same composite as assist pick (${rec.name}).`
-  return diff > 0
-    ? `+${diff} pts vs assist pick (${rec.name}) on server snapshot.`
-    : `${diff} pts vs assist pick (${rec.name}) on server snapshot.`
-})
-
-watch(drawerPreview, (_nv, ov) => {
-  if (!ov) return
-  try {
-    drawerPreviewPrevious.value = JSON.parse(JSON.stringify(ov))
-  } catch {
-    drawerPreviewPrevious.value = ov
-  }
-})
-
-watch(
-  () => (agents.value || []).map((a) => `${a.id}:${a.score}`).join(','),
-  (sig) => {
-    if (!sig) return
-    if (!agentsScoreSig) {
-      agentsScoreSig = sig
-      return
-    }
-    if (sig === agentsScoreSig) return
-    const oldMap = {}
-    for (const p of agentsScoreSig.split(',')) {
-      const [id, sc] = p.split(':')
-      if (id) oldMap[id] = sc
-    }
-    const ids = []
-    for (const p of sig.split(',')) {
-      const [id, sc] = p.split(':')
-      if (id && oldMap[id] != null && oldMap[id] !== sc) ids.push(Number(id))
-    }
-    agentsScoreSig = sig
-    pulseAgentIds.value = ids
-    if (ids.length) {
-      window.setTimeout(() => {
-        pulseAgentIds.value = []
-      }, 900)
-    }
-  }
-)
-
-const prefillLeadId = ref(null)
-
-const agentPage = ref(1)
-const agentPageSize = 12
-const agentFilterQuery = ref('')
-const agentSortKey = ref('score')
-const agentSortDir = ref('desc')
-
-const STALE_MS = 2 * 60 * 60 * 1000
-
-const systemBusy = computed(
-  () =>
-    !!tabState.loadingTab ||
-    agentsLoading.value ||
-    rulesLoading.value ||
-    logsLoading.value ||
-    drawerLoading.value ||
-    preview.loading.value
-)
-
-const dataStale = computed(() => {
-  const t = overview.value?.last_calculated_at
-  if (!t) return false
-  const ts = new Date(t).getTime()
-  if (Number.isNaN(ts)) return false
-  return Date.now() - ts > STALE_MS
-})
-
-const impactUserLabel = computed(() => {
-  const id = liveUserId.value
-  if (!id) return ''
-  const a = (agents.value || []).find((x) => String(x.id) === String(id))
-  return a?.name || `User ${id}`
-})
-
-const logs = computed(() => logsRaw.value || [])
-
-const distributionsToday = computed(() => {
-  const start = new Date()
-  start.setHours(0, 0, 0, 0)
-  return logs.value.filter((l) => new Date(l.created_at) >= start).length
-})
-
-const agentsFiltered = computed(() => {
-  const q = agentFilterQuery.value.trim().toLowerCase()
-  const list = agents.value || []
-  if (!q) return list
-  return list.filter(
-    (a) =>
-      (a.name || '').toLowerCase().includes(q) ||
-      String(a.email || '')
-        .toLowerCase()
-        .includes(q)
-  )
-})
-
-function tierOrder(rank) {
-  const x = String(rank || '').toLowerCase()
-  if (x === 'hot') return 3
-  if (x === 'warm') return 2
-  return 1
-}
-
-const agentsSorted = computed(() => {
-  const list = [...agentsFiltered.value]
-  const k = agentSortKey.value
-  const d = agentSortDir.value === 'asc' ? 1 : -1
-  list.sort((a, b) => {
-    if (k === 'name') return d * String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })
-    if (k === 'tier') return d * (tierOrder(a.rank) - tierOrder(b.rank))
-    if (k === 'at') {
-      const ta = a.calculated_at ? new Date(a.calculated_at).getTime() : 0
-      const tb = b.calculated_at ? new Date(b.calculated_at).getTime() : 0
-      return d * (ta - tb)
-    }
-    const sa = Number(a.score)
-    const sb = Number(b.score)
-    const na = Number.isNaN(sa) ? -1 : sa
-    const nb = Number.isNaN(sb) ? -1 : sb
-    return d * (na - nb)
+const scoringGroups = computed(() => {
+  const rules = scoringRules.value || []
+  const byGroup = (key, label, hint = '') => ({
+    key,
+    label,
+    hint,
+    rules: rules.filter((r) => r.rule_group === key),
   })
-  return list
+  return [
+    byGroup('overall', 'Overall AI Score Weights', 'Must reflect how much each area affects the final 0–100 score.'),
+    byGroup('behavior', 'Behavior Score Weights', 'Sub-weights inside the behavior composite.'),
+    byGroup('status', 'Status Thresholds', 'Minimum overall score for each status label.'),
+    byGroup('risk', 'Risk Thresholds', 'Risk score levels for Low / Medium / High.'),
+  ]
 })
 
-const pagedAgents = computed(() => {
-  const start = (agentPage.value - 1) * agentPageSize
-  return agentsSorted.value.slice(start, start + agentPageSize)
-})
-
-const agentTotalPages = computed(() => Math.max(1, Math.ceil(agentsSorted.value.length / agentPageSize)))
-
-watch(
-  () => agentsSorted.value.length,
-  () => {
-    if (agentPage.value > agentTotalPages.value) agentPage.value = agentTotalPages.value
+function formatRuleValue(rule) {
+  if (rule.rule_group === 'overall' || rule.rule_group === 'behavior') {
+    return `${Math.round(Number(rule.weight || 0) * 100)}%`
   }
-)
-
-watch(agentFilterQuery, () => {
-  agentPage.value = 1
-})
-
-function rulesPayload() {
-  return rules.value.map((r) => ({
-    factor_name: r.factor_name,
-    weight: Number(r.weight),
-    low_value: r.low_value,
-    medium_value: r.medium_value,
-    high_value: r.high_value,
-    direction: r.direction || 'higher_better',
-  }))
+  return Math.round(Number(rule.weight || 0))
 }
 
-async function loadOverviewSettings() {
-  const [o, s] = await Promise.all([salesIntelligenceApi.overview(), salesIntelligenceApi.settings()])
-  overview.value = o || {}
-  settings.value = s || {}
-}
-
-async function loadLogs() {
-  await fetchLogs(50)
-}
-
-const loaders = {
-  overview: async () => {
-    await Promise.all([loadOverviewSettings(), loadLogs()])
-  },
-  agents: async () => {
-    await fetchAgents('')
-  },
-  rules: async () => {
-    await fetchRules()
-  },
-  distribution: async () => {
-    if (!settings.value) await loadOverviewSettings()
-  },
-  ai: async () => {
-    if (!settings.value) await loadOverviewSettings()
-  },
-  logs: async () => {
-    await loadLogs()
-  },
-}
-
-async function ensureTab(tabId) {
-  if (!loaders[tabId] || loaded[tabId]) return
-  tabState.loadingTab = tabId
-  bootError.value = ''
+async function loadScoringRules() {
   try {
-    await loaders[tabId]()
-    loaded[tabId] = true
-  } catch (e) {
-    bootError.value = e?.message || 'Failed to load section'
-  } finally {
-    tabState.loadingTab = null
-  }
-}
-
-async function goTab(id) {
-  activeTab.value = id
-  await ensureTab(id)
-}
-
-watch(activeTab, (t) => ensureTab(t), { immediate: true })
-
-async function loadDrawerPreview(agent) {
-  if (!agent?.id) return
-  drawerLoading.value = true
-  try {
-    drawerPreview.value = await salesIntelligenceApi.previewScore({
-      user_id: agent.id,
-      rules: rulesPayload(),
-    })
+    const data = await aiSalesIntelligenceApi.scoringRules()
+    scoringRules.value = (data.rules || []).map((r) => ({ ...r }))
   } catch {
-    drawerPreview.value = null
-  } finally {
-    drawerLoading.value = false
+    scoringRules.value = []
   }
 }
 
-function openDrawer(agent) {
-  drawerAgent.value = agent
-  loadDrawerPreview(agent)
+async function saveRules() {
+  rulesSaving.value = true
+  saveMsg.value = ''
+  error.value = ''
+  try {
+    await aiSalesIntelligenceApi.updateScoringRules({
+      rules: scoringRules.value.map((r) => ({ id: r.id, weight: r.weight, thresholds: r.thresholds })),
+    })
+    saveMsg.value = 'Scoring rules saved. Click Recalculate to apply to all agents.'
+    await loadScoringRules()
+  } catch (e) {
+    error.value = e.message || 'Failed to save rules'
+  } finally {
+    rulesSaving.value = false
+  }
 }
 
-function closeDrawer() {
-  drawerAgent.value = null
-  drawerPreview.value = null
-  drawerPreviewPrevious.value = null
+async function resetRules() {
+  if (!confirm('Reset all scoring rules to system defaults?')) return
+  rulesSaving.value = true
+  saveMsg.value = ''
+  error.value = ''
+  try {
+    await aiSalesIntelligenceApi.resetScoringRules()
+    saveMsg.value = 'Defaults restored. Click Recalculate to refresh agent scores.'
+    await loadScoringRules()
+  } catch (e) {
+    error.value = e.message || 'Failed to reset rules'
+  } finally {
+    rulesSaving.value = false
+  }
 }
 
-function onRulesChanged() {
-  if (liveUserId.value) preview.schedule(Number(liveUserId.value))
-  if (drawerAgent.value) loadDrawerPreview(drawerAgent.value)
-}
-
-watch(liveUserId, (v) => {
-  if (v) preview.schedule(Number(v))
-  else preview.cancel()
+const summaryCards = computed(() => {
+  const s = summary.value
+  return [
+    { key: 'agents', label: 'Agents tracked', value: s.agents_tracked ?? 0, hint: 'Active sales team' },
+    { key: 'avg', label: 'Avg AI score', value: s.avg_ai_score ?? '—', hint: 'Behavior-weighted' },
+    { key: 'excellent', label: 'Excellent', value: s.excellent ?? 0, hint: 'Score ≥ 85' },
+    { key: 'risk', label: 'High risk', value: s.high_risk ?? 0, hint: 'Needs manager review' },
+  ]
 })
 
-watch(
-  rules,
-  () => {
-    if (drawerAgent.value) loadDrawerPreview(drawerAgent.value)
-  },
-  { deep: true }
-)
+const metricBlocks = computed(() => {
+  const a = agentDetail.value?.agent
+  if (!a) return []
+  const pm = a.pipeline_metrics || {}
+  const rm = a.response_metrics || {}
+  const fm = a.followup_metrics || {}
+  const qm = a.qualification_metrics || {}
+  const cm = a.communication_metrics || {}
+  const dp = a.daily_performance || {}
 
-function onPickAgent(row) {
-  const full = agents.value.find((a) => a.id === row.id)
-  goTab('agents')
-  openDrawer(
-    full || {
-      id: row.id,
-      name: row.title,
-      email: row.subtitle,
-      avatar: null,
-      rank: row.rank,
-      score: row.score,
-    }
-  )
+  return [
+    {
+      key: 'pipeline',
+      title: 'Pipeline Discipline',
+      items: [
+        { label: 'Assigned leads', value: pm.assigned_leads ?? 0 },
+        { label: 'Active leads', value: pm.active_leads ?? 0 },
+        { label: 'Qualified', value: pm.qualified_leads ?? 0 },
+        { label: 'Forward move rate', value: pct(pm.forward_movement_rate) },
+        { label: 'Stuck leads', value: pm.stuck_leads ?? 0 },
+        { label: 'Cleanliness', value: pct(pm.pipeline_cleanliness_score) },
+      ],
+    },
+    {
+      key: 'response',
+      title: 'Assignment Response',
+      items: [
+        { label: 'Avg first activity', value: mins(rm.avg_minutes_to_first_activity) },
+        { label: 'Avg first comment', value: mins(rm.avg_minutes_to_first_comment) },
+        { label: 'Avg first contact', value: mins(rm.avg_minutes_to_first_contact) },
+        { label: 'Not contacted', value: rm.not_contacted_count ?? 0 },
+      ],
+    },
+    {
+      key: 'followup',
+      title: 'Follow-up Discipline',
+      items: [
+        { label: 'Created', value: fm.followups_created ?? 0 },
+        { label: 'Completed', value: fm.followups_completed ?? 0 },
+        { label: 'Overdue', value: fm.overdue_followups ?? 0 },
+        { label: 'Completion rate', value: pct(fm.reminder_completion_rate) },
+        { label: 'No future follow-up', value: fm.leads_without_future_followup ?? 0 },
+      ],
+    },
+    {
+      key: 'qualification',
+      title: 'Qualification Quality',
+      items: [
+        { label: 'Qualified rate', value: pct(qm.qualified_rate) },
+        { label: 'Qualified → Deal', value: pct(qm.qualified_to_deal_rate) },
+        { label: 'Inactive qualified', value: qm.qualified_then_inactive ?? 0 },
+      ],
+    },
+    {
+      key: 'communication',
+      title: 'Communication Quality',
+      items: [
+        { label: 'Comments / lead', value: cm.comments_per_lead ?? 0 },
+        { label: 'Answered rate', value: pct(cm.answered_rate) },
+        { label: 'No answer rate', value: pct(cm.no_answer_rate) },
+        { label: 'Zero comments', value: cm.leads_with_zero_comments ?? 0 },
+      ],
+    },
+    {
+      key: 'daily',
+      title: 'Daily Performance',
+      items: [
+        { label: 'Assignments today', value: dp.assignments ?? 0 },
+        { label: 'Contacts today', value: dp.contacts ?? 0 },
+        { label: 'Comments today', value: dp.comments ?? 0 },
+        { label: 'Qualified today', value: dp.qualified ?? 0 },
+        { label: 'Converted today', value: dp.converted ?? 0 },
+      ],
+    },
+  ]
+})
+
+const drilldownGroups = computed(() => {
+  const d = agentDetail.value?.agent?.neglect_metrics?.drilldown || {}
+  return [
+    { key: 'needs_contact', label: 'Needs Contact', leads: d.needs_contact || [] },
+    { key: 'needs_followup', label: 'Needs Follow-up', leads: d.needs_followup || [] },
+    { key: 'inactive', label: 'Inactive', leads: d.inactive || [] },
+    { key: 'future_expired', label: 'Future Expired', leads: d.future_expired || [] },
+  ]
+})
+
+const weeklyChartSeries = computed(() => {
+  const weeks = agentDetail.value?.agent?.weekly_trends?.weeks || []
+  return [
+    { name: 'Comments', data: weeks.map((w) => w.comments) },
+    { name: 'Activities', data: weeks.map((w) => w.activities) },
+    { name: 'Follow-ups done', data: weeks.map((w) => w.followups_completed) },
+  ]
+})
+
+const weeklyChartOptions = computed(() => ({
+  chart: { toolbar: { show: false }, background: 'transparent' },
+  theme: { mode: isDark.value ? 'dark' : 'light' },
+  xaxis: { categories: (agentDetail.value?.agent?.weekly_trends?.weeks || []).map((w) => w.week) },
+  colors: ['#733e87', '#5b8def', '#2ecc71'],
+  dataLabels: { enabled: false },
+}))
+
+function pct(v) {
+  if (v == null || v === '') return '—'
+  return `${v}%`
 }
 
-function onPickLead(row) {
-  prefillLeadId.value = row.id
-  goTab('distribution')
+function mins(v) {
+  if (v == null) return '—'
+  if (v < 60) return `${Math.round(v)}m`
+  return `${(v / 60).toFixed(1)}h`
 }
 
-function onPickRule() {
-  goTab('rules')
+function formatStatus(s) {
+  return (s || '').replace(/_/g, ' ')
 }
 
-function onAgentSort({ key, dir }) {
-  agentSortKey.value = key
-  agentSortDir.value = dir
-  agentPage.value = 1
+function formatDate(d) {
+  if (!d) return '—'
+  return new Date(d).toLocaleString()
 }
 
-async function onPaletteExec(e) {
-  if (!e || !e.type) return
-  if (e.type === 'chain' && Array.isArray(e.steps)) {
-    for (const step of e.steps) {
-      await onPaletteExec(step)
-      await new Promise((r) => setTimeout(r, 140))
-    }
-    return
-  }
-  if (e.type === 'open-top-agent') {
-    const list = (agents.value || []).filter((a) => a.score != null && !Number.isNaN(Number(a.score)))
-    if (!list.length) return
-    const top = list.reduce((a, b) => (Number(a.score) >= Number(b.score) ? a : b))
-    await goTab('agents')
-    openDrawer(top)
-    return
-  }
-  if (e.type === 'nav') {
-    await goTab(e.tab)
-    return
-  }
-  if (e.type === 'distribute') {
-    await goTab('distribution')
-    return
-  }
-  if (e.type === 'ai') {
-    await goTab('ai')
-    return
-  }
-  if (e.type === 'reload-logs') {
-    await goTab('logs')
-    await loadLogs()
+function scoreClass(score) {
+  if (score >= 85) return 'asi-score--excellent'
+  if (score >= 70) return 'asi-score--good'
+  if (score >= 50) return 'asi-score--warn'
+  return 'asi-score--critical'
+}
+
+function rankingName(userId) {
+  const a = agentsList.value.find((x) => x.user_id === userId)
+  return a?.user?.name || `User #${userId}`
+}
+
+async function loadDashboard() {
+  loading.value = true
+  error.value = ''
+  try {
+    const params = selectedAgentId.value ? { agent_id: selectedAgentId.value } : {}
+    dashboard.value = await aiSalesIntelligenceApi.dashboard(params)
+  } catch (e) {
+    error.value = e.message || 'Failed to load dashboard'
+  } finally {
+    loading.value = false
   }
 }
 
+async function loadAgentDetail(userId) {
+  if (!userId) {
+    agentDetail.value = null
+    return
+  }
+  try {
+    agentDetail.value = await aiSalesIntelligenceApi.showAgent(userId)
+  } catch (e) {
+    error.value = e.message || 'Failed to load agent'
+  }
+}
+
+function selectAgent(userId) {
+  selectedAgentId.value = String(userId)
+  loadAgentDetail(userId)
+}
+
+function onAgentFilter() {
+  loadAgentDetail(selectedAgentId.value || null)
+  if (!selectedAgentId.value) loadDashboard()
+}
+
+async function runRecalculate() {
+  recalculating.value = true
+  try {
+    const payload = selectedAgentId.value ? { user_id: Number(selectedAgentId.value) } : {}
+    await aiSalesIntelligenceApi.recalculate(payload)
+    await loadDashboard()
+    if (selectedAgentId.value) await loadAgentDetail(selectedAgentId.value)
+  } catch (e) {
+    error.value = e.message || 'Recalculation failed'
+  } finally {
+    recalculating.value = false
+  }
+}
+
+function toggleDark() {
+  isDark.value = !isDark.value
+}
+
+onMounted(async () => {
+  try {
+    agentOptions.value = await aiSalesIntelligenceApi.agentOptions()
+  } catch {
+    agentOptions.value = []
+  }
+  await Promise.all([loadDashboard(), loadScoringRules()])
+})
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-/* High-density SaaS shell: soft gray canvas, white surface */
-.sales-intelligence-page {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  box-sizing: border-box;
-  min-height: calc(100vh - var(--app-topbar-height, 3.25rem));
-  padding: 8px;
-  background: #f3f4f6;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  color: #111827;
+.asi-page {
+  --asi-bg: #f0edf3;
+  --asi-panel: #ffffff;
+  --asi-text: #1a1520;
+  --asi-panel-text: #1a1520;
+  --asi-muted: #6b6570;
+  --asi-accent: #733e87;
+  --asi-border: #e8e2ec;
+  padding: 1rem 1.25rem 1.5rem;
+  min-height: 100%;
+  background: var(--asi-bg);
+  color: var(--asi-text);
+}
+.asi-page--dark {
+  --asi-bg: #121018;
+  --asi-panel: #1e1a24;
+  --asi-text: #f2edf5;
+  --asi-panel-text: #f2edf5;
+  --asi-muted: #a89db2;
+  --asi-border: #2e2836;
 }
 
-.si-shell {
-  --si-focus-ring: 0 0 0 2px #fff, 0 0 0 4px #111827;
-  --si-ease: 0.16s ease;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  box-sizing: border-box;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  border-radius: 10px;
-  padding: 8px 10px 10px;
+/* Override global CRM heading styles */
+.asi-page :is(h1, h2, h3, h4, .asi-title-lg, .asi-title, .asi-title-sm) {
+  color: var(--asi-text) !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
 }
-
-.si-app__alert {
-  margin: 8px 0 0;
-  padding: 8px 12px;
+.asi-title-lg {
+  font-size: 1.05rem !important;
+  margin: 0 0 0.15rem !important;
+}
+.asi-title {
+  font-size: 0.875rem !important;
+  margin: 0 0 0.6rem !important;
+}
+.asi-title-sm {
+  font-size: 0.8125rem !important;
+  margin: 0 0 0.5rem !important;
+}
+.asi-subtitle {
+  margin: 0;
+  color: var(--asi-muted) !important;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.asi-panel :is(h2, h3, h4, .asi-title, .asi-title-sm) {
+  color: var(--asi-panel-text) !important;
+}
+.asi-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.asi-header__title {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.asi-header__title h1 {
+  font-size: 1.05rem !important;
+  margin: 0 0 0.15rem;
+  font-weight: 600;
+}
+.asi-header__title p {
+  margin: 0;
+  color: var(--asi-muted);
+  font-size: 0.78rem;
+  max-width: 36rem;
+}
+.asi-header__icon {
+  font-size: 1.25rem;
+  color: var(--asi-accent);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.asi-header__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.asi-select {
+  border: 1px solid var(--asi-border);
+  background: var(--asi-panel);
+  color: var(--asi-text);
   border-radius: 8px;
-  border: 1px solid #fecaca;
-  background: #fff5f5;
-  color: #991b1b;
-  font-size: 12px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.85rem;
 }
-
-.si-app__body {
+.asi-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.asi-btn--primary {
+  background: var(--asi-accent);
+  color: #fff;
+}
+.asi-btn--ghost {
+  background: var(--asi-panel);
+  border: 1px solid var(--asi-border);
+  color: var(--asi-text);
+}
+.asi-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.asi-alert, .asi-loading {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #fde8ea;
+  color: #9b1c2c;
+  margin-bottom: 1rem;
+}
+.asi-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 20vw);
-  gap: 10px;
-  align-items: start;
-  margin-top: 2px;
-  max-height: calc(100vh - 88px);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
-
-.si-app__main {
-  min-height: 0;
-  max-height: calc(100vh - 88px);
-  overflow: auto;
-  padding-bottom: 4px;
+.asi-card {
+  background: var(--asi-panel);
+  border: 1px solid var(--asi-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
 }
-
-.si-app__rail {
-  position: sticky;
-  top: 80px;
-  max-height: calc(100vh - 88px);
-  overflow: auto;
-  padding-bottom: 4px;
+.asi-card__label { font-size: 0.72rem; color: var(--asi-muted); display: block; }
+.asi-card__value { font-size: 1.15rem; display: block; line-height: 1.2; color: var(--asi-panel-text); font-weight: 700; }
+.asi-card__hint { font-size: 0.68rem; color: var(--asi-muted); }
+.asi-grid { display: grid; gap: 1rem; margin-bottom: 1rem; }
+.asi-grid--2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.asi-grid--3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.asi-panel {
+  background: var(--asi-panel);
+  border: 1px solid var(--asi-border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
 }
-
-.si-pane {
-  padding: 2px 0 4px;
-  animation: si-pane-in 0.18s ease-out;
+.asi-panel--highlight {
+  border-color: var(--asi-accent);
+  background: linear-gradient(135deg, rgba(115,62,135,0.06), transparent);
 }
-
-@keyframes si-pane-in {
-  from {
-    opacity: 0.55;
-  }
-  to {
-    opacity: 1;
-  }
+.asi-summary-text {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.82rem;
+  color: var(--asi-panel-text);
 }
-
-.si-app__tabload {
-  font-size: 12px;
-  color: #6b7280;
-  padding: 8px 0;
+.asi-table-wrap { overflow-x: auto; }
+.asi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
 }
-
-@media (max-width: 1024px) {
-  .si-app__body {
-    grid-template-columns: 1fr;
-    max-height: none;
-  }
-
-  .si-app__main {
-    max-height: none;
-  }
-
-  .si-app__rail {
-    position: relative;
-    top: 0;
-    max-height: none;
-    order: -1;
-  }
+.asi-table th {
+  color: var(--asi-muted);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
-
-@media (max-width: 768px) {
-  .sales-intelligence-page {
-    padding: 8px;
-  }
-
-  .si-shell {
-    border-radius: 10px;
-    padding: 10px 10px 12px;
-  }
+.asi-table th, .asi-table td {
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--asi-border);
+  color: var(--asi-panel-text);
 }
+.asi-table__row--active { background: rgba(115,62,135,0.08); }
+.asi-table tbody tr { cursor: pointer; }
+.asi-score { font-weight: 700; }
+.asi-score--excellent { color: #1a8f4a; }
+.asi-score--good { color: #2d7dd2; }
+.asi-score--warn { color: #c47f00; }
+.asi-score--critical { color: #c0392b; }
+.asi-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  text-transform: capitalize;
+  background: #eee;
+}
+.asi-badge--excellent { background: #d4f5e0; color: #1a6b38; }
+.asi-badge--good { background: #dbeafe; color: #1e4a8a; }
+.asi-badge--needs_attention { background: #fff3cd; color: #856404; }
+.asi-badge--critical { background: #fde8ea; color: #9b1c2c; }
+.asi-risk { text-transform: capitalize; font-size: 0.78rem; font-weight: 600; }
+.asi-risk--low { color: #1a8f4a; }
+.asi-risk--medium { color: #c47f00; }
+.asi-risk--high { color: #c0392b; }
+.asi-link {
+  background: none;
+  border: none;
+  color: var(--asi-accent);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.asi-ranking__row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--asi-border);
+  font-size: 0.85rem;
+}
+.asi-ranking__pos { width: 2rem; color: var(--asi-muted); }
+.asi-ranking__name { flex: 1; }
+.asi-ranking__score { font-weight: 700; color: var(--asi-accent); }
+.asi-alerts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.65rem;
+}
+.asi-alert-card {
+  border-radius: 10px;
+  padding: 0.75rem;
+  border: 1px solid var(--asi-border);
+  font-size: 0.82rem;
+}
+.asi-alert-card--high { border-left: 3px solid #c0392b; }
+.asi-alert-card--medium { border-left: 3px solid #c47f00; }
+.asi-alert-card p { margin: 0.35rem 0; color: var(--asi-muted); }
+.asi-alert-card__meta { font-size: 0.72rem; color: var(--asi-muted); }
+.asi-metrics-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.asi-metrics-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--asi-border);
+  font-size: 0.8rem;
+}
+.asi-obs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.asi-obs-list li {
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.4rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(115,62,135,0.06);
+}
+.asi-obs--warning { background: #fff8e6; }
+.asi-obs--critical { background: #fde8ea; }
+.asi-coaching {
+  display: grid;
+  gap: 0.5rem;
+}
+.asi-coach-card {
+  border: 1px solid var(--asi-border);
+  border-radius: 8px;
+  padding: 0.65rem;
+  font-size: 0.82rem;
+}
+.asi-coach-card h4 { margin: 0 0 0.25rem; font-size: 0.85rem; }
+.asi-coach-card p { margin: 0; color: var(--asi-muted); }
+.asi-coach-card--critical { border-left: 3px solid #c0392b; }
+.asi-coach-card--high { border-left: 3px solid #c47f00; }
+.asi-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+  margin: 0.1rem;
+  border-radius: 4px;
+  background: rgba(115,62,135,0.12);
+}
+.asi-drilldown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+.asi-drilldown__group h4 { margin: 0 0 0.35rem; font-size: 0.85rem; }
+.asi-drilldown__group ul {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.78rem;
+  color: var(--asi-muted);
+}
+.asi-empty {
+  color: var(--asi-muted);
+  font-size: 0.78rem;
+  margin: 0;
+}
+.asi-success {
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: #e8f5ec;
+  color: #1a6b38;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+}
+.asi-scoring__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.asi-scoring__actions { display: flex; gap: 0.5rem; }
+.asi-scoring__group { margin-bottom: 1.25rem; }
+.asi-scoring__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.65rem;
+}
+.asi-rule-card {
+  border: 1px solid var(--asi-border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: var(--asi-bg);
+}
+.asi-rule-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.asi-rule-card__name { font-size: 0.78rem; font-weight: 600; color: var(--asi-panel-text); }
+.asi-rule-card__val { font-size: 0.75rem; color: var(--asi-accent); font-weight: 700; }
+.asi-rule-card__desc { font-size: 0.68rem; color: var(--asi-muted); margin: 0 0 0.35rem; }
+.asi-range { width: 100%; accent-color: var(--asi-accent); }
 </style>

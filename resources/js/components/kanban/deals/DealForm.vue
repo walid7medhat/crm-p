@@ -112,6 +112,40 @@
             </div>
           </template>
 
+          <!-- Rental Stages -->
+          <template v-else-if="dealType === 'rental'">
+            <div class="col-md-4" v-if="shouldShowStageDate('application_date')">
+              <label class="form-label-custom">Application Date</label>
+              <AdvancedDatePicker
+                v-model="form.application_date"
+                date-only
+                dob-layout
+                placeholder="Select Application date"
+                class="custom-input"
+              />
+            </div>
+            <div class="col-md-4" v-if="shouldShowStageDate('contract_date')">
+              <label class="form-label-custom">Contract Date</label>
+              <AdvancedDatePicker
+                v-model="form.contract_date"
+                date-only
+                dob-layout
+                placeholder="Select Contract date"
+                class="custom-input"
+              />
+            </div>
+            <div class="col-md-4" v-if="shouldShowStageDate('ejari_date')">
+              <label class="form-label-custom">Ejari Date</label>
+              <AdvancedDatePicker
+                v-model="form.ejari_date"
+                date-only
+                dob-layout
+                placeholder="Select Ejari date"
+                class="custom-input"
+              />
+            </div>
+          </template>
+
           <!-- Won Date (all types) -->
           <div class="col-md-4" v-if="shouldShowStageDate('won_date')">
             <label class="form-label-custom">Won Date</label>
@@ -1970,19 +2004,25 @@ const stageDates = computed(() => {
 })
 
 function shouldShowStageDate(dateKey) {
-  console.log(`🟢 shouldShowStageDate(${dateKey})`)
-  console.log('  - form.value[dateKey]:', form.value[dateKey])
-  
+  const stageDatesByDealType = {
+    primary: ['eoi_date', 'booking_date', 'spa_date', 'won_date'],
+    secondary: ['security_deposit_date', 'mou_date', 'noc_date', 'won_date'],
+    rental: ['application_date', 'contract_date', 'ejari_date', 'won_date'],
+  }
+
+  // Inline Stage Dates edit: always show all date fields for this deal type
+  if (props.activeEditSection === 'stage_dates') {
+    const allowed = stageDatesByDealType[props.dealType] || stageDatesByDealType.primary
+    return allowed.includes(dateKey)
+  }
+
   if (form.value[dateKey]) {
-    console.log('  ✅ returns true (has value)')
     return true
   }
-  
+
   const stageName = props.selectedStageName?.toLowerCase() || ''
   const order = Number(props.selectedStageOrder) || 0
-  
-  console.log(`  - stageName: "${stageName}", order: ${order}`)
-  
+
   const stageDateMap = {
     'eoi_date': { stages: ['eoi'], minOrder: 2 },
     'booking_date': { stages: ['booking'], minOrder: 3 },
@@ -1990,33 +2030,23 @@ function shouldShowStageDate(dateKey) {
     'security_deposit_date': { stages: ['security', 'deposit'], minOrder: 2 },
     'mou_date': { stages: ['mou'], minOrder: 3 },
     'noc_date': { stages: ['noc'], minOrder: 4 },
+    'application_date': { stages: ['application'], minOrder: 2 },
+    'contract_date': { stages: ['contract'], minOrder: 3 },
+    'ejari_date': { stages: ['ejari'], minOrder: 4 },
     'won_date': { stages: ['won', 'deal won', 'closed', 'completed'], minOrder: 5 }
   }
-  
+
   const config = stageDateMap[dateKey]
   if (!config) {
-    console.log('  ❌ no config for', dateKey)
     return false
   }
-  
+
   const stageMatch = config.stages.some(s => stageName.includes(s))
-  console.log(`  - stageMatch: ${stageMatch}`)
-  
   if (stageMatch) {
-    console.log('  ✅ returns true (stage name match)')
     return true
   }
-  
-  const orderMatch = order >= config.minOrder
-  console.log(`  - orderMatch: ${orderMatch} (${order} >= ${config.minOrder})`)
-  
-  if (orderMatch) {
-    console.log('  ✅ returns true (order match)')
-    return true
-  }
-  
-  console.log('  ❌ returns false')
-  return false
+
+  return order >= config.minOrder
 }
 const stageDateConfig = {
   primary: [
@@ -2154,9 +2184,11 @@ removeBudgetDropdownListeners()
 .inline-mode :deep(.row.g-3 > [class*='col-']) {
   width: 49% !important;
   max-width: 100% !important;
-  /* flex: 0 0 100% !important; */
-  /* padding-left: 0 !important;
-  padding-right: 0 !important; */
+}
+
+.inline-mode .form-section:has(.advanced-date-picker) :deep(.row.g-3 > [class*='col-']) {
+  width: 100% !important;
+  flex: 0 0 100% !important;
 }
 :deep(.custom-v-select .vs__open-indicator-icon) {
     font-size: 13px;

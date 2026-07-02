@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\LeadImportController;
 use App\Http\Controllers\Api\Bitrix24SyncController;
 use App\Http\Controllers\Api\Bitrix24WebhookController;
 use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
+use App\Http\Controllers\Api\AiSalesIntelligence\AiSalesIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
@@ -448,6 +449,21 @@ Route::middleware('jwt.auth')->group(function () {
         Route::post('/distribute', [SalesIntelligenceController::class, 'distribute']);
         Route::get('/distribution-logs', [SalesIntelligenceController::class, 'distributionLogs']);
         Route::post('/ai/suggest', [SalesIntelligenceController::class, 'aiSuggest']);
+    });
+
+    Route::prefix('ai-sales-intelligence')->group(function () {
+        Route::get('/dashboard', [AiSalesIntelligenceController::class, 'dashboard']);
+        Route::get('/agents', [AiSalesIntelligenceController::class, 'agents']);
+        Route::get('/agents/options', [AiSalesIntelligenceController::class, 'agentOptions']);
+        Route::get('/agents/{user}', [AiSalesIntelligenceController::class, 'show']);
+        Route::get('/agents/{user}/neglect', [AiSalesIntelligenceController::class, 'neglect']);
+        Route::get('/agents/{user}/drilldown', [AiSalesIntelligenceController::class, 'drilldown']);
+        Route::get('/alerts', [AiSalesIntelligenceController::class, 'alerts']);
+        Route::get('/settings', [AiSalesIntelligenceController::class, 'settings']);
+        Route::get('/scoring-rules', [AiSalesIntelligenceController::class, 'scoringRules']);
+        Route::put('/scoring-rules', [AiSalesIntelligenceController::class, 'updateScoringRules']);
+        Route::post('/scoring-rules/reset', [AiSalesIntelligenceController::class, 'resetScoringRules']);
+        Route::post('/recalculate', [AiSalesIntelligenceController::class, 'recalculate']);
     });
 
     Route::get('/attendance/today', [AttendanceController::class, 'today']);

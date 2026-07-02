@@ -226,14 +226,4 @@ function onCancel() {
 .advanced-date-picker--compact .advanced-date-icon {
   font-size: 12px;
 }
-:deep(.vs__dropdown-menu, .flatpickr-calendar, [data-popper-placement] ){
-    z-index: 45004 !important;
-        max-width: 100px !important;
-
-}
-.vs__dropdown-menu, .flatpickr-calendar, [data-popper-placement] {
-    z-index: 45004 !important;
-        max-width: 100px !important;
-
-}
 </style>

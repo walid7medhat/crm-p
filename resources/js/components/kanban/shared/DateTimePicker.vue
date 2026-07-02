@@ -12,14 +12,11 @@
                         :options="dobMonthChoices"
                         :reduce="reduceDobOption"
                         label="label"
-                        placeholder="Search month…"
+                        placeholder="Month"
                         :clearable="false"
-                        :searchable="true"
-                        append-to-body
+                        :searchable="false"
                         class="dob-v-select"
                         aria-label="Month"
-                          @mousedown.stop
-                             @click.stop
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -36,14 +33,11 @@
                         :options="dobDayChoices"
                         :reduce="reduceDobOption"
                         label="label"
-                        placeholder="Search day…"
+                        placeholder="Day"
                         :clearable="false"
-                        :searchable="true"
-                        append-to-body
+                        :searchable="false"
                         class="dob-v-select"
                         aria-label="Day"
-                          @mousedown.stop
-                         @click.stop
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -59,14 +53,11 @@
                         :options="dobYearChoices"
                         :reduce="reduceDobOption"
                         label="label"
-                        placeholder="Search year…"
+                        placeholder="Year"
                         :clearable="false"
-                        :searchable="true"
-                        append-to-body
+                        :searchable="false"
                         class="dob-v-select"
                         aria-label="Year"
-                          @mousedown.stop
-                          @click.stop
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -153,7 +144,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { Modal } from 'bootstrap'
 import vSelect from 'vue-select'
 
 const props = defineProps({
@@ -337,6 +329,14 @@ watch(() => props.modelValue, (newValue) => {
 }, { immediate: true })
 
 watch(() => props.show, (newValue) => {
+    if (newValue) {
+        document.body.classList.add('date-time-picker-open')
+        suspendBootstrapModalFocusTraps()
+    } else {
+        document.body.classList.remove('date-time-picker-open')
+        restoreBootstrapModalFocusTraps()
+    }
+
     if (!newValue || !props.modelValue) return
     const date = new Date(props.modelValue)
     selectedDate.value = new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -502,6 +502,30 @@ const handleCancel = () => {
     emit('update:show', false)
     emit('cancel')
 }
+
+const modalFocusRestore = []
+
+/** Bootstrap modals trap focus — teleported date picker v-selects blur and close instantly without this. */
+function suspendBootstrapModalFocusTraps() {
+    document.querySelectorAll('.modal.show').forEach((el) => {
+        const inst = Modal.getInstance(el)
+        if (!inst?._config || inst._config.focus === false) return
+        modalFocusRestore.push({ inst, focus: inst._config.focus })
+        inst._config.focus = false
+    })
+}
+
+function restoreBootstrapModalFocusTraps() {
+    modalFocusRestore.forEach(({ inst, focus }) => {
+        if (inst?._config) inst._config.focus = focus
+    })
+    modalFocusRestore.length = 0
+}
+
+onBeforeUnmount(() => {
+    document.body.classList.remove('date-time-picker-open')
+    restoreBootstrapModalFocusTraps()
+})
 </script>
 
 <style scoped>
@@ -515,8 +539,9 @@ const handleCancel = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Above Complete Stage modal (~300xx); searchable menus use 46000 when stage open */
-    z-index: 45000;
+    /* Above bootstrap modals/backdrops (style.css ~100700) and layout chrome (~50000) */
+    z-index: 101000;
+    --vs-dropdown-z-index: 101050;
     backdrop-filter: blur(2px);
 }
 
@@ -528,6 +553,9 @@ const handleCancel = () => {
     min-width: 320px;
     max-width: 360px;
     width: 100%;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
 }
 
 .date-time-picker-modal.is-dob-layout {
@@ -559,6 +587,12 @@ const handleCancel = () => {
     flex-direction: column;
     gap: 3px;
     min-width: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.dob-select-field:has(.vs--open) {
+    z-index: 20;
 }
 
 .dob-select-field-label {
@@ -612,6 +646,12 @@ const handleCancel = () => {
     font-size: 10px !important;
     color: #94a3b8 !important;
     font-weight: 400 !important;
+}
+
+:deep(.dob-v-select .vs__dropdown-menu) {
+    z-index: 100 !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
 }
 
 :deep(.dob-v-select .vs__dropdown-menu .vs__dropdown-option) {
@@ -903,43 +943,13 @@ const handleCancel = () => {
 .btn-apply-picker:hover {
     background: #152547;
 }
-/* ✅ Fix for vue-select dropdown closing issue */
-.date-time-picker-modal .vs__dropdown-menu {
-  z-index: 100000 !important;
-  position: fixed !important;
-  max-height: 200px !important;
-  overflow-y: auto !important;
-}
+</style>
 
-.date-time-picker-modal .vs__dropdown-toggle {
-  cursor: pointer;
-}
-
-.date-time-picker-modal .vs__dropdown-toggle:focus {
-  outline: none;
-}
-
-/* Prevent click propagation from dropdown items */
-.date-time-picker-modal .vs__dropdown-option {
-  cursor: pointer;
-  padding: 6px 12px;
-}
-
-.date-time-picker-modal .vs__dropdown-option:hover {
-  background: #f1f5f9;
-}
-
-.date-time-picker-modal .vs__dropdown-option--highlight {
-  background: #e2e8f0;
-}
-:deep(.vs__dropdown-menu, .flatpickr-calendar, [data-popper-placement] ){
-    z-index: 45004 !important;
-        max-width: 100px !important;
-
-}
-.vs__dropdown-menu, .flatpickr-calendar, [data-popper-placement] {
-    z-index: 45004 !important;
-        max-width: 100px !important;
-
+<!-- Fallback when any portaled vue-select is used inside the picker -->
+<style>
+body.date-time-picker-open .vs__dropdown-menu {
+    z-index: 101050 !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
 }
 </style>

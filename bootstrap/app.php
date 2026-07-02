@@ -101,6 +101,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt('02:15')
             ->withoutOverlapping()
             ->runInBackground();
+        $schedule->command('ai-sales-intelligence:recalculate')
+            ->dailyAt('02:30')
+            ->timezone('Asia/Dubai')
+            ->withoutOverlapping()
+            ->runInBackground();
       $schedule->command('announcements:send-notifications')
          ->dailyAt('08:00')
          ->timezone('Asia/Dubai');
