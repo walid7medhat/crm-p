@@ -43,7 +43,7 @@ class StageController extends Controller
             if($request->deal_type){
                 $stages->where('deal_type',$request->deal_type);
             }
-            $stages=$stages->orderBy('order')->get();
+            $stages=$stages->with('revertToStage')->orderBy('order')->get();
             return ApiResponse::success(
                 new StageCollection($stages),
                 'Stages retrieved successfully'
@@ -71,11 +71,11 @@ class StageController extends Controller
                     $lastOrder = Stage::max('order'); 
                     $data['order'] = $lastOrder ? $lastOrder + 1 : 1;
                 }
-                
+                 $data['notification_times'] = $data['notification_times'] ?? [30, 15, 5];
                 $stage = Stage::create($data + [
                     'added_by' => auth()->id(),
                 ]);
-
+                $stage->load('revertToStage');
             return ApiResponse::success(
                 new StageResource($stage),
                 'Stage created successfully', 
@@ -93,7 +93,7 @@ class StageController extends Controller
     {
         try {
             $stage->loadCount('leads');
-            
+             $stage->load('revertToStage');
             return ApiResponse::success(
                 new StageResource($stage),
                 'Stage retrieved successfully'
@@ -106,10 +106,41 @@ class StageController extends Controller
     /**
      * Update a stage
      */
-    public function update(StageRequest $request, Stage $stage): JsonResponse
+      public function update(StageRequest $request, Stage $stage): JsonResponse
     {
         try {
-            $stage->update($request->validated());
+            $validated = $request->validated();
+
+            // 🔽 معالجة أوقات الإشعارات
+            if (isset($validated['notification_times'])) {
+                $validated['notification_times'] = $this->processNotificationTimes(
+                    $validated['notification_times']
+                );
+            }
+
+            if (isset($validated['revert_to_stage_id']) && 
+                $validated['revert_to_stage_id'] == $stage->id) {
+                return ApiResponse::error(
+                    'A stage cannot revert to itself',
+                    422,
+                    ['revert_to_stage_id' => ['Cannot select the same stage as revert target']]
+                );
+            }
+
+            if (isset($validated['revert_to_stage_id']) && $validated['revert_to_stage_id']) {
+                $targetStage = Stage::find($validated['revert_to_stage_id']);
+                if ($targetStage && $targetStage->order >= $stage->order) {
+                    return ApiResponse::error(
+                        'Revert target stage must be before the current stage',
+                        422,
+                        ['revert_to_stage_id' => ['Target stage must have lower order than current stage']]
+                    );
+                }
+            }
+
+            $stage->update($validated);
+
+            $stage->load('revertToStage');
 
             return ApiResponse::success(
                 new StageResource($stage),
@@ -123,9 +154,28 @@ class StageController extends Controller
     /**
      * Delete a stage
      */
-    public function destroy(Stage $stage): JsonResponse
+     public function destroy(Stage $stage): JsonResponse
     {
         try {
+            // 🔽 التحقق من عدم وجود Leads في هذه المرحلة
+            if ($stage->leads()->count() > 0) {
+                return ApiResponse::error(
+                    'Cannot delete stage with existing leads',
+                    422,
+                    ['stage' => ['This stage has leads assigned to it']]
+                );
+            }
+
+            // 🔽 التحقق من عدم استخدام هذه المرحلة كمرحلة مستهدفة للرجوع
+            $isTargeted = Stage::where('revert_to_stage_id', $stage->id)->exists();
+            if ($isTargeted) {
+                return ApiResponse::error(
+                    'Cannot delete stage that is used as revert target by other stages',
+                    422,
+                    ['stage' => ['This stage is used as revert target by other stages']]
+                );
+            }
+
             $stage->delete();
 
             return ApiResponse::success(null, 'Stage deleted successfully');
@@ -144,7 +194,7 @@ class StageController extends Controller
                 Stage::where('id', $stageData['id'])->update(['order' => $stageData['order']]);
             }
 
-            $stages = Stage::withCount('leads')->orderBy('order')->get();
+            $stages = Stage::withCount('leads')->with('revertToStage')->orderBy('order')->get();
 
             return ApiResponse::success(
                 new StageCollection($stages),
@@ -153,6 +203,44 @@ class StageController extends Controller
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to reorder stages: ' . $e->getMessage());
         }
+    }
+    public function getAvailableRevertStages(Stage $stage): JsonResponse
+    {
+        try {
+            $stages = Stage::where('id', '!=', $stage->id)
+                ->where('order', '<', $stage->order) // فقط المراحل السابقة
+                ->orderBy('order')
+                ->get(['id', 'name', 'order', 'color']);
+
+            return ApiResponse::success(
+                $stages,
+                'Available revert stages retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve available stages: ' . $e->getMessage());
+        }
+    }
+      protected function processNotificationTimes($times): array
+    {
+        if (is_string($times)) {
+            $times = array_map('trim', explode(',', $times));
+        }
+
+        if (empty($times)) {
+            return [30, 15, 5];
+        }
+
+        $times = array_filter($times, function ($time) {
+            return is_numeric($time) && $time > 0 && $time <= 1440;
+        });
+
+        $times = array_map('intval', $times);
+
+        $times = array_unique($times);
+
+        sort($times);
+
+        return !empty($times) ? $times : [30, 15, 5];
     }
 
   public function getStagesWithLeads(Request $request): JsonResponse
@@ -1156,9 +1244,22 @@ public function getOffices()
         try {
             $settings = DB::table('stage_visibility')->get();
              $allStages = Stage::where('stage_type', 'lead')
-            ->orderBy('order')
-            ->get(['id', 'name', 'color', 'order','auto_revert','revert_after_hours','notify_before_minutes']);
-    
+                ->orderBy('order')
+                ->get([
+                    'id', 
+                    'name', 
+                    'color', 
+                    'order',
+                    'auto_revert',
+                    'revert_after_hours',
+                    'notify_before_minutes',
+                    'revert_to_stage_id',        
+                    'revert_notification_message',
+                    'notification_times'          
+                ]);
+
+            $allStages->load('revertToStage');
+
 
             return ApiResponse::success([
                 'settings' => $settings,

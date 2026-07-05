@@ -8,13 +8,14 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 class Stage extends Model
 {
-     use HasFactory;
-   use LogsActivity;
-protected $casts = [
-    'auto_revert' => 'boolean',
-    'revert_after_hours' => 'integer',
-    'notify_before_minutes' => 'integer',
-];
+    use HasFactory;
+    use LogsActivity;
+    protected $casts = [
+        'auto_revert' => 'boolean',
+        'revert_after_hours' => 'integer',
+        'notify_before_minutes' => 'integer',
+          'notification_times' => 'array', 
+    ];
     public function getActivitylogOptions(): LogOptions
     {
         // use $listing->activities
@@ -77,5 +78,10 @@ protected $casts = [
         public function scopeOfDealType($query, $type)
         {
             return $query->where('stage_type', 'deal')->where('deal_type', $type);
+        }
+
+        public function revertToStage()
+        {
+            return $this->belongsTo(Stage::class, 'revert_to_stage_id');
         }
 }

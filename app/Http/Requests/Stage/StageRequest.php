@@ -34,6 +34,14 @@ class StageRequest extends FormRequest
             'auto_revert' => 'boolean',
             'revert_after_hours' => 'nullable|integer|min:1',
             'notify_before_minutes' => 'nullable|integer|min:1',
+             'revert_to_stage_id' => [
+                'nullable',
+                'exists:stages,id',
+                Rule::notIn([$this->route('stage')?->id ?? 0]),
+            ],
+            'revert_notification_message' => 'nullable|string|max:500',
+            'notification_times' => 'nullable|array',
+            'notification_times.*' => 'integer|min:1|max:1440',
         ];
     }
 

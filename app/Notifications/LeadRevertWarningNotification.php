@@ -15,12 +15,14 @@ class LeadRevertWarningNotification extends Notification implements ShouldQueue
     public $lead;
     public $targetStage;
     public $minutesLeft;
+    public $customMessage;
 
-    public function __construct(Lead $lead, string $targetStage, int $minutesLeft)
+    public function __construct(Lead $lead, string $targetStage, int $minutesLeft, string $customMessage = null)
     {
         $this->lead = $lead;
         $this->targetStage = $targetStage;
         $this->minutesLeft = $minutesLeft;
+        $this->customMessage = $customMessage;
     }
 
     public function via($notifiable)
@@ -36,6 +38,8 @@ class LeadRevertWarningNotification extends Notification implements ShouldQueue
             'lead_number' => $this->lead->lead_number,
             'action_type' => 'revert_warning',
             'message' => $this->getMessage(),
+            'minutes_left' => $this->minutesLeft,
+            'target_stage' => $this->targetStage,
             'timestamp' => now()->toISOString(),
         ];
     }
@@ -51,14 +55,19 @@ class LeadRevertWarningNotification extends Notification implements ShouldQueue
             ],
             'action_type' => 'revert_warning',
             'message' => $this->getMessage(),
+            'minutes_left' => $this->minutesLeft,
+            'target_stage' => $this->targetStage,
             'timestamp' => now()->toISOString(),
         ]);
     }
 
     protected function getMessage()
     {
-        $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
+        if ($this->customMessage) {
+            return $this->customMessage;
+        }
 
+        $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
         return "Lead {$leadName} will be reverted to {$this->targetStage} in {$this->minutesLeft} minutes";
     }
 }

@@ -92,65 +92,112 @@
                             <span class="stage-preview-name">{{ stageDrafts[stage.id]?.name || stage.name }}</span>
                         </div>
 
-                        <div class="stage-editor-fields">
-                            <input
-                                v-model="stageDrafts[stage.id].name"
-                                type="text"
-                                class="form-control form-control-sm"
-                                placeholder="Stage name"
-                            />
-                            <input
-                                v-model="stageDrafts[stage.id].color"
-                                type="color"
-                                class="form-control form-control-color stage-color-input"
-                                title="Select stage color"
-                            />
-                                    
-                                   <div class="form-check form-switch">
-                                            <input
-                                                class="form-check-input"
-                                                type="checkbox"
-                                                role="switch"
-                                                :id="'auto_revert_' + stage.id"
-                                                v-model="stageDrafts[stage.id].auto_revert"
-                                            >
-                                            <label
-                                                class="form-check-label small text-muted"
-                                                :for="'auto_revert_' + stage.id"
-                                            >
-                                                Auto revert
-                                            </label>
+                       <div class="stage-editor-fields">
+                           <div class="main">
+                                <input
+                                    v-model="stageDrafts[stage.id].name"
+                                    type="text"
+                                    class="form-control form-control-sm"
+                                    placeholder="Stage name"
+                                />
+                                <input
+                                    v-model="stageDrafts[stage.id].color"
+                                    type="color"
+                                    class="form-control form-control-color stage-color-input"
+                                    title="Select stage color"
+                                />
+                                
+                                <!-- ✅ Auto Revert Switch -->
+                                <div class="form-check form-switch">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        role="switch"
+                                        :id="'auto_revert_' + stage.id"
+                                        v-model="stageDrafts[stage.id].auto_revert"
+                                    >
+                                    <label
+                                        class="form-check-label small text-muted"
+                                        :for="'auto_revert_' + stage.id"
+                                    >
+                                        Auto revert
+                                    </label>
+                                </div>
+                             </div>
+                                <!-- ✅ إعدادات الـ Revert - تظهر فقط عندما يكون Auto Revert مفعلاً -->
+                                <div v-if="stageDrafts[stage.id]?.auto_revert" class="revert-settings-group">
+                                    <!-- ساعات الرجوع -->
+                                    <div class="revert-field">
+                                        <label class="small text-muted">Revert after</label>
+                                        <input
+                                            v-model="stageDrafts[stage.id].revert_after_hours"
+                                            type="number"
+                                            class="form-control form-control-sm"
+                                            placeholder="Hours"
+                                            min="1"
+                                            max="720"
+                                        />
                                     </div>
 
-                                    <input
-                                        v-model="stageDrafts[stage.id].revert_after_hours"
-                                        type="number"
-                                        class="form-control form-control-sm"
-                                        placeholder="Revert after (hours)"
-                                    />
+                                   <div class="revert-field">
+                                    <label class="small text-muted">Target Stage</label>
+                                    <select 
+                                        v-model="stageDrafts[stage.id].revert_to_stage_id"
+                                        class="form-control form-control-sm revert-stage-select"
+                                        :key="'select_' + stage.id"
+                                    >
+                                        <option :value="null">⬅️ Previous Stage (Default)</option>
+                                        
+                                        <option 
+                                            v-for="s in allStages" 
+                                            :key="'option_' + s.id"
+                                            :value="s.id"
+                                            :disabled="s.id === stage.id"
+                                        >
+                                            {{ s.name || 'Unnamed' }}
+                                            <span v-if="s.id === stage.id">(current)</span>
+                                        </option>
+                                    </select>
+                                </div>
 
-                                    <input
-                                        v-model="stageDrafts[stage.id].notify_before_minutes"
-                                        type="number"
-                                        class="form-control form-control-sm"
-                                        placeholder="Notify before (min)"
-                                    />
+                                    <div class="revert-field">
+                                        <label class="small text-muted">Notification Message</label>
+                                        <input
+                                            v-model="stageDrafts[stage.id].revert_notification_message"
+                                            type="text"
+                                            class="form-control form-control-sm notify-message"
+                                            placeholder="Custom notification message (optional)"
+                                        />
+                                    </div>
 
-                            <button
-                                class="btn btn-outline-secondary btn-sm"
-                                :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
-                                @click="resetStageDraft(stage)"
-                            >
-                                Reset
-                            </button>
-                            <button
-                                class="btn btn-primary btn-sm"
-                                :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
-                                @click="saveStageMeta(stage)"
-                            >
-                                {{ savingStageMap[stage.id] ? 'Saving…' : 'Save' }}
-                            </button>
-                            
+                                    <div class="revert-field">
+                                        <label class="small text-muted">Notify at (min)</label>
+                                        <input
+                                            v-model="stageDrafts[stage.id].notification_times"
+                                            type="text"
+                                            class="form-control form-control-sm"
+                                            placeholder="30,15,5"
+                                            @blur="parseNotificationTimes(stage.id)"
+                                        />
+                                    </div>
+                                </div>
+                                 <div class="buttons">
+                                    <!-- الأزرار -->
+                                    <button
+                                        class="btn btn-outline-secondary btn-sm"
+                                        :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
+                                        @click="resetStageDraft(stage)"
+                                    >
+                                        Reset
+                                    </button>
+                                    <button
+                                        class="btn btn-primary btn-sm"
+                                        :disabled="!isStageDirty(stage) || savingStageMap[stage.id]"
+                                        @click="saveStageMeta(stage)"
+                                    >
+                                        {{ savingStageMap[stage.id] ? 'Saving…' : 'Save' }}
+                                    </button>
+                                </div>
                         </div>
                     </div>
                 </div>
@@ -371,7 +418,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed,watch ,onErrorCaptured } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
@@ -410,51 +457,112 @@ const fetchSettings = async () => {
             api.get('/stages/visibility/settings'),
             api.get('/settings/kanban'),
         ])
+        
+        // ✅ التحقق من الاستجابة
+        if (!visibilityResponse.data || !visibilityResponse.data.data) {
+            throw new Error('Invalid response structure')
+        }
+        
         const data = visibilityResponse.data.data
         const kanbanData = kanbanResponse?.data?.data || {}
         
-        allStages.value = data.all_stages || []
-        roles.value = data.roles.map(role => ({ name: role }))
+        // ✅ التأكد من أن all_stages موجودة ومصفوفة
+        let stagesData = data.all_stages || []
+        
+        // ✅ إذا كانت all_stages عبارة عن object وليست array
+        if (!Array.isArray(stagesData)) {
+            console.warn('all_stages is not an array:', stagesData)
+            stagesData = Object.values(stagesData).filter(s => s && s.id)
+        }
+        
+        // ✅ تصفية العناصر الصالحة فقط
+        const validStages = stagesData.filter(stage => {
+            if (!stage || typeof stage !== 'object') {
+                console.warn('Invalid stage object:', stage)
+                return false
+            }
+            if (!stage.id) {
+                console.warn('Stage missing id:', stage)
+                return false
+            }
+            return true
+        })
+        
+        console.log('Valid stages:', validStages.length)
+        
+        allStages.value = validStages
+        roles.value = data.roles ? data.roles.map(role => ({ name: role })) : []
 
+        // ✅ تهيئة stageDrafts
         stageDrafts.value = {}
         allStages.value.forEach(stage => {
-            stageDrafts.value[stage.id] = {
-                name: stage.name || '',
-                color: stage.color || '#3b82f6',
-                auto_revert: stage.auto_revert || false,
-                revert_after_hours: stage.revert_after_hours || null,
-                notify_before_minutes: stage.notify_before_minutes || 30,
+            if (stage && stage.id) {
+                stageDrafts.value[stage.id] = {
+                    name: stage.name || '',
+                    order: stage.order !== undefined && stage.order !== null ? String(stage.order) : '',
+                    color: stage.color || '#3b82f6',
+                    auto_revert: stage.auto_revert || false,
+                    revert_after_hours: stage.revert_after_hours || null,
+                    notify_before_minutes: stage.notify_before_minutes || 30,
+                    revert_to_stage_id: stage.revert_to_stage_id || null,
+                    revert_notification_message: stage.revert_notification_message || '',
+                    notification_times: Array.isArray(stage.notification_times) 
+                        ? stage.notification_times 
+                        : [],
+                }
             }
         })
         
-        // تحويل الإعدادات إلى شكل سهل للاستخدام
+        // ✅ تحويل الإعدادات
         const settingsObj = {}
-        data.settings.forEach(setting => {
-            settingsObj[setting.role_name] = JSON.parse(setting.visible_stages)
-        })
+        if (data.settings && Array.isArray(data.settings)) {
+            data.settings.forEach(setting => {
+                if (setting && setting.role_name) {
+                    try {
+                        const visibleStages = JSON.parse(setting.visible_stages)
+                        settingsObj[setting.role_name] = Array.isArray(visibleStages) ? visibleStages : []
+                    } catch (e) {
+                        console.warn('Failed to parse settings for role:', setting.role_name, e)
+                        settingsObj[setting.role_name] = []
+                    }
+                }
+            })
+        }
         
+        // ✅ تعيين الإعدادات الافتراضية للأدوار التي ليس لها إعدادات
         roles.value.forEach(role => {
             if (!settingsObj[role.name]) {
-                settingsObj[role.name] = getDefaultStagesForRole(role.name)
+                settingsObj[role.name] = allStages.value.map(s => s.id)
             }
         })
         
         settings.value = settingsObj
         changedRoles.value.clear()
 
-        revertHours.value = Number(kanbanData.revert_hours || 24)
+        // ✅ تحديث Revert Hours
+        const revertHoursValue = Number(kanbanData.revert_hours)
+        revertHours.value = !isNaN(revertHoursValue) && revertHoursValue > 0 ? revertHoursValue : 24
         initialRevertHours.value = revertHours.value
         normalizeRevertHours()
         
     } catch (err) {
-        error.value = err.response?.data?.message || 'Failed to load settings'
+        console.error('Error fetching settings:', err)
+        error.value = err.response?.data?.message || err.message || 'Failed to load settings'
+        allStages.value = []
+        roles.value = []
+        stageDrafts.value = {}
     } finally {
         loading.value = false
     }
 }
 
 const getDefaultStagesForRole = (role) => {
-    return allStages.value.map(s => s.id)  
+    if (!allStages.value || !Array.isArray(allStages.value)) {
+        return []
+    }
+    return allStages.value
+        .filter(stage => stage && stage.id)
+        .map(s => s.id)
 }
 
 const formatRoleName = (role) => {
@@ -498,7 +606,29 @@ const applyPreset = (preset) => {
         changedRoles.value.add(role.name)
     })
 }
+const validateStages = (stages) => {
+    if (!stages || !Array.isArray(stages)) {
+        return []
+    }
+    return stages.filter(stage => stage && stage.id)
+}
 
+
+const getDefaultDraft = (stage) => {
+    return {
+        name: stage.name || '',
+        color: stage.color || '#3b82f6',
+        order: stage.order || '',
+        auto_revert: stage.auto_revert || false,
+        revert_after_hours: stage.revert_after_hours || null,
+        notify_before_minutes: stage.notify_before_minutes || 30,
+        revert_to_stage_id: stage.revert_to_stage_id || null,
+        revert_notification_message: stage.revert_notification_message || '',
+        notification_times: Array.isArray(stage.notification_times) 
+            ? stage.notification_times 
+            : [],
+    }
+}
 const saveAllSettings = async () => {
     if (changedRoles.value.size === 0 && !hasRevertChanges.value) {
         Swal.fire({
@@ -568,22 +698,33 @@ const isStageDirty = (stage) => {
     if (!draft) return false
 
     return (
-        (draft.name || '').trim() !== (stage.name || '').trim() ||
-        (draft.color || '').toLowerCase() !== (stage.color || '').toLowerCase() ||
-
+        safeString(draft.name) !== safeString(stage.name) ||
+        safeString(draft.order) !== safeString(stage.order) ||
+        safeString(draft.color).toLowerCase() !== safeString(stage.color).toLowerCase() ||
         Boolean(draft.auto_revert) !== Boolean(stage.auto_revert) ||
-        Number(draft.revert_after_hours || 0) !== Number(stage.revert_after_hours || 0) ||
-        Number(draft.notify_before_minutes || 0) !== Number(stage.notify_before_minutes || 0)
+        safeNumber(draft.revert_after_hours) !== safeNumber(stage.revert_after_hours) ||
+        safeNumber(draft.notify_before_minutes) !== safeNumber(stage.notify_before_minutes) ||
+        safeNumber(draft.revert_to_stage_id) !== safeNumber(stage.revert_to_stage_id) ||
+        safeString(draft.revert_notification_message) !== safeString(stage.revert_notification_message) ||
+        JSON.stringify(draft.notification_times || []) !== JSON.stringify(stage.notification_times || [])
     )
 }
 
 const resetStageDraft = (stage) => {
+    if (!stage || !stage.id) return
+    
     stageDrafts.value[stage.id] = {
         name: stage.name || '',
+        order: stage.order !== undefined && stage.order !== null ? String(stage.order) : '',
         color: stage.color || '#3b82f6',
-         auto_revert: stage.auto_revert || false,
+        auto_revert: stage.auto_revert || false,
         revert_after_hours: stage.revert_after_hours || null,
         notify_before_minutes: stage.notify_before_minutes || 30,
+        revert_to_stage_id: stage.revert_to_stage_id || null,
+        revert_notification_message: stage.revert_notification_message || '',
+        notification_times: Array.isArray(stage.notification_times) 
+            ? stage.notification_times 
+            : [],
     }
 }
 
@@ -598,22 +739,40 @@ const saveStageMeta = async (stage) => {
         return
     }
 
+    let notificationTimes = draft.notification_times
+    if (typeof notificationTimes === 'string') {
+        notificationTimes = notificationTimes
+            .split(',')
+            .map(n => parseInt(n.trim()))
+            .filter(n => !isNaN(n) && n > 0)
+    }
+
     savingStageMap.value = { ...savingStageMap.value, [stage.id]: true }
 
     try {
+                const orderValue = parseInt(draft.order) || stage.order || 0
+
         await api.put(`/stages/${stage.id}`, {
             name: draft.name.trim(),
             color: draft.color || stage.color,
+             order: orderValue,
             auto_revert: draft.auto_revert,
             revert_after_hours: draft.revert_after_hours,
             notify_before_minutes: draft.notify_before_minutes,
+            revert_to_stage_id: draft.revert_to_stage_id,
+            revert_notification_message: draft.revert_notification_message?.trim() || null,
+            notification_times: notificationTimes,
         })
 
         stage.name = draft.name.trim()
         stage.color = draft.color || stage.color
+        stage.order= orderValue
         stage.auto_revert = draft.auto_revert
         stage.revert_after_hours = draft.revert_after_hours
         stage.notify_before_minutes = draft.notify_before_minutes
+        stage.revert_to_stage_id = draft.revert_to_stage_id
+        stage.revert_notification_message = draft.revert_notification_message?.trim() || null
+        stage.notification_times = notificationTimes
 
         Swal.fire({
             icon: 'success',
@@ -632,7 +791,39 @@ const saveStageMeta = async (stage) => {
         savingStageMap.value = { ...savingStageMap.value, [stage.id]: false }
     }
 }
+const parseNotificationTimes = (stageId) => {
+    const draft = stageDrafts.value[stageId]
+    if (!draft) return
 
+    let input = draft.notification_times
+    
+    if (typeof input === 'string') {
+        const times = input
+            .split(',')
+            .map(n => parseInt(n.trim()))
+            .filter(n => !isNaN(n) && n > 0)
+        
+        draft.notification_times = times.length > 0 ? times : []
+    }
+    
+    if (Array.isArray(input)) {
+        const times = input.filter(n => !isNaN(n) && n > 0)
+        draft.notification_times = times.length > 0 ? times : []
+    }
+}
+const safeString = (value) => {
+    if (value === null || value === undefined) return ''
+    return String(value).trim()
+}
+
+const safeNumber = (value) => {
+    const num = Number(value)
+    return isNaN(num) ? 0 : num
+}
+
+const safeCompare = (val1, val2) => {
+    return safeString(val1) === safeString(val2)
+}
 const normalizeRevertHours = () => {
     const n = Number(revertHours.value)
     if (Number.isNaN(n)) {
@@ -664,6 +855,23 @@ const commitRevertHoursText = () => {
 // ================= Lifecycle =================
 onMounted(() => {
     fetchSettings()
+})
+watch(allStages, (newVal) => {
+    if (newVal && Array.isArray(newVal)) {
+        const validStages = newVal.filter(stage => stage && stage.id)
+        if (validStages.length !== newVal.length) {
+            console.warn('Some stages are invalid, filtering...')
+            allStages.value = validStages
+        }
+    }
+}, { deep: true, immediate: true })
+onErrorCaptured((err, instance, info) => {
+    console.error('❌ Error captured:', err)
+    console.error('Component:', instance?.$options?.name || 'unknown')
+    console.error('Info:', info)
+    
+    // منع انتشار الخطأ
+    return false
 })
 </script>
 
@@ -947,10 +1155,11 @@ onMounted(() => {
 
 .stage-editor-fields {
     display: flex;
-    align-items: center;
+    /* align-items: center; */
     gap: 8px;
     flex: 1;
     min-width: 250px;
+    flex-direction:column;
 }
 
 .stage-color-input {
@@ -1348,5 +1557,116 @@ onMounted(() => {
     .stage-name {
         font-size: 11px;
     }
+}
+
+.revert-settings-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 4px;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.revert-settings-group .revert-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+}
+
+.revert-settings-group .revert-field label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.revert-settings-group .revert-field .form-control-sm {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    height: 32px !important;
+    border-radius: 6px !important;
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    transition: all 0.2s ease;
+}
+
+.revert-settings-group .revert-field .form-control-sm:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+}
+
+.revert-settings-group .revert-field .form-control-sm:hover {
+    border-color: #94a3b8 !important;
+}
+
+/* ✅ تحسين الـ Select داخل الـ Revert Settings */
+.revert-settings-group .revert-stage-select {
+    min-width: 150px;
+}
+
+.revert-settings-group .revert-stage-select optgroup {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.revert-settings-group .revert-stage-select optgroup[label*="Previous"] {
+    color: #2563eb;
+}
+
+.revert-settings-group .revert-stage-select optgroup[label*="Current"] {
+    color: #94a3b8;
+}
+
+.revert-settings-group .revert-stage-select optgroup[label*="Next"] {
+    color: #7c3aed;
+}
+
+.revert-settings-group .revert-stage-select option:disabled {
+    color: #94a3b8;
+    background: #f1f5f9;
+    font-style: italic;
+}
+
+/* ✅ Responsive */
+@media (max-width: 768px) {
+    .revert-settings-group {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+    }
+    
+    .revert-settings-group .revert-field {
+        min-width: 100%;
+    }
+    
+    .revert-settings-group .revert-stage-select {
+        min-width: 100%;
+    }
+}
+.main,.buttons{
+        display: flex;
+    flex-direction: row;
+}
+.notify-message{
+    width:300px
 }
 </style>

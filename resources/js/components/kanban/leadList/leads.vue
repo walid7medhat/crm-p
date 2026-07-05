@@ -30,7 +30,38 @@
             </div>
         </div>
 
-
+        <div 
+            v-if="showRevertAlert" 
+            class="revert-alert-wrapper"
+            :class="{ 'revert-alert-visible': showRevertAlert }"
+        >
+            <div class="revert-alert">
+                <!-- المحتوى الموجود -->
+                <div class="revert-alert-icon-wrap">
+                    <iconify-icon icon="lucide:clock-alert" class="revert-alert-icon" />
+                </div>
+                <div class="revert-alert-content">
+                    <div class="revert-alert-header">
+                        <span class="revert-alert-title">⚠️ Revert Warning</span>
+                        <span class="revert-alert-time">{{ revertAlertTimeLeft }}</span>
+                    </div>
+                    <p class="revert-alert-message">
+                        Lead <strong>{{ revertAlertLead }}</strong> will be reverted to 
+                        <strong>{{ revertAlertTarget }}</strong>
+                    </p>
+                </div>
+                <button 
+                    type="button" 
+                    class="revert-alert-close"
+                    @click="closeRevertAlert"
+                    aria-label="Close alert"
+                >
+                    <iconify-icon icon="lucide:x" />
+                </button>
+                <!-- ✅ Progress Bar -->
+                <div class="revert-alert-progress"></div>
+            </div>
+        </div>
         <LeadAnalyticsShortcuts
             :metrics="leadAnalyticsMetrics"
             :active-filter="activeShortcutFilter"
@@ -2234,11 +2265,19 @@ onMounted(async () => {
     fetchResponsiblePersons()
     fetchCardSettings()
 
+
+  setupRevertAlertListener();
+    fetchRevertNotifications();
+    
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
     setTimeout(() => {
         initializeLeadUpdates()
     }, 1000)
+      window.addEventListener('revert-notification', (event) => {
+        console.log('🔔 revert-notification event received:', event.detail)
+        addRevertAlert(event.detail)
+    })
 })
 
 onUnmounted(() => {
@@ -2272,9 +2311,29 @@ const initializeLeadUpdates = () => {
         const channel = window.Echo.private(`user.${user.id}`)
         
         channel.error((error) => {
+               console.error('❌ Channel error:', error)
             startPolling()
         })
-        
+            channel.listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (event) => {
+            console.log('🔔 BroadcastNotificationCreated received:', event)
+            
+            // تحقق من نوع الإشعار
+            if (event?.action_type === 'revert_warning') {
+                const notification = {
+                    id: Date.now(),
+                    data: {
+                        action_type: 'revert_warning',
+                        lead_id: event.lead?.id,
+                        lead_name: event.lead?.lead_name || `Lead #${event.lead?.lead_number}`,
+                        minutes_left: event.minutes_left || 30,
+                        target_stage: event.target_stage || 'previous stage',
+                        message: event.message || `Lead will be reverted to ${event.target_stage || 'previous stage'} in ${event.minutes_left || 30} minutes`
+                    }
+                }
+                addRevertAlert(notification)
+            }
+        })
+       
         channel.listen('.lead.updated', (event) => {
             handleLeadUpdate(event, 'updated')
         })
@@ -2282,10 +2341,13 @@ const initializeLeadUpdates = () => {
         channel.listen('.lead.assigned', (event) => {
             handleLeadUpdate(event, 'assigned')
         })
-
+      
+      
+     
 
         echoListeners.value.push(channel)
-
+   console.log('✅ Revert alert listener connected via Pusher')
+        console.log('📡 Listening on channel: user.' + user.id)
         // Engine emits `lead.assignment.updated` on `private-lead-assignment` (immediate, small payload).
         // Kanban must subscribe here — `user.{id}` may omit sales users / dual-role admins for `lead.updated`.
         const assignmentChannel = window.Echo.private('lead-assignment')
@@ -2305,7 +2367,26 @@ const initializeLeadUpdates = () => {
         startPolling()
     }
 }
-
+// ================= Revert Alert Handler =================
+const handleRevertAlertFromEvent = (event) => {
+    console.log('🔔 handleRevertAlertFromEvent called with:', event)
+    
+    // ✅ بناء كائن الإشعار من الحدث
+    const notification = {
+        id: Date.now(),
+        data: {
+            action_type: 'revert_warning',
+            lead_id: event.lead?.id,
+            lead_name: event.lead?.lead_name || `Lead #${event.lead?.lead_number}`,
+            minutes_left: event.minutes_left || 30,
+            target_stage: event.target_stage || event.lead?.stage || 'previous stage',
+            message: event.message || `Lead will be reverted to ${event.target_stage || 'previous stage'} in ${event.minutes_left || 30} minutes`
+        }
+    }
+    
+    console.log('📨 Adding revert alert:', notification)
+    addRevertAlert(notification)
+}
 const handleLeadUpdate = (event, eventType = 'unknown') => {
     const payload = normalizeLeadRealtimeEvent(event)
 
@@ -3677,6 +3758,129 @@ const $showNotification = (message, type = 'info') => {
         })
     }
 }
+
+
+// ================= Revert Alert State =================
+const revertAlerts = ref([])
+const showRevertAlert = ref(false)
+let revertAlertTimer = null
+const REVERT_ALERT_DURATION = 20000 // 20 ثواني
+
+// ================= Computed =================
+
+// الحصول على آخر إشعار Revert
+const latestRevertAlert = computed(() => {
+    if (revertAlerts.value.length === 0) return null
+    return revertAlerts.value[revertAlerts.value.length - 1]
+})
+
+// رسالة الإشعار
+const revertAlertMessage = computed(() => {
+    if (!latestRevertAlert.value) return ''
+    const data = latestRevertAlert.value.data || {}
+    return data.message || 'A lead will be reverted soon'
+})
+
+// الوقت المتبقي
+const revertAlertTimeLeft = computed(() => {
+    if (!latestRevertAlert.value) return ''
+    const minutes = latestRevertAlert.value.data?.minutes_left || 0
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60)
+        const mins = minutes % 60
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+    }
+    return `${minutes}m`
+})
+
+// Lead Name
+const revertAlertLead = computed(() => {
+    if (!latestRevertAlert.value) return ''
+    return latestRevertAlert.value.data?.lead_name || `Lead #${latestRevertAlert.value.data?.lead_id || 'unknown'}`
+})
+
+// Target Stage
+const revertAlertTarget = computed(() => {
+    if (!latestRevertAlert.value) return ''
+    return latestRevertAlert.value.data?.target_stage || 'previous stage'
+})
+
+// ================= Methods =================
+
+// إغلاق الـ Alert
+const closeRevertAlert = () => {
+    showRevertAlert.value = false
+    if (revertAlertTimer) {
+        clearTimeout(revertAlertTimer)
+        revertAlertTimer = null
+    }
+}
+
+// عرض الـ Alert مع تأخير
+const showRevertAlertWithTimeout = () => {
+    showRevertAlert.value = true
+    
+    // إخفاء بعد 8 ثواني
+    if (revertAlertTimer) {
+        clearTimeout(revertAlertTimer)
+    }
+    revertAlertTimer = setTimeout(() => {
+        showRevertAlert.value = false
+        revertAlertTimer = null
+    }, REVERT_ALERT_DURATION)
+}
+
+// إضافة إشعار Revert جديد
+const addRevertAlert = (notification) => {
+    // التحقق من أن الإشعار من نوع Revert
+    if (notification?.data?.action_type !== 'revert_warning') return
+    
+    // إضافة الإشعار إلى القائمة
+    revertAlerts.value.push(notification)
+    
+    // إظهار الـ Alert
+    showRevertAlertWithTimeout()
+}
+
+// الاستماع للإشعارات الجديدة عبر Pusher
+const setupRevertAlertListener  = () => {
+    // الاستماع لإشعارات الـ Revert الجديدة من NotificationBell
+    window.addEventListener('revert-notification', (event) => {
+        const notification = event.detail
+        addRevertAlert(notification)
+    })
+}
+
+// جلب الإشعارات غير المقروءة عند التحميل
+const fetchRevertNotifications = async () => {
+    try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/notifications?limit=5`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        
+        // تصفية إشعارات الـ Revert فقط
+        const revertNotifications = (data.data || []).filter(
+            n => n?.data?.action_type === 'revert_warning' || n?.type === 'revert_warning'
+        )
+        
+        // إضافة أحدث إشعار Revert
+        if (revertNotifications.length > 0 && !showRevertAlert.value) {
+            // عرض أحدث إشعار غير مقروء
+            const unreadRevert = revertNotifications.filter(n => !n.read_at)
+            if (unreadRevert.length > 0) {
+                addRevertAlert(unreadRevert[0])
+            } else {
+                // إذا كانت كلها مقروءة، عرض أحدث واحد
+                addRevertAlert(revertNotifications[0])
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to fetch revert notifications:', e)
+    }
+}
 </script>
 
 
@@ -4980,5 +5184,203 @@ const $showNotification = (message, type = 'info') => {
     font-size: 16px;
     line-height: 1;
     font-weight: 600;
+}
+/* ✅ Revert Alert Styles - يظهر في الأسفل يمين */
+.revert-alert-wrapper {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 99999;
+    max-width: 420px;
+    width: 100%;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+}
+
+.revert-alert-visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.revert-alert {
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+    border: 1px solid #fca5a5;
+    border-left: 5px solid #ef4444;
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 12px 40px rgba(239, 68, 68, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: revertAlertSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes revertAlertSlideUp {
+    from {
+        transform: translateY(40px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.revert-alert-icon-wrap {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fca5a5;
+}
+
+.revert-alert-icon {
+    font-size: 22px;
+    color: #dc2626;
+    animation: revertIconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes revertIconPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+.revert-alert-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.revert-alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.revert-alert-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #991b1b;
+    letter-spacing: 0.3px;
+}
+
+.revert-alert-time {
+    font-size: 11px;
+    font-weight: 700;
+    color: #dc2626;
+    background: #fef2f2;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid #fca5a5;
+    white-space: nowrap;
+}
+
+.revert-alert-message {
+    font-size: 13px;
+    color: #1f2937;
+    margin: 0;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.revert-alert-message strong {
+    color: #991b1b;
+}
+
+.revert-alert-close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.revert-alert-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+.revert-alert-close iconify-icon {
+    font-size: 14px;
+}
+
+/* ✅ Progress bar في الأسفل */
+.revert-alert-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ef4444, #fca5a5);
+    border-radius: 0 0 14px 14px;
+    animation: revertAlertProgress 8s linear forwards;
+    z-index: 1;
+}
+
+@keyframes revertAlertProgress {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .revert-alert-wrapper {
+        bottom: 20px;
+        right: 12px;
+        max-width: calc(100% - 24px);
+        left: 12px;
+    }
+    
+    .revert-alert {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+    
+    .revert-alert-icon-wrap {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .revert-alert-icon {
+        font-size: 18px;
+    }
+    
+    .revert-alert-title {
+        font-size: 12px;
+    }
+    
+    .revert-alert-time {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+    
+    .revert-alert-message {
+        font-size: 12px;
+    }
 }
 </style>

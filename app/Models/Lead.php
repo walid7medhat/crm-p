@@ -38,6 +38,7 @@ class Lead extends Model
         'score_breakdown' => 'array',
         'extra_client_requirements' => 'array',
          'whatsapp_qualification' => 'array', 
+           'notification_times_sent' => 'array', 
 
     ];
     protected static function booted()
@@ -298,82 +299,179 @@ public function activitiesWithTrashed()
             return $this->belongsTo(PropertyType::class);
         }
 
-        public function shouldAutoRevert(): bool
-        {
-            if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
-                return false;
-            }
-
-            $hours = $this->stage->revert_after_hours ?? 0;
-
-            if ($hours <= 0) return false;
-
-            return $this->last_stage_change_at
-                ->addHours($hours)
-                ->lessThanOrEqualTo(now());
+          public function getRevertTargetStage()
+    {
+        if ($this->stage && $this->stage->revert_to_stage_id) {
+            return $this->stage->revertToStage;
         }
-        public function getPreviousStage()
-        {
-            return \App\Models\Stage::where('order', '<', $this->stage->order)
-                ->orderBy('order', 'desc')
-                ->first();
+
+        // إذا لم يتم تحديد مرحلة، نرجع المرحلة السابقة (للتوافق القديم)
+        return $this->getPreviousStage();
+    }
+
+    /**
+     * التحقق من الحاجة للرجوع التلقائي
+     */
+    public function shouldAutoRevert(): bool
+    {
+        if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
+            return false;
         }
-        public function revertToPreviousStage(): void
-                {
-                    $previousStage = $this->getPreviousStage();
 
-                    if (!$previousStage) return;
+        $hours = $this->stage->revert_after_hours ?? 0;
 
-                    // ✅ الحالة المهمة
-                    if ($previousStage->order == 1) {
-                        $this->revertToStageOne();
-                        return;
-                    }
+        if ($hours <= 0) return false;
 
-                    // 🔹 باقي الحالات (revert عادي)
-                    $oldStage = $this->stage;
-                    $oldPerson = $this->responsiblePerson;
+        return $this->last_stage_change_at
+            ->addHours($hours)
+            ->lessThanOrEqualTo(now());
+    }
 
-                    $this->updateQuietly([
-                        'stage_id' => $previousStage->id,
-                        'last_stage_change_at' => now(),
-                        'revert' => now(),
-                        'notified_revert' => false,
-                    ]);
+    /**
+     * الحصول على المرحلة السابقة
+     */
+    public function getPreviousStage()
+    {
+        return \App\Models\Stage::where('order', '<', $this->stage->order)
+            ->orderBy('order', 'desc')
+            ->first();
+    }
 
-                    $this->refresh();
+    /**
+     * الرجوع إلى المرحلة المستهدفة
+     */
+    public function revertToPreviousStage(): void
+    {
+        $targetStage = $this->getRevertTargetStage();
 
-                    LeadHistoryHelper::log(
-                        $this->id,
-                        [
-                            'action' => 'revert',
-                            'old_stage' => $oldStage?->name,
-                            'new_stage' => $this->stage?->name,
-                            'old_person_id' => $oldPerson?->id,
-                        ]
-                    );
+        if (!$targetStage) return;
 
-                    $changes = [
-                        'old_stage' => $oldStage?->name,
-                        'new_stage' => $this->stage?->name,
-                        'old_person_id' => $oldPerson?->id,
-                    ];
+        // ✅ إذا كانت المرحلة المستهدفة هي المرحلة الأولى، استخدم المنطق القديم
+        if ($targetStage->order == 1) {
+            $this->revertToStageOne();
+            return;
+        }
 
-                    broadcast(new LeadUpdated($this, 'revert', null, $changes));
+        // 🔹 باقي الحالات (revert عادي)
+        $oldStage = $this->stage;
+        $oldPerson = $this->responsiblePerson;
+
+        $this->updateQuietly([
+            'stage_id' => $targetStage->id,
+            'last_stage_change_at' => now(),
+            'revert' => now(),
+            'notified_revert' => false,
+            'notification_times_sent' => [], // إعادة تعيين الإشعارات المرسلة
+        ]);
+
+        $this->refresh();
+
+        LeadHistoryHelper::log(
+            $this->id,
+            [
+                'action' => 'revert',
+                'old_stage' => $oldStage?->name,
+                'new_stage' => $this->stage?->name,
+                'old_person_id' => $oldPerson?->id,
+                'target_stage_id' => $targetStage->id,
+            ]
+        );
+
+        $changes = [
+            'old_stage' => $oldStage?->name,
+            'new_stage' => $this->stage?->name,
+            'old_person_id' => $oldPerson?->id,
+        ];
+
+        broadcast(new LeadUpdated($this, 'revert', null, $changes));
+    }
+
+    /**
+     * التحقق من الحاجة لإرسال إشعار في وقت محدد
+     */
+    public function shouldSendRevertNotificationAt($minutesBefore): bool
+    {
+        if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
+            return false;
+        }
+
+        $hours = $this->stage->revert_after_hours ?? 0;
+
+        if ($hours <= 0) return false;
+
+        $revertTime = $this->last_stage_change_at->copy()->addHours($hours);
+        $notifyTime = $revertTime->copy()->subMinutes($minutesBefore);
+
+        // التحقق من أن الوقت الحالي هو وقت الإشعار (مع مراعاة التسامح)
+        $now = now();
+        $isNotificationTime = $now->between(
+            $notifyTime->copy()->subMinutes(1),
+            $notifyTime->copy()->addMinutes(15)
+        );
+
+        if (!$isNotificationTime) {
+            return false;
+        }
+
+        // التحقق من عدم إرسال هذا الإشعار مسبقاً
+        $sentTimes = $this->notification_times_sent ?? [];
+        if (in_array($minutesBefore, $sentTimes)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * تسجيل إرسال إشعار
+     */
+    public function markNotificationSent($minutesBefore): void
+    {
+        $sentTimes = $this->notification_times_sent ?? [];
+        if (!in_array($minutesBefore, $sentTimes)) {
+            $sentTimes[] = $minutesBefore;
+            $this->updateQuietly([
+                'notification_times_sent' => $sentTimes
+            ]);
+        }
+    }
+
+    /**
+     * التحقق من وجود إشعارات متبقية
+     */
+    public function hasPendingNotifications(): bool
+    {
+        if (!$this->stage || !$this->stage->auto_revert) {
+            return false;
+        }
+
+        $notificationTimes = $this->stage->notification_times ?? [30, 15, 5];
+        $sentTimes = $this->notification_times_sent ?? [];
+
+        foreach ($notificationTimes as $time) {
+            if (!in_array($time, $sentTimes)) {
+                $revertTime = $this->last_stage_change_at->copy()->addHours($this->stage->revert_after_hours ?? 0);
+                $notifyTime = $revertTime->copy()->subMinutes($time);
+                
+                // إذا كان وقت الإشعار لم يمر بعد
+                if ($notifyTime->greaterThan(now())) {
+                    return true;
                 }
-        public function shouldSendRevertNotification(): bool
-            {
-                if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
-                    return false;
-                }
-
-                $hours = $this->stage->revert_after_hours ?? 0;
-                $notifyBefore = $this->stage->notify_before_minutes ?? 30;
-
-                $revertTime = $this->last_stage_change_at->copy()->addHours($hours);
-                $notifyTime = $revertTime->copy()->subMinutes($notifyBefore);
-
-                return now()->between($notifyTime, $revertTime)
-                    && !$this->notified_revert;
             }
+        }
+
+        return false;
+    }
+
+    /**
+     * الحصول على الرسالة المخصصة للإشعار
+     */
+    public function getRevertNotificationMessage(): ?string
+    {
+        if ($this->stage && $this->stage->revert_notification_message) {
+            return $this->stage->revert_notification_message;
+        }
+
+        return null;
+    }
 }
