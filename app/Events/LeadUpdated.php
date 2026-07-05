@@ -222,6 +222,13 @@ class LeadUpdated implements ShouldBroadcast
         return;
     }
 
+    // Revert moves must reach the responsible agent on Kanban (including sales role).
+    if ($this->actionType === 'revert' && (int) $userId === (int) $this->lead->responsible_person_id) {
+        $channels[] = new PrivateChannel('user.'.$userId);
+
+        return;
+    }
+
     // Admins / super admins must always receive broadcasts (many also have `sales`; Kanban relies on Echo).
     if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
         $channels[] = new PrivateChannel('user.'.$userId);

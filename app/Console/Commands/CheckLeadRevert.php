@@ -150,7 +150,8 @@ class CheckLeadRevert extends Command
                                 $lead,
                                 $minutesBefore,
                                 $targetStage?->name ?? 'previous stage',
-                                $stage->revert_notification_message ?? null
+                                $message,
+                                $users->pluck('id')->map(fn ($id) => (int) $id)->all()
                             ));
                             
                             $this->info("📡 Revert event broadcasted for Lead {$lead->id}");

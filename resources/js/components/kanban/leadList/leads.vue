@@ -2271,13 +2271,7 @@ onMounted(async () => {
     
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
-    setTimeout(() => {
-        initializeLeadUpdates()
-    }, 1000)
-      window.addEventListener('revert-notification', (event) => {
-        console.log('🔔 revert-notification event received:', event.detail)
-        addRevertAlert(event.detail)
-    })
+    initializeLeadUpdates()
 })
 
 onUnmounted(() => {
@@ -2300,6 +2294,37 @@ defineExpose({
 })
 
 // Initialize real-time updates with Echo/Pusher
+/** Normalize revert warning payloads from Pusher (event or Laravel notification broadcast). */
+const parseRevertWarningPayload = (event) => {
+    if (!event || typeof event !== 'object') return null
+
+    const nested = event.data && typeof event.data === 'object' ? event.data : null
+    const root = nested?.action_type === 'revert_warning' ? nested : event
+
+    if (root.action_type !== 'revert_warning') return null
+
+    const leadId = root.lead_id ?? root.lead?.id
+    const leadName = root.lead_name
+        ?? root.lead?.lead_name
+        ?? (root.lead?.lead_number ? `Lead #${root.lead.lead_number}` : null)
+        ?? (leadId ? `Lead #${leadId}` : 'Lead')
+
+    const minutesLeft = root.minutes_left ?? 30
+    const targetStage = root.target_stage ?? 'previous stage'
+
+    return {
+        id: event.id ?? Date.now(),
+        data: {
+            action_type: 'revert_warning',
+            lead_id: leadId,
+            lead_name: leadName,
+            minutes_left: minutesLeft,
+            target_stage: targetStage,
+            message: root.message ?? `Lead ${leadName} will be reverted to ${targetStage} in ${minutesLeft} minutes`,
+        },
+    }
+}
+
 const initializeLeadUpdates = () => {
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || !window.Echo) {
@@ -2314,24 +2339,23 @@ const initializeLeadUpdates = () => {
                console.error('❌ Channel error:', error)
             startPolling()
         })
-            channel.listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (event) => {
-            console.log('🔔 BroadcastNotificationCreated received:', event)
-            
-            // تحقق من نوع الإشعار
-            if (event?.action_type === 'revert_warning') {
-                const notification = {
-                    id: Date.now(),
-                    data: {
-                        action_type: 'revert_warning',
-                        lead_id: event.lead?.id,
-                        lead_name: event.lead?.lead_name || `Lead #${event.lead?.lead_number}`,
-                        minutes_left: event.minutes_left || 30,
-                        target_stage: event.target_stage || 'previous stage',
-                        message: event.message || `Lead will be reverted to ${event.target_stage || 'previous stage'} in ${event.minutes_left || 30} minutes`
-                    }
-                }
-                addRevertAlert(notification)
-            }
+
+        // Dedicated revert-warning event (CheckLeadRevert → LeadReverted)
+        channel.listen('.lead.revert.warning', (event) => {
+            const notification = parseRevertWarningPayload(event)
+            if (notification) addRevertAlert(notification)
+        })
+
+        // Laravel notification broadcast (LeadRevertWarningNotification)
+        channel.listen('.notification.revert.warning', (event) => {
+            const notification = parseRevertWarningPayload(event)
+            if (notification) addRevertAlert(notification)
+        })
+
+        // Legacy notification event name (older Laravel default)
+        channel.listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (event) => {
+            const notification = parseRevertWarningPayload(event)
+            if (notification) addRevertAlert(notification)
         })
        
         channel.listen('.lead.updated', (event) => {
@@ -2369,23 +2393,8 @@ const initializeLeadUpdates = () => {
 }
 // ================= Revert Alert Handler =================
 const handleRevertAlertFromEvent = (event) => {
-    console.log('🔔 handleRevertAlertFromEvent called with:', event)
-    
-    // ✅ بناء كائن الإشعار من الحدث
-    const notification = {
-        id: Date.now(),
-        data: {
-            action_type: 'revert_warning',
-            lead_id: event.lead?.id,
-            lead_name: event.lead?.lead_name || `Lead #${event.lead?.lead_number}`,
-            minutes_left: event.minutes_left || 30,
-            target_stage: event.target_stage || event.lead?.stage || 'previous stage',
-            message: event.message || `Lead will be reverted to ${event.target_stage || 'previous stage'} in ${event.minutes_left || 30} minutes`
-        }
-    }
-    
-    console.log('📨 Adding revert alert:', notification)
-    addRevertAlert(notification)
+    const notification = parseRevertWarningPayload(event)
+    if (notification) addRevertAlert(notification)
 }
 const handleLeadUpdate = (event, eventType = 'unknown') => {
     const payload = normalizeLeadRealtimeEvent(event)
@@ -3844,10 +3853,8 @@ const addRevertAlert = (notification) => {
 
 // الاستماع للإشعارات الجديدة عبر Pusher
 const setupRevertAlertListener  = () => {
-    // الاستماع لإشعارات الـ Revert الجديدة من NotificationBell
     window.addEventListener('revert-notification', (event) => {
-        const notification = event.detail
-        addRevertAlert(notification)
+        handleRevertAlertFromEvent(event.detail)
     })
 }
 

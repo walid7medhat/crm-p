@@ -510,4 +510,12 @@ public function getEmployeeDocumentsAttribute()
     {
         return $this->hasMany(DocumentRequest::class, 'hr_user_id');
     }
+
+    /**
+     * Echo / Pusher private channel (matches `Echo.private('user.{id}')` in the frontend).
+     */
+    public function receivesBroadcastNotificationsOn($notification = null): string
+    {
+        return 'user.'.$this->getKey();
+    }
 }

@@ -30,6 +30,11 @@ class LeadRevertWarningNotification extends Notification implements ShouldQueue
         return ['database', 'broadcast'];
     }
 
+    public function broadcastAs(): string
+    {
+        return 'notification.revert.warning';
+    }
+
     public function toDatabase($notifiable)
     {
         return [

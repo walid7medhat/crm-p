@@ -2,38 +2,68 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use App\Models\Lead;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Lead;
 
-class LeadReverted implements ShouldBroadcast
+class LeadReverted implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $lead;
-    public $minutesLeft;
-    public $targetStage;
-    public $message;
+    public Lead $lead;
 
-    public function __construct(Lead $lead, $minutesLeft, $targetStage, $message = null)
-    {
+    public int $minutesLeft;
+
+    public string $targetStage;
+
+    public ?string $message;
+
+    /** @var list<int> */
+    public array $userIds;
+
+    /**
+     * @param  list<int>  $userIds  Users who should receive the warning (responsible + observers).
+     */
+    public function __construct(
+        Lead $lead,
+        int $minutesLeft,
+        string $targetStage,
+        ?string $message = null,
+        array $userIds = [],
+    ) {
         $this->lead = $lead;
         $this->minutesLeft = $minutesLeft;
         $this->targetStage = $targetStage;
         $this->message = $message ?? "Lead will be reverted to {$targetStage} in {$minutesLeft} minutes";
+        $this->userIds = $userIds;
     }
 
-    public function broadcastOn()
+    /**
+     * @return array<int, \Illuminate\Broadcasting\PrivateChannel>
+     */
+    public function broadcastOn(): array
     {
-        return new PrivateChannel('user.' . $this->lead->responsible_person_id);
+        $ids = $this->userIds !== []
+            ? $this->userIds
+            : array_filter([(int) $this->lead->responsible_person_id]);
+
+        return collect($ids)
+            ->filter()
+            ->unique()
+            ->values()
+            ->map(fn (int $id) => new PrivateChannel('user.'.$id))
+            ->all();
     }
 
-    public function broadcastWith()
+    public function broadcastAs(): string
+    {
+        return 'lead.revert.warning';
+    }
+
+    public function broadcastWith(): array
     {
         return [
             'lead' => [
