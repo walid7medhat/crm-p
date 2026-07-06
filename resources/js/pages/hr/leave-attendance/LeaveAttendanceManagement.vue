@@ -296,6 +296,9 @@ const {
   leaveTypes,
   departments,
   agents,
+   attendanceTotal,
+  attendanceLastPage,
+
   leavePage,
   leaveLastPage,
   calendarMonth,
@@ -308,6 +311,7 @@ const {
   attendanceTrend,
   loadAll,
   loadLeaves,
+  loadAttendance,
   loadAnalytics,
   clearFilters,
 } = useLeaveAttendanceManagement()
@@ -321,35 +325,41 @@ const pagedAttendance = computed(() => {
   return filteredAttendance.value.slice(start, start + attendancePerPage.value)
 })
 
-const attendanceStartEntry = computed(() =>
-  filteredAttendance.value.length ? (attendancePage.value - 1) * attendancePerPage.value + 1 : 0
-)
 
-const attendanceEndEntry = computed(() =>
-  Math.min(attendancePage.value * attendancePerPage.value, filteredAttendance.value.length)
-)
 
 const attendancePaginationItems = computed(() => {
-  const total = attendanceTotalPages.value
-  const current = attendancePage.value
-  if (total <= 1) return [{ type: 'page', n: 1 }]
+  const total = attendanceTotalPages.value;
+  const current = attendancePage.value;
+  
+  if (total <= 1) return [{ type: 'page', n: 1 }];
   if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+    return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }));
   }
-  const items = []
+  
+  const items = [];
   const pushDots = () => {
-    if (items.length && items[items.length - 1].type === 'dots') return
-    items.push({ type: 'dots' })
-  }
-  items.push({ type: 'page', n: 1 })
-  const left = Math.max(2, current - 1)
-  const right = Math.min(total - 1, current + 1)
-  if (left > 2) pushDots()
-  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
-  if (right < total - 1) pushDots()
-  items.push({ type: 'page', n: total })
-  return items
-})
+    if (items.length && items[items.length - 1].type === 'dots') return;
+    items.push({ type: 'dots' });
+  };
+  
+  items.push({ type: 'page', n: 1 });
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+  if (left > 2) pushDots();
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i });
+  if (right < total - 1) pushDots();
+  items.push({ type: 'page', n: total });
+  return items;
+});
+
+const attendanceStartEntry = computed(() => {
+  if (!attendanceTotal.value) return 0;
+  return (attendancePage.value - 1) * attendancePerPage.value + 1;
+});
+
+const attendanceEndEntry = computed(() => {
+  return Math.min(attendancePage.value * attendancePerPage.value, attendanceTotal.value);
+});
 
 watch(filteredAttendance, () => {
   attendancePage.value = 1

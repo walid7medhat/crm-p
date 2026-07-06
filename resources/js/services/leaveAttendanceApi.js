@@ -184,12 +184,23 @@ export async function fetchAttendanceRecords(params = {}) {
     const data = await fetchAttendance(params);
     console.log('📊 Raw data from fetchAttendance:', data);
     
-    const payload = data?.data ?? data;
+    // استخراج البيانات من الهيكل الصحيح
+    let payload = data?.data ?? data;
     console.log('📊 Payload:', payload);
     
+    // ===== التعامل مع Pagination =====
+    // البيانات موجودة في payload.data (المصفوفة)
     let employees = [];
+    let pagination = {
+      currentPage: payload?.current_page || 1,
+      lastPage: payload?.last_page || 1,
+      total: payload?.total || 0,
+      perPage: payload?.per_page || 15,
+    };
     
+    // استخراج المصفوفة من الهيكل الصحيح
     if (payload?.data && Array.isArray(payload.data)) {
+      // هيكل pagination: { current_page: 1, data: [...] }
       employees = payload.data;
       console.log('📊 Found employees in payload.data:', employees.length);
     } else if (payload?.employees && Array.isArray(payload.employees)) {
@@ -205,6 +216,7 @@ export async function fetchAttendanceRecords(params = {}) {
     console.log('📊 Employees array:', employees);
     console.log('📊 Employees count:', employees.length);
     
+    // تطبيع البيانات
     let rows = [];
     if (Array.isArray(employees) && employees.length > 0) {
       rows = employees.map(normalizeAttendanceRow).filter(Boolean);
@@ -213,6 +225,7 @@ export async function fetchAttendanceRecords(params = {}) {
     console.log('📊 Normalized rows:', rows);
     console.log('📊 Rows count:', rows.length);
     
+    // بناء الـ summary من البيانات الفعلية
     const summary = {
       total_employees: rows.length,
       present_today: rows.filter(r => r.status === 'present').length,
@@ -221,11 +234,18 @@ export async function fetchAttendanceRecords(params = {}) {
     };
     
     console.log('📊 Summary:', summary);
+    console.log('📊 Pagination:', pagination);
     
     return {
       summary,
       rows,
       date: payload?.date || params?.date || null,
+      // إضافة معلومات pagination
+      pagination: pagination,
+      currentPage: pagination.currentPage,
+      lastPage: pagination.lastPage,
+      total: pagination.total,
+      perPage: pagination.perPage,
     };
     
   } catch (error) {
@@ -239,6 +259,16 @@ export async function fetchAttendanceRecords(params = {}) {
       },
       rows: [],
       date: params?.date || null,
+      pagination: {
+        currentPage: 1,
+        lastPage: 1,
+        total: 0,
+        perPage: 15,
+      },
+      currentPage: 1,
+      lastPage: 1,
+      total: 0,
+      perPage: 15,
     };
   }
 }

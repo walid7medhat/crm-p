@@ -40,7 +40,9 @@ export function useLeaveAttendanceManagement() {
   const loadingMoreLeaves = ref(false)
   const analyticsData = ref(null)
   const calendarMonth = ref(new Date())
-
+  const attendanceTotal = ref(0);
+  const attendanceLastPage = ref(1);
+  const attendancePerPage = ref(10);
   let searchTimer = null
 
   const activeFilterCount = computed(() =>
@@ -146,6 +148,8 @@ export function useLeaveAttendanceManagement() {
       agents.value = []
     }
   }
+// في useLeaveAttendanceManagement.js
+
 async function loadAttendance() {
   try {
     console.log('📊 [Composable] Loading attendance for date:', selectedDate.value);
@@ -157,9 +161,11 @@ async function loadAttendance() {
     
     console.log('📊 [Composable] LoadAttendance result:', result);
     console.log('📊 [Composable] Rows count:', result.rows?.length);
-    console.log('📊 [Composable] First row:', result.rows?.[0]);
-    console.log('📊 [Composable] Summary:', result.summary);
+    console.log('📊 [Composable] Total from API:', result.total);
+    console.log('📊 [Composable] Last page:', result.lastPage);
+    console.log('📊 [Composable] Current page:', result.currentPage);
     
+    // تعيين البيانات
     attendanceSummary.value = result.summary || {
       total_employees: 0,
       present_today: 0,
@@ -169,8 +175,13 @@ async function loadAttendance() {
     
     attendanceRows.value = result.rows || [];
     
+    // تحديث معلومات pagination
+    attendanceTotal.value = result.total || result.rows?.length || 0;
+    attendanceLastPage.value = result.lastPage || 1;
+    
     console.log('📊 [Composable] Attendance rows set:', attendanceRows.value.length);
-    console.log('📊 [Composable] Attendance summary:', attendanceSummary.value);
+    console.log('📊 [Composable] Total:', attendanceTotal.value);
+    console.log('📊 [Composable] Last page:', attendanceLastPage.value);
     
   } catch (error) {
     console.error('❌ [Composable] Error in loadAttendance:', error);
@@ -181,6 +192,8 @@ async function loadAttendance() {
       absent_today: 0,
       late_today: 0,
     };
+    attendanceTotal.value = 0;
+    attendanceLastPage.value = 1;
   }
 }
 
@@ -232,7 +245,18 @@ async function loadAttendance() {
     searchQuery.value = ''
     loadAll()
   }
-
+  const attendanceTotalPages = computed(() => {
+    if (attendanceLastPage.value > 1) {
+      return attendanceLastPage.value;
+    }
+    return Math.max(1, Math.ceil(attendanceTotal.value / attendancePerPage.value));
+  });
+  
+  
+  const pagedAttendance = computed(() => {
+    return attendanceRows.value;
+  });
+  
   watch(selectedDate, () => loadAttendance())
   watch(searchQuery, () => {
     clearTimeout(searchTimer)
@@ -275,5 +299,8 @@ async function loadAttendance() {
     loadLeaves,
     loadAnalytics,
     clearFilters,
+     attendanceTotal,
+    attendanceLastPage,
+    pagedAttendance,
   }
 }
