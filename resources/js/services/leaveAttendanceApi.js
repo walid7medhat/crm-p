@@ -184,12 +184,10 @@ export async function fetchAttendanceRecords(params = {}) {
     const data = await fetchAttendance(params);
     console.log('📊 Raw data from fetchAttendance:', data);
     
-    // استخراج البيانات من الهيكل الصحيح
-    let payload = data?.data ?? data;
+    const payload = data?.data ?? data;
     console.log('📊 Payload:', payload);
     
-    // ===== التعامل مع Pagination =====
-    // البيانات موجودة في payload.data (المصفوفة)
+    // استخراج البيانات من الهيكل الصحيح
     let employees = [];
     let pagination = {
       currentPage: payload?.current_page || 1,
@@ -198,50 +196,33 @@ export async function fetchAttendanceRecords(params = {}) {
       perPage: payload?.per_page || 15,
     };
     
-    // استخراج المصفوفة من الهيكل الصحيح
+    // محاولة استخراج المصفوفة من عدة أماكن
     if (payload?.data && Array.isArray(payload.data)) {
-      // هيكل pagination: { current_page: 1, data: [...] }
       employees = payload.data;
-      console.log('📊 Found employees in payload.data:', employees.length);
     } else if (payload?.employees && Array.isArray(payload.employees)) {
       employees = payload.employees;
-      console.log('📊 Found employees in payload.employees:', employees.length);
     } else if (Array.isArray(payload)) {
       employees = payload;
-      console.log('📊 Payload is array:', employees.length);
-    } else {
-      console.warn('⚠️ No employees found in payload structure:', Object.keys(payload));
     }
     
-    console.log('📊 Employees array:', employees);
-    console.log('📊 Employees count:', employees.length);
+    console.log('📊 Employees found:', employees.length);
+    console.log('📊 Pagination:', pagination);
     
     // تطبيع البيانات
-    let rows = [];
-    if (Array.isArray(employees) && employees.length > 0) {
-      rows = employees.map(normalizeAttendanceRow).filter(Boolean);
-    }
-    
-    console.log('📊 Normalized rows:', rows);
-    console.log('📊 Rows count:', rows.length);
+    const rows = employees.map(normalizeAttendanceRow).filter(Boolean);
     
     // بناء الـ summary من البيانات الفعلية
-    const summary = {
+    const summary = payload?.summary ?? {
       total_employees: rows.length,
       present_today: rows.filter(r => r.status === 'present').length,
       absent_today: rows.filter(r => r.status === 'absent').length,
       late_today: rows.filter(r => r.status === 'late').length,
     };
     
-    console.log('📊 Summary:', summary);
-    console.log('📊 Pagination:', pagination);
-    
     return {
       summary,
       rows,
       date: payload?.date || params?.date || null,
-      // إضافة معلومات pagination
-      pagination: pagination,
       currentPage: pagination.currentPage,
       lastPage: pagination.lastPage,
       total: pagination.total,
@@ -251,20 +232,9 @@ export async function fetchAttendanceRecords(params = {}) {
   } catch (error) {
     console.error('❌ Error in fetchAttendanceRecords:', error);
     return {
-      summary: {
-        total_employees: 0,
-        present_today: 0,
-        absent_today: 0,
-        late_today: 0,
-      },
+      summary: { total_employees: 0, present_today: 0, absent_today: 0, late_today: 0 },
       rows: [],
       date: params?.date || null,
-      pagination: {
-        currentPage: 1,
-        lastPage: 1,
-        total: 0,
-        perPage: 15,
-      },
       currentPage: 1,
       lastPage: 1,
       total: 0,

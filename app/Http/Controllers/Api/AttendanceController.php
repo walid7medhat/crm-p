@@ -125,6 +125,7 @@ class AttendanceController extends Controller
             'returned_db_count' => $returnedCount,
             'status_filter' => $statusFilter,
         ]);
+    $paginated = $query->orderBy('employee_name')->paginate($perPage, ['*'], 'page', $page);
 
         $normalized = $rows->map(function (Attendance $attendance) {
             $row = [
@@ -163,6 +164,14 @@ class AttendanceController extends Controller
                 'date' => $resolvedDate,
                 'summary' => $summary,
                 'employees' => $normalized,
+                'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
+            'per_page' => $paginated->perPage(),
+            'from' => $paginated->firstItem(),
+            'to' => $paginated->lastItem(),
+            'next_page_url' => $paginated->nextPageUrl(),
+            'prev_page_url' => $paginated->previousPageUrl(),
             ],
         ]);
     }
