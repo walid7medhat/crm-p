@@ -77,14 +77,26 @@ export function formatAttendanceDate(value) {
   if (!value) return '—'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return String(value)
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  // تنسيق التاريخ بصيغة: 02 Jul 2026 (مناسبة للإمارات)
+  return d.toLocaleDateString('en-GB', { 
+    day: '2-digit', 
+    month: 'short', 
+    year: 'numeric',
+    timeZone: 'Asia/Dubai' 
+  })
 }
 
 export function formatAttendanceTime(value) {
   if (!value) return '—'
   const d = new Date(value)
   if (!Number.isNaN(d.getTime())) {
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    // تنسيق الوقت بصيغة 12-hour مع AM/PM (مناسب للإمارات)
+    return d.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true,
+      timeZone: 'Asia/Dubai'
+    })
   }
   const m = String(value).match(/(\d{1,2}):(\d{2})/)
   if (!m) return String(value)
