@@ -282,8 +282,6 @@ const showFilters = ref(false)
 const isMobile = ref(false)
 const localFilters = ref({})
 const loadingMoreLeaves = ref(false)
-const attendancePage = ref(1)
-const attendancePerPage = ref(10)
 const selectedAttendanceIds = ref([])
 
 const {
