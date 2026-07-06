@@ -32,13 +32,13 @@ class Stage extends Model
         $leads= $this->hasMany(Lead::class);
         
              $user=auth()->user();
-             if ($user->hasAnyRole([ 'super_admin'])) {
+             if ($user->hasAnyRole([ 'super_admin']) || $user->id==33 || $user->id 30) {
              }
             elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();
                 
                 $leads = $leads->where(function($query) use ($subordinatesIds, $user) {
-                    $query->whereIn('responsible_person_id',array_merge( $subordinatesIds,$user->id))
+                    $query->whereIn('responsible_person_id',array_merge( $subordinatesIds,[$user->id]))
                           ->orWhereIn('added_by', $subordinatesIds);
                                 });
             }
