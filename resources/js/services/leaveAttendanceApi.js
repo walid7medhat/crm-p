@@ -211,9 +211,9 @@ export async function fetchAttendanceRecords(params = {}) {
     // تطبيع البيانات
     const rows = employees.map(normalizeAttendanceRow).filter(Boolean);
     
-    // بناء الـ summary من البيانات الفعلية
+    // بناء الـ summary
     const summary = payload?.summary ?? {
-      total_employees: rows.length,
+      total_employees: pagination.total || rows.length,
       present_today: rows.filter(r => r.status === 'present').length,
       absent_today: rows.filter(r => r.status === 'absent').length,
       late_today: rows.filter(r => r.status === 'late').length,

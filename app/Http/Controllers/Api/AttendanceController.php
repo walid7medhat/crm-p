@@ -71,110 +71,126 @@ class AttendanceController extends Controller
         return ['api_count' => $apiCount, 'saved_count' => $savedCount];
     }
 
-    private function respondFromDatabase(Request $request, bool $todayOnly): \Illuminate\Http\JsonResponse
-    {
-        $date = $request->query('date');
-        $statusFilter = strtolower((string) $request->query('status', 'all'));
-        $employeeIdFilter = $request->query('employee_id');
+ private function respondFromDatabase(Request $request, bool $todayOnly): \Illuminate\Http\JsonResponse
+{
+    $date = $request->query('date');
+    $statusFilter = strtolower((string) $request->query('status', 'all'));
+    $employeeIdFilter = $request->query('employee_id');
+    $page = (int) $request->query('page', 1);
+    $perPage = (int) $request->query('per_page', 15);
 
-        $defaultDate = Carbon::today('Asia/Dubai')->toDateString();
-        $targetDate = $todayOnly
-            ? ($date ? Carbon::parse($date)->toDateString() : $defaultDate)
-            : ($date ?: $defaultDate);
+    $defaultDate = Carbon::today('Asia/Dubai')->toDateString();
+    $targetDate = $todayOnly
+        ? ($date ? Carbon::parse($date)->toDateString() : $defaultDate)
+        : ($date ?: $defaultDate);
 
-        try {
-            if (Attendance::query()->whereDate('date', $targetDate)->count() === 0) {
-                $sync = $this->syncAttendanceFromApi($targetDate);
-                Log::info('Attendance auto-sync (empty date)', [
-                    'date' => $targetDate,
-                    'api_count' => $sync['api_count'],
-                    'db_saved_count' => $sync['saved_count'],
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Attendance auto-sync failed; serving DB only', [
+    try {
+        if (Attendance::query()->whereDate('date', $targetDate)->count() === 0) {
+            $sync = $this->syncAttendanceFromApi($targetDate);
+            Log::info('Attendance auto-sync (empty date)', [
                 'date' => $targetDate,
-                'error' => $e->getMessage(),
+                'api_count' => $sync['api_count'],
+                'db_saved_count' => $sync['saved_count'],
             ]);
         }
-
-        $query = Attendance::query()
-            ->with([
-                'user:id,name,email',
-                'user.employeeProfile.department',
-                'user.employeeProfile.companyBranch',
-            ])
-            ->whereDate('date', $targetDate);
-
-        if ($employeeIdFilter !== null && $employeeIdFilter !== '') {
-            $norm = Attendance::normalizeEmployeeId((string) $employeeIdFilter);
-            if ($norm) {
-                $query->where('employee_id', $norm);
-            }
-        }
-
-        if (in_array($statusFilter, ['present', 'absent', 'late'], true)) {
-            $query->where('status', $statusFilter);
-        }
-
-        $rows = $query->orderBy('employee_name')->get();
-        $returnedCount = $rows->count();
-
-        Log::info('Attendance GET (database)', [
+    } catch (\Throwable $e) {
+        Log::warning('Attendance auto-sync failed; serving DB only', [
             'date' => $targetDate,
-            'returned_db_count' => $returnedCount,
-            'status_filter' => $statusFilter,
+            'error' => $e->getMessage(),
         ]);
+    }
+
+    $query = Attendance::query()
+        ->with([
+            'user:id,name,email,avatar,status',
+            'user.employeeProfile.department',
+            'user.employeeProfile.companyBranch',
+        ])
+        ->whereDate('date', $targetDate);
+
+    if ($employeeIdFilter !== null && $employeeIdFilter !== '') {
+        $norm = Attendance::normalizeEmployeeId((string) $employeeIdFilter);
+        if ($norm) {
+            $query->where('employee_id', $norm);
+        }
+    }
+
+    if (in_array($statusFilter, ['present', 'absent', 'late'], true)) {
+        $query->where('status', $statusFilter);
+    }
+
+    // ✅ استخدام paginate بدلاً من get
     $paginated = $query->orderBy('employee_name')->paginate($perPage, ['*'], 'page', $page);
+    
+    Log::info('Attendance GET (database)', [
+        'date' => $targetDate,
+        'total' => $paginated->total(),
+        'status_filter' => $statusFilter,
+        'page' => $page,
+        'per_page' => $perPage,
+    ]);
 
-        $normalized = $rows->map(function (Attendance $attendance) {
-            $row = [
-                'employee_id' => $attendance->employee_id,
-                'biometric_code'=>$attendance->user?->biometric_code,
-                'employee_name' => $attendance->employee_name ?? $attendance->user?->name ?? 'Unknown',
-                'status' => $attendance->status ?: $this->resolveStatus([
-                    'status' => null,
-                    'check_in' => $attendance->check_in,
-                ]),
-                'check_in' => $attendance->check_in?->timezone('Asia/Dubai')->toDateTimeString(),
-                'check_out' => $attendance->check_out?->timezone('Asia/Dubai')->toDateTimeString(),
-                'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
-                'department' => $attendance->user?->employeeProfile?->department?->name,
-                'branch' => $attendance->user?->employeeProfile?->companyBranch?->name,
-                'employee_code' => $attendance->user?->employeeProfile?->employee_code ?? $attendance->employee_id,
-                'attendance_type' => $this->resolveAttendanceType($attendance),
-                'email' => $attendance->user?->email,
-            ];
-
-            return $row;
-        })->values();
-
-        $resolvedDate = (string) ($normalized->first()['date'] ?? $targetDate);
-
-        $summary = [
-            'total_employees' => $normalized->count(),
-            'present_today' => $normalized->where('status', 'present')->count(),
-            'absent_today' => $normalized->where('status', 'absent')->count(),
-            'late_today' => $normalized->where('status', 'late')->count(),
+    // ✅ تحويل البيانات
+    $normalized = $paginated->getCollection()->map(function (Attendance $attendance) {
+        return [
+            'id' => $attendance->id,
+            'employee_id' => $attendance->employee_id,
+            'biometric_code' => $attendance->user?->biometric_code,
+            'employee_name' => $attendance->employee_name ?? $attendance->user?->name ?? 'Unknown',
+            'status' => $attendance->status ?: $this->resolveStatus([
+                'status' => null,
+                'check_in' => $attendance->check_in,
+            ]),
+            'check_in' => $attendance->check_in?->timezone('Asia/Dubai')->toDateTimeString(),
+            'check_out' => $attendance->check_out?->timezone('Asia/Dubai')->toDateTimeString(),
+            'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
+            'department' => $attendance->user?->employeeProfile?->department?->name,
+            'branch' => $attendance->user?->employeeProfile?->companyBranch?->name,
+            'employee_code' => $attendance->user?->employeeProfile?->employee_code ?? $attendance->employee_id,
+            'attendance_type' => $this->resolveAttendanceType($attendance),
+            'email' => $attendance->user?->email,
+            'user' => $attendance->user ? [
+                'id' => $attendance->user->id,
+                'name' => $attendance->user->name,
+                'email' => $attendance->user->email,
+                'avatar' => $attendance->user->avatar ?? 'users/user.png',
+                'status' => $attendance->user->status ?? 'active',
+            ] : null,
         ];
+    })->values();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'date' => $resolvedDate,
-                'summary' => $summary,
-                'employees' => $normalized,
-                'current_page' => $paginated->currentPage(),
+    $resolvedDate = (string) ($normalized->first()['date'] ?? $targetDate);
+
+    $summary = [
+        'total_employees' => $paginated->total(),
+        'present_today' => $normalized->where('status', 'present')->count(),
+        'absent_today' => $normalized->where('status', 'absent')->count(),
+        'late_today' => $normalized->where('status', 'late')->count(),
+    ];
+
+    // ✅ إرجاع البيانات مع هيكل pagination متوافق مع الـ Frontend
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'date' => $resolvedDate,
+            'summary' => $summary,
+            'employees' => $normalized,
+            // معلومات pagination
+            'current_page' => $paginated->currentPage(),
             'last_page' => $paginated->lastPage(),
             'total' => $paginated->total(),
             'per_page' => $paginated->perPage(),
             'from' => $paginated->firstItem(),
             'to' => $paginated->lastItem(),
+            'first_page_url' => $paginated->url(1),
+            'last_page_url' => $paginated->url($paginated->lastPage()),
             'next_page_url' => $paginated->nextPageUrl(),
             'prev_page_url' => $paginated->previousPageUrl(),
-            ],
-        ]);
-    }
+            'path' => $paginated->path(),
+            'links' => $paginated->linkCollection()->toArray(),
+        ],
+    ]);
+}
 
     private function resolveAttendanceType(Attendance $attendance): string
     {

@@ -43,6 +43,8 @@ export function useLeaveAttendanceManagement() {
   const attendanceTotal = ref(0);
   const attendanceLastPage = ref(1);
   const attendancePerPage = ref(10);
+    const attendancePage = ref(1)
+
   let searchTimer = null
 
   const activeFilterCount = computed(() =>
@@ -148,8 +150,6 @@ export function useLeaveAttendanceManagement() {
       agents.value = []
     }
   }
-// في useLeaveAttendanceManagement.js
-
 async function loadAttendance() {
   try {
     console.log('📊 [Composable] Loading attendance for date:', selectedDate.value);
@@ -157,6 +157,8 @@ async function loadAttendance() {
     const result = await fetchAttendanceRecords({
       date: selectedDate.value,
       status: filters.value.attendance_status || undefined,
+      page: attendancePage.value, // ✅ إضافة رقم الصفحة
+      per_page: attendancePerPage.value, // ✅ إضافة عدد العناصر في الصفحة
     });
     
     console.log('📊 [Composable] LoadAttendance result:', result);
@@ -262,7 +264,16 @@ async function loadAttendance() {
     clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {}, 200)
   })
+watch(attendancePage, () => {
+  if (!loading.value) {
+    loadAttendance();
+  }
+});
 
+watch(attendancePerPage, () => {
+  attendancePage.value = 1;
+  loadAttendance();
+});
   onMounted(async () => {
     await loadOptions()
     await loadAll()
