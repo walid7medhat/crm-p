@@ -309,7 +309,6 @@ const {
   attendanceTrend,
  attendancePage,
   attendancePerPage,
-  attendanceTotal,
   attendanceTotalPages,
   attendanceStartEntry,
   attendanceEndEntry,
