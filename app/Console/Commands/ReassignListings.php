@@ -9,7 +9,7 @@ use App\Models\Owner;
 
 class ReassignListings extends Command
 {
-    protected $signature = 'data:move-to-agent';
+    protected $signature = 'listing:move-to-agent';
     protected $description = 'Move listings, owners to new agent and deactivate old users';
 
     public function handle()
@@ -25,12 +25,10 @@ class ReassignListings extends Command
             'assigned_by' => 1,
         ]);
 
-        // 2️⃣ نقل الـ owners (direct بدون clone)
         $owners = Owner::whereIn('added_by', $userIds)->update([
             'added_by' => $newAgentId
         ]);
 
-        // 3️⃣ تعطيل المستخدمين
         $users = User::whereIn('id', $userIds)->update([
             'status' => 'in_active'
         ]);
