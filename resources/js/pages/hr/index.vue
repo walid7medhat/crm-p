@@ -5029,30 +5029,29 @@ const fetchAttendanceData = async () => {
     }
     
     const result = await fetchAttendance(params)
-    
-    if (result?.data) {
-      employees.value = result.data.map(row => ({
-        employee_id: row.user_id,
-        employee_name: row.user?.name || 'Unknown',
-        avatar: row.user?.avatar || 'https://i.pravatar.cc/40?img=1',
-        status: row.status || 'present',
-        date: row.date,
-        check_in: row.check_in,
-        check_out: row.check_out,
-        break_label: row.break_duration || row.break_label,
-        ot_label: row.overtime || row.ot_label,
-        attendance_type: row.attendance_type || 'office',
-        department: row.user?.employee_profile?.department?.name || row.department || '—',
-        description: row.description || '—',
-        raw: row,
-        id: row.id,
-        break_minutes: row.break_minutes || null,
-        overtime_minutes: row.overtime_minutes || null,
-      }))
-      
-      if (result.meta || result.pagination) {
-        totalPages.value = result.meta?.last_page || result.pagination?.last_page || 1
-      }
+    const rows = Array.isArray(result?.employees) ? result.employees : []
+
+    employees.value = rows.map((row) => ({
+      employee_id: row.employee_id ?? row.user_id,
+      employee_name: row.employee_name ?? row.user?.name ?? 'Unknown',
+      avatar: row.user?.avatar || row.avatar || 'https://i.pravatar.cc/40?img=1',
+      status: row.status || 'present',
+      date: row.date,
+      check_in: row.check_in,
+      check_out: row.check_out,
+      break_label: row.break_duration || row.break_label,
+      ot_label: row.overtime || row.ot_label,
+      attendance_type: row.attendance_type || 'office',
+      department: row.department ?? row.user?.employee_profile?.department?.name ?? '—',
+      description: row.description || '—',
+      raw: row,
+      id: row.id,
+      break_minutes: row.break_minutes || null,
+      overtime_minutes: row.overtime_minutes || null,
+    }))
+
+    if (result?.meta) {
+      totalPages.value = result.meta.last_page || 1
     }
     
     refreshAttendanceSummaryFromRows()

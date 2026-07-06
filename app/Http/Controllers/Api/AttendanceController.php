@@ -210,76 +210,25 @@ class AttendanceController extends Controller
     {
         try {
             $baseUrl = rtrim((string) env('ATTENDANCE_BASE_URL', 'https://oiahead.fortidyndns.com/api'), '/');
-            $url = $baseUrl . '/attendance/today';
+            $rows = $this->fetchRemoteAttendanceJson($baseUrl . '/attendance/today');
 
-            $response = Http::withBasicAuth(
-                (string) env('ATTENDANCE_BASIC_USER', 'admin'),
-                (string) env('ATTENDANCE_BASIC_PASSWORD', 'admin1234')
-            )
-                ->withHeaders([
-                    'x-api-key' => (string) env('ATTENDANCE_API_KEY', 'zkbio_secure_2026'),
-                    'Accept' => 'application/json',
-                ])
-                ->withoutVerifying()
-                ->timeout(30)
-                ->get($url);
-
-            if (!$response->successful()) {
-                Log::warning('Attendance remote API failed', [
-                    'status' => $response->status(),
-                    'url' => $url,
-                ]);
-
-                return [];
-            }
-
-            $rows = $response->json();
-            if (!is_array($rows)) {
-                return [];
-            }
-
-            $usersByBioCode = User::query()
-                ->whereNotNull('biometric_code')
-                ->with(['employeeProfile.department:id,name'])
-                ->get(['id', 'name', 'email', 'biometric_code'])
-                ->keyBy('biometric_code');
-
-            $safeRows = collect($rows)->filter(fn ($row) => is_array($row))->values();
-            $rowsForDate = $safeRows
+            $rowsForDate = collect($rows)
+                ->filter(fn ($row) => is_array($row))
                 ->filter(fn ($row) => ($row['attendance_date'] ?? null) === $targetDate)
-                ->values();
+                ->values()
+                ->all();
 
-            if ($rowsForDate->isEmpty()) {
-                return [];
+            if ($rowsForDate === []) {
+                $rangeUrl = $baseUrl . '/attendance/range?from=' . urlencode($targetDate) . '&to=' . urlencode($targetDate);
+                $rows = $this->fetchRemoteAttendanceJson($rangeUrl);
+                $rowsForDate = collect($rows)
+                    ->filter(fn ($row) => is_array($row))
+                    ->filter(fn ($row) => ($row['attendance_date'] ?? null) === $targetDate)
+                    ->values()
+                    ->all();
             }
 
-            $mapped = [];
-            foreach ($rowsForDate as $row) {
-                $bioCode = (string) ($row['emp_code'] ?? '');
-                $user = $usersByBioCode->get($bioCode);
-
-                $fallbackName = trim(
-                    (string) ($row['first_name'] ?? '') . ' ' . (string) ($row['last_name'] ?? '')
-                );
-
-                $employeeKey = $user?->biometric_code ?: $bioCode ?: (string) ($user?->id ?? '');
-
-                $mapped[] = [
-                    'employee_key' => $employeeKey,
-                    'employee_id' => $user?->id ?? $bioCode,
-                    'biometric_code'=>$user?->biometric_code,
-                    'user_id' => $user?->id,
-                    'employee_name' => $user?->name ?: ($fallbackName ?: ($bioCode ?: 'Unknown')),
-                    'email' => $user?->email,
-                    'department' => $user?->employeeProfile?->department?->name,
-                    'status' => !empty($row['status']) ? strtolower((string) $row['status']) : null,
-                    'check_in' => $row['first_checkin'] ?? null,
-                    'check_out' => $row['last_checkout'] ?? null,
-                    'date' => $row['attendance_date'] ?? $targetDate,
-                ];
-            }
-
-            return $mapped;
+            return $this->mapRemoteAttendanceRows($rowsForDate, $targetDate);
         } catch (\Throwable $e) {
             Log::warning('Attendance remote API exception', [
                 'error' => $e->getMessage(),
@@ -287,6 +236,82 @@ class AttendanceController extends Controller
 
             return [];
         }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchRemoteAttendanceJson(string $url): array
+    {
+        $response = Http::withBasicAuth(
+            (string) env('ATTENDANCE_BASIC_USER', 'admin'),
+            (string) env('ATTENDANCE_BASIC_PASSWORD', 'admin1234')
+        )
+            ->withHeaders([
+                'x-api-key' => (string) env('ATTENDANCE_API_KEY', 'zkbio_secure_2026'),
+                'Accept' => 'application/json',
+            ])
+            ->withoutVerifying()
+            ->timeout(30)
+            ->get($url);
+
+        if (!$response->successful()) {
+            Log::warning('Attendance remote API failed', [
+                'status' => $response->status(),
+                'url' => $url,
+            ]);
+
+            return [];
+        }
+
+        $rows = $response->json();
+
+        return is_array($rows) ? $rows : [];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rowsForDate
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapRemoteAttendanceRows(array $rowsForDate, string $targetDate): array
+    {
+        if ($rowsForDate === []) {
+            return [];
+        }
+
+        $usersByBioCode = User::query()
+            ->whereNotNull('biometric_code')
+            ->with(['employeeProfile.department:id,name'])
+            ->get(['id', 'name', 'email', 'biometric_code'])
+            ->keyBy('biometric_code');
+
+        $mapped = [];
+        foreach ($rowsForDate as $row) {
+            $bioCode = (string) ($row['emp_code'] ?? '');
+            $user = $usersByBioCode->get($bioCode);
+
+            $fallbackName = trim(
+                (string) ($row['first_name'] ?? '') . ' ' . (string) ($row['last_name'] ?? '')
+            );
+
+            $employeeKey = $user?->biometric_code ?: $bioCode ?: (string) ($user?->id ?? '');
+
+            $mapped[] = [
+                'employee_key' => $employeeKey,
+                'employee_id' => $user?->id ?? $bioCode,
+                'biometric_code' => $user?->biometric_code,
+                'user_id' => $user?->id,
+                'employee_name' => $user?->name ?: ($fallbackName ?: ($bioCode ?: 'Unknown')),
+                'email' => $user?->email,
+                'department' => $user?->employeeProfile?->department?->name,
+                'status' => !empty($row['status']) ? strtolower((string) $row['status']) : null,
+                'check_in' => $row['first_checkin'] ?? null,
+                'check_out' => $row['last_checkout'] ?? null,
+                'date' => $row['attendance_date'] ?? $targetDate,
+            ];
+        }
+
+        return $mapped;
     }
 
     private function parseDateTime(mixed $value): ?Carbon

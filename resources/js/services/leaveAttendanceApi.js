@@ -20,12 +20,9 @@ function unwrapPaginated(payload) {
 
 export function normalizeAttendanceRow(row) {
   if (!row) {
-    console.warn('⚠️ Empty row passed to normalizeAttendanceRow');
     return null;
   }
-  
-  console.log('🔄 Normalizing row:', row);
-  
+
   const checkIn = row.check_in ?? row.first_checkin ?? null;
   const checkOut = row.check_out ?? row.last_checkout ?? null;
   
@@ -58,8 +55,7 @@ export function normalizeAttendanceRow(row) {
     avatar: row.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`,
     raw: row,
   };
-  
-  console.log('✅ Normalized row:', normalized);
+
   return normalized;
 }
 
@@ -177,69 +173,57 @@ export function isEarlyDeparture(checkOut) {
 }
 
 
+function extractAttendanceEmployees(raw) {
+  const payload = raw?.data ?? raw
+
+  if (payload?.employees && Array.isArray(payload.employees)) {
+    return { employees: payload.employees, payload }
+  }
+  if (payload?.data && Array.isArray(payload.data)) {
+    return { employees: payload.data, payload }
+  }
+  if (Array.isArray(payload)) {
+    return { employees: payload, payload: { employees: payload } }
+  }
+  return { employees: [], payload: payload || {} }
+}
+
 export async function fetchAttendanceRecords(params = {}) {
-  try {
-    console.log('📊 fetchAttendanceRecords called with:', params);
-    
-    const data = await fetchAttendance(params);
-    console.log('📊 Raw data from fetchAttendance:', data);
-    
-    const payload = data?.data ?? data;
-    console.log('📊 Payload:', payload);
-    
-    // استخراج البيانات من الهيكل الصحيح
-    let employees = [];
-    let pagination = {
-      currentPage: payload?.current_page || 1,
-      lastPage: payload?.last_page || 1,
-      total: payload?.total || 0,
-      perPage: payload?.per_page || 15,
-    };
-    
-    // محاولة استخراج المصفوفة من عدة أماكن
-    if (payload?.data && Array.isArray(payload.data)) {
-      employees = payload.data;
-    } else if (payload?.employees && Array.isArray(payload.employees)) {
-      employees = payload.employees;
-    } else if (Array.isArray(payload)) {
-      employees = payload;
+  const perPage = 500
+  let page = 1
+  let allEmployees = []
+  let lastPayload = {}
+
+  while (true) {
+    const data = await fetchAttendance({ ...params, per_page: perPage, page })
+    const { employees, payload } = extractAttendanceEmployees(data)
+    lastPayload = payload
+
+    allEmployees = allEmployees.concat(employees)
+
+    const lastPage = Number(payload?.last_page ?? 1)
+    if (page >= lastPage || employees.length === 0) {
+      break
     }
-    
-    console.log('📊 Employees found:', employees.length);
-    console.log('📊 Pagination:', pagination);
-    
-    // تطبيع البيانات
-    const rows = employees.map(normalizeAttendanceRow).filter(Boolean);
-    
-    // بناء الـ summary
-    const summary = payload?.summary ?? {
-      total_employees: pagination.total || rows.length,
-      present_today: rows.filter(r => r.status === 'present').length,
-      absent_today: rows.filter(r => r.status === 'absent').length,
-      late_today: rows.filter(r => r.status === 'late').length,
-    };
-    
-    return {
-      summary,
-      rows,
-      date: payload?.date || params?.date || null,
-      currentPage: pagination.currentPage,
-      lastPage: pagination.lastPage,
-      total: pagination.total,
-      perPage: pagination.perPage,
-    };
-    
-  } catch (error) {
-    console.error('❌ Error in fetchAttendanceRecords:', error);
-    return {
-      summary: { total_employees: 0, present_today: 0, absent_today: 0, late_today: 0 },
-      rows: [],
-      date: params?.date || null,
-      currentPage: 1,
-      lastPage: 1,
-      total: 0,
-      perPage: 15,
-    };
+    page += 1
+  }
+
+  const rows = allEmployees.map(normalizeAttendanceRow).filter(Boolean)
+  const summary = lastPayload?.summary ?? {
+    total_employees: Number(lastPayload?.total) || rows.length,
+    present_today: rows.filter((r) => r.status === 'present').length,
+    absent_today: rows.filter((r) => r.status === 'absent').length,
+    late_today: rows.filter((r) => r.status === 'late').length,
+  }
+
+  return {
+    summary,
+    rows,
+    date: lastPayload?.date || params?.date || null,
+    currentPage: 1,
+    lastPage: 1,
+    total: Number(lastPayload?.total) || rows.length,
+    perPage: rows.length,
   }
 }
 

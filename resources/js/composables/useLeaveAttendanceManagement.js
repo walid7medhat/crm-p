@@ -200,41 +200,20 @@ export function useLeaveAttendanceManagement() {
   }
 
   async function loadAttendance() {
-    try {
-      console.log('📊 [Composable] Loading attendance for date:', selectedDate.value)
-      
-      const result = await fetchAttendanceRecords({
-        date: selectedDate.value,
-        status: filters.value.attendance_status || undefined,
-      })
-      
-      console.log('📊 [Composable] LoadAttendance result:', result)
-      console.log('📊 [Composable] Rows count:', result.rows?.length)
-      
-      attendanceSummary.value = result.summary || {
-        total_employees: 0,
-        present_today: 0,
-        absent_today: 0,
-        late_today: 0,
-      }
-      
-      attendanceRows.value = result.rows || []
-      
-      // ✅ إعادة تعيين الصفحة إلى 1 عند تحميل بيانات جديدة
-      attendancePage.value = 1
-      
-      console.log('📊 [Composable] Attendance rows set:', attendanceRows.value.length)
-      
-    } catch (error) {
-      console.error('❌ [Composable] Error in loadAttendance:', error)
-      attendanceRows.value = []
-      attendanceSummary.value = {
-        total_employees: 0,
-        present_today: 0,
-        absent_today: 0,
-        late_today: 0,
-      }
+    const result = await fetchAttendanceRecords({
+      date: selectedDate.value,
+      status: filters.value.attendance_status || undefined,
+    })
+
+    attendanceSummary.value = result.summary || {
+      total_employees: 0,
+      present_today: 0,
+      absent_today: 0,
+      late_today: 0,
     }
+
+    attendanceRows.value = result.rows || []
+    attendancePage.value = 1
   }
 
   async function loadLeaves(reset = true) {
@@ -288,8 +267,7 @@ export function useLeaveAttendanceManagement() {
 
   // ✅ مراقبة تغيير الصفحة - فقط إعادة حساب الـ Pagination
   watch(attendancePage, () => {
-    // لا نحتاج لإعادة تحميل البيانات، فقط نغير الصفحة المعروضة
-    console.log('📊 Page changed to:', attendancePage.value)
+    // Frontend pagination only; no refetch needed.
   })
 
   watch(attendancePerPage, () => {

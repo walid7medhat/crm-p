@@ -12,10 +12,68 @@ import api from '@/plugins/axios'
  * @param {number} params.per_page - 
  * @param {number} params.page -
  */
+function normalizeAttendanceListResponse(root, params = {}) {
+  const payload = root?.data ?? root
+
+  if (payload?.employees && Array.isArray(payload.employees)) {
+    return {
+      employees: payload.employees,
+      summary: payload.summary ?? null,
+      date: payload.date ?? params.date ?? null,
+      meta: {
+        current_page: payload.current_page ?? 1,
+        last_page: payload.last_page ?? 1,
+        total: payload.total ?? payload.employees.length,
+        per_page: payload.per_page ?? payload.employees.length,
+      },
+    }
+  }
+
+  if (payload?.data && Array.isArray(payload.data)) {
+    return {
+      employees: payload.data,
+      summary: payload.summary ?? null,
+      date: payload.date ?? params.date ?? null,
+      meta: {
+        current_page: payload.current_page ?? 1,
+        last_page: payload.last_page ?? 1,
+        total: payload.total ?? payload.data.length,
+        per_page: payload.per_page ?? payload.data.length,
+      },
+    }
+  }
+
+  if (Array.isArray(payload)) {
+    return {
+      employees: payload,
+      summary: null,
+      date: params.date ?? null,
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        total: payload.length,
+        per_page: payload.length,
+      },
+    }
+  }
+
+  return {
+    employees: [],
+    summary: payload?.summary ?? null,
+    date: payload?.date ?? params.date ?? null,
+    meta: {
+      current_page: 1,
+      last_page: 1,
+      total: 0,
+      per_page: params.per_page ?? 15,
+    },
+  }
+}
+
 export const fetchAttendance = async (params = {}) => {
   try {
     const response = await api.get('/attendance', { params })
-    return response.data.data || response.data || []
+    return normalizeAttendanceListResponse(response.data, params)
   } catch (error) {
     console.error('Error fetching attendance:', error)
     throw error

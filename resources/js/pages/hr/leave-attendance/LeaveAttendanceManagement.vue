@@ -294,9 +294,7 @@ const {
   leaveTypes,
   departments,
   agents,
-   attendanceTotal,
-  attendanceLastPage,
-
+  attendanceTotal,
   leavePage,
   leaveLastPage,
   calendarMonth,
