@@ -14,8 +14,30 @@ export async function fetchAttendanceToday(params = {}) {
 }
 
 export async function fetchAttendance(params = {}) {
-  const { data } = await api.get('/attendance', { params })
-  return data
+  try {
+    console.log('🔄 Fetching attendance with params:', params);
+    
+    const response = await api.get('/attendance', { params });
+    console.log('✅ Attendance API response:', response);
+    
+    if (response.status !== 200) {
+      throw new Error(`API returned status ${response.status}`);
+    }
+    
+    if (!response.data) {
+      throw new Error('No data in response');
+    }
+    
+    if (response.data?.success === false) {
+      throw new Error(response.data.message || 'API returned error');
+    }
+    
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ Error in fetchAttendance:', error);
+    throw error;
+  }
 }
 
 export async function fetchLeadTotalCount() {

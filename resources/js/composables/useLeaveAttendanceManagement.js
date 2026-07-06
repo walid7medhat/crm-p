@@ -146,15 +146,43 @@ export function useLeaveAttendanceManagement() {
       agents.value = []
     }
   }
-
-  async function loadAttendance() {
+async function loadAttendance() {
+  try {
+    console.log('📊 [Composable] Loading attendance for date:', selectedDate.value);
+    
     const result = await fetchAttendanceRecords({
       date: selectedDate.value,
       status: filters.value.attendance_status || undefined,
-    })
-    attendanceSummary.value = result.summary || {}
-    attendanceRows.value = result.rows
+    });
+    
+    console.log('📊 [Composable] LoadAttendance result:', result);
+    console.log('📊 [Composable] Rows count:', result.rows?.length);
+    console.log('📊 [Composable] First row:', result.rows?.[0]);
+    console.log('📊 [Composable] Summary:', result.summary);
+    
+    attendanceSummary.value = result.summary || {
+      total_employees: 0,
+      present_today: 0,
+      absent_today: 0,
+      late_today: 0,
+    };
+    
+    attendanceRows.value = result.rows || [];
+    
+    console.log('📊 [Composable] Attendance rows set:', attendanceRows.value.length);
+    console.log('📊 [Composable] Attendance summary:', attendanceSummary.value);
+    
+  } catch (error) {
+    console.error('❌ [Composable] Error in loadAttendance:', error);
+    attendanceRows.value = [];
+    attendanceSummary.value = {
+      total_employees: 0,
+      present_today: 0,
+      absent_today: 0,
+      late_today: 0,
+    };
   }
+}
 
   async function loadLeaves(reset = true) {
     const page = reset ? 1 : leavePage.value + 1

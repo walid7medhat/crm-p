@@ -17,29 +17,50 @@ function unwrapPaginated(payload) {
   return { items: [], currentPage: 1, lastPage: 1, total: 0 }
 }
 
+
 export function normalizeAttendanceRow(row) {
-  if (!row) return null
-  const checkIn = row.check_in ?? row.first_checkin ?? null
-  const checkOut = row.check_out ?? row.last_checkout ?? null
-  const empCode = row.employee_code ?? row.biometric_code ?? row.emp_code ?? row.employee_id
-  return {
-    id: row.employee_id ?? row.user_id ?? row.id,
-    employeeId: row.employee_id ?? row.biometric_code ?? row.emp_code,
+  if (!row) {
+    console.warn('⚠️ Empty row passed to normalizeAttendanceRow');
+    return null;
+  }
+  
+  console.log('🔄 Normalizing row:', row);
+  
+  const checkIn = row.check_in ?? row.first_checkin ?? null;
+  const checkOut = row.check_out ?? row.last_checkout ?? null;
+  
+  const employeeId = row.employee_id ?? row.user_id ?? row.id;
+  const empCode = row.employee_code ?? row.biometric_code ?? row.emp_code ?? employeeId;
+  
+  const name = row.employee_name ?? row.name ?? row.user?.name ?? 'Unknown';
+  
+  const status = (row.status || 'absent').toLowerCase();
+  
+  const department = row.department ?? row.department_name ?? row.user?.employee_profile?.department?.name ?? '—';
+  
+  const branch = row.branch || row.branch_name || row.user?.employee_profile?.branch?.name || department;
+  
+  const normalized = {
+    id: employeeId,
+    employeeId: employeeId,
     empCode: empCode ? `ID : #${String(empCode).replace(/^#/, '')}` : '—',
-    name: row.employee_name ?? row.name ?? 'Unknown',
-    department: row.department ?? '—',
-    branch: row.branch || row.department || '—',
-    attendanceType: row.attendance_type || mapAttendanceType(row.status),
-    email: row.email ?? '',
-    status: (row.status || 'absent').toLowerCase(),
-    checkIn,
-    checkOut,
+    name: name,
+    department: department,
+    branch: branch,
+    attendanceType: row.attendance_type || mapAttendanceType(status),
+    email: row.email ?? row.user?.email ?? '',
+    status: status,
+    checkIn: checkIn,
+    checkOut: checkOut,
     workingHours: calcWorkingHours(checkIn, checkOut),
     overtimeHours: formatOt(row.overtime_minutes ?? row.ot_minutes),
     date: row.date ?? row.attendance_date,
-    avatar: row.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(row.employee_name || 'E')}&background=733e87&color=fff`,
+    avatar: row.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`,
     raw: row,
-  }
+  };
+  
+  console.log('✅ Normalized row:', normalized);
+  return normalized;
 }
 
 function mapAttendanceType(status) {
@@ -143,12 +164,71 @@ export function isEarlyDeparture(checkOut) {
   return mins < 17 * 60
 }
 
+
 export async function fetchAttendanceRecords(params = {}) {
-  const data = await fetchAttendance(params)
-  const payload = data?.data ?? data
-  const summary = payload?.summary ?? {}
-  const rows = (payload?.employees ?? []).map(normalizeAttendanceRow).filter(Boolean)
-  return { summary, rows, date: payload?.date }
+  try {
+    console.log('📊 fetchAttendanceRecords called with:', params);
+    
+    const data = await fetchAttendance(params);
+    console.log('📊 Raw data from fetchAttendance:', data);
+    
+    const payload = data?.data ?? data;
+    console.log('📊 Payload:', payload);
+    
+    let employees = [];
+    
+    if (payload?.data && Array.isArray(payload.data)) {
+      employees = payload.data;
+      console.log('📊 Found employees in payload.data:', employees.length);
+    } else if (payload?.employees && Array.isArray(payload.employees)) {
+      employees = payload.employees;
+      console.log('📊 Found employees in payload.employees:', employees.length);
+    } else if (Array.isArray(payload)) {
+      employees = payload;
+      console.log('📊 Payload is array:', employees.length);
+    } else {
+      console.warn('⚠️ No employees found in payload structure:', Object.keys(payload));
+    }
+    
+    console.log('📊 Employees array:', employees);
+    console.log('📊 Employees count:', employees.length);
+    
+    let rows = [];
+    if (Array.isArray(employees) && employees.length > 0) {
+      rows = employees.map(normalizeAttendanceRow).filter(Boolean);
+    }
+    
+    console.log('📊 Normalized rows:', rows);
+    console.log('📊 Rows count:', rows.length);
+    
+    const summary = {
+      total_employees: rows.length,
+      present_today: rows.filter(r => r.status === 'present').length,
+      absent_today: rows.filter(r => r.status === 'absent').length,
+      late_today: rows.filter(r => r.status === 'late').length,
+    };
+    
+    console.log('📊 Summary:', summary);
+    
+    return {
+      summary,
+      rows,
+      date: payload?.date || params?.date || null,
+    };
+    
+  } catch (error) {
+    console.error('❌ Error in fetchAttendanceRecords:', error);
+    return {
+      summary: {
+        total_employees: 0,
+        present_today: 0,
+        absent_today: 0,
+        late_today: 0,
+      },
+      rows: [],
+      date: params?.date || null,
+    };
+  }
 }
 
 export async function fetchLeaveRequests(params = {}) {
