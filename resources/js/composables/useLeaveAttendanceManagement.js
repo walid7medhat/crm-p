@@ -1,3 +1,5 @@
+// في useLeaveAttendanceManagement.js
+
 import { ref, computed, watch, onMounted } from 'vue'
 import {
   fetchAttendanceRecords,
@@ -40,11 +42,11 @@ export function useLeaveAttendanceManagement() {
   const loadingMoreLeaves = ref(false)
   const analyticsData = ref(null)
   const calendarMonth = ref(new Date())
-  const attendanceTotal = ref(0);
-  const attendanceLastPage = ref(1);
-  const attendancePerPage = ref(10);
-    const attendancePage = ref(1)
-
+  
+  // ✅ Pagination variables (للـ Frontend فقط)
+  const attendancePage = ref(1)
+  const attendancePerPage = ref(10)
+  
   let searchTimer = null
 
   const activeFilterCount = computed(() =>
@@ -90,21 +92,67 @@ export function useLeaveAttendanceManagement() {
     return fields.some((f) => String(f || '').toLowerCase().includes(q))
   }
 
+  // ✅ filteredAttendance - كل البيانات بعد التصفية
   const filteredAttendance = computed(() =>
     attendanceRows.value.filter((row) => {
       if (!matchesSearch(row, [row.name, row.employeeId, row.department, row.branch, row.empCode])) return false
       if (filters.value.department && row.department !== filters.value.department) return false
       if (filters.value.attendance_status && row.status !== filters.value.attendance_status) return false
-      if (filters.value.manager_id) {
-        const agent = agents.value.find((a) => String(a.id) === String(filters.value.manager_id))
-        const teamIds = agents.value.filter((a) => String(a.parent_id) === String(filters.value.manager_id)).map((a) => a.id)
-        if (agent && !teamIds.includes(row.raw?.user_id) && String(row.id) !== String(agent.id)) {
-          // loose match by name in department
-        }
-      }
       return true
     })
   )
+
+  // ✅ pagedAttendance - البيانات المقسمة حسب الصفحة
+  const pagedAttendance = computed(() => {
+    const start = (attendancePage.value - 1) * attendancePerPage.value
+    const end = start + attendancePerPage.value
+    return filteredAttendance.value.slice(start, end)
+  })
+
+  // ✅ attendanceTotal - إجمالي عدد السجلات بعد التصفية
+  const attendanceTotal = computed(() => filteredAttendance.value.length)
+
+  // ✅ attendanceTotalPages - عدد الصفحات
+  const attendanceTotalPages = computed(() => {
+    return Math.max(1, Math.ceil(attendanceTotal.value / attendancePerPage.value))
+  })
+
+  // ✅ attendanceStartEntry - أول عنصر في الصفحة
+  const attendanceStartEntry = computed(() => {
+    if (!attendanceTotal.value) return 0
+    return (attendancePage.value - 1) * attendancePerPage.value + 1
+  })
+
+  // ✅ attendanceEndEntry - آخر عنصر في الصفحة
+  const attendanceEndEntry = computed(() => {
+    return Math.min(attendancePage.value * attendancePerPage.value, attendanceTotal.value)
+  })
+
+  // ✅ attendancePaginationItems - عناصر الـ Pagination
+  const attendancePaginationItems = computed(() => {
+    const total = attendanceTotalPages.value
+    const current = attendancePage.value
+    
+    if (total <= 1) return [{ type: 'page', n: 1 }]
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+    }
+    
+    const items = []
+    const pushDots = () => {
+      if (items.length && items[items.length - 1].type === 'dots') return
+      items.push({ type: 'dots' })
+    }
+    
+    items.push({ type: 'page', n: 1 })
+    const left = Math.max(2, current - 1)
+    const right = Math.min(total - 1, current + 1)
+    if (left > 2) pushDots()
+    for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+    if (right < total - 1) pushDots()
+    items.push({ type: 'page', n: total })
+    return items
+  })
 
   const filteredLeaves = computed(() =>
     leaveRows.value.filter((row) => {
@@ -150,54 +198,44 @@ export function useLeaveAttendanceManagement() {
       agents.value = []
     }
   }
-async function loadAttendance() {
-  try {
-    console.log('📊 [Composable] Loading attendance for date:', selectedDate.value);
-    
-    const result = await fetchAttendanceRecords({
-      date: selectedDate.value,
-      status: filters.value.attendance_status || undefined,
-      page: attendancePage.value, // ✅ إضافة رقم الصفحة
-      per_page: attendancePerPage.value, // ✅ إضافة عدد العناصر في الصفحة
-    });
-    
-    console.log('📊 [Composable] LoadAttendance result:', result);
-    console.log('📊 [Composable] Rows count:', result.rows?.length);
-    console.log('📊 [Composable] Total from API:', result.total);
-    console.log('📊 [Composable] Last page:', result.lastPage);
-    console.log('📊 [Composable] Current page:', result.currentPage);
-    
-    // تعيين البيانات
-    attendanceSummary.value = result.summary || {
-      total_employees: 0,
-      present_today: 0,
-      absent_today: 0,
-      late_today: 0,
-    };
-    
-    attendanceRows.value = result.rows || [];
-    
-    // تحديث معلومات pagination
-    attendanceTotal.value = result.total || result.rows?.length || 0;
-    attendanceLastPage.value = result.lastPage || 1;
-    
-    console.log('📊 [Composable] Attendance rows set:', attendanceRows.value.length);
-    console.log('📊 [Composable] Total:', attendanceTotal.value);
-    console.log('📊 [Composable] Last page:', attendanceLastPage.value);
-    
-  } catch (error) {
-    console.error('❌ [Composable] Error in loadAttendance:', error);
-    attendanceRows.value = [];
-    attendanceSummary.value = {
-      total_employees: 0,
-      present_today: 0,
-      absent_today: 0,
-      late_today: 0,
-    };
-    attendanceTotal.value = 0;
-    attendanceLastPage.value = 1;
+
+  async function loadAttendance() {
+    try {
+      console.log('📊 [Composable] Loading attendance for date:', selectedDate.value)
+      
+      const result = await fetchAttendanceRecords({
+        date: selectedDate.value,
+        status: filters.value.attendance_status || undefined,
+      })
+      
+      console.log('📊 [Composable] LoadAttendance result:', result)
+      console.log('📊 [Composable] Rows count:', result.rows?.length)
+      
+      attendanceSummary.value = result.summary || {
+        total_employees: 0,
+        present_today: 0,
+        absent_today: 0,
+        late_today: 0,
+      }
+      
+      attendanceRows.value = result.rows || []
+      
+      // ✅ إعادة تعيين الصفحة إلى 1 عند تحميل بيانات جديدة
+      attendancePage.value = 1
+      
+      console.log('📊 [Composable] Attendance rows set:', attendanceRows.value.length)
+      
+    } catch (error) {
+      console.error('❌ [Composable] Error in loadAttendance:', error)
+      attendanceRows.value = []
+      attendanceSummary.value = {
+        total_employees: 0,
+        present_today: 0,
+        absent_today: 0,
+        late_today: 0,
+      }
+    }
   }
-}
 
   async function loadLeaves(reset = true) {
     const page = reset ? 1 : leavePage.value + 1
@@ -247,39 +285,36 @@ async function loadAttendance() {
     searchQuery.value = ''
     loadAll()
   }
-  const attendanceTotalPages = computed(() => {
-    if (attendanceLastPage.value > 1) {
-      return attendanceLastPage.value;
-    }
-    return Math.max(1, Math.ceil(attendanceTotal.value / attendancePerPage.value));
-  });
-  
-  
-  const pagedAttendance = computed(() => {
-    return attendanceRows.value;
-  });
-  
-  watch(selectedDate, () => loadAttendance())
+
+  // ✅ مراقبة تغيير الصفحة - فقط إعادة حساب الـ Pagination
+  watch(attendancePage, () => {
+    // لا نحتاج لإعادة تحميل البيانات، فقط نغير الصفحة المعروضة
+    console.log('📊 Page changed to:', attendancePage.value)
+  })
+
+  watch(attendancePerPage, () => {
+    attendancePage.value = 1
+  })
+
+  watch(selectedDate, () => {
+    attendancePage.value = 1
+    loadAttendance()
+  })
+
   watch(searchQuery, () => {
     clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => {}, 200)
+    searchTimer = setTimeout(() => {
+      attendancePage.value = 1
+    }, 200)
   })
-watch(attendancePage, () => {
-  if (!loading.value) {
-    loadAttendance();
-  }
-});
 
-watch(attendancePerPage, () => {
-  attendancePage.value = 1;
-  loadAttendance();
-});
   onMounted(async () => {
     await loadOptions()
     await loadAll()
   })
 
   return {
+    // المتغيرات الأساسية
     loading,
     error,
     searchQuery,
@@ -305,13 +340,22 @@ watch(attendancePerPage, () => {
     filteredLeaves,
     leaveTrend,
     attendanceTrend,
+    
+    // ✅ متغيرات Pagination
+    attendancePage,
+    attendancePerPage,
+    attendanceTotal,
+    attendanceTotalPages,
+    attendanceStartEntry,
+    attendanceEndEntry,
+    attendancePaginationItems,
+    pagedAttendance,
+    
+    // الدوال
     loadAll,
     loadAttendance,
     loadLeaves,
     loadAnalytics,
     clearFilters,
-     attendanceTotal,
-    attendanceLastPage,
-    pagedAttendance,
   }
 }
