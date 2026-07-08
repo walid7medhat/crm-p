@@ -6,7 +6,7 @@ const getApiBaseUrl = () =>
   import.meta.env.VITE_API_BASE_URL ||
   'http://127.0.0.1:8001/api'
 
-const resolveAuthToken = () => {
+export function resolveAuthToken() {
   let token =
     localStorage.getItem('token') ||
     localStorage.getItem('access_token') ||
@@ -16,13 +16,43 @@ const resolveAuthToken = () => {
     const cookies = document.cookie.split('; ')
     const tokenCookie = cookies.find((row) => row.startsWith('token='))
     const accessTokenCookie = cookies.find((row) => row.startsWith('access_token='))
-    token = tokenCookie?.split('=')[1] || accessTokenCookie?.split('=')[1]
+    const raw = tokenCookie?.split('=').slice(1).join('=') || accessTokenCookie?.split('=').slice(1).join('=')
+    token = raw ? decodeURIComponent(raw) : null
   }
 
-  return token || null
+  return token?.trim() || null
+}
+
+export function setAuthToken(token) {
+  if (!token) return
+  const value = String(token).trim()
+  localStorage.setItem('token', value)
+  sessionStorage.setItem('token', value)
+}
+
+export function clearAuthToken() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('access_token')
+  sessionStorage.removeItem('token')
 }
 
 let handlingUnauthorized = false
+
+function requestHadAuthHeader(config) {
+  const headers = config?.headers || {}
+  const auth = headers.Authorization || headers.authorization || headers.get?.('Authorization')
+  return Boolean(auth && String(auth).startsWith('Bearer '))
+}
+
+function isAuthEndpoint(url = '') {
+  const path = String(url)
+  return (
+    path.includes('/auth/login') ||
+    path.includes('/auth/register') ||
+    path.includes('/auth/forgot') ||
+    path.includes('/auth/reset')
+  )
+}
 
 async function handleUnauthorized(error) {
   if (handlingUnauthorized) return Promise.reject(error)
@@ -50,38 +80,57 @@ async function handleUnauthorized(error) {
   return Promise.reject(error)
 }
 
+function attachAuthInterceptor(client) {
+  client.interceptors.request.use((config) => {
+    const token = resolveAuthToken()
+    if (token) {
+      config.headers = config.headers || {}
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  })
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      const status = error.response?.status
+      const url = error.config?.url || ''
+
+      if (status === 401 && !isAuthEndpoint(url)) {
+        const sentToken = requestHadAuthHeader(error.config)
+        const storedToken = resolveAuthToken()
+
+        // Only force re-login when a token was actually sent but rejected.
+        if (sentToken && storedToken) {
+          return handleUnauthorized(error)
+        }
+      }
+
+      return Promise.reject(error)
+    }
+  )
+}
+
 const api = axios.create({
   baseURL: getApiBaseUrl(),
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
 })
 
-api.interceptors.request.use((config) => {
-  const token = resolveAuthToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+attachAuthInterceptor(api)
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      return handleUnauthorized(error)
-    }
-    return Promise.reject(error)
-  }
-)
+// Keep the default axios singleton in sync for legacy `import axios from 'axios'`.
+axios.defaults.baseURL = getApiBaseUrl()
+axios.defaults.headers.common['Accept'] = 'application/json'
+axios.defaults.headers.common['Content-Type'] = 'application/json'
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
+attachAuthInterceptor(axios)
 
 export function getApiErrorMessage(error, fallback = 'Request failed') {
-  return (
-    error?.response?.data?.message ||
-    error?.message ||
-    fallback
-  )
+  return error?.response?.data?.message || error?.message || fallback
 }
 
 export default api

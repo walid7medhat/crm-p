@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import api from '@/plugins/axios';
+import api, { setAuthToken } from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 
@@ -237,10 +237,10 @@ export default {
           longitude: coords?.longitude ?? null,
         });
 
-        const token = response.data.data.token;
+        const token = response.data?.data?.token;
 
         if (token) {
-          localStorage.setItem('token', token);
+          setAuthToken(token);
 
           const userData = response.data.data.user;
 
