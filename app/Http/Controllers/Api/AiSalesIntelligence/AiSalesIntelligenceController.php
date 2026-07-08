@@ -17,15 +17,37 @@ use App\Services\AiSalesIntelligence\AiOrchestrator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class AiSalesIntelligenceController extends Controller
 {
+    private const REQUIRED_TABLES = [
+        'ai_agent_metrics',
+        'ai_agent_rankings',
+        'ai_agent_alerts',
+        'ai_scoring_rules',
+        'ai_sales_intelligence_settings',
+    ];
+
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
             if (!$user || !$user->hasRole('super_admin')) {
                 return ApiResponse::error('Forbidden', 403);
+            }
+
+            $missing = array_values(array_filter(
+                self::REQUIRED_TABLES,
+                fn (string $table) => !Schema::hasTable($table)
+            ));
+
+            if ($missing !== []) {
+                return ApiResponse::error(
+                    'AI Sales Intelligence database tables are missing. Run: php artisan migrate --force',
+                    503,
+                    ['missing_tables' => $missing]
+                );
             }
 
             return $next($request);
