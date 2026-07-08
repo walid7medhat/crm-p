@@ -453,6 +453,7 @@ Route::middleware('jwt.auth')->group(function () {
 
     Route::prefix('ai-sales-intelligence')->group(function () {
         Route::get('/dashboard', [AiSalesIntelligenceController::class, 'dashboard']);
+        Route::get('/status', [AiSalesIntelligenceController::class, 'status']);
         Route::get('/agents', [AiSalesIntelligenceController::class, 'agents']);
         Route::get('/agents/options', [AiSalesIntelligenceController::class, 'agentOptions']);
         Route::get('/agents/{user}', [AiSalesIntelligenceController::class, 'show']);

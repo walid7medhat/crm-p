@@ -47,6 +47,11 @@
       </nav>
     </header>
 
+    <div v-if="bootstrapBanner" class="asi-toast asi-toast--info">
+      <Icon icon="lucide:loader-2" :class="{ spin: bootstrap?.status === 'running' }" />
+      {{ bootstrapBanner }}
+    </div>
+
     <!-- Toasts -->
     <div v-if="error" class="asi-toast asi-toast--error">
       <Icon icon="lucide:alert-circle" />
@@ -121,9 +126,18 @@
               </button>
               <p v-if="!filteredAgents.length" class="asi-empty">
                 <Icon icon="lucide:inbox" />
-                No agents match. Run recalculate to populate scores.
+                {{ bootstrap?.status === 'running' ? 'Scanning all agents and leads… scores will appear shortly.' : 'No agents match. Run recalculate to populate scores.' }}
               </p>
             </div>
+            <footer v-if="agentsMeta.last_page > 1" class="asi-pagination">
+              <button type="button" class="asi-pagination__btn" :disabled="agentsPage <= 1 || loading" @click="goAgentsPage(agentsPage - 1)">
+                Previous
+              </button>
+              <span>Page {{ agentsMeta.current_page || agentsPage }} of {{ agentsMeta.last_page || 1 }} · {{ agentsMeta.total || 0 }} agents</span>
+              <button type="button" class="asi-pagination__btn" :disabled="agentsPage >= (agentsMeta.last_page || 1) || loading" @click="goAgentsPage(agentsPage + 1)">
+                Next
+              </button>
+            </footer>
           </section>
 
           <!-- Rankings + Alerts sidebar -->
@@ -185,7 +199,7 @@
       <template v-else-if="activeTab === 'agents'">
         <section class="asi-card">
           <header class="asi-card__head">
-            <h2><Icon icon="lucide:users" /> All agents ({{ filteredAgents.length }})</h2>
+            <h2><Icon icon="lucide:users" /> All agents ({{ agentsMeta.total || filteredAgents.length }})</h2>
             <div class="asi-filters">
               <button
                 v-for="f in statusFilters"
@@ -225,6 +239,15 @@
               </div>
             </button>
           </div>
+          <footer v-if="agentsMeta.last_page > 1" class="asi-pagination">
+            <button type="button" class="asi-pagination__btn" :disabled="agentsPage <= 1 || loading" @click="goAgentsPage(agentsPage - 1)">
+              Previous
+            </button>
+            <span>Page {{ agentsMeta.current_page || agentsPage }} of {{ agentsMeta.last_page || 1 }}</span>
+            <button type="button" class="asi-pagination__btn" :disabled="agentsPage >= (agentsMeta.last_page || 1) || loading" @click="goAgentsPage(agentsPage + 1)">
+              Next
+            </button>
+          </footer>
         </section>
       </template>
 
@@ -283,7 +306,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { aiSalesIntelligenceApi } from '@/services/aiSalesIntelligenceApi'
 import AsiScoringPanel from './components/AsiScoringPanel.vue'
@@ -299,6 +322,12 @@ const dashboard = ref(null)
 const scoringRules = ref([])
 const agentSearch = ref('')
 const statusFilter = ref('all')
+const agentsPage = ref(1)
+const agentsPerPage = ref(15)
+const agentsMeta = ref({ current_page: 1, last_page: 1, per_page: 15, total: 0 })
+const bootstrap = ref(null)
+let pollTimer = null
+let searchTimer = null
 
 const selectedAgentId = ref('')
 const drawerOpen = ref(false)
@@ -308,7 +337,7 @@ const drawerLoading = ref(false)
 
 const tabs = computed(() => [
   { id: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },
-  { id: 'agents', label: 'Agents', icon: 'lucide:users', badge: agentsList.value.length || null },
+  { id: 'agents', label: 'Agents', icon: 'lucide:users', badge: agentsMeta.value.total || agentsList.value.length || null },
   { id: 'scoring', label: 'Scoring model', icon: 'lucide:sliders-horizontal' },
   { id: 'alerts', label: 'Alerts', icon: 'lucide:bell', badge: alertsList.value.length || null },
 ])
@@ -322,25 +351,31 @@ const statusFilters = [
 ]
 
 const summary = computed(() => dashboard.value?.summary || {})
-const agentsList = computed(() => {
-  const agents = dashboard.value?.agents || []
-  return Array.isArray(agents) ? agents : agents.data || []
-})
+const agentsList = computed(() => dashboard.value?.agents?.data || [])
 const rankings = computed(() => dashboard.value?.rankings || [])
 const alertsList = computed(() => dashboard.value?.alerts || [])
 const topRankings = computed(() => rankings.value.slice(0, 8))
 
-const filteredAgents = computed(() => {
-  let list = [...agentsList.value]
-  const q = agentSearch.value.trim().toLowerCase()
-  if (q) {
-    list = list.filter((a) => (a.user?.name || '').toLowerCase().includes(q))
+const bootstrapBanner = computed(() => {
+  const b = bootstrap.value
+  if (!b) return ''
+  if (b.status === 'running') {
+    const done = b.completed ?? b.agents_scored ?? 0
+    const total = b.total ?? b.agents_expected ?? 0
+    return total
+      ? `Analyzing all agents and leads… ${done}/${total} scored`
+      : 'Analyzing all agents and leads… this may take a few minutes'
   }
-  if (statusFilter.value !== 'all') {
-    list = list.filter((a) => a.status === statusFilter.value)
+  if (b.status === 'pending') {
+    return 'Starting full agent + lead scan automatically…'
   }
-  return list.sort((a, b) => (b.overall_ai_score ?? 0) - (a.overall_ai_score ?? 0))
+  if (b.status === 'partial') {
+    return `Scoring in progress: ${b.agents_scored}/${b.agents_expected} agents ready`
+  }
+  return ''
 })
+
+const filteredAgents = computed(() => [...agentsList.value])
 
 const kpiCards = computed(() => {
   const s = summary.value
@@ -385,16 +420,46 @@ function agentScoreById(userId) {
   return a ? Math.round(a.overall_ai_score ?? 0) : '—'
 }
 
-async function loadDashboard() {
+async function loadDashboard(page = agentsPage.value) {
   loading.value = true
   error.value = ''
   try {
-    dashboard.value = await aiSalesIntelligenceApi.dashboard()
+    const perPage = activeTab.value === 'agents' ? 24 : agentsPerPage.value
+    dashboard.value = await aiSalesIntelligenceApi.dashboard({
+      page,
+      per_page: perPage,
+      search: agentSearch.value.trim() || undefined,
+      status: statusFilter.value !== 'all' ? statusFilter.value : undefined,
+    })
+    agentsMeta.value = dashboard.value?.agents?.meta || agentsMeta.value
+    agentsPage.value = agentsMeta.value.current_page || page
+    bootstrap.value = dashboard.value?.bootstrap || null
+    scheduleBootstrapPoll()
   } catch (e) {
     error.value = e.message || 'Failed to load dashboard'
+    if (e.status === 503) {
+      error.value = `${e.message}${e.errors?.missing_tables ? ` (missing: ${e.errors.missing_tables.join(', ')})` : ''}`
+    }
   } finally {
     loading.value = false
   }
+}
+
+function goAgentsPage(page) {
+  agentsPage.value = Math.max(1, page)
+  loadDashboard(agentsPage.value)
+}
+
+function scheduleBootstrapPoll() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+  const status = bootstrap.value?.status
+  if (!status || !['running', 'pending', 'partial'].includes(status)) return
+  pollTimer = setInterval(() => {
+    loadDashboard(agentsPage.value)
+  }, 8000)
 }
 
 async function loadScoringRules() {
@@ -443,12 +508,14 @@ async function runRecalculate() {
   recalculating.value = true
   error.value = ''
   try {
-    await aiSalesIntelligenceApi.recalculate({})
-    await loadDashboard()
+    const result = await aiSalesIntelligenceApi.recalculate({ sync: true })
+    await loadDashboard(1)
     if (drawerOpen.value && selectedAgentId.value) {
       await loadDrawerAgent(selectedAgentId.value)
     }
-    saveMsg.value = 'Recalculation complete.'
+    saveMsg.value = result?.mode === 'queue'
+      ? 'Full scan queued. Scores will refresh automatically.'
+      : `Recalculation complete for ${result?.recalculated ?? 0} agents.`
   } catch (e) {
     error.value = e.message || 'Recalculation failed'
   } finally {
@@ -496,7 +563,27 @@ function closeDrawer() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadDashboard(), loadScoringRules()])
+  await Promise.all([loadDashboard(1), loadScoringRules()])
+})
+
+watch([agentSearch, statusFilter], () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    agentsPage.value = 1
+    loadDashboard(1)
+  }, 350)
+})
+
+watch(activeTab, (tab) => {
+  if (tab === 'agents' || tab === 'overview') {
+    agentsPage.value = 1
+    loadDashboard(1)
+  }
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+  if (searchTimer) clearTimeout(searchTimer)
 })
 </script>
 
@@ -702,6 +789,32 @@ onMounted(async () => {
 }
 
 .asi-toast--error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.asi-toast--info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+.asi-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.asi-pagination__btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.asi-pagination__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .asi-toast--success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 
 /* Loading */

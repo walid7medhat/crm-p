@@ -10,7 +10,6 @@ use App\Models\AiSalesIntelligence\AiAgentScore;
 use App\Models\AiSalesIntelligence\AiAgentSnapshot;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class AiOrchestrator
 {
@@ -34,11 +33,23 @@ class AiOrchestrator
             $this->recalculateUser((int) $id);
         }
 
-        $metrics = AiAgentMetric::query()->whereIn('user_id', $ids)->get();
-        $this->rankings->persistRankings($metrics);
-        Cache::forget(self::CACHE_DASHBOARD);
+        $this->finalizeRankings($ids);
 
         return count($ids);
+    }
+
+    /**
+     * @param  list<int>|null  $userIds
+     */
+    public function finalizeRankings(?array $userIds = null): void
+    {
+        $query = AiAgentMetric::query();
+        if ($userIds !== null && $userIds !== []) {
+            $query->whereIn('user_id', $userIds);
+        }
+
+        $this->rankings->persistRankings($query->get());
+        Cache::forget(self::CACHE_DASHBOARD);
     }
 
     public function recalculateUser(int $userId): AiAgentMetric
@@ -170,13 +181,17 @@ class AiOrchestrator
 
     protected function teamAverageResponse(int $excludeUserId): ?float
     {
-        $row = DB::table('ai_agent_metrics')
+        $values = AiAgentMetric::query()
             ->where('user_id', '!=', $excludeUserId)
-            ->selectRaw("AVG(JSON_UNQUOTE(JSON_EXTRACT(response_metrics, '$.avg_minutes_to_first_activity'))) as avg_val")
-            ->first();
+            ->pluck('response_metrics')
+            ->map(fn ($metrics) => is_array($metrics) ? ($metrics['avg_minutes_to_first_activity'] ?? null) : null)
+            ->filter(fn ($v) => $v !== null && is_numeric($v))
+            ->map(fn ($v) => (float) $v);
 
-        $v = $row->avg_val ?? null;
+        if ($values->isEmpty()) {
+            return null;
+        }
 
-        return $v !== null ? (float) $v : null;
+        return round((float) $values->avg(), 2);
     }
 }
