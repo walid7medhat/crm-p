@@ -230,7 +230,7 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/{investment}/pdf', [InvestmentController::class, 'pdf']);
     });
 });
-Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
+Route::prefix('stages')->middleware(['auth:api'])->group(function () {
     Route::get('/', [StageController::class, 'index']);
     Route::post('/', [StageController::class, 'store']);
     Route::get('/{stage}', [StageController::class, 'show']);

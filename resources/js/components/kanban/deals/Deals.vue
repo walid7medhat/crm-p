@@ -454,7 +454,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from 'vue'
 import draggable from 'vuedraggable'
-import axios from '@/plugins/axios'
+import axios, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useIntersectionObserver } from '@vueuse/core' 
 import Swal from 'sweetalert2'
@@ -1034,7 +1034,7 @@ async function executeFetchDeals() {
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
       console.error('Error fetching deals:', err);
-      error.value = err.message || 'Failed to load deals. Please try again.';
+      error.value = getApiErrorMessage(err, 'Failed to load deals. Please try again.');
     }
   } finally {
     loading.value = false;

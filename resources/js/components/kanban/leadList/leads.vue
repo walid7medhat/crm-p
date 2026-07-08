@@ -799,7 +799,7 @@ import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 
-import api from '@/plugins/axios'
+import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
@@ -1561,7 +1561,7 @@ const executeFetchLeads = async () => {
         
     } catch (err) {
         if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
-            error.value = err.message || 'Failed to load data'
+            error.value = getApiErrorMessage(err, 'Failed to load data')
         }
     } finally {
         isFetching.value = false
