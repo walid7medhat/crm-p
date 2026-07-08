@@ -6,7 +6,7 @@ import 'vue-select/dist/vue-select.css'
 import VueApexCharts from "vue3-apexcharts"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
-import api from './plugins/axios.js'
+import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken } from './plugins/axios.js'
 
 // CSS imports
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -52,6 +52,8 @@ addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
 // Single shared API client (token + /api base URL) for the whole app
 window.axios = api
 
+const initialToken = resolveAuthToken()
+
 // Pusher and Echo initialization
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js/dist/web/pusher'
@@ -60,19 +62,21 @@ Pusher.logToConsole = true
 
 window.Pusher = Pusher
 
-window.Echo = new Echo({
+if (initialToken && import.meta.env.VITE_PUSHER_APP_KEY) {
+  window.Echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
     authEndpoint: `${getAppOrigin()}/broadcasting/auth`,
     auth: {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            Accept: 'application/json'
-        }
-    }
-});
+      headers: {
+        Authorization: `Bearer ${initialToken}`,
+        Accept: 'application/json',
+      },
+    },
+  })
+}
 
 
 const app = createApp(App)

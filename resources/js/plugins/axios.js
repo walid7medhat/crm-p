@@ -4,7 +4,14 @@ import Swal from 'sweetalert2'
 const getApiBaseUrl = () =>
   (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
   import.meta.env.VITE_API_BASE_URL ||
-  'http://127.0.0.1:8001/api'
+  (typeof window !== 'undefined'
+    ? `${window.location.origin}/api`
+    : 'http://127.0.0.1:8000/api')
+
+export function getAppOrigin() {
+  const base = getApiBaseUrl()
+  return base.replace(/\/api\/?$/, '')
+}
 
 export function resolveAuthToken() {
   let token =
@@ -54,8 +61,21 @@ function isAuthEndpoint(url = '') {
   )
 }
 
+function isPublicAuthPage() {
+  if (typeof window === 'undefined') return false
+  const path = window.location.pathname || ''
+  return (
+    path.startsWith('/sign-in') ||
+    path.startsWith('/sign-up') ||
+    path.startsWith('/forgot-password') ||
+    path.startsWith('/reset-password')
+  )
+}
+
 async function handleUnauthorized(error) {
-  if (handlingUnauthorized) return Promise.reject(error)
+  if (handlingUnauthorized || isPublicAuthPage()) {
+    return Promise.reject(error)
+  }
   handlingUnauthorized = true
 
   const message = error?.response?.data?.message || 'Your session has expired. Please login again.'
@@ -80,7 +100,12 @@ async function handleUnauthorized(error) {
   return Promise.reject(error)
 }
 
+const INTERCEPTOR_FLAG = '__crmAuthInterceptorsAttached'
+
 function attachAuthInterceptor(client) {
+  if (client[INTERCEPTOR_FLAG]) return
+  client[INTERCEPTOR_FLAG] = true
+
   client.interceptors.request.use((config) => {
     const token = resolveAuthToken()
     if (token) {
@@ -96,12 +121,13 @@ function attachAuthInterceptor(client) {
       const status = error.response?.status
       const url = error.config?.url || ''
 
-      if (status === 401 && !isAuthEndpoint(url)) {
+      if (status === 401 && !isAuthEndpoint(url) && !isPublicAuthPage()) {
         const sentToken = requestHadAuthHeader(error.config)
         const storedToken = resolveAuthToken()
+        const serverMessage = String(error?.response?.data?.message || '').toLowerCase()
 
-        // Only force re-login when a token was actually sent but rejected.
-        if (sentToken && storedToken) {
+        // Only force re-login when a token was sent but rejected (expired/invalid).
+        if (sentToken && storedToken && !serverMessage.includes('not provided')) {
           return handleUnauthorized(error)
         }
       }

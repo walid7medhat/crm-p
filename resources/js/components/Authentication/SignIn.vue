@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import api, { setAuthToken } from '@/plugins/axios';
+import api, { setAuthToken, clearAuthToken } from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 
@@ -97,6 +97,16 @@ export default {
   setup() {
     const router = useRouter();
     return { router };
+  },
+  mounted() {
+    // Fresh sign-in page: drop stale tokens so background API calls do not 401-loop.
+    clearAuthToken();
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('refreshToken');
+    } catch {
+      /* ignore */
+    }
   },
   methods: {
     togglePassword() {
