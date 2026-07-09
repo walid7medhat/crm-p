@@ -6056,7 +6056,7 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}">${handoverPct.toFixed(2)}%</td>
         <td style="${tdCell}">${fmtAed(handoverAmount)}</td>
         <td style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Due on transfer'}</span></td>
+        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
       </tr>`
     : '';
 

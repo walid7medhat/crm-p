@@ -297,7 +297,7 @@ const breakdownRows = computed(() => {
       percentage: handoverPercent.value.toFixed(2),
       amount: handoverAmountAed.value,
       date: props.listing?.handover_date || '',
-      status: isDatePaid(props.listing?.handover_date) ? 'Paid' : 'Due on trasfer',
+      status: isDatePaid(props.listing?.handover_date) ? 'Paid' : 'Upcoming',
     });
   }
 
