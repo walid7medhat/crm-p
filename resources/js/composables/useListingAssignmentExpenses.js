@@ -127,87 +127,97 @@ export function useListingAssignmentExpenses({
     };
   };
 
-  // ✅ دالة لإضافة التكاليف الافتراضية
-  const addDefaultDealCosts = () => {
-    console.log('📝 Adding default deal costs. Settings:', dealCostSettings?.value);
-    console.log('📍 Area data:', area?.value);
-    
-    // ✅ استخدام المفاتيح النصية
-    const fees = {
-      dariAdminFee: Number(dealCostSettings?.value?.dari_admin_fee || dealCostSettings?.value?.['1'] || 0),
-      adgmAdminFee: Number(dealCostSettings?.value?.adgm_admin_fee || dealCostSettings?.value?.['2'] || 0),
-      agencyFee: Number(dealCostSettings?.value?.agency_fee || dealCostSettings?.value?.['3'] || 2),
-      transferFee: Number(dealCostSettings?.value?.transfer_fee || dealCostSettings?.value?.['4'] || 2),
-    };
-    
-    // ✅ 1. Agency Fee (2% من سعر البيع) - تضاف دائماً
-    const agencyFeeValue = fees.agencyFee || 2;
-    const transferFeeValue = fees.transferFee || 2;
-    console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
-    
-    const existingAgency = assignmentExpenseLines.value.find(
-      line => line.label === 'Agency Fee' && line.isDefault
-    );
-     const existingTransfer = assignmentExpenseLines.value.find(
-      line => line.label === 'Transfer Fee' && line.isDefault
-    );
-    if (!existingAgency) {
-      assignmentExpenseLines.value.push({
-        id: Date.now() + 3,
-        label: 'Agency Fee',
-        calcType: 'percentage',
-        base: 'sp',
-        value: agencyFeeValue,
-        vatEnabled: false,
-        isDefault: true,
-        isReadonly: true,
-        isAgency: true,
-      });
-      console.log('✅ Agency Fee added');
-    } else {
-      existingAgency.value = agencyFeeValue;
-      console.log('✅ Agency Fee updated');
-    }
-    if (!existingTransfer) {
-      assignmentExpenseLines.value.push({
-        id: Date.now() + 3,
-        label: 'Transfer Fee',
-        calcType: 'percentage',
-        base: 'sp',
-        value: transferFeeValue,
-        vatEnabled: true,
-        isDefault: true,
-        isReadonly: true,
-        isAgency: true,
-      });
-      console.log('✅ Transfer Fee added');
-    } else {
-      existingTransfer.value = transferFeeValue;
-      console.log('✅ Transfer Fee updated');
-    }
-
-    // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة
-    const areaData = area?.value;
-    const feeType = getAdminFeeTypeFromArea(areaData);
-    console.log(`📍 Area: "${areaData?.name || areaData?.area_title || 'Unknown'}" → Admin fee type: ${feeType}`);
-    
-    // ✅ إزالة جميع التكاليف الإدارية القديمة
-    const adminFeeIndices = [];
-    assignmentExpenseLines.value.forEach((line, index) => {
-      if ((line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee') && line.isDefault) {
-        adminFeeIndices.push(index);
-      }
+ // ✅ دالة لإضافة التكاليف الافتراضية
+const addDefaultDealCosts = () => {
+  console.log('📝 Adding default deal costs. Settings:', dealCostSettings?.value);
+  console.log('📍 Area data:', area?.value);
+  
+  // ✅ استخدام المفاتيح النصية
+  const fees = {
+    dariAdminFee: Number(dealCostSettings?.value?.dari_admin_fee || dealCostSettings?.value?.['1'] || 0),
+    adgmAdminFee: Number(dealCostSettings?.value?.adgm_admin_fee || dealCostSettings?.value?.['2'] || 0),
+    agencyFee: Number(dealCostSettings?.value?.agency_fee || dealCostSettings?.value?.['3'] || 2),
+    transferFee: Number(dealCostSettings?.value?.transfer_fee || dealCostSettings?.value?.['4'] || 2),
+  };
+  
+  // ✅ 1. Agency Fee - تضاف مرة واحدة فقط
+  const agencyFeeValue = fees.agencyFee || 2;
+  const transferFeeValue = fees.transferFee || 2;
+  console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
+  console.log(`✅ Transfer Fee: ${transferFeeValue}% of Selling Price`);
+  
+  // ✅ التحقق من وجود Agency Fee قبل الإضافة
+  const existingAgency = assignmentExpenseLines.value.find(
+    line => line.label === 'Agency Fee' && line.isDefault
+  );
+  
+  if (!existingAgency) {
+    assignmentExpenseLines.value.push({
+      id: Date.now() + 3,
+      label: 'Agency Fee',
+      calcType: 'percentage',
+      base: 'sp',
+      value: agencyFeeValue,
+      vatEnabled: false,
+      isDefault: true,
+      isReadonly: true,
+      isAgency: true,
     });
-    // حذف من الأخر إلى الأول لتجنب مشاكل الترتيب
-    adminFeeIndices.reverse().forEach(index => {
-      assignmentExpenseLines.value.splice(index, 1);
-      console.log(`🗑️ Removed old admin fee at index ${index}`);
+    console.log('✅ Agency Fee added (first time)');
+  } else {
+    // ✅ تحديث القيمة فقط (بدون إضافة جديدة)
+    existingAgency.value = agencyFeeValue;
+    console.log('✅ Agency Fee already exists, updating value only');
+  }
+  
+  // ✅ التحقق من وجود Transfer Fee قبل الإضافة
+  const existingTransfer = assignmentExpenseLines.value.find(
+    line => line.label === 'Transfer Fee' && line.isDefault
+  );
+  
+  if (!existingTransfer) {
+    assignmentExpenseLines.value.push({
+      id: Date.now() + 4,
+      label: 'Transfer Fee',
+      calcType: 'percentage',
+      base: 'sp',
+      value: transferFeeValue,
+      vatEnabled: false,
+      isDefault: true,
+      isReadonly: true,
+      isAgency: true,
     });
+    console.log('✅ Transfer Fee added (first time)');
+  } else {
+    // ✅ تحديث القيمة فقط (بدون إضافة جديدة)
+    existingTransfer.value = transferFeeValue;
+    console.log('✅ Transfer Fee already exists, updating value only');
+  }
 
-    // ✅ 3. إضافة التكلفة الإدارية المناسبة
-    if (feeType === 'adgm') {
-      // ADGM Admin Fee - لـ Maryah Island و Reem Island
-      if (fees.adgmAdminFee > 0) {
+  // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة
+  const areaData = area?.value;
+  const feeType = getAdminFeeTypeFromArea(areaData);
+  console.log(`📍 Area: "${areaData?.name || areaData?.area_title || 'Unknown'}" → Admin fee type: ${feeType}`);
+  
+  // ✅ إزالة جميع التكاليف الإدارية القديمة (هذه تتغير حسب المنطقة)
+  const adminFeeIndices = [];
+  assignmentExpenseLines.value.forEach((line, index) => {
+    if ((line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee') && line.isDefault) {
+      adminFeeIndices.push(index);
+    }
+  });
+  adminFeeIndices.reverse().forEach(index => {
+    assignmentExpenseLines.value.splice(index, 1);
+    console.log(`🗑️ Removed old admin fee at index ${index}`);
+  });
+
+  // ✅ 3. إضافة التكلفة الإدارية المناسبة (مرة واحدة فقط)
+  if (feeType === 'adgm') {
+    if (fees.adgmAdminFee > 0) {
+      const existingAdgm = assignmentExpenseLines.value.find(
+        line => line.label === 'ADGM Admin Fee' && line.isDefault
+      );
+      if (!existingAdgm) {
         assignmentExpenseLines.value.push({
           id: Date.now() + 2,
           label: 'ADGM Admin Fee',
@@ -221,11 +231,16 @@ export function useListingAssignmentExpenses({
         });
         console.log(`✅ ADGM Admin Fee added: ${fees.adgmAdminFee} AED`);
       } else {
-        console.log('⚠️ ADGM Admin Fee is 0, skipping');
+        existingAdgm.value = fees.adgmAdminFee;
+        console.log(`✅ ADGM Admin Fee updated: ${fees.adgmAdminFee} AED`);
       }
-    } else {
-      // Dari Admin Fee - لجميع المناطق الأخرى
-      if (fees.dariAdminFee > 0) {
+    }
+  } else {
+    if (fees.dariAdminFee > 0) {
+      const existingDari = assignmentExpenseLines.value.find(
+        line => line.label === 'Dari Admin Fee' && line.isDefault
+      );
+      if (!existingDari) {
         assignmentExpenseLines.value.push({
           id: Date.now() + 1,
           label: 'Dari Admin Fee',
@@ -239,12 +254,14 @@ export function useListingAssignmentExpenses({
         });
         console.log(`✅ Dari Admin Fee added: ${fees.dariAdminFee} AED`);
       } else {
-        console.log('⚠️ Dari Admin Fee is 0, skipping');
+        existingDari.value = fees.dariAdminFee;
+        console.log(`✅ Dari Admin Fee updated: ${fees.dariAdminFee} AED`);
       }
     }
-    
-    console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
-  };
+  }
+  
+  console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
+};
 
   const loadAssignmentExpenseLines = (raw) => {
     const arr = parseAssignmentExpenseLines(raw);
