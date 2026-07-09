@@ -6039,7 +6039,7 @@ const createPaymentDetailsSlide = () => {
       </tr>`;
   }).join('');
 
-  const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Upcoming';
+  const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumRow = hasPremiumRow
     ? `<tr style="background:#f8fafc;">
         <td style="${tdCell}">Premium</td>
@@ -6056,7 +6056,7 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}">${handoverPct.toFixed(2)}%</td>
         <td style="${tdCell}">${fmtAed(handoverAmount)}</td>
         <td style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
+        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Due on transfer'}</span></td>
       </tr>`
     : '';
 
@@ -6127,11 +6127,11 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td style="${tdCell}">${l?.label || '—'}</td>
-        <td style="${tdCell}color:#64748b;">${detail}</td>
-        <td style="${tdCell}">${fmtAed(amt)}</td>
-        <td style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
-        <td style="${tdCell}font-weight:600;">${fmtAed(total)}</td>
+        <td style="${tdCell}background:#ffffff !important;">${l?.label || '—'}</td>
+        <td style="${tdCell}color:#64748b;background:#ffffff !important;">${detail}</td>
+        <td style="${tdCell}background:#ffffff !important;">${fmtAed(amt)}</td>
+        <td style="${tdCell}background:#ffffff !important;">${vat > 0 ? fmtAed(vat) : '—'}</td>
+        <td style="${tdCell}font-weight:600;background:#ffffff !important;">${fmtAed(total)}</td>
       </tr>
     `);
   });
