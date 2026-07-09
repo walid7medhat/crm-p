@@ -321,7 +321,7 @@ const nocRequiredAed = computed(() => {
         percentage: installmentPercentForm.value.toFixed(2),
         amount: handoverAmountForm.value,
         date: form.value.handover_date || '',
-        status: isDatePaid(form.value.handover_date) ? STATUS_PAID : STATUS_DUE_ON_TRANSFER,
+        status: isDatePaid(form.value.handover_date) ? STATUS_PAID : STATUS_UPCOMING,
       });
     }
 
