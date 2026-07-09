@@ -675,7 +675,7 @@
                             :disabled="line.label !== 'Agency Fee'"
                             :checked="line.line.label === 'Agency Fee'"
                           />
-                          <span>{{ line.line.label === 'Agency Fee' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
+                          <span>{{ line.label === 'Agency Fee' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
                         </label>
                       </td>
                       <td class="text-end text-nowrap fw-semibold">{{ formatAed(assignmentExpenseLineTotal(line)) }}</td>
