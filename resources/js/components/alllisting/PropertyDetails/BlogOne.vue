@@ -6077,17 +6077,14 @@ const createPaymentDetailsSlide = () => {
   let expVatTotal = 0;
   let expGrand = 0;
   
-  // ✅ بناء صفوف التكاليف مع إضافة NOC كصف منفصل
   const expenseRows = [];
   
-  // ✅ إضافة NOC كأول صف في جدول التكاليف (إذا كان موجوداً)
   if (hasNoc) {
     const nocAmount = nocFixedAmount;
     const isFullyPaid = scheduledAed >= nocRequired - 0.01;
     const paidAmount = Math.min(paidAed, nocRequired);
     const remainingAmount = Math.max(0, nocRequired - scheduledAed);
     
-    // عرض تفاصيل NOC
     const statusText = isFullyPaid ? '✅ Paid' : '⚠️ Pending';
     const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
     
@@ -6098,14 +6095,12 @@ const createPaymentDetailsSlide = () => {
           ${fmtAed(nocAmount)} 
          
         </td>
-        <td style="${tdCell}text-align:right;">
+        <td style="${tdCell}">
           <div>${fmtAed(nocAmount)}</div>
-          <div style="font-size:${d.fsXs};color:#94a3b8;">
-            Paid: ${fmtAed(paidAmount)} / Remaining: ${fmtAed(remainingAmount)}
-          </div>
+          
         </td>
-        <td style="${tdCell}text-align:right;">—</td>
-        <td style="${tdCell}text-align:right;font-weight:600;">
+        <td style="${tdCell}">—</td>
+        <td style="${tdCell}font-weight:600;">
           <span style="color:${statusColor};">${fmtAed(nocAmount)}</span>
           <div style="font-size:${d.fsXs};color:${statusColor};">${statusText}</div>
         </td>
@@ -6134,9 +6129,9 @@ const createPaymentDetailsSlide = () => {
       <tr>
         <td style="${tdCell}">${l?.label || '—'}</td>
         <td style="${tdCell}color:#64748b;">${detail}</td>
-        <td style="${tdCell}text-align:right;">${fmtAed(amt)}</td>
-        <td style="${tdCell}text-align:right;">${vat > 0 ? fmtAed(vat) : '—'}</td>
-        <td style="${tdCell}text-align:right;font-weight:600;">${fmtAed(total)}</td>
+        <td style="${tdCell}">${fmtAed(amt)}</td>
+        <td style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
+        <td style="${tdCell}font-weight:600;">${fmtAed(total)}</td>
       </tr>
     `);
   });
@@ -6146,7 +6141,7 @@ const createPaymentDetailsSlide = () => {
   const expensesBlock = (expenseRows.length > 0) ? `
     <div style="margin-top:${d.blockMt};width:100%;">
       <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">other costs</div>
-      <div style="background:#ffffff;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
+      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
         <table style="${tableStyle}">
           <thead>
             <tr>
@@ -6161,9 +6156,9 @@ const createPaymentDetailsSlide = () => {
             ${expenseRowsHtml}
             <tr style="background:#f1f5f9;">
               <td colspan="2" style="${tdCell}font-weight:700;">Total</td>
-              <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expSubtotal)}</td>
-              <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expVatTotal)}</td>
-              <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expGrand)}</td>
+              <td style="${tdCell}font-weight:700;">${fmtAed(expSubtotal)}</td>
+              <td style="${tdCell}font-weight:700;">${fmtAed(expVatTotal)}</td>
+              <td style="${tdCell}font-weight:700;">${fmtAed(expGrand)}</td>
             </tr>
           </tbody>
         </table>
