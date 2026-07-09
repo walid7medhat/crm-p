@@ -6090,17 +6090,17 @@ const createPaymentDetailsSlide = () => {
     
     expenseRows.push(`
       <tr style="${!isFullyPaid ? '' : ''}">
-        <td style="${tdCell}font-weight:500;">NOC Fees</td>
-        <td style="${tdCell}color:#64748b;">
+        <td style="${tdCell}font-weight:500;background:#ffffff !important;">NOC Fees</td>
+        <td style="${tdCell}color:#64748b;background:#ffffff !important;">
           ${fmtAed(nocAmount)} 
          
         </td>
-        <td style="${tdCell}">
+        <td style="${tdCell}background:#ffffff !important;">
           <div>${fmtAed(nocAmount)}</div>
           
         </td>
-        <td style="${tdCell}">—</td>
-        <td style="${tdCell}font-weight:600;">
+        <td style="${tdCell}background:#ffffff !important;">—</td>
+        <td style="${tdCell}font-weight:600;background:#ffffff !important;">
           <span style="color:${statusColor};">${fmtAed(nocAmount)}</span>
           <div style="font-size:${d.fsXs};color:${statusColor};">${statusText}</div>
         </td>
