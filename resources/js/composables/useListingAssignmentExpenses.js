@@ -175,7 +175,7 @@ export function useListingAssignmentExpenses({
         calcType: 'percentage',
         base: 'sp',
         value: transferFeeValue,
-        vatEnabled: false,
+        vatEnabled: true,
         isDefault: true,
         isReadonly: true,
         isAgency: true,

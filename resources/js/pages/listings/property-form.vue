@@ -2211,7 +2211,7 @@ const addDefaultDealCosts = () => {
       calcType: 'percentage',
       base: 'sp',
       value: agencyFeeValue,
-      vatEnabled: false,
+      vatEnabled: true,
       isDefault: true,
       isReadonly: true
     });
