@@ -3,59 +3,78 @@ import api from '@/plugins/axios'
 function unwrap(response) {
   const body = response?.data
   if (body?.status === true) return body.data
-  const msg = body?.message || 'Request failed'
+  const msg = body?.message || response?.statusText || 'Request failed'
   const err = new Error(msg)
   err.errors = body?.errors
+  err.status = response?.status
   err.response = response
   throw err
 }
 
+function unwrapError(error) {
+  const body = error?.response?.data
+  const msg = body?.message || error?.message || 'Request failed'
+  const err = new Error(msg)
+  err.errors = body?.errors
+  err.status = error?.response?.status
+  err.response = error?.response
+  throw err
+}
+
+function request(promise) {
+  return promise.then(unwrap).catch(unwrapError)
+}
+
 export const aiSalesIntelligenceApi = {
   dashboard(params = {}) {
-    return api.get('/ai-sales-intelligence/dashboard', { params }).then(unwrap)
+    return request(api.get('/ai-sales-intelligence/dashboard', { params }))
+  },
+
+  status() {
+    return request(api.get('/ai-sales-intelligence/status'))
   },
 
   agents(params = {}) {
-    return api.get('/ai-sales-intelligence/agents', { params }).then(unwrap)
+    return request(api.get('/ai-sales-intelligence/agents', { params }))
   },
 
   agentOptions() {
-    return api.get('/ai-sales-intelligence/agents/options').then(unwrap)
+    return request(api.get('/ai-sales-intelligence/agents/options'))
   },
 
   showAgent(userId) {
-    return api.get(`/ai-sales-intelligence/agents/${userId}`).then(unwrap)
+    return request(api.get(`/ai-sales-intelligence/agents/${userId}`))
   },
 
   neglect(userId) {
-    return api.get(`/ai-sales-intelligence/agents/${userId}/neglect`).then(unwrap)
+    return request(api.get(`/ai-sales-intelligence/agents/${userId}/neglect`))
   },
 
   drilldown(userId) {
-    return api.get(`/ai-sales-intelligence/agents/${userId}/drilldown`).then(unwrap)
+    return request(api.get(`/ai-sales-intelligence/agents/${userId}/drilldown`))
   },
 
   alerts(params = {}) {
-    return api.get('/ai-sales-intelligence/alerts', { params }).then(unwrap)
+    return request(api.get('/ai-sales-intelligence/alerts', { params }))
   },
 
   settings() {
-    return api.get('/ai-sales-intelligence/settings').then(unwrap)
+    return request(api.get('/ai-sales-intelligence/settings'))
   },
 
   scoringRules() {
-    return api.get('/ai-sales-intelligence/scoring-rules').then(unwrap)
+    return request(api.get('/ai-sales-intelligence/scoring-rules'))
   },
 
   updateScoringRules(payload) {
-    return api.put('/ai-sales-intelligence/scoring-rules', payload).then(unwrap)
+    return request(api.put('/ai-sales-intelligence/scoring-rules', payload))
   },
 
   resetScoringRules() {
-    return api.post('/ai-sales-intelligence/scoring-rules/reset').then(unwrap)
+    return request(api.post('/ai-sales-intelligence/scoring-rules/reset'))
   },
 
   recalculate(payload = {}) {
-    return api.post('/ai-sales-intelligence/recalculate', payload).then(unwrap)
+    return request(api.post('/ai-sales-intelligence/recalculate', payload, { timeout: 300000 }))
   },
 }

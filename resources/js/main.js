@@ -6,7 +6,7 @@ import 'vue-select/dist/vue-select.css'
 import VueApexCharts from "vue3-apexcharts"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
-import axios from 'axios'
+import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken } from './plugins/axios.js'
 
 // CSS imports
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -49,79 +49,10 @@ const addCSS = (url) => {
 addCSS('/assets/css/style14.css')
 addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
 
+// Single shared API client (token + /api base URL) for the whole app
+window.axios = api
 
-// API base: use same-origin when served by Laravel (e.g. MAMP), else env
-const getAppOrigin = () =>
-  (typeof window !== 'undefined' && window.__APP_ORIGIN__) ||
-  (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api').replace(/\/api\/?$/, '');
-const getApiBaseUrl = () =>
-  (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
-  import.meta.env.VITE_API_BASE_URL ||
-  'http://127.0.0.1:8001/api';
-
-// Setup Axios
-axios.defaults.baseURL = getAppOrigin()
-axios.defaults.headers.common['Accept'] = 'application/json'
-axios.defaults.headers.common['Content-Type'] = 'application/json'
-
-// Request interceptor for JWT token
-axios.interceptors.request.use(
-  config => {
-    // Get token from various sources
-    let token = localStorage.getItem('token') || 
-                localStorage.getItem('access_token') ||
-                sessionStorage.getItem('token')
-    // Check cookies
-    if (!token) {
-      const cookies = document.cookie.split('; ')
-      const tokenCookie = cookies.find(row => row.startsWith('token='))
-      const accessTokenCookie = cookies.find(row => row.startsWith('access_token='))
-      
-      token = tokenCookie?.split('=')[1] || accessTokenCookie?.split('=')[1]
-    }
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-
-    return config
-  },
-  error => {
-    console.error('Axios Request Error:', error)
-    return Promise.reject(error)
-  }
-)
-
-// Response interceptor
-axios.interceptors.response.use(
-  response => {
-    return response
-  },
-  error => {
-    console.error('Axios Response Error:', error.response?.status, error.message)
-
-    if (error.response?.status === 401) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Session Expired',
-        text: 'Your session has expired. Please login again.',
-        confirmButtonText: 'Login',
-        allowOutsideClick: false
-      }).then(async () => {
-        const { resetSidebarLayout } = await import('./composables/useSidebar.js')
-        resetSidebarLayout()
-        localStorage.clear()
-        sessionStorage.clear()
-        window.location.href = '/sign-in'
-      })
-    }
-
-    return Promise.reject(error)
-  }
-)
-
-// Make axios globally available
-window.axios = axios
+const initialToken = resolveAuthToken()
 
 // Pusher and Echo initialization
 import Echo from 'laravel-echo'
@@ -131,19 +62,21 @@ Pusher.logToConsole = true
 
 window.Pusher = Pusher
 
-window.Echo = new Echo({
+if (initialToken && import.meta.env.VITE_PUSHER_APP_KEY) {
+  window.Echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
     authEndpoint: `${getAppOrigin()}/broadcasting/auth`,
     auth: {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            Accept: 'application/json'
-        }
-    }
-});
+      headers: {
+        Authorization: `Bearer ${initialToken}`,
+        Accept: 'application/json',
+      },
+    },
+  })
+}
 
 
 const app = createApp(App)
@@ -200,7 +133,7 @@ app.use(VueApexCharts)
 
 // Global properties
 app.config.globalProperties.$apiBaseUrl = getApiBaseUrl()
-app.config.globalProperties.$axios = axios
+app.config.globalProperties.$axios = api
 
 // SweetAlert configuration
 const Toast = Swal.mixin({
