@@ -182,7 +182,7 @@ export function useListingAssignmentExpenses({
       });
       console.log('✅ Transfer Fee added');
     } else {
-      existingAgency.value = transferFeeValue;
+      existingTransfer.value = transferFeeValue;
       console.log('✅ Transfer Fee updated');
     }
 
