@@ -2963,7 +2963,7 @@ const paymentBreakdownRows = computed(() => {
     percentage: '',
     amount: premiumAmountForm.value,
     date: '',
-    status: premiumIsNegative.value ? 'Selling below original price' : STATUS_UPCOMING,
+    status: premiumIsNegative.value ? 'Selling below original price' : STATUS_DUE_ON_TRANSFER,
   });
 
   if (Math.abs(handoverAmountForm.value) > 0.01) {
