@@ -100,7 +100,7 @@
           </thead>
           <tbody>
             <tr v-if="nocFixedAmount > 0 || Number(nocPercent) > 0">
-              <td>NOC features</td>
+              <td>NOC</td>
               <td class="text-muted">
                 <span class="text-muted d-block" style="font-size:0.85em;">
                   {{ nocType === 'Ready' ? 'Ready' : 'Off-Plan' }}

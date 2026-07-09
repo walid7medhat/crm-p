@@ -6102,7 +6102,7 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}background:#ffffff !important;">—</td>
         <td style="${tdCell}font-weight:600;background:#ffffff !important;">
           <span style="color:${statusColor};">${fmtAed(nocAmount)}</span>
-          <div style="font-size:${d.fsXs};color:${statusColor};">${statusText}</div>
+          <span style="font-size:${d.fsXs};color:${statusColor};">${statusText}</span>
         </td>
       </tr>
     `);
