@@ -286,7 +286,7 @@ const breakdownRows = computed(() => {
       percentage: '',
       amount: premiumAmount.value,
       date: '',
-      status: premiumAmount.value < -0.01 ? 'Selling below original price' : 'Upcoming',
+      status: premiumAmount.value < -0.01 ? 'Selling below original price' : 'Due on trasfer',
     });
   }
 
@@ -297,7 +297,7 @@ const breakdownRows = computed(() => {
       percentage: handoverPercent.value.toFixed(2),
       amount: handoverAmountAed.value,
       date: props.listing?.handover_date || '',
-      status: isDatePaid(props.listing?.handover_date) ? 'Paid' : 'Upcoming',
+      status: isDatePaid(props.listing?.handover_date) ? 'Paid' : 'Due on trasfer',
     });
   }
 
