@@ -683,6 +683,7 @@
                           type="checkbox"
                           class="form-check-input m-0 flex-shrink-0"
                           :title="'Apply 5% VAT on ' + formatAed(assignmentExpenseLineAmount(line))"
+                          :disabled="line.label !== 'Agency Fee'"
                         />
                         <span>{{ line.vatEnabled ? formatAed(assignmentExpenseLineVat(line)) : '—' }}</span>
                       </label>
@@ -2130,6 +2131,9 @@ const fetchDealCosts = async () => {
       if (!settings['3'] && !settings['agency_fee']) {
         settings['agency_fee'] = 2; // 2% افتراضي
       }
+      if (!settings['4'] && !settings['transfer_fee']) {
+        settings['transfer_fee'] = 2; // 2% افتراضي
+      }
       dealCostSettings.value = settings;
     } else if (data.details) {
       const settings = {};
@@ -2139,11 +2143,18 @@ const fetchDealCosts = async () => {
       if (!settings['agency_fee']) {
         settings['agency_fee'] = 2;
       }
+      if (!settings['transfer_fee']) {
+        settings['transfer_fee'] = 2;
+      }
+      
       dealCostSettings.value = settings;
     } else {
       dealCostSettings.value = data;
       if (!dealCostSettings.value['agency_fee']) {
         dealCostSettings.value['agency_fee'] = 2;
+      }
+      if (!dealCostSettings.value['transfer_fee']) {
+        dealCostSettings.value['transfer_fee'] = 2;
       }
     }
     
@@ -2156,7 +2167,8 @@ const fetchDealCosts = async () => {
     dealCostSettings.value = {
       dari_admin_fee: 0,
       adgm_admin_fee: 0,
-      agency_fee: 2 // ✅ 2% افتراضي
+      agency_fee: 2, // ✅ 2% افتراضي
+      transfer_fee:2,
     };
     addDefaultDealCosts();
     proxy.$showNotification("ℹ️ Using default deal costs", "info");
@@ -2175,16 +2187,22 @@ const addDefaultDealCosts = () => {
   const fees = {
     dariAdminFee: dealCostSettings.value['dari_admin_fee'] || dealCostSettings.value['1'] || 0,
     adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0,
-    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2
+    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2,
+    transferFee: dealCostSettings.value['transfer_fee'] || dealCostSettings.value['4'] || 2,
   };
   
   // ✅ 1. Agency Fee (2% من سعر البيع)
   const agencyFeeValue = Number(fees.agencyFee) || 2;
+   const transferFeeValue = Number(fees.transferFee) || 2;
   console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
   
   const existingAgency = assignmentExpenseLines.value.find(
     line => line.label === 'Agency Fee' && line.isDefault
   );
+   const existingTransfer = assignmentExpenseLines.value.find(
+    line => line.label === 'Transfer Fee' && line.isDefault
+  );
+  
   if (!existingAgency) {
     assignmentExpenseLines.value.push({
       id: Date.now() + 3,
@@ -2200,6 +2218,22 @@ const addDefaultDealCosts = () => {
   } else {
     existingAgency.value = agencyFeeValue;
     console.log('✅ Agency Fee updated');
+  }
+  if (!existingTransfer) {
+    assignmentExpenseLines.value.push({
+      id: Date.now() + 3,
+      label: 'Transfer Fee',
+      calcType: 'percentage',
+      base: 'sp',
+      value: transferFeeValue,
+      vatEnabled: false,
+      isDefault: true,
+      isReadonly: true
+    });
+    console.log('✅ Transfer Fee added');
+  } else {
+    existingAgency.value = transferFeeValue;
+    console.log('✅ Transfer Fee updated');
   }
   
   // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة

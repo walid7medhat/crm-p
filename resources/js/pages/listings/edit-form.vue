@@ -672,6 +672,7 @@
                             type="checkbox"
                             class="form-check-input m-0 flex-shrink-0"
                             :title="'Apply 5% VAT on ' + formatAed(assignmentExpenseLineAmount(line))"
+                            :disabled="line.label !== 'Agency Fee'"
                           />
                           <span>{{ line.vatEnabled ? formatAed(assignmentExpenseLineVat(line)) : '—' }}</span>
                         </label>
@@ -1920,6 +1921,9 @@ const fetchDealCosts = async () => {
       if (!settings['3'] && !settings['agency_fee']) {
         settings['agency_fee'] = 2; // 2% افتراضي
       }
+      if (!settings['4'] && !settings['transfer_fee']) {
+        settings['transfer_fee'] = 2; // 2% افتراضي
+      }
       dealCostSettings.value = settings;
     } else if (data.details) {
       const settings = {};
@@ -1929,11 +1933,17 @@ const fetchDealCosts = async () => {
       if (!settings['agency_fee']) {
         settings['agency_fee'] = 2;
       }
+      if (!settings['transfer_fee']) {
+        settings['transfer_fee'] = 2;
+      }
       dealCostSettings.value = settings;
     } else {
       dealCostSettings.value = data;
       if (!dealCostSettings.value['agency_fee']) {
         dealCostSettings.value['agency_fee'] = 2;
+      }
+      if (!dealCostSettings.value['transfer_fee']) {
+        dealCostSettings.value['transfer_fee'] = 2;
       }
     }
     
@@ -1946,7 +1956,8 @@ const fetchDealCosts = async () => {
     dealCostSettings.value = {
       dari_admin_fee: 0,
       adgm_admin_fee: 0,
-      agency_fee: 2 // ✅ 2% افتراضي
+      agency_fee: 2, // ✅ 2% افتراضي
+      transfer_fee: 2 
     };
     addDefaultDealCosts();
     proxy.$showNotification("ℹ️ Using default deal costs", "info");

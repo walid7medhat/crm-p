@@ -99,8 +99,7 @@
                         <div class="col-md-6">
                             <div class="mb-4">
                                 <label class="form-label fw-semibold">
-                                    ADGM Admin Fee
-                                    <span class="text-muted small">(ADGM)</span>
+                                    Agency Fee
                                 </label>
                                 <div class="input-group">
                                    
@@ -123,7 +122,32 @@
                                 </div>
                             </div>
                         </div>
-
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">
+                                    Transfer Fees
+                                </label>
+                                <div class="input-group">
+                                   
+                                    <input type="number" 
+                                           class="form-control form-control-lg" 
+                                           v-model="form.transfer_fee"
+                                           :class="{'is-invalid': errors.transfer_fee}"
+                                           placeholder="Enter ADGM admin fee"
+                                           step="0.01"
+                                           min="0"
+                                           @input="validateInput('transfer_fee')">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="invalid-feedback" v-if="errors.transfer_fee">
+                                    {{ errors.transfer_fee[0] }}
+                                </div>
+                                <div class="form-text">
+                                    <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+                                    Transfer fee applied 
+                                </div>
+                            </div>
+                        </div>
                       
                     </div>
                 </form>
@@ -186,6 +210,7 @@ export default {
                 dari_admin_fee: 0,
                 adgm_admin_fee: 0,
                 agency_fee:0,
+                transfer_fee:0,
             },
             errors: {},
             originalForm: {}
@@ -232,6 +257,7 @@ export default {
                         this.form.dari_admin_fee = parseFloat(settings.dari_admin_fee) || 0;
                         this.form.adgm_admin_fee = parseFloat(settings.adgm_admin_fee) || 0;
                         this.form.agency_fee = parseFloat(settings.agency_fee) || 0;
+                        this.form.transfer_fee = parseFloat(settings.transfer_fee) || 0;
                         
                         // حفظ نسخة أصلية للمقارنة
                         this.originalForm = { ...this.form };
@@ -270,7 +296,8 @@ export default {
                 const payload = {
                     dari_admin_fee: parseFloat(this.form.dari_admin_fee) || 0,
                     adgm_admin_fee: parseFloat(this.form.adgm_admin_fee) || 0,
-                    agency_fee: parseFloat(this.form.agency_fee) || 0
+                    agency_fee: parseFloat(this.form.agency_fee) || 0,
+                    transfer_fee: parseFloat(this.form.transfer_fee) || 0,
                 };
                 
                 const response = await fetch(API_ENDPOINTS.DEAL_COST_SETTINGS_UPDATE, {

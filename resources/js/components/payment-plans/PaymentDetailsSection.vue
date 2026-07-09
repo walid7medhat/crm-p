@@ -3,7 +3,11 @@
     <div class="pd-card">
       <div class="pd-card-head">
         <div>
-          <div class="pd-card-title">Payment details</div>
+          <div class="pd-card-title">Payment details
+            <span class="badge" :class="nocType === 'Ready' ? 'bg-success' : 'bg-warning text-dark'">
+            {{ nocType }}
+          </span>
+          </div>
           <div class="pd-title-accent" aria-hidden="true" />
         </div>
       </div>
@@ -30,25 +34,23 @@
         </div>
       </div>
 
-     <div v-if="nocFixedAmount > 0" class="pd-noc-strip">
-        <span class="pd-noc-strip__item">
-          <span class="badge" :class="nocType === 'Ready' ? 'bg-success' : 'bg-warning text-dark'">
-            {{ nocType }}
-          </span>
+     <!-- <div v-if="nocFixedAmount > 0" class="pd-noc-strip"> -->
+        <!-- <span class="pd-noc-strip__item">
+          
           NOC <strong>{{ formatAed(nocFixedAmount) }}</strong>
           <span v-if="nocPercent > 0" class="pd-text-muted">({{ nocPercent.toFixed(1) }}% of OP)</span>
-        </span>
-        <span class="pd-noc-strip__item">
+        </span> -->
+        <!-- <span class="pd-noc-strip__item">
           Paid <strong>{{ formatAed(paidTotalAed) }}</strong>
           <span class="pd-text-muted">({{ paidPercentDisplay }}% of OP)</span>
         </span>
         <span class="pd-noc-strip__item">
           Remaining <strong>{{ formatAed(nocRemainingAed) }}</strong>
-        </span>
-        <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
+        </span> -->
+        <!-- <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
           {{ nocRequirementMet ? '✅ Covered' : '⚠️ Pending' }}
-        </span>
-      </div>
+        </span> -->
+      <!-- </div> -->
 
       <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-section-heading">Installment breakdown</div>
       <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-table-wrap">
@@ -84,31 +86,43 @@
         </table>
       </div>
 
-      <div v-if="expenseRows.length > 0" class="pd-section-heading">Assignment deal costs</div>
+      <div v-if="expenseRows.length > 0" class="pd-section-heading">Other costs</div>
       <div v-if="expenseRows.length > 0" class="pd-table-wrap pd-table-wrap--section">
         <table class="pd-table">
           <thead>
             <tr>
               <th><span class="pd-th-pill">Label</span></th>
               <th><span class="pd-th-pill">Detail</span></th>
-              <th class="pd-text-end"><span class="pd-th-pill">Amount</span></th>
-              <th class="pd-text-end"><span class="pd-th-pill">VAT</span></th>
-              <th class="pd-text-end"><span class="pd-th-pill">Total</span></th>
+              <th class=""><span class="pd-th-pill">Amount</span></th>
+              <th class=""><span class="pd-th-pill">VAT</span></th>
+              <th class=""><span class="pd-th-pill">Total</span></th>
             </tr>
           </thead>
           <tbody>
+            <tr v-if="nocFixedAmount > 0 || Number(nocPercent) > 0">
+              <td>NOC features</td>
+              <td class="text-muted">
+                <span class="text-muted d-block" style="font-size:0.85em;">
+                  {{ nocType === 'Ready' ? 'Ready' : 'Off-Plan' }}
+                </span>
+              </td>
+              <td>{{ formatAed(nocFixedAmount) }}</td>
+              <td>—</td>
+              <td class="fw-semibold">{{ formatAed(nocFixedAmount) }}</td>
+            </tr>
             <tr v-for="(row, idx) in expenseRows" :key="row.id" :class="idx % 2 === 1 ? 'pd-row-alt' : ''">
               <td>{{ row.label }}</td>
               <td class="pd-text-muted">{{ row.detail }}</td>
-              <td class="pd-text-end">{{ formatAed(row.amount) }}</td>
-              <td class="pd-text-end">{{ row.vatEnabled ? formatAed(row.vat) : '—' }}</td>
-              <td class="pd-text-end pd-fw-semibold">{{ formatAed(row.total) }}</td>
+              <td class="">{{ formatAed(row.amount) }}</td>
+              <td class="">{{ row.vatEnabled ? formatAed(row.vat) : '—' }}</td>
+              <td class=" pd-fw-semibold">{{ formatAed(row.total) }}</td>
             </tr>
+           
             <tr class="pd-total-row">
               <td colspan="2"><strong>Total</strong></td>
-              <td class="pd-text-end"><strong>{{ formatAed(expensesSubtotal) }}</strong></td>
-              <td class="pd-text-end"><strong>{{ formatAed(expensesTotalVat) }}</strong></td>
-              <td class="pd-text-end"><strong>{{ formatAed(expensesGrandTotal) }}</strong></td>
+              <td class=""><strong>{{ formatAed(expensesSubtotal) }}</strong></td>
+              <td class=""><strong>{{ formatAed(expensesTotalVat) }}</strong></td>
+              <td class=""><strong>{{ formatAed(expensesGrandTotal) }}</strong></td>
             </tr>
           </tbody>
         </table>

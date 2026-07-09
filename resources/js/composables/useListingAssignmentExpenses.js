@@ -137,14 +137,19 @@ export function useListingAssignmentExpenses({
       dariAdminFee: Number(dealCostSettings?.value?.dari_admin_fee || dealCostSettings?.value?.['1'] || 0),
       adgmAdminFee: Number(dealCostSettings?.value?.adgm_admin_fee || dealCostSettings?.value?.['2'] || 0),
       agencyFee: Number(dealCostSettings?.value?.agency_fee || dealCostSettings?.value?.['3'] || 2),
+      transferFee: Number(dealCostSettings?.value?.transfer_fee || dealCostSettings?.value?.['4'] || 2),
     };
     
     // ✅ 1. Agency Fee (2% من سعر البيع) - تضاف دائماً
     const agencyFeeValue = fees.agencyFee || 2;
+    const transferFeeValue = fees.transferFee || 2;
     console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
     
     const existingAgency = assignmentExpenseLines.value.find(
       line => line.label === 'Agency Fee' && line.isDefault
+    );
+     const existingTransfer = assignmentExpenseLines.value.find(
+      line => line.label === 'Transfer Fee' && line.isDefault
     );
     if (!existingAgency) {
       assignmentExpenseLines.value.push({
@@ -162,6 +167,23 @@ export function useListingAssignmentExpenses({
     } else {
       existingAgency.value = agencyFeeValue;
       console.log('✅ Agency Fee updated');
+    }
+    if (!existingTransfer) {
+      assignmentExpenseLines.value.push({
+        id: Date.now() + 3,
+        label: 'Transfer Fee',
+        calcType: 'percentage',
+        base: 'sp',
+        value: transferFeeValue,
+        vatEnabled: false,
+        isDefault: true,
+        isReadonly: true,
+        isAgency: true,
+      });
+      console.log('✅ Transfer Fee added');
+    } else {
+      existingAgency.value = transferFeeValue;
+      console.log('✅ Transfer Fee updated');
     }
 
     // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة

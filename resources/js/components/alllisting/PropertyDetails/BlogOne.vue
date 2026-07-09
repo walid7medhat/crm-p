@@ -2175,6 +2175,7 @@ export default {
   const sqftIcon = '/assets/icons/area-size.svg';
       
 const logo  =  '/assets/images/oiaLogo.jpg';
+const pnglogo  =  '/assets/images/pngLogo.png';
 const locationIcon  =  '/assets/images/Location.png';
 const OiaLogo = '/assets/images/LogoWhite.png';
 
@@ -5759,7 +5760,11 @@ const createSlide4 = () => {
         <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
         <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
-      <div style="width:50% !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      <div style="width:50% !important;position:relative !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+       <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+        </div>
+      </div>
     </div>
     ${createFooter()}
   </div>
@@ -5908,17 +5913,10 @@ const createPaymentDetailsSlide = () => {
   const nocFixedAmount = toNum(p.noc_fixed_amount);
   const nocPct = originalPrice > 0 ? Math.max(0, Math.min(100, (nocFixedAmount / originalPrice) * 100)) : 0;
 
-  // Only render the breakdown slide when ALL of the following hold:
-  //   1) the listing has at least one installment in its payment breakdown,
-  //   2) the completion status is Under Construction (case-insensitive),
-  //   3) a real original_price is set (selling-price fallback doesn't count).
   const completionStr = String(p.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
   const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
   const hasInstallments = installments.length > 0;
   const hasOriginalPrice = rawOriginalPrice > 0;
-  // if (!(hasInstallments && isUnderConstruction && hasOriginalPrice)) {
-  //   return '';
-  // }
 
   let planLabel = '';
   if (p.payment_plan) {
@@ -5981,9 +5979,13 @@ const createPaymentDetailsSlide = () => {
   const hasPremiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction;
   const hasHandoverRow = Math.abs(handoverAmount) > 0.01;
   const breakdownRowCount = sorted.length + (hasPremiumRow ? 1 : 0) + (hasHandoverRow ? 1 : 0) + 1;
+  
+  // ✅ إضافة NOC كصف في جدول التكاليف
+  const hasNoc = nocFixedAmount > 0;
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
-  const contentPressure = breakdownRowCount + expenseRowCount;
+  const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
   const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
+  
   const d = {
     normal: {
       fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2.2mm',
@@ -6064,6 +6066,7 @@ const createPaymentDetailsSlide = () => {
 
   const baseLabels = { op: 'OP', sp: 'SP', premium: 'premium' };
   const baseAmount = (b) => b === 'op' ? originalPrice : b === 'sp' ? sellingPrice : b === 'premium' ? premium : 0;
+  
   const expLineAmount = (l) => {
     const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
     if (calc === 'percentage') return (baseAmount(l?.base) * toNum(l?.value)) / 100;
@@ -6073,9 +6076,52 @@ const createPaymentDetailsSlide = () => {
   let expSubtotal = 0;
   let expVatTotal = 0;
   let expGrand = 0;
-  const expenseRows = expenses.map((l) => {
+  
+  // ✅ بناء صفوف التكاليف مع إضافة NOC كصف منفصل
+  const expenseRows = [];
+  
+  // ✅ إضافة NOC كأول صف في جدول التكاليف (إذا كان موجوداً)
+  if (hasNoc) {
+    const nocAmount = nocFixedAmount;
+    const isFullyPaid = scheduledAed >= nocRequired - 0.01;
+    const paidAmount = Math.min(paidAed, nocRequired);
+    const remainingAmount = Math.max(0, nocRequired - scheduledAed);
+    
+    // عرض تفاصيل NOC
+    const statusText = isFullyPaid ? '✅ Paid' : '⚠️ Pending';
+    const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
+    
+    expenseRows.push(`
+      <tr style="${!isFullyPaid ? '' : ''}">
+        <td style="${tdCell}font-weight:500;">NOC Fees</td>
+        <td style="${tdCell}color:#64748b;">
+          ${fmtAed(nocAmount)} 
+         
+        </td>
+        <td style="${tdCell}text-align:right;">
+          <div>${fmtAed(nocAmount)}</div>
+          <div style="font-size:${d.fsXs};color:#94a3b8;">
+            Paid: ${fmtAed(paidAmount)} / Remaining: ${fmtAed(remainingAmount)}
+          </div>
+        </td>
+        <td style="${tdCell}text-align:right;">—</td>
+        <td style="${tdCell}text-align:right;font-weight:600;">
+          <span style="color:${statusColor};">${fmtAed(nocAmount)}</span>
+          <div style="font-size:${d.fsXs};color:${statusColor};">${statusText}</div>
+        </td>
+      </tr>
+    `);
+    
+    expSubtotal += nocAmount;
+    expGrand += nocAmount;
+  }
+  
+  // ✅ إضافة باقي التكاليف
+  expenses.forEach((l) => {
     const amt = expLineAmount(l);
-    const vat = l?.vatEnabled ? amt * 0.05 : 0;
+    const isAgencyFee = l?.label === 'Agency Fee';
+    // ✅ VAT فقط لـ Agency Fee
+    const vat = (isAgencyFee && l?.vatEnabled) ? amt * 0.05 : 0;
     const total = amt + vat;
     expSubtotal += amt;
     expVatTotal += vat;
@@ -6084,19 +6130,22 @@ const createPaymentDetailsSlide = () => {
     const detail = calc === 'percentage'
       ? `${toNum(l?.value)}% of ${baseLabels[l?.base] || 'OP'}`
       : fmtAed(toNum(l?.value));
-    return `
+    expenseRows.push(`
       <tr>
         <td style="${tdCell}">${l?.label || '—'}</td>
         <td style="${tdCell}color:#64748b;">${detail}</td>
         <td style="${tdCell}text-align:right;">${fmtAed(amt)}</td>
-        <td style="${tdCell}text-align:right;">${l?.vatEnabled ? fmtAed(vat) : '—'}</td>
+        <td style="${tdCell}text-align:right;">${vat > 0 ? fmtAed(vat) : '—'}</td>
         <td style="${tdCell}text-align:right;font-weight:600;">${fmtAed(total)}</td>
-      </tr>`;
-  }).join('');
+      </tr>
+    `);
+  });
 
-  const expensesBlock = expenses.length > 0 ? `
+  const expenseRowsHtml = expenseRows.join('');
+
+  const expensesBlock = (expenseRows.length > 0) ? `
     <div style="margin-top:${d.blockMt};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Assignment deal costs</div>
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">other costs</div>
       <div style="background:#ffffff;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
         <table style="${tableStyle}">
           <thead>
@@ -6109,7 +6158,7 @@ const createPaymentDetailsSlide = () => {
             </tr>
           </thead>
           <tbody>
-            ${expenseRows}
+            ${expenseRowsHtml}
             <tr style="background:#f1f5f9;">
               <td colspan="2" style="${tdCell}font-weight:700;">Total</td>
               <td style="${tdCell}text-align:right;font-weight:700;">${fmtAed(expSubtotal)}</td>
@@ -6122,14 +6171,8 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 
-  const nocStrip = nocPct > 0 ? `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1.2mm 4mm;background:#ffffff;border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};font-size:${d.fs};box-shadow:inset 0 0 0 0.2mm #ffffff;">
-      <span>NOC <strong>${fmtAed(nocFixedAmount)}</strong></span>
-      <span>Paid <strong>${fmtAed(paidAed)}</strong></span>
-      <span>Remaining <strong>${fmtAed(nocRemaining)}</strong></span>
-      <span style="display:inline-block;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};${nocMet ? 'background:#22c55e;color:#fff;' : 'background:#fecdd3;color:#9f1239;'}">${nocMet ? 'NOC met' : 'Below NOC'}</span>
-    </div>
-  ` : '';
+  // ✅ إزالة NOC Strip المنفصل لأنه الآن داخل جدول التكاليف
+  // nocStrip تم إلغاؤه
 
   const installmentTable = (installmentRows || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
@@ -6163,7 +6206,7 @@ const createPaymentDetailsSlide = () => {
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
-      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
+      <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
     </div>
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin-bottom:${d.headerMb};">
@@ -6191,7 +6234,6 @@ const createPaymentDetailsSlide = () => {
         </div>
       </div>
 
-      ${nocStrip}
       ${installmentTable}
       ${expensesBlock}
     </div>

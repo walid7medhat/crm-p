@@ -421,7 +421,7 @@
                     <td class="text-end text-nowrap">{{ formatAed(assignmentExpenseLineAmount(line)) }}</td>
                     <td class="text-end text-nowrap">
                       <label class="d-inline-flex align-items-center gap-1 mb-0">
-                        <input v-model="line.vatEnabled" type="checkbox" class="form-check-input m-0" :disabled="line.isReadonly" />
+                        <input v-model="line.vatEnabled" type="checkbox" class="form-check-input m-0"   :disabled="assignmentExpenseDraft.label !== 'Agency Fee'" />
                         <span>{{ line.vatEnabled ? formatAed(assignmentExpenseLineVat(line)) : '—' }}</span>
                       </label>
                     </td>
@@ -726,6 +726,9 @@ const fetchDealCosts = async () => {
       if (!settings['3'] && !settings['agency_fee']) {
         settings['agency_fee'] = 2;
       }
+       if (!settings['4'] && !settings['transfer_fee']) {
+        settings['transfer_fee'] = 2;
+      }
       dealCostSettings.value = settings;
     } else if (data.details) {
       const settings = {};
@@ -735,11 +738,17 @@ const fetchDealCosts = async () => {
       if (!settings['agency_fee']) {
         settings['agency_fee'] = 2;
       }
+      if (!settings['transfer_fee']) {
+        settings['transfer_fee'] = 2;
+      }
       dealCostSettings.value = settings;
     } else {
       dealCostSettings.value = data;
       if (!dealCostSettings.value['agency_fee']) {
         dealCostSettings.value['agency_fee'] = 2;
+      }
+      if (!dealCostSettings.value['transfer_fee']) {
+        dealCostSettings.value['transfer_fee'] = 2;
       }
     }
     
@@ -754,7 +763,8 @@ const fetchDealCosts = async () => {
     dealCostSettings.value = {
       dari_admin_fee: 0,
       adgm_admin_fee: 0,
-      agency_fee: 2
+      agency_fee: 2,
+      transfer_fee:2
     };
     if (typeof addDefaultDealCosts === 'function') {
       addDefaultDealCosts();

@@ -310,7 +310,7 @@ const nocRequiredAed = computed(() => {
       percentage: '',
       amount: premiumAmountForm.value,
       date: '',
-      status: premiumIsNegative.value ? SELLING_BELOW_OP_WARN_MSG : STATUS_UPCOMING,
+      status: premiumIsNegative.value ? SELLING_BELOW_OP_WARN_MSG : STATUS_DUE_ON_TRANSFER,
     });
 
     if (Math.abs(handoverAmountForm.value) > 0.01) {
@@ -321,7 +321,7 @@ const nocRequiredAed = computed(() => {
         percentage: installmentPercentForm.value.toFixed(2),
         amount: handoverAmountForm.value,
         date: form.value.handover_date || '',
-        status: isDatePaid(form.value.handover_date) ? STATUS_PAID : STATUS_UPCOMING,
+        status: isDatePaid(form.value.handover_date) ? STATUS_PAID : STATUS_DUE_ON_TRANSFER,
       });
     }
 
