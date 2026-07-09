@@ -684,7 +684,7 @@
                           class="form-check-input m-0 flex-shrink-0"
                           :title="'Apply 5% VAT on ' + formatAed(assignmentExpenseLineAmount(line))"
                           :disabled="line.label !== 'Agency Fee'"
-                          :checked="line.line.label === 'Agency Fee'"
+                          :checked="line.label === 'Agency Fee'"
                         />
                           <span>{{ line.label === 'Agency Fee' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
                       </label>
