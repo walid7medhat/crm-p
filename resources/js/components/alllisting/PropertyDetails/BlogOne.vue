@@ -5911,7 +5911,7 @@ const createPaymentDetailsSlide = () => {
   const originalPrice = rawOriginalPrice || sellingPrice;
   const premium = sellingPrice - originalPrice;
   const nocFixedAmount = toNum(p.noc_fixed_amount);
-   const nocPercentage = toNum(p.noc_percentage);
+  const nocPercentage = toNum(p.noc_percentage);
   const nocAmountFromPercentage = originalPrice > 0 ? (originalPrice * Math.max(0, Math.min(100, nocPercentage))) / 100 : 0;
   const nocPct = originalPrice > 0 ? Math.max(0, Math.min(100, (nocFixedAmount / originalPrice) * 100)) : 0;
 
@@ -5960,9 +5960,12 @@ const createPaymentDetailsSlide = () => {
   const nocRemaining = Math.max(0, nocRequired - scheduledAed);
   const nocMet = nocPct <= 0 || scheduledAed >= nocRequired - 0.01;
 
+  // ✅ NOC Percentage - يستخدم paidAed (المدفوع فقط) وليس scheduledAed
   const nocRequiredFromPercentage = nocAmountFromPercentage;
-  const nocRemainingFromPercentage = Math.max(0, nocRequiredFromPercentage - scheduledAed);
-  const nocMetFromPercentage = nocPercentage <= 0 || scheduledAed >= nocRequiredFromPercentage - 0.01;
+  // ✅ Remaining = المطلوب - المدفوع فقط
+  const nocRemainingFromPercentage = Math.max(0, nocRequiredFromPercentage - paidAed);
+  // ✅ NOC met = المدفوع فقط كافي لتغطية المطلوب
+  const nocMetFromPercentage = nocPercentage <= 0 || paidAed >= nocRequiredFromPercentage - 0.01;
 
   const fmtAed = (v) =>
     new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(toNum(v));
@@ -5986,7 +5989,6 @@ const createPaymentDetailsSlide = () => {
   const hasHandoverRow = Math.abs(handoverAmount) > 0.01;
   const breakdownRowCount = sorted.length + (hasPremiumRow ? 1 : 0) + (hasHandoverRow ? 1 : 0) + 1;
   
-  // ✅ إضافة NOC كصف في جدول التكاليف
   const hasNoc = nocFixedAmount > 0;
   const hasNocPercentage = nocPercentage > 0 && nocAmountFromPercentage > 0;
 
@@ -6101,11 +6103,9 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}font-weight:500;background:#ffffff !important;">NOC Fees</td>
         <td style="${tdCell}color:#64748b;background:#ffffff !important;">
           ${fmtAed(nocAmount)} 
-         
         </td>
         <td style="${tdCell}background:#ffffff !important;">
           <div>${fmtAed(nocAmount)}</div>
-          
         </td>
         <td style="${tdCell}background:#ffffff !important;">—</td>
         <td style="${tdCell}font-weight:600;background:#ffffff !important;">
@@ -6123,7 +6123,6 @@ const createPaymentDetailsSlide = () => {
   expenses.forEach((l) => {
     const amt = expLineAmount(l);
     const isAgencyFee = l?.label === 'Agency Fee';
-    // ✅ VAT فقط لـ Agency Fee
     const vat = (isAgencyFee && l?.vatEnabled) ? amt * 0.05 : 0;
     const total = amt + vat;
     expSubtotal += amt;
@@ -6174,9 +6173,6 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 
-  // ✅ إزالة NOC Strip المنفصل لأنه الآن داخل جدول التكاليف
-  // nocStrip تم إلغاؤه
-
   const installmentTable = (installmentRows || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
       <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
@@ -6205,7 +6201,9 @@ const createPaymentDetailsSlide = () => {
       </div>
     </div>
   ` : '';
- const nocPercentageStrip = (hasNocPercentage ) ? `
+  
+  // ✅ NOC Percentage Strip - يستخدم paidAed (المدفوع فقط)
+  const nocPercentageStrip = (hasNocPercentage) ? `
     <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};border-left:1.5mm solid #0ea5e9;display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
       <span style="display:inline-flex;align-items:center;gap:0.8mm;">
         <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0.3mm 2mm;font-weight:700;font-size:${d.fsSm};display:inline-flex;align-items:center;gap:0.5mm;">
@@ -6229,6 +6227,7 @@ const createPaymentDetailsSlide = () => {
       </span>
     </div>
   ` : '';
+  
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
