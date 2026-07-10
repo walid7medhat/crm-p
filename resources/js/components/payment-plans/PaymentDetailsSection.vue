@@ -270,17 +270,29 @@ const paidPercentDisplay = computed(() => {
   if (originalPrice.value <= 0) return '0.00';
   return ((paidTotalAed.value / originalPrice.value) * 100).toFixed(2);
 });
+const nocRemainingAmount = computed(() => {
+  const required = nocRequiredAmount.value;
+  const paid = Number(props.paidTotalAed || 0);
+  return Math.max(0, required - paid);
+});
 
+const isNocCovered = computed(() => {
+  const required = nocRequiredAmount.value;
+  if (required <= 0) return true;
+  const paid = Number(props.paidTotalAed || 0);
+  return paid >= required - 0.01;
+});
 // ✅ NOC Required من النسبة المئوية
 const nocRequiredAed = computed(() => nocAmount.value);
 
 // ✅ NOC Remaining
-const nocRemainingAed = computed(() => Math.max(0, nocRequiredAed.value - scheduledInstallmentsAed.value));
-
+const nocRemainingAed = computed(() => 
+  Math.max(0, nocRequiredAed.value - paidTotalAed.value)
+);
 // ✅ NOC Requirement Met
 const nocRequirementMet = computed(() => {
   if (nocPercentage.value <= 0) return true;
-  return scheduledInstallmentsAed.value >= nocRequiredAed.value - 0.01;
+  return paidTotalAed.value >= nocRequiredAed.value - 0.01;
 });
 
 const breakdownRows = computed(() => {
