@@ -352,7 +352,7 @@
                 readonly
               />
             </div>
-            <!-- <div class="col-md-4">
+            <div class="col-md-4" v-if="isUnderConstruction">
               <label class="form-label">NOC <span class="text-muted fw-normal small">(% of original price)</span></label>
               <v-select
                 v-model="form.noc_percentage"
@@ -365,7 +365,7 @@
                 NOC % applies to <strong>original price (OP)</strong> only (not the payment-plan split). Example: OP 1,000,000 AED and NOC 25% → <strong>250,000 AED</strong> must be covered by total installments entered below.
                 <strong>0</strong> = no NOC payment check.
               </small>
-            </div> -->
+            </div>
           <div class="col-md-4" v-if="showNocField">
             <label class="form-label">
               NOC Fees 
@@ -787,6 +787,7 @@
         :noc-progress-label="nocProgressPaidLabel"
         :noc-fixed-amount="nocFixedAmount"
         :noc-type="currentNocType"
+        :noc-percentage="form.noc_percentage"
         :breakdown-rows="paymentBreakdownRows"
         :is-under-construction="isUnderConstruction"
         :assignment-expense-rows="assignmentExpenseLines"
@@ -4437,15 +4438,15 @@ const handleSubmit = async (action = 'draft') => {
 
     if (showNocField.value && form.value.noc_fixed_amount > 0) {
             formData.append('noc_fixed_amount', String(Math.round(Number(form.value.noc_fixed_amount || 0))));
-            formData.append('noc_percentage', '0');
             formData.append('noc_type', currentNocType.value);
             formData.append('noc_fees_ready', String(form.value.noc_fees_ready || 0));
             formData.append('noc_fees_off_plan', String(form.value.noc_fees_off_plan || 0));
           } else {
             formData.append('noc_fixed_amount', '0');
-            formData.append('noc_percentage', '0');
+            
             formData.append('noc_type', 'none');
           }
+          formData.append('noc_percentage',  String(form.value.noc_percentage || 0));
     
           // ✅ Payment Breakdown - يرسل فقط عند Under Construction
           if (isUnderConstruction.value) {

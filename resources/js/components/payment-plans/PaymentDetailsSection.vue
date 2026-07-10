@@ -34,23 +34,34 @@
         </div>
       </div>
 
-     <!-- <div v-if="nocFixedAmount > 0" class="pd-noc-strip"> -->
-        <!-- <span class="pd-noc-strip__item">
-          
-          NOC <strong>{{ formatAed(nocFixedAmount) }}</strong>
-          <span v-if="nocPercent > 0" class="pd-text-muted">({{ nocPercent.toFixed(1) }}% of OP)</span>
-        </span> -->
-        <!-- <span class="pd-noc-strip__item">
-          Paid <strong>{{ formatAed(paidTotalAed) }}</strong>
-          <span class="pd-text-muted">({{ paidPercentDisplay }}% of OP)</span>
-        </span>
+        <!-- NOC Section - Percentage Only -->
+      <div v-if="nocPercentage > 0 && isUnderConstruction" class="pd-noc-strip">
         <span class="pd-noc-strip__item">
-          Remaining <strong>{{ formatAed(nocRemainingAed) }}</strong>
-        </span> -->
-        <!-- <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
-          {{ nocRequirementMet ? '✅ Covered' : '⚠️ Pending' }}
-        </span> -->
-      <!-- </div> -->
+          <span class="badge bg-info text-white">
+            <i class="fas fa-percentage me-1"></i>
+            NOC %
+          </span>
+          <span class="ms-1">Required:</span>
+          <strong>{{ formatAed(nocAmount) }}</strong>
+          <span class="text-muted ms-1">({{ nocPercentage }}% of OP)</span>
+        </span>
+        
+        <span class="pd-noc-strip__item">
+          <i class="fas fa-check-circle text-success me-1"></i>
+          Paid: <strong>{{ formatAed(paidTotalAed) }}</strong>
+          <span class="text-muted">({{ paidPercentDisplay }}% of OP)</span>
+        </span>
+        
+        <span class="pd-noc-strip__item">
+          <i class="fas fa-clock text-warning me-1"></i>
+          Remaining: <strong>{{ formatAed(nocRemainingAed) }}</strong>
+        </span>
+        
+        <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
+          <i :class="nocRequirementMet ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="me-1"></i>
+          {{ nocRequirementMet ? 'NOC met ✅' : 'Below NOC ⚠️' }}
+        </span>
+      </div>
 
       <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-section-heading">Installment breakdown</div>
       <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-table-wrap">
@@ -137,8 +148,13 @@ import { paymentPlanSelectionLabel } from '@/composables/listingPaymentPlanPrese
 
 const props = defineProps({
   listing: { type: Object, default: () => ({}) },
+  // ✅ إضافة nocPercentage كـ Prop
+  nocPercentage: { type: Number, default: 0 },
 });
-
+const isUnderConstruction = computed(() => {
+  const s = String(props.listing?.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
+  return s === 'under construction' || s === 'off plan';
+});
 const UAE_VAT_RATE = 0.05;
 
 const toNumber = (v) => {
@@ -153,10 +169,17 @@ const premiumAmount = computed(() => sellingPrice.value - originalPrice.value);
 const nocFixedAmount = computed(() => toNumber(props.listing?.noc_fixed_amount || 0));
 const nocType = computed(() => props.listing?.noc_type || 'Off-Plan');
 
-const nocPercent = computed(() => {
-  if (originalPrice.value <= 0 || nocFixedAmount.value <= 0) return 0;
-  return (nocFixedAmount.value / originalPrice.value) * 100;
+// ✅ NOC Percentage من Props
+const nocPercentage = computed(() => toNumber(props.nocPercentage || props.listing?.noc_percentage || 0));
+
+// ✅ NOC Amount من النسبة المئوية
+const nocAmount = computed(() => {
+  if (originalPrice.value <= 0 || nocPercentage.value <= 0) return 0;
+  return (originalPrice.value * Math.max(0, Math.min(100, nocPercentage.value))) / 100;
 });
+
+// ✅ NOC Percent (للتوافق مع الكود القديم)
+const nocPercent = computed(() => nocPercentage.value);
 
 const rawBreakdown = computed(() => {
   const raw = props.listing?.payment_breakdown;
@@ -248,10 +271,15 @@ const paidPercentDisplay = computed(() => {
   return ((paidTotalAed.value / originalPrice.value) * 100).toFixed(2);
 });
 
-const nocRequiredAed = computed(() => (originalPrice.value * nocPercent.value) / 100);
+// ✅ NOC Required من النسبة المئوية
+const nocRequiredAed = computed(() => nocAmount.value);
+
+// ✅ NOC Remaining
 const nocRemainingAed = computed(() => Math.max(0, nocRequiredAed.value - scheduledInstallmentsAed.value));
+
+// ✅ NOC Requirement Met
 const nocRequirementMet = computed(() => {
-  if (nocPercent.value <= 0) return true;
+  if (nocPercentage.value <= 0) return true;
   return scheduledInstallmentsAed.value >= nocRequiredAed.value - 0.01;
 });
 
@@ -268,7 +296,7 @@ const breakdownRows = computed(() => {
     const paid = isDatePaid(entry?.date);
     let status = 'Upcoming';
     if (paid) status = 'Paid';
-    else if (nocPercent.value > 0 && cumulative <= nocRequiredAed.value + 0.01) status = 'Due on transfer';
+    else if (nocPercentage.value > 0 && cumulative <= nocRequiredAed.value + 0.01) status = 'Due on transfer';
     rows.push({
       id: entry?.id != null ? `inst-${entry.id}` : `inst-${idx}`,
       type: 'Installment',
@@ -286,7 +314,7 @@ const breakdownRows = computed(() => {
       percentage: '',
       amount: premiumAmount.value,
       date: '',
-      status: premiumAmount.value < -0.01 ? 'Selling below original price' : 'Due on trasfer',
+      status: premiumAmount.value < -0.01 ? 'Selling below original price' : 'Due on transfer',
     });
   }
 
@@ -374,12 +402,14 @@ const expensesGrandTotal = computed(() =>
   expenseRows.value.reduce((sum, r) => sum + r.total, 0),
 );
 
+// ✅ تحديث hasContent ليشمل NOC Percentage
 const hasContent = computed(
   () =>
     rawBreakdown.value.length > 0 ||
     rawExpenses.value.length > 0 ||
     (originalPrice.value > 0 && Math.abs(premiumAmount.value) > 0.01) ||
-    paymentPlanLabel.value,
+    paymentPlanLabel.value ||
+    nocPercentage.value > 0,
 );
 
 const formatAed = (n) =>

@@ -5911,6 +5911,8 @@ const createPaymentDetailsSlide = () => {
   const originalPrice = rawOriginalPrice || sellingPrice;
   const premium = sellingPrice - originalPrice;
   const nocFixedAmount = toNum(p.noc_fixed_amount);
+   const nocPercentage = toNum(p.noc_percentage);
+  const nocAmountFromPercentage = originalPrice > 0 ? (originalPrice * Math.max(0, Math.min(100, nocPercentage))) / 100 : 0;
   const nocPct = originalPrice > 0 ? Math.max(0, Math.min(100, (nocFixedAmount / originalPrice) * 100)) : 0;
 
   const completionStr = String(p.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
@@ -5958,6 +5960,10 @@ const createPaymentDetailsSlide = () => {
   const nocRemaining = Math.max(0, nocRequired - scheduledAed);
   const nocMet = nocPct <= 0 || scheduledAed >= nocRequired - 0.01;
 
+  const nocRequiredFromPercentage = nocAmountFromPercentage;
+  const nocRemainingFromPercentage = Math.max(0, nocRequiredFromPercentage - scheduledAed);
+  const nocMetFromPercentage = nocPercentage <= 0 || scheduledAed >= nocRequiredFromPercentage - 0.01;
+
   const fmtAed = (v) =>
     new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(toNum(v));
 
@@ -5982,6 +5988,8 @@ const createPaymentDetailsSlide = () => {
   
   // ✅ إضافة NOC كصف في جدول التكاليف
   const hasNoc = nocFixedAmount > 0;
+  const hasNocPercentage = nocPercentage > 0 && nocAmountFromPercentage > 0;
+
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
   const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
   const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
@@ -6197,7 +6205,30 @@ const createPaymentDetailsSlide = () => {
       </div>
     </div>
   ` : '';
-
+ const nocPercentageStrip = (hasNocPercentage ) ? `
+    <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};border-left:1.5mm solid #0ea5e9;display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
+      <span style="display:inline-flex;align-items:center;gap:0.8mm;">
+        <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0.3mm 2mm;font-weight:700;font-size:${d.fsSm};display:inline-flex;align-items:center;gap:0.5mm;">
+          <span style="font-size:${d.fsXs};">%</span> NOC
+        </span>
+        <span style="font-weight:500;">Required:</span>
+        <strong style="font-weight:700;">${fmtAed(nocRequiredFromPercentage)}</strong>
+        <span style="color:#64748b;font-size:${d.fsXs};">(${nocPercentage}% of OP)</span>
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:0.5mm;">
+        <span style="color:#22c55e;">✓</span>
+        Paid: <strong>${fmtAed(paidAed)}</strong>
+        <span style="color:#64748b;font-size:${d.fsXs};">(${originalPrice > 0 ? ((paidAed / originalPrice) * 100).toFixed(2) : '0.00'}% of OP)</span>
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:0.5mm;">
+        <span style="color:#f59e0b;">⏳</span>
+        Remaining: <strong>${fmtAed(nocRemainingFromPercentage)}</strong>
+      </span>
+      <span style="display:inline-flex;align-items:center;padding:0.3mm 1.6mm;border-radius:4mm;font-weight:700;font-size:${d.badgeFs};${nocMetFromPercentage ? 'background:#22c55e;color:#fff;' : 'background:#f59e0b;color:#fff;'}">
+        ${nocMetFromPercentage ? '✅ NOC met' : '⚠️ Below NOC'}
+      </span>
+    </div>
+  ` : '';
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
@@ -6228,7 +6259,7 @@ const createPaymentDetailsSlide = () => {
           <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
         </div>
       </div>
-
+    ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
     </div>

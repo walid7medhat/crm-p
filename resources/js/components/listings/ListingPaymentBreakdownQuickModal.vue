@@ -112,6 +112,20 @@
                     />
                     <div v-if="paymentHandoverDateError" class="lpb-hint lpb-hint--err">{{ paymentHandoverDateError }}</div>
                   </div>
+                 <div class="col-md-6" v-if="isUnderConstruction">
+                    <label class="form-label">NOC <span class="text-muted fw-normal small">(% of original price)</span></label>
+                    <v-select
+                      v-model="form.noc_percentage"
+                      :options="nocPercentageOptions"
+                      :reduce="(item) => item.value"
+                      label="label"
+                      placeholder="0 – 50"
+                    />
+                    <small class="text-muted d-block mt-1">
+                      NOC % applies to <strong>original price (OP)</strong> only (not the payment-plan split). Example: OP 1,000,000 AED and NOC 25% → <strong>250,000 AED</strong> must be covered by total installments entered below.
+                      <strong>0</strong> = no NOC payment check.
+                    </small>
+                  </div>
                   <div class="col-sm-6" :class="{ 'col-sm-12': !isUnderConstruction }"  v-if="Number(nocFixedAmount) > 0">
                     <label class="lpb-label">
                       NOC Fees
@@ -499,11 +513,13 @@
       :noc-remaining-aed="nocRemainingAed"
       :noc-requirement-met="nocRequirementMet"
       :noc-progress-label="nocProgressPaidLabel"
+      :noc-percentage="form.noc_percentage"
       :breakdown-rows="paymentBreakdownRows"
       :assignment-expense-rows="assignmentExpenseLines"
       :assignment-expenses-subtotal="assignmentExpensesSubtotal"
       :assignment-expenses-total-vat="assignmentExpensesTotalVat"
       :assignment-expenses-grand-total="assignmentExpensesGrandTotal"
+
     />
   </Teleport>
 </template>
@@ -818,7 +834,7 @@ const hydrateFromProperty = (propertyData) => {
     payment_plans: paymentPlanValue ? resolvePaymentPlanOption(paymentPlanValue) ?? paymentPlanValue : null,
     payment_plan: propertyData.payment_plan || '',
     handover_date: propertyData.handover_date ? String(propertyData.handover_date).slice(0, 10) : '',
-    noc_percentage: nocValue > 0 ? 100 : 0,
+    noc_percentage: propertyData.noc_percentage ,
     noc_fixed_amount: nocValue,
     completionStatus: propertyData.completion_status || 'Under Construction',
   };

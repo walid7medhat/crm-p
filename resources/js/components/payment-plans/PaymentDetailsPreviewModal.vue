@@ -46,25 +46,34 @@
               </div>
             </div>
 
-            <!-- <div v-if="nocFixedAmount > 0 || Number(nocPercent) > 0" class="pd-noc-strip"> -->
-              <!-- <span class="pd-noc-strip__item">
-                <span class="badge" :class="nocType === 'Ready' ? 'bg-success' : 'bg-warning'">
-                  {{ nocType }}
-                </span>
-                NOC <strong>{{ formatAed(nocFixedAmount) }}</strong>
-                <span v-if="Number(nocPercent) > 0" class="text-muted">({{ nocPercentDisplay }}% of OP)</span>
-              </span> -->
-              <!-- <span class="pd-noc-strip__item">
-                Paid <strong>{{ formatAed(paidTotalAed) }}</strong>
-                <span class="text-muted">({{ paidPercentOfOpDisplay }}% of OP)</span>
+           <!-- NOC Section - Percentage Only -->
+          <div v-if="nocPercentage > 0 && isUnderConstruction" class="pd-noc-strip">
+            <span class="pd-noc-strip__item">
+              <span class="badge bg-info text-white">
+                <i class="fas fa-percentage me-1"></i>
+                NOC %
               </span>
-              <span class="pd-noc-strip__item">
-                Remaining <strong>{{ formatAed(nocRemainingAed) }}</strong>
-              </span>
-              <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
-                {{ nocRequirementMet ? 'NOC met ✅' : 'Below NOC ⚠️' }}
-              </span>
-            </div> -->
+              <span class="ms-1">Required:</span>
+              <strong>{{ formatAed(nocAmount) }}</strong>
+              <span class="text-muted ms-1">({{ nocPercentage }}% of OP)</span>
+            </span>
+            
+            <span class="pd-noc-strip__item">
+              <i class="fas fa-check-circle text-success me-1"></i>
+              Paid: <strong>{{ formatAed(paidTotalAed) }}</strong>
+              <span class="text-muted">({{ paidPercentOfOpDisplay }}% of OP)</span>
+            </span>
+            
+            <span class="pd-noc-strip__item">
+              <i class="fas fa-clock text-warning me-1"></i>
+              Remaining: <strong>{{ formatAed(nocRemainingAmount) }}</strong>
+            </span>
+            
+            <span class="pd-badge" :class="isNocCovered ? 'pd-badge--paid' : 'pd-badge--upcoming'">
+              <i :class="isNocCovered ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="me-1"></i>
+              {{ isNocCovered ? 'NOC met ✅' : 'Below NOC ⚠️' }}
+            </span>
+          </div>
 
             <div class="pd-section-heading"  v-if="isUnderConstruction">Installment breakdown</div>
             <div class="pd-table-wrap"  v-if="isUnderConstruction">
@@ -184,6 +193,7 @@ const props = defineProps({
   assignmentExpensesGrandTotal: { type: Number, default: 0 },
     nocFixedAmount: { type: Number, default: 0 },
   nocType: { type: String, default: 'Off-Plan' },
+   nocPercentage: { type: Number, default:0 },
   isUnderConstruction: { type: Boolean, default: false },
 });
 
@@ -351,7 +361,33 @@ const expensesGrandTotalDisplay = computed(() => {
   const rows = Array.isArray(props.assignmentExpenseRows) ? props.assignmentExpenseRows : [];
   return rows.reduce((sum, row) => sum + expenseLineTotal(row), 0);
 });
+const nocAmount = computed(() => {
+  const percentage = Number(props.nocPercentage || 0);
+  const op = Number(props.originalPrice || 0);
+  if (op <= 0 || percentage <= 0) return 0;
+  return (op * Math.max(0, Math.min(100, percentage))) / 100;
+});
 
+const nocRequiredAmount = computed(() => {
+  return nocAmount.value;
+});
+
+const nocRemainingAmount = computed(() => {
+  const required = nocRequiredAmount.value;
+  const paid = Number(props.paidTotalAed || 0);
+  return Math.max(0, required - paid);
+});
+
+const isNocCovered = computed(() => {
+  const required = nocRequiredAmount.value;
+  if (required <= 0) return true;
+  const paid = Number(props.paidTotalAed || 0);
+  return paid >= required - 0.01;
+});
+
+const nocPercentageOfOp = computed(() => {
+  return Number(props.nocPercentage || 0);
+});
 </script>
 
 <style scoped>
