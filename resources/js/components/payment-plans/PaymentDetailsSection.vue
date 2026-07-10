@@ -110,7 +110,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="nocFixedAmount > 0 || Number(nocPercent) > 0">
+            <tr v-if="nocFixedAmount > 0">
               <td>NOC</td>
               <td class="text-muted">
                 <span class="text-muted d-block" style="font-size:0.85em;">

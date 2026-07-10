@@ -123,7 +123,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="nocFixedAmount > 0 || Number(nocPercent) > 0">
+                  <tr v-if="nocFixedAmount > 0 ">
                     <td>NOC Fees</td>
                     <td class="text-muted">
                    
