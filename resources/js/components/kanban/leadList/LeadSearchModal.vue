@@ -4522,7 +4522,7 @@ function normalizeLeadDateRange(from, to, exact) {
 }
 
 const isFormEmpty = () => {
-    return Object.values(form).every(val => {
+    return Object.values(form.value).every(val => {
         if (Array.isArray(val)) return val.length === 0
         return val === null || val === '' || val === undefined
     })
