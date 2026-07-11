@@ -158,7 +158,7 @@ const addDefaultDealCosts = () => {
       calcType: 'percentage',
       base: 'sp',
       value: agencyFeeValue,
-      vatEnabled: false,
+      vatEnabled: true,
       isDefault: true,
       isReadonly: true,
       isAgency: true,
@@ -281,7 +281,7 @@ const addDefaultDealCosts = () => {
             calcType: line.calcType === 'fixed' ? 'fixed' : 'percentage',
             base: line.base || 'op',
             value: Number(line.value || 0),
-            vatEnabled: !!line.vatEnabled,
+            vatEnabled:  line.label === 'Transfer Fee' ? true : !!line.vatEnabled,
             isDefault: false,
             isReadonly: false,
           });
