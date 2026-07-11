@@ -33,9 +33,12 @@ const isDatePaid = (dateLike) => {
 };
 
 const formatAed = (value) =>
-  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(
-    Number(value || 0),
-  );
+  new Intl.NumberFormat('en-AE', {
+    style: 'currency',
+    currency: 'AED',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Number(value ?? 0));
 
 export function useListingPaymentBreakdown({
   form,
