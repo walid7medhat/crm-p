@@ -640,7 +640,7 @@ export default {
       'sale_rent', 'area_ids', 'area_id', 'project_id', 'type_id', 'beds', 'baths',
       'type_ids', 'beds_list', 'baths_list',
       'price_from', 'price_to', 'size_from', 'size_to', 'sort', 'ref',
-      'completion_status', 'occupancy_status', 'agent_id', 'agent_name','additional_features'
+      'completion_status', 'occupancy_status', 'agent_id', 'agent_name','additional_features','page'
     ];
 
     const LISTING_FILTERS_STORAGE_KEY = 'listingSearchFilters';

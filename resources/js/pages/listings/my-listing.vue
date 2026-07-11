@@ -440,7 +440,10 @@ export default {
 const fetchProperties = async (filters = {}, page = 1) => {
   try {
     isLoading.value = true;
-    
+     if (page === null && route.query.page) {
+        page = parseInt(route.query.page) || 1;
+      }
+      if (page === null) page = 1;
     // Build query parameters
     const params = {
       ...filters,
@@ -519,9 +522,19 @@ const fetchProperties = async (filters = {}, page = 1) => {
     // Change page
     const changePage = (page) => {
       if (page < 1 || page > pagination.value.last_page || page === '...') return;
-        const apiFilters = convertFiltersToAPI(currentFilters.value); 
-     fetchProperties(apiFilters, page);
+      
+      // حفظ رقم الصفحة في الـ URL
+      const query = { ...route.query, page: page };
+      router.replace({ query: pruneEmptyQueryValues(query) });
+      
+      const apiFilters = convertFiltersToAPI(currentFilters.value);
+      fetchProperties(apiFilters, page);
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
     };
+
 
     const encodeFiltersToQuery = (filters) => {
         const activeFeatures = filters.selectedFeatures 
@@ -597,6 +610,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
           : null,
         agent: query.agent_id ? { id: Number(query.agent_id) } : null,
           selectedFeatures: selectedFeatures,
+           page: query.page ? parseInt(query.page) : 1,
       };
     };
 
@@ -1064,17 +1078,55 @@ const fetchProperties = async (filters = {}, page = 1) => {
     // Fetch initial properties on component mount
     onMounted(() => {
       const hasQuery = Object.keys(route.query).length > 0;
+        const pageFromUrl = route.query.page ? parseInt(route.query.page) : 1;
+
       if (hasQuery) {
         const filters = decodeFiltersFromQuery(route.query);
         currentFilters.value = filters;
         initialFilters.value = filters;
         const apiFilters = convertFiltersToAPI(filters);
-        fetchProperties(apiFilters, 1);
+        fetchProperties(apiFilters, pageFromUrl);
       } else {
-        fetchProperties();
+        fetchProperties({},pageFromUrl);
       }
     });
+watch(() => route.query.page, (newPage, oldPage) => {
+  if (newPage && newPage !== oldPage) {
+    const page = parseInt(newPage);
+    if (page !== pagination.value?.current_page) {
+      const apiFilters = convertFiltersToAPI(currentFilters.value);
+      fetchProperties(apiFilters, page);
+    }
+  }
+});
 
+// أضف watch للاستجابة لتغييرات route.query بالكامل (للتحديث عند الضغط على Back)
+watch(() => route.query, (newQuery, oldQuery) => {
+  // تجاهل التغييرات الناتجة عن تحديث page فقط
+  if (newQuery.page !== oldQuery.page) {
+    const page = newQuery.page ? parseInt(newQuery.page) : 1;
+    if (page !== pagination.value?.current_page) {
+      const apiFilters = convertFiltersToAPI(currentFilters.value);
+      fetchProperties(apiFilters, page);
+    }
+    return;
+  }
+  
+  // إذا تغيرت الفلاتر الأخرى، قم بتحديث البيانات
+  const hasFilterChange = LISTING_QUERY_KEYS.some(key => {
+    if (key === 'page') return false;
+    return newQuery[key] !== oldQuery[key];
+  });
+  
+  if (hasFilterChange) {
+    const filters = decodeFiltersFromQuery(newQuery);
+    currentFilters.value = filters;
+    initialFilters.value = filters;
+    const apiFilters = convertFiltersToAPI(filters);
+    const page = newQuery.page ? parseInt(newQuery.page) : 1;
+    fetchProperties(apiFilters, page);
+  }
+}, { deep: true });
     return {
       properties,
       filteredProperties,
