@@ -2448,7 +2448,8 @@ const queryToFormKeys = {
     source: 'source',
 
     source_website: 'sourceWebsite',
-
+     source_portal: 'sourcePortal',
+    source_whatsapp: 'sourceWhatsapp', 
     interaction_result: 'interactionResult',
 
     status_lead: 'qualityStatus',
@@ -2621,6 +2622,7 @@ function syncFormFromQuery(query) {
         source: '',
         sourceWebsite: [],
         sourcePortal:[],
+         sourceWhatsapp: [],  
         interactionResult: '',
         qualityStatus: '',
         team: '',
@@ -2662,9 +2664,17 @@ function syncFormFromQuery(query) {
         const sp = query.source_portal
         next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
     }
-       if (next.source === 'whatsapp' && query.source_whatsapp) {
+       if (query.source_whatsapp) {
         const sw = query.source_whatsapp
         next.sourceWhatsapp = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
+        if (next.sourceWhatsapp.length > 0) {
+            next.source = 'whatsapp'
+        }
+    }
+    
+    // ✅ تأكد من معالجة source إذا كانت whatsapp
+    if (query.source === 'whatsapp') {
+        next.source = 'whatsapp'
     }
     
     normalizeSourceWebsiteForm(next)
