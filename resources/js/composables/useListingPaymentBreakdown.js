@@ -98,8 +98,19 @@ export function useListingPaymentBreakdown({
     Number(parsePriceInputDigits(form.value.original_price) || 0),
   );
 
-  const sellingPriceNum = computed(() => Number(parsePriceInputDigits(form.value.price) || 0));
-
+const sellingPriceNum = computed(() => {
+  const raw = parsePriceInputDigits(form.value.price);
+  const num = Number(raw || 0);
+  
+  console.log('========================================');
+  console.log('🔍 sellingPriceNum DEBUG:');
+  console.log('📝 form.value.price:', form.value.price);
+  console.log('📝 parsePriceInputDigits result:', raw);
+  console.log('📝 Number result:', num);
+  console.log('========================================');
+  
+  return num;
+});
   const premiumAmountForm = computed(() => sellingPriceNum.value - originalPriceNum.value);
 
   const premiumIsNegative = computed(() => premiumAmountForm.value < -0.01);
