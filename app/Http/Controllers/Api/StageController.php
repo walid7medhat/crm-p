@@ -894,11 +894,14 @@ class StageController extends Controller
                     
                         $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
                         $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
+                        $whatsappPartials  = ['whatsapp', 'Whatsapp Oia Properties', 'Whatsapp All Properties'];
                     
                         if ($search === 'website') {
                             $expanded = $websitePartials;
                         } elseif ($search === 'portal') {
                             $expanded = $portalPartials;
+                        }elseif ($search === 'whatsapp') {
+                            $expanded = $whatsappPartials;
                         } else {
                             $expanded = [$search];
                         }
