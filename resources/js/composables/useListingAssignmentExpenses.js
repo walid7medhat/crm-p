@@ -94,7 +94,7 @@ export function useListingAssignmentExpenses({
   const assignmentExpenseLineAmount = (line) => {
     if (!line) return 0;
     if (line.calcType === 'percentage') {
-      return (getAssignmentExpenseBaseAmount(line.base) * Number(line.value || 0)) / 100;
+      return (getAssignmentExpenseBaseAmount(line.base) * Number(line.value || 0)/ 100) ;
     }
     return Number(line.value || 0);
   };
