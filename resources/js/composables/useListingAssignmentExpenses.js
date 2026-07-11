@@ -95,27 +95,53 @@ export function useListingAssignmentExpenses({
   };
 
   // ✅ دالة حساب المبلغ مع التحقق من القيم
-  const assignmentExpenseLineAmount = (line) => {
-    if (!line) return 0;
+  // ✅ دالة حساب المبلغ مع التحقق من القيم
+const assignmentExpenseLineAmount = (line) => {
+  if (!line) return 0;
 
-    const base = parseNumber(getAssignmentExpenseBaseAmount(line.base));
-    let value = parseNumber(line.value);
+  console.log('========================================');
+  console.log('🧮 assignmentExpenseLineAmount CALLED');
+  console.log('📋 Line:', JSON.stringify(line, null, 2));
+  console.log('📋 Line label:', line.label);
+  console.log('📋 Line value (raw):', line.value);
+  console.log('📋 Line calcType:', line.calcType);
+  console.log('📋 Line base:', line.base);
 
-    if (!Number.isFinite(base) || !Number.isFinite(value)) return 0;
+  // 🔍 تحقق من قيم المصدر
+  console.log('🔍 sellingPriceNum.value:', sellingPriceNum.value);
+  console.log('🔍 originalPriceNum.value:', originalPriceNum.value);
+  console.log('🔍 premiumAmountForm.value:', premiumAmountForm.value);
 
+  const baseAmount = getAssignmentExpenseBaseAmount(line.base);
+  console.log('💰 Base amount from getAssignmentExpenseBaseAmount:', baseAmount);
+  console.log('💰 Base amount type:', typeof baseAmount);
+
+  let value = parseNumber(line.value);
+  console.log('📊 Value after parseNumber:', value);
+  console.log('📊 Value type after parseNumber:', typeof value);
+
+  if (!Number.isFinite(baseAmount) || !Number.isFinite(value)) {
+    console.log('❌ Invalid numbers - returning 0');
+    return 0;
+  }
+
+  if (line.calcType === 'percentage') {
     // ✅ إذا كانت القيمة كبيرة جداً (أكثر من 100)، فهي مضروبة في 100
-    // نقوم بتصحيحها تلقائياً
-    if (line.calcType === 'percentage' && value > 100) {
-      console.warn(`⚠️ Value ${value}% seems too high, dividing by 100`);
+    if (value > 100) {
+      console.log(`⚠️ Value ${value} > 100, dividing by 100`);
       value = value / 100;
+      console.log(`✅ New value: ${value}`);
     }
+    
+    console.log(`📐 Calculating: (${baseAmount} * ${value}) / 100`);
+    const result = (baseAmount * value) / 100;
+    console.log(`✅ Result: ${result}`);
+    return result;
+  }
 
-    if (line.calcType === 'percentage') {
-      return (base * value) / 100;
-    }
-
-    return value;
-  };
+  console.log(`💰 Fixed amount: ${value}`);
+  return value;
+};
 
   const assignmentExpenseLineVat = (line) =>
     line?.vatEnabled ? assignmentExpenseLineAmount(line) * UAE_ASSIGNMENT_VAT_RATE : 0;
@@ -149,6 +175,10 @@ export function useListingAssignmentExpenses({
   const addDefaultDealCosts = () => {
     console.log('📝 Adding default deal costs. Settings:', dealCostSettings?.value);
     console.log('📍 Area data:', area?.value);
+
+     console.log('🔍🔍🔍 SELLING PRICE NUM:', sellingPriceNum.value);
+  console.log('🔍🔍🔍 ORIGINAL PRICE NUM:', originalPriceNum.value);
+  console.log('🔍🔍🔍 PREMIUM AMOUNT:', premiumAmountForm.value);
     
     // ✅ قراءة القيم مع التصحيح التلقائي
     const fees = {
