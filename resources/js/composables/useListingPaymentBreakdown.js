@@ -36,8 +36,8 @@ const formatAed = (value) =>
   new Intl.NumberFormat('en-AE', {
     style: 'currency',
     currency: 'AED',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(Number(value ?? 0));
 
 export function useListingPaymentBreakdown({
