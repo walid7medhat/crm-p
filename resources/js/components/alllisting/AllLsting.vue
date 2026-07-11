@@ -531,7 +531,9 @@ export default {
     const fetchProperties = async (filters = {}, page = 1) => {
       try {
         isLoading.value = true;
-        
+        if (!page && route.query.page) {
+          page = parseInt(route.query.page) || 1;
+        }
         if (Object.keys(filters).length > 0) {
           currentFilters.value = { ...currentFilters.value, ...filters };
         }
@@ -619,8 +621,13 @@ export default {
     };
 
     // Change page
-    const changePage = (page) => {
+   const changePage = (page) => {
       if (page < 1 || page > pagination.value.last_page || page === '...') return;
+      
+      // Update the URL with the page parameter
+      const query = { ...route.query, page: page };
+      router.replace({ query: pruneEmptyQueryValues(query) });
+      
       fetchProperties(currentFilters.value, page);
       window.scrollTo({
         top: 0,
@@ -1012,12 +1019,13 @@ const decodeFiltersFromQuery = async (query) => {
     // Fetch initial properties on component mount
     onMounted(async () => {
       await fetchUserInfo();
+  const pageFromUrl = route.query.page ? parseInt(route.query.page) : 1;
 
       const restoreAndFetch = async (filters) => {
         currentFilters.value = convertFiltersToAPI(filters);
         initialFilters.value = filters;
         saveListingFiltersToStorage(filters);
-        await fetchProperties({}, 1);
+        await fetchProperties({}, pageFromUrl);
       };
 
       if (hasListingQueryParams(route.query)) {
@@ -1026,7 +1034,7 @@ const decodeFiltersFromQuery = async (query) => {
           await restoreAndFetch(filters);
         } catch (e) {
           console.error('Failed to restore listing filters from URL:', e);
-          fetchProperties();
+          fetchProperties({},pageFromUrl);
         }
         return;
       }
@@ -1038,12 +1046,12 @@ const decodeFiltersFromQuery = async (query) => {
           replaceRouteWithListingFilters(storedFilters);
         } catch (e) {
           console.error('Failed to restore listing filters from storage:', e);
-          fetchProperties();
+          fetchProperties({},pageFromUrl);
         }
         return;
       }
 
-      fetchProperties();
+      fetchProperties({},pageFromUrl);
     });
 
     return {
