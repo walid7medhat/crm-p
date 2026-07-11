@@ -4521,10 +4521,19 @@ function normalizeLeadDateRange(from, to, exact) {
 
 }
 
-
+const isFormEmpty = () => {
+    return Object.values(form).every(val => {
+        if (Array.isArray(val)) return val.length === 0
+        return val === null || val === '' || val === undefined
+    })
+}
 
 function applySearch(options = {}) {
-
+ if (isFormEmpty()) {
+        show.value = false  
+        emit('update:modelValue', false) 
+        return
+    }
     let createdFrom = undefined
 
     let createdTo = undefined
@@ -6675,6 +6684,7 @@ onBeforeUnmount(() => {
     min-width: 221px;
     background: #f8fafc;
     padding: 16px 14px !important;
+        border-radius: 12px;
 }
 
 .pill-btn {
