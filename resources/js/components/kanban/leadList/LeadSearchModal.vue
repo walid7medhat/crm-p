@@ -4401,6 +4401,21 @@ function getDisplayValue(field, rawValue) {
         return 'Portal'
 
     }
+     if (field.formKey === 'source' && rawValue === 'whatsapp') {
+        const whatsapps = Array.isArray(form.value.sourceWhatsapp) 
+            ? form.value.sourceWhatsapp.filter(v => v != null && v !== '')
+            : (form.value.sourceWhatsapp ? [form.value.sourceWhatsapp] : [])
+        
+        if (whatsapps.length) {
+            const opts = whatsappSourceOptions.value
+            const names = whatsapps.map(val => {
+                const opt = opts.find(o => o.value === val)
+                return opt ? opt.text : String(val)
+            })
+            return `Whatsapp (${names.join(', ')})`
+        }
+        return 'Whatsapp'
+    }
 
     if (Array.isArray(rawValue)) {
 
