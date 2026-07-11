@@ -808,6 +808,26 @@
 
                             </v-select>
 
+                            <v-select
+                                v-if="field.id === 'source' && form.source === 'whatsapp'"
+                                v-model="form.sourceWhatsapp"
+                                :options="whatsappSourceOptionsForMulti"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select WhatsApp sources"
+                                :clearable="form.sourceWhatsapp && form.sourceWhatsapp.length > 0"
+                                multiple
+                                filterable
+                                append-to-body
+                                class="custom-v-select mt-2 office-multi-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+
                         </div>
 
                     </template>
@@ -1640,6 +1660,25 @@
 
                                 </template>
 
+                            </v-select>
+                            <v-select
+                                v-if="field.id === 'source' && form.source === 'whatsapp'"
+                                v-model="form.sourceWhatsapp"
+                                :options="whatsappSourceOptionsForMulti"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select WhatsApp sources"
+                                :clearable="form.sourceWhatsapp && form.sourceWhatsapp.length > 0"
+                                multiple
+                                filterable
+                                append-to-body
+                                class="custom-v-select mt-2 office-multi-select"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
                             </v-select>
 
                         </div>
@@ -2512,6 +2551,16 @@ function normalizeSourceWebsiteForm(next) {
 
     }
 
+     if (next.source === 'whatsapp') {
+        if (Array.isArray(next.sourceWhatsapp)) {
+            next.sourceWhatsapp = next.sourceWhatsapp.filter(v => v != null && v !== '')
+        } else if (next.sourceWhatsapp) {
+            next.sourceWhatsapp = [next.sourceWhatsapp]
+        } else {
+            next.sourceWhatsapp = []
+        }
+    }
+
 }
 
 async function loadAllSelectDataForCurrentForm() {
@@ -2612,6 +2661,10 @@ function syncFormFromQuery(query) {
     if (next.source === 'portal' && query.source_portal) {
         const sp = query.source_portal
         next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
+    }
+       if (next.source === 'whatsapp' && query.source_whatsapp) {
+        const sw = query.source_whatsapp
+        next.sourceWhatsapp = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
     }
     
     normalizeSourceWebsiteForm(next)
@@ -2881,7 +2934,8 @@ const form = ref({
     sourceWebsite: [],
 
     sourcePortal: [],
-
+    sourceWhatsapp: [],  
+    
     interactionResult: '',
 
     qualityStatus: '',
@@ -3225,10 +3279,18 @@ const sourceOptions = ref([
     { value: 'website', text: 'Website' },
 
     { value: 'portal', text: 'Portal' },
+    { value: 'whatsapp', text: 'Whatsapp' },
 
 ])
 
+const whatsappSourceOptions = ref([
+    { value: 'whatsapp_oia', text: 'Whatsapp Oia Properties' },
+    { value: 'whatsapp_all', text: 'Whatsapp All Properties' },
+])
 
+const whatsappSourceOptionsForMulti = computed(() =>
+    whatsappSourceOptions.value.filter(o => o.value != null)
+)
 
 const websiteSourceOptions = ref([
 
@@ -5066,7 +5128,18 @@ function applySearch(options = {}) {
 
             }
 
-        }   else if (form.value.source) {
+        } else if (form.value.source === 'whatsapp') {
+                const whatsapps = Array.isArray(form.value.sourceWhatsapp)
+                    ? form.value.sourceWhatsapp.filter(v => v != null && v !== '')
+                    : (form.value.sourceWhatsapp ? [form.value.sourceWhatsapp] : [])
+                if (whatsapps.length > 1) {
+                    sourceParam = whatsapps
+                } else if (whatsapps.length === 1) {
+                    sourceParam = whatsapps[0]
+                } else {
+                    sourceParam = 'whatsapp'
+                }
+            }  else if (form.value.source) {
 
             sourceParam = form.value.source
 
@@ -5665,6 +5738,8 @@ function resetFormValues() {
         source: '',
 
         sourceWebsite: [],
+         sourcePortal: [],
+        sourceWhatsapp: [],
 
         interactionResult: '',
 
@@ -6200,6 +6275,8 @@ watch(() => form.value.source, (newVal) => {
 
         form.value.sourceWebsite = []
 
+    } else if (newVal === 'whatsapp') {
+        form.value.sourceWhatsapp = []
     } else {
 
         form.value.sourceWebsite = []
