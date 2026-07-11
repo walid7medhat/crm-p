@@ -163,14 +163,14 @@ const toNumber = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-const sellingPrice = computed(() => toNumber(props.listing?.price ?? props.listing?.selling_price));
-const originalPrice = computed(() => toNumber(props.listing?.original_price) || sellingPrice.value);
+const sellingPrice = computed(() => props.listing?.price ?? props.listing?.selling_price);
+const originalPrice = computed(() => props.listing?.original_price) || sellingPrice.value;
 const premiumAmount = computed(() => sellingPrice.value - originalPrice.value);
-const nocFixedAmount = computed(() => toNumber(props.listing?.noc_fixed_amount || 0));
+const nocFixedAmount = computed(() => props.listing?.noc_fixed_amount || 0);
 const nocType = computed(() => props.listing?.noc_type || 'Off-Plan');
 
 // ✅ NOC Percentage من Props
-const nocPercentage = computed(() => toNumber(props.nocPercentage || props.listing?.noc_percentage || 0));
+const nocPercentage = computed(() => props.nocPercentage || props.listing?.noc_percentage || 0);
 
 // ✅ NOC Amount من النسبة المئوية
 const nocAmount = computed(() => {
@@ -217,9 +217,9 @@ const paymentPlanLabel = computed(() => {
 const installmentToAmount = (entry) => {
   if (!entry) return 0;
   if (entry.type === 'percentage') {
-    return (originalPrice.value * toNumber(entry.value)) / 100;
+    return (originalPrice.value * entry.value) / 100;
   }
-  return toNumber(entry.value);
+  return entry.value;
 };
 
 const initialPercentFromPlan = computed(() => {
@@ -349,7 +349,7 @@ const tableTotals = computed(() => {
   let amountTotal = 0;
   let hasPercent = false;
   for (const row of breakdownRows.value) {
-    amountTotal += toNumber(row.amount);
+    amountTotal += row.amount;
     if (row.type === 'Premium') continue;
     const p = parseFloat(row.percentage);
     if (Number.isFinite(p)) {
@@ -375,9 +375,9 @@ const expenseLineAmount = (line) => {
   if (!line) return 0;
   const calcType = line.calcType ?? (line.typeLabel === 'Percentage' ? 'percentage' : 'fixed');
   if (calcType === 'percentage') {
-    return (baseAmount(line.base) * toNumber(line.value)) / 100;
+    return (baseAmount(line.base) * line.value) / 100;
   }
-  return toNumber(line.value ?? line.amount);
+  return line.value ?? line.amount;
 };
 
 const expenseLineVat = (line) => (line?.vatEnabled ? expenseLineAmount(line) * UAE_VAT_RATE : 0);
@@ -390,8 +390,8 @@ const expenseRows = computed(() =>
     const vat = expenseLineVat(line);
     const detail =
       calcType === 'percentage'
-        ? `${toNumber(line?.value)}% of ${baseLabels[line?.base] || 'OP'}`
-        : formatAed(toNumber(line?.value));
+        ? `${line?.value}% of ${baseLabels[line?.base] || 'OP'}`
+        : formatAed(line?.value);
     return {
       id: line?.id != null ? `exp-${line.id}` : `exp-${idx}`,
       label: line?.label || '—',
@@ -424,10 +424,13 @@ const hasContent = computed(
     nocPercentage.value > 0,
 );
 
-const formatAed = (n) =>
-  new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(
-    toNumber(n),
-  );
+const formatAed = (value) =>
+  new Intl.NumberFormat('en-AE', {
+    style: 'currency',
+    currency: 'AED',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Number(value ?? 0));
 
 const formatDateDisplay = (dateLike) => {
   if (!dateLike) return '—';
