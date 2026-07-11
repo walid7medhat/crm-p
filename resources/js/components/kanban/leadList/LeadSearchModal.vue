@@ -3284,8 +3284,8 @@ const sourceOptions = ref([
 ])
 
 const whatsappSourceOptions = ref([
-    { value: 'whatsapp_oia', text: 'Whatsapp Oia Properties' },
-    { value: 'whatsapp_all', text: 'Whatsapp All Properties' },
+    { value: 'Whatsapp Oia Properties', text: 'Whatsapp Oia Properties' },
+    { value: 'Whatsapp All Properties', text: 'Whatsapp All Properties' },
 ])
 
 const whatsappSourceOptionsForMulti = computed(() =>
@@ -6282,7 +6282,7 @@ watch(() => form.value.source, (newVal) => {
         form.value.sourceWebsite = []
 
         form.value.sourcePortal = []
-
+        form.value.sourceWhatsapp = []
     }
 
 })
