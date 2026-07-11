@@ -99,15 +99,17 @@ export function useListingPaymentBreakdown({
   );
 
 const sellingPriceNum = computed(() => {
-  const raw = parsePriceInputDigits(form.value.price);
-  const num = Number(raw || 0);
+  const raw = form.value.price;
+  if (!raw) return 0;
   
-  console.log('========================================');
+  // ✅ تحويل مباشر بدون parsePriceInputDigits
+  const cleaned = String(raw).replace(/,/g, '').trim();
+  const num = Number(cleaned) || 0;
+  
   console.log('🔍 sellingPriceNum DEBUG:');
-  console.log('📝 form.value.price:', form.value.price);
-  console.log('📝 parsePriceInputDigits result:', raw);
+  console.log('📝 form.value.price:', raw);
+  console.log('📝 Cleaned result:', cleaned);
   console.log('📝 Number result:', num);
-  console.log('========================================');
   
   return num;
 });
