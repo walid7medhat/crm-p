@@ -518,7 +518,15 @@ const fetchProperties = async (filters = {}, page = 1) => {
     isLoading.value = false;
   }
 };
-
+const pruneEmptyQueryValues = (obj) => {
+  const out = {};
+  Object.keys(obj).forEach((k) => {
+    const v = obj[k];
+    if (v === undefined || v === null || v === '' || v === 0) return;
+    out[k] = v;
+  });
+  return out;
+};
     // Change page
     const changePage = (page) => {
       if (page < 1 || page > pagination.value.last_page || page === '...') return;
@@ -534,7 +542,13 @@ const fetchProperties = async (filters = {}, page = 1) => {
         behavior: 'smooth'
       });
     };
-
+const LISTING_QUERY_KEYS = [
+  'sale_rent', 'area_ids', 'area_id', 'project_id', 'type_id', 'beds', 'baths',
+  'type_ids', 'beds_list', 'baths_list',
+  'price_from', 'price_to', 'size_from', 'size_to', 'sort', 'ref',
+  'completion_status', 'occupancy_status', 'agent_id', 'agent_name', 'additional_features',
+  'page'
+];
 
     const encodeFiltersToQuery = (filters) => {
         const activeFeatures = filters.selectedFeatures 
