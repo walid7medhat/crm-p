@@ -90,18 +90,19 @@ export function useListingAssignmentExpenses({
     if (base === 'premium') return premiumAmountForm.value;
     return 0;
   };
-
- const assignmentExpenseLineAmount = (line) => {
+const assignmentExpenseLineAmount = (line) => {
   if (!line) return 0;
+
+  const base = getAssignmentExpenseBaseAmount(line.base);
+  const value = Number(line.value || 0);
+
+  if (!Number.isFinite(base) || !Number.isFinite(value)) return 0;
+
   if (line.calcType === 'percentage') {
-    // إذا كانت القيمة عشرية (مثل 0.02) فلا تقسم على 100
-    if (line.value < 1) {
-      return getAssignmentExpenseBaseAmount(line.base) * Number(line.value || 0);
-    }
-    // وإذا كانت نسبة مئوية (مثل 2) فاقسم على 100
-    return (getAssignmentExpenseBaseAmount(line.base) * Number(line.value || 0)) / 100;
+    return (base * value) / 100; // ✅ 2 = 2%
   }
-  return Number(line.value || 0);
+
+  return value; // fixed
 };
   const assignmentExpenseLineVat = (line) =>
     line?.vatEnabled ? assignmentExpenseLineAmount(line) * UAE_ASSIGNMENT_VAT_RATE : 0;
