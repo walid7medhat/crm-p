@@ -273,7 +273,7 @@ const addDefaultDealCosts = () => {
       // Add server data (non-default lines)
       arr.forEach((line, i) => {
         // Don't add default lines from server, they will be re-added by addDefaultDealCosts
-        const isDefault = line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' || line.label === 'Agency Fee';
+        const isDefault = line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' || line.label === 'Agency Fee' || line.label === 'Transfer Fee' ;
         if (!isDefault) {
           assignmentExpenseLines.value.push({
             id: line.id != null ? Number(line.id) : Date.now() + i,
