@@ -33,7 +33,7 @@ export function useListingAssignmentExpenses({
   premiumAmountForm,
   formatAed,
   dealCostSettings = null, 
-  area = null, // ✅ المنطقة من الـ API
+  area = null,
 }) {
   const assignmentExpenseLines = ref([]);
   const assignmentExpenseDraft = ref({
@@ -44,16 +44,13 @@ export function useListingAssignmentExpenses({
     vatEnabled: false,
   });
 
-  // ✅ دالة لتحديد نوع التكلفة بناءً على المنطقة
   const getAdminFeeTypeFromArea = (areaData) => {
     if (!areaData) return 'dari';
     
-    // استخدام القيمة من الـ API (is_adgm)
     if (areaData.is_adgm !== undefined) {
       return areaData.is_adgm ? 'adgm' : 'dari';
     }
     
-    // استخدام all_names من الـ API
     if (areaData.all_names && Array.isArray(areaData.all_names)) {
       const adgmTerms = ['maryah island', 'reem island'];
       const isAdgm = areaData.all_names.some(name => 
@@ -64,7 +61,6 @@ export function useListingAssignmentExpenses({
       return isAdgm ? 'adgm' : 'dari';
     }
     
-    // استخدام hierarchy من الـ API
     if (areaData.hierarchy && Array.isArray(areaData.hierarchy)) {
       const adgmTerms = ['maryah island', 'reem island'];
       const isAdgm = areaData.hierarchy.some(h => 
@@ -75,7 +71,6 @@ export function useListingAssignmentExpenses({
       return isAdgm ? 'adgm' : 'dari';
     }
     
-    // Fallback: التحقق من الاسم
     const areaName = String(areaData.name || areaData.area_title || areaData.title || '').toLowerCase();
     if (areaName.includes('maryah') || areaName.includes('reem')) {
       return 'adgm';
@@ -90,24 +85,38 @@ export function useListingAssignmentExpenses({
     if (base === 'premium') return premiumAmountForm.value;
     return 0;
   };
+
+  // ✅ دالة مساعدة لتنظيف الأرقام
   const parseNumber = (val) => {
-  if (val == null) return 0;
-  return Number(String(val).replace(/,/g, ''));
-};
-const assignmentExpenseLineAmount = (line) => {
-  if (!line) return 0;
+    if (val == null) return 0;
+    if (typeof val === 'number') return val;
+    const cleaned = String(val).replace(/,/g, '').trim();
+    return Number(cleaned) || 0;
+  };
 
-  const base = parseNumber(getAssignmentExpenseBaseAmount(line.base));
-  const value = parseNumber(line.value);
+  // ✅ دالة حساب المبلغ مع التحقق من القيم
+  const assignmentExpenseLineAmount = (line) => {
+    if (!line) return 0;
 
-  if (!Number.isFinite(base) || !Number.isFinite(value)) return 0;
+    const base = parseNumber(getAssignmentExpenseBaseAmount(line.base));
+    let value = parseNumber(line.value);
 
-  if (line.calcType === 'percentage') {
-    return (base * value) / 100;
-  }
+    if (!Number.isFinite(base) || !Number.isFinite(value)) return 0;
 
-  return value;
-};
+    // ✅ إذا كانت القيمة كبيرة جداً (أكثر من 100)، فهي مضروبة في 100
+    // نقوم بتصحيحها تلقائياً
+    if (line.calcType === 'percentage' && value > 100) {
+      console.warn(`⚠️ Value ${value}% seems too high, dividing by 100`);
+      value = value / 100;
+    }
+
+    if (line.calcType === 'percentage') {
+      return (base * value) / 100;
+    }
+
+    return value;
+  };
+
   const assignmentExpenseLineVat = (line) =>
     line?.vatEnabled ? assignmentExpenseLineAmount(line) * UAE_ASSIGNMENT_VAT_RATE : 0;
 
@@ -136,161 +145,164 @@ const assignmentExpenseLineAmount = (line) => {
     };
   };
 
- // ✅ دالة لإضافة التكاليف الافتراضية
-const addDefaultDealCosts = () => {
-  console.log('📝 Adding default deal costs. Settings:', dealCostSettings?.value);
-  console.log('📍 Area data:', area?.value);
-  
-  // ✅ استخدام المفاتيح النصية
-  const fees = {
-    dariAdminFee: Number(dealCostSettings?.value?.dari_admin_fee || dealCostSettings?.value?.['1'] || 0),
-    adgmAdminFee: Number(dealCostSettings?.value?.adgm_admin_fee || dealCostSettings?.value?.['2'] || 0),
-    agencyFee: Number(dealCostSettings?.value?.agency_fee || dealCostSettings?.value?.['3'] || 2),
-    transferFee: Number(dealCostSettings?.value?.transfer_fee || dealCostSettings?.value?.['4'] || 2),
+  // ✅ دالة لإضافة التكاليف الافتراضية
+  const addDefaultDealCosts = () => {
+    console.log('📝 Adding default deal costs. Settings:', dealCostSettings?.value);
+    console.log('📍 Area data:', area?.value);
+    
+    // ✅ قراءة القيم مع التصحيح التلقائي
+    const fees = {
+      dariAdminFee: parseNumber(dealCostSettings?.value?.dari_admin_fee || dealCostSettings?.value?.['1'] || 0),
+      adgmAdminFee: parseNumber(dealCostSettings?.value?.adgm_admin_fee || dealCostSettings?.value?.['2'] || 0),
+      agencyFee: parseNumber(dealCostSettings?.value?.agency_fee || dealCostSettings?.value?.['3'] || 2),
+      transferFee: parseNumber(dealCostSettings?.value?.transfer_fee || dealCostSettings?.value?.['4'] || 2),
+    };
+
+    // ✅ تصحيح النسب المئوية إذا كانت أكثر من 100
+    let agencyFeeValue = fees.agencyFee;
+    let transferFeeValue = fees.transferFee;
+    
+    if (agencyFeeValue > 100) {
+      agencyFeeValue = agencyFeeValue / 100;
+      console.log(`⚠️ Agency Fee corrected from ${fees.agencyFee} to ${agencyFeeValue}`);
+    }
+    
+    if (transferFeeValue > 100) {
+      transferFeeValue = transferFeeValue / 100;
+      console.log(`⚠️ Transfer Fee corrected from ${fees.transferFee} to ${transferFeeValue}`);
+    }
+
+    console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
+    console.log(`✅ Transfer Fee: ${transferFeeValue}% of Selling Price`);
+    
+    // ✅ 1. Agency Fee
+    const existingAgency = assignmentExpenseLines.value.find(
+      line => line.label === 'Agency Fee' && line.isDefault
+    );
+    
+    if (!existingAgency) {
+      assignmentExpenseLines.value.push({
+        id: Date.now() + 3,
+        label: 'Agency Fee',
+        calcType: 'percentage',
+        base: 'sp',
+        value: agencyFeeValue,
+        vatEnabled: true,
+        isDefault: true,
+        isReadonly: true,
+        isAgency: true,
+      });
+      console.log('✅ Agency Fee added');
+    } else {
+      existingAgency.value = agencyFeeValue;
+      console.log('✅ Agency Fee updated');
+    }
+    
+    // ✅ 2. Transfer Fee
+    const existingTransfer = assignmentExpenseLines.value.find(
+      line => line.label === 'Transfer Fee' && line.isDefault
+    );
+    
+    if (!existingTransfer) {
+      assignmentExpenseLines.value.push({
+        id: Date.now() + 4,
+        label: 'Transfer Fee',
+        calcType: 'percentage',
+        base: 'sp',
+        value: transferFeeValue,
+        vatEnabled: false,
+        isDefault: true,
+        isReadonly: true,
+        isAgency: true,
+      });
+      console.log('✅ Transfer Fee added');
+    } else {
+      existingTransfer.value = transferFeeValue;
+      console.log('✅ Transfer Fee updated');
+    }
+
+    // ✅ 3. Admin Fee
+    const areaData = area?.value;
+    const feeType = getAdminFeeTypeFromArea(areaData);
+    console.log(`📍 Area: "${areaData?.name || areaData?.area_title || 'Unknown'}" → Admin fee type: ${feeType}`);
+    
+    // إزالة التكاليف الإدارية القديمة
+    const adminFeeIndices = [];
+    assignmentExpenseLines.value.forEach((line, index) => {
+      if ((line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee') && line.isDefault) {
+        adminFeeIndices.push(index);
+      }
+    });
+    adminFeeIndices.reverse().forEach(index => {
+      assignmentExpenseLines.value.splice(index, 1);
+    });
+
+    // إضافة التكلفة الإدارية المناسبة
+    if (feeType === 'adgm') {
+      if (fees.adgmAdminFee > 0) {
+        const existingAdgm = assignmentExpenseLines.value.find(
+          line => line.label === 'ADGM Admin Fee' && line.isDefault
+        );
+        if (!existingAdgm) {
+          assignmentExpenseLines.value.push({
+            id: Date.now() + 2,
+            label: 'ADGM Admin Fee',
+            calcType: 'fixed',
+            base: null,
+            value: fees.adgmAdminFee,
+            vatEnabled: false,
+            isDefault: true,
+            isReadonly: true,
+            isAdminFee: true,
+          });
+          console.log(`✅ ADGM Admin Fee added: ${fees.adgmAdminFee} AED`);
+        } else {
+          existingAdgm.value = fees.adgmAdminFee;
+        }
+      }
+    } else {
+      if (fees.dariAdminFee > 0) {
+        const existingDari = assignmentExpenseLines.value.find(
+          line => line.label === 'Dari Admin Fee' && line.isDefault
+        );
+        if (!existingDari) {
+          assignmentExpenseLines.value.push({
+            id: Date.now() + 1,
+            label: 'Dari Admin Fee',
+            calcType: 'fixed',
+            base: null,
+            value: fees.dariAdminFee,
+            vatEnabled: false,
+            isDefault: true,
+            isReadonly: true,
+            isAdminFee: true,
+          });
+          console.log(`✅ Dari Admin Fee added: ${fees.dariAdminFee} AED`);
+        } else {
+          existingDari.value = fees.dariAdminFee;
+        }
+      }
+    }
+    
+    console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
   };
-  
-  // ✅ 1. Agency Fee - تضاف مرة واحدة فقط
-  const agencyFeeValue = fees.agencyFee || 2;
-  const transferFeeValue = fees.transferFee || 2;
-  console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
-  console.log(`✅ Transfer Fee: ${transferFeeValue}% of Selling Price`);
-  
-  // ✅ التحقق من وجود Agency Fee قبل الإضافة
-  const existingAgency = assignmentExpenseLines.value.find(
-    line => line.label === 'Agency Fee' && line.isDefault
-  );
-  
-  if (!existingAgency) {
-    assignmentExpenseLines.value.push({
-      id: Date.now() + 3,
-      label: 'Agency Fee',
-      calcType: 'percentage',
-      base: 'sp',
-      value: agencyFeeValue,
-      vatEnabled: true,
-      isDefault: true,
-      isReadonly: true,
-      isAgency: true,
-    });
-    console.log('✅ Agency Fee added (first time)');
-  } else {
-    // ✅ تحديث القيمة فقط (بدون إضافة جديدة)
-    existingAgency.value = agencyFeeValue;
-    console.log('✅ Agency Fee already exists, updating value only');
-  }
-  
-  // ✅ التحقق من وجود Transfer Fee قبل الإضافة
-  const existingTransfer = assignmentExpenseLines.value.find(
-    line => line.label === 'Transfer Fee' && line.isDefault
-  );
-  
-  if (!existingTransfer) {
-    assignmentExpenseLines.value.push({
-      id: Date.now() + 4,
-      label: 'Transfer Fee',
-      calcType: 'percentage',
-      base: 'sp',
-      value: transferFeeValue,
-      vatEnabled: false,
-      isDefault: true,
-      isReadonly: true,
-      isAgency: true,
-    });
-    console.log('✅ Transfer Fee added (first time)');
-  } else {
-    // ✅ تحديث القيمة فقط (بدون إضافة جديدة)
-    existingTransfer.value = transferFeeValue;
-    console.log('✅ Transfer Fee already exists, updating value only');
-  }
-
-  // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة
-  const areaData = area?.value;
-  const feeType = getAdminFeeTypeFromArea(areaData);
-  console.log(`📍 Area: "${areaData?.name || areaData?.area_title || 'Unknown'}" → Admin fee type: ${feeType}`);
-  
-  // ✅ إزالة جميع التكاليف الإدارية القديمة (هذه تتغير حسب المنطقة)
-  const adminFeeIndices = [];
-  assignmentExpenseLines.value.forEach((line, index) => {
-    if ((line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee') && line.isDefault) {
-      adminFeeIndices.push(index);
-    }
-  });
-  adminFeeIndices.reverse().forEach(index => {
-    assignmentExpenseLines.value.splice(index, 1);
-    console.log(`🗑️ Removed old admin fee at index ${index}`);
-  });
-
-  // ✅ 3. إضافة التكلفة الإدارية المناسبة (مرة واحدة فقط)
-  if (feeType === 'adgm') {
-    if (fees.adgmAdminFee > 0) {
-      const existingAdgm = assignmentExpenseLines.value.find(
-        line => line.label === 'ADGM Admin Fee' && line.isDefault
-      );
-      if (!existingAdgm) {
-        assignmentExpenseLines.value.push({
-          id: Date.now() + 2,
-          label: 'ADGM Admin Fee',
-          calcType: 'fixed',
-          base: null,
-          value: fees.adgmAdminFee,
-          vatEnabled: false,
-          isDefault: true,
-          isReadonly: true,
-          isAdminFee: true,
-        });
-        console.log(`✅ ADGM Admin Fee added: ${fees.adgmAdminFee} AED`);
-      } else {
-        existingAdgm.value = fees.adgmAdminFee;
-        console.log(`✅ ADGM Admin Fee updated: ${fees.adgmAdminFee} AED`);
-      }
-    }
-  } else {
-    if (fees.dariAdminFee > 0) {
-      const existingDari = assignmentExpenseLines.value.find(
-        line => line.label === 'Dari Admin Fee' && line.isDefault
-      );
-      if (!existingDari) {
-        assignmentExpenseLines.value.push({
-          id: Date.now() + 1,
-          label: 'Dari Admin Fee',
-          calcType: 'fixed',
-          base: null,
-          value: fees.dariAdminFee,
-          vatEnabled: false,
-          isDefault: true,
-          isReadonly: true,
-          isAdminFee: true,
-        });
-        console.log(`✅ Dari Admin Fee added: ${fees.dariAdminFee} AED`);
-      } else {
-        existingDari.value = fees.dariAdminFee;
-        console.log(`✅ Dari Admin Fee updated: ${fees.dariAdminFee} AED`);
-      }
-    }
-  }
-  
-  console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
-};
 
   const loadAssignmentExpenseLines = (raw) => {
     const arr = parseAssignmentExpenseLines(raw);
     
-    // Clear existing lines first
     assignmentExpenseLines.value = [];
     
     if (arr.length > 0) {
-      // Add server data (non-default lines)
       arr.forEach((line, i) => {
-        // Don't add default lines from server, they will be re-added by addDefaultDealCosts
-        const isDefault = line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' || line.label === 'Agency Fee' || line.label === 'Transfer Fee' ;
+        const isDefault = line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' || line.label === 'Agency Fee' || line.label === 'Transfer Fee';
         if (!isDefault) {
           assignmentExpenseLines.value.push({
             id: line.id != null ? Number(line.id) : Date.now() + i,
             label: String(line.label || ''),
             calcType: line.calcType === 'fixed' ? 'fixed' : 'percentage',
             base: line.base || 'op',
-            value: Number(line.value || 0),
-            vatEnabled:  line.label === 'Transfer Fee' ? true : !!line.vatEnabled,
+            value: parseNumber(line.value),
+            vatEnabled: line.label === 'Transfer Fee' ? true : !!line.vatEnabled,
             isDefault: false,
             isReadonly: false,
           });
@@ -298,7 +310,6 @@ const addDefaultDealCosts = () => {
       });
     }
     
-    // Always add default costs after loading server data
     addDefaultDealCosts();
   };
 
@@ -308,7 +319,7 @@ const addDefaultDealCosts = () => {
       onError?.('Enter a label for the cost line');
       return false;
     }
-    const value = Number(assignmentExpenseDraft.value.value);
+    const value = parseNumber(assignmentExpenseDraft.value.value);
     if (!Number.isFinite(value) || value <= 0) {
       onError?.('Enter a valid value greater than zero');
       return false;
@@ -330,7 +341,6 @@ const addDefaultDealCosts = () => {
   const removeAssignmentExpenseLine = (id) => {
     const line = assignmentExpenseLines.value.find(l => l.id === id);
     
-    // ✅ منع حذف التكاليف الافتراضية
     if (line && line.isDefault) {
       console.warn('⚠️ Cannot remove default cost line:', line.label);
       return;
