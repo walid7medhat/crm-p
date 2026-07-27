@@ -10,6 +10,7 @@
         :z-index="zIndex"
         :no-focus="true"
         dialog-class="kanban-mobile-fullscreen-modal"
+         @hidden="handleClose"
     >
         <div v-if="show" class="view-lead-modal-content p-3 pb-0">
             <!-- Header -->
@@ -90,6 +91,7 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
 import StageChangeReasonModal from '../leadList/StageChangeReasonModal.vue'
@@ -99,6 +101,11 @@ import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
+
+
+
+const route = useRoute()
+const router = useRouter()
 
 const props = defineProps({
     modelValue: Boolean,
@@ -114,7 +121,7 @@ const props = defineProps({
 })
 
 const lead = ref(null)
-const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated'])
+const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
 const leadStageId = ref(null)
@@ -641,35 +648,110 @@ const cleanup = () => {
         echoAssignedListener.value = null
     }
 }
+const checkUrlForLead = () => {
+  const leadIdFromUrl = route.query.lead
+  if (leadIdFromUrl && !show.value) {
+    const numericId = Number(leadIdFromUrl)
+    if (!isNaN(numericId) && numericId > 0) {
+      if (props.leadId !== numericId) {
+        emit('update:leadId', numericId)
+      }
+      show.value = true
+    }
+  }
+}
 
 onMounted(() => {
     fetchStageOrders()
+    checkUrlForLead()
 })
 
 onUnmounted(() => {
     cleanup()
 })
 
+const handleClose = () => {
+  show.value = false
+  if (route.query.lead) {
+    router.push({
+      path: '/kanban',
+      query: {}
+    }).catch(() => {})
+  }
+}
+const showWithLeadId = (leadId) => {
+  if (!leadId) return
+  
+  const numericId = Number(leadId)
+  if (isNaN(numericId) || numericId <= 0) return
+  
+  emit('update:leadId', numericId)
+  
+  router.push({
+    path: '/kanban',
+    query: { lead: numericId }
+  }).catch(() => {})
+  
+  show.value = true
+}
+
+const hideModal = () => {
+  show.value = false
+  
+  if (route.query.lead) {
+    router.push({
+      path: '/kanban',
+      query: {}
+    }).catch(() => {})
+  }
+}
+
+watch(() => route.query.lead, (newLeadId) => {
+  if (newLeadId && !show.value) {
+    const numericId = Number(newLeadId)
+    if (!isNaN(numericId) && numericId > 0) {
+      // إذا كان leadId مختلف، قم بتحديثه
+      if (props.leadId !== numericId) {
+        emit('update:leadId', numericId)
+      }
+      show.value = true
+    }
+  }
+}, { immediate: true })
+
 watch(() => props.modelValue, (val) => {
     show.value = val
 })
 
+
 watch(show, (val) => {
-    if (val) {
-        if (props.leadId) {
-            fetchLead()
-            initializeLeadListener()
-        }
-    } else {
-        cleanup()
-        activeTab.value = 'general'
+  if (val) {
+    if (props.leadId) {
+      fetchLead()
+      initializeLeadListener()
     }
-    emit('update:modelValue', val)
+  } else {
+    cleanup()
+    activeTab.value = 'general'
+    if (route.query.lead) {
+      router.push({
+        path: '/kanban',
+        query: {}
+      }).catch(() => {})
+    }
+  }
+  emit('update:modelValue', val)
 })
+
 
 watch(() => props.leadId, (newLeadId, oldLeadId) => {
     if (!show.value) return
     if (!newLeadId || newLeadId === oldLeadId) return
+      // تحديث الرابط عند تغيير leadId
+    router.push({
+        path: '/kanban',
+        query: { lead: newLeadId }
+    }).catch(() => {})
     fetchLead()
     initializeLeadListener()
 })
@@ -690,6 +772,14 @@ const $showNotification = (message, type = 'info') => {
     if (window.$showNotification) window.$showNotification(message, type)
     else console.log(`${type}: ${message}`)
 }
+defineExpose({
+  show: showWithLeadId,
+  hide: hideModal,
+  showWithLeadId,
+  hideModal,
+  open: showWithLeadId,
+  close: hideModal
+})
 </script>
 
 <style scoped>

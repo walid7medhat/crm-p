@@ -12,6 +12,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadComment;
+use App\Observers\ActivityObserver;
 use App\Observers\DealAssignmentLearningObserver;
 use App\Observers\LeadFirstContactObserver;
 use App\Observers\SalesIntelligenceDealObserver;
@@ -20,6 +21,8 @@ use App\Observers\AiSalesIntelligence\AiSalesIntelligenceDealObserver;
 use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadActivityObserver;
 use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadCommentObserver;
 use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadObserver;
+use App\Observers\LeadCommentObserver;
+use App\Observers\LeadObserver;
 use App\Support\InfrastructureBootstrap;
 
 class AppServiceProvider extends ServiceProvider
@@ -68,5 +71,11 @@ class AppServiceProvider extends ServiceProvider
         LeadActivity::observe(AiSalesIntelligenceLeadActivityObserver::class);
         LeadActivity::observe(LeadFirstContactObserver::class);
         LeadComment::observe(AiSalesIntelligenceLeadCommentObserver::class);
+
+            Lead::observe(LeadObserver::class);
+            LeadComment::observe(LeadCommentObserver::class);
+            LeadActivity::observe(ActivityObserver::class);
+
+
     }
 }

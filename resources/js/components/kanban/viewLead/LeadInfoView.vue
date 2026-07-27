@@ -24,7 +24,7 @@
                 <label class="form-label-custom">Last Name</label>
                 <div class="info-value">{{ lead?.last_name || '—' }}</div>
             </div>
-            <div class="info-group" v-if="lead.work_phone">
+            <div class="info-group" v-if="lead?.work_phone">
                 <label class="form-label-custom">Primary Phone</label>
                 <div class="info-value">
                     <span v-if="canView"><a :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }} </a></span>

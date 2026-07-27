@@ -37,8 +37,10 @@ import '../css/mobile-hr.css'
 import '../css/view-profile.css'
 import '../css/project-page.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
+import { initLeadViewModal } from '@/composables/useLeadViewModal.js'
 
 syncMobileViewport()
+initLeadViewModal(router, router.currentRoute)
 
 const addCSS = (url) => {
   const link = document.createElement('link')

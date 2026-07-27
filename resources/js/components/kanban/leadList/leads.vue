@@ -789,6 +789,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue'
 import draggable from 'vuedraggable'
+import { useRoute, useRouter } from 'vue-router'
+
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
@@ -801,7 +803,7 @@ import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
-import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
+import { openLeadView, onLeadViewUpdated ,showLeadViewModal, leadViewModalId } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import { shouldSuppressLeadUpdateNotification, normalizeLeadRealtimeEvent, buildCrmLeadNotificationEvent } from '@/utils/leadRealtimeNotifications.js'
@@ -813,6 +815,8 @@ const emit = defineEmits(['deal-created'])
 
 const leadPoolRef = ref(null)
 
+const route = useRoute()
+const router = useRouter()
 
 const showStageChangeModal = ref(false)
 
@@ -2272,6 +2276,14 @@ onMounted(async () => {
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
     initializeLeadUpdates()
+     const leadIdFromUrl = route.query.lead
+    if (leadIdFromUrl) {
+        const numericId = Number(leadIdFromUrl)
+        if (!isNaN(numericId) && numericId > 0) {
+            await nextTick()
+            openLeadView(numericId)
+        }
+    }
 })
 
 onUnmounted(() => {
@@ -3072,7 +3084,7 @@ function onMobileCardTouchEnd(column, event) {
     }
 }
 
-function viewLead(task) {
+const viewLead = (task) => {
     const dealId = task?.converted_to_deal_id
     if (dealId) {
         emit('deal-created', {
@@ -3084,9 +3096,23 @@ function viewLead(task) {
         return
     }
     if (task?.id) {
-        openLeadView(task.id)
+            console.log('📌 Opening lead from card:', task.id)
+             openLeadView(task.id)
+        
     }
 }
+
+watch(() => route.query.lead, (leadId) => {
+    if (leadId && viewLeadModalRef.value) {
+        const numericId = Number(leadId)
+        if (!isNaN(numericId) && numericId > 0) {
+            console.log('📌 Opening lead from URL:', numericId)
+            viewLeadModalRef.value.show(numericId)
+        }
+    }
+}, { immediate: true })
+
+
 
 function isColumnVisibleOnMobile(column) {
     if (!kanbanIsMobile.value) return true

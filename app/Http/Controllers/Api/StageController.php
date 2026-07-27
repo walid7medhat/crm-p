@@ -615,8 +615,8 @@ class StageController extends Controller
                     ->orderBy('id', 'desc');
                 }else{
                      $stageLeadsQuery
-                    ->orderBy('updated_at', 'desc')
-                    ->orderBy('id', 'desc');
+                        ->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+                        // ->orderBy('id', 'desc');
                 }
 
                 $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
@@ -964,9 +964,9 @@ class StageController extends Controller
                     ->orderBy('created_at', 'desc')
                     ->orderBy('id', 'desc');
                 }else{
-                     $leadsQuery
-                    ->orderBy('updated_at', 'desc')
-                    ->orderBy('id', 'desc');
+                    $leadsQuery
+                        ->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+                        // ->orderBy('id', 'desc');
                 }
                     
                     
