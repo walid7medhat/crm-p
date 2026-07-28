@@ -434,10 +434,10 @@ class LeadController extends Controller
                 return ApiResponse::error('You are not authorized to view this lead', 403);
             }
 
-            if ($lead->shouldRevertToStageOne()) {
-                $lead->revertToStageOne();
-                $lead->refresh();
-            }
+            // if ($lead->shouldRevertToStageOne()) {
+            //     $lead->revertToStageOne();
+            //     $lead->refresh();
+            // }
             // LeadHistoryHelper::log(
             //     $lead->id,
             //     ['action' => 'view']
@@ -923,16 +923,16 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $old = $lead->getAttributes();
 
         // Check revert condition for stage 3
-        if ($newStage->order == 3 && $lead->stage->order == 2) {
-            if ($lead->shouldRevertToStageOne()) {
-                $lead->revertToStageOne();
+        // if ($newStage->order == 3 && $lead->stage->order == 2) {
+        //     if ($lead->shouldRevertToStageOne()) {
+        //         $lead->revertToStageOne();
                 
-                return ApiResponse::error(
-                    'Cannot move to stage 3. Lead has been reverted to stage 1 due to inactivity.',
-                    422
-                );
-            }
-        }
+        //         return ApiResponse::error(
+        //             'Cannot move to stage 3. Lead has been reverted to stage 1 due to inactivity.',
+        //             422
+        //         );
+        //     }
+        // }
         
         $changes = [];
         $fields = [];
