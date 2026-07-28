@@ -4,7 +4,7 @@
       <div class="pd-card-head">
         <div>
           <div class="pd-card-title">Payment details
-            <span class="badge" :class="nocType === 'Ready' ? 'bg-success' : 'bg-warning text-dark'">
+            <span class="badge" :class="nocType === 'Ready' || nocType === 'Completed' ? 'bg-success' : 'bg-warning text-dark'">
             {{ nocType }}
           </span>
           </div>
@@ -38,8 +38,8 @@
       <div v-if="nocPercentage > 0 && isUnderConstruction" class="pd-noc-strip">
         <span class="pd-noc-strip__item">
           <span class="badge bg-info text-white">
-            <i class="fas fa-percentage me-1"></i>
-            NOC %
+            <!-- <i class="fas fa-percentage me-1"></i> -->
+            NOC 
           </span>
           <span class="ms-1">Required:</span>
           <strong>{{ formatAed(nocAmount) }}</strong>
@@ -114,7 +114,7 @@
               <td>NOC</td>
               <td class="text-muted">
                 <span class="text-muted d-block" style="font-size:0.85em;">
-                  {{ nocType === 'Ready' ? 'Ready' : 'Off-Plan' }}
+                  {{ nocType === 'Ready' || nocType === 'Completed' ? 'Ready' : 'Off-Plan' }}
                 </span>
               </td>
               <td>{{ formatAed(nocFixedAmount) }}</td>
