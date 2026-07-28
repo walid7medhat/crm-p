@@ -21,7 +21,7 @@ class FixLeadCommentUsers extends Command
         $count = 0;
 
         LeadComment::whereNotNull('bitrix24_id')
-            ->whereNull('user_id')
+            ->where('user_id',1)->orWhereNull('user_id')
             ->chunk(50, function ($comments) use ($webhook, &$count) {
 
                 foreach ($comments as $comment) {
