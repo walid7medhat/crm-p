@@ -19,8 +19,10 @@
             </div>
         </div>
 
-        <div v-else-if="!loading && leads.length === 0" class="text-center py-5 text-muted">
-            No leads found in Lead Pool
+        <div v-else-if="!loading && !searching && leads.length === 0" class="lead-pool-empty-state">
+            <p class="lead-pool-empty-state__text">
+                {{ hasActivePoolSearch ? 'There are currently no data on this page' : 'No leads found in Lead Pool' }}
+            </p>
         </div>
 
         <template v-else>
@@ -336,6 +338,11 @@ const emit = defineEmits(['lead-clicked'])
 const leads = ref([])
 const loading = ref(true)
 const searching = ref(false)
+
+const hasActivePoolSearch = computed(() => {
+    const q = currentQuery.value
+    return !!(q && typeof q === 'object' && Object.keys(q).length > 0)
+})
 const showViewModal = ref(false)
 const selectedLeadId = ref(null)
 const showDuplicateModal = ref(false)
@@ -826,6 +833,23 @@ defineExpose({
     padding: 16px 20px;
     min-height: calc(100vh - 72px);
     position: relative;
+}
+
+.lead-pool-empty-state {
+    min-height: calc(100vh - 160px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.lead-pool-empty-state__text {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+    text-align: center;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
 .lead-pool-wrapper--searching .leads-grid {

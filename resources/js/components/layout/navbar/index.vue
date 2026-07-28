@@ -968,6 +968,10 @@ watch(search, () => {
     }
     searchDebounceTimer.value = setTimeout(() => {
         searchDebounceTimer.value = null
+        // User stopped typing in the navbar input — hide advanced popup.
+        if (showSearchModal.value) {
+            showSearchModal.value = false
+        }
         applySearchToApi()
     }, SEARCH_DEBOUNCE_MS)
 })

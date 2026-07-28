@@ -12,6 +12,14 @@
                 <span class="kanban-search-overlay__text">Searching leads…</span>
             </div>
         </div>
+        <div
+            v-else-if="showNoSearchResults"
+            class="kanban-no-results-overlay"
+            role="status"
+            aria-live="polite"
+        >
+            <p class="kanban-no-results-overlay__text">There are currently no data on this page</p>
+        </div>
         <!-- Mobile: pipeline filter (matches design — Current Stage) -->
         <div
             v-if="kanbanIsMobile"
@@ -1060,6 +1068,22 @@ const totalLeadsCount = computed(() => {
         sum += typeof t === 'number' ? t : (col.leads?.length || 0)
     }
     return sum
+})
+
+const hasActiveSearchOrFilters = computed(() => {
+    const q = appliedSearchParams.value
+    return !!(q && typeof q === 'object' && Object.keys(q).length > 0)
+})
+
+const showNoSearchResults = computed(() => {
+    return (
+        !loading.value &&
+        !isSearching.value &&
+        !error.value &&
+        hasActiveSearchOrFilters.value &&
+        columns.value.length > 0 &&
+        totalLeadsCount.value === 0
+    )
 })
 
 const activeShortcutFilter = ref(null)
@@ -4139,6 +4163,27 @@ const fetchRevertNotifications = async () => {
     background: rgba(248, 250, 252, 0.55);
     backdrop-filter: blur(2px);
     pointer-events: none;
+}
+
+.kanban-no-results-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    padding: 24px;
+}
+
+.kanban-no-results-overlay__text {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+    text-align: center;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    max-width: 420px;
 }
 
 .kanban-search-overlay__card {
