@@ -153,12 +153,18 @@
                   :placeholder="searchInputPlaceholder"
                   :model-value="searchInputDisplay"
                   class="search-input"
-                  :class="{ 'search-input--has-selection': hasAnySearchCriteria }"
+                  :class="{ 'search-input--has-selection': hasAnySearchCriteria, 'search-input--loading': isSearchLoading }"
                   :readonly="!!resolvedActiveFilters.length"
                   @update:model-value="onSearchInputUpdate"
                   @focus="onSearchFocus"
                   @blur="onSearchBlur"
                   @click.stop="canUseLeadSearchModal && openSearchModal()"
+                />
+                <span
+                  v-if="isSearchLoading"
+                  class="search-input-spinner"
+                  role="status"
+                  aria-label="Searching"
                 />
               </div>
               <button
@@ -375,12 +381,18 @@
                         :placeholder="searchInputPlaceholder"
                         :model-value="searchInputDisplay"
                         class="search-input"
-                        :class="{ 'search-input--has-selection': hasAnySearchCriteria }"
+                        :class="{ 'search-input--has-selection': hasAnySearchCriteria, 'search-input--loading': isSearchLoading }"
                         :readonly="!!resolvedActiveFilters.length"
                         @update:model-value="onSearchInputUpdate"
                         @focus="onSearchFocus"
                         @blur="onSearchBlur"
                         @click.stop="canUseLeadSearchModal && openSearchModal()"
+                    />
+                    <span
+                        v-if="isSearchLoading"
+                        class="search-input-spinner"
+                        role="status"
+                        aria-label="Searching"
                     />
                 </div>
                 <button
@@ -900,6 +912,7 @@ const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
 const SEARCH_DEBOUNCE_MS = 300;
 const suppressSearchWatcher = ref(false);
+const isSearchLoading = ref(false);
 const leadsRef = ref(null);
 const dealsRef = ref(null);
 const openSettingsHub = (section = null) => {
@@ -929,6 +942,13 @@ function applySearchToApi() {
     const payload = {
         query,
         activeFilters: activeFilters.value || [],
+    }
+
+    // Immediate feedback in the search box while the board fetches.
+    if (query && Object.keys(query).length) {
+        isSearchLoading.value = true
+    } else {
+        isSearchLoading.value = false
     }
     
     if (isDealRoute.value || activeKanbanTab.value === 'deals') {
@@ -1265,7 +1285,11 @@ function onSearchInputUpdate(val) {
     }
     // Keep the advanced popup open while typing in the navbar input.
     // Free-text search still applies via the debounced watch(search).
-    search.value = val;
+    const next = val == null ? '' : String(val);
+    search.value = next;
+    if (String(next).trim()) {
+        isSearchLoading.value = true;
+    }
 }
 
 // Search functions (same as Kanban)
@@ -1558,6 +1582,10 @@ function onSearchModalModelUpdate(val) {
         return;
     }
     showSearchModal.value = true;
+}
+
+function onKanbanLeadSearchLoading(e) {
+    isSearchLoading.value = !!e?.detail?.loading;
 }
 
 let searchBlurTimeout = null;
@@ -1989,6 +2017,7 @@ onMounted(() => {
      document.addEventListener('click', onDocumentClick);
      window.addEventListener('resize', onSearchDropdownReposition);
      window.addEventListener('scroll', onSearchDropdownReposition, true);
+     window.addEventListener('kanban-lead-search-loading', onKanbanLeadSearchLoading);
 
      window.addEventListener('kanban-lead-search-update', (e) => {
     if (e.detail) {
@@ -2021,6 +2050,7 @@ onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick);
   window.removeEventListener('resize', onSearchDropdownReposition);
   window.removeEventListener('scroll', onSearchDropdownReposition, true);
+  window.removeEventListener('kanban-lead-search-loading', onKanbanLeadSearchLoading);
   window.removeEventListener('kanban-lead-search-update', () => {})
   window.removeEventListener('kanban-deal-search-update', () => {})
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
@@ -3427,7 +3457,28 @@ const showBackButton = computed(() => {
     min-width: 200px;
     width: 100%;
     max-width: 100%;
+    position: relative;
     transition: min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.search-input-spinner {
+    position: absolute;
+    right: 8px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    animation: search-spin 0.7s linear infinite;
+    pointer-events: none;
+}
+
+.search-input--loading {
+    padding-right: 28px !important;
+}
+
+@keyframes search-spin {
+    to { transform: rotate(360deg); }
 }
 
 .search-input-container-tall {

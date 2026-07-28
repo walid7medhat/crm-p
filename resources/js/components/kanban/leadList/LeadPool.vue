@@ -1,12 +1,25 @@
 <template>
-    <div class="lead-pool-wrapper">
-        <div v-if="loading" class="text-center py-5">
+    <div class="lead-pool-wrapper" :class="{ 'lead-pool-wrapper--searching': searching }">
+        <div
+            v-if="searching"
+            class="lead-pool-search-overlay"
+            role="status"
+            aria-live="polite"
+            aria-label="Searching leads"
+        >
+            <div class="lead-pool-search-overlay__card">
+                <div class="spinner-border spinner-border-sm text-primary" role="status" />
+                <span>Searching leads…</span>
+            </div>
+        </div>
+
+        <div v-if="loading && leads.length === 0" class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
 
-        <div v-else-if="leads.length === 0" class="text-center py-5 text-muted">
+        <div v-else-if="!loading && leads.length === 0" class="text-center py-5 text-muted">
             No leads found in Lead Pool
         </div>
 
@@ -322,6 +335,7 @@ const emit = defineEmits(['lead-clicked'])
 // State
 const leads = ref([])
 const loading = ref(true)
+const searching = ref(false)
 const showViewModal = ref(false)
 const selectedLeadId = ref(null)
 const showDuplicateModal = ref(false)
@@ -501,7 +515,13 @@ const fetchLeadPool = async ({ force = false } = {}) => {
     }
 
     lastFetchSignature = signature
-    loading.value = true
+    const isFirstLoad = leads.value.length === 0
+    if (isFirstLoad) {
+        loading.value = true
+    } else {
+        searching.value = true
+    }
+    window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
 
     const run = async () => {
         try {
@@ -552,7 +572,9 @@ const fetchLeadPool = async ({ force = false } = {}) => {
             total.value = 0
         } finally {
             loading.value = false
+            searching.value = false
             fetchAbortController = null
+            window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
             if (fetchInFlight === run) {
                 fetchInFlight = null
             }
@@ -790,6 +812,10 @@ defineExpose({
         currentQuery.value = query && typeof query === 'object' ? { ...query } : {}
         currentPage.value = 1
         lastFetchSignature = ''
+        if (Object.keys(currentQuery.value).length) {
+            searching.value = true
+            window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+        }
         scheduleFetchLeadPool()
     },
 })
@@ -799,6 +825,37 @@ defineExpose({
 .lead-pool-wrapper {
     padding: 16px 20px;
     min-height: calc(100vh - 72px);
+    position: relative;
+}
+
+.lead-pool-wrapper--searching .leads-grid {
+    opacity: 0.72;
+    transition: opacity 0.2s ease;
+}
+
+.lead-pool-search-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 48px;
+    pointer-events: none;
+}
+
+.lead-pool-search-overlay__card {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
 }
 
 .leads-grid {

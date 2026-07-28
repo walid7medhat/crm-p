@@ -1306,6 +1306,7 @@ const pollingInterval = ref(null)
 const isFetching = ref(false)
 const abortController = ref(null)
 const fetchDebounceTimer = ref(null)
+let fetchGeneration = 0
 
 // Stage editing state
 const editingStageId = ref(null)
@@ -1427,6 +1428,11 @@ const fetchLeads = async (immediate = false, queryOverride = undefined) => {
     if (queryOverride !== undefined) {
         appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
     }
+    // Show searching feedback immediately when a search/filter is applied.
+    if (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
+        isSearching.value = true
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+    }
     // Clear any pending debounce
     if (fetchDebounceTimer.value) {
         clearTimeout(fetchDebounceTimer.value)
@@ -1483,15 +1489,16 @@ const executeFetchLeads = async () => {
     if (abortController.value) {
         abortController.value.abort()
     }
-    
+
+    const generation = ++fetchGeneration
     abortController.value = new AbortController()
     const hadColumns = columns.value.length > 0
     isFetching.value = true
+    isSearching.value = true
     if (!hadColumns) {
         loading.value = true
-    } else {
-        isSearching.value = true
     }
+    window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     
     try {
         const q = effectiveSearchParams.value
@@ -1505,6 +1512,8 @@ const executeFetchLeads = async () => {
             params,
             signal: abortController.value.signal
         })
+
+        if (generation !== fetchGeneration) return
         
         const responseData = response?.data?.data
         const stagesData = responseData?.stages || []
@@ -1564,15 +1573,18 @@ const executeFetchLeads = async () => {
         saveColumnsToCache()
         
     } catch (err) {
+        if (generation !== fetchGeneration) return
         if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
             error.value = getApiErrorMessage(err, 'Failed to load data')
         }
     } finally {
+        if (generation !== fetchGeneration) return
         isFetching.value = false
         isSearching.value = false
         loading.value = false
         abortController.value = null
         markKanbanReady()
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
     }
 }
 

@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\LeadTextSearch;
 use DB;
 use Illuminate\Support\Facades\Schema;
 class StageController extends Controller
@@ -490,69 +491,11 @@ class StageController extends Controller
                     });
                 }
                 if ($request->filled('search')) {
-                    $search = $request->search;
-                        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
-                        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
-                    
-                        if ($search === 'website') {
-                            $expanded = $websitePartials;
-                        } elseif ($search === 'portal') {
-                            $expanded = $portalPartials;
-                        } else {
-                            $expanded = [$search];
-                        }
-
-                    $q->where(function ($s) use ($search) {
-                        $s->where('lead_name', 'like', "%{$search}%")
-                          ->orWhere('lead_number', 'like', "%{$search}%")
-                          ->orWhere('first_name', 'like', "%{$search}%")
-                          ->orWhere('last_name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%")
-                          ->orWhere('work_phone', 'like', "%{$search}%")
-                          ->orWhere('bedrooms', 'like', "%{$search}%")
-                          ->orWhere('work_phone_2', 'like', "%{$search}%")
-                          ->orWhere('lead_source', 'like', "%{$search}%")
-                          ->orWhere('status_lead', 'like', "%{$search}%")
-                          // Chip vocabulary searchable as plain text — typing "hot"/"cold"/"warm"
-                          // or "answered"/"no_answer" matches the AI priority / call-result columns.
-                        //   ->orWhere('priority', 'like', "%{$search}%")
-                          ->orWhere('interaction_result', 'like', "%{$search}%")
-                          ->orWhere('more_information', 'like', "%{$search}%")
-                          ->orWhere(function($q2) use ($search) {
-                                $q2->where('lead_type', 'like', "%{$search}%")
-                                    ->orWhere('lead_type', 'both');
-                            })
-                            ->orWhere(function($q2) use ($search) {
-                                $q2->where('property_status', 'like', "%{$search}%")
-                                    ->orWhere('property_status', 'both');
-                            })
-
-                          ->orWhere('budget_from', 'like', "%{$search}%")
-                          ->orWhere('budget_to', 'like', "%{$search}%")
-                          ->orWhere('source_information', 'like', "%{$search}%")
-                           ->orWhere('purpose_buying', 'like', "%{$search}%")
-                          ->orWhere('budget', 'like', "%{$search}%")
-                          ->orWhereHas('responsiblePerson', function ($r) use ($search) {
-                              $r->where('name', 'like', "%{$search}%");
-                          })
-                           ->orWhereHas('propertyType', function ($pt) use ($search) {
-                                  $pt->where('name', 'like', "%{$search}%");
-                              })
-                          ->orWhereHas('stage', function ($st) use ($search) {
-                              $st->where('name', 'like', "%{$search}%");
-                          })
-                          ->orWhereHas('integration', function ($st) use ($search) {
-                              $st->where('track_keyword', 'like', "%{$search}%");
-                          });
-                          if (!empty($expanded)) {
-                                $s->orWhere(function ($exp) use ($expanded) {
-                                    foreach ($expanded as $term) {
-                                        $exp->orWhere('lead_source', 'like', "%{$term}%")
-                                            ->orWhere('more_information', 'like', "%{$term}%");
-                                    }
-                                });
-                            }
-                    });
+                    LeadTextSearch::apply($q, (string) $request->search, [
+                        'comments' => false,
+                        'relations' => true,
+                        'admin' => true,
+                    ]);
                 }
             });
 
@@ -890,73 +833,11 @@ class StageController extends Controller
                     });
                 }
                 if ($request->filled('search')) {
-                    $search = $request->search;
-                    
-                        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
-                        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
-                        $whatsappPartials  = ['whatsapp', 'Whatsapp Oia Properties', 'Whatsapp All Properties'];
-                    
-                        if ($search === 'website') {
-                            $expanded = $websitePartials;
-                        } elseif ($search === 'portal') {
-                            $expanded = $portalPartials;
-                        }elseif ($search === 'whatsapp') {
-                            $expanded = $whatsappPartials;
-                        } else {
-                            $expanded = [$search];
-                        }
-
-                    $leadsQuery->where(function ($s) use ($search, $expanded) {
-                        $s->where('lead_name', 'like', "%{$search}%")
-                          ->orWhere('lead_number', 'like', "%{$search}%")
-                          ->orWhere('first_name', 'like', "%{$search}%")
-                          ->orWhere('last_name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%")
-                          ->orWhere('work_phone', 'like', "%{$search}%")
-                          ->orWhere('bedrooms', 'like', "%{$search}%")
-                          ->orWhere('work_phone_2', 'like', "%{$search}%")
-                          ->orWhere('lead_source', 'like', "%{$search}%")
-                          ->orWhere('status_lead', 'like', "%{$search}%")
-                          // Chip vocabulary searchable as plain text — typing "hot"/"cold"/"warm"
-                          // or "answered"/"no_answer" matches the AI priority / call-result columns.
-                        //   ->orWhere('priority', 'like', "%{$search}%")
-                          ->orWhere('interaction_result', 'like', "%{$search}%")
-                          ->orWhere('more_information', 'like', "%{$search}%")
-                           ->orWhere(function($q2) use ($search) {
-                                $q2->where('lead_type', 'like', "%{$search}%")
-                                    ->orWhere('lead_type', 'both');
-                            })
-                            ->orWhere(function($q2) use ($search) {
-                                $q2->where('property_status', 'like', "%{$search}%")
-                                    ->orWhere('property_status', 'both');
-                            })
-
-                          ->orWhere('budget_from', 'like', "%{$search}%")
-                          ->orWhere('budget_to', 'like', "%{$search}%")
-                          ->orWhere('source_information', 'like', "%{$search}%")
-                          ->orWhere('budget', 'like', "%{$search}%")
-                          ->orWhere('purpose_buying', 'like', "%{$search}%")
-                          ->orWhereHas('responsiblePerson', function ($r) use ($search) {
-                              $r->where('name', 'like', "%{$search}%");
-                          })
-                           ->orWhereHas('propertyType', function ($pt) use ($search) {
-                                  $pt->where('name', 'like', "%{$search}%");
-                              })
-                          ->orWhereHas('stage', function ($st) use ($search) {
-                              $st->where('name', 'like', "%{$search}%");
-                          })
-                          ->orWhereHas('integration', function ($st) use ($search) {
-                              $st->where('track_keyword', 'like', "%{$search}%");
-                          });
-                          if (!empty($expanded)) {
-                                $s->orWhere(function ($exp) use ($expanded) {
-                                    foreach ($expanded as $term) {
-                                        $exp->orWhere('lead_source', 'like', "%{$term}%")
-                                            ->orWhere('more_information', 'like', "%{$term}%");
-                                    }
-                                });
-                            }
-                    });
+                    LeadTextSearch::apply($leadsQuery, (string) $request->search, [
+                        'comments' => false,
+                        'relations' => true,
+                        'admin' => true,
+                    ]);
                 }
              // ================= pagination =================
                 if($stage->order==1){

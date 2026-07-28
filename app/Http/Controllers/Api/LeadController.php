@@ -27,6 +27,7 @@ use App\Models\LeadHistory;
 use App\Models\LeadComment;
 use Illuminate\Support\Str;
 use Auth;
+use App\Services\LeadTextSearch;
 
     use App\Exports\LeadsExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -219,62 +220,12 @@ class LeadController extends Controller
                     });
                 }
                 if ($request->filled('search')) {
-                    
-                    $search = $request->search;
-                      if ($user->hasRole(['admin', 'super_admin'])) {
-                    $leadsQuery->where(function ($s) use ($search) {
-                        $s->where('lead_name', 'like', "%{$search}%")
-                          ->orWhere('lead_number', 'like', "%{$search}%")
-                          ->orWhere('first_name', 'like', "%{$search}%")
-                          ->orWhere('last_name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%")
-                          ->orWhere('work_phone', 'like', "%{$search}%")
-                          ->orWhere('bedrooms', 'like', "%{$search}%")
-                          ->orWhere('work_phone_2', 'like', "%{$search}%")
-                          ->orWhere('lead_source', 'like', "%{$search}%")
-                          ->orWhere('status_lead', 'like', "%{$search}%")
-                          ->orWhere(function ($q2) use ($search) {
-                                $q2->where('lead_type', 'like', "%{$search}%")
-                                   ->orWhere('lead_type', 'both');
-                          })
-                          ->orWhere(function ($q2) use ($search) {
-                                $q2->where('property_status', 'like', "%{$search}%")
-                                   ->orWhere('property_status', 'both');
-                          })
-                          ->orWhere('budget_from', 'like', "%{$search}%")
-                          ->orWhere('budget_to', 'like', "%{$search}%")
-                          ->orWhere('source_information', 'like', "%{$search}%")
-                          ->orWhere('purpose_buying', 'like', "%{$search}%")
-                          ->orWhere('budget', 'like', "%{$search}%")
-                          ->orWhereHas('responsiblePerson', function ($r) use ($search) {
-                              $r->where('name', 'like', "%{$search}%");
-                          })
-                          ->orWhereHas('propertyType', function ($pt) use ($search) {
-                              $pt->where('name', 'like', "%{$search}%");
-                          })
-                          ->orWhereHas('stage', function ($st) use ($search) {
-                              $st->where('name', 'like', "%{$search}%");
-                          })
-                          ->orWhereHas('integration', function ($st) use ($search) {
-                              $st->where('track_keyword', 'like', "%{$search}%");
-                          })
-                          // Lead-pool text search also walks the comment body so reps can find leads
-                          // by something a teammate wrote about them earlier.
-                          ->orWhereHas('comments', function ($cm) use ($search) {
-                              $cm->where('comment', 'like', "%{$search}%");
-                          });
-                    });
-                      }else{
-                         $leadsQuery->where('lead_name', 'like', "%{$search}%")
-                        ->orWhere('lead_source', 'like', "%{$search}%") // source
-                        // ->orWhere('lead_type', 'like', "%{$search}%")   // type
-                        ->orWhereHas('comments', function ($cm) use ($search) {
-                            $cm->where('comment', 'like', "%{$search}%");
-                        }) ->orWhereHas('propertyType', function ($pt) use ($search) {
-                              $pt->where('name', 'like', "%{$search}%");
-                          });
-
-                      }
+                    $isAdminSearch = $user->hasRole(['admin', 'super_admin']);
+                    LeadTextSearch::apply($leadsQuery, (string) $request->search, [
+                        'comments' => true,
+                        'relations' => true,
+                        'admin' => $isAdminSearch,
+                    ]);
                 }
         
                 // Apply permission scope to the query (without consuming it with ->get()) so
