@@ -197,7 +197,7 @@ $allowedAgentIds = [];
             'ownership_type' => $this->ownership_type,
             'listing_status' => $this->listing_status,
             'completion_status' => $this->completion_status,
-            'noc_type'=>$this->completion_status,
+           'noc_type' => $this->completion_status === 'completed' ? 'Ready' : 'Off Plan',
             'layout_type_id' => $this->layout_type_id,
             'layout_type' => $this->layout_type?->name,
             'unit_view_id' => $this->unit_view_id,
