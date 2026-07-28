@@ -337,30 +337,36 @@ function onDocumentClick(e) {
         showSearchModal.value = false
     }
 }
-const setupKanbanListeners = () => {
-  window.addEventListener('kanban-tab-change', (e) => {
+const onKanbanTabChangeEvent = (e) => {
     activeTab.value = e.detail
-  })
-  
-  window.addEventListener('kanban-create-new', (e) => {
+}
+
+const onKanbanCreateNewEvent = (e) => {
     const tab = e.detail
     if (tab === 'deals') {
-      showCreateDealModal.value = true
+        showCreateDealModal.value = true
     } else if (tab === 'integration') {
-      settingsHubInitialSection.value = 'integrations'
-      showSettingsHub.value = true
+        settingsHubInitialSection.value = 'integrations'
+        showSettingsHub.value = true
     } else {
-      showCreateModal.value = true
+        showCreateModal.value = true
     }
-  })
-  
-  window.addEventListener('kanban-lead-search', (e) => {
+}
+
+const onKanbanLeadSearchEvent = (e) => {
     onLeadSearch(e.detail)
-  })
-  
-  window.addEventListener('kanban-deal-search', (e) => {
+}
+
+const onKanbanDealSearchEvent = (e) => {
     onDealSearch(e.detail)
-  })
+}
+
+const setupKanbanListeners = () => {
+    window.addEventListener('kanban-tab-change', onKanbanTabChangeEvent)
+    window.addEventListener('kanban-create-new', onKanbanCreateNewEvent)
+    window.addEventListener('kanban-lead-search', onKanbanLeadSearchEvent)
+    window.addEventListener('kanban-lead-search-update', onKanbanLeadSearchEvent)
+    window.addEventListener('kanban-deal-search', onKanbanDealSearchEvent)
 }
 
 
@@ -383,22 +389,6 @@ onMounted(() => {
       window.__kanbanDealsRef = () => Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value;
     window.__kanbanLeadsRef = () => Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value;
     
-    // Setup event listeners for search
-    window.addEventListener('kanban-lead-search', (e) => {
-        onLeadSearch(e.detail);
-    });
-
-    // Modal applies dispatch `kanban-lead-search-update` from the navbar — forward those
-    // to the same handler so the lead-pool tab refreshes too (navbar only fires
-    // `__kanbanLeadsRef.fetchLeads()` which doesn't touch the pool).
-    window.addEventListener('kanban-lead-search-update', (e) => {
-        onLeadSearch(e.detail);
-    });
-
-    window.addEventListener('kanban-deal-search', (e) => {
-        onDealSearch(e.detail);
-    });
-
     window.addEventListener('kanban-leads-board-refresh', onKanbanLeadsBoardRefresh);
     window.addEventListener('kanban-open-converted-deal', onKanbanOpenConvertedDeal);
 
@@ -475,10 +465,11 @@ onUnmounted(() => {
         searchDebounceTimer.value = null
     }
     cleanup()
-      window.removeEventListener('kanban-tab-change', () => {})
-  window.removeEventListener('kanban-create-new', () => {})
-  window.removeEventListener('kanban-lead-search', () => {})
-  window.removeEventListener('kanban-deal-search', () => {})
+    window.removeEventListener('kanban-tab-change', onKanbanTabChangeEvent)
+    window.removeEventListener('kanban-create-new', onKanbanCreateNewEvent)
+    window.removeEventListener('kanban-lead-search', onKanbanLeadSearchEvent)
+    window.removeEventListener('kanban-lead-search-update', onKanbanLeadSearchEvent)
+    window.removeEventListener('kanban-deal-search', onKanbanDealSearchEvent)
       window.removeEventListener('kanban-open-settings', onKanbanOpenSettings)
       window.removeEventListener('kanban-open-converted-deal', onKanbanOpenConvertedDeal)
         delete window.__kanbanDealsRef;

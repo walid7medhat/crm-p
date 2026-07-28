@@ -3,8 +3,8 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '@/plugins/axios'
 
 
-const showLeadViewModal = ref(false)
-const leadViewModalId = ref(null)
+export const showLeadViewModal = ref(false)
+export const leadViewModalId = ref(null)
 const leadUpdatedListeners = new Set()
 
 let router = null

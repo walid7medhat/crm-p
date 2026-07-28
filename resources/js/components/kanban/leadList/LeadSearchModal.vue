@@ -2395,26 +2395,6 @@ const handleOfficeChange = async (newOffice) => {
 
 
 
-watch(() => props.modelValue, (val) => {
-
-    show.value = val
-
-})
-
-
-
-watch(() => props.modelValue, (val) => {
-
-    if (val) {
-
-        nextTick(() => syncFormFromQuery(props.currentQuery))
-
-    }
-
-})
-
-
-
 const queryToFormKeys = {
 
     lead_name: 'leadName',
@@ -2730,7 +2710,10 @@ watch(() => props.initialActivePill, (newVal) => {
 
 watch(show, (val) => {
 
-    emit('update:modelValue', val)
+    // Avoid feedback loops with parent v-model / v-show wrappers.
+    if (val !== props.modelValue) {
+        emit('update:modelValue', val)
+    }
 
     if (val) {
 

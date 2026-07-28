@@ -803,7 +803,7 @@ import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
-import { openLeadView, onLeadViewUpdated ,showLeadViewModal, leadViewModalId } from '@/composables/useLeadViewModal.js'
+import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import { shouldSuppressLeadUpdateNotification, normalizeLeadRealtimeEvent, buildCrmLeadNotificationEvent } from '@/utils/leadRealtimeNotifications.js'
@@ -1478,8 +1478,8 @@ async function saveStage() {
 }
 
 const executeFetchLeads = async () => {
-    if (isFetching.value) return
-    
+    // Latest request wins: cancel older in-flight fetches instead of dropping
+    // the newest user intent.
     if (abortController.value) {
         abortController.value.abort()
     }

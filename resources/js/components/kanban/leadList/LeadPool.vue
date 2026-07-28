@@ -427,6 +427,7 @@ const currentQuery = ref({})
 let fetchInFlight = null
 let fetchDebounceTimer = null
 let lastFetchSignature = ''
+let fetchAbortController = null
 
 const buildFetchParams = () => {
     const params = {
@@ -444,7 +445,10 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const requestLeadPool = async (params, attempt = 0) => {
     try {
-        return await api.get('/leads', { params })
+        return await api.get('/leads', {
+            params,
+            signal: fetchAbortController?.signal,
+        })
     } catch (error) {
         const status = error?.response?.status
         if (status === 429 && attempt < 2) {
@@ -501,6 +505,10 @@ const fetchLeadPool = async ({ force = false } = {}) => {
 
     const run = async () => {
         try {
+            if (fetchAbortController) {
+                fetchAbortController.abort()
+            }
+            fetchAbortController = new AbortController()
             const response = await requestLeadPool(params)
             const body = response.data || {}
             const data = body.data || []
@@ -525,6 +533,9 @@ const fetchLeadPool = async ({ force = false } = {}) => {
                 total.value = 0
             }
         } catch (error) {
+            if (error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
+                return
+            }
             console.error('Error fetching lead pool:', error)
             const isRateLimited = error?.response?.status === 429
             Swal.fire({
@@ -541,6 +552,7 @@ const fetchLeadPool = async ({ force = false } = {}) => {
             total.value = 0
         } finally {
             loading.value = false
+            fetchAbortController = null
             if (fetchInFlight === run) {
                 fetchInFlight = null
             }
@@ -764,6 +776,10 @@ onUnmounted(() => {
     if (fetchDebounceTimer) {
         clearTimeout(fetchDebounceTimer)
         fetchDebounceTimer = null
+    }
+    if (fetchAbortController) {
+        fetchAbortController.abort()
+        fetchAbortController = null
     }
 })
 

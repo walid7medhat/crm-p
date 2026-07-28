@@ -109,14 +109,14 @@
             class="search-area-column kanban-mob-toolbar__search-col"
             ref="searchDropdownAnchorRef"
           >
-            <div
-              class="search-wrapper kanban-mob-toolbar__search-bar d-flex align-items-center"
-              :class="{
-                'search-wrapper-expanded': hasAnySearchCriteria,
-                'search-wrapper-has-selection': hasAnySearchCriteria,
-              }"
-              @click="canUseLeadSearchModal && openSearchModal()"
-            >
+              <div
+                class="search-wrapper kanban-mob-toolbar__search-bar d-flex align-items-center"
+                :class="{
+                  'search-wrapper-expanded': hasAnySearchCriteria,
+                  'search-wrapper-has-selection': hasAnySearchCriteria,
+                }"
+                @click="canUseLeadSearchModal && openSearchModal()"
+              >
               <!-- <button
                 type="button"
                 class="search-icon-btn"
@@ -145,7 +145,10 @@
                   <span class="search-tag-more-text" @click.stop="showSearchModal = true">+{{ moreFiltersCountResolved }} more</span>
                 </div>
               </div>
-              <div class="search-input-container flex-grow-1" @click.stop="canUseLeadSearchModal && openSearchModal()">
+              <div
+                class="search-input-container flex-grow-1"
+                @click.stop="canUseLeadSearchModal && openSearchModal()"
+              >
                 <b-form-input
                   :placeholder="searchInputPlaceholder"
                   :model-value="searchInputDisplay"
@@ -159,6 +162,17 @@
                 />
               </div>
               <button
+                v-if="canUseLeadSearchModal"
+                type="button"
+                class="search-filter-btn"
+                title="Advanced search"
+                aria-label="Open search filters"
+                @mousedown.prevent.stop="openSearchModal"
+                @click.prevent.stop="openSearchModal"
+              >
+                <iconify-icon icon="lucide:list-filter" />
+              </button>
+              <button
                 v-if="hasAnySearchCriteria"
                 type="button"
                 class="search-clear-btn"
@@ -170,26 +184,31 @@
             </div>
             <Teleport to="body">
               <div
-                v-if="showSearchModal"
+                v-if="searchModalMounted"
+                v-show="showSearchModal"
                 ref="searchDropdownPanelRef"
                 class="lead-search-dropdown-outer lead-search-dropdown-outer--teleport"
                 :style="searchDropdownStyle"
+                @mousedown.stop
+                @click.stop
               >
                 <DealSearchModal
                   v-if="activeKanbanTab === 'deals'"
-                  v-model="showSearchModal"
+                  :model-value="showSearchModal"
                   :as-dropdown="true"
                   :current-query="lastQuery"
                   :deal-type="kanbanDealType"
+                  @update:model-value="onSearchModalModelUpdate"
                   @search="onDealSearch"
                 />
                 <LeadSearchModal
                   v-else
-                  v-model="showSearchModal"
+                  :model-value="showSearchModal"
                   :as-dropdown="true"
                   :initial-active-pill="activeFilter?.id"
                   :has-active-filters="(activeFilters && activeFilters.length) > 0"
                   :current-query="lastQuery"
+                  @update:model-value="onSearchModalModelUpdate"
                   @search="onLeadSearch"
                 />
               </div>
@@ -368,10 +387,12 @@
                     v-if="canUseLeadSearchModal"
                     type="button"
                     class="search-filter-btn"
+                    title="Advanced search"
                     aria-label="Add filter"
-                    @click.stop="openSearchModal"
+                    @mousedown.prevent.stop="openSearchModal"
+                    @click.prevent.stop="openSearchModal"
                 >
-                    <iconify-icon icon="lucide:search" />
+                    <iconify-icon icon="lucide:list-filter" />
                 </button>
                 <button
                     v-if="hasAnySearchCriteria"
@@ -385,26 +406,31 @@
             </div>
             <Teleport to="body">
                 <div
-                    v-if="showSearchModal"
+                    v-if="searchModalMounted"
+                    v-show="showSearchModal"
                     ref="searchDropdownPanelRef"
                     class="lead-search-dropdown-outer lead-search-dropdown-outer--teleport"
                     :style="searchDropdownStyle"
+                    @mousedown.stop
+                    @click.stop
                 >
                     <DealSearchModal
                         v-if="activeKanbanTab === 'deals'"
-                        v-model="showSearchModal"
+                        :model-value="showSearchModal"
                         :as-dropdown="true"
                         :current-query="lastQuery"
                         :deal-type="kanbanDealType"
+                        @update:model-value="onSearchModalModelUpdate"
                         @search="onDealSearch"
                     />
                     <LeadSearchModal
                         v-else
-                        v-model="showSearchModal"
+                        :model-value="showSearchModal"
                         :as-dropdown="true"
                         :initial-active-pill="activeFilter?.id"
                         :has-active-filters="(activeFilters && activeFilters.length) > 0"
                         :current-query="lastQuery"
+                        @update:model-value="onSearchModalModelUpdate"
                         @search="onLeadSearch"
                     />
                 </div>
@@ -872,7 +898,8 @@ const searchDropdownAnchorRef = ref(null);
 const searchDropdownPanelRef = ref(null);
 const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
-const SEARCH_DEBOUNCE_MS = 400;
+const SEARCH_DEBOUNCE_MS = 300;
+const suppressSearchWatcher = ref(false);
 const leadsRef = ref(null);
 const dealsRef = ref(null);
 const openSettingsHub = (section = null) => {
@@ -913,6 +940,7 @@ function applySearchToApi() {
 
 // Watch على search لتطبيق البحث مع debounce
 watch(search, () => {
+    if (suppressSearchWatcher.value) return
     console.log('Search value changed:', search.value)
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
@@ -928,7 +956,7 @@ watch(activeKanbanTab, (newTab) => {
     // Reset search when tab changes so the previous tab's filter (typed text + pills + query)
     // doesn't bleed into the new tab. E.g. searching "John" in Lead Pool and switching to Leads
     // must NOT carry "John" over — Leads should load unfiltered.
-    search.value = ''
+    setSearchSilently('')
     activeFilters.value = []
     lastQuery.value = null
     activeFilter.value = null
@@ -1235,13 +1263,8 @@ function onSearchInputUpdate(val) {
     if (resolvedActiveFilters.value.length) {
         clearSearchFilter();
     }
-    // Typing in the input means the user wants free-text search — collapse the advanced
-    // filter modal so it doesn't sit over the results. The `watch(search)` below picks up
-    // the new value and fires applySearchToApi after the debounce window automatically.
-    if (showSearchModal.value) {
-        showSearchModal.value = false;
-        searchInputFocused.value = false;
-    }
+    // Keep the advanced popup open while typing in the navbar input.
+    // Free-text search still applies via the debounced watch(search).
     search.value = val;
 }
 
@@ -1279,6 +1302,14 @@ const dropLinkedQueryKeys = (query, queryKey) => {
     }
 };
 
+function setSearchSilently(value) {
+    suppressSearchWatcher.value = true
+    search.value = value
+    queueMicrotask(() => {
+        suppressSearchWatcher.value = false
+    })
+}
+
 const onLeadSearch = (payload) => {
     console.log('🔍 onLeadSearch called with payload:', payload)
     
@@ -1286,19 +1317,7 @@ const onLeadSearch = (payload) => {
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null
-        
-        // استخدم الـ ref من window
-        if (window.__kanbanLeadsRef) {
-            const leadsComponent = window.__kanbanLeadsRef()
-            if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-                console.log('📞 Calling fetchLeads with null query')
-                leadsComponent.fetchLeads(true, null)
-            } else {
-                console.warn('fetchLeads not found on leads component')
-            }
-        } else {
-            console.warn('window.__kanbanLeadsRef is not available')
-        }
+        setSearchSilently('')
         
         window.dispatchEvent(new CustomEvent('kanban-lead-search-update', { 
             detail: { query: null, activeFilters: [] }
@@ -1326,9 +1345,9 @@ const onLeadSearch = (payload) => {
     activeFilters.value = filters
 
     if (query?.search != null && String(query.search).trim()) {
-        search.value = String(query.search).trim()
+        setSearchSilently(String(query.search).trim())
     } else {
-        search.value = ''
+        setSearchSilently('')
     }
     
     console.log('Active filters:', activeFilters.value)
@@ -1338,17 +1357,6 @@ const onLeadSearch = (payload) => {
         detail: { query: lastQuery.value, activeFilters: activeFilters.value }
     }))
     
-    if (window.__kanbanLeadsRef) {
-        const leadsComponent = window.__kanbanLeadsRef()
-        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-            console.log('📞 Calling fetchLeads with query:', query || null)
-            leadsComponent.fetchLeads(true, query || null)
-        } else {
-            console.warn('fetchLeads not found on leads component')
-        }
-    } else {
-        console.warn('window.__kanbanLeadsRef is not available')
-    }
 }
 
 // قم بتعديل دالة onDealSearch
@@ -1469,12 +1477,13 @@ const clearSearchFilter = () => {
 
 function updateSearchDropdownPosition() {
     const anchor = searchDropdownAnchorRef.value;
-    if (!anchor) return;
+    if (!anchor || typeof anchor.getBoundingClientRect !== 'function') return;
     const rect = anchor.getBoundingClientRect();
+    if (!rect.width && !rect.height) return;
     searchDropdownStyle.value = {
         position: 'fixed',
         top: `${Math.round(rect.bottom + 8)}px`,
-        right: `${Math.round(window.innerWidth - rect.right)}px`,
+        right: `${Math.round(Math.max(12, window.innerWidth - rect.right))}px`,
         left: 'auto',
         width: 'min(1140px, calc(100vw - 24px))',
         maxWidth: 'calc(100vw - 24px)',
@@ -1488,26 +1497,68 @@ function onSearchDropdownReposition() {
     }
 }
 
-const openSearchModal = () => {
+// Prevent the same click that opens the popup from immediately closing it.
+let ignoreSearchOutsideClick = false;
+let ignoreSearchOutsideClickTimer = null;
+const searchModalMounted = ref(false);
+
+function armIgnoreOutsideClick(ms = 150) {
+    ignoreSearchOutsideClick = true;
+    if (ignoreSearchOutsideClickTimer) clearTimeout(ignoreSearchOutsideClickTimer);
+    ignoreSearchOutsideClickTimer = setTimeout(() => {
+        ignoreSearchOutsideClick = false;
+        ignoreSearchOutsideClickTimer = null;
+    }, ms);
+}
+
+function isInsideSearchUi(target) {
+    if (!target || typeof target.closest !== 'function') return false;
+    if (target.closest('.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal')) {
+        return true;
+    }
+    if (target.closest('.search-wrapper, .search-filter-btn, .search-icon-btn, .search-clear-btn')) {
+        return true;
+    }
+    const anchor = searchDropdownAnchorRef.value;
+    const panel = searchDropdownPanelRef.value;
+    if (anchor?.contains?.(target)) return true;
+    if (panel?.contains?.(target)) return true;
+    return false;
+}
+
+function closeSearchModal() {
+    showSearchModal.value = false;
+    searchInputFocused.value = false;
+}
+
+const openSearchModal = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
     if (!canUseLeadSearchModal.value) {
-        // Non-admin on lead-pool: focus the text input, never open the filter modal.
         searchInputFocused.value = true;
         nextTick(() => {
-            const searchInput = searchDropdownAnchorRef.value?.querySelector('.search-input');
+            const searchInput = searchDropdownAnchorRef.value?.querySelector?.('.search-input');
             if (searchInput) searchInput.focus();
         });
         return;
     }
+
+    armIgnoreOutsideClick(150);
+    updateSearchDropdownPosition();
+    searchModalMounted.value = true;
     showSearchModal.value = true;
     searchInputFocused.value = true;
-    nextTick(() => {
-        updateSearchDropdownPosition();
-        const searchInput = searchDropdownAnchorRef.value?.querySelector('.search-input');
-        if (searchInput) {
-            searchInput.focus();
-        }
-    });
+    nextTick(() => updateSearchDropdownPosition());
 };
+
+function onSearchModalModelUpdate(val) {
+    if (!val) {
+        closeSearchModal();
+        return;
+    }
+    showSearchModal.value = true;
+}
 
 let searchBlurTimeout = null;
 function onSearchFocus() {
@@ -1517,30 +1568,40 @@ function onSearchFocus() {
     }
     searchInputFocused.value = true;
     if (!canUseLeadSearchModal.value) return;
-    showSearchModal.value = true;
-    nextTick(updateSearchDropdownPosition);
+    openSearchModal();
 }
 
 function onSearchBlur() {
+    // If focus leaves search input for a control inside the popup, keep it open.
+    // If focus leaves search entirely (click outside), close automatically.
     searchBlurTimeout = setTimeout(() => {
         searchInputFocused.value = false;
         searchBlurTimeout = null;
-    }, 200);
+        if (!showSearchModal.value) return;
+        if (ignoreSearchOutsideClick) return;
+        const active = document.activeElement;
+        if (isInsideSearchUi(active)) return;
+        closeSearchModal();
+    }, 180);
+}
+
+function onDocumentPointerDown(e) {
+    if (!showSearchModal.value) return;
+    if (ignoreSearchOutsideClick) return;
+    if (isInsideSearchUi(e.target)) return;
+    closeSearchModal();
 }
 
 function onDocumentClick(e) {
     if (!showSearchModal.value) return;
-    if (e.target.closest?.('.lead-search-date-backdrop, .lr-date-modal, .lead-search-dropdown-panel, .lead-search-dropdown-outer')) return;
-    if (e.target.closest?.('.modal')) return;
-    const anchor = searchDropdownAnchorRef.value;
-    const panel = searchDropdownPanelRef.value;
-    if (anchor?.contains(e.target)) return;
-    if (panel?.contains(e.target)) return;
-    showSearchModal.value = false;
+    if (ignoreSearchOutsideClick) return;
+    if (isInsideSearchUi(e.target)) return;
+    closeSearchModal();
 }
 
 watch(showSearchModal, (open) => {
     if (open) {
+        searchModalMounted.value = true;
         nextTick(updateSearchDropdownPosition);
     }
 });
@@ -1924,6 +1985,7 @@ onMounted(() => {
    if (isCrmRoute(route.path)) {
      restoreCrmSectionFromStorage();
    }
+     document.addEventListener('mousedown', onDocumentPointerDown, true);
      document.addEventListener('click', onDocumentClick);
      window.addEventListener('resize', onSearchDropdownReposition);
      window.addEventListener('scroll', onSearchDropdownReposition, true);
@@ -1955,7 +2017,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
-   document.removeEventListener('click', onDocumentClick);
+  document.removeEventListener('mousedown', onDocumentPointerDown, true);
+  document.removeEventListener('click', onDocumentClick);
   window.removeEventListener('resize', onSearchDropdownReposition);
   window.removeEventListener('scroll', onSearchDropdownReposition, true);
   window.removeEventListener('kanban-lead-search-update', () => {})
@@ -1965,6 +2028,14 @@ onUnmounted(() => {
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
     searchDebounceTimer.value = null;
+  }
+  if (ignoreSearchOutsideClickTimer) {
+    clearTimeout(ignoreSearchOutsideClickTimer);
+    ignoreSearchOutsideClickTimer = null;
+  }
+  if (searchBlurTimeout) {
+    clearTimeout(searchBlurTimeout);
+    searchBlurTimeout = null;
   }
 });
 
@@ -3318,20 +3389,25 @@ const showBackButton = computed(() => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     margin: 0;
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 15px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
     -webkit-appearance: none;
     appearance: none;
     transition: color 0.15s ease, background 0.15s ease;
+}
+
+.search-filter-btn {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
 }
 
 .search-icon-btn:hover,
@@ -3938,7 +4014,7 @@ const showBackButton = computed(() => {
   }
 
   .kanban-mob-toolbar__search .search-filter-btn {
-    display: none !important;
+    display: inline-flex !important;
   }
 
   .navbar-header.navbar-header--kanban-mobile :deep(.notification-bell-wrap) {
