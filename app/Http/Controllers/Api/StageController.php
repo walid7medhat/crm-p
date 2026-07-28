@@ -244,376 +244,149 @@ class StageController extends Controller
         return !empty($times) ? $times : [30, 15, 5];
     }
 
-  public function getStagesWithLeads(Request $request): JsonResponse
-    {
-        try {
-            $user = auth()->user();
-            $perPage = $request->get('per_page', 20);
+ public function getStagesWithLeads(Request $request): JsonResponse
+{
+    try {
+        $user = auth()->user();
+        $perPage = (int) $request->get('per_page', 20);
 
-                 $userRole = $user->roles()->first()?->name ?? 'sales';
-        
-        // ================= جلب الـ stages المسموح بها لهذا الدور =================
+        $userRole = $user->roles()->first()?->name ?? 'sales';
+
+        // ================= Visible Stages =================
         $stageVisibility = DB::table('stage_visibility')
             ->where('role_name', $userRole)
-            ->first();
-        
-        if ($stageVisibility) {
-            $decoded = json_decode($stageVisibility->visible_stages, true);
-            $visibleStageIds = is_array($decoded) ? array_values(array_filter($decoded)) : [];
-        } else {
-            $visibleStageIds = [];
-        }
+            ->value('visible_stages');
 
-        // Fallback: if role visibility is empty/invalid, show all lead stages
+        $visibleStageIds = $stageVisibility
+            ? array_values(array_filter(json_decode($stageVisibility, true) ?? []))
+            : [];
+
         if (empty($visibleStageIds)) {
             $visibleStageIds = Stage::where('stage_type', 'lead')->pluck('id')->toArray();
         }
 
-        // ================= stages =================
-        $stagesQuery = Stage::where('stage_type', 'lead')
-         ->where('name', '!=', 'lead pool')
-            ->whereIn('id', $visibleStageIds) 
-            ->orderBy('order');
-            if ($request->filled('stage_id')) {
-                $stagesQuery->where('id', $request->stage_id);
-            }
-            $stages = $stagesQuery->get();
+        // ================= Stages =================
+        $stages = Stage::where('stage_type', 'lead')
+            ->where('name', '!=', 'lead pool')
+            ->whereIn('id', $visibleStageIds)
+            ->when($request->filled('stage_id'), fn($q) => $q->where('id', $request->stage_id))
+            ->orderBy('order')
+            ->get();
 
-            // ================= leads query with permissions =================
-            $baseLeadsQuery = Lead::query();
-            $kanbanEagerLoads = [
-                'addedBy:id,name,display_name,avatar',
-                'responsiblePerson:id,name,display_name,avatar',
-                'propertyType:id,name',
-                'area:id,name',
-            ];
+        // ================= Base Leads Query =================
+        $baseLeadsQuery = Lead::query();
 
-            // ================= permissions =================
-            if ($user->hasRole('super_admin')  || auth()->user()->id ==30 || auth()->user()->id ==33) {
-                // super admin sees everything
-            } 
-            elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+        // ================= Permissions =================
+        if (!$user->hasRole('super_admin') && !in_array($user->id, [30, 33])) {
+
+            if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+
                 $subordinatesIds = $user->getAllSubordinatesIds();
-                $baseLeadsQuery->where(function ($q) use ($subordinatesIds, $user) {
+
+                $baseLeadsQuery->where(function ($q) use ($user, $subordinatesIds) {
                     $q->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
                       ->orWhereIn('added_by', $subordinatesIds);
                 });
+
                 if ($user->hasAnyRole(['manager', 'team_lead'])) {
                     $baseLeadsQuery->whereNull('revert');
                 }
-            } 
-            else {
+
+            } else {
+
                 $baseLeadsQuery->where(function ($q) use ($user) {
                     $q->where('responsible_person_id', $user->id)
                       ->orWhere('added_by', $user->id);
                 })->whereNull('revert');
             }
-
-            // ================= apply all filters =================
-            $baseLeadsQuery->where(function ($q) use ($request) {
-                if ($request->filled('changed_by')) {
-                    $q->whereHas('histories', function($query) use($request) {
-                        $query->where('changes->action', 'stage_changed')
-                              ->where('user_id', $request->changed_by);
-                    });
-                }
-                if ($request->filled('responsible_person_id')) {
-                    $q->where('responsible_person_id', $request->responsible_person_id);
-                }
-                if ($request->filled('stage_id')) {
-                    $q->where('stage_id', $request->stage_id);
-                }
-                if ($request->filled('email')) {
-                    $q->where('email', $request->email);
-                }
-              if ($request->filled('work_phone')) {
-                    $q->where(function ($query) use ($request) {
-                        $query->where('work_phone', $request->work_phone)
-                              ->orWhere('work_phone_2', $request->work_phone);
-                    });
-                }
-                if ($request->filled('added_by')) {
-                    $q->where('added_by', $request->added_by);
-                }
-                if ($request->filled('created_from')) {
-                    $q->whereDate('created_at', '>=', $request->created_from);
-                }
-                if ($request->filled('created_to')) {
-                    $q->whereDate('created_at', '<=', $request->created_to);
-                }
-                if ($request->filled('created_at')) {
-                    $q->whereDate('created_at', '=', $request->created_at);
-                }
-                $this->applyLeadSourceFilter($q, $request);
-                if ($request->filled('bedrooms')) {
-                    $q->where('bedrooms', $request->bedrooms);
-                }
-                if ($request->filled('source_information')) {
-                    $q->where('source_information', 'like', "%{$request->source_information}%");
-                }
-                if ($request->filled('closed')) {
-                    $closed = Stage::where('stage_type', 'lead')
-                        ->where('name', 'like', '%Converted%')
-                        ->orderBy('order', 'desc')
-                        ->first();
-                    $q->where('stage_id', $closed->id);
-                }
-                if ($request->filled('lead_name')) {
-                    $q->where('lead_name', 'like', "%{$request->lead_name}%");
-                }
-                if ($request->filled('first_name')) {
-                    $q->where('first_name', 'like', "%{$request->first_name}%");
-                }
-                if ($request->filled('lead_branch_source')) {
-                     $q->where('lead_branch_source', $request->lead_branch_source);
-                }
-                if ($request->filled('office_branch')) {
-                    $officeBranches = $request->office_branch;
-                    
-                    // Convert to array if it's a string (coming as comma-separated)
-                    if (is_string($officeBranches)) {
-                        $officeBranches = explode(',', $officeBranches);
-                    }
-                    
-                    // If it's an array and not empty
-                    if (is_array($officeBranches) && count($officeBranches) > 0) {
-                        $allTeamMembers = [];
-                        
-                        foreach ($officeBranches as $officeBranchId) {
-                            // تأكد من أن $officeBranchId هو رقم صحيح
-                            if (is_numeric($officeBranchId)) {
-                                $branchTeam = User::find($officeBranchId);
-                                if ($branchTeam) {
-                                    // استدعاء الدالة على الـ Model وليس Collection
-                                    $teamMembers = $branchTeam->getAllSubordinatesIds();
-                                    if (is_array($teamMembers)) {
-                                        $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
-                                    }
-                                    // Also add the branch lead themselves
-                                    $allTeamMembers[] = $branchTeam->id;
-                                }
-                            }
-                        }
-                        
-                        // Remove duplicates
-                        $allTeamMembers = array_unique($allTeamMembers);
-                        
-                        if (!empty($allTeamMembers)) {
-                            $q->whereIn('responsible_person_id', $allTeamMembers);
-                        }
-                    }
-                    // Handle single office_branch for backward compatibility
-                    elseif (is_numeric($officeBranches)) {
-                        $branchTeam = User::find($officeBranches);
-                        if ($branchTeam) {
-                            $teamMembers = $branchTeam->getAllSubordinatesIds();
-                            if (is_array($teamMembers)) {
-                                $teamMembers[] = $branchTeam->id;
-                                $q->whereIn('responsible_person_id', $teamMembers);
-                            }
-                        }
-                    }
-                }
-                if ($request->filled('team_id')) {
-                    $teamLead = User::find($request->team_id);
-                    if ($teamLead) {
-                        $teamMemberIds = $teamLead->getAllSubordinatesIds();
-                        $teamMemberIds[] = $teamLead->id;
-                        $q->whereIn('responsible_person_id', $teamMemberIds);
-                    }
-                }
-               if ($request->filled('status_lead')) {
-                    $q->where('status_lead', $request->status_lead);
-                }
-               if ($request->filled('why_lost_lead')) {
-                    $q->where('why_lost_lead', $request->why_lost_lead);
-                }
-
-
-                // Lead Type
-                if ($request->filled('lead_type') && $request->lead_type !='both') {
-                    $q->where(function($q) use ($request) {
-                        $q->where('lead_type', $request->lead_type)
-                        ->orWhere('lead_type', 'both');
-                    });
-                }
-
-                // Property Status
-                if ($request->filled('property_status') && $request->property_status !='both') {
-                    $q->where(function($q) use ($request) {
-                        $q->where('property_status', $request->property_status)
-                        ->orWhere('property_status', 'both');
-                    });
-                }
-                
-                $this->applyBudgetRangeFilter($q, $request);
-                
-                // Filter by Property Type ID
-                if ($request->filled('property_type_id')) {
-                    $q->where('property_type_id', $request->property_type_id);
-                }
-                 if ($request->has('area_id')) {
-                    $areaId = $request->area_id;
-                    $area = Area::find($areaId);
-                
-                    if ($area) {
-                        $childAreaIds = $area->getChildIdsAttribute();
-                        $allAreaIds = array_merge([$areaId], $childAreaIds);
-                
-                        $q->where(function ($qq) use ($allAreaIds) {
-                            $qq->whereIn('area_id', $allAreaIds)
-                             ;
-                        });
-                    }
-                }
-                if ($request->filled('interaction_result')) {
-                    $q->where('interaction_result', $request->interaction_result);
-                }
-                if ($request->filled('purpose_buying')) {
-                    $q->where('purpose_buying', $request->purpose_buying);
-                }
-                if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
-                    $assignedFrom = $request->assigned_from;
-                    $assignedTo = $request->assigned_to;
-                    $assignedDate = $request->assigned_at;
-                    $q->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
-                        $query->where('changes->action', 'assigned');
-                        if ($assignedDate) {
-                            $query->whereDate('created_at', $assignedDate);
-                        } else {
-                            if ($assignedFrom) {
-                                $query->whereDate('created_at', '>=', $assignedFrom);
-                            }
-                            if ($assignedTo) {
-                                $query->whereDate('created_at', '<=', $assignedTo);
-                            }
-                        }
-                    });
-                }
-                if ($request->filled('search')) {
-                    LeadTextSearch::apply($q, (string) $request->search, [
-                        'comments' => false,
-                        'relations' => true,
-                        'admin' => true,
-                    ]);
-                }
-            });
-
-            // ================= analytics counts (chip totals) =================
-            // Snapshot the query BEFORE the temperature chip filter is applied so the
-            // Cold/Warm/Hot/Answered/No-answer chip counts reflect what's available
-            // across the whole filtered set — not just the currently-loaded page, and
-            // not the subset already narrowed by the active chip. Mirrors the OR logic
-            // of `normalizeLeadHeat` on the frontend.
-            $analyticsBaseQuery = clone $baseLeadsQuery;
-            $heatCounts = (clone $analyticsBaseQuery)
-            // OR priority = 'cold',OR priority = 'warm', OR priority = 'hot' 
-                ->selectRaw(
-                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                     SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
-                     SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
-                     SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
-                     SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
-                )
-                ->first();
-            $leadAnalytics = [
-                'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
-                'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
-                'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
-                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
-                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
-            ];
-
-            // Now apply the temperature chip filter — affects stage counts, leads list,
-            // and pagination, but NOT the analytics snapshot taken above.
-            if ($request->filled('heat')) {
-                $heat = $request->heat;
-                $baseLeadsQuery->where(function ($qq) use ($heat) {
-                    $qq->where('status_lead', $heat);
-                    //    ->orWhere('priority', $heat);
-                });
-            }
-
-            // ================= leads per stage (one count query + limit per stage) =================
-            $stageIds = $stages->pluck('id')->all();
-            $leadCountsByStage = collect();
-            if (! empty($stageIds)) {
-                $leadCountsByStage = (clone $baseLeadsQuery)
-                    ->select('stage_id', DB::raw('COUNT(*) as aggregate'))
-                    ->whereIn('stage_id', $stageIds)
-                    ->groupBy('stage_id')
-                    ->pluck('aggregate', 'stage_id');
-            }
-
-            $stagesWithLeads = [];
-            $allLeadsForMeta = collect();
-
-            foreach ($stages as $stage) {
-                $stageLeadsQuery = (clone $baseLeadsQuery)
-                    ->with($kanbanEagerLoads)
-                    ->where('stage_id', $stage->id);
-                if($stage->order==1){
-                $stageLeadsQuery
-                    ->orderBy('created_at', 'desc')
-                    ->orderBy('id', 'desc');
-                }else{
-                     $stageLeadsQuery
-                        ->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
-                        // ->orderBy('id', 'desc');
-                }
-
-                $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
-                $leads = $stageLeadsQuery->limit($perPage)->get();
-                $allLeadsForMeta = $allLeadsForMeta->merge($leads);
-
-                $stagesWithLeads[] = [
-                    'id' => $stage->id,
-                    'name' => $stage->name,
-                    'order' => $stage->order,
-                    'color' => $stage->color,
-                    'lead_count' => $total,
-                    'leads' => $leads,
-                    'pagination' => [
-                        'current_page' => 1,
-                        'last_page' => max(1, (int) ceil($total / max(1, $perPage))),
-                        'per_page' => $perPage,
-                        'total' => $total,
-                        'has_more_pages' => $total > $perPage,
-                    ],
-                    'created_at' => $stage->created_at?->toISOString(),
-                    'updated_at' => $stage->updated_at?->toISOString(),
-                ];
-            }
-
-            $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
-            $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
-            KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
-                $this->kanbanActivityUsersForLeads($allLeadsForMeta)
-            );
-
-            foreach ($stagesWithLeads as &$stageRow) {
-                $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads'])->resolve();
-            }
-            unset($stageRow);
-
-            KanbanLeadCardResource::clearKanbanMeta();
-            KanbanLeadCardResource::clearKanbanActivityUsers();
-
-            return ApiResponse::success([
-                'stages' => $stagesWithLeads,
-                'analytics' => $leadAnalytics,
-                'pagination' => [
-                    'current_page' => $request->get('page', 1),
-                    'per_page' => $perPage,
-                    'total_stages' => count($stages)
-                ]
-            ], 'Stages with paginated leads retrieved successfully');
-
-        } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage());
         }
+
+        // ================= Filters =================
+        $this->applyAllFilters($baseLeadsQuery, $request);
+
+        // ================= Analytics (قبل heat filter) =================
+        $analyticsBase = clone $baseLeadsQuery;
+
+        $heatCounts = $analyticsBase
+            ->selectRaw("
+                SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) as cold,
+                SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) as warm,
+                SUM(CASE WHEN status_lead = 'hot' THEN 1 ELSE 0 END) as hot,
+                SUM(CASE WHEN interaction_result = 'answered' THEN 1 ELSE 0 END) as answered,
+                SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) as no_answer
+            ")
+            ->first();
+
+        $analytics = [
+            'cold' => (int) $heatCounts->cold,
+            'warm' => (int) $heatCounts->warm,
+            'hot' => (int) $heatCounts->hot,
+            'answered' => (int) $heatCounts->answered,
+            'no_answer' => (int) $heatCounts->no_answer,
+        ];
+
+        // ================= Heat Filter =================
+        if ($request->filled('heat')) {
+            $baseLeadsQuery->where('status_lead', $request->heat);
+        }
+
+        // ================= Counts per stage =================
+        $stageIds = $stages->pluck('id');
+
+        $counts = (clone $baseLeadsQuery)
+            ->whereIn('stage_id', $stageIds)
+            ->select('stage_id', DB::raw('COUNT(*) as total'))
+            ->groupBy('stage_id')
+            ->pluck('total', 'stage_id');
+
+        // ================= Load Leads =================
+        $result = [];
+
+        foreach ($stages as $stage) {
+
+            $query = (clone $baseLeadsQuery)
+                ->where('stage_id', $stage->id)
+                ->with([
+                    'addedBy:id,name',
+                    'responsiblePerson:id,name',
+                    'propertyType:id,name',
+                    'area:id,name'
+                ]);
+
+            // Sorting
+            if ($stage->order == 1) {
+                $query->latest();
+            } else {
+                $query->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+            }
+
+            $total = $counts[$stage->id] ?? 0;
+
+            $leads = $query->limit($perPage)->get();
+
+            $result[] = [
+                'id' => $stage->id,
+                'name' => $stage->name,
+                'order' => $stage->order,
+                'lead_count' => $total,
+                'leads' => KanbanLeadCardResource::collection($leads),
+                'pagination' => [
+                    'total' => $total,
+                    'per_page' => $perPage,
+                    'last_page' => ceil($total / $perPage),
+                ]
+            ];
+        }
+
+        return ApiResponse::success([
+            'stages' => $result,
+            'analytics' => $analytics
+        ]);
+
+    } catch (\Exception $e) {
+        return ApiResponse::error($e->getMessage());
     }
+}
 
     /**
      * Load more leads for a specific stage (infinite scroll)
