@@ -1537,12 +1537,25 @@ function armIgnoreOutsideClick(ms = 150) {
 
 function isInsideSearchUi(target) {
     if (!target || typeof target.closest !== 'function') return false;
-    if (target.closest('.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal')) {
+
+    // Main search popup + date/budget overlays.
+    if (target.closest(
+        '.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal, .lead-search-budget-dropdown'
+    )) {
         return true;
     }
-    if (target.closest('.search-wrapper, .search-filter-btn, .search-icon-btn, .search-clear-btn')) {
+
+    // vue-select menus are appended to <body>, so they live outside the popup DOM.
+    if (target.closest(
+        '.vs__dropdown-menu, .vs__dropdown-option, .v-select, .vs--open, [data-popper-placement]'
+    )) {
         return true;
     }
+
+    if (target.closest('.search-wrapper, .search-filter-btn, .search-icon-btn, .search-clear-btn, .search-input-container')) {
+        return true;
+    }
+
     const anchor = searchDropdownAnchorRef.value;
     const panel = searchDropdownPanelRef.value;
     if (anchor?.contains?.(target)) return true;
@@ -1600,16 +1613,12 @@ function onSearchFocus() {
 }
 
 function onSearchBlur() {
-    // If focus leaves search input for a control inside the popup, keep it open.
-    // If focus leaves search entirely (click outside), close automatically.
+    // Do NOT close the advanced popup on input blur.
+    // Selecting vue-select options (append-to-body) blurs the navbar input and
+    // would incorrectly close the whole popup. Outside-click handles closing.
     searchBlurTimeout = setTimeout(() => {
         searchInputFocused.value = false;
         searchBlurTimeout = null;
-        if (!showSearchModal.value) return;
-        if (ignoreSearchOutsideClick) return;
-        const active = document.activeElement;
-        if (isInsideSearchUi(active)) return;
-        closeSearchModal();
     }, 180);
 }
 
