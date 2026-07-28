@@ -244,7 +244,7 @@ class StageController extends Controller
         return !empty($times) ? $times : [30, 15, 5];
     }
 
-  public function getStagesWithLeads(Request $request): JsonResponse
+ public function getStagesWithLeads(Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
@@ -594,6 +594,7 @@ class StageController extends Controller
         return ApiResponse::error($e->getMessage());
     }
 }
+
     /**
      * Load more leads for a specific stage (infinite scroll)
      */
