@@ -10,6 +10,7 @@ use App\Http\Requests\Lead\LeadIntegrationRequest;
 use App\Http\Requests\Lead\AssignResponsiblePersonRequest;
 use App\Http\Resources\Lead\LeadResource;
 use App\Http\Resources\Lead\LeadCollection;
+use App\Http\Resources\Lead\KanbanLeadCardResource;
 use App\Models\Lead;
 use App\Models\Integration;
 use App\Models\LeadParticipant;
@@ -52,15 +53,26 @@ class LeadController extends Controller
         
                 $user = auth()->user();
                 $perPage = $request->get('per_page', 20);
-        
-                $leadsQuery = Lead::with([
-                    'stage',
-                    'addedBy',
-                    'responsiblePerson',
-                    'participants',
-                    'observers.user',
-                    'integration:id,project_id',
-                ]);
+                $isPaginatedPool = $request->filled('paginate') && (string) $request->paginate === '1';
+                $isTextSearch = $request->filled('search');
+                $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
+
+                // Lead Pool cards only need light relations — avoid heavy graph loads.
+                $leadsQuery = Lead::with($isPaginatedPool
+                    ? [
+                        'addedBy:id,name,display_name,avatar,email,parent_id,status',
+                        'responsiblePerson:id,name,display_name,avatar,email,parent_id,status',
+                        'propertyType:id,name',
+                        'area:id,name',
+                    ]
+                    : [
+                        'stage',
+                        'addedBy',
+                        'responsiblePerson',
+                        'participants',
+                        'observers.user',
+                        'integration:id,project_id',
+                    ]);
 
                 // ================= Full filter set (ported from StageController so lead-pool search
                 // matches the kanban-stages search modal behavior end-to-end) =================
@@ -247,37 +259,74 @@ class LeadController extends Controller
                 }
 
                 // Paginated response (used by Lead Pool view) — flat leads array + pagination meta.
-                if ($request->filled('paginate') && (string) $request->paginate === '1') {
-                    // Free-text search: avoid expensive COUNT(*) over the full filtered set.
-                    if ($request->filled('search')) {
-                        $paginator = $leadsQuery->latest()->simplePaginate($perPage);
+                if ($isPaginatedPool) {
+                    // Prefer simple id order when ranking is disabled for search benchmarks.
+                    if ($skipSearchRanking) {
+                        $leadsQuery->orderBy('id');
+                    } else {
+                        $leadsQuery->latest();
+                    }
+
+                    // Always use the light Kanban card resource for pool cards (LeadResource is ~20x heavier).
+                    KanbanLeadCardResource::setKanbanMeta([], []);
+
+                    try {
+                        // Free-text search: avoid expensive COUNT(*) over the full filtered set.
+                        if ($isTextSearch) {
+                            $paginator = $leadsQuery->simplePaginate($perPage);
+                            $items = $paginator->items();
+                            // Mark known Bitrix activity ids as resolved(null) so cards skip per-row user lookups.
+                            $activityMap = [];
+                            foreach ($items as $item) {
+                                if (! empty($item->bitrix24_last_activity_by_id)) {
+                                    $activityMap[(int) $item->bitrix24_last_activity_by_id] = null;
+                                }
+                            }
+                            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId($activityMap);
+                            $payload = KanbanLeadCardResource::collection($items)->resolve();
+
+                            return response()->json([
+                                'success' => true,
+                                'data' => $payload,
+                                'pagination' => [
+                                    'current_page' => $paginator->currentPage(),
+                                    'last_page'    => $paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage(),
+                                    'per_page'     => $paginator->perPage(),
+                                    'total'        => null,
+                                    'has_more_pages' => $paginator->hasMorePages(),
+                                ],
+                                'search_ranking_disabled' => $skipSearchRanking,
+                                'message' => 'Leads retrieved successfully',
+                            ]);
+                        }
+
+                        $paginator = $leadsQuery->paginate($perPage);
+                        $items = $paginator->items();
+                        $activityMap = [];
+                        foreach ($items as $item) {
+                            if (! empty($item->bitrix24_last_activity_by_id)) {
+                                $activityMap[(int) $item->bitrix24_last_activity_by_id] = null;
+                            }
+                        }
+                        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId($activityMap);
+                        $payload = KanbanLeadCardResource::collection($items)->resolve();
+
                         return response()->json([
                             'success' => true,
-                            'data' => LeadResource::collection($paginator->items()),
+                            'data' => $payload,
                             'pagination' => [
                                 'current_page' => $paginator->currentPage(),
-                                'last_page'    => $paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage(),
+                                'last_page'    => $paginator->lastPage(),
                                 'per_page'     => $paginator->perPage(),
-                                'total'        => null,
+                                'total'        => $paginator->total(),
                                 'has_more_pages' => $paginator->hasMorePages(),
                             ],
                             'message' => 'Leads retrieved successfully',
                         ]);
+                    } finally {
+                        KanbanLeadCardResource::clearKanbanMeta();
+                        KanbanLeadCardResource::clearKanbanActivityUsers();
                     }
-
-                    $paginator = $leadsQuery->latest()->paginate($perPage);
-                    return response()->json([
-                        'success' => true,
-                        'data' => LeadResource::collection($paginator->items()),
-                        'pagination' => [
-                            'current_page' => $paginator->currentPage(),
-                            'last_page'    => $paginator->lastPage(),
-                            'per_page'     => $paginator->perPage(),
-                            'total'        => $paginator->total(),
-                            'has_more_pages' => $paginator->hasMorePages(),
-                        ],
-                        'message' => 'Leads retrieved successfully',
-                    ]);
                 }
 
                 // Default: grouped-by-stage response (existing callers).

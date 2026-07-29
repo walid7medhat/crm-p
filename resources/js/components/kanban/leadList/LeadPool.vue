@@ -2,15 +2,13 @@
     <div class="lead-pool-wrapper" :class="{ 'lead-pool-wrapper--searching': searching }">
         <div
             v-if="searching"
-            class="lead-pool-search-overlay"
+            class="lead-pool-search-banner"
             role="status"
             aria-live="polite"
             aria-label="Searching leads"
         >
-            <div class="lead-pool-search-overlay__card">
-                <div class="spinner-border spinner-border-sm text-primary" role="status" />
-                <span>Searching leads…</span>
-            </div>
+            <div class="spinner-border spinner-border-sm text-primary" role="status" />
+            <span>Searching…</span>
         </div>
 
         <div v-if="loading && leads.length === 0" class="text-center py-5">
@@ -853,33 +851,27 @@ defineExpose({
 }
 
 .lead-pool-wrapper--searching .leads-grid {
-    opacity: 0.72;
-    transition: opacity 0.2s ease;
+    opacity: 0.78;
+    transition: opacity 0.15s ease;
 }
 
-.lead-pool-search-overlay {
-    position: absolute;
-    inset: 0;
+.lead-pool-search-banner {
+    position: sticky;
+    top: 8px;
     z-index: 20;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 48px;
-    pointer-events: none;
-}
-
-.lead-pool-search-overlay__card {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
+    gap: 8px;
+    margin: 0 auto 10px;
+    padding: 6px 12px;
     border-radius: 999px;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.95);
     border: 1px solid #e2e8f0;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
-    font-size: 13px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    font-size: 12px;
     font-weight: 600;
     color: #475569;
+    pointer-events: none;
 }
 
 .leads-grid {

@@ -70,15 +70,15 @@ class KanbanLeadCardResource extends JsonResource
             'property_type_id' => $this->property_type_id,
             'area_id' => $this->area_id,
             'property_type' => $this->propertyType?->name,
-            'area' => $this->area?->title,
+            'area' => $this->area?->name ?? $this->area?->title,
             'created_at' => $this->created_at?->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
             'duplicate_no' => $duplicateNo,
             'duplicate_ids' => [],
             'is_reverted' => ! is_null($this->revert),
-            'added_by_user' => new UserResource($this->whenLoaded('addedBy')),
-            'responsible_person' => new UserResource($this->whenLoaded('responsiblePerson')),
-            'parent' => new UserResource($this->whenLoaded('addedBy')),
+            'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
+            'responsible_person' => $this->whenLoaded('responsiblePerson', fn () => $this->formatLeadPoolUser($this->responsiblePerson)),
+            'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,
             'last_activity_at' => $lastActivityAt,
             'last_activity_user' => $this->formatActivityUser($lastActivityUser),
@@ -90,6 +90,27 @@ class KanbanLeadCardResource extends JsonResource
             'priority' => $this->priority,
             'intent' => $this->intent,
             'next_action' => $this->next_action,
+        ];
+    }
+
+    /**
+     * Compact user payload for pool/kanban cards (avoids UserResource children/parent role queries).
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function formatLeadPoolUser($user): ?array
+    {
+        if (! $user) {
+            return null;
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => \App\Models\User::resolveDisplayName($user),
+            'display_name' => $user->display_name,
+            'email' => $user->email,
+            'avatar' => $user->avatar ? asset('storage/'.$user->avatar) : null,
+            'status' => $user->status,
         ];
     }
 }
