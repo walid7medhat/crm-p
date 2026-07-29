@@ -2753,7 +2753,8 @@ const clearClientData = () => {
       }
       .modal-footer-custom {
         position: sticky;
-        bottom: 0;
+        /* Keep Save/Cancel buttons above the fixed bottom Lead/Listing actions on mobile. */
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
         left: 0;
         right: 0;
         background: #fff;
