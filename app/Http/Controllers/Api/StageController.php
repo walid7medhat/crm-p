@@ -484,7 +484,8 @@ class StageController extends Controller
         $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
 
         // ================= analytics counts (chip totals, pre-heat-filter) =================
-        // Skip during free-text search (and whenever ranking is disabled for search).
+        // Skip during free-text search. For normal board refresh, cache briefly to avoid
+        // re-scanning the full lead set on every page reload.
         if ($isTextSearch || $skipSearchRanking) {
             $leadAnalytics = [
                 'tempCold' => 0,
@@ -494,23 +495,26 @@ class StageController extends Controller
                 'callNoAnswer' => 0,
             ];
         } else {
-            $analyticsBaseQuery = clone $baseLeadsQuery;
-            $heatCounts = $analyticsBaseQuery
-                ->selectRaw(
-                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                     SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
-                     SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
-                     SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
-                     SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
-                )
-                ->first();
-            $leadAnalytics = [
-                'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
-                'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
-                'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
-                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
-                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
-            ];
+            $analyticsCacheKey = 'kanban_lead_analytics_u'.$user->id;
+            $leadAnalytics = \Illuminate\Support\Facades\Cache::remember($analyticsCacheKey, 60, function () use ($baseLeadsQuery) {
+                $heatCounts = (clone $baseLeadsQuery)
+                    ->selectRaw(
+                        "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                         SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
+                         SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                         SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                         SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                    )
+                    ->first();
+
+                return [
+                    'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
+                    'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
+                    'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
+                    'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
+                    'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
+                ];
+            });
         }
 
         // ================= apply heat chip filter (affects stage counts + lists only) =================
@@ -650,42 +654,51 @@ class StageController extends Controller
                 ];
             }
         } else {
-            // ================= counts per stage (one query) =================
-            $leadCountsByStage = (clone $baseLeadsQuery)
-                ->select('stage_id', DB::raw('COUNT(*) as aggregate'))
-                ->whereIn('stage_id', $stageIds)
-                ->groupBy('stage_id')
-                ->pluck('aggregate', 'stage_id');
-
-            // ================= top-N leads per stage in ONE query via ROW_NUMBER() =================
-            $rankedSql = "
-                ROW_NUMBER() OVER (
-                    PARTITION BY stage_id
-                    ORDER BY
-                        CASE WHEN stage_id IN (" . implode(',', array_map(fn($id) => (int) $id, $stageOrderById->filter(fn($o) => $o == 1)->keys()->all() ?: [0])) . ")
-                            THEN created_at END DESC,
-                        CASE WHEN stage_id IN (" . implode(',', array_map(fn($id) => (int) $id, $stageOrderById->filter(fn($o) => $o == 1)->keys()->all() ?: [0])) . ")
-                            THEN id END DESC,
-                        COALESCE(bitrix24_last_activity_at, created_at) DESC
-                ) as rn
-            ";
-
-            $rankedQuery = (clone $baseLeadsQuery)
-                ->whereIn('stage_id', $stageIds)
-                ->select('*')
-                ->selectRaw($rankedSql);
-
-            $allRankedLeads = Lead::fromSub($rankedQuery, 'ranked_leads')
-                ->where('rn', '<=', $perPage)
-                ->with($kanbanEagerLoads)
-                ->get();
-
-            $leadsByStage = $allRankedLeads->groupBy('stage_id');
+            // Fast board path: per-stage LIMIT (index-friendly) instead of ROW_NUMBER over the full table.
+            $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
+            $idsByStage = [];
 
             foreach ($stages as $stage) {
-                $leads = $leadsByStage->get($stage->id, collect())->values();
+                $stageQuery = (clone $baseLeadsQuery)
+                    ->where('stage_id', $stage->id)
+                    ->select('leads.id');
+
+                if (in_array($stage->id, $orderOneStageIds, true)) {
+                    $stageQuery->orderByDesc('created_at')->orderByDesc('id');
+                } else {
+                    $stageQuery->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+                }
+
+                $idsByStage[$stage->id] = $stageQuery
+                    ->limit($perPage + 1)
+                    ->pluck('id')
+                    ->all();
+            }
+
+            $allIds = collect($idsByStage)->flatten()->unique()->values()->all();
+            $leadsById = empty($allIds)
+                ? collect()
+                : Lead::query()
+                    ->whereIn('id', $allIds)
+                    ->with($kanbanEagerLoads)
+                    ->get()
+                    ->keyBy('id');
+
+            foreach ($stages as $stage) {
+                $stageIdsList = $idsByStage[$stage->id] ?? [];
+                $hasMore = count($stageIdsList) > $perPage;
+                if ($hasMore) {
+                    $stageIdsList = array_slice($stageIdsList, 0, $perPage);
+                }
+
+                $leads = collect($stageIdsList)
+                    ->map(fn ($id) => $leadsById->get($id))
+                    ->filter()
+                    ->values();
+
+                // Soft count: avoid full COUNT(*) over each stage on every refresh.
+                $total = $hasMore ? ($perPage + 1) : $leads->count();
                 $allLeadsForMeta = $allLeadsForMeta->merge($leads);
-                $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
 
                 $stagesWithLeads[] = [
                     'id' => $stage->id,
@@ -696,10 +709,10 @@ class StageController extends Controller
                     'leads' => $leads,
                     'pagination' => [
                         'current_page' => 1,
-                        'last_page' => max(1, (int) ceil($total / max(1, $perPage))),
+                        'last_page' => $hasMore ? 2 : 1,
                         'per_page' => $perPage,
                         'total' => $total,
-                        'has_more_pages' => $total > $perPage,
+                        'has_more_pages' => $hasMore,
                     ],
                     'created_at' => $stage->created_at?->toISOString(),
                     'updated_at' => $stage->updated_at?->toISOString(),
@@ -707,19 +720,15 @@ class StageController extends Controller
             }
         }
 
-        // Duplicate / activity meta adds extra DB round-trips — skip on free-text search
-        // and whenever ranking is disabled for search benchmarks.
-        if ($isTextSearch || $skipSearchRanking) {
-            KanbanLeadCardResource::setKanbanMeta([], []);
-            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId([]);
-        } else {
-            $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
-            $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
-            KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
-                $this->kanbanActivityUsersForLeads($allLeadsForMeta)
-            );
+        // Skip duplicate/activity meta on board load — these add large extra scans for little UI value on first paint.
+        KanbanLeadCardResource::setKanbanMeta([], []);
+        $activityMap = [];
+        foreach ($allLeadsForMeta as $lead) {
+            if (! empty($lead->bitrix24_last_activity_by_id)) {
+                $activityMap[(int) $lead->bitrix24_last_activity_by_id] = null;
+            }
         }
+        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId($activityMap);
 
         foreach ($stagesWithLeads as &$stageRow) {
             $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads'])->resolve();

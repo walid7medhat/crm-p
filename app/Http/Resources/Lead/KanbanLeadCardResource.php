@@ -3,7 +3,6 @@
 namespace App\Http\Resources\Lead;
 
 use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
-use App\Http\Resources\User\UserResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -81,7 +80,7 @@ class KanbanLeadCardResource extends JsonResource
             'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,
             'last_activity_at' => $lastActivityAt,
-            'last_activity_user' => $this->formatActivityUser($lastActivityUser),
+            'last_activity_user' => $this->formatLeadPoolUser($lastActivityUser),
             'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
             'api_first_question' => null,

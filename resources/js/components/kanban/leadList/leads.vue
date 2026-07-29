@@ -1186,7 +1186,7 @@ const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
 const VISIBLE_LEADS_INCREMENT = 20
 const visibleLeadCounts = ref({})
 const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v1'
-const KANBAN_LEADS_CACHE_TTL_MS =30000
+const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // keep board visible across refreshes
 const responsiblePersons = ref([])
 const loading = ref(true)
 const isSearching = ref(false)
@@ -1448,12 +1448,13 @@ function buildLeadSearchApiParams(q = {}) {
     return params
 }
 
-const fetchLeads = async (immediate = false, queryOverride = undefined) => {
+const fetchLeads = async (immediate = false, queryOverride = undefined, options = {}) => {
     if (queryOverride !== undefined) {
         appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
     }
+    const silent = !!options.silent
     // Show searching feedback immediately when a search/filter is applied.
-    if (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
+    if (!silent && appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
         isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     }
@@ -1467,13 +1468,13 @@ const fetchLeads = async (immediate = false, queryOverride = undefined) => {
     if (!immediate) {
         return new Promise((resolve) => {
             fetchDebounceTimer.value = setTimeout(async () => {
-                await executeFetchLeads()
+                await executeFetchLeads({ silent })
                 resolve()
             }, 300) // 300ms debounce
         })
     }
     
-    return executeFetchLeads()
+    return executeFetchLeads({ silent })
 }
 function closeStageModal() {
     showStageModal.value = false
@@ -1507,7 +1508,7 @@ async function saveStage() {
     }
 }
 
-const executeFetchLeads = async () => {
+const executeFetchLeads = async (options = {}) => {
     // Latest request wins: cancel older in-flight fetches instead of dropping
     // the newest user intent.
     if (abortController.value) {
@@ -1517,13 +1518,17 @@ const executeFetchLeads = async () => {
     const generation = ++fetchGeneration
     abortController.value = new AbortController()
     const hadColumns = columns.value.length > 0
+    const silent = !!options.silent
     isFetching.value = true
-    isSearching.value = true
-    if (!hadColumns) {
+    // Never block the board with "Updating…" when we already have columns (refresh / cache hit).
+    if (!silent && !hadColumns) {
+        isSearching.value = true
         loading.value = true
-    }
-    window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
-    
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+    } else if (!silent && appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
+        isSearching.value = true
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+    }    
     try {
         const q = effectiveSearchParams.value
 
@@ -2304,12 +2309,14 @@ onMounted(async () => {
     const hadCache = loadCachedColumns()
     if (hadCache) {
         markKanbanReady()
-    }
-
-    try {
-        await fetchLeads(true)
-    } finally {
-        markKanbanReady()
+        // Paint instantly from cache, refresh quietly in the background.
+        fetchLeads(true, undefined, { silent: true })
+    } else {
+        try {
+            await fetchLeads(true)
+        } finally {
+            markKanbanReady()
+        }
     }
 
     fetchResponsiblePersons()
