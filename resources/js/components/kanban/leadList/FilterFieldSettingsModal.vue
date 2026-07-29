@@ -512,4 +512,32 @@ onMounted(() => {
 .section-header {
     padding-bottom: 10px !important;
 }
+
+/* Mobile: stack fields + fit modal within viewport */
+@media (max-width: 768px) {
+    :deep(#filter-field-settings-modal .modal-dialog) {
+        max-width: 96vw;
+        width: 96vw;
+        margin: 0.5rem auto;
+    }
+
+    .modal-body-content {
+        padding: 12px !important;
+    }
+
+    .settings-subsections {
+        max-height: 68vh;
+        overflow-y: auto;
+        padding-right: 0;
+    }
+
+    .fields-grid {
+        grid-template-columns: 1fr;
+        gap: 10px 0;
+    }
+
+    .settings-subsection {
+        padding: 12px 12px;
+    }
+}
 </style>
