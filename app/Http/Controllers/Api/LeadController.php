@@ -222,9 +222,10 @@ class LeadController extends Controller
                 if ($request->filled('search')) {
                     $isAdminSearch = $user->hasRole(['admin', 'super_admin']);
                     LeadTextSearch::apply($leadsQuery, (string) $request->search, [
-                        'comments' => true,
+                        'comments' => false,
                         'relations' => true,
                         'admin' => $isAdminSearch,
+                        'lean' => true,
                     ]);
                 }
         
@@ -247,6 +248,23 @@ class LeadController extends Controller
 
                 // Paginated response (used by Lead Pool view) — flat leads array + pagination meta.
                 if ($request->filled('paginate') && (string) $request->paginate === '1') {
+                    // Free-text search: avoid expensive COUNT(*) over the full filtered set.
+                    if ($request->filled('search')) {
+                        $paginator = $leadsQuery->latest()->simplePaginate($perPage);
+                        return response()->json([
+                            'success' => true,
+                            'data' => LeadResource::collection($paginator->items()),
+                            'pagination' => [
+                                'current_page' => $paginator->currentPage(),
+                                'last_page'    => $paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage(),
+                                'per_page'     => $paginator->perPage(),
+                                'total'        => null,
+                                'has_more_pages' => $paginator->hasMorePages(),
+                            ],
+                            'message' => 'Leads retrieved successfully',
+                        ]);
+                    }
+
                     $paginator = $leadsQuery->latest()->paginate($perPage);
                     return response()->json([
                         'success' => true,
@@ -446,11 +464,20 @@ class LeadController extends Controller
             return ApiResponse::success(
                 new LeadResource($lead->load([
                     'stage',
-                    'addedBy',
-                    'responsiblePerson',
+                    'addedBy.roles:id,name',
+                    'addedBy.parent:id,name,display_name,avatar',
+                    'addedBy.employeeProfile.companyBranch:id,name',
+                    'addedBy.employeeProfile.designation:id,name',
+                    'responsiblePerson.roles:id,name',
+                    'responsiblePerson.parent.parent.parent.parent:id,name,display_name,avatar,parent_id',
+                    'responsiblePerson.employeeProfile.companyBranch:id,name',
+                    'responsiblePerson.employeeProfile.designation:id,name',
                     'participants',
-                    'observers.user',
+                    'observers.user:id,name,display_name,avatar,email',
                     'integration:id,project_id',
+                    'propertyType:id,name',
+                    'area' => fn ($q) => $q->with(['parent.parent.parent.parent']),
+                    'createdHistory',
                 ])),
                 'Lead retrieved successfully'
             );
@@ -1324,14 +1351,19 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
           public function view_history($id): JsonResponse
     {
         try {
-            $lead=Lead::find($id);
+            $lead = Lead::find($id);
+            if (! $lead) {
+                return ApiResponse::error('Lead not found', 404);
+            }
+
             LeadHistoryHelper::log(
                 $lead->id,
                 ['action' => 'view']
             );
 
+            // Frontend ignores the body — avoid serializing a full LeadResource on every open.
             return ApiResponse::success(
-                new LeadResource($lead),
+                ['id' => (int) $lead->id],
                 'Lead history saved successfully'
             );
         } catch (\Exception $e) {

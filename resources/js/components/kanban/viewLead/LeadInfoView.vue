@@ -595,7 +595,7 @@
             </div>
         </div>
 
-        <MatchingPropertiesSection v-if="lead?.id" :lead="lead" />
+        <MatchingPropertiesSection v-if="lead?.id && showMatchingProperties" :lead="lead" />
 
         <div v-if="showResponsibleSection" class="info-section">
             <div class="info-section-title">Responsible Person</div>
@@ -801,6 +801,20 @@ const props = defineProps({
 const emit = defineEmits(['person-updated', 'edit-request', 'edit-section', 'lead-updated'])
 
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
+const showMatchingProperties = ref(false)
+
+watch(
+    () => props.lead?.id,
+    (id) => {
+        showMatchingProperties.value = false
+        if (!id) return
+        // Matching listings can be heavy — load after lead details are visible.
+        setTimeout(() => {
+            showMatchingProperties.value = true
+        }, 300)
+    },
+    { immediate: true }
+)
 
 // Person modal state
 const showPersonModal = ref(false)

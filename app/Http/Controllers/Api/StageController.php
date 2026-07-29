@@ -474,28 +474,44 @@ class StageController extends Controller
                     'comments' => false,
                     'relations' => true,
                     'admin' => true,
+                    'lean' => true,
                 ]);
             }
         });
 
+        $isTextSearch = $request->filled('search');
+        // Temporary benchmark switch — see config/lead_scoring.php → kanban_search.skip_ranking
+        $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
+
         // ================= analytics counts (chip totals, pre-heat-filter) =================
-        $analyticsBaseQuery = clone $baseLeadsQuery;
-        $heatCounts = $analyticsBaseQuery
-            ->selectRaw(
-                "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                 SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
-                 SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
-                 SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
-                 SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
-            )
-            ->first();
-        $leadAnalytics = [
-            'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
-            'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
-            'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
-            'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
-            'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
-        ];
+        // Skip during free-text search (and whenever ranking is disabled for search).
+        if ($isTextSearch || $skipSearchRanking) {
+            $leadAnalytics = [
+                'tempCold' => 0,
+                'tempWarm' => 0,
+                'tempHot' => 0,
+                'callAnswered' => 0,
+                'callNoAnswer' => 0,
+            ];
+        } else {
+            $analyticsBaseQuery = clone $baseLeadsQuery;
+            $heatCounts = $analyticsBaseQuery
+                ->selectRaw(
+                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                     SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
+                     SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                     SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                     SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                )
+                ->first();
+            $leadAnalytics = [
+                'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
+                'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
+                'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
+                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
+                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
+            ];
+        }
 
         // ================= apply heat chip filter (affects stage counts + lists only) =================
         if ($request->filled('heat')) {
@@ -505,72 +521,205 @@ class StageController extends Controller
             });
         }
 
-        // ================= counts per stage (one query) =================
-        $leadCountsByStage = (clone $baseLeadsQuery)
-            ->select('stage_id', DB::raw('COUNT(*) as aggregate'))
-            ->whereIn('stage_id', $stageIds)
-            ->groupBy('stage_id')
-            ->pluck('aggregate', 'stage_id');
-
-        // ================= top-N leads per stage in ONE query via ROW_NUMBER() =================
-        // Requires MySQL 8+ / MariaDB 10.2+ / Postgres. Falls back below if unsupported.
-        $rankedSql = "
-            ROW_NUMBER() OVER (
-                PARTITION BY stage_id
-                ORDER BY
-                    CASE WHEN stage_id IN (" . implode(',', array_map(fn($id) => (int) $id, $stageOrderById->filter(fn($o) => $o == 1)->keys()->all() ?: [0])) . ")
-                        THEN created_at END DESC,
-                    CASE WHEN stage_id IN (" . implode(',', array_map(fn($id) => (int) $id, $stageOrderById->filter(fn($o) => $o == 1)->keys()->all() ?: [0])) . ")
-                        THEN id END DESC,
-                    COALESCE(bitrix24_last_activity_at, created_at) DESC
-            ) as rn
-        ";
-
-        $rankedQuery = (clone $baseLeadsQuery)
-            ->whereIn('stage_id', $stageIds)
-            ->select('*')
-            ->selectRaw($rankedSql);
-
-        $allRankedLeads = Lead::fromSub($rankedQuery, 'ranked_leads')
-            ->where('rn', '<=', $perPage)
-            ->with($kanbanEagerLoads)
-            ->get();
-
-        $leadsByStage = $allRankedLeads->groupBy('stage_id');
-
         $stagesWithLeads = [];
         $allLeadsForMeta = collect();
 
-        foreach ($stages as $stage) {
-            $leads = $leadsByStage->get($stage->id, collect())->values();
-            $allLeadsForMeta = $allLeadsForMeta->merge($leads);
-            $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
+        if ($isTextSearch) {
+            $idsByStage = [];
 
-            $stagesWithLeads[] = [
-                'id' => $stage->id,
-                'name' => $stage->name,
-                'order' => $stage->order,
-                'color' => $stage->color,
-                'lead_count' => $total,
-                'leads' => $leads,
-                'pagination' => [
-                    'current_page' => 1,
-                    'last_page' => max(1, (int) ceil($total / max(1, $perPage))),
-                    'per_page' => $perPage,
-                    'total' => $total,
-                    'has_more_pages' => $total > $perPage,
-                ],
-                'created_at' => $stage->created_at?->toISOString(),
-                'updated_at' => $stage->updated_at?->toISOString(),
-            ];
+            if ($skipSearchRanking) {
+                // RAW SEARCH PATH (no ranking): same filters, simple id order, no ROW_NUMBER /
+                // activity reordering. Re-enable ranking with KANBAN_SEARCH_SKIP_RANKING=false.
+                foreach ($stages as $stage) {
+                    $idsByStage[$stage->id] = (clone $baseLeadsQuery)
+                        ->where('stage_id', $stage->id)
+                        ->select('leads.id')
+                        ->orderBy('leads.id')
+                        ->limit($perPage + 1)
+                        ->pluck('id')
+                        ->all();
+                }
+            } else {
+                $searchTerm = trim((string) $request->search);
+                $searchDigits = preg_replace('/\D+/', '', $searchTerm) ?? '';
+                $isNarrowSearch = (
+                    (strlen($searchDigits) >= 4 && preg_match('/^[\d\s\+\-\(\)]+$/', $searchTerm) === 1)
+                    || str_contains($searchTerm, '@')
+                );
+
+                $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
+
+                if ($isNarrowSearch) {
+                    // Phone/email: few matches expected — one scan, no window ranking.
+                    $matchRows = (clone $baseLeadsQuery)
+                        ->whereIn('stage_id', $stageIds)
+                        ->limit(2000)
+                        ->get(['id', 'stage_id', 'created_at', 'bitrix24_last_activity_at']);
+
+                    $grouped = $matchRows->groupBy('stage_id');
+                    foreach ($stages as $stage) {
+                        $rows = $grouped->get($stage->id, collect());
+                        if (in_array($stage->id, $orderOneStageIds, true)) {
+                            $rows = $rows->sortBy([
+                                ['created_at', 'desc'],
+                                ['id', 'desc'],
+                            ])->values();
+                        } else {
+                            $rows = $rows->sortByDesc(function ($r) {
+                                $activity = $r->bitrix24_last_activity_at ?: $r->created_at;
+                                if ($activity instanceof \DateTimeInterface) {
+                                    return $activity->getTimestamp();
+                                }
+
+                                return $activity ? strtotime((string) $activity) : 0;
+                            })->values();
+                        }
+                        $idsByStage[$stage->id] = $rows->take($perPage + 1)->pluck('id')->all();
+                    }
+                } else {
+                    // Broad text: one ranked ID scan (avoids repeating the LIKE filter per stage).
+                    $orderOneList = implode(',', array_map('intval', $orderOneStageIds ?: [0]));
+                    $rankedSql = "
+                        ROW_NUMBER() OVER (
+                            PARTITION BY stage_id
+                            ORDER BY
+                                CASE WHEN stage_id IN ({$orderOneList}) THEN created_at END DESC,
+                                CASE WHEN stage_id IN ({$orderOneList}) THEN id END DESC,
+                                COALESCE(bitrix24_last_activity_at, created_at) DESC
+                        ) as rn
+                    ";
+
+                    $rankedQuery = (clone $baseLeadsQuery)
+                        ->whereIn('stage_id', $stageIds)
+                        ->select('leads.id', 'leads.stage_id')
+                        ->selectRaw($rankedSql);
+
+                    $rankedRows = Lead::fromSub($rankedQuery, 'ranked_leads')
+                        ->where('rn', '<=', $perPage + 1)
+                        ->get(['id', 'stage_id', 'rn']);
+
+                    foreach ($stages as $stage) {
+                        $idsByStage[$stage->id] = $rankedRows
+                            ->where('stage_id', $stage->id)
+                            ->pluck('id')
+                            ->all();
+                    }
+                }
+            }
+
+            $allIds = collect($idsByStage)->flatten()->unique()->values()->all();
+            $leadsById = empty($allIds)
+                ? collect()
+                : Lead::query()
+                    ->whereIn('id', $allIds)
+                    ->with($kanbanEagerLoads)
+                    ->get()
+                    ->keyBy('id');
+
+            foreach ($stages as $stage) {
+                $stageIdsList = $idsByStage[$stage->id] ?? [];
+                $hasMore = count($stageIdsList) > $perPage;
+                if ($hasMore) {
+                    $stageIdsList = array_slice($stageIdsList, 0, $perPage);
+                }
+
+                $leads = collect($stageIdsList)
+                    ->map(fn ($id) => $leadsById->get($id))
+                    ->filter()
+                    ->values();
+
+                $total = $hasMore ? ($perPage + 1) : $leads->count();
+                $allLeadsForMeta = $allLeadsForMeta->merge($leads);
+
+                $stagesWithLeads[] = [
+                    'id' => $stage->id,
+                    'name' => $stage->name,
+                    'order' => $stage->order,
+                    'color' => $stage->color,
+                    'lead_count' => $total,
+                    'leads' => $leads,
+                    'pagination' => [
+                        'current_page' => 1,
+                        'last_page' => $hasMore ? 2 : 1,
+                        'per_page' => $perPage,
+                        'total' => $total,
+                        'has_more_pages' => $hasMore,
+                    ],
+                    'created_at' => $stage->created_at?->toISOString(),
+                    'updated_at' => $stage->updated_at?->toISOString(),
+                ];
+            }
+        } else {
+            // ================= counts per stage (one query) =================
+            $leadCountsByStage = (clone $baseLeadsQuery)
+                ->select('stage_id', DB::raw('COUNT(*) as aggregate'))
+                ->whereIn('stage_id', $stageIds)
+                ->groupBy('stage_id')
+                ->pluck('aggregate', 'stage_id');
+
+            // ================= top-N leads per stage in ONE query via ROW_NUMBER() =================
+            $rankedSql = "
+                ROW_NUMBER() OVER (
+                    PARTITION BY stage_id
+                    ORDER BY
+                        CASE WHEN stage_id IN (" . implode(',', array_map(fn($id) => (int) $id, $stageOrderById->filter(fn($o) => $o == 1)->keys()->all() ?: [0])) . ")
+                            THEN created_at END DESC,
+                        CASE WHEN stage_id IN (" . implode(',', array_map(fn($id) => (int) $id, $stageOrderById->filter(fn($o) => $o == 1)->keys()->all() ?: [0])) . ")
+                            THEN id END DESC,
+                        COALESCE(bitrix24_last_activity_at, created_at) DESC
+                ) as rn
+            ";
+
+            $rankedQuery = (clone $baseLeadsQuery)
+                ->whereIn('stage_id', $stageIds)
+                ->select('*')
+                ->selectRaw($rankedSql);
+
+            $allRankedLeads = Lead::fromSub($rankedQuery, 'ranked_leads')
+                ->where('rn', '<=', $perPage)
+                ->with($kanbanEagerLoads)
+                ->get();
+
+            $leadsByStage = $allRankedLeads->groupBy('stage_id');
+
+            foreach ($stages as $stage) {
+                $leads = $leadsByStage->get($stage->id, collect())->values();
+                $allLeadsForMeta = $allLeadsForMeta->merge($leads);
+                $total = (int) ($leadCountsByStage[$stage->id] ?? 0);
+
+                $stagesWithLeads[] = [
+                    'id' => $stage->id,
+                    'name' => $stage->name,
+                    'order' => $stage->order,
+                    'color' => $stage->color,
+                    'lead_count' => $total,
+                    'leads' => $leads,
+                    'pagination' => [
+                        'current_page' => 1,
+                        'last_page' => max(1, (int) ceil($total / max(1, $perPage))),
+                        'per_page' => $perPage,
+                        'total' => $total,
+                        'has_more_pages' => $total > $perPage,
+                    ],
+                    'created_at' => $stage->created_at?->toISOString(),
+                    'updated_at' => $stage->updated_at?->toISOString(),
+                ];
+            }
         }
 
-        $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
-        $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
-        KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
-        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
-            $this->kanbanActivityUsersForLeads($allLeadsForMeta)
-        );
+        // Duplicate / activity meta adds extra DB round-trips — skip on free-text search
+        // and whenever ranking is disabled for search benchmarks.
+        if ($isTextSearch || $skipSearchRanking) {
+            KanbanLeadCardResource::setKanbanMeta([], []);
+            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId([]);
+        } else {
+            $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($allLeadsForMeta);
+            $serviceDupFlags = $this->kanbanServiceDuplicateFlags($allLeadsForMeta);
+            KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
+                $this->kanbanActivityUsersForLeads($allLeadsForMeta)
+            );
+        }
 
         foreach ($stagesWithLeads as &$stageRow) {
             $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads'])->resolve();
@@ -583,6 +732,8 @@ class StageController extends Controller
         return ApiResponse::success([
             'stages' => $stagesWithLeads,
             'analytics' => $leadAnalytics,
+            // Temporary benchmark marker (see KANBAN_SEARCH_SKIP_RANKING).
+            'search_ranking_disabled' => $skipSearchRanking,
             'pagination' => [
                 'current_page' => $request->get('page', 1),
                 'per_page' => $perPage,
@@ -817,6 +968,7 @@ class StageController extends Controller
                         'comments' => false,
                         'relations' => true,
                         'admin' => true,
+                        'lean' => true,
                     ]);
                 }
              // ================= pagination =================

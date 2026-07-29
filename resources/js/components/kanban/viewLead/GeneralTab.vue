@@ -147,9 +147,9 @@
                  :key="commentListKey"
             />
 
-            <!-- Lead Activity timeline: under comments, grouped by date (who assigned, created, history). Key forces refetch when stage changes so "Stage changed" appears immediately. -->
+            <!-- Defer timeline until after first paint so lead details appear sooner. -->
             <LeadActivityTimeline
-                v-if="canViewCommentsAndActivities && activeViewTab === 'comments' && lead?.id"
+                v-if="canViewCommentsAndActivities && activeViewTab === 'comments' && lead?.id && showActivityTimeline"
                 :key="`timeline-${lead?.id}-${lead?.stage_id}`"
                 :lead-id="lead?.id"
 
@@ -210,6 +210,7 @@ const editingSection = ref(null)
 const isEditMode = ref(false)
 const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
 const activeViewTab = ref('comments')
+const showActivityTimeline = ref(false)
 const commentListRef = ref(null)
 const activityListRef = ref(null)
 const editLeadRef = ref(null)
@@ -556,6 +557,19 @@ onMounted(() => {
     console.log('📝 GeneralTab: Component mounted, isEditMode = false')
     isEditMode.value = false
 })
+
+watch(
+    () => props.lead?.id,
+    (id) => {
+        showActivityTimeline.value = false
+        if (!id) return
+        // Let the lead info paint first; timeline/history is secondary.
+        setTimeout(() => {
+            showActivityTimeline.value = true
+        }, 150)
+    },
+    { immediate: true }
+)
 </script><style scoped>
 /* GeneralTab Wrapper Styles */
 .info-card {

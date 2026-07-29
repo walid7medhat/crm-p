@@ -1543,22 +1543,32 @@ const executeFetchLeads = async () => {
         const stagesData = responseData?.stages || []
         const analytics = responseData?.analytics
         if (analytics && typeof analytics === 'object') {
-            leadAnalyticsServer.value = {
+            const nextAnalytics = {
                 tempCold: Number(analytics.tempCold) || 0,
                 tempWarm: Number(analytics.tempWarm) || 0,
                 tempHot: Number(analytics.tempHot) || 0,
                 callAnswered: Number(analytics.callAnswered) || 0,
                 callNoAnswer: Number(analytics.callNoAnswer) || 0,
             }
+            // Free-text search skips server analytics for speed — keep previous chip totals.
+            const searching = !!(params.search && String(params.search).trim())
+            const hasAny = Object.values(nextAnalytics).some((n) => n > 0)
+            if (!searching || hasAny) {
+                leadAnalyticsServer.value = nextAnalytics
+            }
         }
 
         // تحويل البيانات
+        const searching = !!(params.search && String(params.search).trim())
         const newData = stagesData.map((stage, index) => ({
             title: stage.name,
             status: stage.id,
             color: stage.color || getColorByIndex(index),
             order: stage.order ?? index,
-            leads: sortLeadsByUpdatedAt([...(stage.leads || [])]),
+            // Keep server order during free-text search (no client re-rank by updated_at).
+            leads: searching
+                ? [...(stage.leads || [])]
+                : sortLeadsByUpdatedAt([...(stage.leads || [])]),
             pagination: stage.pagination || {
                 current_page: 1,
                 last_page: 1,

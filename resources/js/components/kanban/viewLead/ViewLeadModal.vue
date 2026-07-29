@@ -50,16 +50,21 @@
 
             <!-- Main Content -->
             <div class="modal-body-custom p-4">
+                <div v-if="isLoadingLead && !lead" class="lead-view-loading text-center py-5">
+                    <b-spinner class="mb-2"></b-spinner>
+                    <div class="text-muted small">Loading lead…</div>
+                </div>
+
                 <!-- General Tab Content -->
                 <GeneralTab 
-                    v-if="activeTab === 'general'" 
+                    v-else-if="activeTab === 'general' && lead" 
                     :lead="lead" 
                     :stage-id="leadStageId"
                     @update:lead="handleLeadUpdateFromTab"
                 />
 
                 <!-- History Tab Content -->
-                <HistoryTab v-if="activeTab === 'history' && canViewHistory"  :lead="lead" :is-active="activeTab === 'history'" />
+                <HistoryTab v-else-if="activeTab === 'history' && canViewHistory && lead"  :lead="lead" :is-active="activeTab === 'history'" />
             </div>
         </div>
         
@@ -121,6 +126,7 @@ const props = defineProps({
 })
 
 const lead = ref(null)
+const isLoadingLead = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
@@ -545,14 +551,20 @@ const clearPendingStageChange = () => {
 }
 
 const fetchLead = async () => {
+    if (!props.leadId) return
+    isLoadingLead.value = true
+    // Drop stale lead so the spinner shows immediately for the new open.
+    if (lead.value?.id !== props.leadId) {
+        lead.value = null
+    }
     try {
         const response = await api.get(`/leads/${props.leadId}`)
         lead.value = response.data.data
-        console.log('✅ Lead fetched:', lead.value)
-        console.log('📝 Salutation value:', lead.value?.salutation)
     } catch (error) {
         console.error('❌ Error fetching lead:', error)
         $showNotification('Failed to load lead details', 'error')
+    } finally {
+        isLoadingLead.value = false
     }
 }
 

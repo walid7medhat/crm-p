@@ -56,7 +56,9 @@ class UserResource extends JsonResource
             'last_login_lng' => $this->last_login_lng,
             'last_login_ip' => $this->last_login_ip,
               // Hierarchical data
-            'team_members_count' => $this->children()->count(),
+            'team_members_count' => $this->relationLoaded('children')
+                ? $this->children->count()
+                : (int) ($this->children_count ?? 0),
             'can_login' => $this->status === 'active',
             
             // Relationships
