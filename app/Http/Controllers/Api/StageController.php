@@ -248,7 +248,7 @@ class StageController extends Controller
 {
     try {
         $user = auth()->user();
-        $perPage = $request->get('per_page', 20);
+        $perPage = $request->get('per_page', 10);
 
         $userRole = $user->roles()->first()?->name ?? 'sales';
 
@@ -753,7 +753,7 @@ class StageController extends Controller
     {
         try {
             $user = auth()->user();
-            $perPage = $request->get('per_page', 20);
+            $perPage = $request->get('per_page', 10);
             $page = $request->get('page', 1);
 
             $leadsQuery = $stage->leads()->with([
