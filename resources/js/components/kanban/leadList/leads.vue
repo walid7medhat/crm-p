@@ -9,7 +9,7 @@
         >
             <div class="kanban-search-overlay__card">
                 <div class="kanban-empty-spinner" />
-                <span class="kanban-search-overlay__text">Searching leads…</span>
+                <span class="kanban-search-overlay__text">Updating…</span>
             </div>
         </div>
         <div
@@ -4169,9 +4169,8 @@ const fetchRevertNotifications = async () => {
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 72px;
-    background: rgba(248, 250, 252, 0.55);
-    backdrop-filter: blur(2px);
+    padding-top: 16px;
+    background: transparent;
     pointer-events: none;
 }
 

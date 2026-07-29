@@ -271,36 +271,8 @@ class LeadController extends Controller
                     KanbanLeadCardResource::setKanbanMeta([], []);
 
                     try {
-                        // Free-text search: avoid expensive COUNT(*) over the full filtered set.
-                        if ($isTextSearch) {
-                            $paginator = $leadsQuery->simplePaginate($perPage);
-                            $items = $paginator->items();
-                            // Mark known Bitrix activity ids as resolved(null) so cards skip per-row user lookups.
-                            $activityMap = [];
-                            foreach ($items as $item) {
-                                if (! empty($item->bitrix24_last_activity_by_id)) {
-                                    $activityMap[(int) $item->bitrix24_last_activity_by_id] = null;
-                                }
-                            }
-                            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId($activityMap);
-                            $payload = KanbanLeadCardResource::collection($items)->resolve();
-
-                            return response()->json([
-                                'success' => true,
-                                'data' => $payload,
-                                'pagination' => [
-                                    'current_page' => $paginator->currentPage(),
-                                    'last_page'    => $paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage(),
-                                    'per_page'     => $paginator->perPage(),
-                                    'total'        => null,
-                                    'has_more_pages' => $paginator->hasMorePages(),
-                                ],
-                                'search_ranking_disabled' => $skipSearchRanking,
-                                'message' => 'Leads retrieved successfully',
-                            ]);
-                        }
-
-                        $paginator = $leadsQuery->paginate($perPage);
+                        // Lead Pool: always simplePaginate — COUNT(*) over ~50k+ pool rows is too slow.
+                        $paginator = $leadsQuery->simplePaginate($perPage);
                         $items = $paginator->items();
                         $activityMap = [];
                         foreach ($items as $item) {
@@ -316,11 +288,12 @@ class LeadController extends Controller
                             'data' => $payload,
                             'pagination' => [
                                 'current_page' => $paginator->currentPage(),
-                                'last_page'    => $paginator->lastPage(),
+                                'last_page'    => $paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage(),
                                 'per_page'     => $paginator->perPage(),
-                                'total'        => $paginator->total(),
+                                'total'        => null,
                                 'has_more_pages' => $paginator->hasMorePages(),
                             ],
+                            'search_ranking_disabled' => $skipSearchRanking,
                             'message' => 'Leads retrieved successfully',
                         ]);
                     } finally {

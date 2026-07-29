@@ -1,23 +1,12 @@
 <template>
     <div class="lead-pool-wrapper" :class="{ 'lead-pool-wrapper--searching': searching }">
-        <div
-            v-if="searching"
-            class="lead-pool-search-banner"
-            role="status"
-            aria-live="polite"
-            aria-label="Searching leads"
-        >
-            <div class="spinner-border spinner-border-sm text-primary" role="status" />
-            <span>Searching…</span>
-        </div>
-
         <div v-if="loading && leads.length === 0" class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
 
-        <div v-else-if="!loading && !searching && leads.length === 0" class="lead-pool-empty-state">
+        <div v-else-if="!loading && leads.length === 0" class="lead-pool-empty-state">
             <p class="lead-pool-empty-state__text">
                 {{ hasActivePoolSearch ? 'There are currently no data on this page' : 'No leads found in Lead Pool' }}
             </p>
@@ -447,6 +436,7 @@ let fetchInFlight = null
 let fetchDebounceTimer = null
 let lastFetchSignature = ''
 let fetchAbortController = null
+let fetchGeneration = 0
 
 const buildFetchParams = () => {
     const params = {
@@ -520,6 +510,7 @@ const fetchLeadPool = async ({ force = false } = {}) => {
     }
 
     lastFetchSignature = signature
+    const generation = ++fetchGeneration
     const isFirstLoad = leads.value.length === 0
     if (isFirstLoad) {
         loading.value = true
@@ -535,6 +526,8 @@ const fetchLeadPool = async ({ force = false } = {}) => {
             }
             fetchAbortController = new AbortController()
             const response = await requestLeadPool(params)
+            if (generation !== fetchGeneration) return
+
             const body = response.data || {}
             const data = body.data || []
 
@@ -558,6 +551,7 @@ const fetchLeadPool = async ({ force = false } = {}) => {
                 total.value = 0
             }
         } catch (error) {
+            if (generation !== fetchGeneration) return
             if (error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
                 return
             }
@@ -576,6 +570,7 @@ const fetchLeadPool = async ({ force = false } = {}) => {
             lastPage.value = 1
             total.value = 0
         } finally {
+            if (generation !== fetchGeneration) return
             loading.value = false
             searching.value = false
             fetchAbortController = null
@@ -594,10 +589,11 @@ const scheduleFetchLeadPool = (options = {}) => {
     if (fetchDebounceTimer) {
         clearTimeout(fetchDebounceTimer)
     }
+    // Keep debounce tiny — long delay makes the "searching" state feel stuck.
     fetchDebounceTimer = setTimeout(() => {
         fetchDebounceTimer = null
         fetchLeadPool(options)
-    }, 250)
+    }, 80)
 }
 
 const goToPage = (page) => {
@@ -817,11 +813,12 @@ defineExpose({
         currentQuery.value = query && typeof query === 'object' ? { ...query } : {}
         currentPage.value = 1
         lastFetchSignature = ''
-        if (Object.keys(currentQuery.value).length) {
-            searching.value = true
-            window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+        // Fetch immediately — don't wait on debounce while a spinner is showing.
+        if (fetchDebounceTimer) {
+            clearTimeout(fetchDebounceTimer)
+            fetchDebounceTimer = null
         }
-        scheduleFetchLeadPool()
+        fetchLeadPool({ force: true })
     },
 })
 </script>
@@ -847,30 +844,12 @@ defineExpose({
     font-weight: 600;
     color: rgba(255, 255, 255, 0.88);
     text-align: center;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    text-shadow: 0 2px 12px rgba(15, 23, 42, 0.35);
 }
 
 .lead-pool-wrapper--searching .leads-grid {
-    opacity: 0.78;
-    transition: opacity 0.15s ease;
-}
-
-.lead-pool-search-banner {
-    position: sticky;
-    top: 8px;
-    z-index: 20;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 auto 10px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-    font-size: 12px;
-    font-weight: 600;
-    color: #475569;
+    opacity: 0.7;
+    transition: opacity 0.12s ease;
     pointer-events: none;
 }
 
