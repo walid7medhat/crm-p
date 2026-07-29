@@ -3034,7 +3034,7 @@ font-weight: 600;
 
 @media (max-width: 768px) {
   .deals-tab-content--mobile {
-    padding: 0 6px;
+    padding: 0 8px;
   }
 
   .deals-tab-content--mobile .deals-type-tabs {
@@ -3064,7 +3064,15 @@ font-weight: 600;
   .kanban-container--mobile {
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    padding-right: 2px;
+    /* Keep equal left/right spacing on mobile */
+    padding: 8px 8px 16px !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .kanban-container--mobile::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 
   .kanban-container--mobile .kanban-wrapper {

@@ -452,4 +452,20 @@ const emit = defineEmits([
   gap: 0;
   padding: 0;
 }
+
+@media (max-width: 768px) {
+  .property-actions-menu--sheet .property-actions-menu__item {
+    min-height: 48px;
+    padding: 12px 8px;
+    font-size: 18px;
+    font-weight: 500;
+    gap: 10px;
+  }
+
+  .property-actions-menu--sheet .property-actions-menu__item i {
+    width: 18px;
+    min-width: 18px;
+    font-size: 17px;
+  }
+}
 </style>

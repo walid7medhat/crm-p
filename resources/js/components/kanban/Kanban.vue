@@ -1270,6 +1270,10 @@ const $showNotification = (message, type = 'info') => {
     flex: 1 1 auto;
     width: 100%;
     align-items: stretch !important;
+    /* Match the board/shortcuts mobile horizontal spacing */
+    padding-left: 8px;
+    padding-right: 8px;
+    box-sizing: border-box;
 }
 
 .kanban-shell--mobile .search-wrapper {

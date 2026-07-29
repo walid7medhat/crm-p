@@ -1056,6 +1056,18 @@ watch(
   font-size: 14px;
 }
 
+@media (max-width: 768px) {
+  .profile-panel-backdrop {
+    justify-content: center;
+    padding: 0 12px;
+  }
+
+  .profile-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
   .profile-panel {
     width: 100%;

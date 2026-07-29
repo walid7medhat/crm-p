@@ -4764,7 +4764,9 @@ const fetchRevertNotifications = async () => {
     min-height: 0;
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
-    max-width: 100vw;
+    /* Avoid 100vw overflow/cropping on some mobile browsers that can visually shift the board */
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
 }
 
@@ -4788,8 +4790,16 @@ const fetchRevertNotifications = async () => {
     overflow-y: auto;
     height: auto;
     min-height: 0;
-    padding: 8px 10px 16px;
+    /* Keep lead board horizontal spacing perfectly balanced on mobile */
+    padding: 8px 8px 16px;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.kanban-outer--mobile .kanban-container::-webkit-scrollbar {
+    width: 0;
+    height: 0;
 }
 
 .kanban-outer--mobile .kanban-wrapper {

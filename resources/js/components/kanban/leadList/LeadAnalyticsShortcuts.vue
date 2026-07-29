@@ -439,6 +439,8 @@ function onChipClick(key) {
 
 @media (max-width: 768px) {
   .lfs {
+    /* Match the board/search mobile padding so left/right spacing is equal */
+    padding: 0 4px;
     margin-bottom: 8px;
   }
 

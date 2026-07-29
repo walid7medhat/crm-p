@@ -7763,9 +7763,56 @@ margin-bottom: 20px;
   display: block;
 }
 
+@media (max-width: 768px) {
+  /* Mobile lightbox: allow the main image to fill available space */
+  .lightbox-content {
+    max-width: none;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .lightbox-main {
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 12px 0;
+  }
+
+  .lightbox-image-container {
+    padding: 0;
+    min-height: 0;
+  }
+
+  .lightbox-image {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    touch-action: auto; /* allow natural tap/drag/zoom behavior */
+  }
+
+  .lightbox-nav {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+
+  .lightbox-thumbnails {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  .lightbox-thumbnail {
+    width: 58px;
+    height: 44px;
+  }
+}
+
 /* Property Content Styles */
 .property-content {
-  /* background: white; */
+  /* Keep transparent background while avoiding an empty ruleset warning. */
+  background: transparent;
 }
 
 .location-section {
@@ -9867,6 +9914,7 @@ margin-top: 20px;
     background: #0B0736 !important;
     color: white !important;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .pdf-section {

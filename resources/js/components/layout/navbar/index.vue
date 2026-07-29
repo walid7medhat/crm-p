@@ -2510,6 +2510,18 @@ const showBackButton = computed(() => {
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+@media (max-width: 768px) {
+  .profile-panel-backdrop {
+    justify-content: center;
+    padding: 0 12px;
+  }
+
+  .profile-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
 .profile-panel {
   width: 713px;
   max-width: 95vw;

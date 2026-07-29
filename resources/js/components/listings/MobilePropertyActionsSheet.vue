@@ -2,6 +2,7 @@
   <div class="ps-actions-sheet" role="dialog" aria-modal="true" aria-label="Property actions">
     <button type="button" class="ps-actions-sheet__backdrop" aria-label="Close actions" @click="emit('close')" />
     <div class="ps-actions-sheet__panel">
+      <div class="ps-actions-sheet__grabber" aria-hidden="true"></div>
       <div class="ps-actions-sheet__head">
         <div class="ps-actions-sheet__head-text">
           <h2 class="ps-actions-sheet__title">Property Actions</h2>
@@ -53,6 +54,15 @@ const emit = defineEmits(['close'])
   display: flex;
   flex-direction: column;
   animation: ps-actions-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ps-actions-sheet__grabber {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: #dbe3ef;
+  margin: 10px auto 2px;
+  flex-shrink: 0;
 }
 
 @keyframes ps-actions-slide-up {
@@ -114,5 +124,62 @@ const emit = defineEmits(['close'])
   overflow-y: auto;
   padding: 8px 14px calc(16px + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Mobile: match the Search shortcut popup mobile bottom-sheet style */
+@media (max-width: 768px) {
+  .ps-actions-sheet {
+    z-index: 12001;
+  }
+
+  .ps-actions-sheet__panel {
+    width: 100%;
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+    animation: ps-actions-slide-up-mobile 0.22s ease-out;
+  }
+
+  .ps-actions-sheet__head {
+    padding: 16px 10px 12px;
+    border-bottom: none;
+  }
+
+  .ps-actions-sheet__title {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .ps-actions-sheet__subtitle {
+    font-size: 13px;
+  }
+
+  .ps-actions-sheet__close {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+  }
+
+  .ps-actions-sheet__body {
+    padding: 10px 10px calc(20px + env(safe-area-inset-bottom, 0px));
+    touch-action: pan-y;
+  }
+}
+
+@keyframes ps-actions-slide-up-mobile {
+  from {
+    transform: translateY(100%);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 </style>

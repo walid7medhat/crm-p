@@ -220,7 +220,7 @@
                 @click="changePage(pagination.current_page - 1)"
                 :disabled="pagination.current_page === 1"
               >
-                <i class="ri-arrow-left-line"></i> Previous
+                <i class="ri-arrow-left-line"></i> <span class="pagination-label">Previous</span>
               </button>
             </li>
 
@@ -247,7 +247,7 @@
                 @click="changePage(pagination.current_page + 1)"
                 :disabled="pagination.current_page === pagination.last_page"
               >
-                Next <i class="ri-arrow-right-line"></i>
+                <span class="pagination-label">Next</span> <i class="ri-arrow-right-line"></i>
               </button>
             </li>
           </ul>
@@ -1527,6 +1527,26 @@ watch(() => route.query, (newQuery, oldQuery) => {
   .status-toggle-btn {
     width: 100%;
     margin-top: 8px;
+  }
+
+  /* Compact mobile pagination (keep Previous/Next on one line) */
+  .pagination {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: center;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pagination-label {
+    display: none;
+  }
+
+  .page-link {
+    padding: 6px 10px;
+    margin: 0 2px;
+    font-size: 12px;
+    border-radius: 8px;
+    white-space: nowrap;
   }
 }
 .status-badges {

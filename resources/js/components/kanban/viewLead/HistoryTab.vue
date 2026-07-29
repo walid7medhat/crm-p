@@ -1293,12 +1293,18 @@ onMounted(() => {
 
 /* Responsive */
 @media (max-width: 768px) {
+    .search-area {
+        /* Outer card already has internal padding; remove extra side spacing on mobile. */
+        padding: 12px 0 0;
+    }
+
     .search-wrapper {
         width: 100%;
     }
     
     .history-table-wrapper {
-        margin: 0 16px 16px 16px;
+        /* Use full available width inside the card on mobile. */
+        margin: 0 0 16px 0;
         overflow-x: auto;
     }
     

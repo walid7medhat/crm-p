@@ -838,17 +838,8 @@
 
                 </div>
 
-                <div class="search-modal-footer d-flex align-items-center justify-content-between mt-3 pt-4">
-
-                    <div class="d-flex gap-4">
-
-                        <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
-
-                        <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
-
-                    </div>
-
-                    <div class="d-flex gap-3">
+                <div class="search-modal-footer d-flex align-items-center justify-content-end mt-3 pt-4">
+                    <div class="search-modal-footer__actions d-flex gap-3">
 
                         <button class="btn-reset" :disabled="searching" @click="resetForm">Reset</button>
 
@@ -1691,17 +1682,8 @@
 
                 </div>
 
-                <div class="search-modal-footer d-flex align-items-center justify-content-between mt-3 pt-4">
-
-                    <div class="d-flex gap-4">
-
-                        <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFilterSettings = true">Add Field</a>
-
-                        <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultFields">Restore default fields</a>
-
-                    </div>
-
-                    <div class="d-flex gap-3">
+                <div class="search-modal-footer d-flex align-items-center justify-content-end mt-3 pt-4">
+                    <div class="search-modal-footer__actions d-flex gap-3">
 
                         <button class="btn-reset" :disabled="searching" @click="resetForm">Reset</button>
 
@@ -6803,6 +6785,10 @@ onBeforeUnmount(() => {
     background: #fff;
 }
 
+.search-modal-footer__actions {
+    margin-left: auto;
+}
+
 .search-section-card {
     background: #fff;
     border: 1px solid #F1F5F9;
@@ -6889,9 +6875,28 @@ onBeforeUnmount(() => {
 
     .search-modal-footer {
         position: sticky;
-        bottom: 0;
-        z-index: 5;
-        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        /* Keep footer actions fully above the fixed bottom Lead/Listing navigation */
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        z-index: 100050;
+        padding: 10px 2px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+        margin-top: 10px !important;
+    }
+
+    .search-modal-footer__actions {
+        width: 100%;
+        gap: 10px !important;
+        justify-content: flex-end;
+        flex-wrap: nowrap;
+    }
+
+    .search-modal-footer__actions .btn-reset,
+    .search-modal-footer__actions .btn-search {
+        min-width: 110px;
+    }
+
+    .search-sections-wrap {
+        /* Prevent last fields from being hidden behind the sticky footer + bottom nav */
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 24px);
     }
 }
 
