@@ -1239,7 +1239,9 @@ const $showNotification = (message, type = 'info') => {
 .kanban-shell--mobile.kanban-main-wrapper {
     min-height: calc(100dvh - 56px);
     border-radius: 0;
-    margin: 0 -4px;
+    /* Center mobile content: avoid negative outer margin that can shift the board left. */
+    margin: 0;
+    padding: 0 4px;
 }
 
 .kanban-shell--mobile :deep(.kanban-tabs-container > .nav-tabs) {
