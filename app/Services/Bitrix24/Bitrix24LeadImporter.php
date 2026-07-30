@@ -93,7 +93,9 @@ class Bitrix24LeadImporter
         'assigned'         => 'assigned',
         // Keys are matched against the LOWERCASED Bitrix status name, so they
         // must be lowercase. "Future Prospect" (and the typo'd "Prospected") → Qualified.
+        'successfull'          => 'qualified',
         'future prospect'  => 'qualified',
+        'future prospected'  => 'qualified',
         'jop seeker'       => 'unqualified',
         'job seeker'       => 'unqualified',
         'junk'             => 'unqualified',
