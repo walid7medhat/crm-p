@@ -118,11 +118,8 @@
                                     <span v-if="kanbanIsMobile" class="column-header__dot" aria-hidden="true" />
                                     <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
                                         <p class="header-title">{{ column.title }}</p>
-                                         <small class="leads-count-badge" v-if="column.leads.length>0 && stagePagination[column.status] && stagePagination[column.status].total > column.leads.length ">
-                                             {{ stagePagination[column.status]?.total || column.leads.length }}
-                                        </small>
-                                        <small class="leads-count-badge" v-else >
-                                            {{ column.leads.length }}
+                                        <small class="leads-count-badge">
+                                            {{ stageCountForColumn(column) }}
                                         </small>
                                     </div>
                                     <input 
@@ -1182,10 +1179,10 @@ const mobilePickStageColumn = computed(() => {
     return columns.value.find(c => c.status === mobilePickStageId.value) || null
 })
 
-const INITIAL_VISIBLE_LEADS_PER_STAGE = 20
-const VISIBLE_LEADS_INCREMENT = 20
+const INITIAL_VISIBLE_LEADS_PER_STAGE = 15
+const VISIBLE_LEADS_INCREMENT = 15
 const visibleLeadCounts = ref({})
-const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v1'
+const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v2'
 const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // keep board visible across refreshes
 const responsiblePersons = ref([])
 const loading = ref(true)
@@ -1197,7 +1194,7 @@ const showLeftZone = ref(true)
 const showRightZone = ref(true)
 const stagePagination = ref({})          
 const loadingMoreLeads = ref({})          
-const leadsPerPage = ref(10)              
+const leadsPerPage = ref(15)              
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
 const isLeadDragging = ref(false)
@@ -1636,14 +1633,16 @@ function saveColumnsToCache() {
                   status: col.status,
                   color: col.color,
                   order: col.order,
-                  // cap number of cached leads per stage to keep localStorage small
-                  leads: Array.isArray(col.leads) ? col.leads.slice(0, 100) : []
+                  // cap cached cards to one page size (badge total comes from stagePagination)
+                  leads: Array.isArray(col.leads) ? col.leads.slice(0, leadsPerPage.value) : []
               }))
             : []
 
         const payload = {
             cachedAt: Date.now(),
-            columns: snapshot
+            columns: snapshot,
+            // Persist exact stage totals so the badge is not the loaded page size
+            stagePagination: stagePagination.value || {},
         }
         localStorage.setItem(KANBAN_LEADS_CACHE_KEY, JSON.stringify(payload))
     } catch (e) {
@@ -1675,6 +1674,9 @@ function loadCachedColumns() {
 
         columns.value = parsed.columns
         syncStageOrderMapFromColumns(parsed.columns)
+        if (parsed.stagePagination && typeof parsed.stagePagination === 'object') {
+            stagePagination.value = parsed.stagePagination
+        }
         sortAllColumnLeads()
 
         // Initialize visible counts based on cached data
