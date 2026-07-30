@@ -36,6 +36,7 @@ use App\Models\PropertyOffer;
 use App\Traits\HotDealNotifiable;
 use App\Models\HotDealRequest;
 use App\Services\ListingMapCoordinateResolver;
+use App\Services\VoiceSearchService;
 use Illuminate\Support\Facades\Log;
 use App\Notifications\ListingNeedsApproval;
 use App\Notifications\ListingApproved;
@@ -72,38 +73,95 @@ class ListingController extends Controller
         $userId      = (int) Auth::id();
         $version     = self::getUserCacheVersion($userId);
 
-        if ($request->boolean('my_listings')) {
-            $cacheKey = self::CACHE_PREFIX . 'my_' . $userId . '_v' . $version . '_' . $filtersHash;
-        } else {
-            $cacheKey = self::CACHE_PREFIX . 'index_' . $userId . '_v' . $version . '_' . $filtersHash;
-        }
+        // Cache resolved grid JSON (not raw models) so cache hits skip resource N+1 work.
+        $cacheKey = $request->boolean('my_listings')
+            ? self::CACHE_PREFIX . 'my_json_' . $userId . '_v' . $version . '_' . $filtersHash
+            : self::CACHE_PREFIX . 'index_json_' . $userId . '_v' . $version . '_' . $filtersHash;
+
+        $resolver = function () use ($request) {
+            ListingGridResource::resetRequestCaches();
+            $data = $this->getListingsData($request);
+
+            return [
+                'listings' => ListingGridResource::collection($data['listings'])->resolve(),
+                'pagination' => $data['pagination'],
+            ];
+        };
 
         if (method_exists(Cache::getStore(), 'tags')) {
             $result = Cache::tags([self::CACHE_TAG])->remember(
                 $cacheKey,
                 self::CACHE_TTL,
-                fn () => $this->getListingsData($request)
+                $resolver
             );
         } else {
             $result = Cache::remember(
                 $cacheKey,
                 self::CACHE_TTL,
-                fn () => $this->getListingsData($request)
+                $resolver
             );
         }
 
         return ApiResponse::success(
-            ListingGridResource::collection($result['listings']),
+            $result['listings'],
             'Listings retrieved successfully',
             200,
             $result['pagination']
         );
 
     } catch (\Exception $e) {
-        dd($e);
+        Log::error('Listing index failed: '.$e->getMessage(), [
+            'exception' => $e,
+        ]);
         return $this->fallbackIndex($request, $e);
     }
 }
+
+    /**
+     * Voice search (Admin / Super Admin only).
+     * Parses transcript → structured filters, then reuses getListingsData().
+     *
+     * POST /api/listings/voice-search
+     * Body: { "transcript": "...", "existing_filters": {}, "per_page": 12 }
+     */
+    public function voiceSearch(Request $request, VoiceSearchService $voiceSearch): JsonResponse
+    {
+        $validated = $request->validate([
+            'transcript' => 'required|string|min:1|max:2000',
+            'existing_filters' => 'nullable|array',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1',
+            'my_listings' => 'nullable|boolean',
+        ]);
+
+        $parsed = $voiceSearch->parse(
+            (string) $validated['transcript'],
+            is_array($validated['existing_filters'] ?? null) ? $validated['existing_filters'] : []
+        );
+
+        // Reuse existing listing filter/query path — no duplicate search engine.
+        $searchRequest = Request::create('/api/listings/properties', 'GET', array_merge(
+            $parsed['query_params'],
+            [
+                'page' => $validated['page'] ?? 1,
+                'per_page' => $validated['per_page'] ?? 12,
+                'my_listings' => $request->boolean('my_listings'),
+            ]
+        ));
+        $searchRequest->setUserResolver(fn () => $request->user());
+
+        $result = $this->getListingsData($searchRequest);
+        $paginator = $result['listings'];
+
+        return ApiResponse::success([
+            'filters' => $parsed['filters'],
+            'query_params' => $parsed['query_params'],
+            'language' => $parsed['language'],
+            'transcript' => $parsed['transcript'],
+            'results' => ListingGridResource::collection($paginator)->resolve(),
+            'count' => (int) ($result['pagination']['total'] ?? $paginator->total()),
+        ], 'Voice search completed successfully', 200, $result['pagination']);
+    }
 
 public function permissions(User $user): JsonResponse
 {
@@ -292,12 +350,25 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
     public function getListingsData(Request $request): array
     {
         $user = Auth::user();
-        $query = Listing::with([
-            'propertyType:id,name', 
-            'area:id,name,parent_id',
-            'agent:id,name,display_name',
-            'galleryImages',
-        ]);
+        $userId = (int) ($user?->id ?? 0);
+        $query = Listing::query()
+            ->with([
+                'propertyType:id,name',
+                'area:id,name,parent_id,type',
+                'area.parent:id,name,parent_id,type',
+                'area.parent.parent:id,name,parent_id,type',
+                'old_area:id,name',
+                'agent:id,name,display_name,email',
+                'rejectedBy:id,name,display_name',
+                'project:id,title,about,area_id,developer_id',
+                'project.developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan',
+                'accessRequests' => function ($q) use ($userId) {
+                    $q->where('requested_by', $userId)
+                        ->where('status', 'approved')
+                        ->select('id', 'listing_id', 'requested_by', 'status', 'request_type');
+                },
+            ])
+            ->withCount('galleryImages');
  $isManagerWithListingTeam = $user->hasRole('manager') && $user->listing_team;
     
    
@@ -2039,6 +2110,9 @@ private function sendResubmissionNotification($listing, $user)
         $iterator = null;
         $patterns = [
             self::CACHE_PREFIX . 'index_*',
+            self::CACHE_PREFIX . 'index_json_*',
+            self::CACHE_PREFIX . 'my_*',
+            self::CACHE_PREFIX . 'my_json_*',
             self::CACHE_PREFIX . 'show_*',
             self::CACHE_PREFIX . 'stats_*'
         ];
@@ -2068,6 +2142,9 @@ private function sendResubmissionNotification($listing, $user)
         
         $patterns = [
             self::CACHE_PREFIX . 'index_',
+            self::CACHE_PREFIX . 'index_json_',
+            self::CACHE_PREFIX . 'my_',
+            self::CACHE_PREFIX . 'my_json_',
             self::CACHE_PREFIX . 'show_',
             self::CACHE_PREFIX . 'stats_'
         ];

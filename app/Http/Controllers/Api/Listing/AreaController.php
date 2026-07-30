@@ -28,9 +28,10 @@ class AreaController extends Controller
     public function index(Request $request): JsonResponse
     {
         $cacheKey = 'areas_'.md5(serialize($request->all()));
+        $forListingSearch = $request->has('has_listings');
 
-        $resolver = function () use ($request) {
-            $query = Area::withCount('child');
+        $resolver = function () use ($request, $forListingSearch) {
+            $query = Area::query()->withCount('child');
 
             // Used by listing search restore (URL decode) — must not return every area
             if ($request->filled('ids')) {
@@ -52,24 +53,54 @@ class AreaController extends Controller
                 $query->where('parent_id', $request->parent_id);
             }
 
-            if ($request->has('with_parent')) {
-                $query->with('parent');
+            if ($request->has('with_parent') || $forListingSearch) {
+                $query->with('parent:id,name,parent_id,type');
             }
 
             if ($request->has('with_child')) {
                 $query->with('child');
             }
 
-            if ($request->has('has_listings')) {
-                $query->where(function ($subQ) {
-                    $subQ->whereHas('properties_complete')
-                        ->orWhereHas('child.properties_complete')
-                        ->orWhereHas('child.child.properties_complete')
-                        ->orWhereHas('child.child.child.properties_complete');
-                });
+            if ($forListingSearch) {
+                // Fast path: areas that have listings + their ancestors (up to 3 levels).
+                // Avoids nested whereHas EXISTS trees over the whole area table.
+                $listingAreaIds = DB::table('listings')
+                    ->whereNotNull('area_id')
+                    ->distinct()
+                    ->pluck('area_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                $allowedIds = $this->expandAreaIdsWithAncestors($listingAreaIds);
+                if (empty($allowedIds)) {
+                    return [];
+                }
+                $query->whereIn('id', $allowedIds);
             }
 
-            return $query->get();
+            $areas = $query->get();
+
+            if ($forListingSearch) {
+                // Slim payload for SearchBar — skip ADGM / getAllAreaNames / project lookups.
+                return $areas->map(function (Area $area) {
+                    $parentName = $area->parent?->name;
+
+                    return [
+                        'id' => $area->id,
+                        'parent_id' => $area->parent_id,
+                        'parent_name' => $parentName,
+                        'name' => $area->name,
+                        'type' => $area->type,
+                        'latitude' => $area->latitude !== null ? (float) $area->latitude : null,
+                        'longitude' => $area->longitude !== null ? (float) $area->longitude : null,
+                        'area_parents_title' => $parentName,
+                        'children_count' => $area->child_count ?? 0,
+                        'subtitle' => $parentName,
+                    ];
+                })->values()->all();
+            }
+
+            return AreaResource::collection($areas)->resolve();
         };
 
         try {
@@ -78,17 +109,49 @@ class AreaController extends Controller
                 : Cache::remember($cacheKey, 3600, $resolver);
 
             return ApiResponse::success(
-                AreaResource::collection($areas),
+                $areas,
                 'Areas retrieved successfully'
             );
         } catch (\Exception $e) {
             Log::error('Error fetching areas: '.$e->getMessage());
 
             return ApiResponse::success(
-                AreaResource::collection($resolver()),
+                $resolver(),
                 'Areas retrieved successfully (cache fallback)'
             );
         }
+    }
+
+    /**
+     * Include listing areas plus parents/grandparents/great-grandparents.
+     *
+     * @param  array<int, int>  $areaIds
+     * @return array<int, int>
+     */
+    protected function expandAreaIdsWithAncestors(array $areaIds): array
+    {
+        $areaIds = array_values(array_unique(array_filter(array_map('intval', $areaIds))));
+        if ($areaIds === []) {
+            return [];
+        }
+
+        $parentMap = Area::query()->pluck('parent_id', 'id')->all();
+        $allowed = [];
+
+        foreach ($areaIds as $id) {
+            $current = $id;
+            $depth = 0;
+            while ($current && $depth < 4) {
+                $allowed[(int) $current] = true;
+                $current = isset($parentMap[$current]) ? (int) $parentMap[$current] : 0;
+                if ($current === 0) {
+                    break;
+                }
+                $depth++;
+            }
+        }
+
+        return array_map('intval', array_keys($allowed));
     }
 
     
