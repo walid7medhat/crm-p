@@ -248,7 +248,7 @@ class StageController extends Controller
 {
     try {
         $user = auth()->user();
-        $perPage = $request->get('per_page', 10);
+        $perPage = (int) $request->get('per_page', 15);
 
         $userRole = $user->roles()->first()?->name ?? 'sales';
 
@@ -528,6 +528,15 @@ class StageController extends Controller
         $stagesWithLeads = [];
         $allLeadsForMeta = collect();
 
+        // Exact per-stage totals for the header badge (one grouped COUNT — not soft perPage+1).
+        $exactCountsByStage = (clone $baseLeadsQuery)
+            ->whereIn('stage_id', $stageIds)
+            ->reorder()
+            ->toBase()
+            ->selectRaw('stage_id, COUNT(*) as cnt')
+            ->groupBy('stage_id')
+            ->pluck('cnt', 'stage_id');
+
         if ($isTextSearch) {
             $idsByStage = [];
 
@@ -632,7 +641,8 @@ class StageController extends Controller
                     ->filter()
                     ->values();
 
-                $total = $hasMore ? ($perPage + 1) : $leads->count();
+                $total = (int) ($exactCountsByStage[$stage->id] ?? 0);
+                $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
                 $allLeadsForMeta = $allLeadsForMeta->merge($leads);
 
                 $stagesWithLeads[] = [
@@ -644,10 +654,10 @@ class StageController extends Controller
                     'leads' => $leads,
                     'pagination' => [
                         'current_page' => 1,
-                        'last_page' => $hasMore ? 2 : 1,
+                        'last_page' => $lastPage,
                         'per_page' => $perPage,
                         'total' => $total,
-                        'has_more_pages' => $hasMore,
+                        'has_more_pages' => $total > $perPage,
                     ],
                     'created_at' => $stage->created_at?->toISOString(),
                     'updated_at' => $stage->updated_at?->toISOString(),
@@ -696,8 +706,8 @@ class StageController extends Controller
                     ->filter()
                     ->values();
 
-                // Soft count: avoid full COUNT(*) over each stage on every refresh.
-                $total = $hasMore ? ($perPage + 1) : $leads->count();
+                $total = (int) ($exactCountsByStage[$stage->id] ?? 0);
+                $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
                 $allLeadsForMeta = $allLeadsForMeta->merge($leads);
 
                 $stagesWithLeads[] = [
@@ -709,10 +719,10 @@ class StageController extends Controller
                     'leads' => $leads,
                     'pagination' => [
                         'current_page' => 1,
-                        'last_page' => $hasMore ? 2 : 1,
+                        'last_page' => $lastPage,
                         'per_page' => $perPage,
                         'total' => $total,
-                        'has_more_pages' => $hasMore,
+                        'has_more_pages' => $total > $perPage,
                     ],
                     'created_at' => $stage->created_at?->toISOString(),
                     'updated_at' => $stage->updated_at?->toISOString(),
@@ -762,7 +772,7 @@ class StageController extends Controller
     {
         try {
             $user = auth()->user();
-            $perPage = $request->get('per_page', 10);
+            $perPage = (int) $request->get('per_page', 15);
             $page = $request->get('page', 1);
 
             $leadsQuery = $stage->leads()->with([
