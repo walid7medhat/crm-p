@@ -63,9 +63,10 @@ return Application::configure(basePath: dirname(__DIR__))
             //         ->withoutOverlapping()
             //         ->appendOutputTo(storage_path('logs/lead-revert.log'));
                     
-                 $schedule->command('comments:sync-authors')
-                    ->hourly()
-                    ->withoutOverlapping();   
+                $schedule->command('comments:sync-authors')
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/comments_sync.log')); 
         $schedule->command('activities:send-reminders')->everyMinute();
         $schedule->command('leads:score')
                 ->everyTenMinutes()

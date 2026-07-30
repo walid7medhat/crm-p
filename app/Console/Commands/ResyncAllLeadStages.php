@@ -116,6 +116,17 @@ class ResyncAllLeadStages extends Command
                             'bitrix24_id' => $b24Id,
                             'status_id' => $b24Lead['STATUS_ID'] ?? null,
                         ]);
+                         try {
+                            // 🔥 اعمل import لليد الناقص
+                            $importer->importOne($b24Lead);
+                        } catch (\Throwable $e) {
+                            $errors++;
+
+                            \Log::error('Import missing lead failed', [
+                                'bitrix24_id' => $b24Id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
 
                         $bar->advance();
                         continue;
