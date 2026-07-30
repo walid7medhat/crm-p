@@ -116,8 +116,8 @@
                 </div>
 
 
-                <span class="badge-images" v-if="property.gallery_images && property.gallery_images.length">
-                  <i class="ri-image-line me-1"></i>{{ property.gallery_images.length }}
+                <span class="badge-images" v-if="property.total_images > 1 || (property.gallery_images && property.gallery_images.length)">
+                  <i class="ri-image-line me-1"></i>{{ property.total_images || property.gallery_images.length }}
                 </span>
               </div>
 
@@ -296,6 +296,8 @@ export default {
     const pagination = ref(null);
     const activeStatus = ref('all'); 
     const userRole = ref(''); 
+    let fetchRequestId = 0;
+    let agentFilterApplied = false; 
     const propertyIcon = '/assets/icons/property-icon.svg';
     const bedIcon = '/assets/icons/bedroom-icon.svg';
     const bathIcon = '/assets/icons/bathroom-icon.svg';
@@ -312,12 +314,12 @@ export default {
 
     const defaultImages = [property1, property2, property3, property4];
 
-    const applyAgentFilterFromQuery = async (agentId, agentName) => {
+    const applyAgentFilterFromQuery = async (agentId, agentName, { refetch = false } = {}) => {
       await nextTick(); 
       
       if (!searchBarRef.value) {
         console.log('⏳ Waiting for SearchBar to load...');
-        setTimeout(() => applyAgentFilterFromQuery(agentId, agentName), 500);
+        setTimeout(() => applyAgentFilterFromQuery(agentId, agentName, { refetch }), 500);
         return;
       }
       
@@ -328,22 +330,18 @@ export default {
         
         if (foundAgent) {
           console.log('✅ Found agent in list:', foundAgent.name);
-          
           searchBar.selectedAgent = foundAgent;
-          
-          setTimeout(() => {
-            searchBar.applyFilters();
-          }, 300);
         } else {
           console.log('⚠️ Agent not found in list, creating custom filter');
-          
-          const customAgent = {
+          searchBar.selectedAgent = {
             id: parseInt(agentId),
             name: agentName || `Agent ${agentId}`
           };
-          
-          searchBar.selectedAgent = customAgent;
-          
+        }
+
+        // Only refetch when agent_id changes after initial mount.
+        // Initial page load already fetches via onMounted restore.
+        if (refetch) {
           setTimeout(() => {
             searchBar.applyFilters();
           }, 300);
@@ -375,19 +373,25 @@ export default {
       }
     };
 
-    watch(() => route.query, (newQuery) => {
-      if (newQuery.agent_id) {
-        console.log('🎯 Agent filter detected in URL:', newQuery);
-        
-        setTimeout(() => {
-          applyAgentFilterFromQuery(newQuery.agent_id, newQuery.agent_name);
-        }, 1000);
-        
-        setTimeout(() => {
-          handleAgentFromQuery(newQuery);
-        }, 1500);
+    watch(() => route.query.agent_id, (agentId, previousAgentId) => {
+      if (!agentId) {
+        agentFilterApplied = false;
+        return;
       }
-    }, { immediate: true });
+
+      const isInitial = previousAgentId === undefined;
+      const changed = !isInitial && String(previousAgentId) !== String(agentId);
+
+      // Sync SearchBar UI; refetch only when agent changes after mount.
+      // Initial page load already fetches via onMounted restore.
+      setTimeout(() => {
+        applyAgentFilterFromQuery(agentId, route.query.agent_name, { refetch: changed });
+      }, isInitial ? 800 : 100);
+
+      if (isInitial) {
+        agentFilterApplied = true;
+      }
+    });
 
     // Status toggle functions
   
@@ -529,6 +533,7 @@ export default {
 
     // Fetch properties from API
     const fetchProperties = async (filters = {}, page = 1) => {
+      const requestId = ++fetchRequestId;
       try {
         isLoading.value = true;
         if (!page && route.query.page) {
@@ -590,6 +595,9 @@ export default {
         console.log("💾 Current saved filters:", currentFilters.value);
 
         const response = await api.get("/listings/properties", { params });
+        if (requestId !== fetchRequestId) {
+          return; // Stale response — a newer fetch is in flight
+        }
         
         // Handle API response
         const responseData = response.data.data;
@@ -612,11 +620,14 @@ export default {
         console.log("✅ Properties loaded:", properties.value.length);
         
       } catch (error) {
+        if (requestId !== fetchRequestId) return;
         console.error("❌ Error fetching properties:", error.response || error);
         properties.value = [];
         pagination.value = null;
       } finally {
-        isLoading.value = false;
+        if (requestId === fetchRequestId) {
+          isLoading.value = false;
+        }
       }
     };
 

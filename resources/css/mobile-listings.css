@@ -139,6 +139,33 @@
     font-size: 20px;
   }
 
+  .bayut-search-bar .voice-search-btn {
+    flex-shrink: 0;
+    align-self: stretch;
+    width: 44px;
+    height: auto;
+    min-height: 100%;
+    border: none;
+    border-radius: 0;
+    border-left: 1px solid #e2e8f0;
+    background: #fff;
+    color: #733e87;
+  }
+
+  .bayut-search-bar .voice-search-btn--active {
+    background: #733e87;
+    color: #fff;
+  }
+
+  .bayut-search-overlay__input-wrap .voice-search-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: #733e87;
+  }
+
   /* Filter chips row */
   .bayut-filter-chips {
     display: flex;

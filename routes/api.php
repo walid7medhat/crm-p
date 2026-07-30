@@ -730,6 +730,10 @@ Route::delete('/search-alerts/{searchAlert}',[ListingController::class, 'destroy
     });
 
 Route::prefix('listings')->group(function(){
+    // Voice search — Admin / Super Admin only (Phase 1 foundation)
+    Route::post('/voice-search', [ListingController::class, 'voiceSearch'])
+        ->middleware('role:super_admin|admin');
+
 Route::post('{id}/duplicate', [ListingController::class, 'duplicate']);
     Route::get('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'index']);
     Route::post('/properties/{listing}/internal-updates', [InternalUpdateController::class, 'store']);

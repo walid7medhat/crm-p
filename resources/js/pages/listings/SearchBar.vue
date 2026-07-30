@@ -16,6 +16,12 @@
             <span v-if="mobileSearchDisplay" class="bayut-search-value">{{ mobileSearchDisplay }}</span>
             <span v-else class="bayut-search-placeholder">Search city, area or building</span>
           </div>
+          <VoiceSearchButton
+            :visible="canUseVoiceSearch"
+            :active="showVoiceSearchModal"
+            variant="mobile"
+            @click="openVoiceSearch"
+          />
           <button type="button" class="bayut-location-btn" aria-label="Search location" @click="openMobileSearchOverlay">
             <i class="ri-map-pin-line"></i>
           </button>
@@ -109,7 +115,13 @@
           </span>
         </template>
         </v-select>
-      </div>
+        <VoiceSearchButton
+          :visible="canUseVoiceSearch"
+          :active="showVoiceSearchModal"
+          variant="desktop"
+          @click="openVoiceSearch"
+        />
+      </div>   
 
       <div class="listing-pill-row">
         <div class="listing-sale-rent-wrap">
@@ -755,6 +767,12 @@
               autocomplete="off"
               @keydown.esc="closeMobileSearchOverlay"
             />
+            <VoiceSearchButton
+              :visible="canUseVoiceSearch"
+              :active="showVoiceSearchModal"
+              variant="mobile"
+              @click="openVoiceSearch"
+            />
           </div>
         </div>
         <div v-if="selectedArea.length" class="bayut-search-selected-tags">
@@ -784,6 +802,14 @@
         </ul>
       </div>
     </Teleport>
+
+    <VoiceSearchModal
+      v-if="canUseVoiceSearch"
+      v-model="showVoiceSearchModal"
+      :existing-filters="voiceExistingFilters"
+      :is-mobile="isMobileViewport"
+      @filters-applied="applyVoiceSearchResult"
+    />
 
     <!-- Mobile filter chip bottom sheet -->
     <Teleport to="body">
@@ -927,10 +953,12 @@ import { ref, onMounted, computed, getCurrentInstance, onUnmounted, watch, nextT
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import { useRoute } from 'vue-router';
 import api from '@/plugins/axios';
+import VoiceSearchButton from '@/components/voice-search/VoiceSearchButton.vue';
+import VoiceSearchModal from '@/components/voice-search/VoiceSearchModal.vue';
 
 export default {
   name: "FixedSearchBar",
-  components: { vSelect },
+  components: { vSelect, VoiceSearchButton, VoiceSearchModal },
   props: {
     initialFilters: {
       type: Object,
@@ -992,6 +1020,7 @@ export default {
     const mobileSearchInputRef = ref(null);
     const mobileChipSheet = ref(null);
     const isMobileViewport = ref(false);
+    const showVoiceSearchModal = ref(false);
     let resizeHandler = null;
 const searchReferenceNumber = ref("");
 const showFeaturesDropdown = ref(false);
@@ -1007,6 +1036,118 @@ const isMyListingPage = computed(() => {
   return route.path === '/my-listing';
 });
 
+    const canUseVoiceSearch = computed(() => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        const roles = Array.isArray(user?.roles) ? user.roles : [];
+        return roles.includes('super_admin') || roles.includes('admin');
+      } catch (_) {
+        return false;
+      }
+    });
+
+    const voiceExistingFilters = computed(() => {
+      const filters = buildCurrentFilters();
+      return {
+        area: Array.isArray(filters.area) && filters.area[0]?.name
+          ? filters.area[0].name
+          : null,
+        property_type: filters.propertyTypes?.[0]?.name || filters.propertyType?.name || null,
+        number_of_bedrooms: filters.bedsList?.[0] === 'Studio'
+          ? 0
+          : (filters.bedsList?.[0] ? Number(filters.bedsList[0]) : null),
+        number_of_bathrooms: filters.bathsList?.[0] ? Number(filters.bathsList[0]) : null,
+        min_price: filters.priceFrom > 0 ? filters.priceFrom : null,
+        max_price: filters.priceTo < 10000000 ? filters.priceTo : null,
+        listing_status: filters.saleRent && filters.saleRent !== 'All'
+          ? String(filters.saleRent).toLowerCase()
+          : null,
+      };
+    });
+
+    const openVoiceSearch = () => {
+      if (!canUseVoiceSearch.value) return;
+      showVoiceSearchModal.value = true;
+    };
+
+    const resolveAreaFromVoice = (filters, queryParams) => {
+      const areaIds = Array.isArray(queryParams?.area_ids)
+        ? queryParams.area_ids.map(Number)
+        : (queryParams?.area_id ? [Number(queryParams.area_id)] : []);
+      const matchedById = areaIds
+        .map((id) => areas.value.find((a) => Number(a.id) === Number(id)))
+        .filter(Boolean);
+      if (matchedById.length) return matchedById;
+
+      const areaName = String(filters?.area || '').trim().toLowerCase();
+      if (!areaName) return [];
+      const matchedByName = areas.value.filter((a) => {
+        const name = String(a.name || '').toLowerCase();
+        return name === areaName || name.includes(areaName) || areaName.includes(name);
+      });
+      return matchedByName.slice(0, 1);
+    };
+
+    const resolvePropertyTypesFromVoice = (filters, queryParams) => {
+      const typeIds = Array.isArray(queryParams?.property_type_ids)
+        ? queryParams.property_type_ids.map(Number)
+        : (queryParams?.property_type_id ? [Number(queryParams.property_type_id)] : []);
+      const matchedById = typeIds
+        .map((id) => propertyTypes.value.find((t) => Number(t.id) === Number(id)))
+        .filter(Boolean);
+      if (matchedById.length) return matchedById;
+
+      const typeName = String(filters?.property_type || '').trim().toLowerCase();
+      if (!typeName) return [];
+      const matchedByName = propertyTypes.value.filter((t) => {
+        const name = String(t.name || '').toLowerCase();
+        return name === typeName || name.includes(typeName) || typeName.includes(name);
+      });
+      return matchedByName.slice(0, 1);
+    };
+
+    const applyVoiceSearchResult = (payload) => {
+      const filters = payload?.filters || {};
+      const queryParams = payload?.query_params || {};
+
+      const nextAreas = resolveAreaFromVoice(filters, queryParams);
+      if (nextAreas.length) {
+        selectedArea.value = nextAreas;
+      }
+
+      const nextTypes = resolvePropertyTypesFromVoice(filters, queryParams);
+      if (nextTypes.length) {
+        selectedPropertyTypes.value = nextTypes;
+        selectedPropertyType.value = nextTypes[0] || null;
+      }
+
+      const bedsRaw = queryParams.number_of_bedrooms ?? filters.number_of_bedrooms;
+      if (bedsRaw !== null && bedsRaw !== undefined && bedsRaw !== '') {
+        selectedBeds.value = [Number(bedsRaw) === 0 ? 'Studio' : String(bedsRaw)];
+      }
+
+      const bathsRaw = queryParams.number_of_bathrooms
+        ?? queryParams.number_of_bathrooms_in?.[0]
+        ?? filters.number_of_bathrooms;
+      if (bathsRaw !== null && bathsRaw !== undefined && bathsRaw !== '') {
+        selectedBaths.value = [String(bathsRaw)];
+      }
+
+      if (queryParams.min_price != null || filters.min_price != null) {
+        priceFrom.value = Number(queryParams.min_price ?? filters.min_price) || 0;
+      }
+      if (queryParams.max_price != null || filters.max_price != null) {
+        priceTo.value = Number(queryParams.max_price ?? filters.max_price) || 10000000;
+      }
+
+      const purpose = String(filters.listing_status || queryParams.listing_status || '').toLowerCase();
+      if (purpose === 'sale') selectedSaleRent.value = 'Sale';
+      if (purpose === 'rent') selectedSaleRent.value = 'Rent';
+
+      // Reuse existing SearchBar → parent filters-changed → /listings/properties flow.
+      applyFilters();
+      showMobileSearchOverlay.value = false;
+    };
 
     // Static options
     const saleRentOptions = ["All", "Sale", "Rent"];
@@ -2409,6 +2550,11 @@ fetchProjects()
       mobileSearchInputRef,
       mobileChipSheet,
       isMobileViewport,
+      showVoiceSearchModal,
+      canUseVoiceSearch,
+      voiceExistingFilters,
+      openVoiceSearch,
+      applyVoiceSearchResult,
       propertyTypeTab,
        listingFeatureOptions,     
      showFeaturesDropdown,      
@@ -3422,8 +3568,16 @@ fetchProjects()
 
 .listing-main-search {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 12px;
   max-width: 810px;
+}
+
+.listing-main-search .listing-main-location {
+  flex: 1;
+  min-width: 0;
 }
 
 .listing-main-search-icon {
@@ -3434,6 +3588,7 @@ fetchProjects()
   z-index: 2;
   font-size: 16px;
   color: #94a3b8;
+  pointer-events: none;
 }
 
 :deep(.listing-main-location .vs__dropdown-toggle) {
