@@ -58,49 +58,42 @@ class Bitrix24LeadImporter
      * Handles the common cases where Bitrix24's pipeline label doesn't match
      * the local stage label verbatim (e.g. "Junk" → local "Unqualified").
      */
-    private const STATUS_NAME_SYNONYMS = [
-        // Order matters — longer/more-specific keys must come first so a
-        // generic key doesn't shadow a specific one (e.g. "not qualified"
-        // before "qualified" doesn't apply here, but the principle holds).
-        'not qualified'    => 'unqualified',
-        'non qualified'    => 'unqualified',
-        'Unqualified'    => 'unqualified',
-        'Unqualified Lead'    => 'unqualified',
-        'disqualified'     => 'unqualified',
-        'junk'             => 'unqualified',
-        'spam'             => 'unqualified',
-        'declined'         => 'unqualified',
-        'rejected'         => 'unqualified',
-        'in process'       => 'contacted',
-        'in progress'      => 'contacted',
-        'processing'       => 'contacted',
-        'follow up'        => 'contacted',
-        'follow-up'        => 'contacted',
-        'Follow-up / Contacted'  => 'contacted',
-        'processed'        => 'converted',
-        'closed won'       => 'converted',
-        'closed-won'       => 'converted',
-        'won'              => 'converted',
-        'success'          => 'converted',
-        'completed'        => 'converted',
-        'closed lost'      => 'lost',
-        'closed-lost'      => 'lost',
-        'failed'           => 'lost',
-        'dead'             => 'lost',
-        'fresh'            => 'new',
-        'pool'             => 'pool',
-        'shared'           => 'shared',
-        'assigned'         => 'assigned',
-        // Keys are matched against the LOWERCASED Bitrix status name, so they
-        // must be lowercase. "Future Prospect" (and the typo'd "Prospected") → Qualified.
-        'successfull'          => 'qualified',
-        'future prospect'  => 'qualified',
-        'future prospected'  => 'qualified',
-        'jop seeker'       => 'unqualified',
-        'job seeker'       => 'unqualified',
-        'junk'             => 'unqualified',
-        'Unqualified Lead'=>'unqualified',
-    ];
+  private const STATUS_NAME_SYNONYMS = [
+    'not qualified'          => 'unqualified',
+    'non qualified'          => 'unqualified',
+    'unqualified'            => 'unqualified',   // was 'Unqualified' — fixed
+    'unqualified lead'       => 'unqualified',   // was 'Unqualified Lead' — fixed
+    'disqualified'           => 'unqualified',
+    'junk'                   => 'unqualified',
+    'spam'                   => 'unqualified',
+    'declined'               => 'unqualified',
+    'rejected'               => 'unqualified',
+    'in process'             => 'contacted',
+    'in progress'            => 'contacted',
+    'processing'             => 'contacted',
+    'follow up'              => 'contacted',
+    'follow-up'              => 'contacted',
+    'follow-up / contacted'  => 'contacted',      // was 'Follow-up / Contacted' — also fixed, same bug
+    'processed'              => 'converted',
+    'closed won'             => 'converted',
+    'closed-won'             => 'converted',
+    'won'                    => 'converted',
+    'success'                => 'converted',
+    'completed'              => 'converted',
+    'closed lost'            => 'lost',
+    'closed-lost'            => 'lost',
+    'failed'                 => 'lost',
+    'dead'                   => 'lost',
+    'fresh'                  => 'new',
+    'pool'                   => 'pool',
+    'shared'                 => 'shared',
+    'assigned'               => 'assigned',
+    'successfull'            => 'qualified',
+    'future prospect'        => 'qualified',
+    'future prospected'      => 'qualified',
+    'jop seeker'             => 'unqualified',
+    'job seeker'             => 'unqualified',
+];
 private const LOCAL_STAGE_KEYWORD_TO_ID = [
     'qualified'   => 6,
     'unqualified' => 11,
