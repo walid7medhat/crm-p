@@ -91,6 +91,17 @@ class ResyncAllLeadStages extends Command
                 'filter' => ['ID' => $bitrixIds],
                 'select' => ['ID', 'STATUS_ID'],
             ]);
+            if (isset($response['error'])) {
+                    $errors++;
+
+                    \Log::error('Bitrix24 API error', [
+                        'error' => $response['error'],
+                        'description' => $response['error_description'] ?? null,
+                        'bitrix_ids' => $bitrixIds,
+                    ]);
+
+                    return; // skip this batch
+                }
 
             $updates = []; // 🔥 bulk update
 
