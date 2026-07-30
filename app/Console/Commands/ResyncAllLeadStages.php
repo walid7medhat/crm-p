@@ -28,129 +28,135 @@ class ResyncAllLeadStages extends Command
     }
 
     public function handle(Bitrix24Client $client)
-    {
-        $importer = new Bitrix24LeadImporter($client, 1);
-        $onlyStage = $this->option('only-stage');
-        $fresh = (bool) $this->option('fresh');
+{
+    ini_set('memory_limit', '512M'); // مهم
 
-        $progressKey = $this->progressKey($onlyStage);
+    $importer = new Bitrix24LeadImporter($client, 1);
+    $onlyStage = $this->option('only-stage');
+    $fresh = (bool) $this->option('fresh');
 
-        if ($fresh) {
-            Cache::forget($progressKey);
-            $this->info('Starting fresh — cleared saved progress.');
-        }
+    $progressKey = $this->progressKey($onlyStage);
 
-        $lastId = $fresh ? 0 : (int) Cache::get($progressKey, 0);
-
-        $query = Lead::whereNotNull('bitrix24_id');
-        if ($onlyStage !== null) {
-            $query->where('stage_id', (int) $onlyStage);
-            $this->info("Resyncing leads currently on stage_id {$onlyStage} only.");
-        }
-
-        $total = $query->count();
-
-        if ($lastId > 0) {
-            $remaining = (clone $query)->where('id', '>', $lastId)->count();
-            $this->info("Resuming after lead ID {$lastId} — {$remaining} of {$total} leads remaining.");
-            $query->where('id', '>', $lastId);
-        } else {
-            $this->info("Found {$total} leads to check.");
-        }
-
-        $checked = 0;
-        $updated = 0;
-        $errors  = 0;
-        $batchSize = 50; // crm.lead.list max per call
-
-        // Progress bar spans the FULL matching-lead set (not just what's left),
-        // and is fast-forwarded to the resume point so it reflects true overall
-        // completion rather than restarting at 0% every time the job resumes.
-        $alreadyProcessed = $lastId > 0 ? ($total - $remaining) : 0;
-        $bar = $this->output->createProgressBar($total);
-        $bar->setFormat(" %current%/%max% [%bar%] %percent:3s%%  updated:%message%  elapsed:%elapsed:6s%  eta:%estimated:-6s%");
-        $bar->setMessage('0, errors:0');
-        $bar->start();
-        if ($alreadyProcessed > 0) {
-            $bar->setProgress($alreadyProcessed);
-        }
-
-        $query->orderBy('id')->chunkById($batchSize, function ($leads) use (
-            $client, $importer, &$checked, &$updated, &$errors, $total, $progressKey, $bar
-        ) {
-            $idMap = $leads->keyBy('bitrix24_id');
-            $bitrixIds = $idMap->keys()->all();
-
-            try {
-                $response = $client->call('crm.lead.list', [
-                    'filter' => ['ID' => $bitrixIds],
-                    'select' => ['ID', 'STATUS_ID'],
-                ]);
-
-                foreach ($response['result'] ?? [] as $b24Lead) {
-                    $checked++;
-                    $b24Id = (int) ($b24Lead['ID'] ?? 0);
-                    $lead  = $idMap->get($b24Id);
-                    if (!$lead) {
-                        $bar->advance();
-                        continue;
-                    }
-
-                    $statusId = $b24Lead['STATUS_ID'] ?? null;
-                    if (!$statusId) {
-                        $bar->advance();
-                        continue;
-                    }
-
-                    // Human-readable label for the Bitrix24 status code (e.g. "NEW" -> "New").
-                    $statusName = $importer->statusName($statusId) ?? $statusId;
-
-                    $newStageId = $importer->resolveStageId($statusId);
-
-                    if ($newStageId && (int) $lead->stage_id !== $newStageId) {
-                        $oldStage = $lead->stage_id;
-                        $lead->update(['stage_id' => $newStageId]);
-                        $updated++;
-                        if ($this->getOutput()->isVerbose()) {
-                            $bar->clear();
-                            $this->line("Lead {$lead->id} (bitrix24_id={$b24Id}): stage {$oldStage} -> {$newStageId} (status={$statusId} \"{$statusName}\")");
-                            $bar->display();
-                        }
-                    } elseif ($this->getOutput()->isVerbose()) {
-                        $bar->clear();
-                        $this->line("Lead {$lead->id} (bitrix24_id={$b24Id}): stage unchanged ({$lead->stage_id}) (status={$statusId} \"{$statusName}\")");
-                        $bar->display();
-                    }
-
-                    $bar->setMessage("{$updated}, errors:{$errors}");
-                    $bar->advance();
-                }
-            } catch (\Throwable $e) {
-                $errors++;
-                $bar->setMessage("{$updated}, errors:{$errors}");
-                \Log::error('Bitrix24 stage resync batch failed: ' . $e->getMessage());
-            }
-
-            // Save the highest lead ID we've finished this chunk, so a
-            // Ctrl+C / crash right after this point resumes from here rather
-            // than reprocessing from lead #1. chunkById iterates in ID order,
-            // so the last item in $leads is the highest ID seen so far.
-            $lastIdInChunk = $leads->last()?->id;
-            if ($lastIdInChunk) {
-                Cache::forever($progressKey, $lastIdInChunk);
-            }
-
-            usleep(50000); // 0.2s pause to respect Bitrix24 rate limits
-        });
-
-        $bar->finish();
-        $this->newLine(2);
-
-        // Full run completed — clear the saved checkpoint so the next
-        // invocation (without --fresh) starts a new pass from the beginning.
+    if ($fresh) {
         Cache::forget($progressKey);
-
-        $this->info("Done! checked={$checked} updated={$updated} errors={$errors}");
-        return 0;
+        $this->info('Starting fresh — cleared saved progress.');
     }
+
+    $lastId = $fresh ? 0 : (int) Cache::get($progressKey, 0);
+
+    $query = Lead::query()
+        ->select('id', 'stage_id', 'bitrix24_id') // 🔥 مهم جدًا
+        ->whereNotNull('bitrix24_id');
+
+    if ($onlyStage !== null) {
+        $query->where('stage_id', (int) $onlyStage);
+        $this->info("Resyncing leads currently on stage_id {$onlyStage} only.");
+    }
+
+    $total = $query->count();
+
+    if ($lastId > 0) {
+        $remaining = (clone $query)->where('id', '>', $lastId)->count();
+        $this->info("Resuming after lead ID {$lastId} — {$remaining} of {$total} leads remaining.");
+        $query->where('id', '>', $lastId);
+    } else {
+        $this->info("Found {$total} leads to check.");
+    }
+
+    $checked = 0;
+    $updated = 0;
+    $errors  = 0;
+    $batchSize = 50;
+
+    $alreadyProcessed = $lastId > 0 ? ($total - $remaining) : 0;
+
+    $bar = $this->output->createProgressBar($total);
+    $bar->setFormat(" %current%/%max% [%bar%] %percent:3s%% updated:%message%");
+    $bar->setMessage('0, errors:0');
+    $bar->start();
+
+    if ($alreadyProcessed > 0) {
+        $bar->setProgress($alreadyProcessed);
+    }
+
+    $query->orderBy('id')->chunkById($batchSize, function ($leads) use (
+        $client, $importer, &$checked, &$updated, &$errors, $progressKey, $bar
+    ) {
+
+        $idMap = $leads->keyBy('bitrix24_id');
+        $bitrixIds = $idMap->keys()->all();
+
+        try {
+            $response = $client->call('crm.lead.list', [
+                'filter' => ['ID' => $bitrixIds],
+                'select' => ['ID', 'STATUS_ID'],
+            ]);
+
+            $updates = []; // 🔥 bulk update
+
+            foreach ($response['result'] ?? [] as $b24Lead) {
+                $checked++;
+
+                $b24Id = (int) ($b24Lead['ID'] ?? 0);
+                $lead  = $idMap->get($b24Id);
+
+                if (!$lead) {
+                    $bar->advance();
+                    continue;
+                }
+
+                $statusId = $b24Lead['STATUS_ID'] ?? null;
+                if (!$statusId) {
+                    $bar->advance();
+                    continue;
+                }
+
+                $newStageId = $importer->resolveStageId($statusId);
+
+                if ($newStageId && (int) $lead->stage_id !== $newStageId) {
+                    $updates[] = [
+                        'id' => $lead->id,
+                        'stage_id' => $newStageId,
+                    ];
+                    $updated++;
+                }
+
+                $bar->advance();
+            }
+
+            // 🔥 bulk update مرة واحدة
+            if (!empty($updates)) {
+                \DB::table('leads')->upsert($updates, ['id'], ['stage_id']);
+            }
+
+        } catch (\Throwable $e) {
+            $errors++;
+            \Log::error('Bitrix24 batch failed: ' . $e->getMessage());
+        }
+
+        $bar->setMessage("{$updated}, errors:{$errors}");
+
+        // 🔥 save progress
+        $lastIdInChunk = $leads->last()?->id;
+        if ($lastIdInChunk) {
+            Cache::forever($progressKey, $lastIdInChunk);
+        }
+
+        // 🔥 تنظيف الذاكرة (مهم جدًا)
+        unset($leads, $idMap, $response, $updates);
+        gc_collect_cycles();
+
+        // خففنا sleep
+        usleep(50000);
+    });
+
+    $bar->finish();
+    $this->newLine(2);
+
+    Cache::forget($progressKey);
+
+    $this->info("Done! checked={$checked} updated={$updated} errors={$errors}");
+
+    return 0;
+}
 }
