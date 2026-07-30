@@ -15,10 +15,14 @@ class CheckQualifiedLeads extends Command
     protected $description = 'Fetch Qualified/Future-Prospected leads from Bitrix24 (UC_NLMQTU, UC_ADTE25) and verify they exist locally on stage_id 6';
 
     // Bitrix24 STATUS_ID codes that represent "Qualified"
-    private const STATUS_IDS = ['UC_NLMQTU', 'UC_ADTE25'];
+    // private const STATUS_IDS = ['UC_NLMQTU', 'UC_ADTE25'];
+    //Bitrix24 STATUS_ID codes that represent "Converted"
+    private const STATUS_IDS = ['UC_B71DK7'];
+    
 
     // Local stage_id that all these leads must be on
-    private const TARGET_STAGE_ID = 6;
+    // private const TARGET_STAGE_ID = 6;
+    private const TARGET_STAGE_ID = 8;//for converted
 
     public function handle(Bitrix24Client $client)
     {
