@@ -80,7 +80,7 @@ class SyncLeadStagesFromBitrix extends Command
                         if (!$b24Lead) continue;
 
                         // ✅ اسم الاستيج
-                        $statusName = strtolower($b24Lead['STATUS_NAME'] ?? '');
+                        $statusName = strtolower($b24Lead['STATUS_ID'] ?? '');
                         if (!$statusName) continue;
 
                         // ✅ normalize
