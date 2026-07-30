@@ -140,7 +140,7 @@ class ResyncAllLeadStages extends Command
                 Cache::forever($progressKey, $lastIdInChunk);
             }
 
-            usleep(200000); // 0.2s pause to respect Bitrix24 rate limits
+            usleep(50000); // 0.2s pause to respect Bitrix24 rate limits
         });
 
         $bar->finish();
