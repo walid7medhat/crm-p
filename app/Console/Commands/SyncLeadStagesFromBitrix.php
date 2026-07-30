@@ -45,57 +45,60 @@ class SyncLeadStagesFromBitrix extends Command
         'future prospect' => 'qualified',
     ];
 
-    public function handle(Bitrix24Client $client)
-    {
-        $this->info('🚀 Start syncing...');
+  public function handle(Bitrix24Client $client)
+{
+    $this->info('🚀 Start syncing...');
 
-        $importer = new Bitrix24LeadImporter($client, 1);
+    $importer = new Bitrix24LeadImporter($client, 1);
 
-        Lead::where('stage_id', 3)
-            ->whereNotNull('bitrix24_id')
-            ->chunkById(100, function ($leads) use ($client, $importer) {
+    // خد الـ IDs كلها الأول (snapshot) عشان التحديث مايأثرش على شرط where
+    $leadIds = Lead::where('stage_id', 3)
+        ->whereNotNull('bitrix24_id')
+        ->pluck('id');
 
-                foreach ($leads as $lead) {
-                    try {
-                        $response = $client->call('crm.lead.get', [
-                            'id' => $lead->bitrix24_id,
-                        ]);
+    $this->info("Found {$leadIds->count()} leads to check.");
 
-                        $b24Lead = $response['result'] ?? null;
-                        if (!$b24Lead) {
-                            $this->warn("Lead {$lead->id}: no data from Bitrix24");
-                            continue;
-                        }
+    $bar = $this->output->createProgressBar($leadIds->count());
 
-                        $statusId = $b24Lead['STATUS_ID'] ?? null;
-                        if (!$statusId) {
-                            $this->warn("Lead {$lead->id}: no STATUS_ID");
-                            continue;
-                        }
+    foreach ($leadIds->chunk(100) as $chunk) {
 
-                        // Use the importer's own (public) resolver — same logic
-                        // used everywhere else in the sync, cached, and handles
-                        // exact/substring/synonym matching for you.
-                        $newStageId = $importer->resolveStageId($statusId);
-                        $statusName = $importer->statusName($statusId);
+        $leads = Lead::whereIn('id', $chunk)->get();
 
-                        if (!$newStageId) {
-                            $this->warn("Lead {$lead->id}: could not resolve stage for status '{$statusName}'");
-                            continue;
-                        }
+        foreach ($leads as $lead) {
+            try {
+                $response = $client->call('crm.lead.get', [
+                    'id' => $lead->bitrix24_id,
+                ]);
 
-                        if ($lead->stage_id != $newStageId) {
-                            $lead->update(['stage_id' => $newStageId]);
-                            $this->line("Lead {$lead->id}: {$statusName} → stage {$newStageId}");
-                        }
-
-                    } catch (\Throwable $e) {
-                        $this->error("Lead {$lead->id}: " . $e->getMessage());
-                        \Log::error("Lead {$lead->id}: " . $e->getMessage());
-                    }
+                $b24Lead = $response['result'] ?? null;
+                if (!$b24Lead) {
+                    $bar->advance();
+                    continue;
                 }
-            });
 
-        $this->info('🎉 Done!');
+                $statusId = $b24Lead['STATUS_ID'] ?? null;
+                if (!$statusId) {
+                    $bar->advance();
+                    continue;
+                }
+
+                $newStageId = $importer->resolveStageId($statusId);
+                $statusName = $importer->statusName($statusId);
+
+                if ($newStageId && $lead->stage_id != $newStageId) {
+                    $lead->update(['stage_id' => $newStageId]);
+                    $this->line("\nLead {$lead->id}: {$statusName} → stage {$newStageId}");
+                }
+
+            } catch (\Throwable $e) {
+                \Log::error("Lead {$lead->id}: " . $e->getMessage());
+            }
+
+            $bar->advance();
+        }
     }
+
+    $bar->finish();
+    $this->info("\n🎉 Done!");
+}
 }
