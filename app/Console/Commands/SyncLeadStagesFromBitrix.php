@@ -5,69 +5,64 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Lead;
 use App\Services\Bitrix24\Bitrix24Client;
+use App\Services\Bitrix24\Bitrix24LeadImporter;
 
 class SyncLeadStagesFromBitrix extends Command
 {
     protected $signature = 'leads:sync-stages';
-    protected $description = 'Sync leads stage from Bitrix using STATUS_NAME';
+    protected $description = 'Sync leads stage from Bitrix';
 
-    // ✅ synonyms
     private const STATUS_NAME_SYNONYMS = [
-        'not qualified'        => 'unqualified',
-        'non qualified'        => 'unqualified',
-        'unqualified'          => 'unqualified',
-        'unqualified lead'     => 'unqualified',
-        'disqualified'         => 'unqualified',
-        'junk'                 => 'unqualified',
-        'spam'                 => 'unqualified',
-        'declined'             => 'unqualified',
-        'rejected'             => 'unqualified',
-        'jop seeker'           => 'unqualified',
-        'job seeker'           => 'unqualified',
+        'not qualified' => 'unqualified',
+        'non qualified' => 'unqualified',
+        'unqualified' => 'unqualified',
+        'unqualified lead' => 'unqualified',
+        'disqualified' => 'unqualified',
+        'junk' => 'unqualified',
+        'spam' => 'unqualified',
+        'declined' => 'unqualified',
+        'rejected' => 'unqualified',
+        'job seeker' => 'unqualified',
 
-        'in process'           => 'contacted',
-        'in progress'          => 'contacted',
-        'processing'           => 'contacted',
-        'follow up'            => 'contacted',
-        'follow-up'            => 'contacted',
-        'follow-up / contacted'=> 'contacted',
+        'in process' => 'contacted',
+        'in progress' => 'contacted',
+        'processing' => 'contacted',
+        'follow up' => 'contacted',
+        'follow-up' => 'contacted',
 
-        'processed'            => 'converted',
-        'closed won'           => 'converted',
-        'closed-won'           => 'converted',
-        'won'                  => 'converted',
-        'success'              => 'converted',
-        'completed'            => 'converted',
+        'processed' => 'converted',
+        'closed won' => 'converted',
+        'won' => 'converted',
+        'success' => 'converted',
+        'completed' => 'converted',
 
-        'closed lost'          => 'lost',
-        'closed-lost'          => 'lost',
-        'failed'               => 'lost',
-        'dead'                 => 'lost',
+        'closed lost' => 'lost',
+        'failed' => 'lost',
+        'dead' => 'lost',
 
-        'fresh'                => 'new',
+        'fresh' => 'new',
 
-        'successfull'          => 'qualified',
-        'future prospect'      => 'qualified',
-        'future prospected'    => 'qualified',
+        'future prospect' => 'qualified',
     ];
 
     public function handle(Bitrix24Client $client)
     {
-        $this->info('🚀 Start syncing leads...');
+        $this->info('🚀 Start syncing...');
 
-        // ✅ mapping النهائي
+        $importer = new Bitrix24LeadImporter(1); // 👈 مهم
+
         $stageMap = [
             'qualified'    => 6,
             'converted'    => 8,
             'unqualified'  => 11,
             'contacted'    => 5,
             'lost'         => 2,
-            'new'=>3
+            'new'          => 3,
         ];
 
         Lead::where('stage_id', 3)
             ->whereNotNull('bitrix24_id')
-            ->chunkById(100, function ($leads) use ($client, $stageMap) {
+            ->chunkById(100, function ($leads) use ($client, $stageMap, $importer) {
 
                 foreach ($leads as $lead) {
 
@@ -79,11 +74,16 @@ class SyncLeadStagesFromBitrix extends Command
                         $b24Lead = $response['result'] ?? null;
                         if (!$b24Lead) continue;
 
-                        // ✅ اسم الاستيج
-                        $statusName = strtolower($b24Lead['STATUS_ID'] ?? '');
-                        if (!$statusName) continue;
+                        // ✅ 👇 هنا بقى الصح
+                        $statusName = strtolower(
+                            $importer->statusName($b24Lead['STATUS_ID'] ?? '') ?? ''
+                        );
 
-                        // ✅ normalize
+                        if (!$statusName) {
+                            $this->warn("No status name for lead {$lead->id}");
+                            continue;
+                        }
+
                         $normalized = null;
 
                         foreach (self::STATUS_NAME_SYNONYMS as $key => $value) {
@@ -93,13 +93,14 @@ class SyncLeadStagesFromBitrix extends Command
                             }
                         }
 
-                        if (!$normalized) continue;
+                        if (!$normalized) {
+                            $this->warn("No match: {$statusName}");
+                            continue;
+                        }
 
-                        // ✅ تحويل ل stage_id
                         $newStageId = $stageMap[$normalized] ?? null;
                         if (!$newStageId) continue;
 
-                        // ✅ update
                         if ($lead->stage_id != $newStageId) {
 
                             $lead->update([
