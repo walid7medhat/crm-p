@@ -49,68 +49,48 @@ class SyncLeadStagesFromBitrix extends Command
     {
         $this->info('🚀 Start syncing...');
 
-        $importer = new Bitrix24LeadImporter($client,1); // 👈 مهم
-
-        $stageMap = [
-            'qualified'    => 6,
-            'converted'    => 8,
-            'unqualified'  => 11,
-            'contacted'    => 5,
-            'lost'         => 2,
-            'new'          => 3,
-        ];
+        $importer = new Bitrix24LeadImporter($client, 1);
 
         Lead::where('stage_id', 3)
             ->whereNotNull('bitrix24_id')
-            ->chunkById(100, function ($leads) use ($client, $stageMap, $importer) {
+            ->chunkById(100, function ($leads) use ($client, $importer) {
 
                 foreach ($leads as $lead) {
-
                     try {
                         $response = $client->call('crm.lead.get', [
-                            'id' => $lead->bitrix24_id
+                            'id' => $lead->bitrix24_id,
                         ]);
 
                         $b24Lead = $response['result'] ?? null;
-                        if (!$b24Lead) continue;
-
-                        // ✅ 👇 هنا بقى الصح
-                        $statusName = strtolower(
-                            $importer->statusName($b24Lead['STATUS_ID'] ?? '') ?? ''
-                        );
-
-                        if (!$statusName) {
-                            $this->warn("No status name for lead {$lead->id}");
+                        if (!$b24Lead) {
+                            $this->warn("Lead {$lead->id}: no data from Bitrix24");
                             continue;
                         }
 
-                        $normalized = null;
-
-                        foreach (self::STATUS_NAME_SYNONYMS as $key => $value) {
-                            if (str_contains($statusName, $key)) {
-                                $normalized = $value;
-                                break;
-                            }
-                        }
-
-                        if (!$normalized) {
-                            $this->warn("No match: {$statusName}");
+                        $statusId = $b24Lead['STATUS_ID'] ?? null;
+                        if (!$statusId) {
+                            $this->warn("Lead {$lead->id}: no STATUS_ID");
                             continue;
                         }
 
-                        $newStageId = $stageMap[$normalized] ?? null;
-                        if (!$newStageId) continue;
+                        // Use the importer's own (public) resolver — same logic
+                        // used everywhere else in the sync, cached, and handles
+                        // exact/substring/synonym matching for you.
+                        $newStageId = $importer->resolveStageId($statusId);
+                        $statusName = $importer->statusName($statusId);
+
+                        if (!$newStageId) {
+                            $this->warn("Lead {$lead->id}: could not resolve stage for status '{$statusName}'");
+                            continue;
+                        }
 
                         if ($lead->stage_id != $newStageId) {
-
-                            $lead->update([
-                                'stage_id' => $newStageId
-                            ]);
-
-                            $this->line("Lead {$lead->id}: {$statusName} → {$normalized} → {$newStageId}");
+                            $lead->update(['stage_id' => $newStageId]);
+                            $this->line("Lead {$lead->id}: {$statusName} → stage {$newStageId}");
                         }
 
                     } catch (\Throwable $e) {
+                        $this->error("Lead {$lead->id}: " . $e->getMessage());
                         \Log::error("Lead {$lead->id}: " . $e->getMessage());
                     }
                 }

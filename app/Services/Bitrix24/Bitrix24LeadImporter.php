@@ -1102,7 +1102,7 @@ class Bitrix24LeadImporter
      *   5. Default stage as last resort, with a log entry so unmapped statuses
      *      are visible.
      */
-    private function resolveStageId($statusId): ?int
+    public function resolveStageId($statusId): ?int
     {
         $code = $this->normalizeCode($statusId);
         if ($code === null) {
@@ -1233,7 +1233,7 @@ class Bitrix24LeadImporter
             return $value !== '' ? $value : null;
         }
     /** Translate Bitrix24 STATUS_ID (e.g. "NEW") -> human label (e.g. "New"). */
-    private function statusName($statusId): ?string
+    public function statusName($statusId): ?string
     {
         $key = $this->normalizeCode($statusId);
         if ($key === null) {
