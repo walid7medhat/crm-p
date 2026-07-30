@@ -112,9 +112,14 @@ class ResyncAllLeadStages extends Command
                 $lead  = $idMap->get($b24Id);
 
                 if (!$lead) {
-                    $bar->advance();
-                    continue;
-                }
+                        \Log::channel('bitrix_missing')->warning('Missing lead during resync', [
+                            'bitrix24_id' => $b24Id,
+                            'status_id' => $b24Lead['STATUS_ID'] ?? null,
+                        ]);
+
+                        $bar->advance();
+                        continue;
+                    }
 
                 $statusId = $b24Lead['STATUS_ID'] ?? null;
                 if (!$statusId) {
@@ -137,7 +142,27 @@ class ResyncAllLeadStages extends Command
 
             // 🔥 bulk update مرة واحدة
             if (!empty($updates)) {
-                \DB::table('leads')->upsert($updates, ['id'], ['stage_id']);
+                $cases = [];
+                $ids = [];
+
+                foreach ($updates as $u) {
+                    $id = (int) $u['id'];
+                    $stage = (int) $u['stage_id'];
+
+                    $cases[] = "WHEN {$id} THEN {$stage}";
+                    $ids[] = $id;
+                }
+
+                $idsList = implode(',', $ids);
+                $casesSql = implode(' ', $cases);
+
+                \DB::statement("
+                    UPDATE leads
+                    SET stage_id = CASE id
+                        {$casesSql}
+                    END
+                    WHERE id IN ({$idsList})
+                ");
             }
 
         } catch (\Throwable $e) {
