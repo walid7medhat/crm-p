@@ -398,7 +398,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             }
 
         if($request->has('is_active')) {
-            if($request->is_active){
+            if($request->boolean('is_active')){
                 $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')

@@ -318,9 +318,11 @@ export default {
               property.status !== 'rented' && property.approved  &&
               property.status !== 'converted' && property.status !== 'draft');
         case 'inactive':
-          return properties.value.filter(property => !property.is_active && !property.is_archived && property.status !== 'converted' &&
-              property.status !== 'rented' &&
-              property.status !== 'draft');
+          return properties.value.filter(property => !property.is_active
+          //  && !property.is_archived && property.status !== 'converted' &&
+          //     property.status !== 'rented' &&
+          //     property.status !== 'draft'
+            );
         case 'archived':
           return properties.value.filter(property => property.is_archived);
         case 'off_plan':

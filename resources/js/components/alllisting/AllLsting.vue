@@ -416,10 +416,10 @@ export default {
           );
         case 'inactive':
           return properties.value.filter(property => 
-            !property.is_active && 
-            !property.is_archived && 
-            property.status !== 'converted' &&
-            property.status !== 'rented' 
+            !property.is_active 
+            // && !property.is_archived && 
+            // property.status !== 'converted' &&
+            // property.status !== 'rented' 
           );
         case 'archived':
           return properties.value.filter(property => property.is_archived);
@@ -561,7 +561,7 @@ export default {
               break;
             case 'inactive':
               params.is_active = false;
-              params.is_archived = false;
+              // params.is_archived = false;
               break;
             case 'draft':
               params.status = 'draft';
