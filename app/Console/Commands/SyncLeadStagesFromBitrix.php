@@ -49,7 +49,7 @@ class SyncLeadStagesFromBitrix extends Command
     {
         $this->info('🚀 Start syncing...');
 
-        $importer = new Bitrix24LeadImporter(1); // 👈 مهم
+        $importer = new Bitrix24LeadImporter($client,1); // 👈 مهم
 
         $stageMap = [
             'qualified'    => 6,
