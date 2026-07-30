@@ -94,6 +94,7 @@ class Bitrix24LeadImporter
     'jop seeker'             => 'unqualified',
     'job seeker'             => 'unqualified',
     'lost leads'             => 'lost',
+    'Assigned'              =>'Assigned'
 ];
 private const LOCAL_STAGE_KEYWORD_TO_ID = [
     'qualified'   => 6,
@@ -104,6 +105,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
     'pool'        => 10,
     'lost'        => 2,
     'shared'      => 9,
+    'Assigned'=>4,
 ];
     /**
      * Bitrix24 keys already mapped to dedicated `leads` columns. Excluded from
