@@ -100,7 +100,16 @@ class Bitrix24LeadImporter
         'job seeker'       => 'unqualified',
         'junk'             => 'unqualified',
     ];
-
+private const LOCAL_STAGE_KEYWORD_TO_ID = [
+    'qualified'   => 6,
+    'unqualified' => 11,
+    'converted'   => 8,
+    'contacted'   => 5,
+    'new'         => 3,
+    'pool'        => 10,
+    'lost'        => 2,
+    'shared'      => 9,
+];
     /**
      * Bitrix24 keys already mapped to dedicated `leads` columns. Excluded from
      * the field_data envelope so LeadResource::facebook_questions_answers
@@ -1128,67 +1137,22 @@ class Bitrix24LeadImporter
         return $stageId;
     }
 
-    private function findStageByName(string $lcName, string $rawName): ?int
-    {
-        // 1. Exact lowercase match.
-        $stageId = Stage::query()
-            ->where('stage_type', 'lead')
-            ->whereRaw('LOWER(name) = ?', [$lcName])
-            ->value('id');
-        if ($stageId !== null) {
-            return $stageId;
-        }
-
-        // 2. Local stage name contains the B24 name (e.g. "New" -> "New Lead").
-        //    Order by length DESC so longer/more-specific matches win:
-        //    e.g. "Qualified" search returns "Qualified" before "Unqualified".
-        //    (We also pre-filter rows that contain `qualified` here but the
-        //    most-specific *matching* candidate is what we want.)
-        $stageId = Stage::query()
-            ->where('stage_type', 'lead')
-            ->where('name', 'LIKE', '%' . $rawName . '%')
-            ->orderByRaw('LENGTH(name) DESC')
-            ->orderBy('order')
-            ->value('id');
-        if ($stageId !== null) {
-            return $stageId;
-        }
-
-        // 3. Synonym table BEFORE reverse-substring — synonyms are explicit
-        //    and won't mis-fire on substring collisions
-        //    ("Disqualified" -> "unqualified" keyword instead of accidentally
-        //    matching "Qualified" via reverse-substring).
-        foreach (self::STATUS_NAME_SYNONYMS as $syn => $localKeyword) {
-            if (mb_strpos($lcName, $syn) !== false) {
-                $stageId = Stage::query()
-                    ->where('stage_type', 'lead')
-                    ->where('name', 'LIKE', '%' . $localKeyword . '%')
-                    ->orderByRaw('LENGTH(name) DESC')
-                    ->orderBy('order')
-                    ->value('id');
-                if ($stageId !== null) {
-                    return $stageId;
-                }
-            }
-        }
-
-        // 4. Reverse — B24 name contains a local stage name. Sort by name
-        //    length DESC so "Unqualified" (11 chars) wins over "Qualified"
-        //    (9 chars) when both are substrings of the same B24 string.
-        $candidates = Stage::query()
-            ->where('stage_type', 'lead')
-            ->get(['id', 'name'])
-            ->sortByDesc(fn ($s) => mb_strlen((string) $s->name))
-            ->values();
-        foreach ($candidates as $candidate) {
-            $candidateLc = mb_strtolower((string) $candidate->name);
-            if ($candidateLc !== '' && mb_strpos($lcName, $candidateLc) !== false) {
-                return $candidate->id;
-            }
-        }
-
-        return null;
+  private function findStageByName(string $lcName, string $rawName): ?int
+{
+    // 1. direct keyword match
+    if (isset(self::LOCAL_STAGE_KEYWORD_TO_ID[$lcName])) {
+        return self::LOCAL_STAGE_KEYWORD_TO_ID[$lcName];
     }
+
+    // 2. synonyms → keyword → id
+    foreach (self::STATUS_NAME_SYNONYMS as $syn => $localKeyword) {
+        if (mb_strpos($lcName, $syn) !== false) {
+            return self::LOCAL_STAGE_KEYWORD_TO_ID[$localKeyword] ?? null;
+        }
+    }
+
+    return null;
+}
 
     /** Combine Bitrix24 address parts into one comma-separated address string. */
     private function composeAddress(array $b24): ?string
