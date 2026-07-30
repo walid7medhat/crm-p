@@ -99,6 +99,7 @@ class Bitrix24LeadImporter
         'jop seeker'       => 'unqualified',
         'job seeker'       => 'unqualified',
         'junk'             => 'unqualified',
+        'Unqualified Lead'=>'unqualified',
     ];
 private const LOCAL_STAGE_KEYWORD_TO_ID = [
     'qualified'   => 6,
