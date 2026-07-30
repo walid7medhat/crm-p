@@ -93,6 +93,7 @@ class Bitrix24LeadImporter
     'future prospected'      => 'qualified',
     'jop seeker'             => 'unqualified',
     'job seeker'             => 'unqualified',
+    'lost leads'             => 'lost',
 ];
 private const LOCAL_STAGE_KEYWORD_TO_ID = [
     'qualified'   => 6,
