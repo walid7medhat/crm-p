@@ -12,39 +12,7 @@ class SyncLeadStagesFromBitrix extends Command
     protected $signature = 'leads:sync-stages';
     protected $description = 'Sync leads stage from Bitrix';
 
-    private const STATUS_NAME_SYNONYMS = [
-        'not qualified' => 'unqualified',
-        'non qualified' => 'unqualified',
-        'unqualified' => 'unqualified',
-        'unqualified lead' => 'unqualified',
-        'disqualified' => 'unqualified',
-        'junk' => 'unqualified',
-        'spam' => 'unqualified',
-        'declined' => 'unqualified',
-        'rejected' => 'unqualified',
-        'job seeker' => 'unqualified',
-
-        'in process' => 'contacted',
-        'in progress' => 'contacted',
-        'processing' => 'contacted',
-        'follow up' => 'contacted',
-        'follow-up' => 'contacted',
-
-        'processed' => 'converted',
-        'closed won' => 'converted',
-        'won' => 'converted',
-        'success' => 'converted',
-        'completed' => 'converted',
-
-        'closed lost' => 'lost',
-        'failed' => 'lost',
-        'dead' => 'lost',
-
-        'fresh' => 'new',
-
-        'future prospect' => 'qualified',
-    ];
-
+   
 public function handle(Bitrix24Client $client)
 {
     $this->info('🚀 Start syncing...');
