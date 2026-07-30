@@ -63,8 +63,20 @@ class ResyncAllLeadStages extends Command
         $errors  = 0;
         $batchSize = 50; // crm.lead.list max per call
 
+        // Progress bar spans the FULL matching-lead set (not just what's left),
+        // and is fast-forwarded to the resume point so it reflects true overall
+        // completion rather than restarting at 0% every time the job resumes.
+        $alreadyProcessed = $lastId > 0 ? ($total - $remaining) : 0;
+        $bar = $this->output->createProgressBar($total);
+        $bar->setFormat(" %current%/%max% [%bar%] %percent:3s%%  updated:%message%  elapsed:%elapsed:6s%  eta:%estimated:-6s%");
+        $bar->setMessage('0, errors:0');
+        $bar->start();
+        if ($alreadyProcessed > 0) {
+            $bar->setProgress($alreadyProcessed);
+        }
+
         $query->orderBy('id')->chunkById($batchSize, function ($leads) use (
-            $client, $importer, &$checked, &$updated, &$errors, $total, $progressKey
+            $client, $importer, &$checked, &$updated, &$errors, $total, $progressKey, $bar
         ) {
             $idMap = $leads->keyBy('bitrix24_id');
             $bitrixIds = $idMap->keys()->all();
@@ -80,11 +92,13 @@ class ResyncAllLeadStages extends Command
                     $b24Id = (int) ($b24Lead['ID'] ?? 0);
                     $lead  = $idMap->get($b24Id);
                     if (!$lead) {
+                        $bar->advance();
                         continue;
                     }
 
                     $statusId = $b24Lead['STATUS_ID'] ?? null;
                     if (!$statusId) {
+                        $bar->advance();
                         continue;
                     }
 
@@ -97,18 +111,24 @@ class ResyncAllLeadStages extends Command
                         $oldStage = $lead->stage_id;
                         $lead->update(['stage_id' => $newStageId]);
                         $updated++;
-                        $this->line("Lead {$lead->id} (bitrix24_id={$b24Id}): stage {$oldStage} -> {$newStageId} (status={$statusId} \"{$statusName}\")");
-                    } else {
+                        if ($this->getOutput()->isVerbose()) {
+                            $bar->clear();
+                            $this->line("Lead {$lead->id} (bitrix24_id={$b24Id}): stage {$oldStage} -> {$newStageId} (status={$statusId} \"{$statusName}\")");
+                            $bar->display();
+                        }
+                    } elseif ($this->getOutput()->isVerbose()) {
+                        $bar->clear();
                         $this->line("Lead {$lead->id} (bitrix24_id={$b24Id}): stage unchanged ({$lead->stage_id}) (status={$statusId} \"{$statusName}\")");
+                        $bar->display();
                     }
+
+                    $bar->setMessage("{$updated}, errors:{$errors}");
+                    $bar->advance();
                 }
             } catch (\Throwable $e) {
                 $errors++;
+                $bar->setMessage("{$updated}, errors:{$errors}");
                 \Log::error('Bitrix24 stage resync batch failed: ' . $e->getMessage());
-            }
-
-            if ($checked % 1000 === 0 || $checked >= $total) {
-                $this->info("--- Progress: {$checked}/{$total} | updated: {$updated} | errors: {$errors} ---");
             }
 
             // Save the highest lead ID we've finished this chunk, so a
@@ -122,6 +142,9 @@ class ResyncAllLeadStages extends Command
 
             usleep(200000); // 0.2s pause to respect Bitrix24 rate limits
         });
+
+        $bar->finish();
+        $this->newLine(2);
 
         // Full run completed — clear the saved checkpoint so the next
         // invocation (without --fresh) starts a new pass from the beginning.
