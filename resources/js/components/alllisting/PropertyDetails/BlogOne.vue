@@ -2355,7 +2355,7 @@ const canApproveListings = computed(() => {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
   
-  const isManagerWithListingTeam = currentUser.roles?.includes('manager') && currentUser?.is_listing_team;
+  const isManagerWithListingTeam = (currentUser.roles?.includes('manager') || currentUser.roles?.includes('team_lead'))&& currentUser?.is_listing_team;
   
   const isSuperAdminUser = currentUser.roles?.includes('super_admin') || currentUser.roles?.includes('admin');
   return isManagerWithListingTeam || isSuperAdminUser;

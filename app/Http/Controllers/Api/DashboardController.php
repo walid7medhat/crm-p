@@ -1145,9 +1145,15 @@ public function getPropertyTypesWithListings(Request $request)
                     $q->whereIn('requested_by', $user_hierarchy);
                 })  ->where('status', 'pending')->orderBy('created_at', 'desc')
                 ->count();
-            $needApprove=Listing::where('approved', false)
-                            ->where('status', 'published')
-                            ->where('is_archived', false)->count();
+           $query = Listing::where('approved', false)
+                ->where('status', 'published')
+                ->where('is_archived', false);
+            
+            if ($user->hasRole('team_lead')) {
+                $query->whereIn('agent_id', $user_hierarchy);
+            }
+            
+            $needApprove = $query->count();
             $counts = [
                 'listings' => [
                     'all' => Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft','rented']) 

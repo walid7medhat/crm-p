@@ -1195,6 +1195,16 @@ public function getMatchingListings(Request $request)
                     foreach ($managers as $manager) {
                         $manager->notify(new ListingNeedsApproval($listing));
                     }
+                    // ✅ Notify Team Lead بتاع الـ Agent
+                        $agent = $listing->agent;
+
+                        if ($agent && $agent->parent) { // parent = team_lead
+                            $teamLead = $agent->parent;
+
+                            if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team) {
+                                $teamLead->notify(new ListingNeedsApproval($listing));
+                            }
+                        }
                 dispatch(new CheckSearchAlerts());
             }
                 DB::commit();
@@ -1901,7 +1911,16 @@ private function sendResubmissionNotification($listing, $user)
         foreach ($managers as $manager) {
             $manager->notify(new ListingNeedsApproval($listing, $user));
         }
-        
+        // ✅ Notify Team Lead بتاع الـ Agent
+            $agent = $listing->agent;
+
+            if ($agent && $agent->parent) { // parent = team_lead
+                $teamLead = $agent->parent;
+
+                if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team) {
+                    $teamLead->notify(new ListingNeedsApproval($listing));
+                }
+            }
         \Log::info('Resubmission notification sent', [
             'listing_id' => $listing->id,
             'resubmitted_by' => $user->id,
@@ -3176,8 +3195,8 @@ public function approve(Listing $listing): JsonResponse
     try {
         $user = auth()->user();
         
-        if (!($user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team))) {
-            return ApiResponse::error('You are not authorized to approve listings.', 403);
+        if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+            return ApiResponse::error('Unauthorized access.', 403);
         }
         
         if ($listing->approved) {
@@ -3231,8 +3250,8 @@ public function reject(Listing $listing, Request $request): JsonResponse
     try {
         $user = auth()->user();
         
-        if (!($user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team))) {
-            return ApiResponse::error('You are not authorized to reject listings.', 403);
+         if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+            return ApiResponse::error('Unauthorized access.', 403);
         }
         
         $request->validate([
@@ -3281,7 +3300,7 @@ public function getPendingApprovals(Request $request): JsonResponse
     try {
         $user = auth()->user();
         
-        if (!$user->hasRole('manager') || !$user->listing_team) {
+         if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
         
@@ -3296,7 +3315,22 @@ public function getPendingApprovals(Request $request): JsonResponse
         ->where('status', 'published')
         ->where('is_archived', false)
         ->orderBy('created_at', 'desc');
+
+        // 👇 Team Lead restriction
+        if ($user->hasRole('team_lead')) {
+
+            $allIds = User::where(function($q) use ($user) {
+                $q->where('id', $user->id)
+                  ->orWhere('parent_id', $user->id)
+                  ->orWhereHas('parent', function($parentQuery) use ($user) {
+                      $parentQuery->where('parent_id', $user->id);
+                  });
+            })->pluck('id')->toArray();
+
+            $query->whereIn('agent_id', $allIds);
+        }
         
+        // filters
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -3355,7 +3389,7 @@ public function batchApprove(Request $request): JsonResponse
     try {
         $user = auth()->user();
         
-        if (!$user->hasRole('manager') || !$user->listing_team) {
+         if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
         
