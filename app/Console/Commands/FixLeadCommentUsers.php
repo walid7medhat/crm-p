@@ -6,84 +6,98 @@ use Illuminate\Console\Command;
 use App\Models\LeadComment;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class FixLeadCommentUsers extends Command
 {
     protected $signature = 'comments:sync-authors';
     protected $description = 'Fetch author from Bitrix and update comments';
 
-public function handle()
-{
-    $this->info('🚀 Start syncing comment authors...');
-\Log::info('comments:sync-authors START ' . now());
-    $webhook = config('bitrix24.webhook_url');
+    public function handle()
+    {
+        $this->info('🚀 Start syncing comment authors...');
+        \Log::info('comments:sync-authors START ' . now());
 
-    $count = 0;
-    $errors = 0;
+        $webhook = config('bitrix24.webhook_url');
 
-    // 🔥 آخر ID اتعالج
-    $lastId = cache()->get('comments_sync_last_id', 0);
+        $count = 0;
+        $errors = 0;
 
-    while (true) {
+        // 🔥 آخر ID اتعالج
+        $lastId = Cache::get('comments_sync_last_id', 0);
 
-        $comments = LeadComment::whereNotNull('bitrix24_id')
-            ->where(function ($q) {
-                $q->where('user_id', 1)
-                  ->orWhereNull('user_id');
-            })
-            ->where('id', '>', $lastId)
-            ->orderBy('id')
-            ->limit(50)
-            ->get();
+        while (true) {
 
-        if ($comments->isEmpty()) {
-            break;
-        }
+            $comments = LeadComment::whereNotNull('bitrix24_id')
+                ->where(function ($q) {
+                    $q->where('user_id', 1)
+                      ->orWhereNull('user_id');
+                })
+                ->where('id', '>', $lastId)
+                ->orderBy('id')
+                ->limit(50)
+                ->get();
 
-        foreach ($comments as $comment) {
+            if ($comments->isEmpty()) {
+                break;
+            }
 
-            try {
-                $this->line("➡️ Checking comment {$comment->id}");
+            foreach ($comments as $comment) {
 
-                $response = Http::get($webhook . 'crm.timeline.comment.get', [
-                    'id' => $comment->bitrix24_id
-                ]);
+                try {
+                    $this->line("➡️ Checking comment {$comment->id}");
 
-                if (!$response->ok()) {
+                    $response = Http::timeout(10)->get(
+                        $webhook . 'crm.timeline.comment.get',
+                        ['id' => $comment->bitrix24_id]
+                    );
+
+                    if ($response->ok()) {
+                        $b24Comment = $response->json('result');
+
+                        if ($b24Comment) {
+                            $bitrixAuthorId = $b24Comment['AUTHOR_ID'] ?? null;
+
+                            if ($bitrixAuthorId) {
+                                $user = User::where('bitrix24_id', $bitrixAuthorId)->first();
+
+                                if ($user) {
+                                    $comment->update([
+                                        'user_id' => $user->id
+                                    ]);
+
+                                    $count++;
+                                }
+                            }
+                        }
+                    } else {
+                        $errors++;
+                        \Log::warning('Bitrix API failed', [
+                            'comment_id' => $comment->id,
+                            'status' => $response->status()
+                        ]);
+                    }
+
+                } catch (\Throwable $e) {
                     $errors++;
-                    continue;
+                    \Log::error('Error syncing comment', [
+                        'comment_id' => $comment->id,
+                        'error' => $e->getMessage()
+                    ]);
                 }
 
-                $b24Comment = $response->json('result');
-
-                if (!$b24Comment) continue;
-
-                $bitrixAuthorId = $b24Comment['AUTHOR_ID'] ?? null;
-                if (!$bitrixAuthorId) continue;
-
-                $user = User::where('bitrix24_id', $bitrixAuthorId)->first();
-                if (!$user) continue;
-
-                $comment->update([
-                    'user_id' => $user->id
-                ]);
-
-                $count++;
-
-                // 🔥 update progress
+                // 🔥 أهم نقطة: نحفظ التقدم في كل الحالات
                 $lastId = $comment->id;
-                cache()->put('comments_sync_last_id', $lastId);
-
-            } catch (\Throwable $e) {
-                $errors++;
+                Cache::put('comments_sync_last_id', $lastId);
             }
         }
+
+        // خلص كل حاجة
+        Cache::forget('comments_sync_last_id');
+
+        $this->info("✅ Done. Fixed {$count} comments, Errors: {$errors}");
+        \Log::info("comments:sync-authors DONE. Fixed {$count}, Errors {$errors}");
+
+        return Command::SUCCESS;
     }
-
-    cache()->forget('comments_sync_last_id');
-
-    $this->info("✅ Done. Fixed {$count} comments, Errors: {$errors}");
-
-    return Command::SUCCESS;
-}
 }
