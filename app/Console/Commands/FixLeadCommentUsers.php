@@ -15,7 +15,7 @@ class FixLeadCommentUsers extends Command
 public function handle()
 {
     $this->info('🚀 Start syncing comment authors...');
-
+\Log::info('comments:sync-authors START ' . now());
     $webhook = config('bitrix24.webhook_url');
 
     $count = 0;
