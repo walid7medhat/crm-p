@@ -20,10 +20,10 @@ class FixLeadCommentUsers extends Command
 
         $webhook = config('bitrix24.webhook_url');
 
-        $count = 0;
+        $updated = 0;
+        $skipped = 0;
         $errors = 0;
 
-        // 🔥 آخر ID اتعالج
         $lastId = Cache::get('comments_sync_last_id', 0);
 
         while (true) {
@@ -44,6 +44,8 @@ class FixLeadCommentUsers extends Command
 
             foreach ($comments as $comment) {
 
+                $status = 'SKIPPED';
+
                 try {
                     $this->line("➡️ Checking comment {$comment->id}");
 
@@ -53,6 +55,7 @@ class FixLeadCommentUsers extends Command
                     );
 
                     if ($response->ok()) {
+
                         $b24Comment = $response->json('result');
 
                         if ($b24Comment) {
@@ -66,37 +69,52 @@ class FixLeadCommentUsers extends Command
                                         'user_id' => $user->id
                                     ]);
 
-                                    $count++;
+                                    $updated++;
+                                    $status = 'UPDATED';
+                                } else {
+                                    $skipped++;
+                                    $status = 'NO USER';
                                 }
+                            } else {
+                                $skipped++;
+                                $status = 'NO AUTHOR';
                             }
+                        } else {
+                            $skipped++;
+                            $status = 'EMPTY RESPONSE';
                         }
+
                     } else {
                         $errors++;
-                        \Log::warning('Bitrix API failed', [
-                            'comment_id' => $comment->id,
-                            'status' => $response->status()
-                        ]);
+                        $status = 'API ERROR';
                     }
 
                 } catch (\Throwable $e) {
                     $errors++;
-                    \Log::error('Error syncing comment', [
-                        'comment_id' => $comment->id,
-                        'error' => $e->getMessage()
-                    ]);
+                    $status = 'EXCEPTION';
                 }
 
-                // 🔥 أهم نقطة: نحفظ التقدم في كل الحالات
+                // 🔥 log لكل كومنت
+                $this->line("   ➜ Status: {$status}");
+
+                // 🔥 تحديث التقدم في كل الحالات
                 $lastId = $comment->id;
                 Cache::put('comments_sync_last_id', $lastId);
             }
         }
 
-        // خلص كل حاجة
         Cache::forget('comments_sync_last_id');
 
-        $this->info("✅ Done. Fixed {$count} comments, Errors: {$errors}");
-        \Log::info("comments:sync-authors DONE. Fixed {$count}, Errors {$errors}");
+        $this->info("✅ Done.");
+        $this->info("Updated: {$updated}");
+        $this->info("Skipped: {$skipped}");
+        $this->info("Errors: {$errors}");
+
+        \Log::info("comments:sync-authors DONE", [
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'errors' => $errors
+        ]);
 
         return Command::SUCCESS;
     }
