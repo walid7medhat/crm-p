@@ -1218,14 +1218,20 @@ const sortOptions = [
     
     const areasData = response.data.data || response.data;
     
-    const mappedAreas = areasData.map(area => ({
-      id: area.id,
-      name: area.area_parents_title || area.name || area.title,
-      subtitle: area.region || area.city || area.country || 'UAE'
-    }));
+    // Place/project name on top, full parent location underneath (e.g. Abu Dhabi, UAE)
+    const mappedAreas = areasData.map(area => {
+      const placeName = area.name || area.title || `Area ${area.id}`;
+      const locationPath = area.area_parents_title || area.subtitle || area.parent_name || 'UAE';
+      return {
+        id: area.id,
+        name: placeName,
+        subtitle: locationPath,
+        area_parents_title: locationPath,
+      };
+    });
     
     areas.value = mappedAreas;
-    allAreas.value = mappedAreas; //
+    allAreas.value = mappedAreas;
     
     console.log("✅ Areas loaded:", areas.value.length);
     
@@ -2436,20 +2442,14 @@ const featuresButtonLabel = computed(() => {
       event.target.value = formatThousandsDisplay(sizeTo.value);
     };
 
-    // Location: first line = first part of name, second line = full remainder (rest + subtitle)
+    // Location: first line = place/project, second line = full location path
     const locationFirstLine = (option) => {
       if (!option || !option.name) return '';
-      const idx = option.name.indexOf(',');
-      return idx > 0 ? option.name.slice(0, idx).trim() : option.name;
+      return option.name;
     };
     const locationSecondLine = (option) => {
       if (!option) return '';
-      const name = option.name || '';
-      const subtitle = option.subtitle || 'UAE';
-      const idx = name.indexOf(',');
-      const rest = idx > 0 ? name.slice(idx + 1).trim() : '';
-      if (rest) return subtitle ? `${rest}, ${subtitle}` : rest;
-      return subtitle;
+      return option.subtitle || option.area_parents_title || 'UAE';
     };
 
     const isAreaSelected = (option) => {
