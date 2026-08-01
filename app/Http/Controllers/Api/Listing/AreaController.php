@@ -27,8 +27,9 @@ class AreaController extends Controller
     
     public function index(Request $request): JsonResponse
     {
-        $cacheKey = 'areas_'.md5(serialize($request->all()));
         $forListingSearch = $request->has('has_listings');
+        // v2: listing search returns place name + full parent location path
+        $cacheKey = ($forListingSearch ? 'areas_listing_v2_' : 'areas_').md5(serialize($request->all()));
 
         $resolver = function () use ($request, $forListingSearch) {
             $query = Area::query()->withCount('child');
@@ -81,21 +82,35 @@ class AreaController extends Controller
             $areas = $query->get();
 
             if ($forListingSearch) {
-                // Slim payload for SearchBar — skip ADGM / getAllAreaNames / project lookups.
-                return $areas->map(function (Area $area) {
-                    $parentName = $area->parent?->name;
+                // Slim payload for SearchBar: place on top, full location underneath.
+                $nameById = Area::query()->pluck('name', 'id');
+                $parentById = Area::query()->pluck('parent_id', 'id');
+
+                return $areas->map(function (Area $area) use ($nameById, $parentById) {
+                    $parts = [];
+                    $current = (int) ($area->parent_id ?: 0);
+                    $guard = 0;
+                    while ($current && $guard < 8) {
+                        $parentName = $nameById[$current] ?? null;
+                        if ($parentName) {
+                            $parts[] = $parentName;
+                        }
+                        $current = isset($parentById[$current]) ? (int) $parentById[$current] : 0;
+                        $guard++;
+                    }
+                    $locationPath = implode(', ', $parts) ?: 'UAE';
 
                     return [
                         'id' => $area->id,
                         'parent_id' => $area->parent_id,
-                        'parent_name' => $parentName,
+                        'parent_name' => $parts[0] ?? null,
                         'name' => $area->name,
                         'type' => $area->type,
                         'latitude' => $area->latitude !== null ? (float) $area->latitude : null,
                         'longitude' => $area->longitude !== null ? (float) $area->longitude : null,
-                        'area_parents_title' => $parentName,
+                        'area_parents_title' => $locationPath,
                         'children_count' => $area->child_count ?? 0,
-                        'subtitle' => $parentName,
+                        'subtitle' => $locationPath,
                     ];
                 })->values()->all();
             }
