@@ -6,15 +6,16 @@ use Illuminate\Console\Command;
 use App\Models\LeadActivity;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class FixLeadActivityUsers extends Command
 {
     protected $signature = 'activities:sync-authors-fast';
-    protected $description = 'Ultra fast sync LeadActivity authors';
+    protected $description = 'Ultra fast sync LeadActivity authors with resume support';
 
     public function handle()
     {
-        $this->info('🚀 Fast syncing activities...');
+        $this->info('🚀 Fast syncing activities (with resume)...');
 
         $webhook = config('bitrix24.webhook_url');
 
@@ -22,18 +23,29 @@ class FixLeadActivityUsers extends Command
         $skipped = 0;
         $errors = 0;
 
+        // 🔥 آخر ID
+        $lastId = Cache::get('activities_sync_last_id', 0);
+
         // 🔥 cache كل اليوزر مرة واحدة
         $users = User::whereNotNull('bitrix24_id')
             ->pluck('id', 'bitrix24_id')
             ->toArray();
 
+        // 🔥 total بعد lastId
         $total = LeadActivity::whereNotNull('bitrix24_id')
             ->where(function ($q) {
                 $q->where('user_id', 1)
                   ->orWhereNull('user_id');
             })
+            ->where('id', '>', $lastId)
             ->count();
 
+        if ($total === 0) {
+            $this->info('✅ No activities to process.');
+            return Command::SUCCESS;
+        }
+
+        // 🔥 progress bar
         $bar = $this->output->createProgressBar($total);
         $bar->setFormat("%current%/%max% [%bar%] %percent:3s%% | U:%message%");
         $bar->setMessage("0 | S:0 | E:0");
@@ -44,6 +56,7 @@ class FixLeadActivityUsers extends Command
                 $q->where('user_id', 1)
                   ->orWhereNull('user_id');
             })
+            ->where('id', '>', $lastId)
             ->orderBy('id')
             ->chunkById(200, function ($activities) use (
                 $webhook,
@@ -51,6 +64,7 @@ class FixLeadActivityUsers extends Command
                 &$skipped,
                 &$errors,
                 &$users,
+                &$lastId,
                 $bar
             ) {
 
@@ -93,6 +107,11 @@ class FixLeadActivityUsers extends Command
                         $errors++;
                     }
 
+                    // 🔥 حفظ التقدم بعد كل record
+                    $lastId = $activity->id;
+                    Cache::put('activities_sync_last_id', $lastId);
+
+                    // 🔥 تحديث progress
                     $bar->setMessage("{$updated} | S:{$skipped} | E:{$errors}");
                     $bar->advance();
                 }
@@ -100,6 +119,9 @@ class FixLeadActivityUsers extends Command
 
         $bar->finish();
         $this->newLine(2);
+
+        // 🔥 خلصنا → نمسح الكاش
+        Cache::forget('activities_sync_last_id');
 
         $this->info("✅ Done");
         $this->info("Updated: {$updated}");
