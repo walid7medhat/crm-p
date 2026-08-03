@@ -271,7 +271,7 @@ const assignmentExpenseLineAmount = (line) => {
     if (feeType === 'adgm') {
       if (fees.adgmAdminFee > 0) {
         const existingAdgm = assignmentExpenseLines.value.find(
-          line => line.label === 'ADGM Admin Fees' && line.isDefault
+          line => (line.label === 'ADGM Admin Fees' || line.label === 'ADGM Admin Fee' ) && line.isDefault
         );
         if (!existingAdgm) {
           assignmentExpenseLines.value.push({
@@ -293,7 +293,7 @@ const assignmentExpenseLineAmount = (line) => {
     } else {
       if (fees.dariAdminFee > 0) {
         const existingDari = assignmentExpenseLines.value.find(
-          line => line.label === 'Dari Admin Fees' && line.isDefault
+          line => (line.label === 'Dari Admin Fees' || line.label === 'Dari Admin Fee') && line.isDefault
         );
         if (!existingDari) {
           assignmentExpenseLines.value.push({
@@ -324,7 +324,7 @@ const assignmentExpenseLineAmount = (line) => {
     
     if (arr.length > 0) {
       arr.forEach((line, i) => {
-        const isDefault = line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees' || line.label === 'Agency Fees' || line.label === 'Transfer Fees'  || line.label === 'Agency Fee' || line.label === 'Transfer Fee';
+        const isDefault = line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees' || line.label === 'Agency Fees' || line.label === 'Transfer Fees'  || line.label === 'Agency Fee' || line.label === 'Transfer Fee' || line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' ||;
         if (!isDefault) {
           assignmentExpenseLines.value.push({
             id: line.id != null ? Number(line.id) : Date.now() + i,
