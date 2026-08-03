@@ -318,7 +318,8 @@ const breakdownRows = computed(() => {
       type: 'Installment',
       percentage: originalPrice.value > 0 ? ((amount / originalPrice.value) * 100).toFixed(2) : '',
       amount,
-      date: paid ? '' : (entry?.date || ''), // only show date if NOT paid
+      // date: paid ? '' : (entry?.date || ''), // only show date if NOT paid
+      date:(entry?.date || ''),
       status,
     };
 
