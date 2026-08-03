@@ -2596,10 +2596,10 @@ const fetchPropertyData = async (id) => {
     // ✅ تأكد من وجود التكاليف الافتراضية
     // حتى لو كانت هناك بيانات من الخادم، تأكد من وجود التكاليف الافتراضية
     const hasDari = assignmentExpenseLines.value.some(
-      line => line.label === 'Dari Admin Fee'
+      line => (line.label === 'Dari Admin Fee' || line.label === 'Dari Admin Fees')
     );
     const hasAdgm = assignmentExpenseLines.value.some(
-      line => line.label === 'ADGM Admin Fee'
+      line => (line.label === 'ADGM Admin Fee' || line.label === 'ADGM Admin Fees')
     );
     
     

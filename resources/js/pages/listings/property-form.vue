@@ -2246,7 +2246,7 @@ const addDefaultDealCosts = () => {
   // ✅ إزالة التكاليف الإدارية القديمة
   const adminFeeIndices = [];
   assignmentExpenseLines.value.forEach((line, index) => {
-    if ((line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee') && line.isDefault) {
+    if (((line.label === 'Dari Admin Fee' || line.label === 'Dari Admin Fees') || (line.label === 'ADGM Admin Fee' ||line.label === 'ADGM Admin Fees')) && line.isDefault) {
       adminFeeIndices.push(index);
     }
   });
@@ -2261,7 +2261,7 @@ const addDefaultDealCosts = () => {
     if (Number(fees.adgmAdminFee) > 0) {
       assignmentExpenseLines.value.push({
         id: Date.now() + 2,
-        label: 'ADGM Admin Fee',
+        label: 'ADGM Admin Fees',
         calcType: 'fixed',
         base: null,
         value: Number(fees.adgmAdminFee),
@@ -2277,7 +2277,7 @@ const addDefaultDealCosts = () => {
     if (Number(fees.dariAdminFee) > 0) {
       assignmentExpenseLines.value.push({
         id: Date.now() + 1,
-        label: 'Dari Admin Fee',
+        label: 'Dari Admin Fees',
         calcType: 'fixed',
         base: null,
         value: Number(fees.dariAdminFee),

@@ -259,7 +259,7 @@ const assignmentExpenseLineAmount = (line) => {
     // إزالة التكاليف الإدارية القديمة
     const adminFeeIndices = [];
     assignmentExpenseLines.value.forEach((line, index) => {
-      if ((line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees') && line.isDefault) {
+      if (((line.label === 'Dari Admin Fees' || line.label === 'Dari Admin Fee') || (line.label === 'ADGM Admin Fees') || line.label === 'ADGM Admin Fee') && line.isDefault) {
         adminFeeIndices.push(index);
       }
     });

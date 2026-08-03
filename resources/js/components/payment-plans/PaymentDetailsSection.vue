@@ -403,7 +403,7 @@ const expenseRows = computed(() =>
     const vat = expenseLineVat(line);
     const detail =
       calcType === 'percentage'
-        ? `${line?.value}% }`
+        ? `${line?.value}% `
         : formatAed(line?.value);
     return {
       id: line?.id != null ? `exp-${line.id}` : `exp-${idx}`,
