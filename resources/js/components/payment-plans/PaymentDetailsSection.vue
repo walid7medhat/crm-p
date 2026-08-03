@@ -111,7 +111,7 @@
           </thead>
           <tbody>
             <tr v-if="nocFixedAmount > 0">
-              <td>NOC</td>
+              <td>NOC Fees</td>
               <td class="text-muted">
                 —
                 <!-- <span class="text-muted d-block" style="font-size:0.85em;">
