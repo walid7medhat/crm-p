@@ -2199,16 +2199,16 @@ const addDefaultDealCosts = () => {
   console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
   
   const existingAgency = assignmentExpenseLines.value.find(
-    line => line.label === 'Agency Fee' && line.isDefault
+    line => line.label === 'Agency Fees' && line.isDefault
   );
    const existingTransfer = assignmentExpenseLines.value.find(
-    line => line.label === 'Transfer Fee' && line.isDefault
+    line => line.label === 'Transfer Fees' && line.isDefault
   );
   
   if (!existingAgency) {
     assignmentExpenseLines.value.push({
       id: Date.now() + 3,
-      label: 'Agency Fee',
+      label: 'Agency Fees',
       calcType: 'percentage',
       base: 'sp',
       value: agencyFeeValue,
@@ -2224,7 +2224,7 @@ const addDefaultDealCosts = () => {
   if (!existingTransfer) {
     assignmentExpenseLines.value.push({
       id: Date.now() + 3,
-      label: 'Transfer Fee',
+      label: 'Transfer Fees',
       calcType: 'percentage',
       base: 'sp',
       value: transferFeeValue,

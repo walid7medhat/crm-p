@@ -19,15 +19,15 @@
           <div class="pd-cell-value">{{ formatAed(sellingPrice) }}</div>
         </div>
         <div class="pd-cell pd-cell--muted">
-          <div class="pd-cell-label">Original price (OP)</div>
+          <div class="pd-cell-label">Original price </div>
           <div class="pd-cell-value pd-cell-value--dark">{{ formatAed(originalPrice) }}</div>
         </div>
         <div class="pd-cell pd-cell--muted" v-if="paymentPlanLabel">
-          <div class="pd-cell-label">Payment plan (%)</div>
+          <div class="pd-cell-label">Payment plan</div>
           <div class="pd-cell-value pd-cell-value--dark">{{ paymentPlanLabel || '—' }}</div>
         </div>
         <div class="pd-cell pd-cell--muted">
-          <div class="pd-cell-label">Premium (selling − OP)</div>
+          <div class="pd-cell-label">Premium </div>
           <div class="pd-cell-value pd-cell-value--dark" :class="{ 'pd-text-danger': premiumAmount < 0 }">
             {{ formatAed(premiumAmount) }}
           </div>
@@ -113,9 +113,10 @@
             <tr v-if="nocFixedAmount > 0">
               <td>NOC</td>
               <td class="text-muted">
-                <span class="text-muted d-block" style="font-size:0.85em;">
+                —
+                <!-- <span class="text-muted d-block" style="font-size:0.85em;">
                   {{ nocType === 'Ready' || nocType === 'Completed' ? 'Ready' : 'Off-Plan' }}
-                </span>
+                </span> -->
               </td>
               <td>{{ formatAed(nocFixedAmount) }}</td>
               <td>—</td>
@@ -138,6 +139,7 @@
           </tbody>
         </table>
       </div>
+      <p>Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
   </div>
 </template>
@@ -296,7 +298,8 @@ const nocRequirementMet = computed(() => {
 });
 
 const breakdownRows = computed(() => {
-  const rows = [];
+  const paidRows = [];
+  const notPaidRows = [];
   let cumulative = 0;
   const sorted = rawBreakdown.value
     .slice()
@@ -309,15 +312,21 @@ const breakdownRows = computed(() => {
     let status = 'Upcoming';
     if (paid) status = 'Paid';
     else if (nocPercentage.value > 0 && cumulative <= nocRequiredAed.value + 0.01) status = 'Due on transfer';
-    rows.push({
+
+    const row = {
       id: entry?.id != null ? `inst-${entry.id}` : `inst-${idx}`,
       type: 'Installment',
       percentage: originalPrice.value > 0 ? ((amount / originalPrice.value) * 100).toFixed(2) : '',
       amount,
-      date: entry?.date || '',
+      date: paid ? '' : (entry?.date || ''), // only show date if NOT paid
       status,
-    });
+    };
+
+    if (paid) paidRows.push(row);
+    else notPaidRows.push(row);
   });
+
+  const rows = [...paidRows];
 
   if (rawBreakdown.value.length > 0 || originalPrice.value > 0 || sellingPrice.value > 0) {
     rows.push({
@@ -330,14 +339,17 @@ const breakdownRows = computed(() => {
     });
   }
 
+  rows.push(...notPaidRows);
+
   if (Math.abs(handoverAmountAed.value) > 0.01) {
+    const handoverPaid = isDatePaid(props.listing?.handover_date);
     rows.push({
       id: 'handover-row',
       type: `Handover (${handoverPercent.value.toFixed(0)}%)`,
       percentage: handoverPercent.value.toFixed(2),
       amount: handoverAmountAed.value,
-      date: props.listing?.handover_date || '',
-      status: isDatePaid(props.listing?.handover_date) ? 'Paid' : 'Upcoming',
+      date: handoverPaid ? '' : (props.listing?.handover_date || ''),
+      status: handoverPaid ? 'Paid' : 'Upcoming',
     });
   }
 
@@ -390,7 +402,7 @@ const expenseRows = computed(() =>
     const vat = expenseLineVat(line);
     const detail =
       calcType === 'percentage'
-        ? `${line?.value}% of ${baseLabels[line?.base] || 'OP'}`
+        ? `${line?.value}%  || 'OP'}`
         : formatAed(line?.value);
     return {
       id: line?.id != null ? `exp-${line.id}` : `exp-${idx}`,

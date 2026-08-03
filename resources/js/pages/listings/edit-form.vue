@@ -687,9 +687,9 @@
                             class="form-check-input m-0 flex-shrink-0"
                             :title="'Apply 5% VAT on ' + formatAed(assignmentExpenseLineAmount(line))"
                              disabled
-                            :checked="line.label === 'Agency Fee'"
+                            :checked="line.label === 'Agency Fees'"
                           />
-                          <span>{{ line.label === 'Agency Fee' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
+                          <span>{{ line.label === 'Agency Fees' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
                         </label>
                       </td>
                       <td class="text-end text-nowrap fw-semibold">{{ formatAed(assignmentExpenseLineTotal(line)) }}</td>

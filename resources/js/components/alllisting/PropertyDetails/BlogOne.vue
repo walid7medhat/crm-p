@@ -5602,15 +5602,15 @@ const createSlide1 = (currentUser) => {
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
     <div style="position:absolute !important; bottom:16% !important; left:10mm !important; width:42% !important; background:#fff !important; border-radius:5mm !important; padding:7mm 9mm 7mm 9mm !important; box-sizing:border-box !important;">
-      <p style="font-size:16px; line-height: 25px; font-weight:normal; background:#733E87; display:inline-block; padding:0px 20px 10px 20px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0px 0 18px 0; position:absolute !important; top:-10px !important;  font-family: 'Montserrat', sans-serif; ">For ${listingStatus}</p>
+      <p style="font-size:16px; line-height: 25px; font-weight:normal; background:#01062D; display:inline-block; padding:0px 20px 10px 20px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0px 0 18px 0; position:absolute !important; top:-10px !important;  font-family: 'Montserrat', sans-serif; ">For ${listingStatus}</p>
       <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:bold; margin:0 0 12px 0; line-height:1.1; text-transform:uppercase;font-family: 'Montserrat', sans-serif;">${projectTitle}</h1>
-      <p  style="font-size:20px; color:#733E87; font-weight:600; margin:0 0 18px 0;font-family: 'Montserrat', sans-serif;">${bedroomsText} ${propertyTypeName}</p>
+      <p  style="font-size:20px; color:#01062D; font-weight:600; margin:0 0 18px 0;font-family: 'Montserrat', sans-serif;">${bedroomsText} ${propertyTypeName}</p>
       <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;">
        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; margin-top:2px !important;" fill="#733E87"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
         <span  style="font-size: 14px; color: #818181;font-family: 'Montserrat', sans-serif;" >${location}</span>
       </p>
       <div style="border-top:0.3mm solid #ddd !important; margin-bottom:5mm !important; margin-top:15mm !important;"></div>
-      <h2 style="font-size:7mm !important; color:#733E87 !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">AED ${price}</h2>
+      <h2 style="font-size:7mm !important; color:#01062D !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">AED ${price}</h2>
     </div>
     ${createFooter()}
   </div>
@@ -5631,8 +5631,8 @@ const createSlide2 = () => {
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
         ${features.map((feature) => `
-          <span style="color:#fff !important; font-size:2.9mm !important; font-weight:700 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important; text-transform:uppercase !important;">${feature}</span>
-        `).join('')}
+            <span style="color:rgba(255,255,255,0.85) !important; font-size:2.9mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important;">${feature}</span>
+          `).join('')}
       </div>
     </div>
   ` : '';
@@ -5707,7 +5707,7 @@ const createSlide3 = () => {
           imageUrl
             ? `<img src="${imageUrl}" 
                   style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; margin-top:0.5mm !important;" />`
-            : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#733E87"
+            : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D"
                   style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>`
@@ -6027,27 +6027,39 @@ const createPaymentDetailsSlide = () => {
   }[densityTier];
 
   const thCell = `padding:${d.padHead};text-align:center;vertical-align:middle;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important`;
   const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
   let cumulative = 0;
-  const installmentRows = sorted.map((entry) => {
+  const installmentRowsPaidArr = [];
+  const installmentRowsNotPaidArr = [];
+
+  sorted.forEach((entry) => {
     const amount = installmentAmount(entry);
     cumulative += amount;
+    const paid = isPaid(entry?.date);
     let status = 'Upcoming';
-    if (isPaid(entry?.date)) status = 'Paid';
+    if (paid) status = 'Paid';
     else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
-    return `
+    const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
+
+    const rowHtml = `
       <tr>
         <td style="${tdCell}">Installment</td>
         <td style="${tdCell}">${pct}%</td>
         <td style="${tdCell}">${fmtAed(amount)}</td>
-        <td style="${tdCell}">${fmtDate(entry?.date)}</td>
-        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(status)}">${status}</span></td>
+        <td style="${tdCell}">${dateCell}</td>
+        <td style="${tdCell}"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(status)}">${status}</span></td>
       </tr>`;
-  }).join('');
+
+    if (paid) installmentRowsPaidArr.push(rowHtml);
+    else installmentRowsNotPaidArr.push(rowHtml);
+  });
+
+  const installmentRowsPaid = installmentRowsPaidArr.join('');
+  const installmentRowsNotPaid = installmentRowsNotPaidArr.join('');
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumRow = hasPremiumRow
@@ -6122,7 +6134,7 @@ const createPaymentDetailsSlide = () => {
   // ✅ إضافة باقي التكاليف
   expenses.forEach((l) => {
     const amt = expLineAmount(l);
-    const isAgencyFee = l?.label === 'Agency Fee';
+    const isAgencyFee = l?.label === 'Agency Fees';
     const vat = (isAgencyFee && l?.vatEnabled) ? amt * 0.05 : 0;
     const total = amt + vat;
     expSubtotal += amt;
@@ -6130,7 +6142,7 @@ const createPaymentDetailsSlide = () => {
     expGrand += total;
     const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
     const detail = calc === 'percentage'
-      ? `${toNum(l?.value)}% of ${baseLabels[l?.base] || 'OP'}`
+      ? `${toNum(l?.value)}%  || 'OP'}`
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
@@ -6188,8 +6200,9 @@ const createPaymentDetailsSlide = () => {
             </tr>
           </thead>
           <tbody>
-            ${installmentRows}
+             ${installmentRowsPaid}
             ${premiumRow}
+            ${installmentRowsNotPaid}
             ${handoverRow}
             <tr style="background:#f1f5f9;">
               <td style="${tdCell}font-weight:700;" colspan="2">Total</td>
@@ -6239,13 +6252,13 @@ const createPaymentDetailsSlide = () => {
         <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:${d.accentMb};"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
         <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:${d.cardPad};">
           <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
           <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
         </div>
         <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price (OP)</div>
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price </div>
           <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(originalPrice)}</div>
         </div>
            ${planLabel ? `
@@ -6261,6 +6274,7 @@ const createPaymentDetailsSlide = () => {
     ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
+      <p>Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
     ${createFooter()}
   </div>

@@ -15,9 +15,9 @@
               <div>
                 <div id="pd-modal-title" class="pd-modal-title">Payment details
 
-                  <span class="badge" :class="nocType === 'Ready' || nocType === 'Completed' ? 'bg-success' : 'bg-warning'">
+                  <!-- <span class="badge" :class="nocType === 'Ready' || nocType === 'Completed' ? 'bg-success' : 'bg-warning'">
                   {{ nocType }}
-                </span>
+                </span> -->
                 </div>
                 <div class="pd-title-accent" aria-hidden="true" />
               </div>
@@ -33,15 +33,15 @@
                 <div class="pd-card-value">{{ formatAed(sellingPrice) }}</div>
               </div>
               <div class="pd-card pd-card--muted">
-                <div class="pd-card-label">Original price (OP)</div>
+                <div class="pd-card-label">Original price </div>
                 <div class="pd-card-value pd-card-value--dark">{{ formatAed(originalPrice) }}</div>
               </div>
               <div class="pd-card pd-card--muted" v-if="paymentPlanLabel">
-                <div class="pd-card-label">Payment plan (%)</div>
+                <div class="pd-card-label">Payment plan </div>
                 <div class="pd-card-value pd-card-value--dark">{{ paymentPlanLabel || '—' }}</div>
               </div>
               <div class="pd-card pd-card--muted">
-                <div class="pd-card-label">Premium (selling − OP)</div>
+                <div class="pd-card-label">Premium </div>
                 <div class="pd-card-value pd-card-value--dark">{{ formatAed(premiumAmount) }}</div>
               </div>
             </div>
@@ -126,10 +126,10 @@
                   <tr v-if="nocFixedAmount > 0 ">
                     <td>NOC Fees</td>
                     <td class="text-muted">
-                   
-                      <span class="text-muted d-block" style="font-size:0.85em;">
+                        —
+                      <!-- <span class="text-muted d-block" style="font-size:0.85em;">
                         {{ nocType === 'Ready' || nocType === 'Completed'? 'Ready' : 'Off-Plan' }}
-                      </span>
+                      </span> -->
                     </td>
                     <td>{{ formatAed(nocFixedAmount) }}</td>
                     <td>—</td>
@@ -283,12 +283,12 @@ const formatExpenseDetail = (row) => {
   if (calcType === 'percentage') {
     const baseShort = row?.baseLabel
       ? String(row.baseLabel)
-          .replace('Original Price (OP)', 'OP')
-          .replace('Sale Price (SP)', 'SP')
-          .replace('Premium (SP − OP)', 'premium')
+          .replace('Original Price ', 'OP')
+          .replace('Sale Price ', 'SP')
+          .replace('Premium ', 'premium')
       : baseLabels[row?.base] || '';
     const pct = row?.valueDisplay ?? `${Number(row?.value || 0)}%`;
-    return baseShort && baseShort !== '—' ? `${pct} of ${baseShort}` : pct;
+    return baseShort && baseShort !== '—' ? `${pct}` : pct;
   }
   return row?.valueDisplay ?? formatAed(Number(row?.value ?? row?.amount ?? 0));
 };
