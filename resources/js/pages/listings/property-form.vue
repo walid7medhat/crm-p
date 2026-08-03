@@ -684,9 +684,9 @@
                           class="form-check-input m-0 flex-shrink-0"
                           :title="'Apply 5% VAT on ' + formatAed(assignmentExpenseLineAmount(line))"
                           disabled
-                          :checked="line.label == 'Agency Fee'"
+                          :checked="line.label == 'Agency Fee' || line.label == 'Agency Fees'"
                         />
-                          <span>{{ line.label === 'Agency Fee' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
+                          <span>{{ line.label === 'Agency Fee' || line.label === 'Agency Fees' ? formatAed(assignmentExpenseLineVat(line)) : 'inc vat' }}</span>
                       </label>
                     </td>
                     <td class="text-end text-nowrap fw-semibold">{{ formatAed(assignmentExpenseLineTotal(line)) }}</td>
@@ -2199,10 +2199,10 @@ const addDefaultDealCosts = () => {
   console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
   
   const existingAgency = assignmentExpenseLines.value.find(
-    line => line.label === 'Agency Fees' && line.isDefault
+    line => (line.label === 'Agency Fees' || line.label === 'Agency Fee') && line.isDefault
   );
    const existingTransfer = assignmentExpenseLines.value.find(
-    line => line.label === 'Transfer Fees' && line.isDefault
+    line => (line.label === 'Transfer Fees' || line.label === 'Transfer Fee') && line.isDefault
   );
   
   if (!existingAgency) {

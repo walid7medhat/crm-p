@@ -6185,7 +6185,7 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 
-  const installmentTable = (installmentRows || premiumRow || handoverRow) && hasInstallments ? `
+  const installmentTable = (installmentRowsPaid || installmentRowsNotPaid  || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
       <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
       <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm #ffffff;width:100%;box-sizing:border-box;">
@@ -6274,7 +6274,7 @@ const createPaymentDetailsSlide = () => {
     ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
-      <p>Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+      <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};border-left:1.5mm solid #0ea5e9;display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
     ${createFooter()}
   </div>

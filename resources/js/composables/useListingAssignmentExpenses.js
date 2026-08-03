@@ -207,7 +207,7 @@ const assignmentExpenseLineAmount = (line) => {
     
     // ✅ 1. Agency Fee
     const existingAgency = assignmentExpenseLines.value.find(
-      line => line.label === 'Agency Fees' && line.isDefault
+      line => (line.label === 'Agency Fees' || line.label === 'Agency Fee') && line.isDefault
     );
     
     if (!existingAgency) {
@@ -230,7 +230,7 @@ const assignmentExpenseLineAmount = (line) => {
     
     // ✅ 2. Transfer Fee
     const existingTransfer = assignmentExpenseLines.value.find(
-      line => line.label === 'Transfer Fees' && line.isDefault
+      line => (line.label === 'Transfer Fees' || line.label === 'Transfer Fee' ) && line.isDefault
     );
     
     if (!existingTransfer) {
@@ -324,7 +324,7 @@ const assignmentExpenseLineAmount = (line) => {
     
     if (arr.length > 0) {
       arr.forEach((line, i) => {
-        const isDefault = line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees' || line.label === 'Agency Fees' || line.label === 'Transfer Fees';
+        const isDefault = line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees' || line.label === 'Agency Fees' || line.label === 'Transfer Fees'  || line.label === 'Agency Fee' || line.label === 'Transfer Fee';
         if (!isDefault) {
           assignmentExpenseLines.value.push({
             id: line.id != null ? Number(line.id) : Date.now() + i,

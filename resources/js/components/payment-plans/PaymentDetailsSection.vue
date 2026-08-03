@@ -4,9 +4,9 @@
       <div class="pd-card-head">
         <div>
           <div class="pd-card-title">Payment details
-            <span class="badge" :class="nocType === 'Ready' || nocType === 'Completed' ? 'bg-success' : 'bg-warning text-dark'">
+            <!-- <span class="badge" :class="nocType === 'Ready' || nocType === 'Completed' ? 'bg-success' : 'bg-warning text-dark'">
             {{ nocType }}
-          </span>
+          </span> -->
           </div>
           <div class="pd-title-accent" aria-hidden="true" />
         </div>
@@ -139,7 +139,7 @@
           </tbody>
         </table>
       </div>
-      <p>Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+      <p class="pd-noc-strip">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
   </div>
 </template>
