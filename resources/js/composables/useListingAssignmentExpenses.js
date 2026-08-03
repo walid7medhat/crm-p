@@ -324,7 +324,7 @@ const assignmentExpenseLineAmount = (line) => {
     
     if (arr.length > 0) {
       arr.forEach((line, i) => {
-        const isDefault = line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees' || line.label === 'Agency Fees' || line.label === 'Transfer Fees'  || line.label === 'Agency Fee' || line.label === 'Transfer Fee' || line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' ||;
+        const isDefault = line.label === 'Dari Admin Fees' || line.label === 'ADGM Admin Fees' || line.label === 'Agency Fees' || line.label === 'Transfer Fees'  || line.label === 'Agency Fee' || line.label === 'Transfer Fee' || line.label === 'Dari Admin Fee' || line.label === 'ADGM Admin Fee' ;
         if (!isDefault) {
           assignmentExpenseLines.value.push({
             id: line.id != null ? Number(line.id) : Date.now() + i,
