@@ -5630,9 +5630,9 @@ const createSlide2 = () => {
     <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
-        ${features.map((feature) => `
-            <span style="color:rgba(255,255,255,0.85) !important; font-size:2.9mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important;">${feature}</span>
-          `).join('')}
+       ${features.map((feature) => `
+                <span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.6mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
+              `).join('')}
       </div>
     </div>
   ` : '';
