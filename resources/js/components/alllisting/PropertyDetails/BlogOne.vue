@@ -6122,7 +6122,6 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}background:#ffffff !important;">—</td>
         <td style="${tdCell}font-weight:600;background:#ffffff !important;">
           <span style="color:${statusColor};">${fmtAed(nocAmount)}</span>
-          <span style="font-size:${d.fsXs};color:${statusColor};">${statusText}</span>
         </td>
       </tr>
     `);
@@ -6142,7 +6141,7 @@ const createPaymentDetailsSlide = () => {
     expGrand += total;
     const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
     const detail = calc === 'percentage'
-      ? `${toNum(l?.value)}%  || 'OP'}`
+      ? `${toNum(l?.value)}% `
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
