@@ -8,9 +8,9 @@ export const assignmentExpenseTypeOptions = [
 ];
 
 export const assignmentExpenseBaseOptions = [
-  { label: 'Original Price (OP)', value: 'op' },
-  { label: 'Sale Price (SP)', value: 'sp' },
-  { label: 'Premium (SP − OP)', value: 'premium' },
+  { label: 'Original Price ', value: 'op' },
+  { label: 'Sale Price', value: 'sp' },
+  { label: 'Premium ', value: 'premium' },
 ];
 
 export function parseAssignmentExpenseLines(raw) {

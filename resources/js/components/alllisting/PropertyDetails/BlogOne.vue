@@ -6027,7 +6027,7 @@ const createPaymentDetailsSlide = () => {
   }[densityTier];
 
   const thCell = `padding:${d.padHead};text-align:center;vertical-align:middle;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important;`;
   const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
@@ -6217,7 +6217,7 @@ const createPaymentDetailsSlide = () => {
   
   // ✅ NOC Percentage Strip - يستخدم paidAed (المدفوع فقط)
   const nocPercentageStrip = (hasNocPercentage) ? `
-    <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};border-left:1.5mm solid #0ea5e9;display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
+    <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
       <span style="display:inline-flex;align-items:center;gap:0.8mm;">
         <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0.3mm 2mm;font-weight:700;font-size:${d.fsSm};display:inline-flex;align-items:center;gap:0.5mm;">
           <span style="font-size:${d.fsXs};">%</span> NOC
@@ -6249,11 +6249,11 @@ const createPaymentDetailsSlide = () => {
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin-bottom:${d.headerMb};">
         <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:1mm;background:#e85d1c;border-radius:1mm;margin-top:${d.accentMb};"></div>
+        <div style="width:14mm;height:1mm;background:#FAA300;border-radius:1mm;margin-top:${d.accentMb};"></div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
-        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #e85d1c;border-radius:3mm;padding:${d.cardPad};">
+        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #FAA300;border-radius:3mm;padding:${d.cardPad};">
           <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
           <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
         </div>
@@ -6274,7 +6274,7 @@ const createPaymentDetailsSlide = () => {
     ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
-      <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};border-left:1.5mm solid #0ea5e9;display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+      <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
     ${createFooter()}
   </div>
