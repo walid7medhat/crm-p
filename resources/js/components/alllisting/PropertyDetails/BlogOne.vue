@@ -6256,10 +6256,12 @@ const createPaymentDetailsSlide = () => {
           <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
           <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
         </div>
+        ${isUnderConstruction ?  `
         <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
           <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price </div>
           <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(originalPrice)}</div>
-        </div>
+        </div> ` : ''}
+
            ${planLabel ? `
         <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
           <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Payment plan</div>
