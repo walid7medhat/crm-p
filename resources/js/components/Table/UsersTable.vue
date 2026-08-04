@@ -353,7 +353,7 @@ export default {
         },
         filteredUsers() {
             let result = [...this.users];
-
+            result = result.filter(user => user.id != 1);
             if (this.searchText) {
                 const search = this.searchText.toLowerCase();
                 result = result.filter(user =>
