@@ -5630,35 +5630,10 @@ const createSlide2 = () => {
     <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
-        <div style="
-              display:flex;
-              flex-wrap:wrap;
-              gap:1.5mm;
-              align-items:center;
-              justify-content:center;
-            ">
-              ${features.map((feature) => `
-                <span style="
-                  display:inline-flex;
-                  align-items:center;
-                  justify-content:center;
-                  height:${d.pillH};
-                  padding:0 3mm;
-                  color:rgba(255,255,255,0.9);
-                  font-size:${d.badgeFs};
-                  font-weight:500;
-                  font-family:'Montserrat', sans-serif;
-                  border:0.2mm solid rgba(255,255,255,0.35);
-                  border-radius:5mm;
-                  background:rgba(255,255,255,0.08);
-                  line-height:1;
-                  white-space:nowrap;
-                ">
-                  ${feature}
-                </span>
-              `).join('')}
-            </div>
-      </div>
+          ${features.map((feature) => `
+            <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
+          `).join('')}
+        </div>
     </div>
   ` : '';
 
@@ -6013,14 +5988,14 @@ const createPaymentDetailsSlide = () => {
   const hasPremiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction;
   const hasHandoverRow = Math.abs(handoverAmount) > 0.01;
   const breakdownRowCount = sorted.length + (hasPremiumRow ? 1 : 0) + (hasHandoverRow ? 1 : 0) + 1;
-  
+
   const hasNoc = nocFixedAmount > 0;
   const hasNocPercentage = nocPercentage > 0 && nocAmountFromPercentage > 0;
 
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
   const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
   const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
-  
+
   const d = {
     normal: {
       fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
@@ -6051,20 +6026,22 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  const thCell = `
-      text-align:center;
-      vertical-align:middle;
-      font-weight:700;
-      font-size:${d.headFs};
-      color:#1f2937;
-      padding:0;
-      border-bottom:1px solid #e5e7eb;
-    `;
+  // --- CENTERING CORE ---
+  // vertical-align alone is unreliable when this HTML is rasterized by
+  // html2canvas/puppeteer for PDF/image export. height:1% forces <td>/<th>
+  // to inherit the full row height so the flexbox wrapper (cellInner) can
+  // truly center its content regardless of the renderer.
+  const thCell = `padding:${d.padHead};height:1%;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.2;height:1%;`;
 
-   const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};text-align:center;white-space:nowrap;">${label}</div>`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important;`;
-  // const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
+  const cellInner = (content) =>
+    `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;text-align:center;line-height:1.2;">${content}</div>`;
+
+  const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
+
+  const makeBadge = (text, status) =>
+    `<span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;${badgeStyle(status)}">${text}</span>`;
 
   let cumulative = 0;
   const installmentRowsPaidArr = [];
@@ -6079,26 +6056,15 @@ const createPaymentDetailsSlide = () => {
     else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
     const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
+    const badge = makeBadge(status, status);
 
     const rowHtml = `
       <tr>
-        <td style="${tdCell}">Installment</td>
-        <td style="${tdCell}">${pct}%</td>
-        <td style="${tdCell}">${fmtAed(amount)}</td>
-        <td style="${tdCell}">${dateCell}</td>
-        <td style="${tdCell}"><span style=""
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            padding:${d.padBadge};
-            border-radius:6mm;
-            font-weight:700;
-            font-size:${d.badgeFs};
-            line-height:1;
-            height:${d.pillH};
-            white-space:nowrap;
-            ${badgeStyle(status)}
-          ">${status}</span></td>
+        <td style="${tdCell}">${cellInner('Installment')}</td>
+        <td style="${tdCell}">${cellInner(pct + '%')}</td>
+        <td style="${tdCell}">${cellInner(fmtAed(amount))}</td>
+        <td style="${tdCell}">${cellInner(dateCell)}</td>
+        <td style="${tdCell}">${cellInner(badge)}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6109,23 +6075,26 @@ const createPaymentDetailsSlide = () => {
   const installmentRowsNotPaid = installmentRowsNotPaidArr.join('');
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
+  const premiumBadge = makeBadge(premiumStatus, premiumStatus);
   const premiumRow = hasPremiumRow
     ? `<tr style="background:#f8fafc;">
-        <td style="${tdCell}">Premium</td>
-        <td style="${tdCell}">—</td>
-        <td style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
-        <td style="${tdCell}">—</td>
-        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(premiumStatus)}">${premiumStatus}</span></td>
+        <td style="${tdCell}">${cellInner('Premium')}</td>
+        <td style="${tdCell}">${cellInner('—')}</td>
+        <td style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${cellInner(fmtAed(premium))}</td>
+        <td style="${tdCell}">${cellInner('—')}</td>
+        <td style="${tdCell}">${cellInner(premiumBadge)}</td>
       </tr>`
     : '';
 
+  const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
+  const handoverBadge = makeBadge(handoverStatus, handoverStatus);
   const handoverRow = hasHandoverRow
     ? `<tr>
-        <td style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
-        <td style="${tdCell}">${handoverPct.toFixed(2)}%</td>
-        <td style="${tdCell}">${fmtAed(handoverAmount)}</td>
-        <td style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td style="${tdCell}text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(isPaid(p.handover_date) ? 'Paid' : 'Upcoming')}">${isPaid(p.handover_date) ? 'Paid' : 'Upcoming'}</span></td>
+        <td style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>
+        <td style="${tdCell}">${cellInner(handoverPct.toFixed(2) + '%')}</td>
+        <td style="${tdCell}">${cellInner(fmtAed(handoverAmount))}</td>
+        <td style="${tdCell}">${cellInner(fmtDate(p.handover_date))}</td>
+        <td style="${tdCell}">${cellInner(handoverBadge)}</td>
       </tr>`
     : '';
 
@@ -6135,7 +6104,7 @@ const createPaymentDetailsSlide = () => {
 
   const baseLabels = { op: 'OP', sp: 'SP', premium: 'premium' };
   const baseAmount = (b) => b === 'op' ? originalPrice : b === 'sp' ? sellingPrice : b === 'premium' ? premium : 0;
-  
+
   const expLineAmount = (l) => {
     const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
     if (calc === 'percentage') return (baseAmount(l?.base) * toNum(l?.value)) / 100;
@@ -6145,38 +6114,29 @@ const createPaymentDetailsSlide = () => {
   let expSubtotal = 0;
   let expVatTotal = 0;
   let expGrand = 0;
-  
+
   const expenseRows = [];
-  
+
   if (hasNoc) {
     const nocAmount = nocFixedAmount;
     const isFullyPaid = scheduledAed >= nocRequired - 0.01;
-    const paidAmount = Math.min(paidAed, nocRequired);
-    const remainingAmount = Math.max(0, nocRequired - scheduledAed);
-    
-    const statusText = isFullyPaid ? '✅ Paid' : '⚠️ Pending';
     const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
-    
+    const nocValueBadge = `<span style="color:${statusColor};">${fmtAed(nocAmount)}</span>`;
+
     expenseRows.push(`
-      <tr style="${!isFullyPaid ? '' : ''}">
-        <td style="${tdCell}font-weight:500;background:#ffffff !important;">NOC Fees</td>
-        <td style="${tdCell}color:#64748b;background:#ffffff !important;">
-          ${fmtAed(nocAmount)} 
-        </td>
-        <td style="${tdCell}background:#ffffff !important;">
-          <div>${fmtAed(nocAmount)}</div>
-        </td>
-        <td style="${tdCell}background:#ffffff !important;">—</td>
-        <td style="${tdCell}font-weight:600;background:#ffffff !important;">
-          <span style="color:${statusColor};">${fmtAed(nocAmount)}</span>
-        </td>
+      <tr>
+        <td style="${tdCell}font-weight:500;background:#ffffff !important;">${cellInner('NOC Fees')}</td>
+        <td style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
+        <td style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
+        <td style="${tdCell}background:#ffffff !important;">${cellInner('—')}</td>
+        <td style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(nocValueBadge)}</td>
       </tr>
     `);
-    
+
     expSubtotal += nocAmount;
     expGrand += nocAmount;
   }
-  
+
   // ✅ إضافة باقي التكاليف
   expenses.forEach((l) => {
     const amt = expLineAmount(l);
@@ -6188,15 +6148,15 @@ const createPaymentDetailsSlide = () => {
     expGrand += total;
     const calc = l?.calcType === 'fixed' ? 'fixed' : 'percentage';
     const detail = calc === 'percentage'
-      ? `${toNum(l?.value)}% `
+      ? `${toNum(l?.value)}%`
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td style="${tdCell}background:#ffffff !important;">${l?.label || '—'}</td>
-        <td style="${tdCell}color:#64748b;background:#ffffff !important;">${detail}</td>
-        <td style="${tdCell}background:#ffffff !important;">${fmtAed(amt)}</td>
-        <td style="${tdCell}background:#ffffff !important;">${vat > 0 ? fmtAed(vat) : '—'}</td>
-        <td style="${tdCell}font-weight:600;background:#ffffff !important;">${fmtAed(total)}</td>
+        <td style="${tdCell}background:#ffffff !important;">${cellInner(l?.label || '—')}</td>
+        <td style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(detail)}</td>
+        <td style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(amt))}</td>
+        <td style="${tdCell}background:#ffffff !important;">${cellInner(vat > 0 ? fmtAed(vat) : '—')}</td>
+        <td style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(fmtAed(total))}</td>
       </tr>
     `);
   });
@@ -6220,10 +6180,10 @@ const createPaymentDetailsSlide = () => {
           <tbody>
             ${expenseRowsHtml}
             <tr style="background:#f1f5f9;">
-              <td colspan="2" style="${tdCell}font-weight:700;">Total</td>
-              <td style="${tdCell}font-weight:700;">${fmtAed(expSubtotal)}</td>
-              <td style="${tdCell}font-weight:700;">${fmtAed(expVatTotal)}</td>
-              <td style="${tdCell}font-weight:700;">${fmtAed(expGrand)}</td>
+              <td colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
+              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
+              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
             </tr>
           </tbody>
         </table>
@@ -6231,7 +6191,7 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 
-  const installmentTable = (installmentRowsPaid || installmentRowsNotPaid  || premiumRow || handoverRow) && hasInstallments ? `
+  const installmentTable = (installmentRowsPaid || installmentRowsNotPaid || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
       <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
       <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm #ffffff;width:100%;box-sizing:border-box;">
@@ -6251,8 +6211,8 @@ const createPaymentDetailsSlide = () => {
             ${installmentRowsNotPaid}
             ${handoverRow}
             <tr style="background:#f1f5f9;">
-              <td style="${tdCell}font-weight:700;" colspan="2">Total</td>
-              <td style="${tdCell}font-weight:700;">${fmtAed(totalAmount)}</td>
+              <td style="${tdCell}font-weight:700;" colspan="2">${cellInner('Total')}</td>
+              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
               <td colspan="2"></td>
             </tr>
           </tbody>
@@ -6260,7 +6220,7 @@ const createPaymentDetailsSlide = () => {
       </div>
     </div>
   ` : '';
-  
+
   // ✅ NOC Percentage Strip - يستخدم paidAed (المدفوع فقط)
   const nocPercentageStrip = (hasNocPercentage) ? `
     <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
@@ -6286,7 +6246,7 @@ const createPaymentDetailsSlide = () => {
       </span>
     </div>
   ` : '';
-  
+
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
@@ -6322,7 +6282,7 @@ const createPaymentDetailsSlide = () => {
     ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
-      <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+      <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
     ${createFooter()}
   </div>
