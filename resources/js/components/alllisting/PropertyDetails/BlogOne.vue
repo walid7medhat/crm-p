@@ -5631,7 +5631,7 @@ const createSlide2 = () => {
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
          ${features.map((feature) => `
-          <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.6mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
+          <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important;  padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
         `).join('')}
       </div>
     </div>
@@ -5998,7 +5998,7 @@ const createPaymentDetailsSlide = () => {
   
   const d = {
     normal: {
-      fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2.2mm',
+      fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
       pad: '1.05mm 0.8mm', padHead: '0.25mm', padBadge: '0.45mm 1.6mm',
       sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
       titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
@@ -6007,7 +6007,7 @@ const createPaymentDetailsSlide = () => {
       pillH: '4.6mm', rowGap: '0.2mm',
     },
     compact: {
-      fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '2mm',
+      fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '1.8mm',
       pad: '0.85mm 0.7mm', padHead: '0.2mm', padBadge: '0.35mm 1.4mm',
       sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
       titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
@@ -6016,7 +6016,7 @@ const createPaymentDetailsSlide = () => {
       pillH: '4.2mm', rowGap: '0.15mm',
     },
     tight: {
-      fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.85mm',
+      fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.6mm',
       pad: '0.7mm 0.6mm', padHead: '0.15mm', padBadge: '0.3mm 1.2mm',
       sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
       titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
@@ -6028,7 +6028,7 @@ const createPaymentDetailsSlide = () => {
 
   const thCell = `padding:${d.padHead};height:1%;`;
 
-   const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
+   const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};text-align:center;white-space:nowrap;">${label}</div>`;
   const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important;`;
   // const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
