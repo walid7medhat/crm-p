@@ -5630,9 +5630,9 @@ const createSlide2 = () => {
     <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
-       ${features.map((feature) => `
-                <span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.6mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
-              `).join('')}
+         ${features.map((feature) => `
+          <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.6mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
+        `).join('')}
       </div>
     </div>
   ` : '';
@@ -6026,9 +6026,11 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  const thCell = `padding:${d.padHead};text-align:center;vertical-align:middle;`;
+  const thCell = `padding:${d.padHead};height:1%;`;
+
+   const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
   const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important;`;
-  const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
+  // const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
   let cumulative = 0;
@@ -6051,7 +6053,7 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}">${pct}%</td>
         <td style="${tdCell}">${fmtAed(amount)}</td>
         <td style="${tdCell}">${dateCell}</td>
-        <td style="${tdCell}"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;${badgeStyle(status)}">${status}</span></td>
+        <td style="${tdCell}"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};${badgeStyle(status)}">${status}</span></td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);

@@ -139,7 +139,7 @@
           </tbody>
         </table>
       </div>
-      <p class="pd-noc-strip">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+      <p class="pd-noc-strip mt-3">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
     </div>
   </div>
 </template>
@@ -483,7 +483,7 @@ const badgeClass = (status) => {
   overflow: hidden;
 }
 
-.pd-card::before {
+/* .pd-card::before {
   content: '';
   position: absolute;
   inset: -8%;
@@ -494,7 +494,7 @@ const badgeClass = (status) => {
   background-position: center 45%;
   background-size: min(92%, 720px) auto;
   opacity: 0.045;
-}
+} */
 
 .pd-card > * { position: relative; z-index: 1; }
 
