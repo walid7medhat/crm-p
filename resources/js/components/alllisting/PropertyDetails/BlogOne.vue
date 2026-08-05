@@ -5630,9 +5630,34 @@ const createSlide2 = () => {
     <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
-         ${features.map((feature) => `
-          <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important;  padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
-        `).join('')}
+        <div style="
+              display:flex;
+              flex-wrap:wrap;
+              gap:1.5mm;
+              align-items:center;
+              justify-content:center;
+            ">
+              ${features.map((feature) => `
+                <span style="
+                  display:inline-flex;
+                  align-items:center;
+                  justify-content:center;
+                  height:${d.pillH};
+                  padding:0 3mm;
+                  color:rgba(255,255,255,0.9);
+                  font-size:${d.badgeFs};
+                  font-weight:500;
+                  font-family:'Montserrat', sans-serif;
+                  border:0.2mm solid rgba(255,255,255,0.35);
+                  border-radius:5mm;
+                  background:rgba(255,255,255,0.08);
+                  line-height:1;
+                  white-space:nowrap;
+                ">
+                  ${feature}
+                </span>
+              `).join('')}
+            </div>
       </div>
     </div>
   ` : '';
@@ -6026,7 +6051,15 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  const thCell = `padding:${d.padHead};height:1%;`;
+  const thCell = `
+      text-align:center;
+      vertical-align:middle;
+      font-weight:700;
+      font-size:${d.headFs};
+      color:#1f2937;
+      padding:0;
+      border-bottom:1px solid #e5e7eb;
+    `;
 
    const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};text-align:center;white-space:nowrap;">${label}</div>`;
   const tdCell = `padding:${d.pad};font-size:${d.fs};vertical-align:middle;line-height:1.2;text-align:center!important;`;
@@ -6053,7 +6086,19 @@ const createPaymentDetailsSlide = () => {
         <td style="${tdCell}">${pct}%</td>
         <td style="${tdCell}">${fmtAed(amount)}</td>
         <td style="${tdCell}">${dateCell}</td>
-        <td style="${tdCell}"><span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};${badgeStyle(status)}">${status}</span></td>
+        <td style="${tdCell}"><span style=""
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            padding:${d.padBadge};
+            border-radius:6mm;
+            font-weight:700;
+            font-size:${d.badgeFs};
+            line-height:1;
+            height:${d.pillH};
+            white-space:nowrap;
+            ${badgeStyle(status)}
+          ">${status}</span></td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
