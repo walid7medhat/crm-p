@@ -94,6 +94,9 @@ body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
 
 .kanban-outer:not(.kanban-outer--mobile) .kanban-column .column-header {
   flex-shrink: 0 !important;
+  width: 100% !important;
+  clip-path: none !important;
+  border-radius: 10px 10px 0 0 !important;
 }
 
 .kanban-outer:not(.kanban-outer--mobile) .kanban-column .column-content-scrollable {

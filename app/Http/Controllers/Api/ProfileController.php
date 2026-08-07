@@ -19,14 +19,30 @@ class ProfileController extends Controller
     {
         try {
             $user = $request->user();
-            $user->load(['roles', 'permissions', 'parent', 'addedBy', 'children']);
-            
+            if (! $user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated',
+                ], 401);
+            }
+
+            $user->load([
+                'roles',
+                'permissions',
+                'parent.roles',
+                'addedBy',
+                'children',
+                'employeeProfile.department',
+                'employeeProfile.designation',
+                'employeeProfile.companyBranch',
+            ]);
+
             return response()->json([
                 'success' => true,
-                'data' => new UserResource($user),
-                'message' => 'Profile retrieved successfully'
+                'data' => (new UserResource($user))->resolve(),
+                'message' => 'Profile retrieved successfully',
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -65,11 +81,20 @@ class ProfileController extends Controller
                 'phone' => $request->phone,
             ]);
 
-            $user->load(['roles', 'permissions', 'parent', 'addedBy', 'children']);
+            $user->load([
+                'roles',
+                'permissions',
+                'parent.roles',
+                'addedBy',
+                'children',
+                'employeeProfile.department',
+                'employeeProfile.designation',
+                'employeeProfile.companyBranch',
+            ]);
 
             return response()->json([
                 'success' => true,
-                'data' => new UserResource($user),
+                'data' => (new UserResource($user))->resolve(),
                 'message' => 'Profile updated successfully'
             ]);
 
@@ -115,11 +140,20 @@ class ProfileController extends Controller
                 'avatar' => $avatarPath
             ]);
 
-            $user->load(['roles', 'permissions', 'parent', 'addedBy', 'children']);
+            $user->load([
+                'roles',
+                'permissions',
+                'parent.roles',
+                'addedBy',
+                'children',
+                'employeeProfile.department',
+                'employeeProfile.designation',
+                'employeeProfile.companyBranch',
+            ]);
 
             return response()->json([
                 'success' => true,
-                'data' => new UserResource($user),
+                'data' => (new UserResource($user))->resolve(),
                 'message' => 'Avatar updated successfully'
             ]);
 
@@ -171,11 +205,20 @@ class ProfileController extends Controller
 
             $user->update(['background_id' => $backgroundId]);
 
-            $user->load(['roles', 'permissions', 'parent', 'addedBy', 'children']);
+            $user->load([
+                'roles',
+                'permissions',
+                'parent.roles',
+                'addedBy',
+                'children',
+                'employeeProfile.department',
+                'employeeProfile.designation',
+                'employeeProfile.companyBranch',
+            ]);
 
             return response()->json([
                 'success' => true,
-                'data' => new UserResource($user),
+                'data' => (new UserResource($user))->resolve(),
                 'message' => 'Background updated successfully'
             ]);
 

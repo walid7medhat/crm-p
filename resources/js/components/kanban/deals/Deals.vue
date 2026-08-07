@@ -51,12 +51,9 @@
                     class="column-header d-flex align-items-center justify-content-between cursor-move flex-shrink-0" 
                     :style="{ background: column.headerBg }"
                   >
-                    <div class="d-flex align-items-center gap-2">
-                      <!-- <div class="stage-circle">
-                        <div class="stage-dot" :style="{ backgroundColor: column.dotColor }"></div>
-                      </div> -->
+                    <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
                       <div v-if="editingStageId !== column.stage_id" class="header-title-wrapper" @click="startEditingStage(column)">
-                        <p class="header-title">{{ column.title }} ({{ column.deals_count }})</p>
+                        <p class="header-title">{{ column.title }}</p>
                       </div>
                       <input 
                         v-else
@@ -69,23 +66,19 @@
                         type="text"
                       />
                     </div>
-                    <!-- <div class="dropdown">
-                      <button type="button" data-bs-toggle="dropdown" aria-expanded="false" class="bg-transparent border-0 p-0 d-flex align-items-center">
-                        <iconify-icon icon="entypo:dots-three-vertical" class="column-menu-icon"></iconify-icon>
-                      </button>
-                      <ul class="dropdown-menu p-12 border bg-base shadow">
-                        <li  @click="editStage(column)">
-                          <a href="#" class="dropdown-item px-10 py-1 text-secondary-light bg-hover-neutral-200 text-hover-neutral-900 d-flex align-items-center gap-2">
-                            <iconify-icon class="text-xs" icon="lucide:edit"></iconify-icon>
-                            Edit Stage
-                          </a>
-                        </li>
-                      </ul>
-                    </div> -->
+                    <div
+                      v-if="editingStageId !== column.stage_id"
+                      class="column-header__metrics"
+                      :title="`${column.deals_count || 0} deals · ${stageValueForColumn(column)}`"
+                    >
+                      <span class="column-metric column-metric--count">{{ column.deals_count || 0 }}</span>
+                      <span class="column-metric-sep" aria-hidden="true">·</span>
+                      <span class="column-metric column-metric--value">{{ stageValueForColumn(column) }}</span>
+                    </div>
                   </div>
 
                   <!-- Column Content: deal cards (empty columns stay minimal, like leads) -->
-                  <div class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column">
+                  <div class="column-content column-content-scrollable p-6 flex-grow-1 d-flex flex-column">
                     <draggable 
                       v-model="column.deals" 
                       :group="'deals-' + activeTypeTab" 
@@ -101,7 +94,7 @@
                     >
                       <template #item="{ element: deal }">
                         <div
-                          class="kanban-card kanban-card-figma bg-white radius-12 mb-10 cursor-pointer"
+                          class="kanban-card kanban-card-figma bg-white radius-12 cursor-pointer"
                           :class="{
                             'mobile-pressing': mobilePressState.dealId === deal.id && mobilePressState.isPressing,
                             'mobile-action-origin': mobileActionSheet.visible && mobileActionSheet.deal?.id === deal.id
@@ -117,23 +110,23 @@
                           </div>
 
                           <div class="task-info">
-                            <div class="info-item date-created-line mb-10">
-                              <span class="date-created-label">Created :</span>
-                              <span class="date-created-value">{{ formatDealCardCreated(deal.created_at) }}</span>
+                            <div class="info-item date-created-line">
+                              <span class="date-created-label info-label">Created :</span>
+                              <span class="date-created-value info-value">{{ formatDealCardCreated(deal.created_at) }}</span>
                             </div>
 
-                            <div class="info-item mb-10">
-                              <div class="info-label text-secondary-light text-xs">Buyer Name</div>
-                              <div class="info-value">{{ deal.buyer_name || '—' }}</div>
+                            <div class="info-item">
+                              <div class="info-label">Buyer Name</div>
+                              <div class="info-value info-value--primary">{{ deal.buyer_name || '—' }}</div>
                             </div>
 
-                            <div class="info-item mb-0">
-                              <div class="info-label text-secondary-light text-xs">Source</div>
+                            <div class="info-item">
+                              <div class="info-label">Source</div>
                               <div class="info-value">{{ deal.source || '—' }}</div>
                             </div>
 
                             <!-- Responsible Person -->
-                            <div v-if="hasResponsiblePerson(deal)" class="responsible-info d-flex align-items-center justify-content-between mb-12 mt-10">
+                            <div v-if="hasResponsiblePerson(deal)" class="responsible-info d-flex align-items-center justify-content-between">
                               <div class="d-flex align-items-center gap-2">
                                 <div
                                   class="person-hover-anchor"
@@ -188,10 +181,10 @@
 
                               <!-- Assigned By -->
                                           <div>
-                                              <hr class="mb-2 border-neutral-200">
-                                              <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
+                                              <hr class="kanban-card-divider">
+                                              <div class="d-flex align-items-center justify-content-between assignedBy">
                                                   <div class="info-item">
-                                                      <div class="info-label text-secondary-light text-xs mb-1">Assigned </div>
+                                                      <div class="info-label">Assigned </div>
                                                       <div class="info-value">{{ formatDate(deal.assigned_at) }}</div>
                                                   </div>
                                                   <div
@@ -765,6 +758,25 @@ function formatDealCardCreated(dateString) {
   const datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
   return `${datePart} | ${timePart}`
+}
+
+function formatCompactAed(amount) {
+  const num = Number(amount) || 0
+  if (num >= 1_000_000) {
+    const m = num / 1_000_000
+    return `${m >= 10 ? m.toFixed(0) : m.toFixed(1).replace(/\.0$/, '')}M AED`
+  }
+  if (num >= 1_000) {
+    const k = num / 1_000
+    return `${k >= 100 ? k.toFixed(0) : k.toFixed(1).replace(/\.0$/, '')}K AED`
+  }
+  return `${new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 }).format(num)} AED`
+}
+
+function stageValueForColumn(column) {
+  const deals = column?.deals || []
+  const sum = deals.reduce((acc, deal) => acc + (Number(deal?.deal_total_amount) || 0), 0)
+  return formatCompactAed(sum)
 }
 
 /** Figma card footer: "21 Dec 2025 | 12:05 PM" (uses best available timestamp from API) */
@@ -2509,24 +2521,55 @@ defineExpose({
 }
 
 .column-header {
-  min-height: 36px;
-  padding: 3px 8px 3px 10px !important;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
+  min-height: 40px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px !important;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
   border: none;
   box-shadow: none;
   position: relative;
   z-index: 1;
-  overflow: visible;
-  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
+  overflow: hidden;
+  clip-path: none;
+  gap: 8px;
+}
+
+.column-header__metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.column-metric {
+  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #0B0736;
+  white-space: nowrap;
+}
+
+.column-metric--count {
+  font-size: 13px;
+}
+
+.column-metric-sep {
+  font-weight: 700;
+  font-size: 12px;
+  color: rgba(11, 7, 54, 0.45);
 }
 
 .column-header .header-title {
-font-weight: 600;
+font-weight: 700;
     font-style: SemiBold;
-    font-size: 11px;
-    line-height: 1.1;
+    font-size: 12px;
+    line-height: 1.2;
     color: #0B0736;
     margin: 0;
 }
@@ -2613,9 +2656,9 @@ font-weight: 600;
 
 .header-title {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  font-weight: 600;
-  font-size: 11px;
-  line-height: 1.1;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.2;
   color: #0B0736;
   margin: 0;
 }
@@ -2623,6 +2666,7 @@ font-weight: 600;
 .header-title-wrapper {
   cursor: pointer;
   flex: 1;
+  min-width: 0;
 }
 
 .header-title-wrapper:hover .header-title {
@@ -2649,45 +2693,54 @@ font-weight: 600;
 
 /* Kanban card — Figma deal card */
 .kanban-card-figma {
-  padding: 10px 10px 8px;
+  padding: 10px 12px !important;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   box-shadow: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 0;
 }
 
 .kanban-card-top {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .kanban-card-divider {
   border: 0;
   border-top: 1px solid #e8ecf4;
+  margin: 4px 0 6px;
   opacity: 1;
+}
+
+.task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .date-created-line {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.3;
-  color: #8a8f98;
+  color: #475569;
 }
 
 .date-created-label {
   font-weight: 500;
   margin-right: 6px;
+  color: #475569;
 }
 
 .date-created-value {
   font-weight: 500;
-  color: #777e89;
+  color: #0f172a;
 }
 
 .assigned-by-line {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  color: #4b5563;
+  color: #334155;
 }
 
 .kanban-card-footer-avatar {
@@ -2699,7 +2752,7 @@ font-weight: 600;
 .task-title {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.25;
   letter-spacing: -0.02em;
   color: #0B0736;
@@ -2711,26 +2764,78 @@ font-weight: 600;
 
 .info-label {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  color: #8b9099;
+  color: #475569;
   font-weight: 500;
-  font-size: 11px;
-  margin-bottom: 3px;
+  font-size: 12px !important;
+  margin-bottom: 1px;
+  line-height: 1.25;
 }
 
 .info-value {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 500;
   font-size: 12px;
-  line-height: 1.25;
-  color: #343a40;
+  line-height: 1.3;
+  color: #0f172a;
+}
+
+.info-value--primary {
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+  color: #0B0736 !important;
 }
 
 .date-info {
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-weight: 500;
-  font-size: 10px;
-  line-height: 9px;
-  color: #64748B;
+  font-size: 12px;
+  line-height: 1.25;
+  color: #475569;
+}
+
+.kanban-card .info-label,
+.kanban-card .date-created-label {
+  color: #475569 !important;
+}
+
+.kanban-card .info-value,
+.kanban-card .date-created-value {
+  color: #0f172a !important;
+}
+
+.kanban-card .task-title,
+.kanban-card .info-value--primary {
+  color: #0B0736 !important;
+}
+
+[data-theme=dark] .kanban-card-figma,
+[data-theme=dark] .kanban-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+[data-theme=dark] .kanban-card .task-title,
+[data-theme=dark] .kanban-card .info-value--primary {
+  color: #f8fafc !important;
+}
+
+[data-theme=dark] .kanban-card .info-value,
+[data-theme=dark] .kanban-card .date-created-value {
+  color: #e2e8f0 !important;
+}
+
+[data-theme=dark] .kanban-card .info-label,
+[data-theme=dark] .kanban-card .date-created-label {
+  color: #cbd5e1 !important;
+}
+
+[data-theme=dark] .kanban-card-divider {
+  border-top-color: #334155;
+}
+
+.column-content.p-6 {
+  padding: 6px !important;
 }
 
 .kanban-card:hover {
@@ -2765,6 +2870,7 @@ font-weight: 600;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  gap: 7px;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
 }
 
@@ -3105,7 +3211,9 @@ font-weight: 600;
   .kanban-container--mobile .column-header {
     clip-path: none;
     border-radius: 10px 10px 0 0;
-    min-height: 34px;
+    min-height: 40px;
+    padding: 8px 10px !important;
+    width: 100%;
   }
 
   .kanban-container--mobile .column-content-scrollable {
@@ -3120,7 +3228,7 @@ font-weight: 600;
   }
 
   .kanban-container--mobile .kanban-card-figma {
-    margin-bottom: 8px !important;
+    margin-bottom: 0 !important;
   }
 
   .kanban-nav-zone {

@@ -5999,49 +5999,49 @@ const createPaymentDetailsSlide = () => {
   const d = {
     normal: {
       fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
-      pad: '1.05mm 0.8mm', padHead: '0.25mm', padBadge: '0.45mm 1.6mm',
+      pad: '1.05mm 0.8mm', padHead: '0.25mm', badgePadX: '1.8mm',
       sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
       titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
       cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
       nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1mm 0 0.8mm 0', pagePad: '7mm 7mm 14mm 7mm',
-      pillH: '4.6mm', rowGap: '0.2mm',
+      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '0.2mm',
     },
     compact: {
       fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '1.8mm',
-      pad: '0.85mm 0.7mm', padHead: '0.2mm', padBadge: '0.35mm 1.4mm',
+      pad: '0.85mm 0.7mm', padHead: '0.2mm', badgePadX: '1.5mm',
       sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
       titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
       cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
       nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.8mm 0 0.6mm 0', pagePad: '6mm 6mm 13mm 6mm',
-      pillH: '4.2mm', rowGap: '0.15mm',
+      pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.15mm',
     },
     tight: {
       fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.6mm',
-      pad: '0.7mm 0.6mm', padHead: '0.15mm', padBadge: '0.3mm 1.2mm',
+      pad: '0.7mm 0.6mm', padHead: '0.15mm', badgePadX: '1.3mm',
       sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
       titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
       cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
       nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.7mm 0 0.5mm 0', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
-      pillH: '3.8mm', rowGap: '0.1mm',
+      pillH: '3.8mm', badgeH: '2.9mm', rowGap: '0.1mm',
     },
   }[densityTier];
 
   // --- CENTERING CORE ---
-  // vertical-align alone is unreliable when this HTML is rasterized by
-  // html2canvas/puppeteer for PDF/image export. height:1% forces <td>/<th>
-  // to inherit the full row height so the flexbox wrapper (cellInner) can
-  // truly center its content regardless of the renderer.
-  const thCell = `padding:${d.padHead};height:1%;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.2;height:1%;`;
+  // html2canvas places glyphs at the BOTTOM of a tall line-height box, so
+  // never use height === line-height for pills. Use line-height:1 + padding.
+  const thCell = `padding:${d.padHead};vertical-align:middle;text-align:center;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.25;vertical-align:middle;text-align:center;`;
 
   const cellInner = (content) =>
-    `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;text-align:center;line-height:1.2;">${content}</div>`;
+    `<div style="width:100%;text-align:center;line-height:1.25;position:relative;top:-0.18mm;">${content}</div>`;
 
-  const thPill = (label) => `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:${d.pillH};box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:6mm;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;">${label}</div>`;
+  // Asymmetric padding (slightly more bottom) keeps text optically centered in PDF
+  const thPill = (label) =>
+    `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;padding:0.95mm 1.2mm 1.55mm;position:relative;top:-0.14mm;">${label}</div>`;
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
   const makeBadge = (text, status) =>
-    `<span style="display:inline-flex;align-items:center;justify-content:center;padding:${d.padBadge};border-radius:6mm;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;${badgeStyle(status)}">${text}</span>`;
+    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;text-align:center;padding:0.7mm ${d.badgePadX} 1.3mm;position:relative;top:-0.14mm;${badgeStyle(status)}">${text}</span>`;
 
   let cumulative = 0;
   const installmentRowsPaidArr = [];
@@ -6060,11 +6060,11 @@ const createPaymentDetailsSlide = () => {
 
     const rowHtml = `
       <tr>
-        <td style="${tdCell}">${cellInner('Installment')}</td>
-        <td style="${tdCell}">${cellInner(pct + '%')}</td>
-        <td style="${tdCell}">${cellInner(fmtAed(amount))}</td>
-        <td style="${tdCell}">${cellInner(dateCell)}</td>
-        <td style="${tdCell}">${cellInner(badge)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('Installment')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(pct + '%')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(amount))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(dateCell)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(badge)}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6078,11 +6078,11 @@ const createPaymentDetailsSlide = () => {
   const premiumBadge = makeBadge(premiumStatus, premiumStatus);
   const premiumRow = hasPremiumRow
     ? `<tr style="background:#f8fafc;">
-        <td style="${tdCell}">${cellInner('Premium')}</td>
-        <td style="${tdCell}">${cellInner('—')}</td>
-        <td style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${cellInner(fmtAed(premium))}</td>
-        <td style="${tdCell}">${cellInner('—')}</td>
-        <td style="${tdCell}">${cellInner(premiumBadge)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('Premium')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${cellInner(fmtAed(premium))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(premiumBadge)}</td>
       </tr>`
     : '';
 
@@ -6090,11 +6090,11 @@ const createPaymentDetailsSlide = () => {
   const handoverBadge = makeBadge(handoverStatus, handoverStatus);
   const handoverRow = hasHandoverRow
     ? `<tr>
-        <td style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>
-        <td style="${tdCell}">${cellInner(handoverPct.toFixed(2) + '%')}</td>
-        <td style="${tdCell}">${cellInner(fmtAed(handoverAmount))}</td>
-        <td style="${tdCell}">${cellInner(fmtDate(p.handover_date))}</td>
-        <td style="${tdCell}">${cellInner(handoverBadge)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverPct.toFixed(2) + '%')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(handoverAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtDate(p.handover_date))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverBadge)}</td>
       </tr>`
     : '';
 
@@ -6125,11 +6125,11 @@ const createPaymentDetailsSlide = () => {
 
     expenseRows.push(`
       <tr>
-        <td style="${tdCell}font-weight:500;background:#ffffff !important;">${cellInner('NOC Fees')}</td>
-        <td style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
-        <td style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
-        <td style="${tdCell}background:#ffffff !important;">${cellInner('—')}</td>
-        <td style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(nocValueBadge)}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:500;background:#ffffff !important;">${cellInner('NOC Fees')}</td>
+        <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(nocValueBadge)}</td>
       </tr>
     `);
 
@@ -6152,11 +6152,11 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td style="${tdCell}background:#ffffff !important;">${cellInner(l?.label || '—')}</td>
-        <td style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(detail)}</td>
-        <td style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(amt))}</td>
-        <td style="${tdCell}background:#ffffff !important;">${cellInner(vat > 0 ? fmtAed(vat) : '—')}</td>
-        <td style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(fmtAed(total))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(l?.label || '—')}</td>
+        <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(detail)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(amt))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(vat > 0 ? fmtAed(vat) : '—')}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(fmtAed(total))}</td>
       </tr>
     `);
   });
@@ -6170,20 +6170,20 @@ const createPaymentDetailsSlide = () => {
         <table style="${tableStyle}">
           <thead>
             <tr>
-              <th style="${thCell}width:18%;">${thPill('Label')}</th>
-              <th style="${thCell}width:24%;">${thPill('Detail')}</th>
-              <th style="${thCell}width:20%;">${thPill('Amount')}</th>
-              <th style="${thCell}width:16%;">${thPill('VAT')}</th>
-              <th style="${thCell}width:22%;">${thPill('Total')}</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Label')}</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Detail')}</th>
+              <th align="center" valign="middle" style="${thCell}width:20%;">${thPill('Amount')}</th>
+              <th align="center" valign="middle" style="${thCell}width:16%;">${thPill('VAT')}</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Total')}</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRowsHtml}
             <tr style="background:#f1f5f9;">
-              <td colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
-              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
-              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
-              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
+              <td align="center" valign="middle" colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
             </tr>
           </tbody>
         </table>
@@ -6198,11 +6198,11 @@ const createPaymentDetailsSlide = () => {
         <table style="${tableStyle}">
           <thead>
             <tr>
-              <th style="${thCell}width:22%;">${thPill('Payment type')}</th>
-              <th style="${thCell}width:13%;">${thPill('Percentage')}</th>
-              <th style="${thCell}width:24%;">${thPill('Amount')}</th>
-              <th style="${thCell}width:18%;">${thPill('Date')}</th>
-              <th style="${thCell}width:15%;">${thPill('Status')}</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Payment type')}</th>
+              <th align="center" valign="middle" style="${thCell}width:13%;">${thPill('Percentage')}</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Amount')}</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Date')}</th>
+              <th align="center" valign="middle" style="${thCell}width:15%;">${thPill('Status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -6211,8 +6211,8 @@ const createPaymentDetailsSlide = () => {
             ${installmentRowsNotPaid}
             ${handoverRow}
             <tr style="background:#f1f5f9;">
-              <td style="${tdCell}font-weight:700;" colspan="2">${cellInner('Total')}</td>
-              <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;" colspan="2">${cellInner('Total')}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
               <td colspan="2"></td>
             </tr>
           </tbody>

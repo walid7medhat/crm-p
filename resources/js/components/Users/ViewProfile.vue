@@ -447,7 +447,7 @@
 
 <script>
 import { ref, onMounted, reactive, getCurrentInstance, computed, watch } from 'vue';
-import axios from 'axios';
+import api from '@/plugins/axios';
 import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
@@ -463,6 +463,17 @@ export default {
     const activeTab = ref('edit-profile');
     const profileImage = ref(user1);
     const defaultAvatarImg = ref(defaultAvatar);
+
+    const readStoredUser = () => {
+      try {
+        const raw = localStorage.getItem('user');
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch (_) {
+        return null;
+      }
+    };
     
     const vacationLoading = ref(false);
     const attendanceSettingsLoading = ref(false);
@@ -504,49 +515,36 @@ export default {
     
     const loadAgents = async () => {
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        
-        const agentsResponse = await axios.get('/api/listings/agents/', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          },
+        const agentsResponse = await api.get('/listings/agents/', {
           params: {
             role: 'sales',
             active: true
           }
         });
-        
-        if (agentsResponse.data.status) {
-          agentsList.value = agentsResponse.data.data;
+
+        if (agentsResponse.data.status || agentsResponse.data.success) {
+          agentsList.value = agentsResponse.data.data || [];
         }
-        
+
       } catch (error) {
         console.error('Error loading agents:', error);
       }
     };
-    
+
     const loadVacationData = async () => {
       vacationLoading.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        
-        const vacationResponse = await axios.get('/api/listings/agent/vacation-mode', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (vacationResponse.data.status) {
-          const data = vacationResponse.data.data;
+        const vacationResponse = await api.get('/listings/agent/vacation-mode');
+
+        if (vacationResponse.data.status || vacationResponse.data.success) {
+          const data = vacationResponse.data.data || {};
           vacationData.active = data.on_vacation || false;
           vacationData.delegate_id = data.delegate_agent_id || '';
           vacationData.last_updated = data.updated_at || '';
         }
-        
+
         await loadAgents();
-        
+
       } catch (error) {
         console.error('Error loading vacation data:', error);
         showNotification('Failed to load vacation data', 'error');
@@ -554,24 +552,16 @@ export default {
         vacationLoading.value = false;
       }
     };
-    
+
     const saveVacationMode = async () => {
       vacationLoading.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        
-        const response = await axios.post('/api/listings/agent/vacation', {
+        const response = await api.post('/listings/agent/vacation', {
           active: vacationData.active,
           delegate_id: vacationData.active ? vacationData.delegate_id : null
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
         });
-        
-        if (response.data.status) {
+
+        if (response.data.status || response.data.success) {
           showNotification('Vacation mode updated successfully!', 'success');
           if (response.data.data) {
             Object.assign(vacationData, response.data.data);
@@ -659,34 +649,58 @@ export default {
       confirm_password: ''
     });
     
-    const loadUserData = async () => {
+    const applyUserToForm = (profile) => {
+      if (!profile || typeof profile !== 'object') return;
+      // Unwrap accidental nested { data: user } payloads
+      const data = profile.data && typeof profile.data === 'object' && !profile.id
+        ? profile.data
+        : profile;
+
+      user.value = data;
+      formData.name = data.name || '';
+      formData.email = data.email || '';
+      formData.phone = data.phone || '';
+
+      if (data.avatar) {
+        profileImage.value = data.avatar;
+      }
+
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('/api/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (response.data.success) {
-          user.value = response.data.data;
-          formData.name = user.value.name || '';
-          formData.email = user.value.email || '';
-          formData.phone = user.value.phone || '';
-          
-          if (user.value.avatar) {
-            profileImage.value = user.value.avatar;
-          }
-          
-          localStorage.setItem('user', JSON.stringify(user.value));
+        localStorage.setItem('user', JSON.stringify(data));
+      } catch (_) {
+        // ignore storage failures
+      }
+    };
+
+    const loadUserData = async () => {
+      // Show cached profile immediately while the API loads
+      const cached = readStoredUser();
+      if (cached?.id || cached?.email || cached?.name) {
+        applyUserToForm(cached);
+      }
+
+      try {
+        const response = await api.get('/profile');
+        const payload = response.data || {};
+        const ok = payload.success !== false && payload.status !== false;
+        const profile = payload.data ?? payload;
+
+        if (ok && profile && (profile.id || profile.email || profile.name)) {
+          applyUserToForm(profile);
+        } else if (!user.value?.id) {
+          showNotification(payload.message || 'Failed to load profile data', 'error');
         }
       } catch (error) {
         console.error('Error loading user data:', error);
-        showNotification('Failed to load profile data', 'error');
+        if (!user.value?.id) {
+          showNotification(
+            error?.response?.data?.message || 'Failed to load profile data',
+            'error'
+          );
+        }
       }
     };
-    
+
     const showNotification = (message, type = 'info') => {
       if (instance && instance.appContext.config.globalProperties.$showNotification) {
         instance.appContext.config.globalProperties.$showNotification(message, type);
@@ -694,22 +708,14 @@ export default {
         alert(message);
       }
     };
-    
+
     const updateProfile = async () => {
       loading.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.put('/api/profile', formData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.data.success) {
-          user.value = response.data.data;
-          localStorage.setItem('user', JSON.stringify(user.value));
+        const response = await api.put('/profile', formData);
+
+        if (response.data.success || response.data.status) {
+          applyUserToForm(response.data.data || response.data);
           showNotification('Profile updated successfully!', 'success');
         } else {
           showNotification(response.data.message || 'Failed to update profile', 'error');
@@ -720,7 +726,7 @@ export default {
           const errors = Object.values(error.response.data.errors).flat();
           showNotification(errors[0] || 'Failed to update profile', 'error');
         } else {
-          showNotification('Failed to update profile', 'error');
+          showNotification(error?.response?.data?.message || 'Failed to update profile', 'error');
         }
       } finally {
         loading.value = false;
@@ -732,28 +738,21 @@ export default {
         showNotification('New password and confirmation do not match!', 'warning');
         return;
       }
-      
+
       if (passwordData.new_password.length < 6) {
         showNotification('Password must be at least 6 characters long!', 'warning');
         return;
       }
-      
+
       passwordLoading.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.post('/api/profile/change-password', {
+        const response = await api.post('/profile/change-password', {
           current_password: passwordData.current_password,
           new_password: passwordData.new_password,
           new_password_confirmation: passwordData.confirm_password
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
         });
-        
-        if (response.data.success) {
+
+        if (response.data.success || response.data.status) {
           passwordData.current_password = '';
           passwordData.new_password = '';
           passwordData.confirm_password = '';
@@ -767,30 +766,26 @@ export default {
           const errors = Object.values(error.response.data.errors).flat();
           showNotification(errors[0] || 'Failed to change password', 'error');
         } else {
-          showNotification('Failed to change password', 'error');
+          showNotification(error?.response?.data?.message || 'Failed to change password', 'error');
         }
       } finally {
         passwordLoading.value = false;
       }
     };
-    
+
     const updateAvatar = async (file) => {
       try {
         const formDataObj = new FormData();
         formDataObj.append('avatar', file);
-        
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.post('/api/profile/avatar', formDataObj, {
+
+        const response = await api.post('/profile/avatar', formDataObj, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           }
         });
-        
-        if (response.data.success) {
-          user.value = response.data.data;
-          profileImage.value = user.value.avatar;
-          localStorage.setItem('user', JSON.stringify(user.value));
+
+        if (response.data.success || response.data.status) {
+          applyUserToForm(response.data.data || response.data);
           showNotification('Profile image updated successfully!', 'success');
         } else {
           showNotification(response.data.message || 'Failed to update avatar', 'error');
@@ -801,7 +796,7 @@ export default {
           const errors = Object.values(error.response.data.errors).flat();
           showNotification(errors[0] || 'Failed to update avatar', 'error');
         } else {
-          showNotification('Failed to update avatar', 'error');
+          showNotification(error?.response?.data?.message || 'Failed to update avatar', 'error');
         }
       }
     };
@@ -838,13 +833,7 @@ export default {
       if (!isSuperAdmin.value) return;
       attendanceSettingsLoading.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('/api/attendance/settings', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
+        const response = await api.get('/attendance/settings');
 
         attendanceSettings.day_of_week = Number.isInteger(response.data?.day_of_week) ? response.data.day_of_week : 6;
         attendanceSettings.start_time = String(response.data?.start_time || '09:00:00').slice(0, 5);
@@ -862,14 +851,8 @@ export default {
     const loadDepartmentOptions = async () => {
       if (!isSuperAdmin.value) return;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('/api/attendance/departments', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        const rows = Array.isArray(response.data) ? response.data : [];
+        const response = await api.get('/attendance/departments');
+        const rows = Array.isArray(response.data) ? response.data : (response.data?.data || []);
 
         departmentOptions.value = rows
           .map((dept) => ({
@@ -885,19 +868,13 @@ export default {
 
     const loadAttendanceStatus = async () => {
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('/api/attendance/status', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
+        const response = await api.get('/attendance/status');
 
         attendanceStatus.is_active_day = !!response.data?.is_active_day;
         attendanceStatus.is_department_active = response.data?.is_department_active !== false;
         attendanceStatus.is_within_time_window = !!response.data?.is_within_time_window;
         attendanceStatus.already_checked_in = !!response.data?.already_checked_in;
-        attendanceStatus.check_in_at=response.data?.check_in_at,
+        attendanceStatus.check_in_at = response.data?.check_in_at;
         attendanceStatus.status = response.data?.status || 'Closed';
         attendanceStatus.window_label = response.data?.window_label || 'Not configured';
         attendanceStatus.today_code = response.data?.today_code || '';
@@ -910,21 +887,14 @@ export default {
       if (!isSuperAdmin.value) return;
       attendanceSettingsSaving.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.put('/api/attendance/settings', {
+        const response = await api.put('/attendance/settings', {
           day_of_week: Number(attendanceSettings.day_of_week),
           start_time: attendanceSettings.start_time,
           end_time: attendanceSettings.end_time,
           department_ids: attendanceSettings.department_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id)),
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
         });
 
-        if (response.data?.success) {
+        if (response.data?.success || response.data?.status) {
           showNotification('Attendance settings saved successfully!', 'success');
           await loadAttendanceStatus();
         }
@@ -950,18 +920,11 @@ export default {
       if (checkinSubmitting.value || !isCheckinCodeComplete.value) return;
       checkinSubmitting.value = true;
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.post('/api/attendance/check-in', {
+        const response = await api.post('/attendance/check-in', {
           code: String(checkinCode.value || '').trim().toUpperCase(),
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
         });
 
-        if (response.data?.success) {
+        if (response.data?.success || response.data?.status) {
           showNotification(response.data?.message || 'Checked in successfully', 'success');
           checkinCode.value = '';
           await loadAttendanceStatus();

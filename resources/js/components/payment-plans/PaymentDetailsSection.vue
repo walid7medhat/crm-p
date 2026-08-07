@@ -622,19 +622,25 @@ const badgeClass = (status) => {
   border: none;
   font-weight: 600;
   font-size: 12px;
-  text-align: left;
-  vertical-align: bottom;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .pd-th-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
   background: #0f1f3a;
   color: #fff;
-  padding: 0.3rem 0.55rem;
+  padding: 0.4rem 0.65rem 0.45rem;
   border-radius: 999px;
   font-size: 10px;
   letter-spacing: 0.02em;
+  line-height: 1;
   text-transform: capitalize;
+  text-align: center;
   white-space: nowrap;
   font-weight: 600;
 }
@@ -643,6 +649,7 @@ const badgeClass = (status) => {
   padding: 0.5rem 0.45rem;
   border: none;
   vertical-align: middle;
+  text-align: center;
   color: #1e293b;
   font-size: 12px;
 }
@@ -656,12 +663,17 @@ const badgeClass = (status) => {
 }
 
 .pd-badge {
-  display: inline-block;
-  padding: 0.25rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.3rem 0.65rem 0.35rem;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
+  text-align: center;
 }
 
 .pd-badge--paid { background: #22c55e; color: #fff; }
