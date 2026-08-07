@@ -5793,7 +5793,7 @@ const createSlide5 = () => {
         <div style="flex:1 !important; background-image:url('${floorPlan2}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
         ` : ''}
       </div>
-       <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Floor plans, sizes, dimensions, and layouts are approximate and for illustrative purposes only. 
+       <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:1.3mm 1.6mm;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:16px;">Floor plans, sizes, dimensions, and layouts are approximate and for illustrative purposes only. 
         </br>
         Final details may vary and are subject to the developer’s confirmation.</p>
     </div>
