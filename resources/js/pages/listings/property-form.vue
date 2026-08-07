@@ -3467,7 +3467,7 @@ const isSelectedProjectFloorPlan = (floorPlan) => {
 };
 
 const selectSingleProjectFloorPlan = (floorPlan) => {
-      if (selectedProject.value?.id !== 1788 || selectedProject.value?.id !==1833) {
+      if (selectedProject.value?.id !== 1788 && selectedProject.value?.id !== 1833) {
 
   if (form.value.area && form.value.area.id) {
     if (!floorPlan.area_id ) {
