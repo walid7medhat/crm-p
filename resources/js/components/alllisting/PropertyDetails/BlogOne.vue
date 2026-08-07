@@ -5787,7 +5787,7 @@ const createSlide5 = () => {
         <h1 style="color:#0B0736 !important;  font-size:6mm !important; font-weight:700 !important;  margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Floor Plan</h1>
         <img src="${logo}" style="width:18mm !important; display:block !important;" />
       </div>
-      <div style="display:flex !important; gap:6mm !important; height:70% !important;">
+      <div style="display:flex !important; gap:6mm !important; height:72% !important;">
         <div style="flex:1 !important; background-image:url('${floorPlan1}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
         ${floorPlan2 ? `
         <div style="flex:1 !important; background-image:url('${floorPlan2}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
