@@ -16,8 +16,8 @@ class Asset extends Model
     ];
     
     protected $casts = [
-        'purchase_date' => 'date',
-        'warranty_date' => 'date',
+        'purchase_date' => 'date:Y-m-d',
+        'warranty_date' => 'date:Y-m-d',
         'unit_price' => 'decimal:2',
     ];
     

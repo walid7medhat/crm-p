@@ -119,7 +119,6 @@ class AttendanceController extends Controller
         $query->where('status', $statusFilter);
     }
 
-    // ✅ استخدام paginate بدلاً من get
     $paginated = $query->orderBy('employee_name')->paginate($perPage, ['*'], 'page', $page);
     
     Log::info('Attendance GET (database)', [
@@ -130,7 +129,6 @@ class AttendanceController extends Controller
         'per_page' => $perPage,
     ]);
 
-    // ✅ تحويل البيانات
     $normalized = $paginated->getCollection()->map(function (Attendance $attendance) {
         return [
             'id' => $attendance->id,
@@ -168,7 +166,6 @@ class AttendanceController extends Controller
         'late_today' => $normalized->where('status', 'late')->count(),
     ];
 
-    // ✅ إرجاع البيانات مع هيكل pagination متوافق مع الـ Frontend
     return response()->json([
         'success' => true,
         'data' => [

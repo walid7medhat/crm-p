@@ -19,8 +19,8 @@ class AssetAssignment extends Model
     ];
     
     protected $casts = [
-        'handover_date' => 'date',
-        'return_date' => 'date',
+        'handover_date' => 'date:Y-m-d',
+        'return_date' => 'date:Y-m-d',
     ];
     
     public function asset()

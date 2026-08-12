@@ -404,6 +404,7 @@ import {
   fetchAssetTypes,
   fetchResponsiblePersons,
   fetchAssetStatistics,
+  updateAssetAssignment
 } from '@/services/assetsApi'
 import { fetchDepartments, fetchBranches } from '@/services/employeesApi'
 import AssetCard from '@/components/hr/assets/AssetCard.vue'
@@ -539,30 +540,46 @@ const filteredAssetResponsiblePersons = computed(() => {
 // ===== Helper Functions =====
 function toDateValue(value) {
   if (!value) return null
+
   if (value instanceof Date) return value
+
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return new Date(`${value}T12:00:00`)
   }
+
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 function toIsoDate(value) {
-  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return ''
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return ''
+  }
+
   const y = value.getFullYear()
   const m = String(value.getMonth() + 1).padStart(2, '0')
   const d = String(value.getDate()).padStart(2, '0')
+
   return `${y}-${m}-${d}`
 }
 
 function formatDateDisplay(value) {
-  if (!value) return ''
-  const dt = toDateValue(value)
-  if (!dt) return ''
-  const d = String(dt.getDate()).padStart(2, '0')
-  const m = String(dt.getMonth() + 1).padStart(2, '0')
-  const y = dt.getFullYear()
-  return `${d}/${m}/${y}`
+    if (!value) return ''
+
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [y, m, d] = value.split('-')
+        return `${d}/${m}/${y}`
+    }
+
+    const dt = toDateValue(value)
+
+    if (!dt) return ''
+
+    const d = String(dt.getDate()).padStart(2, '0')
+    const m = String(dt.getMonth() + 1).padStart(2, '0')
+    const y = dt.getFullYear()
+
+    return `${d}/${m}/${y}`
 }
 
 function getFieldValueByPath(path) {
@@ -633,31 +650,97 @@ function openCreate() {
 }
 
 function openEdit(asset) {
-  editingId.value = asset.id
-  form.value = {
-    name: asset.name || '',
-    asset_type_id: asset.assetTypeId || asset.asset_type_id || '',
-    serial_number: asset.serialNumber === '—' ? '' : asset.serialNumber || asset.serial_number || '',
-    model_number: asset.modelNumber === '—' ? '' : asset.modelNumber || asset.model_number || '',
-    rdp_number: asset.rdpNumber || asset.rdp_number || '',
-    remarks: asset.remarks || '',
-    description: asset.description || '',
-    asset_user_id: asset.assetUserId || asset.current_user?.id || null,
-    handover_date: asset.handoverDate ? String(asset.handoverDate).slice(0, 10) : asset.current_assignment?.handover_date || '',
-    return_date: asset.returnDate ? String(asset.returnDate).slice(0, 10) : asset.current_assignment?.return_date || '',
-    branch_id: asset.branchId || asset.branch_id || '',
-    department_id: asset.departmentId || asset.department_id || '',
-    status: asset.status || 'available',
-    purchase_date: asset.purchaseDate ? String(asset.purchaseDate).slice(0, 10) : asset.purchase_date || '',
-    supplier_name: asset.supplierName || asset.supplier_name || '',
-    warranty_date: asset.warrantyDate ? String(asset.warrantyDate).slice(0, 10) : asset.warranty_date || '',
-    condition: asset.condition || 'new',
-    unit_price: asset.unitPrice || asset.unit_price || '',
-    currency: asset.currency || 'UAE Dirham',
-    quantity: asset.quantity || 1,
-  }
-  showFormModal.value = true
-  fetchAssetResponsiblePersons()
+   console.log('EDIT ASSET:', asset)
+    console.log('RDP:', asset.rdp_number, asset.rdpNumber)
+    editingId.value = asset.id
+
+    const currentUserId =
+        asset.currentAssignment?.user_id ||
+        asset.current_assignment?.user_id ||
+        asset.current_user?.id ||
+        asset.currentUser?.id ||
+        asset.assignedUserId ||
+        asset.assetUserId ||
+        null
+
+    form.value = {
+        name: asset.name || '',
+        asset_type_id: asset.assetTypeId || asset.asset_type_id || '',
+
+        serial_number:
+            asset.serialNumber === '—'
+                ? ''
+                : asset.serialNumber || asset.serial_number || '',
+
+        model_number:
+            asset.modelNumber === '—'
+                ? ''
+                : asset.modelNumber || asset.model_number || '',
+
+        rdp_number:
+            asset.rdp_number ||
+            asset.rdpNumber ||
+            '',
+
+        remarks: asset.remarks || '',
+        description: asset.description || '',
+
+        asset_user_id: currentUserId,
+
+        handover_date:
+            asset.handoverDate
+                ? String(asset.handoverDate).slice(0, 10)
+                : asset.current_assignment?.handover_date || '',
+
+        return_date:
+            asset.current_assignment?.return_date ||
+            asset.currentAssignment?.return_date ||
+            '',
+
+        branch_id:
+            asset.branchId ||
+            asset.branch_id ||
+            '',
+
+        department_id:
+            asset.departmentId ||
+            asset.department_id ||
+            '',
+
+        status: asset.status || 'available',
+
+        purchase_date:
+            asset.purchaseDate
+                ? String(asset.purchaseDate).slice(0, 10)
+                : asset.purchase_date || '',
+
+        supplier_name:
+            asset.supplierName ||
+            asset.supplier_name ||
+            '',
+
+        warranty_date:
+            asset.warrantyDate
+                ? String(asset.warrantyDate).slice(0, 10)
+                : asset.warranty_date || '',
+
+        condition: asset.condition || 'new',
+
+        unit_price:
+            asset.unitPrice ||
+            asset.unit_price ||
+            '',
+
+        currency: asset.currency || 'UAE Dirham',
+
+        quantity: asset.quantity || 1,
+    }
+
+    // مهم جدًا: نخزن الـ asset الحالي عشان نعرف الـ current user
+    actionAsset.value = asset
+
+    showFormModal.value = true
+    fetchAssetResponsiblePersons()
 }
 
 function closeFormModal() {
@@ -667,122 +750,273 @@ function closeFormModal() {
 }
 
 async function saveAsset() {
-  // Validation
-  if (!form.value.name || !form.value.asset_type_id) {
-    Swal.fire({ 
-      icon: 'warning', 
-      title: 'Required fields', 
-      text: 'Asset name and type are required.' 
-    })
-    return
-  }
 
-  // If status is 'assigned' but no user selected
-  if (form.value.status === 'assigned' && !form.value.asset_user_id) {
-    Swal.fire({ 
-      icon: 'warning', 
-      title: 'User required', 
-      text: 'Please select an employee to assign this asset.' 
-    })
-    return
-  }
+    // ================================
+    // VALIDATION
+    // ================================
 
-  saving.value = true
-  try {
-    const payload = {
-      name: form.value.name,
-      asset_type_id: Number(form.value.asset_type_id),
-      serial_number: form.value.serial_number || null,
-      model_number: form.value.model_number || null,
-      rdp_number: form.value.rdp_number || null,
-      description: form.value.description || null,
-      remarks: form.value.remarks || null,
-      purchase_date: form.value.purchase_date || null,
-      warranty_date: form.value.warranty_date || null,
-      unit_price: form.value.unit_price || null,
-      supplier_name: form.value.supplier_name || null,
-      quantity: Number(form.value.quantity) || 1,
-      condition: form.value.condition || 'new',
-      status: form.value.status || 'available',
-      branch_id: form.value.branch_id || null,
-      department_id: form.value.department_id || null,
+    if (!form.value.name || !form.value.asset_type_id) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Required fields',
+            text: 'Asset name and type are required.'
+        })
+        return
     }
 
-    let result
-    if (editingId.value) {
-      result = await updateAsset(editingId.value, payload)
-    } else {
-      result = await createAsset(payload)
+    if (
+        form.value.status === 'assigned' &&
+        !form.value.asset_user_id
+    ) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'User required',
+            text: 'Please select an employee to assign this asset.'
+        })
+        return
     }
 
-    // If asset user is selected, assign the asset
-    if (form.value.asset_user_id && result?.id) {
-      await assignAsset(result.id, {
-        user_id: Number(form.value.asset_user_id),
-        handover_date: form.value.handover_date || new Date().toISOString().slice(0, 10),
-        notes: form.value.remarks || 'Assigned during creation',
-      })
-    }
+    saving.value = true
 
-    Swal.fire({ 
-      icon: 'success', 
-      title: 'Saved', 
-      timer: 1600, 
-      showConfirmButton: false, 
-      toast: true, 
-      position: 'top-end' 
-    })
-    
-    closeFormModal()
-    await loadAssets(true)
-  } catch (e) {
-    let errorMessage = 'Failed to save asset'
-    let errorDetails = null
-    
-    if (e?.response?.data) {
-      const data = e.response.data
-      
-      // Check for validation errors
-      if (data.errors) {
-        errorDetails = data.errors
-        // Get first error message
-        const firstError = Object.values(data.errors)[0]
-        errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError)
-      } else if (data.message) {
-        errorMessage = data.message
-      }
-    } else if (e?.message) {
-      errorMessage = e.message
-    }
-    
-    // Show detailed validation errors if available
-    if (errorDetails) {
-      let errorHtml = '<div style="text-align:left;">'
-      Object.entries(errorDetails).forEach(([field, messages]) => {
-        if (Array.isArray(messages)) {
-          messages.forEach(msg => {
-            errorHtml += `<p style="margin:4px 0;"><strong>${field}:</strong> ${msg}</p>`
-          })
+    try {
+
+        // ==========================================
+        // 1. SAVE ASSET
+        // ==========================================
+
+        const payload = {
+            name: form.value.name,
+
+            asset_type_id:
+                Number(form.value.asset_type_id),
+
+            serial_number:
+                form.value.serial_number || null,
+
+            model_number:
+                form.value.model_number || null,
+
+            rdp_number:
+                form.value.rdp_number || null,
+
+            description:
+                form.value.description || null,
+
+            remarks:
+                form.value.remarks || null,
+
+            purchase_date:
+                form.value.purchase_date || null,
+
+            warranty_date:
+                form.value.warranty_date || null,
+
+            unit_price:
+                form.value.unit_price || null,
+
+            supplier_name:
+                form.value.supplier_name || null,
+
+            quantity:
+                Number(form.value.quantity) || 1,
+
+            condition:
+                form.value.condition || 'new',
+
+            status:
+                form.value.status || 'available',
+
+            branch_id:
+                form.value.branch_id || null,
+
+            department_id:
+                form.value.department_id || null,
         }
-      })
-      errorHtml += '</div>'
-      
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        html: errorHtml,
-        confirmButtonColor: '#733e87'
-      })
-    } else {
-      Swal.fire({ 
-        icon: 'error', 
-        title: 'Failed', 
-        text: errorMessage 
-      })
+
+        let result
+
+        if (editingId.value) {
+
+            // EDIT ASSET
+            result = await updateAsset(
+                editingId.value,
+                payload
+            )
+
+        } else {
+
+            // CREATE ASSET
+            result = await createAsset(payload)
+        }
+
+
+        // ==========================================
+        // 2. ASSIGNMENT
+        // ==========================================
+
+        if (form.value.asset_user_id) {
+
+            const selectedUserId =
+                Number(form.value.asset_user_id)
+
+            const currentAssignment =
+                actionAsset.value?.current_assignment ||
+                actionAsset.value?.currentAssignment ||
+                null
+
+           
+              const currentUserId =
+                actionAsset.value?.currentAssignment?.user_id ||
+                actionAsset.value?.current_assignment?.user_id ||
+                actionAsset.value?.current_user?.id ||
+                actionAsset.value?.currentUser?.id ||
+                actionAsset.value?.assignedUserId ||
+                actionAsset.value?.assetUserId ||
+                null
+
+
+            // ==========================================
+            // DATES
+            // ==========================================
+
+            const handoverDate =
+                form.value.handover_date ||
+                new Date().toISOString().slice(0, 10)
+
+            const returnDate =
+                form.value.return_date || null
+
+
+            // ==========================================
+            // CASE 1: CREATE NEW ASSET
+            // ==========================================
+
+            if (!editingId.value) {
+
+                await assignAsset(result.id, {
+                    user_id: selectedUserId,
+
+                    handover_date: handoverDate,
+
+                    return_date: returnDate,
+
+                    notes:
+                        form.value.remarks ||
+                        'Assigned during creation',
+                })
+            }
+
+
+            // ==========================================
+            // CASE 2: EDIT
+            // ASSET WAS NOT ASSIGNED BEFORE
+            // ==========================================
+
+            else if (!currentUserId) {
+
+                await assignAsset(editingId.value, {
+                    user_id: selectedUserId,
+
+                    handover_date: handoverDate,
+
+                    return_date: returnDate,
+
+                    notes:
+                        form.value.remarks ||
+                        'Assigned during edit',
+                })
+            }
+
+
+            // ==========================================
+            // CASE 3: EDIT
+            // USER CHANGED
+            // ==========================================
+
+            else if (
+                Number(currentUserId) !== selectedUserId
+            ) {
+
+                await transferAsset(editingId.value, {
+                    user_id: selectedUserId,
+
+                    handover_date: handoverDate,
+
+                    return_date: returnDate,
+
+                    notes:
+                        form.value.remarks ||
+                        'Transferred during edit',
+                })
+            }
+
+
+            // ==========================================
+            // CASE 4: EDIT
+            // SAME USER
+            // ==========================================
+
+            else {
+
+                if (currentAssignment?.id) {
+
+                    await updateAssetAssignment(
+                        currentAssignment.id,
+                        {
+                            handover_date:
+                                handoverDate,
+
+                            return_date:
+                                returnDate,
+
+                            notes:
+                                form.value.remarks ||
+                                null,
+                        }
+                    )
+                }
+            }
+        }
+
+
+        // ==========================================
+        // SUCCESS
+        // ==========================================
+
+        await Swal.fire({
+            icon: 'success',
+            title: 'Saved',
+            timer: 1600,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        })
+
+        closeFormModal()
+
+        await loadAssets(true)
+
+    } catch (e) {
+
+        console.error(
+            'SAVE ASSET ERROR:',
+            e
+        )
+
+        const errorMessage =
+            e?.response?.data?.message ||
+            e?.message ||
+            'Failed to save asset'
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Failed',
+            text: errorMessage
+        })
+
+    } finally {
+        saving.value = false
     }
-  } finally {
-    saving.value = false
-  }
 }
 function openAssign(asset, mode = 'assign') {
   actionAsset.value = asset

@@ -72,37 +72,59 @@ export function normalizeAsset(row) {
   const condition = row.condition || 'new'
 
   return {
-    id: row.id,
-    name: row.name || '—',
-    assetId: row.asset_code || `AST-${String(row.id).padStart(3, '0')}`,
-    serialNumber: row.serial_number || '—',
-    modelNumber: row.model_number || '—',
-    category: row.asset_type?.name || '—',
-    assetTypeId: row.asset_type_id || row.asset_type?.id || null,
-    assignedEmployee: row.current_user?.name || '—',
-    assignedAvatar: row.current_user?.avatar || null,
-    department: row.department?.name || '—',
-    departmentId: row.department_id || row.department?.id || null,
-    branch: row.branch?.name || '—',
-    branchId: row.branch_id || row.branch?.id || null,
-    status,
-    statusLabel: row.status_label || STATUS_LABELS[status] || status,
-    condition,
-    conditionLabel: CONDITION_LABELS[condition] || condition,
-    purchaseDate: row.purchase_date || null,
-    warrantyDate: row.warranty_date || null,
-    warrantyStatus: resolveWarrantyStatus(row.warranty_date),
-    handoverDate: row.current_assignment?.handover_date || null,
-    supplierName: row.supplier_name || '—',
-    unitPrice: row.unit_price ?? null,
-    quantity: row.quantity ?? 1,
-    description: row.description || '',
-    remarks: row.remarks || '',
-    imageIcon: 'lucide:package',
-    raw: row,
-  }
-}
+  id: row.id,
+  name: row.name || '—',
+  assetId: row.asset_code || `AST-${String(row.id).padStart(3, '0')}`,
+  serialNumber: row.serial_number || '—',
+  modelNumber: row.model_number || '—',
+  rdpNumber: row.rdp_number || '—',
 
+  category: row.asset_type?.name || '—',
+  assetTypeId: row.asset_type_id || row.asset_type?.id || null,
+
+  assignedEmployee: row.current_user?.name || '—',
+  assignedAvatar: row.current_user?.avatar || null,
+  assignedUserId:
+  row.current_user?.id ||
+  row.currentAssignment?.user_id ||
+  row.current_assignment?.user_id ||
+  row.user_id ||
+  null,
+
+  currentAssignment: row.currentAssignment || row.current_assignment,
+  department: row.department?.name || '—',
+  departmentId: row.department_id || row.department?.id || null,
+
+  branch: row.branch?.name || '—',
+  branchId: row.branch_id || row.branch?.id || null,
+
+  status,
+  statusLabel: row.status_label || STATUS_LABELS[status] || status,
+  condition,
+  conditionLabel: CONDITION_LABELS[condition] || condition,
+
+  purchaseDate: row.purchase_date || null,
+  warrantyDate: row.warranty_date || null,
+  warrantyStatus: resolveWarrantyStatus(row.warranty_date),
+
+  handoverDate: row.current_assignment?.handover_date || null,
+  supplierName: row.supplier_name || '—',
+  unitPrice: row.unit_price ?? null,
+  quantity: row.quantity ?? 1,
+  description: row.description || '',
+  remarks: row.remarks || '',
+  imageIcon: 'lucide:package',
+  raw: row,
+}
+}
+export async function updateAssetAssignment(assetId, payload) {
+    const response = await api.put(
+        `/assets/${assetId}/assignment`,
+        payload
+    )
+
+    return response.data?.data ?? response.data
+}
 // ==================== Asset Types ====================
 
 /**

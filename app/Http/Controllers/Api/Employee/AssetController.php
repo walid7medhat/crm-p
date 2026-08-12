@@ -196,6 +196,7 @@ class AssetController extends Controller
             $asset = Asset::with([
                 'assetType', 
                 'branch', 
+                'currentAssignment',
                 'currentAssignment.user',
                 'currentUser',
                 'assignments' => function($q) {
@@ -213,28 +214,63 @@ class AssetController extends Controller
     }
     
     public function update(Request $request, $id)
-    {
-        $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'asset_type_id' => 'sometimes|exists:asset_types,id',
-            'serial_number' => 'nullable|string',
-            'model_number' => 'nullable|string',
-            'unit_price' => 'nullable|numeric|min:0',
-            'condition' => 'nullable|in:new,used,working,damaged,maintenance',
-            'status' => 'nullable|in:available,assigned,maintenance,disposed',
-            'branch_id' => 'nullable|exists:company_branches,id',
-            'department_id' => 'nullable|exists:departments,id',
-        ]);
-        
-        try {
-            $asset = Asset::find($id);
-            $asset->update($request->input());
-            
-            return ApiResponse::success($asset->load('assetType'), 'Asset updated successfully');
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to update asset: ' . $e->getMessage());
+        {
+            $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'asset_type_id' => 'sometimes|exists:asset_types,id',
+                'serial_number' => 'nullable|string',
+                'model_number' => 'nullable|string',
+                'rdp_number' => 'nullable|string', // ADD
+                'description' => 'nullable|string',
+                'remarks' => 'nullable|string',
+                'purchase_date' => 'nullable|date',
+                'warranty_date' => 'nullable|date',
+                'unit_price' => 'nullable|numeric|min:0',
+                'supplier_name' => 'nullable|string',
+                'quantity' => 'nullable|integer|min:1',
+                'condition' => 'nullable|in:new,used,working,damaged,maintenance',
+                'status' => 'nullable|in:available,assigned,maintenance,disposed',
+                'branch_id' => 'nullable|exists:company_branches,id',
+                'department_id' => 'nullable|exists:departments,id',
+            ]);
+
+            try {
+                $asset = Asset::findOrFail($id);
+
+                $asset->update($request->only([
+                    'name',
+                    'asset_type_id',
+                    'serial_number',
+                    'model_number',
+                    'rdp_number',
+                    'description',
+                    'remarks',
+                    'purchase_date',
+                    'warranty_date',
+                    'unit_price',
+                    'supplier_name',
+                    'quantity',
+                    'condition',
+                    'status',
+                    'branch_id',
+                    'department_id',
+                ]));
+
+                return ApiResponse::success(
+                    $asset->fresh()->load([
+                        'assetType',
+                        'branch',
+                        'currentAssignment.user',
+                        'currentUser',
+                    ]),
+                    'Asset updated successfully'
+                );
+            } catch (\Exception $e) {
+                return ApiResponse::error(
+                    'Failed to update asset: ' . $e->getMessage()
+                );
+            }
         }
-    }
     
     public function destroy($id)
     {
@@ -260,6 +296,7 @@ class AssetController extends Controller
             'user_id' => 'required|exists:users,id',
             'handover_date' => 'required|date',
             'notes' => 'nullable|string',
+            'return_date' => 'nullable|date',
         ]);
         
         try {
@@ -276,6 +313,9 @@ class AssetController extends Controller
                 $request->handover_date,
                 $request->notes
             );
+             $assignment->update([
+                'return_date' => $request->return_date,
+            ]);
             
             // Add to history
             AssetHistory::create([
@@ -294,6 +334,46 @@ class AssetController extends Controller
             return ApiResponse::error('Failed to assign asset: ' . $e->getMessage());
         }
     }
+    public function updateAssignment(Request $request, $id)
+{
+    $request->validate([
+        'handover_date' => 'nullable|date',
+        'return_date' => 'nullable|date',
+        'notes' => 'nullable|string',
+    ]);
+
+    try {
+        $assignment = AssetAssignment::findOrFail($id);
+
+
+        if (!$assignment) {
+            return ApiResponse::error(
+                'Asset does not have an active assignment',
+                422
+            );
+        }
+
+        $assignment->update([
+            'handover_date' => $request->handover_date,
+            'return_date' => $request->return_date,
+            'notes' => $request->notes,
+        ]);
+
+        return ApiResponse::success(
+            $assignment->fresh()->load([
+                'asset',
+                'user',
+                'assignedBy'
+            ]),
+            'Assignment updated successfully'
+        );
+
+    } catch (\Exception $e) {
+        return ApiResponse::error(
+            'Failed to update assignment: ' . $e->getMessage()
+        );
+    }
+}
     
     public function returnAsset(Request $request, $id){
         $request->validate([
@@ -333,6 +413,7 @@ class AssetController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'handover_date' => 'required|date',
+            'return_date' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
 
@@ -364,6 +445,7 @@ class AssetController extends Controller
                 'handover_date' => $request->handover_date,
                 'notes' => $request->notes,
                 'status' => 'active',
+                 'return_date' => $request->handover_date,
             ]);
 
             $asset->update(['status' => 'assigned']);

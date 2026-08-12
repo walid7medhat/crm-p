@@ -287,6 +287,7 @@ Route::prefix('assets')->middleware(['auth:api'])->group(function () {
     Route::post('/{id}/transfer', [AssetController::class, 'transferAsset']);
     Route::post('/{id}/maintenance', [AssetController::class, 'markMaintenance']);
     Route::get('/{id}/history', [AssetController::class, 'getAssetHistory']);
+    Route::put('/{id}/assignment', [AssetController::class, 'updateAssignment']);
     
     // Employee Assets
     Route::get('/employee/{userId}/assets', [AssetController::class, 'getEmployeeAssets']);
