@@ -108,7 +108,7 @@ class DocumentRequestController extends Controller
             DB::beginTransaction();
             
             $documentRequest = DocumentRequest::create([
-                'user_id' => Auth::id(),
+                'user_id' =>$request->user_id?? Auth::id(),
                 'document_type_id' => $request->document_type_id,
                 'description' => $request->description,
                 'status' => 'pending',
@@ -148,7 +148,7 @@ class DocumentRequestController extends Controller
             $documentRequest = DocumentRequest::findOrFail($id);
             $user = Auth::user();
             
-            if ($documentRequest->user_id !== $user->id) {
+            if ($documentRequest->user_id !== $user->id && !$user->hasRole('super_admin')) {
                 return ApiResponse::error('You can only edit your own requests', 403);
             }
             

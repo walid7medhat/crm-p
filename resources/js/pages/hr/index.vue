@@ -58,6 +58,14 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
+          <template v-else-if="activeTab === 'Document Requests'">
+            <button type="button" class="hr-generate-btn" @click="openRequestDocumentModal">
+              Request Document
+              <iconify-icon icon="lucide:plus" />
+            </button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+          </template>
           <template v-else-if="activeTab === 'Employee Details'">
             <button type="button" class="employee-detail-action-chip">Activity</button>
             <button type="button" class="employee-detail-action-chip">Deactivate</button>
@@ -322,6 +330,68 @@
           </div>
         </div>
       </div>
+      <div class="hr-content-card" v-else-if="activeTab === 'Document Requests'">
+          <div class="hr-content-shell overview-shell">
+            <div class="employee-overview-head">
+              <h6 class="overview-section-title">Document Requests</h6>
+              <div class="employee-overview-actions">
+                <div class="hr-search-wrap" style="min-width:260px;">
+                  <iconify-icon icon="lucide:search" class="hr-search-icon" />
+                  <input v-model="documentRequestsSearch" type="text" class="hr-search-input" placeholder="Search employee or document type" />
+                </div>
+              </div>
+            </div>
+
+            <div class="requested-documents-card mt-2">
+              <div class="requested-document-list">
+                <div
+                  v-for="doc in filteredDocumentRequests"
+                  :key="`global-doc-${doc.id}`"
+                  class="requested-document-row requested-document-row--with-employee"
+                >
+                  <div>
+                    <strong>{{ doc.employeeName }}</strong>
+                    <small>Employee</small>
+                  </div>
+                  <div>
+                    <strong>{{ doc.documentType }}</strong>
+                    <small>Document Name</small>
+                  </div>
+                  <div>
+                    <strong>{{ doc.description || '--' }}</strong>
+                    <small>Description</small>
+                  </div>
+                  <div>
+                    <strong>{{ doc.requestedDate }}</strong>
+                    <small>Requested On</small>
+                  </div>
+                  <div>
+                    <strong :class="`doc-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}</strong>
+                    <small>Status</small>
+                  </div>
+                  <div>
+                    <strong>{{ doc.rejectionReason || '--' }}</strong>
+                    <small>Rejection Reason</small>
+                  </div>
+                  <div class="requested-document-actions">
+                    <button type="button" class="row-action-btn" @click="openDocumentDetail(doc)">
+                      <iconify-icon icon="lucide:eye" />
+                    </button>
+                    <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" @click="openEditDocumentRequest(doc)">
+                      <iconify-icon icon="lucide:pencil" />
+                    </button>
+                    <button type="button" class="row-action-btn" @click="deleteRequestedDocument(doc)">
+                      <iconify-icon icon="lucide:trash-2" />
+                    </button>
+                  </div>
+                </div>
+                <div v-if="!loadingRequestedDocuments && !filteredDocumentRequests.length" class="text-center text-muted py-4">
+                  No document requests found
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       <div class="hr-content-card hr-la-card" v-else-if="activeTab === 'Leave / Attendance'">
         <div class="hr-content-shell hr-la-shell">
@@ -1642,6 +1712,10 @@
         <div class="employee-filter-right w-100">
           <p class="request-doc-title">Request New Document</p>
           <div class="request-doc-grid">
+            <div class="add-field" v-if="activeTab === 'Document Requests' && !editingRequestedDocumentId">
+              <label>Employee *</label>
+              <SearchableSelect v-model="requestDocumentForm.employee" :options="documentRequestEmployeeOptions" placeholder="Select Employee" />
+            </div>
             <div class="add-field">
               <label>Document Type *</label>
               <SearchableSelect v-model="requestDocumentForm.documentType" :options="requestDocumentOptions" placeholder="Select Document" />
@@ -1825,6 +1899,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ApexCharts from 'vue3-apexcharts'
+import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import HrTeamTreePanel from '@/components/hr/HrTeamTreePanel.vue'
 import HrAttendanceSearchDropdown from '@/components/hr/HrAttendanceSearchDropdown.vue'
@@ -1839,6 +1914,27 @@ import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
+import {
+  fetchDocumentRequests,
+  createDocumentRequest,
+  updateDocumentRequest,
+  deleteDocumentRequest,
+  approveDocumentRequest,
+  rejectDocumentRequest,
+  fetchDocumentTypes,
+} from '@/services/documentRequestsApi'
+
+import {
+  fetchJobs,
+  createJob,
+  updateJob,
+  deleteJob,
+  fetchApplicants,
+  getApplicant,
+  updateApplicantStatus as updateApplicantStatusApi,
+  scheduleInterview as scheduleInterviewApi,
+  fetchRecruitmentStatistics,
+} from '@/services/recruitmentApi'
 import {
   fetchAnnouncements,
   createAnnouncement,
@@ -2207,22 +2303,77 @@ const selectedRequestedDocument = ref(null)
 const requestDocumentForm = ref({
   documentType: '',
   description: '',
+  employee: '',
 })
-const requestDocumentOptions = [
-  'Salary Certificate',
-  'Commitment Certificate',
-  'Experience Certificate',
-  'No Objection Certificate',
-  'Employment Certificate',
-  'Completion Of Probationary Period',
-]
-const requestedDocuments = ref([
-  { id: 1, documentType: 'Commitment Certificate', description: 'Lorem Ipsum is simply dummy text...', requestedDate: '05 Feb 2025', status: 'Approved', rejectionReason: '' },
-  { id: 2, documentType: 'Salary Certificate', description: 'Lorem Ipsum is simply dummy text...', requestedDate: '05 Feb 2025', status: 'Pending', rejectionReason: '' },
-  { id: 3, documentType: 'Experience Certificate', description: 'Lorem Ipsum is simply dummy text...', requestedDate: '05 Feb 2025', status: 'Rejected', rejectionReason: 'Not Completed Probation...' },
-  { id: 4, documentType: 'No Objection Certificate', description: '--', requestedDate: '05 Feb 2025', status: 'Approved', rejectionReason: '' },
-  { id: 5, documentType: 'Employment Certificate', description: '--', requestedDate: '05 Feb 2025', status: 'Approved', rejectionReason: '' },
-])
+
+const requestedDocuments = ref([])
+const loadingRequestedDocuments = ref(false)
+const documentTypesList = ref([])
+
+const requestDocumentOptions = computed(() => {
+  if (documentTypesList.value.length > 0) {
+    return documentTypesList.value.map((t) => ({ value: t.id, label: t.name }))
+  }
+  return []
+})
+
+function mapDocumentRequestToRow(item) {
+  return {
+    id: item.id,
+    employeeName: item.user?.name || item.employee?.name || item.user_name || '—',
+    user_id: item.user_id,
+    documentType: item.document_type?.name || '—',
+    document_type_id: item.document_type_id,
+    description: item.description || '--',
+    requestedDate: formatDate(item.requested_date || item.created_at),
+    status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending',
+    rejectionReason: item.rejection_reason || '',
+    file_url: item.file_url || '',
+    raw: item,
+  }
+}
+
+const documentRequestsSearch = ref('')
+
+const filteredDocumentRequests = computed(() => {
+  const q = documentRequestsSearch.value.trim().toLowerCase()
+  if (!q) return requestedDocuments.value
+  return requestedDocuments.value.filter((doc) =>
+    [doc.employeeName, doc.documentType, doc.description, doc.status]
+      .some((v) => String(v || '').toLowerCase().includes(q)),
+  )
+})
+
+const documentRequestEmployeeOptions = computed(() =>
+  employeesDirectory.value.map((e) => ({ value: e.id, label: e.name })),
+)
+
+const loadDocumentTypesList = async () => {
+  try {
+    const result = await fetchDocumentTypes()
+    documentTypesList.value = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : []
+  } catch (error) {
+    console.error('Failed to load document types:', error)
+    documentTypesList.value = []
+  }
+}
+
+const loadRequestedDocuments = async (employeeId = null) => {
+  loadingRequestedDocuments.value = true
+  try {
+    const params = {}
+    if (employeeId) params.user_id = employeeId
+    const result = await fetchDocumentRequests(params)
+    const items = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : []
+    requestedDocuments.value = items.map(mapDocumentRequestToRow)
+  } catch (error) {
+    console.error('Failed to load document requests:', error)
+    showNotification('Failed to load requested documents', 'error')
+    requestedDocuments.value = []
+  } finally {
+    loadingRequestedDocuments.value = false
+  }
+}
 const editingRequestedDocumentId = ref(null)
 const approveDocumentFile = ref(null)
 const rejectDocumentReason = ref('')
@@ -2415,25 +2566,52 @@ const assetEditForm = ref({
 const hrSectionTab = ref('attendance')
 
 const headerTabMenus = {
-  Employees: ['Manage Employees', 'Employee Assets'],
+  Employees: ['Manage Employees', 'Document Requests'],
   Payroll: ['Manage Salary', 'Manage Pay Slip'],
   'Leave / Attendance': ['Leave Management', 'Attendance Management', 'Announcements'],
   Career: ['Manage Recruitments', 'Interviews', 'Career Lists'],
   Assets: ['Asset Directory', 'Asset Requests'],
 }
 
-const careerRows = ref([
-  { id: 1, title: 'Software Engineer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '05 Feb 2023', closingDate: '12 Feb 2025', hiringManager: 'Maria Guan', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=47', applicants: '85', status: 'Open' },
-  { id: 2, title: 'UI/UX Designer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '03', postedDate: '10 Feb 2023', closingDate: '25 Feb 2027', hiringManager: 'Ahmad Al Daghash', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=12', applicants: '30', status: 'Open' },
-  { id: 3, title: 'Backend Developer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '15 Mar 2023', closingDate: '25 Mar 2027', hiringManager: 'Omar Moraden', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=15', applicants: '25', status: 'On Hold' },
-  { id: 4, title: 'Sales Manager', department: 'Sales', branch: 'Abu Dhabi', type: 'Contract', openings: '01', postedDate: '18 Mar 2023', closingDate: '22 Mar 2025', hiringManager: 'Ahmad Al Adaway', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=21', applicants: '38', status: 'Closed' },
-  { id: 5, title: 'Electronical Engineer', department: 'Operations', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '22 Apr 2023', closingDate: '28 Apr 2027', hiringManager: 'Tarek Mahmoud', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=28', applicants: '50', status: 'Closed' },
-  { id: 6, title: 'HR Manager', department: 'HR Department', branch: 'Abu Dhabi', type: 'Part-time', openings: '02', postedDate: '25 Oct 2023', closingDate: '29 Oct 2027', hiringManager: 'Hadi Zain', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=31', applicants: '45', status: 'Closed' },
-  { id: 7, title: 'Sales Agent', department: 'Sales', branch: 'Abu Dhabi', type: 'Full-time', openings: '05', postedDate: '22 Nov 2023', closingDate: '29 Nov 2027', hiringManager: 'Karim Haddad', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=33', applicants: '65', status: 'Closed' },
-  { id: 8, title: 'Sales Agent', department: 'Sales', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '15 Jan 2024', closingDate: '19 Jan 2026', hiringManager: 'Omar Al Kaabi', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=35', applicants: '45', status: 'Closed' },
-  { id: 9, title: 'Graphic Designer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '25 May 2025', closingDate: '29 May 2027', hiringManager: 'Khalid Al Mazrouei', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=39', applicants: '62', status: 'Closed' },
-  { id: 10, title: 'Frontend Developer', department: 'Marketing', branch: 'Abu Dhabi', type: 'Full-time', openings: '01', postedDate: '28 Aug 2025', closingDate: '05 Sep 2027', hiringManager: 'Abdullah Al Falasi', hiringManagerAvatar: 'https://i.pravatar.cc/80?img=41', applicants: '32', status: 'Closed' },
-])
+const careerRows = ref([])
+const loadingCareerJobs = ref(false)
+
+function mapJobToRow(job) {
+  return {
+    id: job.id,
+    title: job.title,
+    department: job.department?.name || '—',
+    department_id: job.department_id,
+    branch: job.branch?.name || '—',
+    branch_id: job.branch_id,
+    type: job.job_type,
+    openings: String(job.openings ?? '0').padStart(2, '0'),
+    postedDate: formatDate(job.posted_date),
+    closingDate: job.closing_date ? formatDate(job.closing_date) : '--',
+    hiringManager: job.hiring_manager?.name || '—',
+    hiringManagerAvatar: job.hiring_manager?.avatar || 'https://i.pravatar.cc/80?img=1',
+    applicants: String(job.applicants_count ?? 0),
+    status: job.status === 'open' ? 'Open' : job.status === 'on_hold' ? 'On Hold' : 'Closed',
+    raw: job,
+  }
+}
+
+const loadCareerJobs = async () => {
+  loadingCareerJobs.value = true
+  try {
+    const params = { per_page: 100 }
+    if (careerSearchKeyword.value) params.search = careerSearchKeyword.value
+    const result = await fetchJobs(params)
+    const items = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : []
+    careerRows.value = items.map(mapJobToRow)
+  } catch (error) {
+    console.error('Failed to load jobs:', error)
+    showNotification('Failed to load jobs', 'error')
+    careerRows.value = []
+  } finally {
+    loadingCareerJobs.value = false
+  }
+}
 const selectedCareerJob = ref(null)
 const careerApplicantsSearch = ref('')
 const selectedCareerApplicantId = ref(1)
@@ -4093,27 +4271,49 @@ function onHeaderTabClick(tab, event) {
 }
 
 function onHeaderMenuSelect(tab, item) {
+  // تعيين التبويب النشط بناءً على العنصر المحدد
   if (tab === 'Employees') {
-    activeTab.value = item === 'Employee Assets' ? 'Assets' : 'Employees'
-  } else if (tab === 'Assets') {
-    activeTab.value = 'Assets'
-  } else {
-    activeTab.value = tab
-  }
-
-  if (tab === 'Leave / Attendance') {
-    if (item === 'Leave Management') leaveSectionMode.value = 'leave'
-    else if (item === 'Attendance Management') leaveSectionMode.value = 'attendance'
-    else leaveSectionMode.value = 'announcements'
-  }
-  if (tab === 'Career') {
-    if (item === 'Manage Recruitments') careerSectionMode.value = 'manage-recruitments'
-    else if (item === 'Interviews') careerSectionMode.value = 'interviews'
-    else careerSectionMode.value = 'career-lists'
-  }
-  if (tab === 'Payroll') {
+    if (item === 'Document Requests') {
+      activeTab.value = 'Document Requests'
+      loadRequestedDocuments()
+    } else {
+      activeTab.value = 'Employees'
+    }
+  } else if (tab === 'Leave / Attendance') {
+    if (item === 'Leave Management') {
+      activeTab.value = 'Leave / Attendance'
+      leaveSectionMode.value = 'leave'
+    } else if (item === 'Attendance Management') {
+      activeTab.value = 'Leave / Attendance'
+      leaveSectionMode.value = 'attendance'
+    } else if (item === 'Announcements') {
+      activeTab.value = 'Leave / Attendance'
+      leaveSectionMode.value = 'announcements'
+    }
+  } else if (tab === 'Career') {
+    if (item === 'Manage Recruitments') {
+      activeTab.value = 'Career'
+      careerSectionMode.value = 'manage-recruitments'
+    } else if (item === 'Interviews') {
+      activeTab.value = 'Career'
+      careerSectionMode.value = 'interviews'
+    } else if (item === 'Career Lists') {
+      activeTab.value = 'Career'
+      careerSectionMode.value = 'career-lists'
+    }
+  } else if (tab === 'Payroll') {
+    activeTab.value = 'Payroll'
     payrollSectionLabel.value = item
+  } else if (tab === 'Assets') {
+    if (item === 'Asset Directory') {
+      activeTab.value = 'Assets'
+    } else if (item === 'Asset Requests') {
+      activeTab.value = 'Assets'
+      // يمكن إضافة منطق لعرض طلبات الأصول هنا
+    }
   }
+  
+  // إغلاق القائمة المنسدلة
   openHeaderMenu.value = null
 }
 
@@ -4579,14 +4779,29 @@ function openCareerApplicants(job) {
   selectedCareerJob.value = job
   careerSectionMode.value = 'view-applicants'
   openCareerRowMenuId.value = null
-  selectedCareerApplicantId.value = careerApplicantsRows.value[0]?.id || null
+  loadCareerApplicants(job.id)
 }
 
-function setCareerApplicantDecision(nextDecision) {
+const setCareerApplicantDecision = async (nextDecision) => {
   if (!selectedCareerApplicant.value) return
-  careerApplicantsRows.value = careerApplicantsRows.value.map((row) =>
-    row.id === selectedCareerApplicant.value.id ? { ...row, decision: nextDecision } : row,
-  )
+  const statusMap = { Selected: 'shortlisted', Rejected: 'rejected', Maybe: 'pending' }
+  const apiStatus = statusMap[nextDecision] || 'pending'
+
+  let rejectionReason = null
+  if (apiStatus === 'rejected') {
+    rejectionReason = 'Rejected by HR'
+  }
+
+  try {
+    await updateApplicantStatusApi(selectedCareerApplicant.value.id, apiStatus, rejectionReason)
+    careerApplicantsRows.value = careerApplicantsRows.value.map((row) =>
+      row.id === selectedCareerApplicant.value.id ? { ...row, decision: nextDecision, status: apiStatus } : row,
+    )
+    showNotification('Applicant status updated', 'success')
+  } catch (error) {
+    console.error('Failed to update applicant status:', error)
+    showNotification(error.response?.data?.message || 'Failed to update status', 'error')
+  }
 }
 
 function toggleCareerApplicantSection(sectionKey) {
@@ -5660,57 +5875,109 @@ function openEmployeeDetails(row) {
 
 function closeRequestDocumentModal() {
   showRequestDocumentModal.value = false
-  requestDocumentForm.value = { documentType: '', description: '' }
+  requestDocumentForm.value = { documentType: '', description: '', employee: '' }
   editingRequestedDocumentId.value = null
 }
 
 function openRequestDocumentModal() {
   editingRequestedDocumentId.value = null
-  requestDocumentForm.value = { documentType: '', description: '' }
+  requestDocumentForm.value = { documentType: '', description: '', employee: '' }
   showRequestDocumentModal.value = true
 }
 
-function submitRequestDocument() {
-  if (!requestDocumentForm.value.documentType) return
-  const today = new Date()
-  const requestedDate = `${String(today.getDate()).padStart(2, '0')} ${today.toLocaleDateString('en-GB', { month: 'short' })} ${today.getFullYear()}`
-  if (editingRequestedDocumentId.value) {
-    requestedDocuments.value = requestedDocuments.value.map((doc) =>
-      doc.id === editingRequestedDocumentId.value
-        ? { ...doc, documentType: requestDocumentForm.value.documentType, description: requestDocumentForm.value.description || '--' }
-        : doc,
-    )
-  } else {
-    requestedDocuments.value.unshift({
-      id: Date.now(),
-      documentType: requestDocumentForm.value.documentType,
-      description: requestDocumentForm.value.description || '--',
-      requestedDate,
-      status: 'Pending',
-      rejectionReason: '',
-    })
+const submitRequestDocument = async () => {
+  if (!requestDocumentForm.value.documentType) {
+    showNotification('Please select a document type', 'error')
+    return
   }
-  closeRequestDocumentModal()
+  if (
+    activeTab.value === 'Document Requests' &&
+    !editingRequestedDocumentId.value &&
+    !requestDocumentForm.value.employee
+  ) {
+    showNotification('Please select an employee', 'error')
+    return
+  }
+
+  try {
+    const payload = {
+      document_type_id: requestDocumentForm.value.documentType,
+      description: requestDocumentForm.value.description || '',
+    }
+    if (requestDocumentForm.value.employee) {
+      payload.user_id = requestDocumentForm.value.employee
+    }
+
+    if (editingRequestedDocumentId.value) {
+      await updateDocumentRequest(editingRequestedDocumentId.value, payload)
+      showNotification('Document request updated successfully', 'success')
+    } else {
+      await createDocumentRequest(payload)
+      showNotification('Document request submitted successfully', 'success')
+    }
+
+    closeRequestDocumentModal()
+    await loadRequestedDocuments(selectedEmployeeDetail.value?.id)
+  } catch (error) {
+    console.error('Failed to submit document request:', error)
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const messages = Object.values(error.response.data.errors).flat().map((m) => `• ${m}`).join('\n')
+      showNotification(messages, 'error')
+    } else {
+      showNotification(error.response?.data?.message || 'Failed to submit request', 'error')
+    }
+  }
 }
 
 function openEditDocumentRequest(doc) {
   editingRequestedDocumentId.value = doc.id
+
   requestDocumentForm.value = {
-    documentType: doc.documentType,
+    documentType: doc.document_type_id ?? doc.raw?.document_type_id ?? '',
     description: doc.description === '--' ? '' : doc.description,
+    // employee: doc.user_id ?? doc.raw?.user_id ?? '',
   }
+
   showRequestDocumentModal.value = true
 }
 
-function deleteRequestedDocument(doc) {
-  requestedDocuments.value = requestedDocuments.value.filter((item) => item.id !== doc.id)
-  if (selectedRequestedDocument.value?.id === doc.id) {
-    selectedRequestedDocument.value = null
-    showDocumentDetailModal.value = false
+async function deleteRequestedDocument(doc) {
+  const confirmed = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete this document request. This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+      }).then((result) => resolve(result.isConfirmed))
+    } else {
+      resolve(window.confirm('Delete this document request?'))
+    }
+  })
+  if (!confirmed) return
+
+  try {
+    await deleteDocumentRequest(doc.id)
+    showNotification('Document request deleted successfully', 'success')
+    if (selectedRequestedDocument.value?.id === doc.id) {
+      selectedRequestedDocument.value = null
+      showDocumentDetailModal.value = false
+    }
+    await loadRequestedDocuments(selectedEmployeeDetail.value?.id)
+  } catch (error) {
+    console.error('Failed to delete document request:', error)
+    showNotification(error.response?.data?.message || 'Failed to delete request', 'error')
   }
 }
 
-function openDocumentDetail(doc) {
+async function openDocumentDetail(doc) {
+  try {
+    const full = await getDocumentRequest ? null : null 
+  } catch (e) {}
   selectedRequestedDocument.value = { ...doc }
   showDocumentDetailModal.value = true
 }
@@ -5743,28 +6010,44 @@ function handleApproveDocumentFileChange(event) {
   approveDocumentFile.value = file || null
 }
 
-function confirmApproveDocument() {
+const confirmApproveDocument = async () => {
   if (!selectedRequestedDocument.value) return
-  requestedDocuments.value = requestedDocuments.value.map((doc) =>
-    doc.id === selectedRequestedDocument.value.id
-      ? { ...doc, status: 'Approved', rejectionReason: '' }
-      : doc,
-  )
-  selectedRequestedDocument.value = { ...selectedRequestedDocument.value, status: 'Approved', rejectionReason: '' }
-  closeApproveDocumentModal()
+  if (!approveDocumentFile.value) {
+    showNotification('Please attach a file', 'error')
+    return
+  }
+
+  try {
+    await approveDocumentRequest(selectedRequestedDocument.value.id, approveDocumentFile.value)
+    showNotification('Document request approved successfully', 'success')
+    closeApproveDocumentModal()
+    showDocumentDetailModal.value = false
+    await loadRequestedDocuments(selectedEmployeeDetail.value?.id)
+  } catch (error) {
+    console.error('Failed to approve document request:', error)
+    showNotification(error.response?.data?.message || 'Failed to approve request', 'error')
+  }
 }
 
-function confirmRejectDocument() {
+const confirmRejectDocument = async () => {
   if (!selectedRequestedDocument.value) return
-  const reason = rejectDocumentReason.value || 'Rejected'
-  requestedDocuments.value = requestedDocuments.value.map((doc) =>
-    doc.id === selectedRequestedDocument.value.id
-      ? { ...doc, status: 'Rejected', rejectionReason: reason }
-      : doc,
-  )
-  selectedRequestedDocument.value = { ...selectedRequestedDocument.value, status: 'Rejected', rejectionReason: reason }
-  closeRejectDocumentModal()
+  if (!rejectDocumentReason.value || rejectDocumentReason.value.trim().length < 5) {
+    showNotification('Rejection reason must be at least 5 characters', 'error')
+    return
+  }
+
+  try {
+    await rejectDocumentRequest(selectedRequestedDocument.value.id, rejectDocumentReason.value)
+    showNotification('Document request rejected successfully', 'success')
+    closeRejectDocumentModal()
+    showDocumentDetailModal.value = false
+    await loadRequestedDocuments(selectedEmployeeDetail.value?.id)
+  } catch (error) {
+    console.error('Failed to reject document request:', error)
+    showNotification(error.response?.data?.message || 'Failed to reject request', 'error')
+  }
 }
+
 function showNotification(message, type = 'success') {
   if (window.$showNotification) {
     window.$showNotification(message, type)
@@ -5932,9 +6215,10 @@ function restoreHrPageState() {
   if (typeof window === 'undefined') return
   try {
     const savedActiveTab = window.localStorage.getItem(HR_ACTIVE_TAB_STORAGE_KEY)
-    if (savedActiveTab && headerTabs.includes(savedActiveTab)) {
-      activeTab.value = savedActiveTab
-    }
+if (savedActiveTab && (headerTabs.includes(savedActiveTab) || savedActiveTab === 'Document Requests')) {
+  activeTab.value = savedActiveTab
+  if (savedActiveTab === 'Document Requests') loadRequestedDocuments()
+}
 
     const savedLeaveMode = window.localStorage.getItem(HR_LEAVE_MODE_STORAGE_KEY)
     if (savedLeaveMode && ['leave', 'attendance', 'announcements'].includes(savedLeaveMode)) {
@@ -6149,6 +6433,10 @@ onMounted(async () => {
   await fetchAttendanceData()
   await loadAttendanceSummary()
   await loadDailyAttendanceStats()
+
+   await loadDocumentTypesList()
+  await loadRequestedDocuments()
+  await loadCareerJobs()
 
   await loadAgentData()
   syncMobileViewport()
@@ -9750,6 +10038,9 @@ onBeforeUnmount(() => {
 .checkbox-label span {
   font-weight: 500;
   color: #1f2937;
+}
+.requested-document-row--with-employee {
+  grid-template-columns: minmax(140px, 1fr) minmax(150px, 1.3fr) minmax(200px, 1.6fr) 120px 90px minmax(160px, 1.4fr) 110px;
 }
 </style>
 
