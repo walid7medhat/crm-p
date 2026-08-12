@@ -141,7 +141,7 @@
                                         <div v-if="order.review">
                                             <div class="review-display">
                                                 <div class="review-text mb-1">
-                                                    "{{ truncateText(order.review, 60) }}"
+                                                    "{{ order.review }}"
                                                 </div>
                                                 <small class="text-muted d-block">
                                                     By: {{ order.reviewed_by?.name || 'Requester' }}
@@ -1243,7 +1243,8 @@ function  hasActions(order) {
 }
 
 .review-display {
-    max-width: 200px;
+    max-width: 320px;
+    min-width: 180px;
     background: #f8f9fa;
     padding: 8px 12px;
     border-radius: 6px;
@@ -1254,8 +1255,11 @@ function  hasActions(order) {
     font-style: italic;
     color: #495057;
     font-size: 12px;
-    line-height: 1.3;
+    line-height: 1.4;
     word-break: break-word;
+    white-space: pre-wrap;
+    overflow: visible;
+    max-height: none;
     margin-bottom: 4px;
 }
 
@@ -1282,7 +1286,7 @@ function  hasActions(order) {
 /* Responsive */
 @media (max-width: 768px) {
     .review-display {
-        max-width: 150px;
+        max-width: 280px;
     }
     
     .review-text {

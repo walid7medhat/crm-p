@@ -151,15 +151,16 @@
                                         Type: {{ order.request_type }}, Status: {{ order.status }}
                                     </div>
                                     
-                                    <div v-if="order.request_type === 'viewing' && order.status === 'approved' && order.review && order.can_review">
+                                    <div v-if="order.request_type === 'viewing' && order.status === 'approved' && order.review">
                                         <div class="review-display">
                                             <div class="review-text mb-1">
-                                                "{{ truncateText(order.review, 80) }}"
+                                                "{{ order.review }}"
                                             </div>
                                             <small class="text-muted d-block">
                                                 {{ formatDate(order.reviewed_at) }}
                                             </small>
                                             <button 
+                                                v-if="order.can_review"
                                                 class="btn btn-sm btn-link p-0 text-primary mt-1"
                                                 @click="editReview(order)"
                                                 title="Edit Review"
@@ -179,7 +180,7 @@
                                         <span class="text-muted">-</span>
                                         <small v-if="order.request_type === 'viewing' && order.status === 'approved'" 
                                                class="text-muted d-block">
-                                            <template v-if="!order.can_review">
+                                            <template v-if="!order.can_review && !order.review">
                                                 Only the requester can review
                                             </template>
                                         </small>
@@ -1685,7 +1686,8 @@ onUnmounted(() => {
 
 
 .review-display {
-    max-width: 250px;
+    max-width: 320px;
+    min-width: 180px;
 }
 
 .review-text {
@@ -1698,6 +1700,9 @@ onUnmounted(() => {
     font-size: 13px;
     line-height: 1.4;
     word-break: break-word;
+    white-space: pre-wrap;
+    overflow: visible;
+    max-height: none;
 }
 
 /* زر Add Review */
@@ -1756,7 +1761,7 @@ onUnmounted(() => {
 /* Modal responsive */
 @media (max-width: 768px) {
     .review-display {
-        max-width: 200px;
+        max-width: 280px;
     }
     
     .review-text {

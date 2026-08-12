@@ -5,27 +5,6 @@
         <h6 class="uac-title">Attendance</h6>
         <p class="uac-subtitle">Daily check-in &amp; check-out by month</p>
       </div>
-      <div class="uac-month-nav">
-        <button
-          type="button"
-          class="uac-nav-btn"
-          :disabled="loading || !canGoNewer"
-          @click="goNewer"
-          aria-label="Newer month"
-        >
-          <i class="ri-arrow-left-s-line"></i>
-        </button>
-        <span class="uac-month-label">{{ currentMonth?.label || '—' }}</span>
-        <button
-          type="button"
-          class="uac-nav-btn"
-          :disabled="loading || !canGoOlder"
-          @click="goOlder"
-          aria-label="Older month"
-        >
-          <i class="ri-arrow-right-s-line"></i>
-        </button>
-      </div>
     </div>
 
     <div v-if="loading" class="uac-loading">
@@ -49,10 +28,33 @@
     </div>
 
     <template v-else-if="currentMonth">
-      <div class="uac-summary">
-        <span class="uac-chip present">{{ currentMonth.present }} Present</span>
-        <span class="uac-chip late">{{ currentMonth.late }} Late</span>
-        <span class="uac-chip absent">{{ currentMonth.absent }} Absent</span>
+      <div class="uac-toolbar">
+        <div class="uac-summary">
+          <span class="uac-chip present">{{ currentMonth.present }} Present</span>
+          <span class="uac-chip late">{{ currentMonth.late }} Late</span>
+          <span class="uac-chip absent">{{ currentMonth.absent }} Absent</span>
+        </div>
+        <div class="uac-month-nav">
+          <button
+            type="button"
+            class="uac-nav-btn"
+            :disabled="loading || !canGoNewer"
+            @click="goNewer"
+            aria-label="Newer month"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+          </button>
+          <span class="uac-month-label">{{ currentMonth?.label || '—' }}</span>
+          <button
+            type="button"
+            class="uac-nav-btn"
+            :disabled="loading || !canGoOlder"
+            @click="goOlder"
+            aria-label="Older month"
+          >
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
       </div>
 
       <div class="uac-table-wrap">
@@ -61,7 +63,7 @@
             <tr>
               <th>Date</th>
               <th>Status</th>
-              <th>Check In &amp; Check Out</th>
+              <th>Check in &amp; Check Out</th>
               <th class="text-end">Break</th>
             </tr>
           </thead>
@@ -69,17 +71,18 @@
             <tr v-for="row in sortedDays" :key="row.date">
               <td class="uac-date">{{ formatDate(row.date) }}</td>
               <td>
-                <span class="status-badge" :class="statusClass(row.status)">{{ row.status }}</span>
+                <span class="status-badge" :class="statusClass(row.status)">
+                  <span class="status-dot" aria-hidden="true" />
+                  {{ row.status }}
+                </span>
               </td>
               <td>
                 <div class="check-flow">
                   <span class="check-time">{{ formatTime(row.date, row.check_in) }}</span>
                   <span class="check-duration-wrap">
-                    <span class="dur-dot"></span>
                     <span class="dur-line"></span>
                     <span class="dur-text">{{ formatDuration(row.date, row.check_in, row.check_out) }}</span>
                     <span class="dur-line"></span>
-                    <span class="dur-dot"></span>
                   </span>
                   <span class="check-time">{{ formatTime(row.date, row.check_out) }}</span>
                 </div>
@@ -209,46 +212,54 @@ export default {
 
 <style scoped>
 .user-attendance-carousel {
-  background: #fff;
-  border: 1px solid #eceff5;
-  border-radius: 12px;
-  padding: 16px 18px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 .uac-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .uac-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: #0b0736;
 }
 
 .uac-subtitle {
-  margin: 2px 0 0;
-  font-size: 0.75rem;
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
   color: #9ca3af;
+}
+
+.uac-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .uac-month-nav {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid #eceff5;
+  border-radius: 999px;
+  background: #fff;
 }
 
 .uac-nav-btn {
-  width: 30px;
-  height: 30px;
-  border: 1px solid #eceff5;
+  width: 28px;
+  height: 28px;
+  border: none;
   border-radius: 50%;
-  background: #fff;
+  background: transparent;
   color: #4b5563;
   display: inline-flex;
   align-items: center;
@@ -258,8 +269,8 @@ export default {
 }
 
 .uac-nav-btn:hover:not(:disabled) {
-  background: #f4f0f8;
-  color: #733e87;
+  background: #f3f4f6;
+  color: #0b0736;
 }
 
 .uac-nav-btn:disabled {
@@ -268,24 +279,24 @@ export default {
 }
 
 .uac-month-label {
-  min-width: 110px;
+  min-width: 100px;
   text-align: center;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: #374151;
+  color: #0b0736;
+  padding: 0 4px;
 }
 
 .uac-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .uac-chip {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
 }
 
@@ -295,8 +306,8 @@ export default {
 }
 
 .uac-chip.late {
-  background: #ffedd5;
-  color: #9a3412;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .uac-chip.absent {
@@ -337,21 +348,21 @@ export default {
 .uac-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .uac-table thead th {
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #9ca3af;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid #eceff5;
   white-space: nowrap;
 }
 
 .uac-table tbody td {
-  padding: 10px;
+  padding: 14px 12px;
   border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
 }
@@ -374,11 +385,21 @@ export default {
 
 .status-badge {
   text-transform: capitalize;
-  padding: 4px 10px;
+  padding: 5px 12px 5px 10px;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .status-present {
@@ -392,50 +413,46 @@ export default {
 }
 
 .status-late {
-  background: #ffedd5;
-  color: #9a3412;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .check-flow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   white-space: nowrap;
 }
 
 .check-time {
   color: #111827;
   font-weight: 500;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
 }
 
 .check-duration-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-}
-
-.dur-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #9ca3af;
+  gap: 8px;
+  min-width: 90px;
 }
 
 .dur-line {
-  width: 16px;
+  flex: 1;
+  min-width: 18px;
   height: 1px;
-  background: #cfd4dc;
+  background: #d1d5db;
 }
 
 .dur-text {
   color: #d69a22;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .break-col {
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
 }
 
 @media (max-width: 768px) {

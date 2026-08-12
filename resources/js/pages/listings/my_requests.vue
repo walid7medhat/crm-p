@@ -185,7 +185,7 @@
                                         <div v-if="request.review">
                                             <div class="review-display">
                                                 <div class="review-text mb-1">
-                                                    "{{ truncateText(request.review, 60) }}"
+                                                    "{{ request.review }}"
                                                 </div>
                                                 <small class="text-muted d-block">
                                                     By: {{ request.reviewed_by?.name || 'Requester' }}
@@ -1554,7 +1554,8 @@ function viewProperty(propertyId) {
 }
 
 .review-display {
-    max-width: 250px;
+    max-width: 320px;
+    min-width: 180px;
 }
 
 .review-text {
@@ -1567,6 +1568,9 @@ function viewProperty(propertyId) {
     font-size: 13px;
     line-height: 1.4;
     word-break: break-word;
+    white-space: pre-wrap;
+    overflow: visible;
+    max-height: none;
 }
 
 /* زر Add Review */
