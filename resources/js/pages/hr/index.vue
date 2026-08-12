@@ -624,10 +624,10 @@
             <div class="add-grid-two">
               <div class="add-field add-field-full">
                 <label>Announcement Tittle *</label>
-                <SearchableSelect
+                <input
                   v-model="announcementForm.title"
-                  :options="announcementRows.map((row) => row.title)"
-                  placeholder="Enter Announcement Tittle"
+                  type="text"
+                  placeholder="Enter Announcement Title"
                 />
               </div>
               <div class="add-field">
@@ -1840,6 +1840,12 @@ import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
 import {
+  fetchAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement as deleteAnnouncementApi,
+} from '@/services/announcementsApi'
+import {
   createEmployee,
   updateEmployee,
   fetchDepartments,
@@ -2800,11 +2806,8 @@ const leaveRows = ref([
   { id: 2, empId: '#EMPO02', employeeName: 'Ahmad Al Daghash', avatar: 'https://i.pravatar.cc/80?img=12', designation: 'UI/UX Designer', leaveType: 'Sick', startDate: '10 Feb 2026', endDate: '11 Feb 2026', days: '02', reason: 'Fever', appliedDate: '10 Feb 2026', status: 'Approved', approvedBy: 'HR Manager' },
   { id: 3, empId: '#EMPO03', employeeName: 'Adeel Malik', avatar: 'https://i.pravatar.cc/80?img=33', designation: 'Sales Executive', leaveType: 'Casual', startDate: '21 Apr 2026', endDate: '21 Apr 2026', days: '01', reason: 'Personal Errand', appliedDate: '19 Apr 2026', status: 'Rejected', approvedBy: '--' },
 ])
-const announcementRows = ref([
-  { id: 1, title: 'National Day Holiday Notification', startDate: '01 Feb 2026', endDate: '04 Feb 2026', branch: 'All', department: 'All', description: 'Dear Team, As we approach the celebration of UAE National Day, we would like to inform you of the upcoming holiday schedule.' },
-  { id: 2, title: 'Ramadan Working Hours', startDate: '05 Apr 2026', endDate: '--', branch: 'Abu Dhabi', department: 'All', description: 'Dear Team, We hope you are doing well. In the month of Ramadan, our working hours will be from 9:00 AM to 4:00 PM.' },
-  { id: 3, title: 'Eid Holidays', startDate: '01 Mar 2026', endDate: '03 Mar 2026', branch: 'Abu Dhabi', department: 'All', description: 'Dear Team, We hope you are doing well. If you have any queries, kindly reach out to the HR Department.' },
-])
+const announcementRows = ref([])
+const loadingAnnouncements = ref(false)
 const announcementsPage = ref(1)
 const announcementsPerPage = 10
 
@@ -3144,7 +3147,42 @@ const announcementsPaginationItems = computed(() => {
   items.push({ type: 'page', n: total })
   return items
 })
+function mapAnnouncementToRow(item) {
+  return {
+    id: item.id,
+    title: item.title,
+    startDate: formatDate(item.start_date),
+    endDate: item.end_date ? formatDate(item.end_date) : '--',
+    branch: item.branch?.name || 'All',
+    department: item.department?.name || 'All',
+    branch_id: item.branch_id || '',
+    department_id: item.department_id || '',
+    description: item.description || '--',
+    raw: item,
+  }
+}
+const loadAnnouncementsData = async () => {
+  loadingAnnouncements.value = true
+  try {
+    const params = {
+      per_page: announcementsPerPage,
+      page: announcementsPage.value,
+    }
+    if (announcementSearchFilters.value.title) params.search = announcementSearchFilters.value.title
+    if (announcementSearchFilters.value.branch) params.branch_id = announcementSearchFilters.value.branch
+    if (announcementSearchFilters.value.department) params.department_id = announcementSearchFilters.value.department
 
+    const result = await fetchAnnouncements(params)
+    const items = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : []
+    announcementRows.value = items.map(mapAnnouncementToRow)
+  } catch (error) {
+    console.error('Failed to load announcements:', error)
+    showNotification('Failed to load announcements', 'error')
+    announcementRows.value = []
+  } finally {
+    loadingAnnouncements.value = false
+  }
+}
 const filteredCareerRows = computed(() => {
   const keyword = careerSearchKeyword.value.trim().toLowerCase()
   if (!keyword) return careerRows.value
@@ -4270,7 +4308,26 @@ function closeLeaveDetails() {
   showLeaveDetailModal.value = false
 }
 
-function confirmDeleteLeave(leave) {
+async function confirmDeleteLeave(leave) {
+  const shouldDelete = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete this leave request for "${leave.employeeName}". This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+      }).then((result) => resolve(result.isConfirmed))
+    } else {
+      resolve(window.confirm(`Delete leave request for "${leave.employeeName}"?`))
+    }
+  })
+
+  if (!shouldDelete) return
+
   leaveRows.value = leaveRows.value.filter((row) => row.id !== leave.id)
   openLeaveRowMenuId.value = null
 }
@@ -4358,11 +4415,11 @@ function openEditAnnouncement(item) {
   editingAnnouncementId.value = item.id
   announcementForm.value = {
     title: item.title || '',
-    branch: item.branch || '',
-    department: item.department || '',
-    startDate: normalizeDateInput(item.startDate),
-    endDate: normalizeDateInput(item.endDate),
-    description: item.description || '',
+    branch: item.branch_id || '',
+    department: item.department_id || '',
+    startDate: normalizeDateInput(item.raw?.start_date),
+    endDate: item.raw?.end_date ? normalizeDateInput(item.raw.end_date) : '',
+    description: item.raw?.description || '',
   }
   showAnnouncementModal.value = true
   openAnnouncementRowMenuId.value = null
@@ -4376,46 +4433,98 @@ function clearAnnouncementForm() {
   announcementForm.value = defaultAnnouncementForm()
 }
 
-function saveAnnouncement() {
+const saveAnnouncement = async () => {
+  if (!announcementForm.value.title) {
+    showNotification('Please enter an announcement title', 'error')
+    return
+  }
+  if (!announcementForm.value.startDate) {
+    showNotification('Please select a start date', 'error')
+    return
+  }
+
   const payload = {
-    title: announcementForm.value.title || 'Untitled Announcement',
-    startDate: formatDate(announcementForm.value.startDate) || '--',
-    endDate: formatDate(announcementForm.value.endDate) || '--',
-    branch: announcementForm.value.branch || 'All',
-    department: announcementForm.value.department || 'All',
-    description: announcementForm.value.description || '--',
+    title: announcementForm.value.title,
+    description: announcementForm.value.description || '',
+    start_date: announcementForm.value.startDate,
+    end_date: announcementForm.value.endDate || null,
+    branch_id: announcementForm.value.branch || null,
+    department_id: announcementForm.value.department || null,
   }
-  if (editingAnnouncementId.value) {
-    announcementRows.value = announcementRows.value.map((item) =>
-      item.id === editingAnnouncementId.value ? { ...item, ...payload } : item,
-    )
-  } else {
-    const nextId = announcementRows.value.length ? Math.max(...announcementRows.value.map((item) => Number(item.id) || 0)) + 1 : 1
-    announcementRows.value.unshift({ id: nextId, ...payload })
-    announcementsPage.value = 1
+
+  try {
+    if (editingAnnouncementId.value) {
+      await updateAnnouncement(editingAnnouncementId.value, payload)
+      showNotification('Announcement updated successfully', 'success')
+    } else {
+      await createAnnouncement(payload)
+      showNotification('Announcement created successfully', 'success')
+    }
+    showAnnouncementModal.value = false
+    editingAnnouncementId.value = null
+    announcementForm.value = defaultAnnouncementForm()
+    await loadAnnouncementsData()
+  } catch (error) {
+    console.error('Failed to save announcement:', error)
+
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const messages = Object.values(errors)
+        .flat()
+        .map((msg) => `• ${msg}`)
+        .join('\n')
+      showNotification(messages, 'error')
+    } else {
+      const message = error.response?.data?.message || 'Failed to save announcement'
+      showNotification(message, 'error')
+    }
   }
-  showAnnouncementModal.value = false
-  editingAnnouncementId.value = null
 }
 
-function deleteAnnouncement(item) {
-  announcementRows.value = announcementRows.value.filter((row) => row.id !== item.id)
-  openAnnouncementRowMenuId.value = null
+async function deleteAnnouncement(item) {
+  const confirmed = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete "${item.title}". This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+      }).then((result) => resolve(result.isConfirmed))
+    } else {
+      resolve(window.confirm(`Delete announcement "${item.title}"?`))
+    }
+  })
+  if (!confirmed) return
+
+  try {
+    await deleteAnnouncementApi(item.id)
+    showNotification('Announcement deleted successfully', 'success')
+    openAnnouncementRowMenuId.value = null
+    await loadAnnouncementsData()
+  } catch (error) {
+    console.error('Failed to delete announcement:', error)
+    showNotification(error.response?.data?.message || 'Failed to delete announcement', 'error')
+  }
 }
 
-function applyAnnouncementSearchFilters() {
+async function applyAnnouncementSearchFilters() {
   announcementsPage.value = 1
   showAnnouncementSearchModal.value = false
+  await loadAnnouncementsData()
 }
 
-function resetAnnouncementSearchFilters() {
-  announcementSearchFilters.value = {
-    title: '',
-    branch: '',
-    department: '',
-  }
+async function resetAnnouncementSearchFilters() {
+  announcementSearchFilters.value = { title: '', branch: '', department: '' }
   announcementsPage.value = 1
+  await loadAnnouncementsData()
 }
+
+watch(announcementsPage, () => {
+  loadAnnouncementsData()
+})
 
 function exportAnnouncements() {
   const headers = ['Title', 'Start Date', 'End Date', 'Branch', 'Department', 'Description']
@@ -5766,9 +5875,26 @@ function closeAddEmployeeModal() {
   resetAddEmployeeForm()
 }
 
-function confirmDeleteEmployee(row) {
-  const shouldDelete = window.confirm(`Are you sure you want to delete employee "${row.name}"?`)
+async function confirmDeleteEmployee(row) {
+  const shouldDelete = await new Promise((resolve) => {
+    if (window.Swal) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete employee "${row.name}". This action cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+      }).then((result) => resolve(result.isConfirmed))
+    } else {
+      resolve(window.confirm(`Are you sure you want to delete employee "${row.name}"?`))
+    }
+  })
+
   if (!shouldDelete) return
+
   employeesDirectory.value = employeesDirectory.value.filter((employee) => String(employee.id) !== String(row.id))
   if (selectedEmployeeDetail.value && String(selectedEmployeeDetail.value.id) === String(row.id)) {
     selectedEmployeeDetail.value = null
@@ -6018,7 +6144,7 @@ onMounted(async () => {
   await loadLeaveStatistics()
   await loadAssetStatistics()
   await fetchAssetResponsiblePersons()
-
+  await loadAnnouncementsData()
   // Load attendance data
   await fetchAttendanceData()
   await loadAttendanceSummary()
