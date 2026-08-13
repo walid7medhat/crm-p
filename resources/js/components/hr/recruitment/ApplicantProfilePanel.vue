@@ -18,16 +18,16 @@
       </header>
 
       <div class="rec-profile__actions">
-        <button type="button" @click="$emit('schedule', applicant)">
+        <button v-if="!isFinalStatus" type="button" @click="$emit('schedule', applicant)">
           <iconify-icon icon="lucide:calendar-clock" /> Schedule Interview
         </button>
-        <button type="button" @click="$emit('move', applicant)">
+        <button v-if="!isFinalStatus" type="button" @click="$emit('move', applicant)">
           <iconify-icon icon="lucide:arrow-right-left" /> Move Candidate
         </button>
-        <button type="button" class="danger" @click="$emit('reject', applicant)">
+        <button v-if="!isFinalStatus" type="button" class="danger" @click="$emit('reject', applicant)">
           <iconify-icon icon="lucide:user-x" /> Reject
         </button>
-        <button type="button" class="success" @click="$emit('hire', applicant)">
+        <button v-if="!isFinalStatus" type="button" class="success" @click="$emit('hire', applicant)">
           <iconify-icon icon="lucide:user-check" /> Hire
         </button>
         <button v-if="applicant.resumeUrl" type="button" @click="$emit('download', applicant)">
@@ -118,8 +118,14 @@ const props = defineProps({
 
 defineEmits(['close', 'schedule', 'move', 'reject', 'hire', 'download'])
 
-const answers = computed(() => props.applicant?.answers || props.applicant?.raw?.answers || {})
+const FINAL_STATUSES = ['hired', 'rejected', 'withdrawn']
 
+const isFinalStatus = computed(() => {
+  const status = String(props.applicant?.status || props.applicant?.raw?.status || '').toLowerCase()
+  return FINAL_STATUSES.includes(status)
+})
+
+const answers = computed(() => props.applicant?.answers || props.applicant?.raw?.answers || {})
 const experienceItems = computed(() => {
   const raw = answers.value.experience || answers.value.work_experience || answers.value.experiences
   return Array.isArray(raw) ? raw : []

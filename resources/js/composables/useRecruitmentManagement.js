@@ -5,6 +5,10 @@ import {
   fetchApplicants,
   fetchApplicant,
   fetchInterviews,
+  updateInterview,
+  createJob,
+  updateJob,
+  deleteJob,
   PIPELINE_STAGES,
   resolvePipelineStage,
 } from '@/services/recruitmentApi'
@@ -102,6 +106,14 @@ export function useRecruitmentManagement() {
       return true
     })
   })
+  const filteredInterviews = computed(() =>
+  interviews.value.filter((interview) => {
+    if (!matchesSearch([interview.applicantName, interview.jobTitle, interview.interviewerName])) return false
+    if (selectedJob.value && String(interview.jobId) !== String(selectedJob.value.id)) return false
+    if (filters.value.hiring_manager_id && String(interview.interviewerId) !== String(filters.value.hiring_manager_id)) return false
+    return true
+  })
+)
 
   async function loadOptions() {
     try {
@@ -120,31 +132,41 @@ export function useRecruitmentManagement() {
     }
   }
 
-  async function loadAll() {
-    loading.value = true
-    error.value = ''
-    try {
-      const [stats, jobsResult, applicantsResult, interviewsList] = await Promise.all([
-        fetchRecruitmentStatistics(),
-        fetchJobs({ per_page: 100 }),
-        fetchApplicants({ per_page: 200 }),
-        fetchInterviews({ per_page: 100 }),
-      ])
-      statistics.value = stats
-      jobs.value = jobsResult.items
-      applicants.value = applicantsResult.items.map((a) => ({
-        ...a,
-        pipelineStage: resolvePipelineStage(a.raw),
-      }))
-      interviews.value = interviewsList
-      jobsPage.value = jobsResult.currentPage
-      jobsLastPage.value = jobsResult.lastPage
-    } catch (e) {
-      error.value = e?.response?.data?.message || e?.message || 'Failed to load recruitment data'
-    } finally {
-      loading.value = false
-    }
+async function loadAll() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [stats, jobsResult, applicantsResult, interviewsResult] = await Promise.all([
+      fetchRecruitmentStatistics(),
+      fetchJobs({ per_page: 100 }),
+      fetchApplicants({ per_page: 200 }),
+      fetchInterviews({ per_page: 100 }),
+    ])
+    statistics.value = stats
+    jobs.value = jobsResult.items
+    applicants.value = applicantsResult.items.map((a) => ({
+      ...a,
+      pipelineStage: resolvePipelineStage(a.raw),
+    }))
+    interviews.value = interviewsResult.items
+    jobsPage.value = jobsResult.currentPage
+    jobsLastPage.value = jobsResult.lastPage
+  } catch (e) {
+    error.value = e?.response?.data?.message || e?.message || 'Failed to load recruitment data'
+  } finally {
+    loading.value = false
   }
+}
+
+async function reloadInterviews() {
+  const result = await fetchInterviews({ per_page: 100 })
+  interviews.value = result.items
+}
+
+async function saveInterviewUpdate(id, payload) {
+  await updateInterview(id, payload)
+  await reloadInterviews()
+}
 
   async function loadApplicantDetail(id) {
     applicantDetailLoading.value = true
@@ -166,7 +188,19 @@ export function useRecruitmentManagement() {
     filters.value = DEFAULT_FILTERS()
     searchQuery.value = ''
   }
+    async function saveJob(payload, jobId = null) {
+      if (jobId) {
+        await updateJob(jobId, payload)
+      } else {
+        await createJob(payload)
+      }
+      await loadAll()
+    }
 
+    async function removeJob(jobId) {
+      await deleteJob(jobId)
+      await loadAll()
+    }
   watch(searchQuery, () => {
     clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {}, 250)
@@ -199,10 +233,15 @@ export function useRecruitmentManagement() {
     pipelineBoard,
     filteredJobs,
     filteredApplicants,
+    filteredInterviews,
     loadAll,
     loadApplicantDetail,
     selectJob,
     clearFilters,
     PIPELINE_STAGES,
+    saveJob,
+    removeJob,
+        reloadInterviews,
+    saveInterviewUpdate,
   }
 }

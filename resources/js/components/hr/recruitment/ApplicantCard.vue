@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <div class="rec-applicant-card__swipe" @click.stop>
+    <div class="rec-applicant-card__swipe" v-if="!isFinalStatus" @click.stop>
       <button type="button" class="rec-swipe-btn rec-swipe-btn--move" @click="$emit('move', applicant)">
         <iconify-icon icon="lucide:arrow-right-left" />
       </button>
@@ -37,14 +37,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-defineProps({
+const props = defineProps({
   applicant: { type: Object, required: true },
   active: { type: Boolean, default: false },
 })
 
 defineEmits(['select', 'move', 'reject', 'hire'])
+
+const FINAL_STATUSES = ['hired', 'rejected', 'withdrawn']
+
+const isFinalStatus = computed(() => {
+  const status = String(props.applicant?.status || props.applicant?.raw?.status || '').toLowerCase()
+  return FINAL_STATUSES.includes(status)
+})
 
 const swipeOpen = ref(false)
 let startX = 0

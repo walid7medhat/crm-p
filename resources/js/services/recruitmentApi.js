@@ -34,6 +34,17 @@ const JOB_TYPE_LABELS = {
   remote: 'Remote',
 }
 
+function toDateOnly(value) {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function normalizeJob(job) {
   if (!job) return null
   return {
@@ -46,11 +57,15 @@ export function normalizeJob(job) {
     employmentType: JOB_TYPE_LABELS[job.job_type] || job.job_type || '—',
     jobType: job.job_type,
     applicantsCount: job.applicants_count ?? job.applicants?.length ?? 0,
-    postedDate: job.posted_date,
-    closingDate: job.closing_date,
+    postedDate: toDateOnly(job.posted_date),
+    closingDate: toDateOnly(job.closing_date),
     status: job.status,
     statusLabel: formatJobStatus(job.status),
     openings: job.openings,
+    skills: Array.isArray(job.skills) ? job.skills : [],
+    customQuestions: Array.isArray(job.custom_questions) ? job.custom_questions : [],
+    requiredDocuments: Array.isArray(job.required_documents) ? job.required_documents : [],
+    description: job.description || '',
     recruiter: job.hiring_manager?.name || '—',
     recruiterId: job.hiring_manager_id,
     raw: job,
@@ -171,7 +186,12 @@ export async function fetchApplicant(id) {
 export async function fetchInterviews(params = {}) {
   const response = await api.get('/recruitment/admin/interviews', { params })
   const page = unwrapPaginated(response.data)
-  return page.items
+  return { ...page, items: page.items.map(normalizeInterview) }
+}
+
+export async function updateInterview(id, payload) {
+  const response = await api.put(`/recruitment/admin/interviews/${id}`, payload)
+  return normalizeInterview(response.data?.data)
 }
 
 export async function updateApplicantStatus(id, status, rejectionReason = '') {
@@ -197,4 +217,55 @@ export function exportRecruitmentCsv(filename, rows, columns) {
   link.download = filename
   link.click()
   URL.revokeObjectURL(link.href)
+}
+
+
+export async function createJob(payload) {
+  const response = await api.post('/recruitment/admin/jobs', payload)
+  return normalizeJob(response.data?.data)
+}
+
+export async function updateJob(id, payload) {
+  const response = await api.put(`/recruitment/admin/jobs/${id}`, payload)
+  return normalizeJob(response.data?.data)
+}
+
+export async function deleteJob(id) {
+  const response = await api.delete(`/recruitment/admin/jobs/${id}`)
+  return response.data
+}
+
+
+export function normalizeInterview(interview) {
+  if (!interview) return null
+  return {
+    id: interview.id,
+    applicantId: interview.applicant_id,
+    applicantName: interview.applicant?.full_name || '—',
+    applicantEmail: interview.applicant?.email || '',
+    jobId: interview.job_id,
+    jobTitle: interview.job?.title || interview.applicant?.job?.title || '—',
+    interviewerId: interview.interviewer_id,
+    interviewerName: interview.interviewer?.name || '—',
+    scheduledAt: interview.scheduled_at,
+    type: interview.type,
+    typeLabel: formatInterviewType(interview.type),
+    location: interview.location || '',
+    meetingLink: interview.meeting_link || '',
+    status: interview.status,
+    statusLabel: formatInterviewStatus(interview.status),
+    feedback: interview.feedback || '',
+    rating: interview.rating || null,
+    raw: interview,
+  }
+}
+
+export function formatInterviewType(type) {
+  const map = { online: 'Online', in_person: 'In Person', phone: 'Phone' }
+  return map[type] || type || '—'
+}
+
+export function formatInterviewStatus(status) {
+  const map = { scheduled: 'Scheduled', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No Show' }
+  return map[status] || status || '—'
 }

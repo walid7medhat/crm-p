@@ -284,6 +284,10 @@ class RecruitmentController extends Controller
             'job_type' => 'required|in:full_time,part_time,contract,internship,remote',
             'openings' => 'required|integer|min:1',
             'closing_date' => 'nullable|date|after:today',
+            'skills' => 'nullable|array',
+            'required_documents' => 'nullable|array',
+            'custom_questions' => 'nullable|array',
+            'custom_questions.*.question' => 'required_with:custom_questions|string',
         ]);
         
         try {

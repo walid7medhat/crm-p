@@ -159,7 +159,7 @@
 
       <div class="hr-content-card hr-employees-card" v-else-if="activeTab === 'Employees'">
         <div class="hr-content-shell overview-shell hr-employees-shell">
-          <EmployeesManagement embedded @add="showAddEmployeeModal = true" @edit="openEditEmployee" @delete="deleteEmployee"  @view="openEmployeeDetails" />
+          <EmployeesManagement :key="employeesRefreshKey" embedded @add="showAddEmployeeModal = true" @edit="openEditEmployee" @delete="deleteEmployee"  @view="openEmployeeDetails" />
         </div>
       </div>
 
@@ -1900,6 +1900,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ApexCharts from 'vue3-apexcharts'
 import Swal from 'sweetalert2'
+import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 import HrTeamTreePanel from '@/components/hr/HrTeamTreePanel.vue'
 import HrAttendanceSearchDropdown from '@/components/hr/HrAttendanceSearchDropdown.vue'
@@ -2020,6 +2021,7 @@ const {
   hrAttendanceTeamTree,
   teamOptions,
 } = useHrDashboard()
+const router = useRouter()
 const departmentsList = ref([])
 const designationsList = ref([])
 const branchesList = ref([])
@@ -2254,6 +2256,7 @@ const openCareerRowMenuId = ref(null)
 const employeeFilterChips = ['Finance', 'Marketing', 'HR Department', 'Sales', 'Operations', 'Active', 'In Active']
 const selectedFilterChip = ref('Marketing')
 const showAddEmployeeModal = ref(false)
+const employeesRefreshKey = ref(0)
 const isEditEmployeeMode = ref(false)
 const editingEmployeeId = ref(null)
 const profileImageInputRef = ref(null)
@@ -5587,6 +5590,8 @@ function resetAddEmployeeForm() {
   addEmployeeProfileFile.value = null
   addEmployeeProfilePreview.value = ''
   selectedDocumentType.value = 'emirates_id'
+    removeEditQueryParam()
+
 }
 
 function appendEmployeeDocumentFields(formData) {
@@ -5857,6 +5862,7 @@ const deleteEmployee = async (employee) => {
     
     // Close any open menus
     openEmployeeRowMenuId.value = null
+    employeesRefreshKey.value++
     
   } catch (error) {
     console.error('Error deleting employee:', error)
@@ -6133,7 +6139,7 @@ async function saveEmployeeForm() {
     closeAddEmployeeModal()
     
     await fetchRealEmployees()
-    
+    employeesRefreshKey.value++
   } catch (error) {
   console.error('Error saving employee:', error)
 
@@ -6150,12 +6156,19 @@ async function saveEmployeeForm() {
   }
 }
 }
-
+function removeEditQueryParam() {
+  if (route.query.edit) {
+    const newQuery = { ...route.query }
+    delete newQuery.edit
+    router.replace({ query: newQuery })
+  }
+}
 function closeAddEmployeeModal() {
   showAddEmployeeModal.value = false
   isEditEmployeeMode.value = false
   editingEmployeeId.value = null
   resetAddEmployeeForm()
+   removeEditQueryParam()
 }
 
 async function confirmDeleteEmployee(row) {

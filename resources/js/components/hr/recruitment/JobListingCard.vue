@@ -5,9 +5,19 @@
         <p class="rec-job-card__title">{{ job.title }}</p>
         <span class="rec-job-card__badge" :class="`rec-job-card__badge--${job.status}`">{{ job.statusLabel }}</span>
       </div>
-      <button type="button" class="rec-job-card__menu" @click.stop="$emit('menu', job)">
-        <iconify-icon icon="lucide:more-vertical" />
-      </button>
+      <div class="rec-job-card__menu-wrap" @click.stop>
+        <button type="button" class="rec-job-card__menu" @click.stop="showMenu = !showMenu">
+          <iconify-icon icon="lucide:more-vertical" />
+        </button>
+        <div v-if="showMenu" class="rec-job-card__dropdown" @click.stop>
+          <button type="button" @click.stop="onEdit">
+            <iconify-icon icon="lucide:pencil" /> Edit
+          </button>
+          <button type="button" class="danger" @click.stop="onDelete">
+            <iconify-icon icon="lucide:trash-2" /> Delete
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="rec-job-card__meta">
@@ -34,11 +44,36 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+
+const props = defineProps({
   job: { type: Object, required: true },
 })
 
-defineEmits(['select', 'pipeline', 'menu'])
+const emit = defineEmits(['select', 'pipeline', 'edit', 'delete'])
+
+const showMenu = ref(false)
+
+function onEdit() {
+  showMenu.value = false
+  emit('edit', props.job)
+}
+
+function onDelete() {
+  showMenu.value = false
+  emit('delete', props.job)
+}
+
+function closeOnOutsideClick() {
+  showMenu.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('click', closeOnOutsideClick)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeOnOutsideClick)
+})
 
 function formatDate(value) {
   if (!value) return '—'
