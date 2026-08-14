@@ -158,12 +158,12 @@ public function resetPassword(Request $request): JsonResponse
             'last_login_ip' => $ip,
         ];
 
-        if (is_numeric($lat) && is_numeric($lng)) {
-            $location = \App\Helpers\LocationHelper::fromCoords($lat, $lng);
-            $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
-            $loginData['last_login_lat'] = $location['lat'] ?? $user->last_login_lat;
-            $loginData['last_login_lng'] = $location['lon'] ?? $user->last_login_lng;
-        }
+        // if (is_numeric($lat) && is_numeric($lng)) {
+        //     $location = \App\Helpers\LocationHelper::fromCoords($lat, $lng);
+        //     $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
+        //     $loginData['last_login_lat'] = $location['lat'] ?? $user->last_login_lat;
+        //     $loginData['last_login_lng'] = $location['lon'] ?? $user->last_login_lng;
+        // }
 
         $user->update($loginData);
 
