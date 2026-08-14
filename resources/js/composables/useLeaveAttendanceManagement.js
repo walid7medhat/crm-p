@@ -46,6 +46,8 @@ export function useLeaveAttendanceManagement() {
   // ✅ Pagination variables (للـ Frontend فقط)
   const attendancePage = ref(1)
   const attendancePerPage = ref(10)
+  const leaveTablePage = ref(1)
+  const leavePerPage = ref(10)
   
   let searchTimer = null
 
@@ -129,21 +131,16 @@ export function useLeaveAttendanceManagement() {
   })
 
   // ✅ attendancePaginationItems - عناصر الـ Pagination
-  const attendancePaginationItems = computed(() => {
-    const total = attendanceTotalPages.value
-    const current = attendancePage.value
-    
+  function buildPaginationItems(total, current) {
     if (total <= 1) return [{ type: 'page', n: 1 }]
     if (total <= 7) {
       return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
     }
-    
     const items = []
     const pushDots = () => {
       if (items.length && items[items.length - 1].type === 'dots') return
       items.push({ type: 'dots' })
     }
-    
     items.push({ type: 'page', n: 1 })
     const left = Math.max(2, current - 1)
     const right = Math.min(total - 1, current + 1)
@@ -152,7 +149,11 @@ export function useLeaveAttendanceManagement() {
     if (right < total - 1) pushDots()
     items.push({ type: 'page', n: total })
     return items
-  })
+  }
+
+  const attendancePaginationItems = computed(() =>
+    buildPaginationItems(attendanceTotalPages.value, attendancePage.value)
+  )
 
   const filteredLeaves = computed(() =>
     leaveRows.value.filter((row) => {
@@ -163,6 +164,15 @@ export function useLeaveAttendanceManagement() {
       return true
     })
   )
+
+  const pagedLeaves = computed(() => {
+    const start = (leaveTablePage.value - 1) * leavePerPage.value
+    return filteredLeaves.value.slice(start, start + leavePerPage.value)
+  })
+  const leaveTotalPages = computed(() => Math.max(1, Math.ceil(filteredLeaves.value.length / leavePerPage.value)))
+  const leaveStartEntry = computed(() => (filteredLeaves.value.length ? (leaveTablePage.value - 1) * leavePerPage.value + 1 : 0))
+  const leaveEndEntry = computed(() => Math.min(leaveTablePage.value * leavePerPage.value, filteredLeaves.value.length))
+  const leavePaginationItems = computed(() => buildPaginationItems(leaveTotalPages.value, leaveTablePage.value))
 
   const leaveTrend = computed(() => {
     const stats = leaveStats.value
@@ -200,10 +210,20 @@ export function useLeaveAttendanceManagement() {
   }
 
   async function loadAttendance() {
-    const result = await fetchAttendanceRecords({
-      date: selectedDate.value,
+    const params = {
       status: filters.value.attendance_status || undefined,
-    })
+      department: filters.value.department || undefined,
+      search: searchQuery.value.trim() || undefined,
+    }
+    if (filters.value.start_date || filters.value.end_date) {
+      params.start_date = filters.value.start_date || filters.value.end_date
+      params.end_date = filters.value.end_date || filters.value.start_date
+    } else {
+      const now = new Date()
+      params.start_date = localDateStringYMD(new Date(now.getFullYear(), now.getMonth(), 1))
+      params.end_date = selectedDate.value
+    }
+    const result = await fetchAttendanceRecords(params)
 
     attendanceSummary.value = result.summary || {
       total_employees: 0,
@@ -216,21 +236,26 @@ export function useLeaveAttendanceManagement() {
     attendancePage.value = 1
   }
 
-  async function loadLeaves(reset = true) {
-    const page = reset ? 1 : leavePage.value + 1
-    const params = { page, per_page: 25, status: filters.value.leave_status }
+  async function loadLeaves() {
+    const params = { per_page: 50, status: filters.value.leave_status }
     if (filters.value.start_date) params.start_date = filters.value.start_date
     if (filters.value.end_date) params.end_date = filters.value.end_date
     if (filters.value.leave_type_id) params.leave_type_id = filters.value.leave_type_id
 
-    const result = await fetchLeaveRequests(params)
-    if (reset) {
-      leaveRows.value = result.items
-    } else {
-      leaveRows.value = [...leaveRows.value, ...result.items]
-    }
-    leavePage.value = result.currentPage
-    leaveLastPage.value = result.lastPage
+    let page = 1
+    let lastPage = 1
+    const all = []
+    do {
+      const result = await fetchLeaveRequests({ ...params, page })
+      all.push(...(result.items || []))
+      lastPage = result.lastPage || 1
+      page += 1
+    } while (page <= lastPage && page <= 20)
+
+    leaveRows.value = all
+    leavePage.value = 1
+    leaveLastPage.value = 1
+    leaveTablePage.value = 1
   }
 
   async function loadAll() {
@@ -239,7 +264,7 @@ export function useLeaveAttendanceManagement() {
     try {
       await Promise.all([
         loadAttendance(),
-        loadLeaves(true),
+        loadLeaves(),
         fetchLeaveStatistics().then((s) => { leaveStats.value = s }),
       ])
     } catch (e) {
@@ -272,6 +297,10 @@ export function useLeaveAttendanceManagement() {
 
   watch(attendancePerPage, () => {
     attendancePage.value = 1
+  })
+
+  watch(leavePerPage, () => {
+    leaveTablePage.value = 1
   })
 
   watch(selectedDate, () => {
@@ -328,6 +357,13 @@ export function useLeaveAttendanceManagement() {
     attendanceEndEntry,
     attendancePaginationItems,
     pagedAttendance,
+    leaveTablePage,
+    leavePerPage,
+    leaveTotalPages,
+    leaveStartEntry,
+    leaveEndEntry,
+    leavePaginationItems,
+    pagedLeaves,
     
     // الدوال
     loadAll,

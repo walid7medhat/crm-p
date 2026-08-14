@@ -639,4 +639,74 @@ export const fetchAsset = async (id) => {
   }
 }
 
+const REQUEST_STATUS_LABELS = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+}
+
+export function normalizeAssetRequest(row) {
+  if (!row) return null
+  const status = row.status || 'pending'
+  const user = row.user || {}
+  const code = user.employee_code || (user.id ? String(user.id) : '')
+  return {
+    id: row.id,
+    userId: row.user_id || user.id || null,
+    userName: user.name || '—',
+    avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=0b0736&color=fff`,
+    employeeCode: code,
+    department: row.department?.name || user.department || '—',
+    departmentId: row.department_id || row.department?.id || null,
+    assetItem: row.asset_item || '—',
+    qty: Number(row.qty || 1),
+    status,
+    statusLabel: REQUEST_STATUS_LABELS[status] || status,
+    companyName: row.company_name || '—',
+    branch: row.branch?.name || user.branch || '—',
+    branchId: row.branch_id || row.branch?.id || null,
+    description: row.description || '',
+    appliedAt: row.applied_at || row.created_at || null,
+    approvedBy: row.approver?.name || '',
+    rejectionReason: row.rejection_reason || '',
+    raw: row,
+  }
+}
+
+export async function fetchAssetRequests(params = {}) {
+  const response = await api.get('/asset-requests', { params: { per_page: 200, page: 1, ...params } })
+  const page = unwrapPaginated(response.data)
+  return {
+    ...page,
+    items: page.items.map(normalizeAssetRequest).filter(Boolean),
+  }
+}
+
+export async function createAssetRequest(payload) {
+  const response = await api.post('/asset-requests', payload)
+  return normalizeAssetRequest(response.data?.data || response.data)
+}
+
+export async function updateAssetRequest(id, payload) {
+  const response = await api.put(`/asset-requests/${id}`, payload)
+  return normalizeAssetRequest(response.data?.data || response.data)
+}
+
+export async function deleteAssetRequest(id) {
+  const response = await api.delete(`/asset-requests/${id}`)
+  return response.data
+}
+
+export async function approveAssetRequest(id) {
+  const response = await api.post(`/asset-requests/${id}/approve`)
+  return normalizeAssetRequest(response.data?.data || response.data)
+}
+
+export async function rejectAssetRequest(id, rejectionReason = '') {
+  const response = await api.post(`/asset-requests/${id}/reject`, {
+    rejection_reason: rejectionReason || null,
+  })
+  return normalizeAssetRequest(response.data?.data || response.data)
+}
+
 

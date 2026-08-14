@@ -59,14 +59,16 @@ class EmployeeController extends Controller
             }
 
             if ($request->filled('department_id')) {
-                $query->whereHas('employeeProfile', function ($q) use ($request) {
-                    $q->where('department_id', $request->department_id);
+                $departmentIds = $this->idsWithSameName(\App\Models\Department::class, $request->department_id);
+                $query->whereHas('employeeProfile', function ($q) use ($departmentIds) {
+                    $q->whereIn('department_id', $departmentIds);
                 });
             }
 
             if ($request->filled('designation_id')) {
-                $query->whereHas('employeeProfile', function ($q) use ($request) {
-                    $q->where('designation_id', $request->designation_id);
+                $designationIds = $this->idsWithSameName(\App\Models\Designation::class, $request->designation_id);
+                $query->whereHas('employeeProfile', function ($q) use ($designationIds) {
+                    $q->whereIn('designation_id', $designationIds);
                 });
             }
 
@@ -93,6 +95,18 @@ class EmployeeController extends Controller
             if ($request->filled('joining_date_to')) {
                 $query->whereHas('employeeProfile', function ($q) use ($request) {
                     $q->whereDate('joining_date', '<=', $request->joining_date_to);
+                });
+            }
+
+            if ($request->filled('joining_date')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
+                    $q->whereDate('joining_date', $request->joining_date);
+                });
+            }
+
+            if ($request->filled('visa_validity')) {
+                $query->whereHas('employeeProfile', function ($q) use ($request) {
+                    $q->whereDate('visa_validity', $request->visa_validity);
                 });
             }
             
@@ -470,6 +484,7 @@ class EmployeeController extends Controller
                 'total_employees' => User::whereHas('employeeProfile')->count(),
                 'active_employees' => EmployeeProfile::where('employment_status', 'active')->count(),
                 'new_employees_30d' => EmployeeProfile::where('joining_date', '>=', now()->subDays(30))->count(),
+                'resigned_employees' => EmployeeProfile::where('employment_status', 'terminated')->count(),
                 'employees_on_leave' => EmployeeProfile::where('employment_status', 'on_leave')->count(),
                 'departments_count' => \App\Models\Department::whereHas('employeeProfiles')->count(),
                 'by_employment_status' => [
@@ -553,5 +568,18 @@ class EmployeeController extends Controller
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to delete document: ' . $e->getMessage());
         }
+    }
+
+    private function idsWithSameName(string $modelClass, $id): array
+    {
+        $id = (int) $id;
+        $name = $modelClass::where('id', $id)->value('name');
+        if (!$name) {
+            return [$id];
+        }
+
+        $ids = $modelClass::where('name', $name)->pluck('id')->map(fn ($value) => (int) $value)->all();
+
+        return $ids ?: [$id];
     }
 }

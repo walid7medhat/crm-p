@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\Employee\CompanyBranchController;
 use App\Http\Controllers\Api\Employee\EmployeeExcelImportController;
 use App\Http\Controllers\Api\Employee\DocumentRequestController;
 use App\Http\Controllers\Api\Employee\AssetController;
+use App\Http\Controllers\Api\Employee\AssetRequestController;
 use App\Http\Controllers\Api\Employee\LeaveController;
 use App\Http\Controllers\Api\Employee\AnnouncementController;
 use App\Http\Controllers\Api\Employee\RecruitmentController;
@@ -293,6 +294,16 @@ Route::prefix('assets')->middleware(['auth:api'])->group(function () {
     Route::get('/employee/{userId}/assets', [AssetController::class, 'getEmployeeAssets']);
 });
 
+Route::prefix('asset-requests')->middleware(['auth:api'])->group(function () {
+    Route::get('/', [AssetRequestController::class, 'index']);
+    Route::post('/', [AssetRequestController::class, 'store']);
+    Route::get('/{id}', [AssetRequestController::class, 'show']);
+    Route::put('/{id}', [AssetRequestController::class, 'update']);
+    Route::delete('/{id}', [AssetRequestController::class, 'destroy']);
+    Route::post('/{id}/approve', [AssetRequestController::class, 'approve']);
+    Route::post('/{id}/reject', [AssetRequestController::class, 'reject']);
+});
+
 // ==================== Leave Management Routes ====================
 Route::middleware(['auth:api'])->prefix('leaves')->group(function () {
 
@@ -402,6 +413,7 @@ Route::middleware(['auth:api'])->prefix('recruitment/admin')->group(function () 
     Route::get('/interviews', [RecruitmentController::class, 'getInterviews']);
     Route::post('/interviews', [RecruitmentController::class, 'scheduleInterview']);
     Route::put('/interviews/{id}', [RecruitmentController::class, 'updateInterview']);
+    Route::delete('/interviews/{id}', [RecruitmentController::class, 'deleteInterview']);
     
     // Statistics
     Route::get('/statistics', [RecruitmentController::class, 'statistics']);

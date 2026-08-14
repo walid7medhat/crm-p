@@ -1,7 +1,7 @@
 <template>
   <div class="la-attendance-table-wrap emp-directory-table">
     <div class="emp-directory-table__head">
-      <h6 class="emp-directory-table__title">Manage Attendance</h6>
+      <h6 class="emp-directory-table__title">Manage Leave</h6>
       <div class="emp-directory-table__head-actions">
         <div class="emp-directory-table__search-wrap" ref="searchWrapRef">
           <label class="emp-directory-table__search">
@@ -9,7 +9,7 @@
             <input
               :value="searchQuery"
               type="text"
-              placeholder="Filter and search Attendance"
+              placeholder="Filter and search Leave"
               autocomplete="off"
               @input="$emit('update:searchQuery', $event.target.value)"
               @focus="showFilters = true"
@@ -24,10 +24,11 @@
               v-if="showFilters"
               class="emp-search-popup--portal"
               :style="popupStyle"
-              mode="attendance"
+              mode="leave"
               :search="searchQuery"
               :filters="filters"
               :departments="departments"
+              :leave-types="leaveTypes"
               :managers="managers"
               @update:search="$emit('update:searchQuery', $event)"
               @search="onPopupSearch"
@@ -57,54 +58,56 @@
             </th>
             <th>Date</th>
             <th>Employee</th>
-            <th>Check In &amp; Check Out</th>
-            <th>Branch</th>
+            <th>Leave Period</th>
             <th>Type</th>
+            <th>Status</th>
             <th class="la-attendance-table__action">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!records.length">
             <td colspan="7" class="la-attendance-table__empty">
-              <iconify-icon icon="lucide:clipboard-list" />
-              <p>No attendance records match your search.</p>
+              <iconify-icon icon="lucide:calendar-days" />
+              <p>No leave requests match your search.</p>
             </td>
           </tr>
-          <tr v-for="record in records" :key="`att-${record.id}-${record.checkIn}`">
+          <tr v-for="leave in records" :key="`leave-${leave.id}`">
             <td class="la-attendance-table__check">
               <input
                 type="checkbox"
-                :checked="selectedIds.includes(recordKey(record))"
-                @change="toggleRow(record)"
+                :checked="selectedIds.includes(leave.id)"
+                @change="toggleRow(leave.id)"
               />
             </td>
-            <td class="la-attendance-table__date">{{ formatDate(record.date) }}</td>
+            <td class="la-attendance-table__date">{{ formatDate(leave.startDate) }}</td>
             <td>
               <div class="la-attendance-table__employee">
-                <img :src="record.avatar" :alt="record.name" class="la-attendance-table__avatar" loading="lazy" />
+                <img :src="leave.avatar" :alt="leave.employeeName" class="la-attendance-table__avatar" loading="lazy" />
                 <div>
-                  <p class="la-attendance-table__name">{{ record.name }}</p>
-                  <span class="la-attendance-table__emp-id">{{ formatEmpId(record.empCode) }}</span>
+                  <p class="la-attendance-table__name">{{ leave.employeeName }}</p>
+                  <span class="la-attendance-table__emp-id">{{ formatEmpId(leave.empCode) }}</span>
                 </div>
               </div>
             </td>
             <td>
-              <div class="la-attendance-table__flow" :class="{ 'is-empty': isInactive(record) }">
-                <span class="la-attendance-table__time">{{ formatTime(record.checkIn) }}</span>
+              <div class="la-attendance-table__flow">
+                <span class="la-attendance-table__time">{{ formatDate(leave.startDate) }}</span>
                 <span class="la-attendance-table__duration-wrap">
                   <i class="la-attendance-table__dot" />
                   <i class="la-attendance-table__line" />
-                  <span class="la-attendance-table__duration">{{ formatDuration(record.workingHours) }}</span>
+                  <span class="la-attendance-table__duration">{{ leave.duration }}d</span>
                   <i class="la-attendance-table__line" />
                   <i class="la-attendance-table__dot" />
                 </span>
-                <span class="la-attendance-table__time">{{ formatTime(record.checkOut) }}</span>
+                <span class="la-attendance-table__time">{{ formatDate(leave.endDate) }}</span>
               </div>
             </td>
-            <td class="la-attendance-table__muted">{{ record.branch || '—' }}</td>
-            <td class="la-attendance-table__muted">{{ record.attendanceType || '—' }}</td>
+            <td class="la-attendance-table__muted">{{ leave.leaveType }}</td>
+            <td>
+              <span class="la-leave-status" :class="`is-${leave.status}`">{{ leave.statusLabel }}</span>
+            </td>
             <td class="la-attendance-table__action">
-              <button type="button" class="la-attendance-table__menu-btn" @click.stop="openMenu(record, $event)">
+              <button type="button" class="la-attendance-table__menu-btn" @click.stop="openMenu(leave, $event)">
                 <iconify-icon icon="lucide:more-vertical" />
               </button>
             </td>
@@ -154,11 +157,14 @@
         :style="menuStyle"
         @click.stop
       >
-        <button type="button" @click="onEdit(menuRecord)">
-          <iconify-icon icon="lucide:pencil" /> Edit
+        <button v-if="menuRecord?.canApproveParent || menuRecord?.canApproveHr" type="button" @click="onApprove(menuRecord)">
+          <iconify-icon icon="lucide:check" /> Approve
         </button>
-        <button type="button" @click="onHistory(menuRecord)">
-          <iconify-icon icon="lucide:history" /> History
+        <button v-if="menuRecord?.canReject" type="button" @click="onReject(menuRecord)">
+          <iconify-icon icon="lucide:x" /> Reject
+        </button>
+        <button type="button" @click="onView(menuRecord)">
+          <iconify-icon icon="lucide:eye" /> View
         </button>
       </div>
     </Teleport>
@@ -167,7 +173,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { formatAttendanceDate, formatAttendanceTime } from '@/services/leaveAttendanceApi'
+import { formatAttendanceDate } from '@/services/leaveAttendanceApi'
 import LeaveAttendanceSearchPopup from '@/components/hr/leave-attendance/LeaveAttendanceSearchPopup.vue'
 import { isInsideHrSearchPopup, useHrSearchPopupPortal } from '@/composables/useHrSearchPopupPortal'
 
@@ -184,6 +190,7 @@ const props = defineProps({
   searchQuery: { type: String, default: '' },
   filters: { type: Object, default: () => ({}) },
   departments: { type: Array, default: () => [] },
+  leaveTypes: { type: Array, default: () => [] },
   managers: { type: Array, default: () => [] },
 })
 
@@ -192,8 +199,9 @@ const emit = defineEmits([
   'update:perPage',
   'update:selectedIds',
   'update:searchQuery',
-  'edit',
-  'history',
+  'approve',
+  'reject',
+  'view',
   'export',
   'apply-filters',
   'clear-filters',
@@ -208,31 +216,12 @@ const searchWrapRef = ref(null)
 const { popupStyle } = useHrSearchPopupPortal(searchWrapRef, showFilters)
 
 const allSelected = computed(
-  () => props.records.length > 0 && props.records.every((r) => props.selectedIds.includes(recordKey(r)))
+  () => props.records.length > 0 && props.records.every((r) => props.selectedIds.includes(r.id))
 )
 const someSelected = computed(() => props.selectedIds.length > 0)
 
-function recordKey(record) {
-  return `${record.id}-${record.checkIn || ''}`
-}
-
 function formatDate(value) {
   return formatAttendanceDate(value)
-}
-
-function formatTime(value) {
-  const formatted = formatAttendanceTime(value)
-  if (!value || formatted === '—') return '00:00 PM'
-  return formatted
-}
-
-function formatDuration(value) {
-  if (!value || value === '—') return '0h 0m'
-  return value
-}
-
-function isInactive(record) {
-  return !record.checkIn && !record.checkOut
 }
 
 function formatEmpId(code) {
@@ -241,30 +230,24 @@ function formatEmpId(code) {
   return `ID : #${raw}`
 }
 
-function toggleRow(record) {
-  const key = recordKey(record)
-  const next = props.selectedIds.includes(key)
-    ? props.selectedIds.filter((id) => id !== key)
-    : [...props.selectedIds, key]
+function toggleRow(id) {
+  const next = props.selectedIds.includes(id)
+    ? props.selectedIds.filter((item) => item !== id)
+    : [...props.selectedIds, id]
   emit('update:selectedIds', next)
 }
 
 function toggleSelectAll(event) {
-  if (event.target.checked) {
-    emit('update:selectedIds', props.records.map(recordKey))
-  } else {
-    emit('update:selectedIds', [])
-  }
+  emit('update:selectedIds', event.target.checked ? props.records.map((r) => r.id) : [])
 }
 
-function openMenu(record, event) {
-  const key = recordKey(record)
-  if (openMenuId.value === key) {
+function openMenu(leave, event) {
+  if (openMenuId.value === leave.id) {
     closeMenu()
     return
   }
-  menuRecord.value = record
-  openMenuId.value = key
+  menuRecord.value = leave
+  openMenuId.value = leave.id
   const rect = event.currentTarget.getBoundingClientRect()
   menuStyle.value = {
     top: `${rect.bottom + 6}px`,
@@ -277,28 +260,18 @@ function closeMenu() {
   menuRecord.value = null
 }
 
-function toActionPayload(record) {
-  if (!record) return null
-  return {
-    ...(record.raw || {}),
-    employee_id: record.id ?? record.raw?.employee_id,
-    employee_name: record.name,
-    date: record.date ?? record.raw?.date,
-    check_in: record.checkIn ?? record.raw?.check_in,
-    check_out: record.checkOut ?? record.raw?.check_out,
-    status: record.status ?? record.raw?.status,
-    department: record.department,
-    branch: record.branch,
-  }
-}
-
-function onEdit(record) {
-  emit('edit', toActionPayload(record))
+function onApprove(leave) {
+  emit('approve', leave)
   closeMenu()
 }
 
-function onHistory(record) {
-  emit('history', toActionPayload(record))
+function onReject(leave) {
+  emit('reject', leave)
+  closeMenu()
+}
+
+function onView(leave) {
+  emit('view', leave)
   closeMenu()
 }
 

@@ -1266,6 +1266,13 @@ onUnmounted(() => {
   font-size: 12px;
   color: #4b5563;
   resize: vertical;
+  outline: none;
+  box-shadow: none;
+}
+.asset-create-modal textarea:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: #cbd5e1;
 }
 .asset-create-modal .add-field-full {
   grid-column: 1 / -1;
@@ -1273,7 +1280,16 @@ onUnmounted(() => {
 .asset-create-modal .add-field :deep(.vs__dropdown-toggle) {
   height: 38px;
   min-height: 38px;
+  border: 1px solid #d9dee7;
   border-radius: 8px;
+  box-shadow: none;
+}
+.asset-create-modal .add-field :deep(input.vs__search),
+.asset-create-modal .add-field :deep(.vs__selected) {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
 }
 .asset-create-modal .add-field :deep(.vs__actions) {
   height: 100%;
@@ -1526,7 +1542,7 @@ onUnmounted(() => {
   font-weight: 600;
   color: #1f2937;
 }
-.add-field input,
+.add-field input:not(.vs__search),
 .add-field textarea {
   width: 100%;
   border: 1px solid #d9dee7;
@@ -1534,6 +1550,8 @@ onUnmounted(() => {
   padding: 0 12px;
   font-size: 12px;
   color: #4b5563;
+  outline: none;
+  box-shadow: none;
 }
 .add-field input {
   height: 38px;

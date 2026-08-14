@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-main-body hr-screen">
+  <div class="dashboard-main-body hr-screen" :class="{ 'hr-screen--overview': activeTab === 'Overview' }">
     <div class="hr-frame">
       <div class="hr-topbar" ref="hrTopbarRef">
         <div v-if="isMobileViewport" class="hr-mobile-head">
@@ -43,7 +43,6 @@
         <div v-if="!isMobileViewport" class="hr-topbar-actions">
           <template v-if="activeTab === 'Overview'">
             <div class="hr-overview-search">
-              <iconify-icon icon="lucide:plus" />
               <input v-model="overviewSearch" type="text" placeholder="Filter and search" />
               <iconify-icon icon="lucide:search" />
             </div>
@@ -51,7 +50,7 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Employees'">
-            <button type="button" class="hr-generate-btn" @click="showAddEmployeeModal = true">
+            <button type="button" class="hr-generate-btn hr-generate-btn--navy" @click="showAddEmployeeModal = true">
               Add Employee
               <iconify-icon icon="lucide:plus" />
             </button>
@@ -73,15 +72,25 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:trash-2" /></button>
           </template>
           <template v-else-if="activeTab === 'Assets'">
-            <button type="button" class="hr-generate-btn" @click="openAssetsPrimaryAction">
-              Add New Asset
+            <button
+              type="button"
+              class="hr-generate-btn"
+              :class="{ 'hr-generate-btn--navy': assetsSectionMode === 'requests' }"
+              @click="openAssetsPrimaryAction"
+            >
+              {{ assetsSectionMode === 'requests' ? 'New Request Assets' : 'Add New Asset' }}
               <iconify-icon icon="lucide:plus" />
             </button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Leave / Attendance'">
-            <button type="button" class="hr-generate-btn" @click="openLeaveAttendancePrimaryAction">
+            <button
+              type="button"
+              class="hr-generate-btn"
+              :class="{ 'hr-generate-btn--navy': leaveSectionMode === 'announcements' }"
+              @click="openLeaveAttendancePrimaryAction"
+            >
               {{ leaveSectionMode === 'attendance' ? 'Create Attendance' : leaveSectionMode === 'announcements' ? 'Add Announcements' : 'Generate Leave' }}
               <iconify-icon icon="lucide:plus" />
             </button>
@@ -89,6 +98,14 @@
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Career'">
+            <button v-if="careerSectionMode === 'manage-recruitments'" type="button" class="hr-generate-btn hr-generate-btn--navy" @click="openCareerCreateJob">
+              Add New Job
+              <iconify-icon icon="lucide:plus" />
+            </button>
+            <button v-else-if="careerSectionMode === 'interviews'" type="button" class="hr-generate-btn hr-generate-btn--navy" @click="openCareerScheduleInterview">
+              Schedule Interview
+              <iconify-icon icon="lucide:plus" />
+            </button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
             <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
           </template>
@@ -110,28 +127,49 @@
           <div class="overview-analytics">
             <div class="overview-department-card">
               <h6 class="overview-section-title">Department Wise Employees</h6>
-              <div class="overview-bars">
-                <div v-for="entry in departmentSeries" :key="entry.department" class="overview-bar-item">
-                  <div class="overview-bar-track">
-                    <span class="overview-bar-fill" :style="{ height: `${entry.value}%` }"></span>
-                  </div>
-                  <span>{{ entry.department }}</span>
-                </div>
+              <div class="overview-dept-chart">
+                <ApexCharts
+                  type="bar"
+                  height="260"
+                  :options="departmentChartOptions"
+                  :series="departmentChartSeries"
+                />
               </div>
             </div>
 
             <div class="overview-attendance-card">
               <div class="overview-attendance-head">
                 <h6 class="overview-section-title">Employee Attendance</h6>
-                <button type="button" class="overview-month-btn">
-                  Last Month
-                  <iconify-icon icon="lucide:chevron-down" />
-                </button>
+                <div class="overview-period-wrap">
+                  <button type="button" class="overview-month-btn" @click.stop="overviewPeriodOpen = !overviewPeriodOpen">
+                    <iconify-icon icon="lucide:calendar" />
+                    {{ overviewAttendancePeriod }}
+                    <iconify-icon icon="lucide:chevron-down" />
+                  </button>
+                  <div v-if="overviewPeriodOpen" class="overview-period-menu">
+                    <button
+                      v-for="period in overviewAttendancePeriods"
+                      :key="period"
+                      type="button"
+                      :class="{ active: period === overviewAttendancePeriod }"
+                      @click="overviewAttendancePeriod = period; overviewPeriodOpen = false"
+                    >
+                      {{ period }}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="overview-attendance-body">
-                <div class="overview-ring-shell">
-                  <div class="overview-ring">
-                    <span>{{ filteredOverviewEmployees.length }}</span>
+                <div class="overview-donut-wrap">
+                  <ApexCharts
+                    type="donut"
+                    height="210"
+                    width="210"
+                    :options="attendanceChartOptions"
+                    :series="attendanceChartSeries"
+                  />
+                  <div class="overview-donut-center">
+                    <span>{{ overviewEmployeeTotal }}</span>
                     <small>Total Employees</small>
                   </div>
                 </div>
@@ -142,7 +180,7 @@
                   <p><i class="others"></i> Others <strong>{{ attendanceLegend.others }}</strong></p>
                 </div>
               </div>
-              <button type="button" class="overview-details-btn">View Full Details</button>
+              <button type="button" class="overview-details-btn" @click="openOverviewAttendanceDetails">View Full Details</button>
             </div>
           </div>
 
@@ -151,9 +189,8 @@
             :selected-employee-id="selectedOverviewEmployee ? selectedOverviewEmployee.id : null"
             @select-all="selectAllOverviewEmployees"
             @select-employee="selectOverviewEmployee"
-            
+            @view="viewOverviewEmployee"
           />
-          <EmployeeDetails v-if="selectedOverviewEmployee" :employee="selectedOverviewEmployee" />
         </div>
       </div>
 
@@ -407,82 +444,91 @@
             @view-leave="(leave) => openLeaveDetails(mapLeaveForModal(leave))"
           />
           <template v-else-if="leaveSectionMode === 'announcements'">
-            <div class="employee-overview-card leave-overview-card announcement-overview-card">
-              <div class="employee-overview-head">
-                <h6 class="overview-section-title">Manage Announcements</h6>
-                <div class="employee-overview-actions">
-                  <button type="button" class="employee-export-btn" @click="exportAnnouncements">
-                    Export Excel
-                    <iconify-icon icon="lucide:file-down" />
-                  </button>
-                </div>
+            <div class="announcement-card">
+              <div class="announcement-card__head">
+                <h6 class="announcement-card__title">Manage Announcements</h6>
+                <button type="button" class="announcement-card__export" @click="exportAnnouncements">
+                  <iconify-icon icon="lucide:file-spreadsheet" />
+                  <span>Export Excel</span>
+                </button>
               </div>
 
-              <div class="leave-table-wrap announcement-table-wrap">
-                <table class="table leave-table align-middle mb-0 announcement-table">
+              <div class="announcement-card__scroll">
+                <table class="announcement-grid">
                   <thead>
                     <tr>
-                      <th class="checkbox-col"><input type="checkbox" /></th>
+                      <th class="announcement-grid__check"><input type="checkbox" /></th>
                       <th>Title</th>
                       <th>Start Date</th>
                       <th>End Date</th>
                       <th>Branch</th>
                       <th>Department</th>
-                      <th class="announcement-description-col">Description</th>
-                      <th class="col-action sticky-action-col">Action</th>
+                      <th>Description</th>
+                      <th class="announcement-grid__action">Action</th>
                     </tr>
                   </thead>
                   <tbody>
+                    <tr v-if="!pagedAnnouncementRows.length">
+                      <td colspan="8" class="announcement-grid__empty">No announcements to display.</td>
+                    </tr>
                     <tr v-for="item in pagedAnnouncementRows" :key="`announcement-row-${item.id}`">
-                      <td class="checkbox-col"><input type="checkbox" /></td>
-                      <td>{{ item.title }}</td>
+                      <td class="announcement-grid__check"><input type="checkbox" /></td>
+                      <td class="announcement-grid__title-cell">{{ item.title }}</td>
                       <td>{{ item.startDate }}</td>
                       <td>{{ item.endDate || '--' }}</td>
                       <td>{{ item.branch }}</td>
                       <td>{{ item.department }}</td>
-                      <td class="announcement-description-col">{{ item.description }}</td>
-                      <td class="col-action sticky-action-col">
-                        <button type="button" class="row-action-btn" @click.stop="toggleAnnouncementRowMenu(item.id, $event)">
+                      <td class="announcement-grid__desc">{{ item.description }}</td>
+                      <td class="announcement-grid__action">
+                        <button type="button" class="announcement-grid__menu-btn" @click.stop="toggleAnnouncementRowMenu(item.id, $event)">
                           <iconify-icon icon="lucide:more-vertical" />
                         </button>
-                        <teleport to="body">
-                          <div
-                            v-if="openAnnouncementRowMenuId === item.id"
-                            class="leave-row-menu announcement-row-menu"
-                            :style="announcementRowMenuStyle"
-                            @click.stop
-                          >
-                            <button type="button" class="leave-row-menu-item" @click.stop="openEditAnnouncement(item)">
-                              <iconify-icon icon="lucide:pencil" /> Edit
-                            </button>
-                            <button type="button" class="leave-row-menu-item danger" @click.stop="deleteAnnouncement(item)">
-                              <iconify-icon icon="lucide:trash-2" /> Delete
-                            </button>
-                          </div>
-                        </teleport>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <div class="hr-footer">
+              <Teleport to="body">
+                <div
+                  v-if="openAnnouncementRowMenuId"
+                  class="leave-row-menu announcement-row-menu"
+                  :style="announcementRowMenuStyle"
+                  @click.stop
+                >
+                  <button type="button" class="leave-row-menu-item" @click.stop="openViewAnnouncement(openAnnouncementMenuItem)">
+                    <iconify-icon icon="lucide:eye" /> View
+                  </button>
+                  <button type="button" class="leave-row-menu-item" @click.stop="openEditAnnouncement(openAnnouncementMenuItem)">
+                    <iconify-icon icon="lucide:pencil" /> Edit
+                  </button>
+                  <button type="button" class="leave-row-menu-item danger" @click.stop="deleteAnnouncement(openAnnouncementMenuItem)">
+                    <iconify-icon icon="lucide:trash-2" /> Delete
+                  </button>
+                </div>
+              </Teleport>
+
+              <div class="announcement-card__footer">
                 <span>Showing {{ announcementsStartEntry }} to {{ announcementsEndEntry }} of {{ filteredAnnouncementRows.length }} Entries</span>
-                <div class="hr-pagination">
-                  <button type="button" class="page-btn" :disabled="announcementsPage === 1" @click="announcementsPage = Math.max(1, announcementsPage - 1)">Previous</button>
+                <div class="announcement-card__pagination">
+                  <button type="button" class="announcement-card__page-btn" :disabled="announcementsPage === 1" @click="announcementsPage = Math.max(1, announcementsPage - 1)">
+                    <iconify-icon icon="lucide:chevron-left" /> Previous
+                  </button>
                   <template v-for="(item, idx) in announcementsPaginationItems" :key="item.type === 'page' ? `anp-${item.n}` : `and-${idx}`">
-                    <span v-if="item.type === 'dots'" class="page-dots">...</span>
+                    <span v-if="item.type === 'dots'" class="announcement-card__dots">...</span>
                     <button
                       v-else
                       type="button"
-                      class="page-number"
-                      :class="{ active: announcementsPage === item.n }"
+                      class="announcement-card__page-number"
+                      :class="{ 'is-active': announcementsPage === item.n }"
                       @click="announcementsPage = item.n"
                     >
                       {{ item.n }}
                     </button>
                   </template>
-                  <button type="button" class="page-btn" :disabled="announcementsPage >= announcementsTotalPages" @click="announcementsPage = Math.min(announcementsTotalPages, announcementsPage + 1)">Next</button>
+                  <button type="button" class="announcement-card__page-btn" :disabled="announcementsPage >= announcementsTotalPages" @click="announcementsPage = Math.min(announcementsTotalPages, announcementsPage + 1)">
+                    Next <iconify-icon icon="lucide:chevron-right" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -494,13 +540,21 @@
 
       <div class="hr-content-card hr-assets-card" v-else-if="activeTab === 'Assets'">
         <div class="hr-content-shell overview-shell hr-assets-shell">
-          <AssetsManagement ref="assetsMgmtRef" embedded />
+          <AssetsManagement v-if="assetsSectionMode === 'manage-assets'" ref="assetsMgmtRef" embedded />
+          <AssetRequestsManagement v-else ref="assetRequestsMgmtRef" embedded />
         </div>
       </div>
 
       <div class="hr-content-card hr-recruitment-card" v-else-if="activeTab === 'Career'">
         <div class="hr-content-shell overview-shell hr-recruitment-shell">
-          <CareerRecruitmentManagement embedded />
+          <CareerRecruitmentManagement
+            v-if="careerSectionMode === 'manage-recruitments'"
+            ref="careerMgmtRef"
+            embedded
+            @view-applicants="openCareerApplicants"
+          />
+          <ApplicantsManagement v-else-if="careerSectionMode === 'view-applicants'" :job="viewingCareerJob" embedded />
+          <InterviewsManagement v-else ref="interviewsMgmtRef" embedded />
         </div>
       </div>
 
@@ -683,17 +737,17 @@
     <div v-if="showAnnouncementModal" class="edit-overlay add-employee-overlay" @click.self="closeAnnouncementModal">
       <div class="add-employee-modal leave-apply-modal announcement-modal">
         <div class="add-employee-head">
-          <h6>Add Announcements</h6>
+          <h6>{{ editingAnnouncementId ? 'Edit Announcement' : 'Add Announcements' }}</h6>
           <button type="button" class="add-employee-close" @click="closeAnnouncementModal">
             <iconify-icon icon="lucide:x" />
           </button>
         </div>
 
         <div class="add-employee-body">
-          <section class="add-employee-section">
+          <section class="announcement-form-panel">
             <div class="add-grid-two">
               <div class="add-field add-field-full">
-                <label>Announcement Tittle *</label>
+                <label>Announcement Title <em>*</em></label>
                 <input
                   v-model="announcementForm.title"
                   type="text"
@@ -701,7 +755,7 @@
                 />
               </div>
               <div class="add-field">
-                <label>Branch *</label>
+                <label>Branch <em>*</em></label>
                 <SearchableSelect
                   v-model="announcementForm.branch"
                   :options="branchOptions"
@@ -709,7 +763,7 @@
                 />
               </div>
               <div class="add-field">
-                <label>Department *</label>
+                <label>Department <em>*</em></label>
                 <SearchableSelect
                   v-model="announcementForm.department"
                   :options="announcementDepartmentOptions"
@@ -718,11 +772,17 @@
               </div>
               <div class="add-field">
                 <label>Start Date</label>
-                <input :value="formatDateDisplay(announcementForm.startDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.startDate')" />
+                <div class="add-field-control">
+                  <input :value="formatDateDisplay(announcementForm.startDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.startDate')" />
+                  <iconify-icon icon="lucide:calendar" />
+                </div>
               </div>
               <div class="add-field">
                 <label>End Date</label>
-                <input :value="formatDateDisplay(announcementForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.endDate')" />
+                <div class="add-field-control">
+                  <input :value="formatDateDisplay(announcementForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.endDate')" />
+                  <iconify-icon icon="lucide:calendar" />
+                </div>
               </div>
               <div class="add-field add-field-full">
                 <label>Description</label>
@@ -735,6 +795,51 @@
         <div class="add-employee-footer">
           <button type="button" class="add-employee-clear-btn" @click="clearAnnouncementForm">Clear</button>
           <button type="button" class="add-employee-save-btn" @click="saveAnnouncement">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showViewAnnouncementModal && viewingAnnouncement" class="edit-overlay add-employee-overlay" @click.self="closeViewAnnouncement">
+      <div class="add-employee-modal leave-apply-modal announcement-modal announcement-view-modal">
+        <div class="add-employee-head">
+          <h6>View Announcement</h6>
+          <button type="button" class="add-employee-close" @click="closeViewAnnouncement">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </div>
+        <div class="add-employee-body">
+          <section class="announcement-form-panel">
+            <div class="add-grid-two">
+              <div class="add-field add-field-full">
+                <label>Announcement Title</label>
+                <p class="announcement-view-value">{{ viewingAnnouncement.title || '--' }}</p>
+              </div>
+              <div class="add-field">
+                <label>Branch</label>
+                <p class="announcement-view-value">{{ viewingAnnouncement.branch || '--' }}</p>
+              </div>
+              <div class="add-field">
+                <label>Department</label>
+                <p class="announcement-view-value">{{ viewingAnnouncement.department || '--' }}</p>
+              </div>
+              <div class="add-field">
+                <label>Start Date</label>
+                <p class="announcement-view-value">{{ viewingAnnouncement.startDate || '--' }}</p>
+              </div>
+              <div class="add-field">
+                <label>End Date</label>
+                <p class="announcement-view-value">{{ viewingAnnouncement.endDate || '--' }}</p>
+              </div>
+              <div class="add-field add-field-full">
+                <label>Description</label>
+                <p class="announcement-view-value announcement-view-value--body">{{ viewingAnnouncement.description || '--' }}</p>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="add-employee-footer">
+          <button type="button" class="add-employee-clear-btn" @click="closeViewAnnouncement">Close</button>
+          <button type="button" class="add-employee-save-btn" @click="openEditAnnouncement(viewingAnnouncement)">Edit</button>
         </div>
       </div>
     </div>
@@ -778,12 +883,19 @@
     </div>
 
     <div v-if="showLeaveRejectModal && selectedLeaveRow" class="edit-overlay" @click.self="showLeaveRejectModal = false">
-      <div class="leave-confirm-modal">
-        <button type="button" class="employee-filter-close" @click="showLeaveRejectModal = false"><iconify-icon icon="lucide:x" /></button>
-        <div class="confirm-icon danger"><iconify-icon icon="lucide:ban" /></div>
-        <h6>Leave Rejection Confirmation !</h6>
-        <p>Please confirm that you want to reject this leave request.<br/>The employee will be notified after rejection.</p>
-        <button type="button" class="leave-confirm-btn" @click="confirmLeaveRejection">Confirm</button>
+      <div class="la-reject-modal">
+        <button type="button" class="la-reject-modal__close" aria-label="Close" @click="showLeaveRejectModal = false">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="la-reject-modal__icon">
+          <iconify-icon icon="lucide:ban" />
+        </div>
+        <h6>Reject leave request?</h6>
+        <p>Please confirm that you want to reject this leave request. The employee will be notified.</p>
+        <div class="la-reject-modal__actions">
+          <button type="button" class="la-reject-modal__cancel" @click="showLeaveRejectModal = false">Cancel</button>
+          <button type="button" class="la-reject-modal__confirm" @click="confirmLeaveRejection">Reject</button>
+        </div>
       </div>
     </div>
 
@@ -1249,7 +1361,7 @@
           <section class="add-employee-section">
             <div class="add-grid-two">
               <div class="add-field add-field-full">
-                <label>Employee *</label>
+                <label>Employee <em>*</em></label>
                 <SearchableSelect
                   v-model="createAttendanceForm.employee"
                   :options="applyLeaveEmployeeOptions"
@@ -1257,7 +1369,7 @@
                 />
               </div>
               <div class="add-field add-field-full">
-                <label>Type *</label>
+                <label>Type <em>*</em></label>
                 <SearchableSelect
                   v-model="createAttendanceForm.type"
                   :options="attendanceCreateTypeOptions"
@@ -1265,7 +1377,7 @@
                 />
               </div>
               <div class="add-field">
-                <label>Status *</label>
+                <label>Status <em>*</em></label>
                 <SearchableSelect
                   v-model="createAttendanceForm.status"
                   :options="attendanceStatusOptions"
@@ -1273,19 +1385,28 @@
                 />
               </div>
               <div class="add-field">
-                <label>Date *</label>
-                <input :value="formatDateDisplay(createAttendanceForm.date)" type="text" placeholder="--/--/--" readonly @click="openDatePicker('createAttendanceForm.date')" />
+                <label>Date <em>*</em></label>
+                <div class="add-field-control">
+                  <input :value="formatDateDisplay(createAttendanceForm.date)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('createAttendanceForm.date')" />
+                  <iconify-icon icon="lucide:calendar" />
+                </div>
               </div>
               <div class="add-field">
-                <label>Check In *</label>
-                <input v-model="createAttendanceForm.checkIn" type="time" />
+                <label>Check In <em>*</em></label>
+                <div class="add-field-control">
+                  <input v-model="createAttendanceForm.checkIn" type="time" />
+                  <iconify-icon icon="lucide:clock" />
+                </div>
               </div>
               <div class="add-field">
-                <label>Check Out *</label>
-                <input v-model="createAttendanceForm.checkOut" type="time" />
+                <label>Check Out <em>*</em></label>
+                <div class="add-field-control">
+                  <input v-model="createAttendanceForm.checkOut" type="time" />
+                  <iconify-icon icon="lucide:clock" />
+                </div>
               </div>
               <div class="add-field">
-                <label>Break *</label>
+                <label>Break</label>
                 <SearchableSelect
                   v-model="createAttendanceForm.breakLabel"
                   :options="attendanceBreakOptions"
@@ -1293,7 +1414,7 @@
                 />
               </div>
               <div class="add-field">
-                <label>Overtime (OT) *</label>
+                <label>Overtime (OT)</label>
                 <SearchableSelect
                   v-model="createAttendanceForm.otLabel"
                   :options="attendanceOtOptions"
@@ -1307,8 +1428,8 @@
             </div>
           </section>
 
-          <section class="add-employee-section">
-            <h6>Attachments</h6>
+          <section class="add-employee-section attendance-attachments">
+            <label class="attendance-upload-label">Attachments</label>
             <div class="upload-dropzone leave-upload-dropzone">
               <div>
                 <strong>Upload documents</strong>
@@ -1316,7 +1437,7 @@
               </div>
               <label class="select-file-btn">
                 Select File
-                <input type="file" class="d-none" @change="handleCreateAttendanceFileChange" />
+                <input type="file" class="d-none" accept=".jpg,.jpeg,.png,.pdf" @change="handleCreateAttendanceFileChange" />
               </label>
             </div>
             <div v-if="createAttendanceAttachment" class="uploaded-doc-card">
@@ -1890,6 +2011,8 @@
     :show="showUnifiedDatePicker"
     :model-value="datePickerValue"
     :date-only="true"
+    :dob-layout="isDobPickerField"
+    :block-future-dates="isDobPickerField"
     @update:show="showUnifiedDatePicker = $event"
     @apply="handleDatePickerApply"
   />
@@ -1906,12 +2029,14 @@ import HrTeamTreePanel from '@/components/hr/HrTeamTreePanel.vue'
 import HrAttendanceSearchDropdown from '@/components/hr/HrAttendanceSearchDropdown.vue'
 import StatsCards from '@/components/hr/overview/StatsCards.vue'
 import EmployeesTable from '@/components/hr/overview/EmployeesTable.vue'
-import EmployeeDetails from '@/components/hr/overview/EmployeeDetails.vue'
 import EmployeesManagement from '@/pages/hr/employees/EmployeesManagement.vue'
 import EmployeeDocumentDropzone from '@/components/hr/employees/EmployeeDocumentDropzone.vue'
 import LeaveAttendanceManagement from '@/pages/hr/leave-attendance/LeaveAttendanceManagement.vue'
 import CareerRecruitmentManagement from '@/pages/hr/recruitment/CareerRecruitmentManagement.vue'
+import InterviewsManagement from '@/pages/hr/recruitment/InterviewsManagement.vue'
+import ApplicantsManagement from '@/pages/hr/recruitment/ApplicantsManagement.vue'
 import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
+import AssetRequestsManagement from '@/pages/hr/assets/AssetRequestsManagement.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
@@ -2031,6 +2156,8 @@ const route = useRoute()
 const HR_ACTIVE_TAB_STORAGE_KEY = 'hr.activeTab'
 const HR_LEAVE_MODE_STORAGE_KEY = 'hr.leaveSectionMode'
 const HR_LEAVE_INNER_TAB_STORAGE_KEY = 'hr.leaveInnerTab'
+const HR_CAREER_MODE_STORAGE_KEY = 'hr.careerSectionMode'
+const HR_ASSETS_MODE_STORAGE_KEY = 'hr.assetsSectionMode'
 const hrDebugUi = computed(() => {
   void route.fullPath
   return hrPipelineDebugEnabled()
@@ -2199,8 +2326,8 @@ const fetchRealEmployees = async () => {
 }
 
 // ========== UI State ==========
-const headerTabs = ['Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
-const activeTab = ref('Employees')
+const headerTabs = ['Overview', 'Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
+const activeTab = ref('Overview')
 const openHeaderMenu = ref(null)
 const topbarTabsRef = ref(null)
 const hrTopbarRef = ref(null)
@@ -2208,6 +2335,10 @@ const payrollSectionLabel = ref('Manage Salary')
 const isMobileViewport = ref(false)
 const overviewSearch = ref('')
 const selectedOverviewEmployee = ref(null)
+const overviewAttendancePeriod = ref('Last Month')
+const overviewPeriodOpen = ref(false)
+const overviewAttendancePeriods = ['This Week', 'This Month', 'Last Month']
+const recruitmentOverviewStats = ref({ total_applicants: 0 })
 const searchKeyword = ref('')
 const page = ref(1)
 const perPage = 10
@@ -2217,6 +2348,7 @@ const showCreateAttendanceModal = ref(false)
 const showUnifiedDatePicker = ref(false)
 const datePickerValue = ref(null)
 const activeDateField = ref('')
+const isDobPickerField = computed(() => /(?:^|\.)dob(?:$|[A-Z_.])/i.test(activeDateField.value || '') || /date_of_birth|dateOfBirth/i.test(activeDateField.value || ''))
 const leaveSectionMode = ref('leave')
 const showLeaveSearchModal = ref(false)
 const showCareerSearchModal = ref(false)
@@ -2227,6 +2359,8 @@ const attendanceSearchInputFocused = ref(false)
 let attendanceSearchBlurTimer = null
 const showAnnouncementSearchModal = ref(false)
 const showAnnouncementModal = ref(false)
+const showViewAnnouncementModal = ref(false)
+const viewingAnnouncement = ref(null)
 const openLeaveRowMenuId = ref(null)
 const openAttendanceRowMenuId = ref(null)
 const openAnnouncementRowMenuId = ref(null)
@@ -2244,9 +2378,14 @@ const assetsSearch = ref('')
 const showAssetSearchModal = ref(false)
 const showAssetCreateModal = ref(false)
 const assetsMgmtRef = ref(null)
+const assetRequestsMgmtRef = ref(null)
+const careerMgmtRef = ref(null)
+const interviewsMgmtRef = ref(null)
+const viewingCareerJob = ref(null)
 const assetsPage = ref(1)
 const assetsPerPage = 10
 const careerSectionMode = ref('manage-recruitments')
+const assetsSectionMode = ref('manage-assets')
 const careerSearchKeyword = ref('')
 const careerPage = ref(1)
 const careerPerPage = 10
@@ -2569,11 +2708,11 @@ const assetEditForm = ref({
 const hrSectionTab = ref('attendance')
 
 const headerTabMenus = {
-  Employees: ['Manage Employees', 'Document Requests'],
+  Employees: ['Manage Employees'],
   Payroll: ['Manage Salary', 'Manage Pay Slip'],
   'Leave / Attendance': ['Leave Management', 'Attendance Management', 'Announcements'],
-  Career: ['Manage Recruitments', 'Interviews', 'Career Lists'],
-  Assets: ['Asset Directory', 'Asset Requests'],
+  Career: ['Manage Recruitments', 'Interviews'],
+  Assets: ['Manage Assets', 'Asset Requests'],
 }
 
 const careerRows = ref([])
@@ -2697,6 +2836,7 @@ const overviewEmployees = computed(() => {
       status: emp.employment_status === 'active' ? 'Present' : emp.employment_status === 'on_leave' ? 'On Leave' : 'Others',
       attendanceType: emp.employment_status === 'active' ? 'present' : emp.employment_status === 'on_leave' ? 'leave' : 'other',
       avatar: emp.avatar,
+      employee_code: emp.employee_code,
     }))
   }
   return []
@@ -2716,15 +2856,27 @@ const filteredEmployeeRows = computed(() => {
 })
 
 // ========== STATS ==========
+const overviewEmployeeTotal = computed(() => employeesDirectory.value.length)
+
 const overviewStats = computed(() => {
-  const total = employeesDirectory.value.length
-  const active = employeesDirectory.value.filter(e => e.employment_status === 'active' || e.status === 'active').length
-  
+  const total = overviewEmployeeTotal.value
+  const presentToday = attendanceStats.value.present || 0
+  const applications = recruitmentOverviewStats.value.total_applicants || 0
+  const now = Date.now()
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000
+  const newEmployees = employeesDirectory.value.filter((emp) => {
+    const raw = emp.joiningDate
+    if (!raw || raw === '-') return false
+    const joined = new Date(raw)
+    if (Number.isNaN(joined.getTime())) return false
+    return now - joined.getTime() <= thirtyDays
+  }).length
+
   return [
-    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(115, 62, 135, 0.12)', iconColor: '#733E87' },
-    { key: 'applications', label: 'Job Applications', value: 352, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
-    { key: 'new-employees', label: 'New Employees', value: 56, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-    { key: 'attendance', label: 'Todays Attendance', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(115, 62, 135, 0.1)', iconColor: '#733E87' },
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: '#d6eeff', iconColor: '#3b9ae1' },
+    { key: 'applications', label: 'Job Applications', value: applications, icon: 'lucide:file-text', bgColor: '#ede4ff', iconColor: '#8b7cf6' },
+    { key: 'new-employees', label: 'New Employees', value: newEmployees, icon: 'lucide:user-round-plus', bgColor: '#d8f5e5', iconColor: '#3fbb54' },
+    { key: 'attendance', label: 'Todays Attendance', value: presentToday, icon: 'lucide:calendar-check-2', bgColor: '#d4f4f0', iconColor: '#2bb8b0' },
   ]
 })
 
@@ -2743,23 +2895,119 @@ const employeeStats = computed(() => {
 
 // ========== DEPARTMENT SERIES ==========
 const departmentSeries = computed(() => {
+  const preferred = ['HR', 'Sales', 'Marketing', 'Finance', 'Operations']
   const deptMap = {}
-  employeesDirectory.value.forEach(emp => {
+  employeesDirectory.value.forEach((emp) => {
     const dept = emp.department
     if (dept && dept !== '-') {
       deptMap[dept] = (deptMap[dept] || 0) + 1
     }
   })
-  
-  const total = employeesDirectory.value.length
-  return Object.entries(deptMap).map(([dept, count]) => ({
-    department: dept,
-    value: Math.round((count / total) * 100)
-  })).slice(0, 5)
+
+  const matchPreferred = (name) =>
+    Object.keys(deptMap).find((key) => {
+      const lower = key.toLowerCase()
+      const target = name.toLowerCase()
+      return lower === target || lower.includes(target) || target.includes(lower)
+    })
+
+  const preferredRows = preferred.map((department) => {
+    const key = matchPreferred(department)
+    return { department, count: key ? deptMap[key] : 0 }
+  })
+  const usedKeys = new Set(preferred.map((name) => matchPreferred(name)).filter(Boolean))
+  const extraRows = Object.entries(deptMap)
+    .filter(([dept]) => !usedKeys.has(dept))
+    .map(([department, count]) => ({ department, count }))
+    .sort((a, b) => b.count - a.count)
+
+  if (preferredRows.some((row) => row.count > 0)) {
+    return [...preferredRows, ...extraRows].slice(0, 5)
+  }
+  if (extraRows.length) return extraRows.slice(0, 5)
+  return preferred.map((department) => ({ department, count: 0 }))
+})
+
+const departmentChartSeries = computed(() => [{
+  name: 'Employees',
+  data: departmentSeries.value.map((entry) => entry.count),
+}])
+
+const departmentChartOptions = computed(() => {
+  const maxCount = Math.max(60, ...departmentSeries.value.map((entry) => entry.count), 0)
+  const yMax = Math.ceil(maxCount / 10) * 10
+  return {
+    chart: {
+      type: 'bar',
+      toolbar: { show: false },
+      fontFamily: 'Inter, Poppins, system-ui, sans-serif',
+      sparkline: { enabled: false },
+      offsetY: 8,
+    },
+    colors: ['#F99F1C'],
+    plotOptions: {
+      bar: {
+        borderRadius: 8,
+        borderRadiusApplication: 'end',
+        columnWidth: '28%',
+        distributed: false,
+      },
+    },
+    dataLabels: { enabled: false },
+    stroke: { show: false },
+    fill: {
+      type: 'gradient',
+      gradient: {
+        type: 'vertical',
+        shadeIntensity: 0.35,
+        gradientToColors: ['#FDE68A'],
+        inverseColors: false,
+        opacityFrom: 1,
+        opacityTo: 0.85,
+        stops: [0, 100],
+      },
+    },
+    grid: {
+      borderColor: '#eceff3',
+      strokeDashArray: 0,
+      xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: true } },
+      padding: { top: 8, right: 8, bottom: 0, left: 8 },
+    },
+    xaxis: {
+      categories: departmentSeries.value.map((entry) => entry.department),
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: {
+        style: { colors: '#6b7280', fontSize: '12px', fontWeight: 500 },
+      },
+    },
+    yaxis: {
+      min: 0,
+      max: yMax,
+      tickAmount: Math.max(1, yMax / 10),
+      labels: {
+        style: { colors: '#9ca3af', fontSize: '11px' },
+      },
+    },
+    legend: { show: false },
+    tooltip: {
+      y: { formatter: (value) => `${value} employees` },
+    },
+  }
 })
 
 // ========== ATTENDANCE LEGEND ==========
 const attendanceLegend = computed(() => {
+  const present = Number(attendanceStats.value.present) || 0
+  const onLeave = Number(attendanceStats.value.on_leave) || 0
+  const holiday = Number(attendanceStats.value.holiday) || 0
+  const others = (Number(attendanceStats.value.absent) || 0)
+    + (Number(attendanceStats.value.late) || 0)
+    + (Number(attendanceStats.value.half_day) || 0)
+  if (present + onLeave + holiday + others > 0) {
+    return { present, onLeave, holiday, others }
+  }
   const tally = { present: 0, onLeave: 0, holiday: 0, others: 0 }
   overviewEmployees.value.forEach((employee) => {
     if (employee.attendanceType === 'present') tally.present += 1
@@ -2769,6 +3017,38 @@ const attendanceLegend = computed(() => {
   })
   return tally
 })
+
+const attendanceChartSeries = computed(() => {
+  const { present, onLeave, holiday, others } = attendanceLegend.value
+  const values = [present, onLeave, holiday, others]
+  return values.some((value) => value > 0) ? values : [1, 0, 0, 0]
+})
+
+const attendanceChartOptions = computed(() => ({
+  chart: {
+    type: 'donut',
+    sparkline: { enabled: true },
+    fontFamily: 'Inter, Poppins, system-ui, sans-serif',
+  },
+  labels: ['Present', 'On Leave', 'On Holiday', 'Others'],
+  colors: attendanceChartSeries.value.every((value, idx) => idx === 0 || value === 0) && attendanceLegend.value.present === 0
+    ? ['#eceff3', '#f5c518', '#8bc34a', '#c4b5fd']
+    : ['#6C5DD3', '#F5C518', '#8BC34A', '#C4B5FD'],
+  stroke: { width: 0 },
+  legend: { show: false },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      expandOnClick: false,
+      donut: {
+        size: '72%',
+      },
+    },
+  },
+  tooltip: {
+    enabled: attendanceLegend.value.present + attendanceLegend.value.onLeave + attendanceLegend.value.holiday + attendanceLegend.value.others > 0,
+  },
+}))
 
 // ========== FILTERED OVERVIEW EMPLOYEES ==========
 const filteredOverviewEmployees = computed(() => {
@@ -2889,6 +3169,7 @@ const attendanceStatusOptions = ['Present', 'Absent', 'Late', 'Half Day']
 const attendanceCreateTypeOptions = ['Visit', 'Office', 'Call', 'Work From Home', 'Out Of Office', 'Official Deputation', 'Paid Time Off', 'Remote Work']
 const attendanceBreakOptions = ['0 Mnts', '30 Mnts', '1 hr', '1 hr 30 mnts', '2 hr 30 mnts']
 const attendanceOtOptions = ['0 Mnts', '30 Mnts', '1 hr', '1 hr 30 mnts', '2 hr']
+const attendanceHourOptions = ['0 hr', '0.5 hr', '1 hr', '1.5 hr', '2 hr', '3 hr', '4 hr']
 const defaultAttendanceSearchFilters = () => ({
   employee: '',
   department: '',
@@ -2966,12 +3247,16 @@ const announcementSearchFilters = ref({
 })
 const defaultCreateAttendanceForm = () => ({
   employee: '',
+  department: '',
+  branch: '',
   type: '',
   status: '',
   date: '',
   checkIn: '',
   checkOut: '',
   breakLabel: '',
+  earlyHours: '',
+  missedHours: '',
   otLabel: '',
   description: '',
 })
@@ -2979,6 +3264,22 @@ const createAttendanceForm = ref(defaultCreateAttendanceForm())
 const createAttendanceAttachment = ref(null)
 const applyLeaveEmployeeOptions = computed(() =>
   employeesDirectory.value.map((employee) => `#${employee.employee_code} ${employee.name}`),
+)
+const attendanceDepartmentNameOptions = computed(() =>
+  departmentsList.value.map((d) => d.name).filter(Boolean)
+)
+const attendanceBranchNameOptions = computed(() =>
+  branchesList.value.map((b) => b.name || b).filter(Boolean)
+)
+
+watch(
+  () => createAttendanceForm.value.employee,
+  (value) => {
+    const emp = employeesDirectory.value.find((item) => `#${item.employee_code} ${item.name}` === value)
+    if (!emp) return
+    if (emp.department && emp.department !== '-') createAttendanceForm.value.department = emp.department
+    if (emp.branch && emp.branch !== '-') createAttendanceForm.value.branch = emp.branch
+  },
 )
 
 // ========== LEAVE ROWS (Mock for now, can be replaced with API) ==========
@@ -3328,6 +3629,9 @@ const announcementsPaginationItems = computed(() => {
   items.push({ type: 'page', n: total })
   return items
 })
+const openAnnouncementMenuItem = computed(() =>
+  announcementRows.value.find((row) => row.id === openAnnouncementRowMenuId.value) || null
+)
 function mapAnnouncementToRow(item) {
   return {
     id: item.id,
@@ -4294,26 +4598,15 @@ function onHeaderMenuSelect(tab, item) {
       leaveSectionMode.value = 'announcements'
     }
   } else if (tab === 'Career') {
-    if (item === 'Manage Recruitments') {
-      activeTab.value = 'Career'
-      careerSectionMode.value = 'manage-recruitments'
-    } else if (item === 'Interviews') {
-      activeTab.value = 'Career'
-      careerSectionMode.value = 'interviews'
-    } else if (item === 'Career Lists') {
-      activeTab.value = 'Career'
-      careerSectionMode.value = 'career-lists'
-    }
+    activeTab.value = 'Career'
+    careerSectionMode.value = item === 'Interviews' ? 'interviews' : 'manage-recruitments'
+    if (item !== 'Interviews') viewingCareerJob.value = null
   } else if (tab === 'Payroll') {
     activeTab.value = 'Payroll'
     payrollSectionLabel.value = item
   } else if (tab === 'Assets') {
-    if (item === 'Asset Directory') {
-      activeTab.value = 'Assets'
-    } else if (item === 'Asset Requests') {
-      activeTab.value = 'Assets'
-      // يمكن إضافة منطق لعرض طلبات الأصول هنا
-    }
+    activeTab.value = 'Assets'
+    assetsSectionMode.value = item === 'Asset Requests' ? 'requests' : 'manage-assets'
   }
   
   // إغلاق القائمة المنسدلة
@@ -4353,6 +4646,9 @@ function menuItemIcon(item) {
 }
 
 function onDocumentClick(event) {
+  if (!event.target.closest?.('.overview-period-wrap')) {
+    overviewPeriodOpen.value = false
+  }
   if (showAttendanceSearchModal.value) {
     if (event.target.closest?.('.lr-date-modal, .lead-search-date-backdrop, .flatpickr-calendar')) return
     if (event.target.closest?.('.hr-attendance-mob-sheet')) return
@@ -4588,7 +4884,7 @@ function toggleAnnouncementRowMenu(id, event) {
   const rect = event?.currentTarget?.getBoundingClientRect?.()
   if (rect) {
     const menuWidth = 260
-    const menuHeight = 126
+    const menuHeight = 168
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight
     const spaceBelow = viewportHeight - rect.bottom
@@ -4614,7 +4910,20 @@ function openAnnouncementModalForCreate() {
   showAnnouncementModal.value = true
 }
 
+function openViewAnnouncement(item) {
+  if (!item) return
+  viewingAnnouncement.value = item
+  showViewAnnouncementModal.value = true
+  openAnnouncementRowMenuId.value = null
+}
+
+function closeViewAnnouncement() {
+  showViewAnnouncementModal.value = false
+  viewingAnnouncement.value = null
+}
+
 function openEditAnnouncement(item) {
+  if (!item) return
   editingAnnouncementId.value = item.id
   announcementForm.value = {
     title: item.title || '',
@@ -4624,6 +4933,7 @@ function openEditAnnouncement(item) {
     endDate: item.raw?.end_date ? normalizeDateInput(item.raw.end_date) : '',
     description: item.raw?.description || '',
   }
+  showViewAnnouncementModal.value = false
   showAnnouncementModal.value = true
   openAnnouncementRowMenuId.value = null
 }
@@ -4685,6 +4995,7 @@ const saveAnnouncement = async () => {
 }
 
 async function deleteAnnouncement(item) {
+  if (!item) return
   const confirmed = await new Promise((resolve) => {
     if (window.Swal) {
       Swal.fire({
@@ -4779,10 +5090,10 @@ function toggleCareerRowMenu(id, event) {
 }
 
 function openCareerApplicants(job) {
+  viewingCareerJob.value = job
   selectedCareerJob.value = job
   careerSectionMode.value = 'view-applicants'
   openCareerRowMenuId.value = null
-  loadCareerApplicants(job.id)
 }
 
 const setCareerApplicantDecision = async (nextDecision) => {
@@ -5288,7 +5599,19 @@ function openLeaveAttendancePrimaryAction() {
 }
 
 function openAssetsPrimaryAction() {
+  if (assetsSectionMode.value === 'requests') {
+    assetRequestsMgmtRef.value?.openCreate?.()
+    return
+  }
   assetsMgmtRef.value?.openCreate?.()
+}
+
+function openCareerCreateJob() {
+  careerMgmtRef.value?.openCreateJob?.()
+}
+
+function openCareerScheduleInterview() {
+  interviewsMgmtRef.value?.openCreate?.()
 }
 
 function closeCreateAttendanceModal() {
@@ -5408,6 +5731,16 @@ const submitCreateAttendance = async () => {
       showNotification('Please enter check-out time', 'error')
       return
     }
+
+    if (!createAttendanceForm.value.type) {
+      showNotification('Please select an attendance type', 'error')
+      return
+    }
+
+    if (!createAttendanceForm.value.status) {
+      showNotification('Please select a status', 'error')
+      return
+    }
     
     const selectedEmployeeText = String(createAttendanceForm.value.employee || '')
     const linkedEmployee = employeesDirectory.value.find(
@@ -5428,6 +5761,8 @@ const submitCreateAttendance = async () => {
       attendance_type: createAttendanceForm.value.type || 'office',
       break_duration: createAttendanceForm.value.breakLabel || '0',
       overtime: createAttendanceForm.value.otLabel || '0',
+      early_hours: createAttendanceForm.value.earlyHours || '0',
+      missed_hours: createAttendanceForm.value.missedHours || '0',
       description: createAttendanceForm.value.description || '',
     }
     
@@ -5871,6 +6206,24 @@ const deleteEmployee = async (employee) => {
 }
 
 
+function selectAllOverviewEmployees() {
+  activeTab.value = 'Employees'
+}
+
+function selectOverviewEmployee(employee) {
+  selectedOverviewEmployee.value = employee
+}
+
+function viewOverviewEmployee(employee) {
+  const row = employeesDirectory.value.find((item) => String(item.id) === String(employee.id))
+  openEmployeeDetails(row || employee)
+}
+
+function openOverviewAttendanceDetails() {
+  activeTab.value = 'Leave / Attendance'
+  leaveSectionMode.value = 'attendance'
+}
+
 function openEmployeeDetails(row) {
   selectedEmployeeDetail.value = enrichEmployeeDetail(row)
   employeeDetailTab.value = 'company'
@@ -6228,7 +6581,7 @@ function restoreHrPageState() {
   if (typeof window === 'undefined') return
   try {
     const savedActiveTab = window.localStorage.getItem(HR_ACTIVE_TAB_STORAGE_KEY)
-if (savedActiveTab && (headerTabs.includes(savedActiveTab) || savedActiveTab === 'Document Requests')) {
+if (savedActiveTab && (headerTabs.includes(savedActiveTab) || savedActiveTab === 'Document Requests' || savedActiveTab === 'Employee Details')) {
   activeTab.value = savedActiveTab
   if (savedActiveTab === 'Document Requests') loadRequestedDocuments()
 }
@@ -6241,6 +6594,16 @@ if (savedActiveTab && (headerTabs.includes(savedActiveTab) || savedActiveTab ===
     const savedLeaveInnerTab = window.localStorage.getItem(HR_LEAVE_INNER_TAB_STORAGE_KEY)
     if (savedLeaveInnerTab && ['attendance', 'team'].includes(savedLeaveInnerTab)) {
       hrSectionTab.value = savedLeaveInnerTab
+    }
+
+    const savedCareerMode = window.localStorage.getItem(HR_CAREER_MODE_STORAGE_KEY)
+    if (savedCareerMode === 'interviews') {
+      careerSectionMode.value = savedCareerMode
+    }
+
+    const savedAssetsMode = window.localStorage.getItem(HR_ASSETS_MODE_STORAGE_KEY)
+    if (savedAssetsMode && ['manage-assets', 'requests'].includes(savedAssetsMode)) {
+      assetsSectionMode.value = savedAssetsMode
     }
   } catch (error) {
     console.warn('Unable to restore HR page state', error)
@@ -6255,6 +6618,16 @@ watch(activeTab, (value) => {
 watch(leaveSectionMode, (value) => {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(HR_LEAVE_MODE_STORAGE_KEY, value)
+})
+
+watch(careerSectionMode, (value) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(HR_CAREER_MODE_STORAGE_KEY, value)
+})
+
+watch(assetsSectionMode, (value) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(HR_ASSETS_MODE_STORAGE_KEY, value)
 })
 
 watch(hrSectionTab, (value) => {
@@ -6450,6 +6823,11 @@ onMounted(async () => {
    await loadDocumentTypesList()
   await loadRequestedDocuments()
   await loadCareerJobs()
+  try {
+    recruitmentOverviewStats.value = await fetchRecruitmentStatistics() || { total_applicants: 0 }
+  } catch (error) {
+    console.warn('Unable to load recruitment overview stats', error)
+  }
 
   await loadAgentData()
   syncMobileViewport()
@@ -6497,8 +6875,14 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
 }
+.hr-screen--overview .hr-topbar {
+  min-height: 64px;
+  padding: 0 18px;
+  box-shadow: 0 8px 20px rgba(32, 19, 68, 0.08);
+}
 .hr-mobile-head { display: none; }
 .hr-topbar-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.hr-screen--overview .hr-topbar-tabs { gap: 2px; }
 .hr-tab-wrap { position: relative; }
 .hr-tab {
   border: none;
@@ -6511,11 +6895,21 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 3px;
 }
+.hr-screen--overview .hr-tab {
+  padding: 20px 14px 16px;
+  font-size: 14px;
+  color: #6b7280;
+  border-radius: 0;
+}
 .hr-tab.active {
   color: #111827;
   font-weight: 600;
   border-bottom: 2px solid var(--hr-secondary);
   border-radius: 0;
+}
+.hr-screen--overview .hr-tab.active {
+  font-weight: 700;
+  border-bottom: 3px solid #F99F1C;
 }
 .hr-tab-chevron { font-size: 12px; color: #9ca3af; }
 .hr-tab-menu {
@@ -6545,14 +6939,14 @@ onBeforeUnmount(() => {
 }
 .hr-topbar-actions { display: flex; align-items: center; gap: 8px; }
 .hr-overview-search {
-  min-width: 220px;
+  min-width: 240px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 999px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 8px 14px;
   color: #9ca3af;
 }
 .hr-overview-search input {
@@ -6560,7 +6954,13 @@ onBeforeUnmount(() => {
   outline: none;
   width: 100%;
   color: #6b7280;
-  font-size: 12px;
+  font-size: 13px;
+  background: transparent;
+}
+.hr-screen--overview .hr-icon-btn {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
 }
 .hr-generate-btn {
   border: none;
@@ -6573,6 +6973,12 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.hr-generate-btn--navy {
+  background: #0b0736;
+}
+.hr-generate-btn--navy iconify-icon {
+  color: #f99f1c;
 }
 .hr-icon-btn {
   width: 36px;
@@ -6897,8 +7303,16 @@ onBeforeUnmount(() => {
 .leave-row-menu-item.danger,
 .leave-row-menu-item.reject { color: #ef4444; }
 .leave-row-menu-item.approve { color: #16a34a; }
-.announcement-overview-card .employee-overview-head {
-  align-items: center;
+.hr-content-card.hr-la-card,
+.hr-la-shell,
+.hr-content-card.hr-recruitment-card,
+.hr-recruitment-shell,
+.hr-content-card.hr-assets-card,
+.hr-assets-shell {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 .career-summary-row {
   margin-bottom: 12px;
@@ -7272,16 +7686,186 @@ onBeforeUnmount(() => {
   color: #9ca3af;
   margin-left: 10px;
 }
-.announcement-table-wrap {
-  max-height: 520px;
+.announcement-card {
+  background: #fff;
+  border: 1px solid #eceff5;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(32, 19, 68, 0.08);
 }
-.announcement-table .announcement-description-col {
-  min-width: 360px;
-  width: 360px;
+.announcement-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 12px;
+}
+.announcement-card__title {
+  margin: 0;
+  font-size: 16px !important;
+  font-weight: 700;
+  color: #111827;
+}
+.announcement-card__export {
+  border: 1px solid #e7eaf1;
+  border-radius: 999px;
+  height: 40px;
+  padding: 0 14px;
+  background: #fff;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.announcement-card__export iconify-icon {
+  color: #f99f1c;
+  font-size: 16px;
+}
+.announcement-card__scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.announcement-grid {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+.announcement-grid thead th {
+  background: #f6f7fb;
+  border-bottom: 1px solid #eef0f4;
+  font-size: 12px;
+  font-weight: 600;
   color: #6b7280;
+  text-align: left;
+  padding: 12px 14px;
+  white-space: nowrap;
+}
+.announcement-grid tbody td {
+  border-bottom: 1px solid #ede7f3;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #374151;
+  vertical-align: middle;
+  background: #fff;
+}
+.announcement-grid tbody tr:hover td {
+  background: #faf8fc;
+}
+.announcement-grid__check {
+  width: 42px;
+  text-align: center;
+}
+.announcement-grid__check input {
+  width: 14px;
+  height: 14px;
+  accent-color: #733e87;
+}
+.announcement-grid__title-cell {
+  font-weight: 600;
+  color: #111827;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.announcement-grid__desc {
+  max-width: 280px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.announcement-grid__empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 36px 16px !important;
+}
+.announcement-grid__action {
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+  text-align: center;
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  background: #fff;
+  box-shadow: -8px 0 14px -12px rgba(15, 23, 42, 0.18);
+}
+.announcement-grid thead th.announcement-grid__action {
+  z-index: 4;
+  background: #f6f7fb;
+}
+.announcement-grid tbody tr:hover td.announcement-grid__action {
+  background: #faf8fc;
+}
+.announcement-grid__menu-btn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.announcement-grid__menu-btn:hover {
+  background: #f4f0f8;
+  color: #733e87;
+}
+.announcement-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #ede7f3;
+  font-size: 11px;
+  color: #9ca3af;
+  flex-wrap: wrap;
+}
+.announcement-card__pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.announcement-card__page-btn,
+.announcement-card__page-number {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.announcement-card__page-number.is-active {
+  background: #eef0f4;
+  color: #111827;
+  font-weight: 600;
+}
+.announcement-card__page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.announcement-card__dots {
+  color: #9ca3af;
+  padding: 0 4px;
 }
 .announcement-row-menu {
-  width: 230px;
+  width: 210px;
+}
+.announcement-row-menu .leave-row-menu-item + .leave-row-menu-item {
+  border-top: 1px solid #f3f4f6;
+  border-radius: 0;
 }
 .announcement-search-modal {
   width: min(720px, 94vw);
@@ -7289,13 +7873,47 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr;
 }
 .announcement-modal {
-  width: min(760px, 94vw) !important;
+  width: min(720px, 94vw) !important;
+}
+.announcement-form-panel {
+  background: #f8fafc;
+  border: 1px solid #edf1f6;
+  border-radius: 14px;
+  padding: 16px;
+}
+.announcement-modal .add-field input,
+.announcement-modal .add-field textarea {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: none;
+  background: #fff;
+}
+.announcement-modal .add-field input {
+  height: 50px;
+}
+.announcement-modal .add-field :deep(.v-select),
+.announcement-modal .add-field :deep(.crm-searchable-select) {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 .announcement-modal .add-field :deep(.vs__dropdown-toggle) {
   position: relative;
   display: flex;
   align-items: center;
+  height: 50px;
+  min-height: 50px;
   padding-right: 34px;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+.announcement-modal .add-field :deep(.vs__search),
+.announcement-modal .add-field :deep(.vs__selected) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 .announcement-modal .add-field :deep(.vs__actions) {
   position: absolute;
@@ -7317,7 +7935,30 @@ onBeforeUnmount(() => {
   display: inline-flex;
 }
 .announcement-modal .add-field textarea {
-  min-height: 104px;
+  min-height: 120px;
+  padding: 12px 14px;
+}
+.announcement-modal .add-field-control input {
+  height: 50px;
+  cursor: pointer;
+}
+.announcement-view-value {
+  margin: 0;
+  min-height: 50px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px 14px;
+  font-size: 13px;
+  color: #111827;
+  display: flex;
+  align-items: center;
+}
+.announcement-view-value--body {
+  min-height: 120px;
+  align-items: flex-start;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 .attendance-row-action-cell {
   position: relative;
@@ -7942,11 +8583,115 @@ onBeforeUnmount(() => {
 .attendance-create-modal {
   width: min(680px, 92vw) !important;
 }
+.add-field label em {
+  color: #ef4444;
+  font-style: normal;
+}
+.add-field-control {
+  position: relative;
+  display: block;
+}
+.add-field-control input {
+  padding-right: 36px;
+}
+.add-field-control iconify-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  font-size: 16px;
+}
+.attendance-upload-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.attendance-create-modal .leave-upload-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px dashed #d1d5db;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+.attendance-attachments {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 14px;
+}
+.attendance-create-modal .leave-upload-dropzone iconify-icon {
+  font-size: 28px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+.attendance-create-modal .leave-upload-dropzone div {
+  flex: 1;
+  min-width: 0;
+}
+.attendance-create-modal .leave-upload-dropzone strong {
+  display: block;
+  font-size: 13px;
+  color: #111827;
+}
+.attendance-create-modal .leave-upload-dropzone small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+.attendance-create-modal .add-employee-save-btn {
+  background: #0b0736;
+  color: #fff;
+}
+.attendance-create-modal .add-employee-clear-btn {
+  background: #f3f4f6;
+  color: #111827;
+}
+.attendance-create-modal .add-employee-footer {
+  justify-content: center;
+}
+.attendance-create-modal .add-field textarea {
+  min-height: 90px;
+}
+.attendance-create-modal .add-field input[type="time"] {
+  height: 50px;
+  line-height: 50px;
+}
+.attendance-create-modal .add-field input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 42px;
+  height: 100%;
+  cursor: pointer;
+}
 .attendance-create-modal .add-field :deep(.vs__dropdown-toggle) {
   position: relative;
   display: flex;
   align-items: center;
+  height: 50px;
+  min-height: 50px;
   padding-right: 34px;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+.attendance-create-modal .add-field :deep(.vs__search),
+.attendance-create-modal .add-field :deep(.vs__selected) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.attendance-create-modal .add-field-control input {
+  height: 50px;
+  cursor: pointer;
 }
 .attendance-create-modal .add-field :deep(.vs__actions) {
   position: absolute;
@@ -7988,7 +8733,9 @@ onBeforeUnmount(() => {
 .leave-apply-modal .add-field :deep(.vs__dropdown-toggle) {
   height: 50px;
   min-height: 50px;
-  border-radius: 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
 }
 .leave-apply-modal .add-field :deep(.vs__open-indicator) {
   width: 11px;
@@ -8788,11 +9535,19 @@ onBeforeUnmount(() => {
 .add-field :deep(.vs__dropdown-toggle) {
   height: 36px;
   min-height: 36px;
-  border: 1px solid #d9dee7;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0 8px 0 10px;
   display: flex;
   align-items: center;
+  box-shadow: none;
+  background: #fff;
+}
+.add-field :deep(.vs__search),
+.add-field :deep(.vs__selected) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 .add-field :deep(.vs__selected-options) {
   display: inline-flex;
@@ -8952,169 +9707,192 @@ onBeforeUnmount(() => {
 .overview-shell {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
+}
+.overview-card {
+  border: none !important;
+  background: transparent !important;
+  padding: 16px 4px 4px !important;
+}
+.overview-card .overview-shell {
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 .overview-analytics {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
+  gap: 16px;
 }
 .overview-department-card,
 .overview-attendance-card {
-  border: 1px solid #edf1f6;
-  border-radius: 12px;
+  border: none;
+  border-radius: 14px;
   background: #ffffff;
-  padding: 9px;
+  padding: 20px 22px 18px;
+  box-shadow: 0 10px 24px rgba(32, 19, 68, 0.08);
 }
 .overview-department-card {
-  min-height: 285px;
+  min-height: 360px;
 }
 .overview-attendance-card {
-  min-height: 285px;
+  min-height: 360px;
   display: flex;
   flex-direction: column;
 }
 .overview-section-title {
   margin: 0;
-  font-size: 15px !important;
-  font-weight: 600;
+  font-size: 16px !important;
+  font-weight: 700;
   color: #111827;
 }
-.overview-bars {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  align-items: end;
-  min-height: 195px;
+.overview-dept-chart {
+  margin-top: 6px;
 }
-.overview-bar-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.overview-dept-chart :deep(.apexcharts-gridline) {
+  stroke: #eceff3;
 }
-.overview-bar-track {
-  width: 32px;
-  height: 148px;
-  border-radius: 7px;
-  background: #fff7e0;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
+.overview-dept-chart :deep(.apexcharts-xaxis-tick) {
+  display: none;
 }
-.overview-bar-fill {
-  width: 100%;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #facc15 0%, #f59e0b 100%);
-}
-.overview-bar-item span {
-  font-size: 11px;
-  color: #4b5563;
+.overview-donut-wrap :deep(.apexcharts-canvas) {
+  margin: 0 auto;
 }
 .overview-attendance-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+.overview-period-wrap {
+  position: relative;
 }
 .overview-month-btn {
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #ffffff;
   color: #6b7280;
-  padding: 6px 10px;
-  font-size: 11px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+}
+.overview-period-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+  z-index: 20;
+}
+.overview-period-menu button {
+  width: 100%;
+  border: none;
+  background: #fff;
+  border-radius: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  color: #374151;
+  font-size: 12px;
+}
+.overview-period-menu button.active,
+.overview-period-menu button:hover {
+  background: #f3f4f6;
 }
 .overview-attendance-body {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 20px;
+  flex: 1;
 }
-.overview-ring-shell {
-  width: 145px;
-  height: 145px;
+.overview-donut-wrap {
+  position: relative;
+  width: 210px;
+  height: 210px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: conic-gradient(#7c3aed 0 62%, #facc15 62% 78%, #84cc16 78% 92%, #c4b5fd 92% 100%);
-  border-radius: 999px;
 }
-.overview-ring {
-  width: 104px;
-  height: 104px;
-  border-radius: 999px;
-  background: #ffffff;
+.overview-donut-center {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
-.overview-ring span {
-  font-size: 22px;
+.overview-donut-center span {
+  font-size: 28px;
   font-weight: 700;
   color: #111827;
   line-height: 1;
 }
-.overview-ring small {
-  margin-top: 2px;
-  font-size: 10px;
-  color: #6b7280;
+.overview-donut-center small {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
 }
 .overview-legend {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   flex: 1;
+  min-width: 0;
 }
 .overview-legend p {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 .overview-legend p strong {
   margin-left: auto;
   color: #111827;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
 }
 .overview-legend i {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 3px;
+  flex-shrink: 0;
 }
-.overview-legend i.present { background: #7c3aed; }
-.overview-legend i.onleave { background: #facc15; }
-.overview-legend i.holiday { background: #84cc16; }
-.overview-legend i.others { background: #c4b5fd; }
+.overview-legend i.present { background: #6C5DD3; }
+.overview-legend i.onleave { background: #F5C518; }
+.overview-legend i.holiday { background: #8BC34A; }
+.overview-legend i.others { background: #C4B5FD; }
 .overview-details-btn {
   margin-top: auto;
-  margin-bottom: 2px;
   width: 100%;
-  height: 34px;
-  border: 1px solid #eceff5;
-  border-radius: 999px;
-  background: #f4f5f7;
-  color: #1f2937;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #F99F1C;
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
   padding: 0 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  transition: background-color 0.18s ease, filter 0.18s ease;
 }
 .overview-details-btn:hover {
-  background: #eef0f4;
-  border-color: #e5e7eb;
+  background: #e89010;
+  filter: brightness(1.02);
 }
 .hr-content-shell--team .hr-content-head {
   padding-bottom: 0;
@@ -9681,9 +10459,6 @@ onBeforeUnmount(() => {
   .hr-search-wrap { min-width: 260px; }
 }
 @media (max-width: 900px) {
-  .overview-bars {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
   .overview-attendance-body {
     flex-direction: column;
     align-items: flex-start;
@@ -9857,10 +10632,17 @@ onBeforeUnmount(() => {
     padding: 10px;
     margin-top: 0;
   }
+  .hr-screen--overview .overview-card {
+    padding: 10px !important;
+  }
   .hr-content-shell {
     padding: 10px;
     border-radius: 12px;
     border: 1px solid #e7eaf0;
+  }
+  .hr-screen--overview .overview-shell {
+    border: none;
+    padding: 0;
   }
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -9872,42 +10654,25 @@ onBeforeUnmount(() => {
   .overview-department-card,
   .overview-attendance-card {
     min-height: auto;
-    padding: 10px;
-    border-radius: 10px;
-  }
-  .overview-bars {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    min-height: 160px;
-    gap: 8px;
-  }
-  .overview-bar-track {
-    width: 24px;
-    height: 118px;
+    padding: 16px;
+    border-radius: 12px;
   }
   .overview-attendance-body {
-    gap: 10px;
-    flex-direction: row;
-    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
+    align-items: center;
   }
-  .overview-ring-shell {
-    width: 118px;
-    height: 118px;
-    flex-shrink: 0;
-  }
-  .overview-ring {
-    width: 84px;
-    height: 84px;
-  }
-  .overview-ring span {
-    font-size: 20px;
+  .overview-donut-wrap {
+    width: 180px;
+    height: 180px;
   }
   .overview-legend {
-    grid-template-columns: 1fr;
-    gap: 6px;
+    width: 100%;
+    gap: 10px;
   }
   .overview-details-btn {
-    height: 32px;
-    font-size: 12px;
+    height: 42px;
+    font-size: 13px;
   }
   .hr-content-head {
     flex-direction: column;

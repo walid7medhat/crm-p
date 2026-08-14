@@ -74,21 +74,27 @@ class AttendanceController extends Controller
  private function respondFromDatabase(Request $request, bool $todayOnly): \Illuminate\Http\JsonResponse
 {
     $date = $request->query('date');
+    $startDate = $request->query('start_date');
+    $endDate = $request->query('end_date');
     $statusFilter = strtolower((string) $request->query('status', 'all'));
     $employeeIdFilter = $request->query('employee_id');
     $page = (int) $request->query('page', 1);
     $perPage = (int) $request->query('per_page', 15);
 
     $defaultDate = Carbon::today('Asia/Dubai')->toDateString();
+    $useRange = !$todayOnly && $startDate && $endDate;
+    $rangeFrom = $useRange ? Carbon::parse($startDate)->toDateString() : null;
+    $rangeTo = $useRange ? Carbon::parse($endDate)->toDateString() : null;
     $targetDate = $todayOnly
         ? ($date ? Carbon::parse($date)->toDateString() : $defaultDate)
-        : ($date ?: $defaultDate);
+        : ($date ?: ($rangeTo ?: $defaultDate));
 
     try {
-        if (Attendance::query()->whereDate('date', $targetDate)->count() === 0) {
-            $sync = $this->syncAttendanceFromApi($targetDate);
+        $syncDate = $targetDate;
+        if (Attendance::query()->whereDate('date', $syncDate)->count() === 0) {
+            $sync = $this->syncAttendanceFromApi($syncDate);
             Log::info('Attendance auto-sync (empty date)', [
-                'date' => $targetDate,
+                'date' => $syncDate,
                 'api_count' => $sync['api_count'],
                 'db_saved_count' => $sync['saved_count'],
             ]);
@@ -105,8 +111,13 @@ class AttendanceController extends Controller
             'user:id,name,email,avatar,status',
             'user.employeeProfile.department',
             'user.employeeProfile.companyBranch',
-        ])
-        ->whereDate('date', $targetDate);
+        ]);
+
+    if ($useRange) {
+        $query->whereBetween('date', [$rangeFrom, $rangeTo]);
+    } else {
+        $query->whereDate('date', $targetDate);
+    }
 
     if ($employeeIdFilter !== null && $employeeIdFilter !== '') {
         $norm = Attendance::normalizeEmployeeId((string) $employeeIdFilter);
@@ -119,10 +130,12 @@ class AttendanceController extends Controller
         $query->where('status', $statusFilter);
     }
 
-    $paginated = $query->orderBy('employee_name')->paginate($perPage, ['*'], 'page', $page);
+    $paginated = $query->orderByDesc('date')->orderBy('employee_name')->paginate($perPage, ['*'], 'page', $page);
     
     Log::info('Attendance GET (database)', [
         'date' => $targetDate,
+        'start_date' => $rangeFrom,
+        'end_date' => $rangeTo,
         'total' => $paginated->total(),
         'status_filter' => $statusFilter,
         'page' => $page,

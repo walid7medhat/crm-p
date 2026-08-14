@@ -35,7 +35,7 @@ class RecruitmentController extends Controller
         // Interviews Permissions
         $this->middleware('permission:interviews-list', ['only' => ['getInterviews']]);
         $this->middleware('permission:interviews-create', ['only' => ['scheduleInterview']]);
-        $this->middleware('permission:interviews-edit', ['only' => ['updateInterview']]);
+        $this->middleware('permission:interviews-edit', ['only' => ['updateInterview', 'deleteInterview']]);
         
         // Statistics
         $this->middleware('permission:recruitment-list', ['only' => ['statistics']]);
@@ -354,7 +354,7 @@ class RecruitmentController extends Controller
     public function getApplicants(Request $request, $jobId = null)
     {
         try {
-            $query = Applicant::with(['job', 'interviews']);
+            $query = Applicant::with(['job.branch', 'interviews']);
             
             if ($jobId) {
                 $query->where('job_id', $jobId);
@@ -362,6 +362,9 @@ class RecruitmentController extends Controller
 
             if ($request->filled('job_id')) {
                 $query->where('job_id', $request->job_id);
+            }
+            if ($request->filled('applicant_id')) {
+                $query->where('applicant_id', $request->applicant_id);
             }
             
             if ($request->has('status')) {
@@ -387,7 +390,7 @@ class RecruitmentController extends Controller
     public function getApplicant($id)
     {
         try {
-            $applicant = Applicant::with(['job', 'interviews.interviewer'])->findOrFail($id);
+            $applicant = Applicant::with(['job.branch', 'interviews.interviewer'])->findOrFail($id);
             
             if ($applicant->resume_path) {
                 $applicant->resume_url = asset('storage/' . $applicant->resume_path);
@@ -437,10 +440,12 @@ class RecruitmentController extends Controller
     $request->validate([
         'applicant_id' => 'required|exists:applicants,id',
         'interviewer_id' => 'required|exists:users,id',
-        'scheduled_at' => 'required|date|after:now',
+        'scheduled_at' => 'required|date',
+        'end_time' => 'nullable|date',
         'type' => 'required|in:online,in_person,phone',
         'location' => 'nullable|string',
-        'meeting_link' => 'nullable|url',
+        'meeting_link' => 'nullable|string',
+        'feedback' => 'nullable|string',
     ]);
     
     try {
@@ -478,9 +483,11 @@ class RecruitmentController extends Controller
             'job_id' => $applicant->job_id,
             'interviewer_id' => $request->interviewer_id,
             'scheduled_at' => $request->scheduled_at,
+            'end_time' => $request->end_time,
             'type' => $request->type,
             'location' => $request->location,
             'meeting_link' => $request->meeting_link,
+            'feedback' => $request->feedback,
             'status' => 'scheduled',
         ]);
         
@@ -505,25 +512,50 @@ class RecruitmentController extends Controller
     public function updateInterview(Request $request, $id)
     {
         $request->validate([
+            'scheduled_at' => 'sometimes|date',
+            'end_time' => 'nullable|date',
+            'type' => 'sometimes|in:online,in_person,phone',
+            'location' => 'nullable|string',
+            'meeting_link' => 'nullable|string',
             'feedback' => 'nullable|string',
             'rating' => 'nullable|integer|min:1|max:5',
             'status' => 'sometimes|in:scheduled,completed,cancelled,no_show',
         ]);
         
         try {
-            $interview = Interview::with(['applicant', 'interviewer'])->findOrFail($id);
-            $interview->update($request->all());
+            $interview = Interview::with(['applicant', 'job.branch', 'interviewer'])->findOrFail($id);
+            $interview->update($request->only([
+                'scheduled_at',
+                'end_time',
+                'type',
+                'location',
+                'meeting_link',
+                'feedback',
+                'rating',
+                'status',
+            ]));
             
-            return ApiResponse::success($interview, 'Interview updated successfully');
+            return ApiResponse::success($interview->fresh(['applicant', 'job.branch', 'interviewer']), 'Interview updated successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to update interview: ' . $e->getMessage());
+        }
+    }
+
+    public function deleteInterview($id)
+    {
+        try {
+            $interview = Interview::findOrFail($id);
+            $interview->delete();
+            return ApiResponse::success(null, 'Interview deleted successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to delete interview: ' . $e->getMessage());
         }
     }
     
     public function getInterviews(Request $request)
     {
         try {
-            $query = Interview::with(['applicant', 'job', 'interviewer']);
+            $query = Interview::with(['applicant.job.branch', 'job.branch', 'interviewer']);
             
             if ($request->has('status')) {
                 $query->where('status', $request->status);
@@ -531,6 +563,12 @@ class RecruitmentController extends Controller
             
             if ($request->has('interviewer_id')) {
                 $query->where('interviewer_id', $request->interviewer_id);
+            }
+            if ($request->filled('job_id')) {
+                $query->where('job_id', $request->job_id);
+            }
+            if ($request->filled('applicant_id')) {
+                $query->where('applicant_id', $request->applicant_id);
             }
             
             $interviews = $query->orderBy('scheduled_at', 'desc')

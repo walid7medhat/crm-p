@@ -73,7 +73,20 @@
                 <button type="button" class="nav-arrow" @click="previousMonth">
                     <iconify-icon icon="lucide:chevron-left" class="arrow-icon"></iconify-icon>
                 </button>
-                <div class="month-year-text">{{ currentMonthYear }}</div>
+                <div class="picker-month-year">
+                    <label class="picker-nav-select">
+                        <select :value="currentDate.getMonth()" @change="setHeaderMonth(Number($event.target.value))">
+                            <option v-for="(label, idx) in dobMonthLabels" :key="label" :value="idx">{{ label }}</option>
+                        </select>
+                        <iconify-icon icon="lucide:chevron-down" />
+                    </label>
+                    <label class="picker-nav-select picker-nav-select--year">
+                        <select :value="currentDate.getFullYear()" @change="setHeaderYear(Number($event.target.value))">
+                            <option v-for="y in headerYearOptions" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                        <iconify-icon icon="lucide:chevron-down" />
+                    </label>
+                </div>
                 <button type="button" class="nav-arrow" @click="nextMonth">
                     <iconify-icon icon="lucide:chevron-right" class="arrow-icon"></iconify-icon>
                 </button>
@@ -446,6 +459,23 @@ const nextMonth = () => {
     currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1)
 }
 
+const headerYearOptions = computed(() => {
+    const todayY = new Date().getFullYear()
+    const maxY = shouldBlockFuture.value ? todayY : todayY + 20
+    const minY = shouldBlockFuture.value ? todayY - 110 : todayY - 40
+    const list = []
+    for (let y = maxY; y >= minY; y--) list.push(y)
+    return list
+})
+
+function setHeaderMonth(monthIndex) {
+    currentDate.value = new Date(currentDate.value.getFullYear(), monthIndex, 1)
+}
+
+function setHeaderYear(year) {
+    currentDate.value = new Date(year, currentDate.value.getMonth(), 1)
+}
+
 const selectDate = (date, dayCell) => {
     if (props.dateOnly && props.dobLayout && dayCell?.isFutureDobBlocked) {
         return
@@ -547,11 +577,11 @@ onBeforeUnmount(() => {
 
 .date-time-picker-modal {
     background: #fff;
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.2);
     padding: 24px 20px;
-    min-width: 320px;
-    max-width: 360px;
+    min-width: 340px;
+    max-width: 400px;
     width: 100%;
     overflow: visible;
     position: relative;
@@ -748,6 +778,53 @@ onBeforeUnmount(() => {
     text-align: center;
     flex: 1;
     letter-spacing: -0.2px;
+}
+
+.picker-month-year {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.picker-nav-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.picker-nav-select select {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 7px 28px 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0b0736;
+    cursor: pointer;
+    min-width: 118px;
+}
+
+.picker-nav-select--year select {
+    min-width: 88px;
+}
+
+.picker-nav-select select:focus {
+    outline: none;
+    border-color: #f99f1c;
+    box-shadow: 0 0 0 3px rgba(249, 159, 28, 0.16);
+    background: #fff;
+}
+
+.picker-nav-select iconify-icon {
+    position: absolute;
+    right: 8px;
+    pointer-events: none;
+    font-size: 14px;
+    color: #94a3b8;
 }
 
 /* Calendar */

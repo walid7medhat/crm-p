@@ -75,6 +75,17 @@ export function normalizeJob(job) {
 export function normalizeApplicant(applicant) {
   if (!applicant) return null
   const job = applicant.job || {}
+  const answers = applicant.answers && typeof applicant.answers === 'object' ? applicant.answers : {}
+  const interviews = applicant.interviews || []
+  const scheduled = interviews.find((item) => item.status === 'scheduled')
+  const completed = interviews.some((item) => item.status === 'completed')
+  let decision = 'maybe'
+  if (applicant.status === 'rejected' || applicant.status === 'withdrawn') decision = 'rejected'
+  else if (['shortlisted', 'hired', 'interview'].includes(applicant.status)) decision = 'selected'
+  let interviewStatus = 'Not Scheduled'
+  if (scheduled) interviewStatus = 'Scheduled'
+  else if (completed) interviewStatus = 'Completed'
+  else if (applicant.status === 'interview') interviewStatus = 'Scheduled'
   return {
     id: applicant.id,
     name: applicant.full_name,
@@ -86,15 +97,34 @@ export function normalizeApplicant(applicant) {
     applicationDate: applicant.applied_at,
     status: applicant.status,
     statusLabel: formatApplicantStatus(applicant.status),
+    decision,
     pipelineStage: resolvePipelineStage(applicant),
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(applicant.full_name || 'A')}&background=733e87&color=fff`,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(applicant.full_name || 'A')}&background=2563eb&color=fff`,
     resumeUrl: applicant.resume_url || (applicant.resume_path ? `/storage/${applicant.resume_path}` : null),
     nationality: applicant.nationality || '—',
+    gender: applicant.gender || '—',
+    dateOfBirth: applicant.date_of_birth || '',
+    visaStatus: formatVisaStatus(applicant.visa_status),
+    visaExpiry: answers.visa_expiry || answers.visaExpiry || '',
+    noticePeriod: applicant.notice_period_days != null ? `${applicant.notice_period_days} Days` : '—',
+    currentSalary: applicant.current_salary != null ? `${applicant.current_salary} AED` : '—',
+    expectedSalary: applicant.expected_salary != null ? `${applicant.expected_salary} AED` : '—',
+    totalExperience: applicant.total_experience_years != null ? String(applicant.total_experience_years) : '—',
+    uaeExperience: applicant.experience_in_uae_years != null ? String(applicant.experience_in_uae_years) : '—',
+    location: answers.current_location || answers.location || job.branch?.name || '—',
     notes: applicant.additional_notes || '',
-    interviews: applicant.interviews || [],
-    answers: applicant.answers || {},
+    interviews,
+    answers,
+    availabilityStatus: answers.availability || answers.availability_status || 'Pending',
+    hiringStatus: applicant.status === 'hired' ? 'Hired' : (['shortlisted', 'interview'].includes(applicant.status) ? 'Onboarding' : 'Pending'),
+    interviewStatus,
     raw: applicant,
   }
+}
+
+function formatVisaStatus(status) {
+  const map = { resident: 'Residence Visa', visit: 'Visit Visa', sponsorship: 'Sponsorship', none: 'None' }
+  return map[status] || status || '—'
 }
 
 export function resolvePipelineStage(applicant) {
@@ -194,6 +224,11 @@ export async function updateInterview(id, payload) {
   return normalizeInterview(response.data?.data)
 }
 
+export async function deleteInterview(id) {
+  const response = await api.delete(`/recruitment/admin/interviews/${id}`)
+  return response.data
+}
+
 export async function updateApplicantStatus(id, status, rejectionReason = '') {
   await api.put(`/recruitment/admin/applicants/${id}/status`, {
     status,
@@ -238,19 +273,23 @@ export async function deleteJob(id) {
 
 export function normalizeInterview(interview) {
   if (!interview) return null
+  const job = interview.job || interview.applicant?.job || {}
   return {
     id: interview.id,
     applicantId: interview.applicant_id,
     applicantName: interview.applicant?.full_name || '—',
     applicantEmail: interview.applicant?.email || '',
     jobId: interview.job_id,
-    jobTitle: interview.job?.title || interview.applicant?.job?.title || '—',
+    jobTitle: job.title || interview.applicant?.job?.title || '—',
     interviewerId: interview.interviewer_id,
     interviewerName: interview.interviewer?.name || '—',
     scheduledAt: interview.scheduled_at,
+    endTime: interview.end_time || null,
+    createdAt: interview.created_at || null,
     type: interview.type,
     typeLabel: formatInterviewType(interview.type),
     location: interview.location || '',
+    branch: job.branch?.name || interview.location || '—',
     meetingLink: interview.meeting_link || '',
     status: interview.status,
     statusLabel: formatInterviewStatus(interview.status),

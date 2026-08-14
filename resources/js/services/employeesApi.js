@@ -14,6 +14,20 @@ function unwrapList(payload) {
   return { items: [], meta: null }
 }
 
+function uniqueByName(items) {
+  const seen = new Set()
+  const out = []
+  for (const item of items || []) {
+    if (!item) continue
+    const name = String(item.name ?? item.label ?? '').trim().toLowerCase()
+    const key = name || `id:${item.id ?? item.value}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(item)
+  }
+  return out
+}
+
 function unwrapPaginated(payload) {
   const root = payload?.data
   if (root?.data && Array.isArray(root.data)) {
@@ -97,19 +111,19 @@ export async function deleteEmployee(id) {
 export async function fetchDepartments() {
   const response = await api.get('/departments', { params: { per_page: 200 } })
   const { items } = unwrapList(response.data)
-  return items
+  return uniqueByName(items)
 }
 
 export async function fetchDesignations() {
   const response = await api.get('/designations', { params: { per_page: 200 } })
   const { items } = unwrapList(response.data)
-  return items
+  return uniqueByName(items)
 }
 
 export async function fetchBranches() {
   const response = await api.get('/company-branches', { params: { per_page: 200 } })
   const { items } = unwrapList(response.data)
-  return items
+  return uniqueByName(items)
 }
 
 export async function fetchManagers() {

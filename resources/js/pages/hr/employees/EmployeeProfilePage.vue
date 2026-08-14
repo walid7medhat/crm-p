@@ -121,30 +121,22 @@
               </ul>
             </section>
 
-            <!-- ✅ Documents (FIXED 🔥) -->
-            <section class="emp-profile-page__card">
+            <section class="emp-profile-page__card emp-profile-page__card--wide">
               <h6>Documents</h6>
-
-              <div v-if="employee.raw?.employee_profile?.documents">
-                <div
-                  v-for="(docs, type) in employee.raw.employee_profile.documents"
-                  :key="type"
-                  class="emp-profile-page__field"
-                >
-                  <label>{{ formatDocType(type) }}</label>
-
-                  <div v-if="docs.length">
-                    <div v-for="doc in docs" :key="doc.id">
-                      <a :href="doc.file_url" target="_blank">
-                        {{ doc.original_name }}
+              <div v-if="documentGroups.length" class="emp-profile-docs">
+                <article v-for="group in documentGroups" :key="group.type" class="emp-profile-docs__group">
+                  <p class="emp-profile-docs__type">{{ formatDocType(group.type) }}</p>
+                  <ul>
+                    <li v-for="doc in group.files" :key="doc.id">
+                      <iconify-icon icon="lucide:file-text" />
+                      <a v-if="doc.file_url" :href="doc.file_url" target="_blank" rel="noopener">
+                        {{ doc.original_name || doc.name || 'View file' }}
                       </a>
-                    </div>
-                  </div>
-
-                  <span v-else>—</span>
-                </div>
+                      <span v-else>{{ doc.original_name || doc.name || '—' }}</span>
+                    </li>
+                  </ul>
+                </article>
               </div>
-
               <p v-else class="emp-profile-page__empty">No documents uploaded</p>
             </section>
 
@@ -193,11 +185,30 @@ const statusLabel = computed(() => {
 const badgeClass = computed(() => `emp-card__badge--${employee.value?.employmentStatus || 'active'}`)
 
 const documentGroups = computed(() => {
-  const docs = employee.value?.raw?.employee_profile?.documents || {}
-  return Object.entries(docs).map(([type, list]) => ({
-    type,
-    count: Array.isArray(list) ? list.length : 0,
-  })).filter((g) => g.count > 0)
+  const docs = employee.value?.raw?.employee_profile?.documents
+  if (!docs) return []
+  const groups = Array.isArray(docs)
+    ? docs.reduce((acc, doc) => {
+        const type = doc.document_type || 'other'
+        if (!acc[type]) acc[type] = []
+        acc[type].push(doc)
+        return acc
+      }, {})
+    : docs
+  return Object.entries(groups)
+    .map(([type, list]) => {
+      const seen = new Set()
+      const files = (Array.isArray(list) ? list : []).filter((doc) => {
+        const key = `${doc?.file_url || ''}|${doc?.original_name || doc?.name || ''}|${doc?.id || ''}`
+        const nameKey = `${doc?.file_url || doc?.original_name || doc?.name || ''}`
+        if (!nameKey || seen.has(nameKey)) return false
+        seen.add(nameKey)
+        seen.add(key)
+        return true
+      })
+      return { type, files }
+    })
+    .filter((group) => group.files.length > 0)
 })
 
 function formatDate(value) {
