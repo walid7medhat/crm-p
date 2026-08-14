@@ -283,15 +283,24 @@ watch(() => props.initialView, (v) => {
   if (v === 'leave') activeView.value = 'leave'
   else if (v === 'attendance') activeView.value = 'records'
 })
+function handleAppNotification(event) {
+  const n = event.detail || {}
+  if (n.type === 'leave_request' || n.type === 'leave_request_hr') {
+    loadAll()
+  }
+}
 
 onMounted(() => {
   syncMobile()
   window.addEventListener('resize', syncMobile, { passive: true })
+  window.addEventListener('app-notification', handleAppNotification)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', syncMobile)
+  window.removeEventListener('app-notification', handleAppNotification)
 })
+
 </script>
 
 <style>

@@ -259,7 +259,7 @@ Route::prefix('company-branches')->group(function () {
     Route::get('/statistics/summary', [CompanyBranchController::class, 'getStatistics']);
 });
 // Document Types CRUD
-Route::middleware(['role:super_admin|hr'])->prefix('document-types')->group(function () {
+Route::middleware(['auth:api'])->prefix('document-types')->group(function () {
     Route::get('/', [DocumentRequestController::class, 'getDocumentTypes']);
     Route::post('/', [DocumentRequestController::class, 'storeDocumentType']);
     Route::put('/{id}', [DocumentRequestController::class, 'updateDocumentType']);

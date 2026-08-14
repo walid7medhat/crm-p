@@ -9,7 +9,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
+use App\Notifications\NewAssetRequestNotification;
+use App\Notifications\AssetRequestStatusNotification;
 class AssetRequestController extends Controller
 {
     public function index(Request $request)
@@ -97,7 +98,10 @@ class AssetRequestController extends Controller
             ]);
 
             $row->load($this->relations());
-
+        $hrUsers = User::role(['hr', 'super_admin'])->get();
+        foreach ($hrUsers as $hrUser) {
+            $hrUser->notify(new NewAssetRequestNotification($row));
+        }
             return ApiResponse::success($this->transform($row), 'Asset request created successfully', 201);
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to create asset request: ' . $e->getMessage());
@@ -153,6 +157,8 @@ class AssetRequestController extends Controller
             ]);
 
             $row->load($this->relations());
+            $row->user?->notify(new AssetRequestStatusNotification($row, 'approved'));
+
             DB::commit();
 
             return ApiResponse::success($this->transform($row), 'Asset request approved');
@@ -184,6 +190,7 @@ class AssetRequestController extends Controller
             ]);
 
             $row->load($this->relations());
+            $row->user?->notify(new AssetRequestStatusNotification($row, 'rejected'));
             DB::commit();
 
             return ApiResponse::success($this->transform($row), 'Asset request rejected');

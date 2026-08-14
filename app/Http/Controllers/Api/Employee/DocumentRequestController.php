@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Notifications\DocumentRequestStatusNotification;
 
 class DocumentRequestController extends Controller
 {
@@ -199,7 +200,8 @@ class DocumentRequestController extends Controller
                 'status' => 'approved',
                 'approved_date' => now(),
             ]);
-            
+                    $documentRequest->user?->notify(new DocumentRequestStatusNotification($documentRequest, 'approved'));
+
             DB::commit();
             
             return ApiResponse::success(
@@ -234,7 +236,8 @@ class DocumentRequestController extends Controller
                 'rejection_reason' => $request->rejection_reason,
                 'rejected_date' => now(),
             ]);
-            
+                    $documentRequest->user?->notify(new DocumentRequestStatusNotification($documentRequest, 'rejected'));
+
             return ApiResponse::success(
                 $documentRequest->load(['user', 'hrUser', 'documentType']),
                 'Document request rejected successfully'
@@ -267,7 +270,12 @@ class DocumentRequestController extends Controller
             
             $documentRequests = $query->orderBy('created_at', 'desc')
                 ->paginate($request->per_page ?? 15);
-            
+             $documentRequests->getCollection()->transform(function ($item) {
+                    if ($item->file_path) {
+                        $item->file_url = asset('storage/' . $item->file_path);
+                    }
+                    return $item;
+                });
             return ApiResponse::success($documentRequests, 'Document requests retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve document requests: ' . $e->getMessage());

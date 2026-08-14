@@ -295,6 +295,11 @@ class LeaveController extends Controller
                 }
             }
             
+            $hrUsers = User::role(['super_admin'])->get();
+            
+            foreach ($hrUsers as $hrUser) {
+                $hrUser->notify(new LeaveRequestNotification($leaveRequest,'parent'));
+            }
             DB::commit();
             
             return ApiResponse::success(
@@ -447,7 +452,8 @@ class LeaveController extends Controller
             }
             
             $leaveRequest->rejectByParent($request->rejection_reason);
-            
+                    $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_rejected'));
+
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request rejected by parent');
@@ -475,6 +481,8 @@ class LeaveController extends Controller
             
             $leaveRequest->approveByHr();
              $this->updateLeaveBalance($leaveRequest);
+                     $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_approved'));
+
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request approved by HR successfully');
@@ -505,7 +513,8 @@ class LeaveController extends Controller
             }
             
             $leaveRequest->rejectByHr($request->rejection_reason);
-            
+            $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_rejected'));
+
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request rejected by HR');

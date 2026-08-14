@@ -78,6 +78,37 @@ if (initialToken && import.meta.env.VITE_PUSHER_APP_KEY) {
       },
     },
   })
+  // ================= Live notifications (Pusher) =================
+function getStoredUserId() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.id || null
+  } catch (_) {
+    return null
+  }
+}
+
+if (window.Echo) {
+  const currentUserId = getStoredUserId()
+
+  if (currentUserId) {
+    window.Echo.private(`user.${currentUserId}`)
+      .notification((notification) => {
+        console.log('[Notification]', notification)
+
+        // Toast it
+        const type = String(notification.type || '').includes('status')
+          ? (notification.status === 'approved' ? 'success' : 'error')
+          : 'info'
+        showNotificationDeferred(notification.message || 'New notification', type)
+
+        // Broadcast to any listening Vue component
+        window.dispatchEvent(new CustomEvent('app-notification', { detail: notification }))
+      })
+  }
+}
 }
 
 
@@ -156,9 +187,14 @@ const Toast = Swal.mixin({
 function showNotificationDeferred(message, type = 'info') {
   const msg = typeof message === 'string' ? message : String(message)
   const icon = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'
+  const delay = Swal.isVisible() ? 500 : 150
   setTimeout(() => {
-    Toast.fire({ icon, title: msg })
-  }, 150)
+    try {
+      Toast.fire({ icon, title: msg })
+    } catch (e) {
+      console.warn('Toast fire failed:', e)
+    }
+  }, delay)
 }
 app.config.globalProperties.$showNotification = showNotificationDeferred
 window.$showNotification = showNotificationDeferred
@@ -234,6 +270,12 @@ app.mixin({
     }
   }
 })
-
+// in main.js, after app creation, before app.mount
+window.addEventListener('unhandledrejection', (event) => {
+  if (String(event.reason?.message || event.reason).includes('Element not found')) {
+    // Known benign ApexCharts race when a chart's container unmounts mid-update
+    event.preventDefault()
+  }
+})
 // Mount app
 app.mount('#app')

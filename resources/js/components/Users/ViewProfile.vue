@@ -157,6 +157,20 @@
           </span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
+
+        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
+          <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> My Documents</span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
+        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-assets' }" role="tab" @click="activeTab = 'my-assets'; loadMyAssets()">
+          <span class="vp-nav__left"><iconify-icon icon="lucide:briefcase" /> My Assets</span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
+        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-leave' }" role="tab" @click="activeTab = 'my-leave'; loadMyLeave()">
+          <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
+
       </aside>
 
       <main class="vp-content">
@@ -452,13 +466,232 @@
             </div>
           </section>
         </div>
+
+
+        <!-- My Documents -->
+        <div v-if="activeTab === 'my-documents'" class="vp-panel">
+          <div class="vp-panel__head">
+            <h3 class="vp-panel__title">My Document Requests</h3>
+            <button type="button" class="vp-btn-primary" @click="openDocRequestModal()">+ New Request</button>
+          </div>
+          <div v-if="docRequestsLoading" class="vp-loading">Loading...</div>
+          <table v-else class="vp-simple-table">
+            <thead>
+              <tr><th>Document Type</th><th>Description</th><th>Requested On</th><th>Status</th><th>Rejection Reason</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="doc in myDocumentRequests" :key="doc.id">
+                <td>{{ doc.document_type?.name || '—' }}</td>
+                <td>{{ doc.description || '--' }}</td>
+                <td>{{ formatDate(doc.requested_date || doc.created_at) }}</td>
+                <td><span class="vp-status-pill" :class="`vp-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}
+                    <a v-if="doc.status === 'approved' && doc.file_url" :href="doc.file_url" target="_blank" rel="noopener" class="vp-row-btn" style="margin-left:6px;" title="Download">
+                      <iconify-icon icon="lucide:download" />
+                    </a>
+                </span></td>
+                <td>{{ doc.rejection_reason || '--' }}</td>
+                <td>
+                  <button v-if="doc.status === 'pending'" type="button" class="vp-row-btn" @click="openDocRequestModal(doc)"><iconify-icon icon="lucide:pencil" /></button>
+                  <button type="button" class="vp-row-btn" @click="deleteMyDocumentRequest(doc)"><iconify-icon icon="lucide:trash-2" /></button>
+                </td>
+              </tr>
+              <tr v-if="!myDocumentRequests.length"><td colspan="6" class="text-center text-muted py-3">No document requests yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- My Assets -->
+        <div v-if="activeTab === 'my-assets'" class="vp-panel">
+          <div class="vp-panel__head"><h3 class="vp-panel__title">My Assigned Assets</h3></div>
+          <div v-if="myAssignedAssets.length" class="vp-simple-cards">
+            <div v-for="asset in myAssignedAssets" :key="asset.id" class="vp-asset-card">
+              <strong>{{ asset.name }}</strong>
+              <span>{{ asset.asset_type?.name || '—' }} · {{ asset.serial_number || '—' }}</span>
+              <span class="vp-status-pill vp-status-assigned">{{ asset.status }}</span>
+            </div>
+          </div>
+          <p v-else class="text-muted">No assets currently assigned to you.</p>
+
+          <div class="vp-panel__head" style="margin-top:24px">
+            <h3 class="vp-panel__title">My Asset Requests</h3>
+            <button type="button" class="vp-btn-primary" @click="openAssetRequestModal()">+ Request Asset</button>
+          </div>
+          <table class="vp-simple-table">
+            <thead><tr><th>Item</th><th>Qty</th><th>Description</th><th>Requested On</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="req in myAssetRequests" :key="req.id">
+                <td>{{ req.asset_item }}</td>
+                <td>{{ req.qty }}</td>
+                <td>{{ req.description || '--' }}</td>
+                <td>{{ formatDate(req.applied_at) }}</td>
+                <td><span class="vp-status-pill" :class="`vp-status-${req.status}`">{{ req.status }}</span></td>
+                <td>
+                  <button v-if="req.status === 'pending'" type="button" class="vp-row-btn" @click="openAssetRequestModal(req)"><iconify-icon icon="lucide:pencil" /></button>
+                  <button type="button" class="vp-row-btn" @click="deleteMyAssetRequest(req)"><iconify-icon icon="lucide:trash-2" /></button>
+                </td>
+              </tr>
+              <tr v-if="!myAssetRequests.length"><td colspan="6" class="text-center text-muted py-3">No asset requests yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- My Leave -->
+        <div v-if="activeTab === 'my-leave'" class="vp-panel">
+          <div class="vp-panel__head"><h3 class="vp-panel__title">Leave Balance</h3></div>
+          <div class="vp-simple-cards">
+            <div v-for="b in myLeaveBalance" :key="b.id" class="vp-asset-card">
+              <strong>{{ b.leave_type?.name }}</strong>
+              <span>{{ b.remaining_days }} / {{ b.total_days }} days remaining</span>
+            </div>
+          </div>
+
+          <div class="vp-panel__head" style="margin-top:24px">
+            <h3 class="vp-panel__title">My Leave Requests</h3>
+            <button type="button" class="vp-btn-primary" @click="openLeaveRequestModal()">+ Apply Leave</button>
+          </div>
+          <table class="vp-simple-table">
+            <thead><tr><th>Type</th><th>Start</th><th>End</th><th>Days</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="lv in myLeaveRequests" :key="lv.id">
+                <td>{{ lv.leave_type?.name }}</td>
+                <td>{{ formatDate(lv.start_date) }}</td>
+                <td>{{ formatDate(lv.end_date) }}</td>
+                <td>{{ lv.days }}</td>
+                <td><span class="vp-status-pill" :class="`vp-status-${lv.status}`">{{ lv.status }}</span></td>
+                <td>
+                  <button v-if="lv.status === 'pending_parent'" type="button" class="vp-row-btn" @click="cancelMyLeave(lv)"><iconify-icon icon="lucide:x-circle" /></button>
+                </td>
+              </tr>
+              <tr v-if="!myLeaveRequests.length"><td colspan="6" class="text-center text-muted py-3">No leave requests yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+
       </main>
+    </div>
+    <!-- Document Request Modal -->
+    <div v-if="showDocRequestModal" class="vp-modal-overlay" @click.self="showDocRequestModal = false">
+      <div class="vp-modal">
+        <div class="vp-modal__head">
+          <h4>{{ editingDocRequestId ? 'Edit' : 'New' }} Document Request</h4>
+          <button type="button" @click="showDocRequestModal = false"><iconify-icon icon="lucide:x" /></button>
+        </div>
+        <div class="vp-modal__body">
+          <div class="vp-field">
+            <label class="vp-field__label">Document Type</label>
+            <select v-model="docRequestForm.document_type_id" class="vp-field__input">
+              <option value="">Select type</option>
+              <option v-for="t in documentTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Description</label>
+            <textarea v-model="docRequestForm.description" class="vp-field__input" rows="3" placeholder="Optional details"></textarea>
+          </div>
+        </div>
+        <div class="vp-modal__footer">
+          <button type="button" class="vp-btn-ghost" @click="showDocRequestModal = false">Cancel</button>
+          <button type="button" class="vp-btn-primary" :disabled="docRequestSaving" @click="submitDocRequest">Submit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Asset Request Modal -->
+    <div v-if="showAssetRequestModal" class="vp-modal-overlay" @click.self="showAssetRequestModal = false">
+      <div class="vp-modal">
+        <div class="vp-modal__head">
+          <h4>{{ editingAssetRequestId ? 'Edit' : 'New' }} Asset Request</h4>
+          <button type="button" @click="showAssetRequestModal = false"><iconify-icon icon="lucide:x" /></button>
+        </div>
+        <div class="vp-modal__body">
+          <div class="vp-field">
+            <label class="vp-field__label">Asset Item *</label>
+            <input v-model="assetRequestForm.asset_item" type="text" class="vp-field__input" placeholder="e.g. Laptop" />
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Company Name *</label>
+            <input v-model="assetRequestForm.company_name" type="text" class="vp-field__input" />
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Branch *</label>
+            <select v-model="assetRequestForm.branch_id" class="vp-field__input">
+              <option value="">Select branch</option>
+              <option v-for="b in branchesForRequest" :key="b.id" :value="b.id">{{ b.name }}</option>
+            </select>
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Department *</label>
+            <select v-model="assetRequestForm.department_id" class="vp-field__input">
+              <option value="">Select department</option>
+              <option v-for="d in departmentsForRequest" :key="d.id" :value="d.id">{{ d.name }}</option>
+            </select>
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Quantity *</label>
+            <input v-model.number="assetRequestForm.qty" type="number" min="1" class="vp-field__input" />
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Description</label>
+            <textarea v-model="assetRequestForm.description" class="vp-field__input" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="vp-modal__footer">
+          <button type="button" class="vp-btn-ghost" @click="showAssetRequestModal = false">Cancel</button>
+          <button type="button" class="vp-btn-primary" :disabled="assetRequestSaving" @click="submitAssetRequest">Submit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leave Request Modal -->
+    <div v-if="showLeaveRequestModal" class="vp-modal-overlay" @click.self="showLeaveRequestModal = false">
+      <div class="vp-modal">
+        <div class="vp-modal__head">
+          <h4>Apply Leave</h4>
+          <button type="button" @click="showLeaveRequestModal = false"><iconify-icon icon="lucide:x" /></button>
+        </div>
+        <div class="vp-modal__body">
+          <div class="vp-field">
+            <label class="vp-field__label">Leave Type *</label>
+            <select v-model="leaveRequestForm.leave_type_id" class="vp-field__input">
+              <option value="">Select type</option>
+              <option v-for="t in myLeaveTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Start Date *</label>
+            <input v-model="leaveRequestForm.start_date" type="date" class="vp-field__input" />
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">End Date *</label>
+            <input v-model="leaveRequestForm.end_date" type="date" class="vp-field__input" />
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label"><input type="checkbox" v-model="leaveRequestForm.is_half_day" /> Half Day</label>
+          </div>
+          <div class="vp-field" v-if="leaveRequestForm.is_half_day">
+            <label class="vp-field__label">Half Day Type</label>
+            <select v-model="leaveRequestForm.half_day_type" class="vp-field__input">
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+            </select>
+          </div>
+          <div class="vp-field">
+            <label class="vp-field__label">Reason</label>
+            <textarea v-model="leaveRequestForm.reason" class="vp-field__input" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="vp-modal__footer">
+          <button type="button" class="vp-btn-ghost" @click="showLeaveRequestModal = false">Cancel</button>
+          <button type="button" class="vp-btn-primary" :disabled="leaveRequestSaving" @click="submitLeaveRequest">Submit</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, reactive, getCurrentInstance, computed, watch } from 'vue';
+import { ref, onMounted ,onBeforeUnmount, reactive, getCurrentInstance, computed, watch } from 'vue';
 import api from '@/plugins/axios';
 import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
@@ -984,12 +1217,31 @@ export default {
         checkinSubmitting.value = false;
       }
     };
-    
-    onMounted(() => {
-      loadUserData();
-      loadVacationData();
-      loadAttendanceStatus();
-    });
+  function handleAppNotification(event) {
+    const n = event.detail || {}
+    if (n.type === 'document_request_status') {
+      if (activeTab.value === 'my-documents') loadMyDocuments()
+    }
+    if (n.type === 'asset_request_status') {
+      if (activeTab.value === 'my-assets') loadMyAssets()
+    }
+    if (n.type === 'leave_request_status') {
+      if (activeTab.value === 'my-leave') loadMyLeave()
+      showNotification(n.message || 'Your leave request status changed', n.status === 'approved' ? 'success' : 'error')
+    }
+  }
+
+onMounted(() => {
+  loadUserData()
+  loadVacationData()
+  loadAttendanceStatus()
+  window.addEventListener('app-notification', handleAppNotification)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('app-notification', handleAppNotification)
+})
+  
 
     watch(isSuperAdmin, (value) => {
       if (value) {
@@ -1004,6 +1256,255 @@ export default {
       }
     });
     
+
+
+    // ===== My Documents =====
+const myDocumentRequests = ref([]);
+const docRequestsLoading = ref(false);
+const documentTypes = ref([]);
+const showDocRequestModal = ref(false);
+const editingDocRequestId = ref(null);
+const docRequestForm = reactive({ document_type_id: '', description: '' });
+const docRequestSaving = ref(false);
+
+const loadDocumentTypes = async () => {
+  try {
+    const res = await api.get('/document-types');
+    documentTypes.value = res.data?.data || res.data || [];
+  } catch (e) { console.error(e); }
+};
+
+const loadMyDocuments = async () => {
+  docRequestsLoading.value = true;
+  try {
+    const res = await api.get('/document-requests');
+    const payload = res.data?.data;
+    myDocumentRequests.value = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load document requests', 'error');
+  } finally {
+    docRequestsLoading.value = false;
+  }
+  if (!documentTypes.value.length) await loadDocumentTypes();
+};
+
+const openDocRequestModal = (doc = null) => {
+  if (doc) {
+    editingDocRequestId.value = doc.id;
+    docRequestForm.document_type_id = doc.document_type_id || doc.document_type?.id || '';
+    docRequestForm.description = doc.description === '--' ? '' : (doc.description || '');
+  } else {
+    editingDocRequestId.value = null;
+    docRequestForm.document_type_id = '';
+    docRequestForm.description = '';
+  }
+  showDocRequestModal.value = true;
+};
+
+const submitDocRequest = async () => {
+  if (!docRequestForm.document_type_id) {
+    showNotification('Please select a document type', 'error');
+    return;
+  }
+  docRequestSaving.value = true;
+  try {
+    const payload = {
+      document_type_id: docRequestForm.document_type_id,
+      description: docRequestForm.description || '',
+    };
+    if (editingDocRequestId.value) {
+      await api.put(`/document-requests/${editingDocRequestId.value}`, payload);
+      showNotification('Document request updated', 'success');
+    } else {
+      await api.post('/document-requests/store/new', payload);
+      showNotification('Document request submitted', 'success');
+    }
+    showDocRequestModal.value = false;
+    await loadMyDocuments();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to submit request', 'error');
+  } finally {
+    docRequestSaving.value = false;
+  }
+};
+
+const deleteMyDocumentRequest = async (doc) => {
+  if (!confirm('Delete this document request?')) return;
+  try {
+    await api.delete(`/document-requests/${doc.id}`);
+    showNotification('Document request deleted', 'success');
+    await loadMyDocuments();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to delete', 'error');
+  }
+};
+
+// ===== My Assets =====
+const myAssignedAssets = ref([]);
+const myAssetRequests = ref([]);
+const showAssetRequestModal = ref(false);
+const editingAssetRequestId = ref(null);
+const assetRequestForm = reactive({ asset_item: '', company_name: '', branch_id: '', department_id: '', qty: 1, description: '' });
+const assetRequestSaving = ref(false);
+const branchesForRequest = ref([]);
+const departmentsForRequest = ref([]);
+
+const loadAssetRequestOptions = async () => {
+  try {
+    const [branchesRes, deptsRes] = await Promise.all([
+      api.get('/company-branches'),
+      api.get('/departments'),
+    ]);
+
+    const branchesPayload = branchesRes.data?.data;
+    branchesForRequest.value = Array.isArray(branchesPayload)
+      ? branchesPayload
+      : Array.isArray(branchesPayload?.data)
+        ? branchesPayload.data
+        : [];
+
+    const deptsPayload = deptsRes.data?.data;
+    departmentsForRequest.value = Array.isArray(deptsPayload)
+      ? deptsPayload
+      : Array.isArray(deptsPayload?.data)
+        ? deptsPayload.data
+        : [];
+  } catch (e) {
+    console.error(e);
+    branchesForRequest.value = [];
+    departmentsForRequest.value = [];
+  }
+};
+
+const loadMyAssets = async () => {
+  try {
+    const [assetsRes, requestsRes] = await Promise.all([
+      api.get('/assets', { params: { user_id: user.value.id } }),
+      api.get('/asset-requests', { params: { user_id: user.value.id } }),
+    ]);
+    const assetsPayload = assetsRes.data?.data;
+    myAssignedAssets.value = Array.isArray(assetsPayload?.data) ? assetsPayload.data : (Array.isArray(assetsPayload) ? assetsPayload : []);
+    const reqPayload = requestsRes.data?.data;
+    myAssetRequests.value = Array.isArray(reqPayload?.data) ? reqPayload.data : (Array.isArray(reqPayload) ? reqPayload : []);
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load assets', 'error');
+  }
+  if (!branchesForRequest.value.length) await loadAssetRequestOptions();
+};
+
+const openAssetRequestModal = (req = null) => {
+  if (req) {
+    editingAssetRequestId.value = req.id;
+    assetRequestForm.asset_item = req.asset_item || '';
+    assetRequestForm.company_name = req.company_name || '';
+    assetRequestForm.branch_id = req.branch_id || '';
+    assetRequestForm.department_id = req.department_id || '';
+    assetRequestForm.qty = req.qty || 1;
+    assetRequestForm.description = req.description || '';
+  } else {
+    editingAssetRequestId.value = null;
+    Object.assign(assetRequestForm, { asset_item: '', company_name: '', branch_id: '', department_id: '', qty: 1, description: '' });
+  }
+  showAssetRequestModal.value = true;
+};
+
+const submitAssetRequest = async () => {
+  if (!assetRequestForm.asset_item || !assetRequestForm.company_name || !assetRequestForm.branch_id || !assetRequestForm.department_id || !assetRequestForm.qty) {
+    showNotification('Please fill all required fields', 'error');
+    return;
+  }
+  assetRequestSaving.value = true;
+  try {
+    const payload = { ...assetRequestForm, user_id: user.value.id };
+    if (editingAssetRequestId.value) {
+      await api.put(`/asset-requests/${editingAssetRequestId.value}`, payload);
+      showNotification('Asset request updated', 'success');
+    } else {
+      await api.post('/asset-requests', payload);
+      showNotification('Asset request submitted', 'success');
+    }
+    showAssetRequestModal.value = false;
+    await loadMyAssets();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to submit request', 'error');
+  } finally {
+    assetRequestSaving.value = false;
+  }
+};
+
+const deleteMyAssetRequest = async (req) => {
+  if (!confirm('Delete this asset request?')) return;
+  try {
+    await api.delete(`/asset-requests/${req.id}`);
+    showNotification('Asset request deleted', 'success');
+    await loadMyAssets();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to delete', 'error');
+  }
+};
+
+// ===== My Leave =====
+const myLeaveRequests = ref([]);
+const myLeaveBalance = ref([]);
+const myLeaveTypes = ref([]);
+const showLeaveRequestModal = ref(false);
+const leaveRequestForm = reactive({ leave_type_id: '', start_date: '', end_date: '', reason: '', is_half_day: false, half_day_type: 'morning' });
+const leaveRequestSaving = ref(false);
+
+const loadMyLeave = async () => {
+  try {
+    const [reqRes, balanceRes, typesRes] = await Promise.all([
+      api.get('/leaves'),
+      api.get('/leaves/my-balance'),
+      api.get('/leaves/types'),
+    ]);
+    const reqPayload = reqRes.data?.data;
+    myLeaveRequests.value = Array.isArray(reqPayload?.data) ? reqPayload.data : (Array.isArray(reqPayload) ? reqPayload : []);
+    myLeaveBalance.value = balanceRes.data?.data || [];
+    myLeaveTypes.value = typesRes.data?.data || [];
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load leave data', 'error');
+  }
+};
+
+const openLeaveRequestModal = () => {
+  Object.assign(leaveRequestForm, { leave_type_id: '', start_date: '', end_date: '', reason: '', is_half_day: false, half_day_type: 'morning' });
+  showLeaveRequestModal.value = true;
+};
+
+const submitLeaveRequest = async () => {
+  if (!leaveRequestForm.leave_type_id || !leaveRequestForm.start_date || !leaveRequestForm.end_date) {
+    showNotification('Please fill all required fields', 'error');
+    return;
+  }
+  leaveRequestSaving.value = true;
+  try {
+    await api.post('/leaves', { ...leaveRequestForm });
+    showNotification('Leave request submitted', 'success');
+    showLeaveRequestModal.value = false;
+    await loadMyLeave();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to submit leave request', 'error');
+  } finally {
+    leaveRequestSaving.value = false;
+  }
+};
+
+const cancelMyLeave = async (lv) => {
+  if (!confirm('Cancel this leave request?')) return;
+  try {
+    await api.post(`/leaves/${lv.id}/cancel`);
+    showNotification('Leave request cancelled', 'success');
+    await loadMyLeave();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to cancel', 'error');
+  }
+};
+
+
     return {
       user,
       activeTab,
@@ -1047,8 +1548,51 @@ export default {
       toggleDepartmentSelection,
       submitCheckin,
       currentDelegate,
-      formatDate
+      formatDate,
+      myDocumentRequests, docRequestsLoading, documentTypes, showDocRequestModal, editingDocRequestId,
+      docRequestForm, docRequestSaving, loadMyDocuments, openDocRequestModal, submitDocRequest, deleteMyDocumentRequest,
+      myAssignedAssets, myAssetRequests, showAssetRequestModal, editingAssetRequestId, assetRequestForm,
+      assetRequestSaving, branchesForRequest, departmentsForRequest, loadMyAssets, openAssetRequestModal,
+      submitAssetRequest, deleteMyAssetRequest,
+      myLeaveRequests, myLeaveBalance, myLeaveTypes, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
+      loadMyLeave, openLeaveRequestModal, submitLeaveRequest, cancelMyLeave,
     };
   }
 };
 </script>
+<style scoped>
+.vp-modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.vp-modal {
+  width: min(520px, 92vw); background: #fff; border-radius: 12px;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+.vp-modal__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid #eee;
+}
+.vp-modal__head h4 { margin: 0; font-size: 16px; font-weight: 600; }
+.vp-modal__head button { border: none; background: transparent; color: #6b7280; }
+.vp-modal__body { padding: 16px 18px; display: grid; gap: 12px; }
+.vp-modal__footer { padding: 14px 18px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
+.vp-loading { padding: 20px; color: #6b7280; }
+.vp-simple-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.vp-simple-table th, .vp-simple-table td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; text-align: left; }
+.vp-simple-table th { color: #6b7280; font-weight: 600; background: #f8fafc; }
+.vp-row-btn { border: none; background: transparent; color: #6b7280; margin-right: 4px; }
+.vp-status-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: capitalize;
+}
+.vp-status-pending { background: #fef3c7; color: #92400e; }
+.vp-status-approved { background: #dcfce7; color: #166534; }
+.vp-status-rejected { background: #fee2e2; color: #991b1b; }
+.vp-status-pending_parent, .vp-status-pending_hr { background: #fef3c7; color: #92400e; }
+.vp-status-assigned { background: #dbeafe; color: #1e40af; }
+.vp-simple-cards { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.vp-asset-card {
+  border: 1px solid #edf1f6; border-radius: 10px; padding: 12px 14px; min-width: 200px;
+  display: flex; flex-direction: column; gap: 6px; background: #fff;
+}
+</style>

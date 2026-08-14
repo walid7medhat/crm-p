@@ -22,7 +22,7 @@ class NewDocumentRequestNotification extends Notification
     public function via($notifiable): array
     {
         // mail
-        return [ 'database'];
+        return [ 'database','broadcast'];
     }
 
     public function toMail($notifiable): MailMessage
@@ -46,4 +46,19 @@ class NewDocumentRequestNotification extends Notification
             'status' => 'pending',
         ];
     }
+    public function toArray($notifiable)
+{
+    return [
+        'type' => 'document_request',
+        'document_request_id' => $this->documentRequest->id,
+        'document_type' => $this->documentRequest->documentType?->name,
+        'user_id' => $this->documentRequest->user_id,
+        'user_name' => $this->documentRequest->user?->name,
+        'message' => "{$this->documentRequest->user?->name} requested a {$this->documentRequest->documentType?->name}",
+    ];
+}
+  public function broadcastType(): string
+        {
+            return $this->toArray(null)['type'] ?? 'notification';
+        }
 }

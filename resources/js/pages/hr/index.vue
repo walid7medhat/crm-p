@@ -355,6 +355,16 @@
                   <button type="button" class="row-action-btn" @click="openDocumentDetail(doc)">
                     <iconify-icon icon="lucide:eye" />
                   </button>
+                  <a
+                      v-if="doc.status === 'Approved' && doc.fileUrl"
+                      :href="doc.fileUrl"
+                      target="_blank"
+                      rel="noopener"
+                      class="row-action-btn"
+                      title="Download document"
+                    >
+                      <iconify-icon icon="lucide:download" />
+                    </a>
                   <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" @click="openEditDocumentRequest(doc)">
                     <iconify-icon icon="lucide:pencil" />
                   </button>
@@ -1866,6 +1876,16 @@
             <p><span>Requested Date</span><strong>{{ selectedRequestedDocument.requestedDate }}</strong></p>
             <p><span>Status</span><strong :class="`doc-status-${String(selectedRequestedDocument.status).toLowerCase()}`">{{ selectedRequestedDocument.status }}</strong></p>
           </div>
+          <a
+            v-if="selectedRequestedDocument.status === 'Approved' && selectedRequestedDocument.fileUrl"
+            :href="selectedRequestedDocument.fileUrl"
+            target="_blank"
+            rel="noopener"
+            class="request-doc-confirm-btn mt-2"
+            style="display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;"
+          >
+            <iconify-icon icon="lucide:download" /> Download Document
+          </a>
           <div class="add-field mt-2">
             <label>Description</label>
             <textarea :value="selectedRequestedDocument.description || '--'" readonly></textarea>
@@ -2471,6 +2491,7 @@ function mapDocumentRequestToRow(item) {
     status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending',
     rejectionReason: item.rejection_reason || '',
     file_url: item.file_url || '',
+    fileUrl: item.file_url || '', 
     raw: item,
   }
 }
@@ -2708,7 +2729,7 @@ const assetEditForm = ref({
 const hrSectionTab = ref('attendance')
 
 const headerTabMenus = {
-  Employees: ['Manage Employees'],
+  Employees: ['Manage Employees','Document Requests'],
   Payroll: ['Manage Salary', 'Manage Pay Slip'],
   'Leave / Attendance': ['Leave Management', 'Attendance Management', 'Announcements'],
   Career: ['Manage Recruitments', 'Interviews'],
@@ -4635,6 +4656,7 @@ function scrollEmployeeDetailSection(sectionKey) {
 
 function menuItemIcon(item) {
   const label = String(item).toLowerCase()
+  if (label.includes('document')) return 'lucide:file-text'
   if (label.includes('asset')) return 'lucide:briefcase-business'
   if (label.includes('attendance')) return 'lucide:calendar-check'
   if (label.includes('leave')) return 'lucide:calendar-off'
@@ -6798,6 +6820,41 @@ const fetchAssetResponsiblePersons = async () => {
 }
 
 // ========== ON MOUNTED ==========
+function handleAppNotification(event) {
+  const n = event.detail || {}
+
+  if (n.type === 'document_request' || n.type === 'document_request_status') {
+    if (activeTab.value === 'Document Requests') {
+      loadRequestedDocuments()
+    }
+    if (
+      activeTab.value === 'Employee Details' &&
+      employeeDetailView.value === 'requested-documents' &&
+      selectedEmployeeDetail.value
+    ) {
+      loadRequestedDocuments(selectedEmployeeDetail.value.id)
+    }
+  }
+
+  if (n.type === 'asset_request' || n.type === 'asset_request_status') {
+      if (activeTab.value === 'Assets') {
+        if (assetsSectionMode.value === 'requests') {
+          assetRequestsMgmtRef.value?.refresh?.()
+        } else {
+          fetchAssetsData()
+        }
+      }
+    }
+    if (n.type === 'leave_request' || n.type === 'leave_request_hr') {
+      if (activeTab.value === 'Leave / Attendance' && leaveSectionMode.value === 'leave') {
+        fetchLeaveRequestsData()
+      }
+    }
+}
+
+
+
+
 onMounted(async () => {
   console.log('BASE URL:', api.defaults.baseURL)
   restoreHrPageState()
@@ -6823,6 +6880,8 @@ onMounted(async () => {
    await loadDocumentTypesList()
   await loadRequestedDocuments()
   await loadCareerJobs()
+    window.addEventListener('app-notification', handleAppNotification)
+
   try {
     recruitmentOverviewStats.value = await fetchRecruitmentStatistics() || { total_applicants: 0 }
   } catch (error) {
@@ -6844,6 +6903,8 @@ onBeforeUnmount(() => {
   if (attendanceSearchBlurTimer) clearTimeout(attendanceSearchBlurTimer)
   window.removeEventListener('resize', syncMobileViewport)
   document.removeEventListener('click', onDocumentClick)
+    window.removeEventListener('app-notification', handleAppNotification)
+
 })
 </script>
 
@@ -9148,6 +9209,7 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 14px;
   font-weight: 600;
+  text-align:center;
 }
 .employee-filter-close {
   position: absolute;

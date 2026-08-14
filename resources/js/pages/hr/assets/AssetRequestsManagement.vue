@@ -580,11 +580,15 @@ function onDocClick(event) {
 onMounted(() => document.addEventListener('click', onDocClick))
 onUnmounted(() => document.removeEventListener('click', onDocClick))
 
-defineExpose({ openCreate })
+defineExpose({ openCreate, refresh: loadAll })
 </script>
 
 <style scoped>
 @import '../../../../css/hr-employees.css';
 @import '../../../../css/hr-recruitment.css';
 @import '../../../../css/hr-assets.css';
+.ast-req-reject-btn,.ast-req-approve-btn{
+  text-align: center;
+}
+
 </style>
