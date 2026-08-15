@@ -188,7 +188,7 @@ class LeaveController extends Controller
             
             $query->whereIn('user_id', $employeeIds);
             
-            $query->where('status', 'pending_parent');
+            // $query->where('status', 'pending_parent');
         }
         else {
             $query->where('user_id', $user->id);
@@ -420,7 +420,7 @@ class LeaveController extends Controller
             $leaveRequest->approveByParent();
             
             // Send notification to HR
-            $hrUsers = \App\Models\User::role('hr')->get();
+            $hrUsers = \App\Models\User::role(['hr','super_admin'])->get();
             foreach ($hrUsers as $hr) {
                 $hr->notify(new LeaveRequestNotification($leaveRequest, 'hr'));
             }
@@ -456,7 +456,12 @@ class LeaveController extends Controller
             
             $leaveRequest->rejectByParent($request->rejection_reason);
                     $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_rejected'));
-
+                // Send notification to HR
+            $hrUsers = \App\Models\User::role(['hr','super_admin'])->get();
+            foreach ($hrUsers as $hr) {
+                $hr->notify(new LeaveRequestNotification($leaveRequest, 'hr_rejected_by_parent'));
+            }
+            
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request rejected by parent');
@@ -484,8 +489,14 @@ class LeaveController extends Controller
             
             $leaveRequest->approveByHr();
              $this->updateLeaveBalance($leaveRequest);
-                     $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_approved'));
-
+             $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_approved'));
+            // NEW — let the parent/manager know HR finalized it
+            if ($leaveRequest->parent_id) {
+                $parent = User::find($leaveRequest->parent_id);
+                if ($parent) {
+                    $parent->notify(new LeaveRequestNotification($leaveRequest, 'parent_approved'));
+                }
+            }
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request approved by HR successfully');
@@ -517,7 +528,13 @@ class LeaveController extends Controller
             
             $leaveRequest->rejectByHr($request->rejection_reason);
             $leaveRequest->user->notify(new LeaveRequestNotification($leaveRequest, 'employee_rejected'));
-
+            // NEW — let the parent/manager know HR finalized it
+            if ($leaveRequest->parent_id) {
+                $parent = User::find($leaveRequest->parent_id);
+                if ($parent) {
+                    $parent->notify(new LeaveRequestNotification($leaveRequest, 'parent_rejected'));
+                }
+            }
             DB::commit();
             
             return ApiResponse::success($leaveRequest, 'Leave request rejected by HR');

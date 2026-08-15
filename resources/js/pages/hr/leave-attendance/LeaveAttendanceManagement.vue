@@ -284,6 +284,7 @@ watch(() => props.initialView, (v) => {
   else if (v === 'attendance') activeView.value = 'records'
 })
 function handleAppNotification(event) {
+  console.log('[app-notification]', event.detail) // TEMP
   const n = event.detail || {}
   if (n.type === 'leave_request' || n.type === 'leave_request_hr') {
     loadAll()

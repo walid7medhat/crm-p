@@ -13,7 +13,7 @@ class LeaveRequestNotification extends Notification implements ShouldQueue
     use Queueable;
 
     protected $leaveRequest;
-    protected $type; // 'parent' | 'hr' | 'employee_approved' | 'employee_rejected'
+    protected $type; // 'parent' | 'hr' | 'employee_approved' | 'employee_rejected' | 'parent_approved' | 'parent_rejected'
 
     public function __construct(LeaveRequest $leaveRequest, $type = 'parent')
     {
@@ -23,8 +23,6 @@ class LeaveRequestNotification extends Notification implements ShouldQueue
 
     public function via($notifiable)
     {
-        // 'broadcast' pushes this over Pusher on the notifiable's
-        // private channel (App.Models.User.{id}) automatically.
         return ['database', 'broadcast'];
     }
 
@@ -62,11 +60,28 @@ class LeaveRequestNotification extends Notification implements ShouldQueue
                     $this->leaveRequest->end_date->format('M d, Y') . ') has been approved.');
         }
 
-        // employee_rejected
+        if ($this->type === 'employee_rejected') {
+            return (new MailMessage)
+                ->subject('❌ Your Leave Request Was Rejected')
+                ->greeting('Hello ' . $notifiable->name . ',')
+                ->line('Your **' . $leaveType->name . '** request was rejected.')
+                ->line('**Reason:** ' . ($this->leaveRequest->rejection_reason ?? '—'));
+        }
+
+        if ($this->type === 'parent_approved') {
+            return (new MailMessage)
+                ->subject('✅ HR Approved a Leave Request You Approved')
+                ->greeting('Hello ' . $notifiable->name . ',')
+                ->line('HR has finalized **' . $user->name . '**\'s **' . $leaveType->name . '** request, which you previously approved.')
+                ->line('**Duration:** ' . $this->leaveRequest->start_date->format('M d, Y') . ' → ' . $this->leaveRequest->end_date->format('M d, Y'))
+                ->line('Status: Approved');
+        }
+
+        // parent_rejected
         return (new MailMessage)
-            ->subject('❌ Your Leave Request Was Rejected')
+            ->subject('❌ HR Rejected a Leave Request You Approved')
             ->greeting('Hello ' . $notifiable->name . ',')
-            ->line('Your **' . $leaveType->name . '** request was rejected.')
+            ->line('HR has rejected **' . $user->name . '**\'s **' . $leaveType->name . '** request, which you previously approved.')
             ->line('**Reason:** ' . ($this->leaveRequest->rejection_reason ?? '—'));
     }
 
@@ -92,6 +107,14 @@ class LeaveRequestNotification extends Notification implements ShouldQueue
                 'status' => 'pending_hr',
                 'action_url' => '/leaves/' . $this->leaveRequest->id,
             ],
+            'hr_rejected_by_parent' => [
+                'type' => 'leave_request_hr',
+                'leave_request_id' => $this->leaveRequest->id,
+                'title' => 'Leave Request Rejected by Manager',
+                'message' => $user->name . '\'s ' . $leaveType->name . ' request was rejected by their manager',
+                'status' => 'rejected',
+                'action_url' => '/leaves/' . $this->leaveRequest->id,
+            ],
             'employee_approved' => [
                 'type' => 'leave_request_status',
                 'leave_request_id' => $this->leaveRequest->id,
@@ -108,6 +131,24 @@ class LeaveRequestNotification extends Notification implements ShouldQueue
                 'status' => 'rejected',
                 'action_url' => '/profile',
             ],
+            'parent_approved' => [
+                'type' => 'leave_request_parent_status',
+                'leave_request_id' => $this->leaveRequest->id,
+                'title' => 'Leave Request Finalized by HR',
+                'message' => 'HR approved ' . $user->name . '\'s ' . $leaveType->name . ' request',
+                'status' => 'approved',
+                'employee_name' => $user->name,
+                'action_url' => '/profile',
+            ],
+            'parent_rejected' => [
+                'type' => 'leave_request_parent_status',
+                'leave_request_id' => $this->leaveRequest->id,
+                'title' => 'Leave Request Finalized by HR',
+                'message' => 'HR rejected ' . $user->name . '\'s ' . $leaveType->name . ' request',
+                'status' => 'rejected',
+                'employee_name' => $user->name,
+                'action_url' => '/profile',
+            ],
             default => [],
         };
     }
@@ -116,8 +157,9 @@ class LeaveRequestNotification extends Notification implements ShouldQueue
     {
         return $this->toDatabase($notifiable);
     }
-      public function broadcastType(): string
-        {
-            return $this->toArray(null)['type'] ?? 'notification';
-        }
+
+    public function broadcastType(): string
+    {
+        return $this->toArray(null)['type'] ?? 'notification';
+    }
 }

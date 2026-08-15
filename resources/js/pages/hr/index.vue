@@ -6899,19 +6899,23 @@ function handleAppNotification(event) {
   }
 
   if (n.type === 'asset_request' || n.type === 'asset_request_status') {
-      if (activeTab.value === 'Assets') {
-        if (assetsSectionMode.value === 'requests') {
-          assetRequestsMgmtRef.value?.refresh?.()
-        } else {
-          fetchAssetsData()
-        }
+    if (activeTab.value === 'Assets') {
+      if (assetsSectionMode.value === 'requests') {
+        assetRequestsMgmtRef.value?.refresh?.()
+      } else {
+        fetchAssetsData()
       }
     }
-    if (n.type === 'leave_request' || n.type === 'leave_request_hr') {
-      if (activeTab.value === 'Leave / Attendance' && leaveSectionMode.value === 'leave') {
-        fetchLeaveRequestsData()
-      }
-    }
+  }
+
+  // NEW — leave request reached HR (parent approved it) or was superseded
+  if (n.type === 'leave_request_hr') {
+  if (activeTab.value === 'Leave / Attendance' && leaveSectionMode.value === 'leave') {
+    fetchLeaveRequestsData()
+  }
+  const isRejected = n.status === 'rejected'
+  showNotification(n.message || (isRejected ? 'A leave request was rejected by a manager' : 'A leave request needs HR approval'), isRejected ? 'warning' : 'info')
+}
 }
 
 

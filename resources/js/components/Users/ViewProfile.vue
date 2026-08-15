@@ -170,6 +170,18 @@
           <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
+        <button
+            v-if="isTeamLead || isSuperAdmin"
+            type="button"
+            class="vp-nav__item"
+            :class="{ 'is-active': activeTab === 'team-leave' }"
+            role="tab"
+            @click="activeTab = 'team-leave'; loadTeamLeaveRequests()"
+          >
+            <span class="vp-nav__left"><iconify-icon icon="lucide:users" /> Team Leave Requests</span>
+            <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+            <span v-if="teamLeavePendingCount > 0" class="vp-nav__badge">{{ teamLeavePendingCount }}</span>
+          </button>
 
       </aside>
 
@@ -699,6 +711,86 @@
             </article>
           </div>
         </div>
+        <!-- Team Leave Requests -->
+        <div v-if="activeTab === 'team-leave'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">Team Leave Requests</h3>
+              <p class="vp-panel__subtitle">Review and act on leave requests from your direct reports.</p>
+            </div>
+          </div>
+
+          <div class="vp-stat-row">
+            <div class="vp-stat-chip"><span>{{ teamLeaveStats.total }}</span> Total</div>
+            <div class="vp-stat-chip is-pending"><span>{{ teamLeaveStats.pending }}</span> Pending</div>
+            <div class="vp-stat-chip is-approved"><span>{{ teamLeaveStats.approved }}</span> Approved</div>
+            <div class="vp-stat-chip is-rejected"><span>{{ teamLeaveStats.rejected }}</span> Rejected</div>
+          </div>
+
+          <div class="vp-hub__toolbar">
+            <div class="vp-filter-chips">
+              <button type="button" class="vp-chip" :class="{ 'is-active': teamLeaveStatusFilter === 'all' }" @click="teamLeaveStatusFilter = 'all'">All</button>
+              <button type="button" class="vp-chip" :class="{ 'is-active': teamLeaveStatusFilter === 'pending_parent' }" @click="teamLeaveStatusFilter = 'pending_parent'">Pending</button>
+              <button type="button" class="vp-chip" :class="{ 'is-active': teamLeaveStatusFilter === 'approved' }" @click="teamLeaveStatusFilter = 'approved'">Approved</button>
+              <button type="button" class="vp-chip" :class="{ 'is-active': teamLeaveStatusFilter === 'rejected' }" @click="teamLeaveStatusFilter = 'rejected'">Rejected</button>
+            </div>
+            <label class="vp-search">
+              <iconify-icon icon="lucide:search" />
+              <input v-model="teamLeaveSearch" type="text" placeholder="Search employee or leave type" />
+            </label>
+          </div>
+
+          <div v-if="teamLeaveLoading" class="vp-loading">Loading team requests...</div>
+          <div v-else-if="!filteredTeamLeaveRequests.length" class="vp-empty">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:calendar-check" /></div>
+            <h4>{{ teamLeaveSearch ? 'No matching requests' : 'No pending requests' }}</h4>
+            <p>{{ teamLeaveSearch ? 'Try a different search term.' : 'Your team is all caught up.' }}</p>
+          </div>
+          <div v-else class="vp-req-list">
+              <article v-for="lv in filteredTeamLeaveRequests" :key="lv.id" class="vp-req-row">
+                <div class="vp-req-col">
+                  <strong>{{ lv.user?.name || '—' }}</strong>
+                  <small>Employee</small>
+                </div>
+                <div class="vp-req-col">
+                  <strong>{{ lv.leave_type?.name || '—' }}</strong>
+                  <small>Leave Type</small>
+                </div>
+                <div class="vp-req-col vp-req-col--date">
+                  <strong>{{ formatDateShort(lv.start_date) }}</strong>
+                  <small>Start Date</small>
+                </div>
+                <div class="vp-req-col vp-req-col--date">
+                  <strong>{{ formatDateShort(lv.end_date) }}</strong>
+                  <small>End Date</small>
+                </div>
+                <div class="vp-req-col vp-req-col--qty">
+                  <strong>{{ lv.days ?? '—' }}</strong>
+                  <small>Days</small>
+                </div>
+                <div class="vp-req-col">
+                  <strong>{{ lv.reason || '--' }}</strong>
+                  <small>Reason</small>
+                </div>
+                <div class="vp-req-col vp-req-col--status">
+                  <span class="vp-status-text" :class="`is-${statusTone(lv.status)}`">{{ formatStatusLabel(lv.status) }}</span>
+                  <small v-if="lv.status === 'rejected' && lv.rejection_reason">{{ lv.rejection_reason }}</small>
+                  <small v-else>Status</small>
+                </div>
+                <div class="vp-req-actions">
+                  <template v-if="lv.status === 'pending_parent'">
+                    <button type="button" class="vp-row-btn vp-row-btn--approve" title="Approve" :disabled="teamLeaveActingId === lv.id" @click="approveTeamLeave(lv)">
+                      <iconify-icon icon="lucide:check" />
+                    </button>
+                    <button type="button" class="vp-row-btn vp-row-btn--reject" title="Reject" :disabled="teamLeaveActingId === lv.id" @click="rejectTeamLeave(lv)">
+                      <iconify-icon icon="lucide:x" />
+                    </button>
+                  </template>
+                  <span v-else class="vp-muted-note" style="font-size:11px;">No action needed</span>
+                </div>
+              </article>
+            </div>
+        </div>
 
 
       </main>
@@ -890,7 +982,7 @@ import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
 import SearchableSelect from '@/components/ui/SearchableSelect.vue';
-
+import Swal from 'sweetalert2';
 export default {
   name: 'UserProfile',
   components: {
@@ -1080,6 +1172,15 @@ export default {
         return name === 'super_admin' || name === 'super admin';
       });
     });
+    const isTeamLead = computed(() => {
+        const roleName = String(user.value?.role_name || '').toLowerCase();
+        if (['team_lead', 'team lead', 'manager'].includes(roleName)) return true;
+        const roles = Array.isArray(user.value?.roles) ? user.value.roles : [];
+        return roles.some((role) => {
+          const name = String(role?.name || role || '').toLowerCase();
+          return ['team_lead', 'team lead', 'manager'].includes(name);
+        });
+      });
     const userInitials = computed(() => {
       const name = String(user.value?.name || 'U').trim();
       const parts = name.split(/\s+/).filter(Boolean);
@@ -1441,19 +1542,34 @@ export default {
         checkinSubmitting.value = false;
       }
     };
-  function handleAppNotification(event) {
-    const n = event.detail || {}
-    if (n.type === 'document_request_status') {
-      if (activeTab.value === 'my-documents') loadMyDocuments()
+    function handleAppNotification(event) {
+      const n = event.detail || {}
+      if (n.type === 'document_request_status') {
+        if (activeTab.value === 'my-documents') loadMyDocuments()
+      }
+      if (n.type === 'asset_request_status') {
+        if (activeTab.value === 'my-assets') loadMyAssets()
+      }
+      if (n.type === 'leave_request_status') {
+        if (activeTab.value === 'my-leave') loadMyLeave()
+        showNotification(n.message || 'Your leave request status changed', n.status === 'approved' ? 'success' : 'error')
+      }
+      if (n.type === 'leave_request') {
+        if (isTeamLead.value) {
+          loadTeamLeaveRequests() // always refresh, not gated on tab
+          showNotification(n.message || 'New leave request awaiting your approval', 'info')
+        }
+      }
+      if (n.type === 'leave_request_parent_status') {
+        if (isTeamLead.value) {
+          loadTeamLeaveRequests() // always refresh, not gated on tab
+          showNotification(
+            n.message || 'HR finalized a leave request',
+            n.status === 'approved' ? 'success' : 'error'
+          )
+        }
+      }
     }
-    if (n.type === 'asset_request_status') {
-      if (activeTab.value === 'my-assets') loadMyAssets()
-    }
-    if (n.type === 'leave_request_status') {
-      if (activeTab.value === 'my-leave') loadMyLeave()
-      showNotification(n.message || 'Your leave request status changed', n.status === 'approved' ? 'success' : 'error')
-    }
-  }
 
 onMounted(() => {
   loadUserData()
@@ -1789,16 +1905,170 @@ const submitLeaveRequest = async () => {
 };
 
 const cancelMyLeave = async (lv) => {
-  if (!confirm('Cancel this leave request?')) return;
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: 'Cancel this leave request?',
+    text: 'This action cannot be undone.',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, cancel it',
+    confirmButtonColor: '#dc2626',
+    cancelButtonText: 'Keep it',
+  });
+  if (!result.isConfirmed) return;
+
   try {
     await api.post(`/leaves/${lv.id}/cancel`);
-    showNotification('Leave request cancelled', 'success');
+    Swal.fire({
+      icon: 'success',
+      title: 'Leave request cancelled',
+      timer: 1600,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
     await loadMyLeave();
   } catch (error) {
-    showNotification(error.response?.data?.message || 'Failed to cancel', 'error');
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to cancel',
+      text: error.response?.data?.message || error.message,
+    });
+  }
+};
+// ===== Team Leave Requests (team lead / manager) =====
+const teamLeaveRequests = ref([]);
+const teamLeaveLoading = ref(false);
+const teamLeaveSearch = ref('');
+const teamLeaveActingId = ref(null);
+
+
+const teamLeaveStatusFilter = ref('all');
+
+const filteredTeamLeaveRequests = computed(() => {
+  const query = teamLeaveSearch.value.trim().toLowerCase();
+  let list = teamLeaveRequests.value;
+  if (teamLeaveStatusFilter.value !== 'all') {
+    list = list.filter((lv) => lv.status === teamLeaveStatusFilter.value);
+  }
+  if (!query) return list;
+  return list.filter((lv) =>
+    [lv.user?.name, lv.leave_type?.name]
+      .some((value) => String(value || '').toLowerCase().includes(query)),
+  );
+});
+
+const loadTeamLeaveRequests = async () => {
+  teamLeaveLoading.value = true;
+  try {
+    // No status filter — backend index() already scopes team_lead to their direct reports;
+    // we want the full history here, not just pending ones.
+    const res = await api.get('/leaves');
+    const payload = res.data?.data;
+    teamLeaveRequests.value = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load team leave requests', 'error');
+    teamLeaveRequests.value = [];
+  } finally {
+    teamLeaveLoading.value = false;
+  }
+};
+const teamLeavePendingCount = computed(() =>
+  teamLeaveRequests.value.filter((lv) => lv.status === 'pending_parent').length
+);
+
+const teamLeaveStats = computed(() => {
+  const list = teamLeaveRequests.value || [];
+  return {
+    total: list.length,
+    pending: list.filter((lv) => lv.status === 'pending_parent' || lv.status === 'pending_hr').length,
+    approved: list.filter((lv) => lv.status === 'approved').length,
+    rejected: list.filter((lv) => lv.status === 'rejected').length,
+  };
+});
+
+const approveTeamLeave = async (lv) => {
+  const result = await Swal.fire({
+    icon: 'question',
+    title: 'Approve this leave request?',
+    html: `You are approving <strong>${lv.user?.name || 'this employee'}</strong>'s ${lv.leave_type?.name || ''} leave request.`,
+    showCancelButton: true,
+    confirmButtonText: 'Approve',
+    confirmButtonColor: '#16a34a',
+    cancelButtonText: 'Cancel',
+  });
+  if (!result.isConfirmed) return;
+
+  teamLeaveActingId.value = lv.id;
+  try {
+    await api.post(`/leaves/${lv.id}/approve-parent`);
+    Swal.fire({
+      icon: 'success',
+      title: 'Request approved',
+      timer: 1600,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
+    await loadTeamLeaveRequests();
+    window.dispatchEvent(new CustomEvent('app-notification', {
+      detail: { type: 'leave_request_status', status: 'approved' },
+    }));
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to approve',
+      text: error.response?.data?.message || error.message,
+    });
+  } finally {
+    teamLeaveActingId.value = null;
   }
 };
 
+const rejectTeamLeave = async (lv) => {
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: 'Reject this leave request?',
+    html: `You are rejecting <strong>${lv.user?.name || 'this employee'}</strong>'s ${lv.leave_type?.name || ''} leave request.`,
+    input: 'textarea',
+    inputPlaceholder: 'Reason for rejection (min 4 characters)',
+    inputValidator: (value) => {
+      if (!value || value.trim().length < 4) {
+        return 'Rejection reason must be at least 4 characters';
+      }
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Reject',
+    confirmButtonColor: '#dc2626',
+    cancelButtonText: 'Cancel',
+  });
+  if (!result.isConfirmed) return;
+
+  teamLeaveActingId.value = lv.id;
+  try {
+    await api.post(`/leaves/${lv.id}/reject-parent`, { rejection_reason: result.value.trim() });
+    Swal.fire({
+      icon: 'success',
+      title: 'Request rejected',
+      timer: 1600,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
+    await loadTeamLeaveRequests();
+    window.dispatchEvent(new CustomEvent('app-notification', {
+      detail: { type: 'leave_request_status', status: 'rejected' },
+    }));
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to reject',
+      text: error.response?.data?.message || error.message,
+    });
+  } finally {
+    teamLeaveActingId.value = null;
+  }
+};
 
     return {
       user,
@@ -1821,6 +2091,7 @@ const cancelMyLeave = async (lv) => {
       checkinCode,
       dayOptions,
       isSuperAdmin,
+      isTeamLead,
       userInitials,
       displayAvatar,
       isOnline,
@@ -1858,6 +2129,9 @@ const cancelMyLeave = async (lv) => {
       myLeaveRequests, myLeaveBalance, myLeaveTypes, leaveLoading, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
       leaveSearch, leaveTypeOptions, halfDayTypeOptions, filteredLeaveRequests,
       loadMyLeave, openLeaveRequestModal, submitLeaveRequest, cancelMyLeave,
+      teamLeaveRequests, teamLeaveLoading, teamLeaveSearch, teamLeaveActingId, teamLeavePendingCount,
+      teamLeaveStats, teamLeaveStatusFilter,
+      filteredTeamLeaveRequests, loadTeamLeaveRequests, approveTeamLeave, rejectTeamLeave,
     };
   }
 };
@@ -1890,4 +2164,24 @@ const cancelMyLeave = async (lv) => {
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
+
+.vp-nav__badge {
+  margin-left: auto;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  line-height: 1.6;
+}
+.vp-row-btn--approve { color: #16a34a; }
+.vp-row-btn--reject { color: #dc2626; }
+.vp-row-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.vp-filter-chips { display: flex; gap: 6px; }
+.vp-chip {
+  border: 1px solid #e5e7eb; background: #fff; border-radius: 999px;
+  padding: 5px 12px; font-size: 12px; color: #6b7280; cursor: pointer;
+}
+.vp-chip.is-active { background: #0b0736; border-color: #0b0736; color: #fff; }
 </style>

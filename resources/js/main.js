@@ -104,8 +104,21 @@ if (window.Echo) {
           : 'info'
         showNotificationDeferred(notification.message || 'New notification', type)
 
-        // Broadcast to any listening Vue component
-        window.dispatchEvent(new CustomEvent('app-notification', { detail: notification }))
+        // ===== التعديل هنا =====
+        // لو نوع الإشعار leave_request_parent_status (يعني HR قبل أو رفض)
+        if (notification.type === 'leave_request_parent_status') {
+          // هنبعت إشعار مخصص عشان Vue component يعرف يحدث نفسه
+          window.dispatchEvent(new CustomEvent('app-notification', { 
+            detail: { 
+              ...notification,
+              // نحدد إنه parent status عشان نعرفه في الـ component
+              isParentStatus: true 
+            } 
+          }))
+        } else {
+          // باقي الإشعارات زي ما هي
+          window.dispatchEvent(new CustomEvent('app-notification', { detail: notification }))
+        }
       })
   }
 }

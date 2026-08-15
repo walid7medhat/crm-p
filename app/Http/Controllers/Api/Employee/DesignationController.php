@@ -25,31 +25,36 @@ class DesignationController extends Controller
      * GET /api/designations
      */
     public function index(Request $request)
-    {
-        try {
-            $query = Designation::query();
-            
-            // Search filter
-            if ($request->has('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%')
-                      ->orWhere('description', 'like', '%' . $request->search . '%');
-            }
-            
-            // Active filter
-            if ($request->has('is_active')) {
-                $query->where('is_active', $request->boolean('is_active'));
-            }
-            
-            $designations = $query->orderBy('id')
-                                  ->orderBy('name')
-                                  ->paginate($request->per_page ?? 15);
-            
-            return ApiResponse::success($designations, 'Designations retrieved successfully');
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to retrieve designations: ' . $e->getMessage());
-        }
-    }
+{
+    try {
+        $query = Designation::query();
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        if ($request->boolean('all')) {
+            $designations = $query->orderBy('id')->orderBy('name')->get();
+            return ApiResponse::success($designations, 'Designations retrieved successfully');
+        }
+
+        $designations = $query->orderBy('id')
+                              ->orderBy('name')
+                              ->paginate($request->per_page ?? 50);
+
+        return ApiResponse::success($designations, 'Designations retrieved successfully');
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to retrieve designations: ' . $e->getMessage());
+    }
+}
     /**
      * Get single designation
      * GET /api/designations/{id}
