@@ -231,7 +231,7 @@ export function isTabActive(currentPath, tab) {
  * Header sub-navigation tabs — context-aware per CRM section or module.
  */
 export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
-  const { isAdmin, isSuperAdmin, isCustomAdmin, isShowOnlyListing, hasPermission } = ctx;
+  const { isAdmin, isSuperAdmin, isCustomAdmin, isShowOnlyListing, hasPermission,isHr } = ctx;
 
   if (module === LAYOUT_MODULES.CRM && crmSection) {
     return buildCrmSectionHeaderTabs(crmSection, ctx);
@@ -499,6 +499,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
 export function buildTopModuleNav(ctx = {}) {
   const {
     isAdmin,
+    isHr,
     isSuperAdmin,
     userId,
   } = ctx;
@@ -514,7 +515,7 @@ export function buildTopModuleNav(ctx = {}) {
     });
   }
 
-  if (isSuperAdmin || userId === 186) {
+  if (isSuperAdmin || userId === 186 || isHr) {
     items.push({
       id: 'hr',
       label: 'HRM',

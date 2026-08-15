@@ -807,7 +807,7 @@ const isAdmin = computed(() => {
 });
 
 const isSuperAdmin = computed(() => user.value?.roles?.includes('super_admin') ?? false);
-
+const isHr = computed(() => user.value?.roles?.includes('hr') ?? false);
 const isCustomAdmin = computed(() => {
   if (!user.value) return false;
   const userId = Number(user.value.id);
@@ -872,6 +872,7 @@ const topModuleNavItems = computed(() => {
   return buildTopModuleNav({
     isAdmin: isAdmin.value,
     isSuperAdmin: isSuperAdmin.value,
+    isHr: isHr.value,
     isShowOnlyListing: isShowOnlyListingNav.value,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListingNav.value,

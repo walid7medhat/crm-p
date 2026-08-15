@@ -181,7 +181,7 @@
           </ul>
         </li>
 
-        <li v-if="isSuperAdmin || user.id === 186">
+        <li v-if="isSuperAdmin || user.id === 186 || isHr">
           <router-link to="/hr" custom v-slot="{ navigate, href }">
             <a
               :href="href"
@@ -560,7 +560,9 @@ const isCustomAdmin = computed(() => {
 const isSuperAdmin = computed(() => {
   return user.value?.roles?.includes('super_admin') ?? false;
 });
-
+const isHr =computed(() => {
+  return user.value?.roles?.includes('hr') ?? false;
+});
 const tableItems = computed(() => {
   const items = [
     { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: 0,permission: 'listings-list' },
@@ -935,7 +937,7 @@ const mobileDockItems = computed(() => {
     })));
   }
 
-  if (isSuperAdmin.value || user.value?.id === 186) {
+  if (isSuperAdmin.value || isHr.value || user.value?.id === 186) {
     moreChildren.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
   }
 

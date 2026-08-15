@@ -633,7 +633,7 @@ const today = new Date()
         if (this.startDate) params.start_date = this.startDate
         if (this.endDate) params.end_date = this.endDate
 
-        const res = await axios.get('/api/attendance/period-report', { params })
+        const res = await axios.get('/attendance/period-report', { params })
         const payload = Array.isArray(res?.data?.data) ? res.data.data : []
 
         const hasDailyBreakdown = payload.length && payload.some((u) => Array.isArray(u?.daily_breakdown))

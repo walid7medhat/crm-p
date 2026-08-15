@@ -156,9 +156,9 @@ const baseRoutes = [
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
-  { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/hr/employees/:id', component: EmployeeProfilePage, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/hr/assets/:id', component: AssetDetailsPage, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
+  { path: '/hr/employees/:id', component: EmployeeProfilePage, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
+  { path: '/hr/assets/:id', component: AssetDetailsPage, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
@@ -359,6 +359,16 @@ const isAdminFromStorage = () => {
     return false
   }
 }
+const isHrFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.roles) && u.roles.includes('hr')
+  } catch {
+    return false
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -401,11 +411,15 @@ router.beforeEach((to, from, next) => {
     next('/')
     return
   }
-  if (to.matched.some((r) => r.meta.requiresAdmin) && !isAdminFromStorage()) {
-    console.log('Super admin only — redirecting home')
-    next('/')
-    return
-  }
+      if (
+        to.matched.some((r) => r.meta.requiresAdmin) &&
+        !isAdminFromStorage() &&
+        !(to.matched.some((r) => r.meta.allowHr) && isHrFromStorage())
+      ) {
+          console.log('Admin required — redirecting home')
+          next('/')
+          return
+      }
 
   if (to.path === '/sign-in' && isValidToken) {
     console.log('User authenticated, redirecting to home')
