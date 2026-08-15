@@ -9,8 +9,8 @@
           <span class="hr-mobile-title">HRM</span>
           <div class="hr-mobile-head-right">
             <img class="hr-mobile-avatar" src="https://i.pravatar.cc/40?img=33" alt="User avatar" />
-            <button type="button" class="hr-mobile-more-btn" @click="openHrSettings()">
-              <iconify-icon icon="lucide:more-vertical" />
+            <button type="button" class="hr-mobile-more-btn" title="Settings" @click="openHrSettings()">
+              <iconify-icon icon="lucide:settings" />
             </button>
           </div>
         </div>
@@ -47,23 +47,21 @@
               <input v-model="overviewSearch" type="text" placeholder="Filter and search" />
               <iconify-icon icon="lucide:search" />
             </div>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Employees'">
             <button type="button" class="hr-generate-btn hr-generate-btn--navy" @click="showAddEmployeeModal = true">
               Add Employee
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Document Requests'">
             <button type="button" class="hr-generate-btn hr-generate-btn--navy" @click="openRequestDocumentModal">
               Request Document
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings('documents')"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings('documents')"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Employee Details'">
             <button type="button" class="employee-detail-action-chip">Activity</button>
@@ -81,8 +79,7 @@
               {{ assetsSectionMode === 'requests' ? 'New Request Assets' : 'Add New Asset' }}
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Leave / Attendance'">
             <button
@@ -94,8 +91,7 @@
               {{ leaveSectionMode === 'attendance' ? 'Create Attendance' : leaveSectionMode === 'announcements' ? 'Add Announcements' : 'Generate Leave' }}
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Career'">
             <button v-if="careerSectionMode === 'manage-recruitments'" type="button" class="hr-generate-btn hr-generate-btn--navy" @click="openCareerCreateJob">
@@ -106,16 +102,14 @@
               Schedule Interview
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else>
             <button type="button" class="hr-generate-btn">
               Generate
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
         </div>
       </div>

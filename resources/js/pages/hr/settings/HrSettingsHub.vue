@@ -47,8 +47,8 @@
               :items="sortedDepartments"
               :loading="loading.employees"
               :saving="saving.department"
-              :fields="[{ key: 'name', label: 'Department name', type: 'text', required: true, placeholder: 'e.g. Sales' }]"
-              @save="saveDepartment"
+              :fields="departmentFields"
+              @save="(payload, editing) => saveDepartment(payload, editing)"
               @remove="removeDepartment"
             />
             <HrSettingsCatalog
@@ -62,12 +62,9 @@
               :items="sortedDesignations"
               :loading="loading.employees"
               :saving="saving.designation"
-              :fields="[
-                { key: 'name', label: 'Designation', type: 'text', required: true, placeholder: 'e.g. Senior Agent' },
-                { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Optional role summary', full: true },
-              ]"
-              :subtitle="(item) => item.description || ''"
-              @save="saveDesignation"
+              :fields="designationFields"
+              :subtitle="designationSubtitle"
+              @save="(payload, editing) => saveDesignation(payload, editing)"
               @remove="removeDesignation"
             />
             <HrSettingsCatalog
@@ -81,13 +78,9 @@
               :items="sortedBranches"
               :loading="loading.employees"
               :saving="saving.branch"
-              :fields="[
-                { key: 'name', label: 'Branch name', type: 'text', required: true, placeholder: 'e.g. Dubai Marina' },
-                { key: 'code', label: 'Code', type: 'text', required: true, placeholder: 'DXB-01' },
-                { key: 'address', label: 'Address', type: 'text', placeholder: 'Optional', full: true },
-              ]"
-              :subtitle="(item) => [item.code, item.address].filter(Boolean).join(' · ')"
-              @save="saveBranch"
+              :fields="branchFields"
+              :subtitle="branchSubtitle"
+              @save="(payload, editing) => saveBranch(payload, editing)"
               @remove="removeBranch"
             />
           </div>
@@ -103,8 +96,8 @@
               :items="sortedDocumentTypes"
               :loading="loading.documents"
               :saving="saving.documentType"
-              :fields="[{ key: 'name', label: 'Document type', type: 'text', required: true, placeholder: 'e.g. Salary Certificate' }]"
-              @save="saveDocumentType"
+              :fields="documentTypeFields"
+              @save="(payload, editing) => saveDocumentType(payload, editing)"
               @remove="removeDocumentType"
             />
           </div>
@@ -128,9 +121,9 @@
               :saving="saving.leaveType"
               :fields="leaveFields"
               :subtitle="leaveSubtitle"
-              :badge="(item) => item.is_active === false ? 'Inactive' : paymentLabel(item.payment_type)"
-              :badge-class="(item) => item.is_active === false ? 'is-muted' : 'is-info'"
-              @save="saveLeaveType"
+              :badge="leaveBadge"
+              :badge-class="leaveBadgeClass"
+              @save="(payload, editing) => saveLeaveType(payload, editing)"
               @remove="removeLeaveType"
             />
           </div>
@@ -261,8 +254,8 @@
               :items="sortedAssetTypes"
               :loading="loading.assets"
               :saving="saving.assetType"
-              :fields="[{ key: 'name', label: 'Asset type', type: 'text', required: true, placeholder: 'e.g. Laptop' }]"
-              @save="saveAssetType"
+              :fields="assetTypeFields"
+              @save="(payload, editing) => saveAssetType(payload, editing)"
               @remove="removeAssetType"
             />
           </div>
@@ -395,6 +388,24 @@ const jobTypes = [
   { value: 'remote', label: 'Remote', hint: 'Location-independent' },
 ]
 
+const departmentFields = [
+  { key: 'name', label: 'Department name', type: 'text', required: true, placeholder: 'e.g. Sales' },
+]
+const designationFields = [
+  { key: 'name', label: 'Designation', type: 'text', required: true, placeholder: 'e.g. Senior Agent' },
+  { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Optional role summary', full: true },
+]
+const branchFields = [
+  { key: 'name', label: 'Branch name', type: 'text', required: true, placeholder: 'e.g. Dubai Marina' },
+  { key: 'code', label: 'Code', type: 'text', required: true, placeholder: 'DXB-01' },
+  { key: 'address', label: 'Address', type: 'text', placeholder: 'Optional', full: true },
+]
+const documentTypeFields = [
+  { key: 'name', label: 'Document type', type: 'text', required: true, placeholder: 'e.g. Salary Certificate' },
+]
+const assetTypeFields = [
+  { key: 'name', label: 'Asset type', type: 'text', required: true, placeholder: 'e.g. Laptop' },
+]
 const leaveFields = [
   { key: 'name', label: 'Leave type', type: 'text', required: true, placeholder: 'e.g. Annual Leave' },
   { key: 'payment_type', label: 'Payment', type: 'select', required: true, options: [
@@ -406,6 +417,22 @@ const leaveFields = [
   { key: 'requires_attachment', label: 'Attachment', type: 'toggle', onLabel: 'Attachment required', offLabel: 'No attachment' },
   { key: 'is_active', label: 'Availability', type: 'toggle', default: true, onLabel: 'Active', offLabel: 'Inactive' },
 ]
+
+function designationSubtitle(item) {
+  return item.description || ''
+}
+
+function branchSubtitle(item) {
+  return [item.code, item.address].filter(Boolean).join(' · ')
+}
+
+function leaveBadge(item) {
+  return item.is_active === false ? 'Inactive' : paymentLabel(item.payment_type)
+}
+
+function leaveBadgeClass(item) {
+  return item.is_active === false ? 'is-muted' : 'is-info'
+}
 
 const attendanceForm = reactive({
   day_of_week: 6,
@@ -557,12 +584,19 @@ watch(() => props.initialTab, (tab) => {
 
 onMounted(() => loadTab(activeTab.value))
 
+function resolveRecordId(payload, editing) {
+  const id = Number(payload?.id ?? editing?.id)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
+
 async function runSave({ key, create, update, reload, catalog, payload, editing }) {
+  const id = resolveRecordId(payload, editing)
+  const { id: _ignored, ...data } = payload || {}
   saving[key] = true
   try {
-    if (editing?.id) await update(editing.id, payload)
-    else await create(payload)
-    notify(editing?.id ? 'Updated successfully' : 'Added successfully')
+    if (id) await update(id, data)
+    else await create(data)
+    notify(id ? 'Updated successfully' : 'Added successfully')
     catalog?.closeForm?.()
     await reload()
   } catch (error) {
@@ -595,7 +629,7 @@ function saveDepartment(payload, editing) {
     update: updateDepartment,
     reload: loadEmployeesCatalogs,
     catalog: departmentsCatalog.value,
-    payload: { name: payload.name },
+    payload: { id: payload.id, name: payload.name },
     editing,
   })
 }
@@ -611,7 +645,7 @@ function saveDesignation(payload, editing) {
     update: updateDesignation,
     reload: loadEmployeesCatalogs,
     catalog: designationsCatalog.value,
-    payload: { name: payload.name, description: payload.description || null },
+    payload: { id: payload.id, name: payload.name, description: payload.description || null },
     editing,
   })
 }
@@ -628,6 +662,7 @@ function saveBranch(payload, editing) {
     reload: loadEmployeesCatalogs,
     catalog: branchesCatalog.value,
     payload: {
+      id: payload.id,
       name: payload.name,
       code: payload.code,
       address: payload.address || null,
@@ -647,7 +682,7 @@ function saveDocumentType(payload, editing) {
     update: updateDocumentType,
     reload: loadDocuments,
     catalog: documentsCatalog.value,
-    payload: { name: payload.name },
+    payload: { id: payload.id, name: payload.name },
     editing,
   })
 }
@@ -664,6 +699,7 @@ function saveLeaveType(payload, editing) {
     reload: loadLeave,
     catalog: leaveCatalog.value,
     payload: {
+      id: payload.id,
       name: payload.name,
       payment_type: payload.payment_type,
       default_days: Number(payload.default_days) || 0,
@@ -685,7 +721,7 @@ function saveAssetType(payload, editing) {
     update: updateAssetType,
     reload: loadAssets,
     catalog: assetsCatalog.value,
-    payload: { name: payload.name },
+    payload: { id: payload.id, name: payload.name },
     editing,
   })
 }
@@ -962,10 +998,10 @@ function saveCareerDefaults() {
 }
 .hr-set-field em,
 :deep(.hr-set-field em) { color: #dc2626; }
-.hr-set-field input,
+.hr-set-field input:not([type="checkbox"]):not([type="radio"]),
 .hr-set-field select,
 .hr-set-field textarea,
-:deep(.hr-set-field input),
+:deep(.hr-set-field input:not([type="checkbox"]):not([type="radio"])),
 :deep(.hr-set-field select),
 :deep(.hr-set-field textarea) {
   height: 42px;
@@ -1035,11 +1071,45 @@ function saveCareerDefaults() {
 :deep(.hr-set-switch) {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 42px;
+  gap: 10px;
+  min-height: 42px;
   font-weight: 600;
+  cursor: pointer;
 }
-:deep(.hr-set-switch input) { accent-color: #0b0736; }
+:deep(.hr-set-switch input) {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+:deep(.hr-set-switch__track) {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+:deep(.hr-set-switch__track::after) {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+:deep(.hr-set-switch input:checked + .hr-set-switch__track) {
+  background: #0b0736;
+}
+:deep(.hr-set-switch input:checked + .hr-set-switch__track::after) {
+  transform: translateX(20px);
+}
 .hr-set-chips {
   display: flex;
   flex-wrap: wrap;
