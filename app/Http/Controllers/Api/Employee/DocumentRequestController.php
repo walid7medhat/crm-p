@@ -27,7 +27,9 @@ class DocumentRequestController extends Controller
                 $types->where('name', 'like', '%' . $request->search . '%');
             }
             
-           $types=$types-> orderBy('id')->get();
+           $types=$types-> orderBy('id')->get()
+                ->unique(fn ($type) => mb_strtolower(trim((string) $type->name)))
+                ->values();
             return ApiResponse::success($types, 'Document types retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve document types: ' . $e->getMessage());

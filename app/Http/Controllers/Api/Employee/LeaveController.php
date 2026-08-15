@@ -22,7 +22,10 @@ class LeaveController extends Controller
     public function getLeaveTypes(Request $request)
     {
         try {
-            $types = LeaveType::query()->where('is_active', true);
+            $types = LeaveType::query();
+            if (!$request->boolean('all')) {
+                $types->where('is_active', true);
+            }
           if ($request->has('search')) {
                 $types->where('name', 'like', '%' . $request->search . '%');
             }

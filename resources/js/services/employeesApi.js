@@ -114,16 +114,61 @@ export async function fetchDepartments() {
   return uniqueByName(items)
 }
 
+export async function createDepartment(payload) {
+  const response = await api.post('/departments', payload)
+  return response.data?.data ?? response.data
+}
+
+export async function updateDepartment(id, payload) {
+  const response = await api.put(`/departments/${id}`, payload)
+  return response.data?.data ?? response.data
+}
+
+export async function deleteDepartment(id) {
+  const response = await api.delete(`/departments/${id}`)
+  return response.data
+}
+
 export async function fetchDesignations() {
   const response = await api.get('/designations', { params: { per_page: 200 } })
   const { items } = unwrapList(response.data)
   return uniqueByName(items)
 }
 
+export async function createDesignation(payload) {
+  const response = await api.post('/designations', payload)
+  return response.data?.data ?? response.data
+}
+
+export async function updateDesignation(id, payload) {
+  const response = await api.put(`/designations/${id}`, payload)
+  return response.data?.data ?? response.data
+}
+
+export async function deleteDesignation(id) {
+  const response = await api.delete(`/designations/${id}`)
+  return response.data
+}
+
 export async function fetchBranches() {
   const response = await api.get('/company-branches', { params: { per_page: 200 } })
   const { items } = unwrapList(response.data)
   return uniqueByName(items)
+}
+
+export async function createBranch(payload) {
+  const response = await api.post('/company-branches', payload)
+  return response.data?.data ?? response.data
+}
+
+export async function updateBranch(id, payload) {
+  const response = await api.put(`/company-branches/${id}`, payload)
+  return response.data?.data ?? response.data
+}
+
+export async function deleteBranch(id) {
+  const response = await api.delete(`/company-branches/${id}`)
+  return response.data
 }
 
 export async function fetchManagers() {

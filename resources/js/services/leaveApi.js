@@ -8,9 +8,9 @@ import api from '@/plugins/axios'
  * @param {string} search - Search keyword
  * @returns {Promise<Array>} List of leave types
  */
-export const fetchLeaveTypes = async (search = '') => {
+export const fetchLeaveTypes = async (search = '', { all = false } = {}) => {
   try {
-    const response = await api.get('/leaves/types', { params: { search } })
+    const response = await api.get('/leaves/types', { params: { search, all: all ? 1 : undefined } })
     const data = response?.data?.data || response?.data || []
     return Array.isArray(data) ? data : []
   } catch (error) {

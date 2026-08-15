@@ -9,7 +9,7 @@
           <span class="hr-mobile-title">HRM</span>
           <div class="hr-mobile-head-right">
             <img class="hr-mobile-avatar" src="https://i.pravatar.cc/40?img=33" alt="User avatar" />
-            <button type="button" class="hr-mobile-more-btn">
+            <button type="button" class="hr-mobile-more-btn" @click="openHrSettings()">
               <iconify-icon icon="lucide:more-vertical" />
             </button>
           </div>
@@ -20,7 +20,7 @@
             <button
               type="button"
               class="hr-tab"
-              :class="{ active: tab === activeTab || openHeaderMenu === tab }"
+              :class="{ active: isHeaderTabActive(tab) }"
               :aria-expanded="openHeaderMenu === tab"
               @click.stop="onHeaderTabClick(tab, $event)"
             >
@@ -33,6 +33,7 @@
                 :key="item"
                 type="button" 
                 class="hr-tab-menu-item"
+                :class="{ active: isHeaderMenuItemActive(tab, item) }"
                 @click="onHeaderMenuSelect(tab, item)"
               >
                 {{ item }}
@@ -46,24 +47,23 @@
               <input v-model="overviewSearch" type="text" placeholder="Filter and search" />
               <iconify-icon icon="lucide:search" />
             </div>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Employees'">
             <button type="button" class="hr-generate-btn hr-generate-btn--navy" @click="showAddEmployeeModal = true">
               Add Employee
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Document Requests'">
-            <button type="button" class="hr-generate-btn" @click="openRequestDocumentModal">
+            <button type="button" class="hr-generate-btn hr-generate-btn--navy" @click="openRequestDocumentModal">
               Request Document
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings('documents')"><iconify-icon icon="lucide:more-vertical" /></button>
           </template>
           <template v-else-if="activeTab === 'Employee Details'">
             <button type="button" class="employee-detail-action-chip">Activity</button>
@@ -81,8 +81,8 @@
               {{ assetsSectionMode === 'requests' ? 'New Request Assets' : 'Add New Asset' }}
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Leave / Attendance'">
             <button
@@ -94,8 +94,8 @@
               {{ leaveSectionMode === 'attendance' ? 'Create Attendance' : leaveSectionMode === 'announcements' ? 'Add Announcements' : 'Generate Leave' }}
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else-if="activeTab === 'Career'">
             <button v-if="careerSectionMode === 'manage-recruitments'" type="button" class="hr-generate-btn hr-generate-btn--navy" @click="openCareerCreateJob">
@@ -106,16 +106,16 @@
               Schedule Interview
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else>
             <button type="button" class="hr-generate-btn">
               Generate
               <iconify-icon icon="lucide:plus" />
             </button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:more-vertical" /></button>
-            <button type="button" class="hr-icon-btn"><iconify-icon icon="lucide:settings" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:more-vertical" /></button>
+            <button type="button" class="hr-icon-btn" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
         </div>
       </div>
@@ -331,28 +331,28 @@
             <h6>My Documents</h6>
             <div class="requested-document-list">
               <div v-for="doc in requestedDocuments" :key="doc.id" class="requested-document-row">
-                <div>
-                  <strong>{{ doc.documentType }}</strong>
+                <div class="requested-document-col">
+                  <strong :title="doc.documentType">{{ doc.documentType }}</strong>
                   <small>Document Name</small>
                 </div>
-                <div>
-                  <strong>{{ doc.description || '--' }}</strong>
+                <div class="requested-document-col">
+                  <strong :title="doc.description || '--'">{{ doc.description || '--' }}</strong>
                   <small>Description</small>
                 </div>
-                <div>
+                <div class="requested-document-col requested-document-col--date">
                   <strong>{{ doc.requestedDate }}</strong>
                   <small>Requested On</small>
                 </div>
-                <div>
+                <div class="requested-document-col requested-document-col--status">
                   <strong :class="`doc-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}</strong>
                   <small>Status</small>
                 </div>
-                <div>
-                  <strong>{{ doc.rejectionReason || '--' }}</strong>
+                <div class="requested-document-col">
+                  <strong :title="doc.rejectionReason || '--'">{{ doc.rejectionReason || '--' }}</strong>
                   <small>Rejection Reason</small>
                 </div>
                 <div class="requested-document-actions">
-                  <button type="button" class="row-action-btn" @click="openDocumentDetail(doc)">
+                  <button type="button" class="row-action-btn" title="View" @click="openDocumentDetail(doc)">
                     <iconify-icon icon="lucide:eye" />
                   </button>
                   <a
@@ -365,10 +365,10 @@
                     >
                       <iconify-icon icon="lucide:download" />
                     </a>
-                  <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" @click="openEditDocumentRequest(doc)">
+                  <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" title="Edit" @click="openEditDocumentRequest(doc)">
                     <iconify-icon icon="lucide:pencil" />
                   </button>
-                  <button type="button" class="row-action-btn" @click="deleteRequestedDocument(doc)">
+                  <button type="button" class="row-action-btn" title="Delete" @click="deleteRequestedDocument(doc)">
                     <iconify-icon icon="lucide:trash-2" />
                   </button>
                 </div>
@@ -382,59 +382,60 @@
             <div class="employee-overview-head">
               <h6 class="overview-section-title">Document Requests</h6>
               <div class="employee-overview-actions">
-                <div class="hr-search-wrap" style="min-width:260px;">
+                <div class="hr-search-wrap doc-requests-search">
                   <iconify-icon icon="lucide:search" class="hr-search-icon" />
                   <input v-model="documentRequestsSearch" type="text" class="hr-search-input" placeholder="Search employee or document type" />
                 </div>
               </div>
             </div>
 
-            <div class="requested-documents-card mt-2">
-              <div class="requested-document-list">
-                <div
-                  v-for="doc in filteredDocumentRequests"
-                  :key="`global-doc-${doc.id}`"
-                  class="requested-document-row requested-document-row--with-employee"
-                >
-                  <div>
-                    <strong>{{ doc.employeeName }}</strong>
-                    <small>Employee</small>
-                  </div>
-                  <div>
-                    <strong>{{ doc.documentType }}</strong>
-                    <small>Document Name</small>
-                  </div>
-                  <div>
-                    <strong>{{ doc.description || '--' }}</strong>
-                    <small>Description</small>
-                  </div>
-                  <div>
-                    <strong>{{ doc.requestedDate }}</strong>
-                    <small>Requested On</small>
-                  </div>
-                  <div>
-                    <strong :class="`doc-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}</strong>
-                    <small>Status</small>
-                  </div>
-                  <div>
-                    <strong>{{ doc.rejectionReason || '--' }}</strong>
-                    <small>Rejection Reason</small>
-                  </div>
-                  <div class="requested-document-actions">
-                    <button type="button" class="row-action-btn" @click="openDocumentDetail(doc)">
-                      <iconify-icon icon="lucide:eye" />
-                    </button>
-                    <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" @click="openEditDocumentRequest(doc)">
-                      <iconify-icon icon="lucide:pencil" />
-                    </button>
-                    <button type="button" class="row-action-btn" @click="deleteRequestedDocument(doc)">
-                      <iconify-icon icon="lucide:trash-2" />
-                    </button>
-                  </div>
+            <div class="requested-document-list">
+              <div
+                v-for="doc in filteredDocumentRequests"
+                :key="`global-doc-${doc.id}`"
+                class="requested-document-row requested-document-row--with-employee"
+              >
+                <div class="requested-document-col">
+                  <strong :title="doc.employeeName">{{ doc.employeeName }}</strong>
+                  <small>Employee</small>
                 </div>
-                <div v-if="!loadingRequestedDocuments && !filteredDocumentRequests.length" class="text-center text-muted py-4">
-                  No document requests found
+                <div class="requested-document-col">
+                  <strong :title="doc.documentType">{{ doc.documentType }}</strong>
+                  <small>Document Name</small>
                 </div>
+                <div class="requested-document-col">
+                  <strong :title="doc.description || '--'">{{ doc.description || '--' }}</strong>
+                  <small>Description</small>
+                </div>
+                <div class="requested-document-col requested-document-col--date">
+                  <strong>{{ doc.requestedDate }}</strong>
+                  <small>Requested On</small>
+                </div>
+                <div class="requested-document-col requested-document-col--status">
+                  <strong :class="`doc-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}</strong>
+                  <small>Status</small>
+                </div>
+                <div class="requested-document-col">
+                  <strong :title="doc.rejectionReason || '--'">{{ doc.rejectionReason || '--' }}</strong>
+                  <small>Rejection Reason</small>
+                </div>
+                <div class="requested-document-actions">
+                  <button type="button" class="row-action-btn" title="View" @click="openDocumentDetail(doc)">
+                    <iconify-icon icon="lucide:eye" />
+                  </button>
+                  <button v-if="doc.status === 'Pending'" type="button" class="row-action-btn" title="Edit" @click="openEditDocumentRequest(doc)">
+                    <iconify-icon icon="lucide:pencil" />
+                  </button>
+                  <button type="button" class="row-action-btn" title="Delete" @click="deleteRequestedDocument(doc)">
+                    <iconify-icon icon="lucide:trash-2" />
+                  </button>
+                </div>
+              </div>
+              <div v-if="loadingRequestedDocuments" class="text-center text-muted py-4">
+                Loading document requests...
+              </div>
+              <div v-else-if="!filteredDocumentRequests.length" class="text-center text-muted py-4">
+                No document requests found
               </div>
             </div>
           </div>
@@ -2036,6 +2037,11 @@
     @update:show="showUnifiedDatePicker = $event"
     @apply="handleDatePickerApply"
   />
+  <HrSettingsHub
+    v-if="showHrSettings"
+    :initial-tab="hrSettingsTab"
+    @close="showHrSettings = false"
+  />
 </template>
 
 <script setup>
@@ -2057,6 +2063,7 @@ import InterviewsManagement from '@/pages/hr/recruitment/InterviewsManagement.vu
 import ApplicantsManagement from '@/pages/hr/recruitment/ApplicantsManagement.vue'
 import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
 import AssetRequestsManagement from '@/pages/hr/assets/AssetRequestsManagement.vue'
+import HrSettingsHub from '@/pages/hr/settings/HrSettingsHub.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
@@ -2734,6 +2741,67 @@ const headerTabMenus = {
   'Leave / Attendance': ['Leave Management', 'Attendance Management', 'Announcements'],
   Career: ['Manage Recruitments', 'Interviews'],
   Assets: ['Manage Assets', 'Asset Requests'],
+}
+
+function isHeaderTabActive(tab) {
+  if (openHeaderMenu.value === tab) return true
+  if (tab === 'Employees') {
+    return ['Employees', 'Document Requests', 'Employee Details'].includes(activeTab.value)
+  }
+  return tab === activeTab.value
+}
+
+const showHrSettings = ref(false)
+const hrSettingsTab = ref('employees')
+
+function inferHrSettingsTab() {
+  if (activeTab.value === 'Document Requests') return 'documents'
+  if (activeTab.value === 'Assets') return 'assets'
+  if (activeTab.value === 'Career') return 'career'
+  if (activeTab.value === 'Leave / Attendance') {
+    return leaveSectionMode.value === 'attendance' ? 'attendance' : 'leave'
+  }
+  return 'employees'
+}
+
+function openHrSettings(tab = null) {
+  hrSettingsTab.value = tab || inferHrSettingsTab()
+  showHrSettings.value = true
+  openHeaderMenu.value = null
+}
+
+watch(showHrSettings, async (open, wasOpen) => {
+  if (wasOpen && !open) {
+    await Promise.allSettled([
+      loadDocumentTypesList(),
+      loadLeaveTypes(),
+      loadAssetTypes(),
+    ])
+  }
+})
+
+function isHeaderMenuItemActive(tab, item) {
+  if (tab === 'Employees') {
+    if (item === 'Document Requests') return activeTab.value === 'Document Requests'
+    if (item === 'Manage Employees') return activeTab.value === 'Employees' || activeTab.value === 'Employee Details'
+  }
+  if (tab === 'Leave / Attendance') {
+    if (item === 'Leave Management') return activeTab.value === 'Leave / Attendance' && leaveSectionMode.value === 'leave'
+    if (item === 'Attendance Management') return activeTab.value === 'Leave / Attendance' && leaveSectionMode.value === 'attendance'
+    if (item === 'Announcements') return activeTab.value === 'Leave / Attendance' && leaveSectionMode.value === 'announcements'
+  }
+  if (tab === 'Career') {
+    if (item === 'Interviews') return activeTab.value === 'Career' && careerSectionMode.value === 'interviews'
+    if (item === 'Manage Recruitments') return activeTab.value === 'Career' && careerSectionMode.value === 'manage-recruitments'
+  }
+  if (tab === 'Payroll') {
+    return activeTab.value === 'Payroll' && payrollSectionLabel.value === item
+  }
+  if (tab === 'Assets') {
+    if (item === 'Asset Requests') return activeTab.value === 'Assets' && assetsSectionMode.value === 'requests'
+    if (item === 'Manage Assets') return activeTab.value === 'Assets' && assetsSectionMode.value === 'manage-assets'
+  }
+  return false
 }
 
 const careerRows = ref([])
@@ -6995,8 +7063,13 @@ onBeforeUnmount(() => {
   color: #374151;
   font-size: 13px;
 }
-.hr-tab-menu-item:hover {
+.hr-tab-menu-item:hover,
+.hr-tab-menu-item.active {
   background: #f3f4f6;
+}
+.hr-tab-menu-item.active {
+  font-weight: 600;
+  color: #111827;
 }
 .hr-topbar-actions { display: flex; align-items: center; gap: 8px; }
 .hr-overview-search {
@@ -9011,50 +9084,86 @@ onBeforeUnmount(() => {
   gap: 10px 14px;
 }
 .requested-documents-card {
-  border: 1px solid #dce7ff;
-  border-radius: 12px;
-  background: #fff;
-  padding: 14px;
-  min-height: calc(100vh - 260px);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 0;
 }
 .requested-documents-card h6 {
   margin: 0 0 12px;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 700;
-  color: #1f2a44;
+  color: #111827;
 }
 .requested-document-list {
-  display: grid;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  overflow-x: auto;
 }
 .requested-document-row {
-  border: 1px solid #edf1f6;
+  border: 1px solid #eceff3;
   border-radius: 12px;
   background: #fff;
-  padding: 12px 14px;
-  display: grid;
-  grid-template-columns: minmax(150px, 1.3fr) minmax(200px, 1.6fr) 120px 90px minmax(160px, 1.4fr) 110px;
-  gap: 12px;
+  padding: 16px 18px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.requested-document-col {
+  min-width: 0;
+  flex: 1 1 0;
+}
+.requested-document-col--date,
+.requested-document-col--status {
+  flex: 0 0 110px;
 }
 .requested-document-row strong {
   display: block;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .requested-document-row small {
-  font-size: 11px;
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
   color: #9ca3af;
 }
 .requested-document-actions {
   display: inline-flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
   justify-content: flex-end;
 }
-.doc-status-approved { color: #15803d !important; }
+.requested-document-actions .row-action-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.requested-document-actions .row-action-btn:hover {
+  color: #4b5563;
+}
+.doc-status-approved { color: #16a34a !important; }
 .doc-status-pending { color: #d39b1a !important; }
-.doc-status-rejected { color: #dc2626 !important; }
+.doc-status-rejected { color: #ef2222 !important; }
+.doc-requests-search {
+  min-width: 280px;
+}
 
 .request-doc-modal,
 .request-doc-approve-modal,
@@ -10519,6 +10628,9 @@ onBeforeUnmount(() => {
   }
   .hr-summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hr-search-wrap { min-width: 260px; }
+  .requested-document-row {
+    min-width: 920px;
+  }
 }
 @media (max-width: 900px) {
   .overview-attendance-body {
@@ -10878,9 +10990,6 @@ onBeforeUnmount(() => {
 .checkbox-label span {
   font-weight: 500;
   color: #1f2937;
-}
-.requested-document-row--with-employee {
-  grid-template-columns: minmax(140px, 1fr) minmax(150px, 1.3fr) minmax(200px, 1.6fr) 120px 90px minmax(160px, 1.4fr) 110px;
 }
 </style>
 

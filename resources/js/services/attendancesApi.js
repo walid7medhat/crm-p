@@ -268,6 +268,28 @@ export const fetchMonthlyAttendance = async (userId, month) => {
   }
 }
 
+function toHHmm(value) {
+  if (!value) return '09:00'
+  const text = String(value)
+  return text.length >= 5 ? text.slice(0, 5) : text
+}
+
+export async function fetchAttendanceSettings() {
+  const response = await api.get('/attendance/settings')
+  const data = response.data?.data ?? response.data ?? {}
+  return {
+    day_of_week: Number(data.day_of_week ?? 6),
+    start_time: toHHmm(data.start_time || '09:00:00'),
+    end_time: toHHmm(data.end_time || '10:00:00'),
+    department_ids: Array.isArray(data.department_ids) ? data.department_ids.map(Number) : [],
+  }
+}
+
+export async function updateAttendanceSettings(payload) {
+  const response = await api.put('/attendance/settings', payload)
+  return response.data?.data ?? response.data
+}
+
 const attendancesApi = {
   profileHistory(months = 12) {
     return api.get('/profile/attendance-history', {

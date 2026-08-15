@@ -136,7 +136,14 @@ export const fetchAssetTypes = async (search = '') => {
   try {
     const response = await api.get('/asset-types', { params: { search } })
     const data = response?.data?.data || response?.data || []
-    return Array.isArray(data) ? data : []
+    const list = Array.isArray(data) ? data : []
+    const seen = new Set()
+    return list.filter((item) => {
+      const key = String(item?.name || '').trim().toLowerCase() || `id:${item?.id}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   } catch (error) {
     console.error('❌ Failed to fetch asset types:', error)
     return []

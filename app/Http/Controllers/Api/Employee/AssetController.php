@@ -23,7 +23,9 @@ class AssetController extends Controller
              if ($request->has('search')) {
                 $types->where('name', 'like', '%' . $request->search . '%');
             }
-            $types=$types->orderBy('name')->get();
+            $types=$types->orderBy('id')->get()
+                ->unique(fn ($type) => mb_strtolower(trim((string) $type->name)))
+                ->values();
             return ApiResponse::success($types, 'Asset types retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve asset types: ' . $e->getMessage());

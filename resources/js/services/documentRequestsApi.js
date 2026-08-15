@@ -2,7 +2,15 @@ import api from '@/plugins/axios'
 
 export async function fetchDocumentTypes(params = {}) {
   const { data } = await api.get('/document-types', { params })
-  return data?.data ?? data
+  const list = data?.data ?? data
+  const items = Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : []
+  const seen = new Set()
+  return items.filter((item) => {
+    const key = String(item?.name || '').trim().toLowerCase() || `id:${item?.id}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 export async function createDocumentType(payload) {

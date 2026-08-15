@@ -469,102 +469,235 @@
 
 
         <!-- My Documents -->
-        <div v-if="activeTab === 'my-documents'" class="vp-panel">
-          <div class="vp-panel__head">
-            <h3 class="vp-panel__title">My Document Requests</h3>
-            <button type="button" class="vp-btn-primary" @click="openDocRequestModal()">+ New Request</button>
+        <div v-if="activeTab === 'my-documents'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">My Document Requests</h3>
+              <p class="vp-panel__subtitle">Request certificates and track approval in one place.</p>
+            </div>
+            <button type="button" class="vp-btn-primary vp-hub__cta" @click="openDocRequestModal()">
+              Request Document
+              <iconify-icon icon="lucide:plus" />
+            </button>
           </div>
-          <div v-if="docRequestsLoading" class="vp-loading">Loading...</div>
-          <table v-else class="vp-simple-table">
-            <thead>
-              <tr><th>Document Type</th><th>Description</th><th>Requested On</th><th>Status</th><th>Rejection Reason</th><th></th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="doc in myDocumentRequests" :key="doc.id">
-                <td>{{ doc.document_type?.name || '—' }}</td>
-                <td>{{ doc.description || '--' }}</td>
-                <td>{{ formatDate(doc.requested_date || doc.created_at) }}</td>
-                <td><span class="vp-status-pill" :class="`vp-status-${String(doc.status).toLowerCase()}`">{{ doc.status }}
-                    <a v-if="doc.status === 'approved' && doc.file_url" :href="doc.file_url" target="_blank" rel="noopener" class="vp-row-btn" style="margin-left:6px;" title="Download">
-                      <iconify-icon icon="lucide:download" />
-                    </a>
-                </span></td>
-                <td>{{ doc.rejection_reason || '--' }}</td>
-                <td>
-                  <button v-if="doc.status === 'pending'" type="button" class="vp-row-btn" @click="openDocRequestModal(doc)"><iconify-icon icon="lucide:pencil" /></button>
-                  <button type="button" class="vp-row-btn" @click="deleteMyDocumentRequest(doc)"><iconify-icon icon="lucide:trash-2" /></button>
-                </td>
-              </tr>
-              <tr v-if="!myDocumentRequests.length"><td colspan="6" class="text-center text-muted py-3">No document requests yet</td></tr>
-            </tbody>
-          </table>
+
+          <div class="vp-stat-row">
+            <div class="vp-stat-chip"><span>{{ docRequestStats.total }}</span> Total</div>
+            <div class="vp-stat-chip is-pending"><span>{{ docRequestStats.pending }}</span> Pending</div>
+            <div class="vp-stat-chip is-approved"><span>{{ docRequestStats.approved }}</span> Approved</div>
+            <div class="vp-stat-chip is-rejected"><span>{{ docRequestStats.rejected }}</span> Rejected</div>
+          </div>
+
+          <div class="vp-hub__toolbar">
+            <label class="vp-search">
+              <iconify-icon icon="lucide:search" />
+              <input v-model="documentSearch" type="text" placeholder="Search document type or description" />
+            </label>
+          </div>
+
+          <div v-if="docRequestsLoading" class="vp-loading">Loading document requests...</div>
+          <div v-else-if="!filteredDocumentRequests.length" class="vp-empty">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:file-text" /></div>
+            <h4>{{ documentSearch ? 'No matching requests' : 'No document requests yet' }}</h4>
+            <p>{{ documentSearch ? 'Try a different search term.' : 'Request a salary certificate, experience letter, and more.' }}</p>
+            <button v-if="!documentSearch" type="button" class="vp-btn-primary" @click="openDocRequestModal()">Request Document</button>
+          </div>
+          <div v-else class="vp-req-list">
+            <article v-for="doc in filteredDocumentRequests" :key="doc.id" class="vp-req-row">
+              <div class="vp-req-col">
+                <strong>{{ doc.document_type?.name || '—' }}</strong>
+                <small>Document Name</small>
+              </div>
+              <div class="vp-req-col">
+                <strong>{{ doc.description || '--' }}</strong>
+                <small>Description</small>
+              </div>
+              <div class="vp-req-col vp-req-col--date">
+                <strong>{{ formatDateShort(doc.requested_date || doc.created_at) }}</strong>
+                <small>Requested On</small>
+              </div>
+              <div class="vp-req-col vp-req-col--status">
+                <span class="vp-status-text" :class="`is-${statusTone(doc.status)}`">{{ formatStatusLabel(doc.status) }}</span>
+                <small>Status</small>
+              </div>
+              <div class="vp-req-col">
+                <strong>{{ doc.rejection_reason || '--' }}</strong>
+                <small>Rejection Reason</small>
+              </div>
+              <div class="vp-req-actions">
+                <a
+                  v-if="String(doc.status).toLowerCase() === 'approved' && doc.file_url"
+                  :href="doc.file_url"
+                  target="_blank"
+                  rel="noopener"
+                  class="vp-row-btn"
+                  title="Download"
+                >
+                  <iconify-icon icon="lucide:download" />
+                </a>
+                <button v-if="String(doc.status).toLowerCase() === 'pending'" type="button" class="vp-row-btn" title="Edit" @click="openDocRequestModal(doc)">
+                  <iconify-icon icon="lucide:pencil" />
+                </button>
+                <button type="button" class="vp-row-btn" title="Delete" @click="deleteMyDocumentRequest(doc)">
+                  <iconify-icon icon="lucide:trash-2" />
+                </button>
+              </div>
+            </article>
+          </div>
         </div>
 
         <!-- My Assets -->
-        <div v-if="activeTab === 'my-assets'" class="vp-panel">
-          <div class="vp-panel__head"><h3 class="vp-panel__title">My Assigned Assets</h3></div>
-          <div v-if="myAssignedAssets.length" class="vp-simple-cards">
-            <div v-for="asset in myAssignedAssets" :key="asset.id" class="vp-asset-card">
-              <strong>{{ asset.name }}</strong>
-              <span>{{ asset.asset_type?.name || '—' }} · {{ asset.serial_number || '—' }}</span>
-              <span class="vp-status-pill vp-status-assigned">{{ asset.status }}</span>
+        <div v-if="activeTab === 'my-assets'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">My Assets</h3>
+              <p class="vp-panel__subtitle">Assigned equipment and your open asset requests.</p>
             </div>
+            <button type="button" class="vp-btn-primary vp-hub__cta" @click="openAssetRequestModal()">
+              Request Asset
+              <iconify-icon icon="lucide:plus" />
+            </button>
           </div>
-          <p v-else class="text-muted">No assets currently assigned to you.</p>
 
-          <div class="vp-panel__head" style="margin-top:24px">
-            <h3 class="vp-panel__title">My Asset Requests</h3>
-            <button type="button" class="vp-btn-primary" @click="openAssetRequestModal()">+ Request Asset</button>
+          <h4 class="vp-section-label">Assigned to me</h4>
+          <div v-if="assetsLoading" class="vp-loading">Loading assets...</div>
+          <div v-else-if="myAssignedAssets.length" class="vp-entity-grid">
+            <article v-for="asset in myAssignedAssets" :key="asset.id" class="vp-entity-card">
+              <div class="vp-entity-card__icon">
+                <iconify-icon icon="lucide:laptop" />
+              </div>
+              <div class="vp-entity-card__body">
+                <strong>{{ asset.name }}</strong>
+                <span>{{ asset.asset_type?.name || 'Asset' }}</span>
+                <span class="vp-entity-card__meta">SN {{ asset.serial_number || '—' }}</span>
+              </div>
+              <span class="vp-status-pill vp-status-assigned">{{ formatStatusLabel(asset.status) }}</span>
+            </article>
           </div>
-          <table class="vp-simple-table">
-            <thead><tr><th>Item</th><th>Qty</th><th>Description</th><th>Requested On</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="req in myAssetRequests" :key="req.id">
-                <td>{{ req.asset_item }}</td>
-                <td>{{ req.qty }}</td>
-                <td>{{ req.description || '--' }}</td>
-                <td>{{ formatDate(req.applied_at) }}</td>
-                <td><span class="vp-status-pill" :class="`vp-status-${req.status}`">{{ req.status }}</span></td>
-                <td>
-                  <button v-if="req.status === 'pending'" type="button" class="vp-row-btn" @click="openAssetRequestModal(req)"><iconify-icon icon="lucide:pencil" /></button>
-                  <button type="button" class="vp-row-btn" @click="deleteMyAssetRequest(req)"><iconify-icon icon="lucide:trash-2" /></button>
-                </td>
-              </tr>
-              <tr v-if="!myAssetRequests.length"><td colspan="6" class="text-center text-muted py-3">No asset requests yet</td></tr>
-            </tbody>
-          </table>
+          <div v-else class="vp-empty vp-empty--compact">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:briefcase" /></div>
+            <h4>No assets assigned</h4>
+            <p>When HR assigns equipment, it will appear here.</p>
+          </div>
+
+          <div class="vp-hub__toolbar vp-hub__toolbar--spaced">
+            <h4 class="vp-section-label mb-0">Asset requests</h4>
+            <label class="vp-search">
+              <iconify-icon icon="lucide:search" />
+              <input v-model="assetSearch" type="text" placeholder="Search asset item or description" />
+            </label>
+          </div>
+
+          <div v-if="!assetsLoading && !filteredAssetRequests.length" class="vp-empty vp-empty--compact">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:package-plus" /></div>
+            <h4>{{ assetSearch ? 'No matching requests' : 'No asset requests yet' }}</h4>
+            <p>{{ assetSearch ? 'Try a different search term.' : 'Need a laptop, phone, or other equipment? Submit a request.' }}</p>
+          </div>
+          <div v-else-if="!assetsLoading" class="vp-req-list">
+            <article v-for="req in filteredAssetRequests" :key="req.id" class="vp-req-row">
+              <div class="vp-req-col">
+                <strong>{{ req.asset_item }}</strong>
+                <small>Asset Item</small>
+              </div>
+              <div class="vp-req-col vp-req-col--qty">
+                <strong>{{ req.qty }}</strong>
+                <small>Qty</small>
+              </div>
+              <div class="vp-req-col">
+                <strong>{{ req.description || '--' }}</strong>
+                <small>Description</small>
+              </div>
+              <div class="vp-req-col vp-req-col--date">
+                <strong>{{ formatDateShort(req.applied_at) }}</strong>
+                <small>Requested On</small>
+              </div>
+              <div class="vp-req-col vp-req-col--status">
+                <span class="vp-status-text" :class="`is-${statusTone(req.status)}`">{{ formatStatusLabel(req.status) }}</span>
+                <small>Status</small>
+              </div>
+              <div class="vp-req-actions">
+                <button v-if="String(req.status).toLowerCase() === 'pending'" type="button" class="vp-row-btn" title="Edit" @click="openAssetRequestModal(req)">
+                  <iconify-icon icon="lucide:pencil" />
+                </button>
+                <button type="button" class="vp-row-btn" title="Delete" @click="deleteMyAssetRequest(req)">
+                  <iconify-icon icon="lucide:trash-2" />
+                </button>
+              </div>
+            </article>
+          </div>
         </div>
 
         <!-- My Leave -->
-        <div v-if="activeTab === 'my-leave'" class="vp-panel">
-          <div class="vp-panel__head"><h3 class="vp-panel__title">Leave Balance</h3></div>
-          <div class="vp-simple-cards">
-            <div v-for="b in myLeaveBalance" :key="b.id" class="vp-asset-card">
-              <strong>{{ b.leave_type?.name }}</strong>
-              <span>{{ b.remaining_days }} / {{ b.total_days }} days remaining</span>
+        <div v-if="activeTab === 'my-leave'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">My Leave</h3>
+              <p class="vp-panel__subtitle">Check your balance and apply for time off.</p>
             </div>
+            <button type="button" class="vp-btn-primary vp-hub__cta" @click="openLeaveRequestModal()">
+              Apply Leave
+              <iconify-icon icon="lucide:plus" />
+            </button>
           </div>
 
-          <div class="vp-panel__head" style="margin-top:24px">
-            <h3 class="vp-panel__title">My Leave Requests</h3>
-            <button type="button" class="vp-btn-primary" @click="openLeaveRequestModal()">+ Apply Leave</button>
+          <h4 class="vp-section-label">Leave balance</h4>
+          <div v-if="leaveLoading" class="vp-loading">Loading leave data...</div>
+          <div v-else-if="myLeaveBalance.length" class="vp-balance-grid">
+            <article v-for="b in myLeaveBalance" :key="b.id" class="vp-balance-card">
+              <div class="vp-balance-card__top">
+                <strong>{{ b.leave_type?.name || 'Leave' }}</strong>
+                <span>{{ b.remaining_days ?? 0 }}/{{ b.total_days ?? 0 }}</span>
+              </div>
+              <div class="vp-balance-bar">
+                <div class="vp-balance-bar__fill" :style="{ width: leaveBalancePercent(b) + '%' }"></div>
+              </div>
+              <small>{{ b.remaining_days ?? 0 }} days remaining</small>
+            </article>
           </div>
-          <table class="vp-simple-table">
-            <thead><tr><th>Type</th><th>Start</th><th>End</th><th>Days</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="lv in myLeaveRequests" :key="lv.id">
-                <td>{{ lv.leave_type?.name }}</td>
-                <td>{{ formatDate(lv.start_date) }}</td>
-                <td>{{ formatDate(lv.end_date) }}</td>
-                <td>{{ lv.days }}</td>
-                <td><span class="vp-status-pill" :class="`vp-status-${lv.status}`">{{ lv.status }}</span></td>
-                <td>
-                  <button v-if="lv.status === 'pending_parent'" type="button" class="vp-row-btn" @click="cancelMyLeave(lv)"><iconify-icon icon="lucide:x-circle" /></button>
-                </td>
-              </tr>
-              <tr v-if="!myLeaveRequests.length"><td colspan="6" class="text-center text-muted py-3">No leave requests yet</td></tr>
-            </tbody>
-          </table>
+          <p v-else class="vp-muted-note">No leave balances available.</p>
+
+          <div class="vp-hub__toolbar vp-hub__toolbar--spaced">
+            <h4 class="vp-section-label mb-0">Leave requests</h4>
+            <label class="vp-search">
+              <iconify-icon icon="lucide:search" />
+              <input v-model="leaveSearch" type="text" placeholder="Search leave type or status" />
+            </label>
+          </div>
+
+          <div v-if="!leaveLoading && !filteredLeaveRequests.length" class="vp-empty vp-empty--compact">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:calendar-off" /></div>
+            <h4>{{ leaveSearch ? 'No matching requests' : 'No leave requests yet' }}</h4>
+            <p>{{ leaveSearch ? 'Try a different search term.' : 'Apply for annual, sick, or other leave from here.' }}</p>
+          </div>
+          <div v-else-if="!leaveLoading" class="vp-req-list">
+            <article v-for="lv in filteredLeaveRequests" :key="lv.id" class="vp-req-row">
+              <div class="vp-req-col">
+                <strong>{{ lv.leave_type?.name || '—' }}</strong>
+                <small>Leave Type</small>
+              </div>
+              <div class="vp-req-col vp-req-col--date">
+                <strong>{{ formatDateShort(lv.start_date) }}</strong>
+                <small>Start Date</small>
+              </div>
+              <div class="vp-req-col vp-req-col--date">
+                <strong>{{ formatDateShort(lv.end_date) }}</strong>
+                <small>End Date</small>
+              </div>
+              <div class="vp-req-col vp-req-col--qty">
+                <strong>{{ lv.days ?? '—' }}</strong>
+                <small>Days</small>
+              </div>
+              <div class="vp-req-col vp-req-col--status">
+                <span class="vp-status-text" :class="`is-${statusTone(lv.status)}`">{{ formatStatusLabel(lv.status) }}</span>
+                <small>Status</small>
+              </div>
+              <div class="vp-req-actions">
+                <button v-if="lv.status === 'pending_parent'" type="button" class="vp-row-btn" title="Cancel request" @click="cancelMyLeave(lv)">
+                  <iconify-icon icon="lucide:x-circle" />
+                </button>
+              </div>
+            </article>
+          </div>
         </div>
 
 
@@ -572,118 +705,178 @@
     </div>
     <!-- Document Request Modal -->
     <div v-if="showDocRequestModal" class="vp-modal-overlay" @click.self="showDocRequestModal = false">
-      <div class="vp-modal">
+      <div class="vp-modal vp-modal--form">
         <div class="vp-modal__head">
-          <h4>{{ editingDocRequestId ? 'Edit' : 'New' }} Document Request</h4>
-          <button type="button" @click="showDocRequestModal = false"><iconify-icon icon="lucide:x" /></button>
+          <div class="vp-modal__head-copy">
+            <span class="vp-modal__badge"><iconify-icon icon="lucide:file-plus-2" /></span>
+            <div>
+              <h4>{{ editingDocRequestId ? 'Edit Document Request' : 'Request New Document' }}</h4>
+              <p>Choose the document type and add any details HR should know.</p>
+            </div>
+          </div>
+          <button type="button" class="vp-modal__close" @click="showDocRequestModal = false"><iconify-icon icon="lucide:x" /></button>
         </div>
         <div class="vp-modal__body">
           <div class="vp-field">
-            <label class="vp-field__label">Document Type</label>
-            <select v-model="docRequestForm.document_type_id" class="vp-field__input">
-              <option value="">Select type</option>
-              <option v-for="t in documentTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
-            </select>
+            <label class="vp-field__label">Document Type <em class="required">*</em></label>
+            <SearchableSelect
+              v-model="docRequestForm.document_type_id"
+              :options="documentTypeOptions"
+              placeholder="Select document type"
+            />
           </div>
           <div class="vp-field">
             <label class="vp-field__label">Description</label>
-            <textarea v-model="docRequestForm.description" class="vp-field__input" rows="3" placeholder="Optional details"></textarea>
+            <textarea
+              v-model="docRequestForm.description"
+              class="vp-field__input vp-field__textarea"
+              rows="5"
+              maxlength="500"
+              placeholder="e.g. Needed for visa renewal, embassy, or bank application"
+            ></textarea>
+            <span class="vp-field__hint">{{ (docRequestForm.description || '').length }}/500 · Optional, but helps HR process faster</span>
           </div>
         </div>
         <div class="vp-modal__footer">
           <button type="button" class="vp-btn-ghost" @click="showDocRequestModal = false">Cancel</button>
-          <button type="button" class="vp-btn-primary" :disabled="docRequestSaving" @click="submitDocRequest">Submit</button>
+          <button type="button" class="vp-btn-primary" :disabled="docRequestSaving" @click="submitDocRequest">
+            {{ docRequestSaving ? 'Submitting...' : (editingDocRequestId ? 'Save Changes' : 'Submit Request') }}
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Asset Request Modal -->
     <div v-if="showAssetRequestModal" class="vp-modal-overlay" @click.self="showAssetRequestModal = false">
-      <div class="vp-modal">
+      <div class="vp-modal vp-modal--form vp-modal--wide">
         <div class="vp-modal__head">
-          <h4>{{ editingAssetRequestId ? 'Edit' : 'New' }} Asset Request</h4>
-          <button type="button" @click="showAssetRequestModal = false"><iconify-icon icon="lucide:x" /></button>
+          <div class="vp-modal__head-copy">
+            <span class="vp-modal__badge"><iconify-icon icon="lucide:briefcase" /></span>
+            <div>
+              <h4>{{ editingAssetRequestId ? 'Edit Asset Request' : 'Request New Asset' }}</h4>
+              <p>Tell us what you need and where it should be assigned.</p>
+            </div>
+          </div>
+          <button type="button" class="vp-modal__close" @click="showAssetRequestModal = false"><iconify-icon icon="lucide:x" /></button>
         </div>
         <div class="vp-modal__body">
-          <div class="vp-field">
-            <label class="vp-field__label">Asset Item *</label>
-            <input v-model="assetRequestForm.asset_item" type="text" class="vp-field__input" placeholder="e.g. Laptop" />
-          </div>
-          <div class="vp-field">
-            <label class="vp-field__label">Company Name *</label>
-            <input v-model="assetRequestForm.company_name" type="text" class="vp-field__input" />
-          </div>
-          <div class="vp-field">
-            <label class="vp-field__label">Branch *</label>
-            <select v-model="assetRequestForm.branch_id" class="vp-field__input">
-              <option value="">Select branch</option>
-              <option v-for="b in branchesForRequest" :key="b.id" :value="b.id">{{ b.name }}</option>
-            </select>
-          </div>
-          <div class="vp-field">
-            <label class="vp-field__label">Department *</label>
-            <select v-model="assetRequestForm.department_id" class="vp-field__input">
-              <option value="">Select department</option>
-              <option v-for="d in departmentsForRequest" :key="d.id" :value="d.id">{{ d.name }}</option>
-            </select>
-          </div>
-          <div class="vp-field">
-            <label class="vp-field__label">Quantity *</label>
-            <input v-model.number="assetRequestForm.qty" type="number" min="1" class="vp-field__input" />
-          </div>
-          <div class="vp-field">
-            <label class="vp-field__label">Description</label>
-            <textarea v-model="assetRequestForm.description" class="vp-field__input" rows="3"></textarea>
+          <div class="vp-modal__grid">
+            <div class="vp-field vp-field--full">
+              <label class="vp-field__label">Asset Item <em class="required">*</em></label>
+              <input v-model="assetRequestForm.asset_item" type="text" class="vp-field__input" placeholder="e.g. MacBook Pro, iPhone, Monitor" />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">Company Name <em class="required">*</em></label>
+              <input v-model="assetRequestForm.company_name" type="text" class="vp-field__input" placeholder="Enter company name" />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">Quantity <em class="required">*</em></label>
+              <input v-model.number="assetRequestForm.qty" type="number" min="1" class="vp-field__input" />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">Branch <em class="required">*</em></label>
+              <SearchableSelect
+                v-model="assetRequestForm.branch_id"
+                :options="branchSelectOptions"
+                placeholder="Select branch"
+              />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">Department <em class="required">*</em></label>
+              <SearchableSelect
+                v-model="assetRequestForm.department_id"
+                :options="assetDepartmentOptions"
+                placeholder="Select department"
+              />
+            </div>
+            <div class="vp-field vp-field--full">
+              <label class="vp-field__label">Description</label>
+              <textarea
+                v-model="assetRequestForm.description"
+                class="vp-field__input vp-field__textarea"
+                rows="4"
+                maxlength="500"
+                placeholder="Why do you need this asset? Any specs or preferences?"
+              ></textarea>
+              <span class="vp-field__hint">{{ (assetRequestForm.description || '').length }}/500</span>
+            </div>
           </div>
         </div>
         <div class="vp-modal__footer">
           <button type="button" class="vp-btn-ghost" @click="showAssetRequestModal = false">Cancel</button>
-          <button type="button" class="vp-btn-primary" :disabled="assetRequestSaving" @click="submitAssetRequest">Submit</button>
+          <button type="button" class="vp-btn-primary" :disabled="assetRequestSaving" @click="submitAssetRequest">
+            {{ assetRequestSaving ? 'Submitting...' : (editingAssetRequestId ? 'Save Changes' : 'Submit Request') }}
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Leave Request Modal -->
     <div v-if="showLeaveRequestModal" class="vp-modal-overlay" @click.self="showLeaveRequestModal = false">
-      <div class="vp-modal">
+      <div class="vp-modal vp-modal--form">
         <div class="vp-modal__head">
-          <h4>Apply Leave</h4>
-          <button type="button" @click="showLeaveRequestModal = false"><iconify-icon icon="lucide:x" /></button>
+          <div class="vp-modal__head-copy">
+            <span class="vp-modal__badge"><iconify-icon icon="lucide:calendar-plus" /></span>
+            <div>
+              <h4>Apply Leave</h4>
+              <p>Select dates and a leave type. Your manager will review the request.</p>
+            </div>
+          </div>
+          <button type="button" class="vp-modal__close" @click="showLeaveRequestModal = false"><iconify-icon icon="lucide:x" /></button>
         </div>
         <div class="vp-modal__body">
           <div class="vp-field">
-            <label class="vp-field__label">Leave Type *</label>
-            <select v-model="leaveRequestForm.leave_type_id" class="vp-field__input">
-              <option value="">Select type</option>
-              <option v-for="t in myLeaveTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
-            </select>
+            <label class="vp-field__label">Leave Type <em class="required">*</em></label>
+            <SearchableSelect
+              v-model="leaveRequestForm.leave_type_id"
+              :options="leaveTypeOptions"
+              placeholder="Select leave type"
+            />
           </div>
-          <div class="vp-field">
-            <label class="vp-field__label">Start Date *</label>
-            <input v-model="leaveRequestForm.start_date" type="date" class="vp-field__input" />
+          <div class="vp-modal__grid">
+            <div class="vp-field">
+              <label class="vp-field__label">Start Date <em class="required">*</em></label>
+              <input v-model="leaveRequestForm.start_date" type="date" class="vp-field__input" />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">End Date <em class="required">*</em></label>
+              <input v-model="leaveRequestForm.end_date" type="date" class="vp-field__input" />
+            </div>
           </div>
-          <div class="vp-field">
-            <label class="vp-field__label">End Date *</label>
-            <input v-model="leaveRequestForm.end_date" type="date" class="vp-field__input" />
-          </div>
-          <div class="vp-field">
-            <label class="vp-field__label"><input type="checkbox" v-model="leaveRequestForm.is_half_day" /> Half Day</label>
-          </div>
+          <label class="vp-toggle">
+            <input type="checkbox" v-model="leaveRequestForm.is_half_day" />
+            <span class="vp-toggle__track"></span>
+            <span class="vp-toggle__copy">
+              <strong>Half Day</strong>
+              <small>Use this for a morning or afternoon only</small>
+            </span>
+          </label>
           <div class="vp-field" v-if="leaveRequestForm.is_half_day">
             <label class="vp-field__label">Half Day Type</label>
-            <select v-model="leaveRequestForm.half_day_type" class="vp-field__input">
-              <option value="morning">Morning</option>
-              <option value="afternoon">Afternoon</option>
-            </select>
+            <SearchableSelect
+              v-model="leaveRequestForm.half_day_type"
+              :options="halfDayTypeOptions"
+              placeholder="Select period"
+              :clearable="false"
+            />
           </div>
           <div class="vp-field">
             <label class="vp-field__label">Reason</label>
-            <textarea v-model="leaveRequestForm.reason" class="vp-field__input" rows="3"></textarea>
+            <textarea
+              v-model="leaveRequestForm.reason"
+              class="vp-field__input vp-field__textarea"
+              rows="4"
+              maxlength="500"
+              placeholder="Add a short reason for your leave"
+            ></textarea>
+            <span class="vp-field__hint">{{ (leaveRequestForm.reason || '').length }}/500</span>
           </div>
         </div>
         <div class="vp-modal__footer">
           <button type="button" class="vp-btn-ghost" @click="showLeaveRequestModal = false">Cancel</button>
-          <button type="button" class="vp-btn-primary" :disabled="leaveRequestSaving" @click="submitLeaveRequest">Submit</button>
+          <button type="button" class="vp-btn-primary" :disabled="leaveRequestSaving" @click="submitLeaveRequest">
+            {{ leaveRequestSaving ? 'Submitting...' : 'Submit Request' }}
+          </button>
         </div>
       </div>
     </div>
@@ -696,11 +889,13 @@ import api from '@/plugins/axios';
 import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
+import SearchableSelect from '@/components/ui/SearchableSelect.vue';
 
 export default {
   name: 'UserProfile',
   components: {
     UserAttendanceCarousel,
+    SearchableSelect,
   },
   setup() {
     const instance = getCurrentInstance();
@@ -841,6 +1036,35 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       });
+    };
+
+    const formatDateShort = (dateString) => {
+      if (!dateString) return '—';
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return String(dateString);
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+
+    const formatStatusLabel = (status) => {
+      if (!status) return '—';
+      return String(status)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+    };
+
+    const statusTone = (status) => {
+      const value = String(status || '').toLowerCase();
+      if (value.includes('approv') || value === 'active') return 'approved';
+      if (value.includes('reject') || value.includes('cancel')) return 'rejected';
+      if (value.includes('assign')) return 'assigned';
+      return 'pending';
+    };
+
+    const leaveBalancePercent = (balance) => {
+      const total = Number(balance?.total_days) || 0;
+      const remaining = Number(balance?.remaining_days) || 0;
+      if (total <= 0) return 0;
+      return Math.max(0, Math.min(100, Math.round((remaining / total) * 100)));
     };
     
     const currentDelegate = computed(() => {
@@ -1266,6 +1490,36 @@ const showDocRequestModal = ref(false);
 const editingDocRequestId = ref(null);
 const docRequestForm = reactive({ document_type_id: '', description: '' });
 const docRequestSaving = ref(false);
+const documentSearch = ref('');
+
+const documentTypeOptions = computed(() => {
+  const list = Array.isArray(documentTypes.value)
+    ? documentTypes.value
+    : Array.isArray(documentTypes.value?.data)
+      ? documentTypes.value.data
+      : [];
+  return list.map((type) => ({ value: type.id, label: type.name }));
+});
+
+const docRequestStats = computed(() => {
+  const list = myDocumentRequests.value || [];
+  const tone = (item) => String(item.status || '').toLowerCase();
+  return {
+    total: list.length,
+    pending: list.filter((item) => tone(item) === 'pending').length,
+    approved: list.filter((item) => tone(item) === 'approved').length,
+    rejected: list.filter((item) => tone(item) === 'rejected').length,
+  };
+});
+
+const filteredDocumentRequests = computed(() => {
+  const query = documentSearch.value.trim().toLowerCase();
+  if (!query) return myDocumentRequests.value;
+  return myDocumentRequests.value.filter((doc) =>
+    [doc.document_type?.name, doc.description, doc.status]
+      .some((value) => String(value || '').toLowerCase().includes(query)),
+  );
+});
 
 const loadDocumentTypes = async () => {
   try {
@@ -1343,12 +1597,29 @@ const deleteMyDocumentRequest = async (doc) => {
 // ===== My Assets =====
 const myAssignedAssets = ref([]);
 const myAssetRequests = ref([]);
+const assetsLoading = ref(false);
 const showAssetRequestModal = ref(false);
 const editingAssetRequestId = ref(null);
 const assetRequestForm = reactive({ asset_item: '', company_name: '', branch_id: '', department_id: '', qty: 1, description: '' });
 const assetRequestSaving = ref(false);
 const branchesForRequest = ref([]);
 const departmentsForRequest = ref([]);
+const assetSearch = ref('');
+
+const branchSelectOptions = computed(() =>
+  (branchesForRequest.value || []).map((branch) => ({ value: branch.id, label: branch.name })),
+);
+const assetDepartmentOptions = computed(() =>
+  (departmentsForRequest.value || []).map((dept) => ({ value: dept.id, label: dept.name })),
+);
+const filteredAssetRequests = computed(() => {
+  const query = assetSearch.value.trim().toLowerCase();
+  if (!query) return myAssetRequests.value;
+  return myAssetRequests.value.filter((req) =>
+    [req.asset_item, req.description, req.status]
+      .some((value) => String(value || '').toLowerCase().includes(query)),
+  );
+});
 
 const loadAssetRequestOptions = async () => {
   try {
@@ -1378,6 +1649,7 @@ const loadAssetRequestOptions = async () => {
 };
 
 const loadMyAssets = async () => {
+  assetsLoading.value = true;
   try {
     const [assetsRes, requestsRes] = await Promise.all([
       api.get('/assets', { params: { user_id: user.value.id } }),
@@ -1390,6 +1662,8 @@ const loadMyAssets = async () => {
   } catch (e) {
     console.error(e);
     showNotification('Failed to load assets', 'error');
+  } finally {
+    assetsLoading.value = false;
   }
   if (!branchesForRequest.value.length) await loadAssetRequestOptions();
 };
@@ -1449,11 +1723,30 @@ const deleteMyAssetRequest = async (req) => {
 const myLeaveRequests = ref([]);
 const myLeaveBalance = ref([]);
 const myLeaveTypes = ref([]);
+const leaveLoading = ref(false);
 const showLeaveRequestModal = ref(false);
 const leaveRequestForm = reactive({ leave_type_id: '', start_date: '', end_date: '', reason: '', is_half_day: false, half_day_type: 'morning' });
 const leaveRequestSaving = ref(false);
+const leaveSearch = ref('');
+const halfDayTypeOptions = [
+  { value: 'morning', label: 'Morning' },
+  { value: 'afternoon', label: 'Afternoon' },
+];
+
+const leaveTypeOptions = computed(() =>
+  (myLeaveTypes.value || []).map((type) => ({ value: type.id, label: type.name })),
+);
+const filteredLeaveRequests = computed(() => {
+  const query = leaveSearch.value.trim().toLowerCase();
+  if (!query) return myLeaveRequests.value;
+  return myLeaveRequests.value.filter((lv) =>
+    [lv.leave_type?.name, lv.status]
+      .some((value) => String(value || '').toLowerCase().includes(query)),
+  );
+});
 
 const loadMyLeave = async () => {
+  leaveLoading.value = true;
   try {
     const [reqRes, balanceRes, typesRes] = await Promise.all([
       api.get('/leaves'),
@@ -1467,6 +1760,8 @@ const loadMyLeave = async () => {
   } catch (e) {
     console.error(e);
     showNotification('Failed to load leave data', 'error');
+  } finally {
+    leaveLoading.value = false;
   }
 };
 
@@ -1549,38 +1844,26 @@ const cancelMyLeave = async (lv) => {
       submitCheckin,
       currentDelegate,
       formatDate,
+      formatDateShort,
+      formatStatusLabel,
+      statusTone,
+      leaveBalancePercent,
       myDocumentRequests, docRequestsLoading, documentTypes, showDocRequestModal, editingDocRequestId,
-      docRequestForm, docRequestSaving, loadMyDocuments, openDocRequestModal, submitDocRequest, deleteMyDocumentRequest,
-      myAssignedAssets, myAssetRequests, showAssetRequestModal, editingAssetRequestId, assetRequestForm,
-      assetRequestSaving, branchesForRequest, departmentsForRequest, loadMyAssets, openAssetRequestModal,
+      docRequestForm, docRequestSaving, documentSearch, documentTypeOptions, docRequestStats, filteredDocumentRequests,
+      loadMyDocuments, openDocRequestModal, submitDocRequest, deleteMyDocumentRequest,
+      myAssignedAssets, myAssetRequests, assetsLoading, showAssetRequestModal, editingAssetRequestId, assetRequestForm,
+      assetRequestSaving, branchesForRequest, departmentsForRequest, assetSearch, branchSelectOptions, assetDepartmentOptions,
+      filteredAssetRequests, loadMyAssets, openAssetRequestModal,
       submitAssetRequest, deleteMyAssetRequest,
-      myLeaveRequests, myLeaveBalance, myLeaveTypes, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
+      myLeaveRequests, myLeaveBalance, myLeaveTypes, leaveLoading, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
+      leaveSearch, leaveTypeOptions, halfDayTypeOptions, filteredLeaveRequests,
       loadMyLeave, openLeaveRequestModal, submitLeaveRequest, cancelMyLeave,
     };
   }
 };
 </script>
 <style scoped>
-.vp-modal-overlay {
-  position: fixed; inset: 0; background: rgba(15,23,42,0.4);
-  display: flex; align-items: center; justify-content: center; z-index: 9999;
-}
-.vp-modal {
-  width: min(520px, 92vw); background: #fff; border-radius: 12px;
-  max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-}
-.vp-modal__head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; border-bottom: 1px solid #eee;
-}
-.vp-modal__head h4 { margin: 0; font-size: 16px; font-weight: 600; }
-.vp-modal__head button { border: none; background: transparent; color: #6b7280; }
-.vp-modal__body { padding: 16px 18px; display: grid; gap: 12px; }
-.vp-modal__footer { padding: 14px 18px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
 .vp-loading { padding: 20px; color: #6b7280; }
-.vp-simple-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.vp-simple-table th, .vp-simple-table td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; text-align: left; }
-.vp-simple-table th { color: #6b7280; font-weight: 600; background: #f8fafc; }
 .vp-row-btn { border: none; background: transparent; color: #6b7280; margin-right: 4px; }
 .vp-status-pill {
   display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: capitalize;
@@ -1590,9 +1873,21 @@ const cancelMyLeave = async (lv) => {
 .vp-status-rejected { background: #fee2e2; color: #991b1b; }
 .vp-status-pending_parent, .vp-status-pending_hr { background: #fef3c7; color: #92400e; }
 .vp-status-assigned { background: #dbeafe; color: #1e40af; }
-.vp-simple-cards { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
-.vp-asset-card {
-  border: 1px solid #edf1f6; border-radius: 10px; padding: 12px 14px; min-width: 200px;
-  display: flex; flex-direction: column; gap: 6px; background: #fff;
+.vp-modal--form :deep(.crm-field) { margin: 0; }
+.vp-modal--form :deep(.vs__dropdown-toggle) {
+  height: 46px;
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1px solid #eceff5;
+  padding: 0 10px;
+}
+.vp-modal--form :deep(.vs__search),
+.vp-modal--form :deep(.vs__selected) {
+  font-size: 14px;
+  color: #0b0736;
+}
+.vp-modal--form :deep(.vs__dropdown-menu) {
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
 </style>
