@@ -1583,7 +1583,7 @@
                   <SearchableSelect v-model="addEmployeeForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" />
                 </div>
                 <div class="add-field">
-                  <label>Salary *</label>
+                  <label>Salary </label>
                   <div class="salary-input-group">
                     <input v-model="addEmployeeForm.salary" type="text" placeholder="Enter Amount" />
                     <span>UAE Dirham</span>
@@ -2011,7 +2011,7 @@
               <div class="add-field"><label>Address Outside UAE *</label><input v-model="sectionEditForm.address_outside_uae" type="text" /></div>
               <div class="add-field"><label>Nationality *</label><SearchableSelect v-model="sectionEditForm.nationality" :options="nationalityOptions" placeholder="Not Selected" /></div>
               <div class="add-field"><label>Salary Type *</label><SearchableSelect v-model="sectionEditForm.salary_type" :options="salaryTypeOptions" placeholder="Not Selected" /></div>
-              <div class="add-field"><label>Basic Salary *</label><input v-model="sectionEditForm.salary" type="text" /></div>
+              <div class="add-field"><label>Basic Salary </label><input v-model="sectionEditForm.salary" type="text" /></div>
             </div>
           </template>
           <div class="employee-filter-actions mt-2">
@@ -2267,8 +2267,8 @@ const fetchRealEmployees = async () => {
       status: 'active',
       statusText: 'Active',
       statusType: 'active',
-      nationality: 'Indian',
-      salary: '2000.00',
+      nationality: '',
+      salary: '',
       salary_type: 'monthly',
       supervisor: 'Khalid Al Mazrouei',
       role_name: 'Employee',
@@ -3185,7 +3185,7 @@ const employeeDocumentTypes = [
   { label: 'Labor Card', value: 'labor_card' },
   { label: 'Passport', value: 'passport' },
   { label: 'Visa', value: 'visa' },
-  { label: 'Passport Photo', value: 'passport_photo' },
+  // { label: 'Passport Photo', value: 'passport_photo' },
   { label: 'Insurance Card', value: 'insurance_card' },
   { label: 'Broker License', value: 'broker_license' },
   { label: 'ILOE Certificate', value: 'iloe_certificate' },
@@ -6188,7 +6188,7 @@ function enrichEmployeeDetail(row) {
     address_inside_uae: row.address_inside_uae || row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
     address_outside_uae: row.address_outside_uae || row.address || 'Al Wahda, Near Bus Station, Abu Dhabi, United Arab Emirates',
     salary_type: row.salary_type || 'monthly',
-    salary: row.salary || '2000.00',
+    salary: row.salary || '',
     branch: row.branch || 'Abu Dhabi Head Office',
     supervisor: row.supervisor || 'Khalid Al Mazrouei',
     emiratesId: row.emiratesId || '784-1990-1234567-1',

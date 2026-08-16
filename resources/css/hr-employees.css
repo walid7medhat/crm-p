@@ -1,4 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:root {
+  --emp-primary: #733e87;
+  --emp-navy: #0b0736;
+  --emp-bg: #f8f6fb;
+  --emp-card: #ffffff;
+  --emp-border: #e8edf3;
+  --emp-muted: #64748b;
+  --emp-radius: 14px;
+  --emp-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+}
 
 .emp-mgmt {
   --emp-primary: #733e87;

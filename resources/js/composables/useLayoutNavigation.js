@@ -506,7 +506,7 @@ export function buildTopModuleNav(ctx = {}) {
 
   const items = [];
 
-  if (isAdmin) {
+  if (isAdmin && !isHr) {
     items.push({
       id: 'crm',
       label: 'CRM',

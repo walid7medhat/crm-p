@@ -86,12 +86,12 @@
             'active-parent': isSidebarModuleActive('crm'),
           }"
         >
-          <a href="javascript:void(0)" @click.stop.prevent="handleCrmClick" :class="{ active: isSidebarModuleActive('crm') }">
+          <a  v-if="!isHr" href="javascript:void(0)" @click.stop.prevent="handleCrmClick" :class="{ active: isSidebarModuleActive('crm') }">
             <iconify-icon icon="lucide:handshake" class="menu-icon" />
             <span>CRM</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
-          <ul v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
+          <ul v-if="!isHr" v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
             <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
               <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
                 <img :src="leadsIcon" class="imgicon submenu-icon" alt="" />
@@ -149,7 +149,7 @@
         </li>
 
         <li
-       
+          v-if="!isHr"
           :class="{
             dropdown: true,
             open: activeDropdown === 'calculator',
@@ -986,11 +986,11 @@ const mobileDockItems = computed(() => {
     });
   }
 
-  if (!isShowOnlyListing.value) {
+  if (!isShowOnlyListing.value && !isHr.value) {
     items.push({ path: '/kanban', label: 'Leads', iconSrc: leadsIcon.value });
    
   }
-  if ( !isSalesInListingTeam.value) {
+  if ( !isSalesInListingTeam.value && !isHr.value) {
     items.push({ path: '/kanban_deal', label: 'Deals', iconSrc: dealsIcon.value });
   }
 

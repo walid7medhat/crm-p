@@ -182,6 +182,17 @@
             <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
             <span v-if="teamLeavePendingCount > 0" class="vp-nav__badge">{{ teamLeavePendingCount }}</span>
           </button>
+          <button
+              type="button"
+              class="vp-nav__item"
+              :class="{ 'is-active': activeTab === 'announcements' }"
+              role="tab"
+              @click="activeTab = 'announcements'; loadMyAnnouncements()"
+            >
+              <span class="vp-nav__left"><iconify-icon icon="lucide:megaphone" /> Announcements</span>
+              <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+              <span v-if="unreadAnnouncementsCount > 0" class="vp-nav__badge">{{ unreadAnnouncementsCount }}</span>
+            </button>
 
       </aside>
 
@@ -537,6 +548,9 @@
                 <small>Rejection Reason</small>
               </div>
               <div class="vp-req-actions">
+                <button type="button" class="vp-row-btn" title="View Details" @click="openDocumentDetail(doc)">
+                  <iconify-icon icon="lucide:eye" />
+                </button>
                 <a
                   v-if="String(doc.status).toLowerCase() === 'approved' && doc.file_url"
                   :href="doc.file_url"
@@ -704,6 +718,9 @@
                 <small>Status</small>
               </div>
               <div class="vp-req-actions">
+                 <button type="button" class="vp-row-btn" title="View Details" @click="openLeaveDetail(lv)">
+                    <iconify-icon icon="lucide:eye" />
+                  </button>
                 <button v-if="lv.status === 'pending_parent'" type="button" class="vp-row-btn" title="Cancel request" @click="cancelMyLeave(lv)">
                   <iconify-icon icon="lucide:x-circle" />
                 </button>
@@ -778,6 +795,9 @@
                   <small v-else>Status</small>
                 </div>
                 <div class="vp-req-actions">
+                  <button type="button" class="vp-row-btn" title="View Details" @click="openLeaveDetail(lv)">
+                    <iconify-icon icon="lucide:eye" />
+                  </button>
                   <template v-if="lv.status === 'pending_parent'">
                     <button type="button" class="vp-row-btn vp-row-btn--approve" title="Approve" :disabled="teamLeaveActingId === lv.id" @click="approveTeamLeave(lv)">
                       <iconify-icon icon="lucide:check" />
@@ -790,6 +810,58 @@
                 </div>
               </article>
             </div>
+        </div>
+        <!-- Announcements -->
+        <div v-if="activeTab === 'announcements'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">Announcements</h3>
+              <p class="vp-panel__subtitle">Company and department updates.</p>
+            </div>
+            <button
+              v-if="unreadAnnouncementsCount > 0"
+              type="button"
+              class="vp-btn-ghost vp-hub__cta"
+              @click="markAllAnnouncementsRead"
+            >
+              Mark All as Read
+            </button>
+          </div>
+
+          <div class="vp-hub__toolbar">
+            <label class="vp-search">
+              <iconify-icon icon="lucide:search" />
+              <input v-model="announcementSearch" type="text" placeholder="Search announcements" />
+            </label>
+          </div>
+
+          <div v-if="announcementsLoading" class="vp-loading">Loading announcements...</div>
+          <div v-else-if="!filteredAnnouncements.length" class="vp-empty">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:megaphone" /></div>
+            <h4>{{ announcementSearch ? 'No matching announcements' : 'No announcements yet' }}</h4>
+            <p>{{ announcementSearch ? 'Try a different search term.' : 'Check back later for company updates.' }}</p>
+          </div>
+          <div v-else class="vp-announcement-list">
+            <article
+              v-for="item in filteredAnnouncements"
+              :key="item.id"
+              class="vp-announcement-card"
+              :class="{ 'is-unread': !item.is_viewed }"
+              @click="openAnnouncement(item)"
+            >
+              <div class="vp-announcement-card__top">
+                <span v-if="!item.is_viewed" class="vp-unread-dot" aria-hidden="true"></span>
+                <strong>{{ item.title }}</strong>
+                <span class="vp-announcement-card__date">{{ formatDateShort(item.start_date || item.created_at) }}</span>
+              </div>
+              <p class="vp-announcement-card__desc">{{ item.description || 'No description provided.' }}</p>
+              <div class="vp-announcement-card__meta">
+                <span v-if="item.branch?.name"><iconify-icon icon="lucide:map-pin" /> {{ item.branch.name }}</span>
+                <span v-if="item.department?.name"><iconify-icon icon="lucide:building-2" /> {{ item.department.name }}</span>
+                <span v-if="item.creator?.name"><iconify-icon icon="lucide:user" /> {{ item.creator.name }}</span>
+              </div>
+            </article>
+          </div>
         </div>
 
 
@@ -837,7 +909,103 @@
         </div>
       </div>
     </div>
+    <!-- Document Detail Modal -->
+<div v-if="showDocumentDetailModal && viewingDocument" class="vp-modal-overlay" @click.self="showDocumentDetailModal = false">
+  <div class="vp-modal vp-modal--form">
+    <div class="vp-modal__head">
+      <div class="vp-modal__head-copy">
+        <span class="vp-modal__badge"><iconify-icon icon="lucide:file-text" /></span>
+        <div>
+          <h4>{{ viewingDocument.document_type?.name || 'Document Request' }}</h4>
+          <p>Requested {{ formatDate(viewingDocument.requested_date || viewingDocument.created_at) }}</p>
+        </div>
+      </div>
+      <button type="button" class="vp-modal__close" @click="showDocumentDetailModal = false"><iconify-icon icon="lucide:x" /></button>
+    </div>
+    <div class="vp-modal__body">
+      <div class="vp-detail-grid">
+        <p><span>Document Type</span><strong>{{ viewingDocument.document_type?.name || '—' }}</strong></p>
+        <p><span>Status</span><strong class="vp-status-text" :class="`is-${statusTone(viewingDocument.status)}`">{{ formatStatusLabel(viewingDocument.status) }}</strong></p>
+        <p><span>Requested On</span><strong>{{ formatDateShort(viewingDocument.requested_date || viewingDocument.created_at) }}</strong></p>
+        <p v-if="viewingDocument.hr_user?.name"><span>Processed By</span><strong>{{ viewingDocument.hr_user.name }}</strong></p>
+      </div>
+      <div class="vp-field" style="margin-top: 14px;">
+        <label class="vp-field__label">Description</label>
+        <p class="vp-detail-note">{{ viewingDocument.description || '--' }}</p>
+      </div>
+      <div v-if="String(viewingDocument.status).toLowerCase() === 'rejected'" class="vp-field">
+        <label class="vp-field__label">Rejection Reason</label>
+        <p class="vp-detail-note vp-detail-note--danger">{{ viewingDocument.rejection_reason || '--' }}</p>
+      </div>
+      <a
+        v-if="String(viewingDocument.status).toLowerCase() === 'approved' && viewingDocument.file_url"
+        :href="viewingDocument.file_url"
+        target="_blank"
+        rel="noopener"
+        class="vp-btn-primary"
+        style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; margin-top: 10px;"
+      >
+        <iconify-icon icon="lucide:download" /> Download Document
+      </a>
+    </div>
+    <div class="vp-modal__footer">
+      <button type="button" class="vp-btn-primary" @click="showDocumentDetailModal = false">Close</button>
+    </div>
+  </div>
+</div>
 
+    <!-- Leave Detail Modal -->
+    <div v-if="showLeaveDetailModal && viewingLeave" class="vp-modal-overlay" @click.self="showLeaveDetailModal = false">
+      <div class="vp-modal vp-modal--form">
+        <div class="vp-modal__head">
+          <div class="vp-modal__head-copy">
+            <span class="vp-modal__badge"><iconify-icon icon="lucide:calendar-days" /></span>
+            <div>
+              <h4>{{ viewingLeave.leave_type?.name || 'Leave Request' }}</h4>
+              <p v-if="viewingLeave.user?.name">{{ viewingLeave.user.name }}</p>
+            </div>
+          </div>
+          <button type="button" class="vp-modal__close" @click="showLeaveDetailModal = false"><iconify-icon icon="lucide:x" /></button>
+        </div>
+        <div class="vp-modal__body">
+          <div class="vp-detail-grid">
+            <p><span>Leave Type</span><strong>{{ viewingLeave.leave_type?.name || '—' }}</strong></p>
+            <p><span>Status</span><strong class="vp-status-text" :class="`is-${statusTone(viewingLeave.status)}`">{{ formatStatusLabel(viewingLeave.status) }}</strong></p>
+            <p><span>Start Date</span><strong>{{ formatDateShort(viewingLeave.start_date) }}</strong></p>
+            <p><span>End Date</span><strong>{{ formatDateShort(viewingLeave.end_date) }}</strong></p>
+            <p><span>Days</span><strong>{{ viewingLeave.days ?? '—' }}</strong></p>
+            <p v-if="viewingLeave.is_half_day"><span>Half Day</span><strong>{{ formatStatusLabel(viewingLeave.half_day_type) }}</strong></p>
+            <p v-if="viewingLeave.parent?.name"><span>Manager</span><strong>{{ viewingLeave.parent.name }}</strong></p>
+            <p v-if="viewingLeave.hr?.name"><span>HR Reviewer</span><strong>{{ viewingLeave.hr.name }}</strong></p>
+          </div>
+          <div class="vp-field" style="margin-top: 14px;">
+            <label class="vp-field__label">Reason</label>
+            <p class="vp-detail-note">{{ viewingLeave.reason || '--' }}</p>
+          </div>
+          <div v-if="String(viewingLeave.status).toLowerCase() === 'rejected'" class="vp-field">
+            <label class="vp-field__label">Rejection Reason</label>
+            <p class="vp-detail-note vp-detail-note--danger">{{ viewingLeave.rejection_reason || '--' }}</p>
+          </div>
+          <a
+            v-if="viewingLeave.attachment_url"
+            :href="viewingLeave.attachment_url"
+            target="_blank"
+            rel="noopener"
+            class="vp-btn-primary"
+            style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; margin-top: 10px;"
+          >
+            <iconify-icon icon="lucide:paperclip" /> View Attachment
+          </a>
+        </div>
+        <div class="vp-modal__footer">
+          <template v-if="viewingLeave.status === 'pending_parent' && (isTeamLead || isSuperAdmin) && viewingLeave.user_id !== user.id">
+            <button type="button" class="vp-btn-ghost" style="color:#dc2626;" :disabled="teamLeaveActingId === viewingLeave.id" @click="rejectTeamLeave(viewingLeave); showLeaveDetailModal = false">Reject</button>
+            <button type="button" class="vp-btn-primary" style="background:#16a34a;" :disabled="teamLeaveActingId === viewingLeave.id" @click="approveTeamLeave(viewingLeave); showLeaveDetailModal = false">Approve</button>
+          </template>
+          <button v-else type="button" class="vp-btn-primary" @click="showLeaveDetailModal = false">Close</button>
+        </div>
+      </div>
+    </div>
     <!-- Asset Request Modal -->
     <div v-if="showAssetRequestModal" class="vp-modal-overlay" @click.self="showAssetRequestModal = false">
       <div class="vp-modal vp-modal--form vp-modal--wide">
@@ -969,6 +1137,32 @@
           <button type="button" class="vp-btn-primary" :disabled="leaveRequestSaving" @click="submitLeaveRequest">
             {{ leaveRequestSaving ? 'Submitting...' : 'Submit Request' }}
           </button>
+        </div>
+      </div>
+    </div>
+    <!-- Announcement Detail Modal -->
+    <div v-if="showAnnouncementModal && viewingAnnouncement" class="vp-modal-overlay" @click.self="showAnnouncementModal = false">
+      <div class="vp-modal vp-modal--form">
+        <div class="vp-modal__head">
+          <div class="vp-modal__head-copy">
+            <span class="vp-modal__badge"><iconify-icon icon="lucide:megaphone" /></span>
+            <div>
+              <h4>{{ viewingAnnouncement.title }}</h4>
+              <p>{{ formatDate(viewingAnnouncement.start_date || viewingAnnouncement.created_at) }}</p>
+            </div>
+          </div>
+          <button type="button" class="vp-modal__close" @click="showAnnouncementModal = false"><iconify-icon icon="lucide:x" /></button>
+        </div>
+        <div class="vp-modal__body">
+          <p style="white-space: pre-wrap; line-height: 1.6;">{{ viewingAnnouncement.description || 'No description provided.' }}</p>
+          <div class="vp-announcement-card__meta" style="margin-top: 12px;">
+            <span v-if="viewingAnnouncement.branch?.name"><iconify-icon icon="lucide:map-pin" /> {{ viewingAnnouncement.branch.name }}</span>
+            <span v-if="viewingAnnouncement.department?.name"><iconify-icon icon="lucide:building-2" /> {{ viewingAnnouncement.department.name }}</span>
+            <span v-if="viewingAnnouncement.end_date"><iconify-icon icon="lucide:calendar-x" /> Ends {{ formatDateShort(viewingAnnouncement.end_date) }}</span>
+          </div>
+        </div>
+        <div class="vp-modal__footer">
+          <button type="button" class="vp-btn-primary" @click="showAnnouncementModal = false">Close</button>
         </div>
       </div>
     </div>
@@ -1120,22 +1314,21 @@ export default {
     
     const formatDate = (dateString) => {
       if (!dateString) return 'N/A';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      const datePart = String(dateString).slice(0, 10);
+      const [year, month, day] = datePart.split('-').map(Number);
+      if (!year || !month || !day) return String(dateString);
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      return `${months[month - 1]} ${day}, ${year}`;
     };
 
     const formatDateShort = (dateString) => {
-      if (!dateString) return '—';
-      const date = new Date(dateString);
-      if (Number.isNaN(date.getTime())) return String(dateString);
-      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    };
+        if (!dateString) return '—';
+        const datePart = String(dateString).slice(0, 10); // "2026-08-17" — grab YYYY-MM-DD before any timezone conversion happens
+        const [year, month, day] = datePart.split('-').map(Number);
+        if (!year || !month || !day) return String(dateString);
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${String(day).padStart(2, '0')} ${months[month - 1]} ${year}`;
+      };
 
     const formatStatusLabel = (status) => {
       if (!status) return '—';
@@ -1569,12 +1762,17 @@ export default {
           )
         }
       }
+      if (n.type === 'announcement') {
+        loadMyAnnouncements() // always refresh, badge should update even off-tab
+        showNotification(n.message || 'New announcement posted', 'info')
+      }
     }
 
 onMounted(() => {
   loadUserData()
   loadVacationData()
   loadAttendanceStatus()
+  loadMyAnnouncements() 
   window.addEventListener('app-notification', handleAppNotification)
 })
 
@@ -2069,7 +2267,87 @@ const rejectTeamLeave = async (lv) => {
     teamLeaveActingId.value = null;
   }
 };
+// ===== Announcements =====
+const myAnnouncements = ref([]);
+const announcementsLoading = ref(false);
+const announcementSearch = ref('');
+const showAnnouncementModal = ref(false);
+const viewingAnnouncement = ref(null);
 
+const unreadAnnouncementsCount = computed(() =>
+  myAnnouncements.value.filter((a) => !a.is_viewed).length
+);
+
+const filteredAnnouncements = computed(() => {
+  const query = announcementSearch.value.trim().toLowerCase();
+  if (!query) return myAnnouncements.value;
+  return myAnnouncements.value.filter((a) =>
+    [a.title, a.description].some((value) => String(value || '').toLowerCase().includes(query)),
+  );
+});
+
+const loadMyAnnouncements = async () => {
+  announcementsLoading.value = true;
+  try {
+    const res = await api.get('/announcements/active');
+    const payload = res.data?.data;
+    myAnnouncements.value = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : []);
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load announcements', 'error');
+    myAnnouncements.value = [];
+  } finally {
+    announcementsLoading.value = false;
+  }
+};
+
+const openAnnouncement = async (item) => {
+  viewingAnnouncement.value = item;
+  showAnnouncementModal.value = true;
+  if (!item.is_viewed) {
+    try {
+      // GET /announcements/{id} marks it as viewed server-side (per AnnouncementController::show)
+      const res = await api.get(`/announcements/${item.id}`);
+      const updated = res.data?.data;
+      const idx = myAnnouncements.value.findIndex((a) => a.id === item.id);
+      if (idx !== -1) {
+        myAnnouncements.value[idx] = { ...myAnnouncements.value[idx], is_viewed: true };
+      }
+      if (updated) viewingAnnouncement.value = updated;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+};
+
+const markAllAnnouncementsRead = async () => {
+  try {
+    await api.post('/announcements/mark-all-read');
+    myAnnouncements.value = myAnnouncements.value.map((a) => ({ ...a, is_viewed: true }));
+    showNotification('All announcements marked as read', 'success');
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to mark as read', 'error');
+  }
+};
+
+
+// ===== Document Detail Modal =====
+const showDocumentDetailModal = ref(false);
+const viewingDocument = ref(null);
+
+const openDocumentDetail = (doc) => {
+  viewingDocument.value = doc;
+  showDocumentDetailModal.value = true;
+};
+
+// ===== Leave Detail Modal =====
+const showLeaveDetailModal = ref(false);
+const viewingLeave = ref(null);
+
+const openLeaveDetail = (lv) => {
+  viewingLeave.value = lv;
+  showLeaveDetailModal.value = true;
+};
     return {
       user,
       activeTab,
@@ -2132,6 +2410,12 @@ const rejectTeamLeave = async (lv) => {
       teamLeaveRequests, teamLeaveLoading, teamLeaveSearch, teamLeaveActingId, teamLeavePendingCount,
       teamLeaveStats, teamLeaveStatusFilter,
       filteredTeamLeaveRequests, loadTeamLeaveRequests, approveTeamLeave, rejectTeamLeave,
+
+      myAnnouncements, announcementsLoading, announcementSearch, showAnnouncementModal, viewingAnnouncement,    
+      unreadAnnouncementsCount, filteredAnnouncements, loadMyAnnouncements, openAnnouncement, markAllAnnouncementsRead,
+
+      showDocumentDetailModal, viewingDocument, openDocumentDetail,
+      showLeaveDetailModal, viewingLeave, openLeaveDetail,
     };
   }
 };
@@ -2184,4 +2468,40 @@ const rejectTeamLeave = async (lv) => {
   padding: 5px 12px; font-size: 12px; color: #6b7280; cursor: pointer;
 }
 .vp-chip.is-active { background: #0b0736; border-color: #0b0736; color: #fff; }
+
+.vp-announcement-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.vp-announcement-card {
+  border: 1px solid #edf1f6; border-radius: 12px; padding: 14px 16px;
+  background: #fff; cursor: pointer; transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.vp-announcement-card:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.08); }
+.vp-announcement-card.is-unread { border-color: #0b0736; background: #f8f7ff; }
+.vp-announcement-card__top {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.vp-announcement-card__top strong { font-size: 14px; color: #0b0736; flex: 1; }
+.vp-announcement-card__date { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+.vp-unread-dot {
+  width: 8px; height: 8px; border-radius: 999px; background: #dc2626; flex-shrink: 0;
+}
+.vp-announcement-card__desc {
+  margin: 0 0 8px; font-size: 13px; color: #4b5563; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.vp-announcement-card__meta {
+  display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #9ca3af;
+}
+.vp-announcement-card__meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+.vp-detail-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px;
+}
+.vp-detail-grid p { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.vp-detail-grid p span { font-size: 11px; color: #9ca3af; }
+.vp-detail-grid p strong { font-size: 13px; color: #0b0736; font-weight: 600; }
+.vp-detail-note {
+  margin: 4px 0 0; font-size: 13px; color: #4b5563; line-height: 1.5;
+  background: #f8fafc; border: 1px solid #edf1f6; border-radius: 8px; padding: 10px 12px;
+}
+.vp-detail-note--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 </style>

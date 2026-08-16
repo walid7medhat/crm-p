@@ -28,7 +28,7 @@
       </button>
     </div>
 
-    <div class="emp-mgmt__toolbar">
+    <!-- <div class="emp-mgmt__toolbar">
       <div class="emp-mgmt__search-row">
         <div class="emp-mgmt__search">
           <iconify-icon icon="lucide:search" class="emp-mgmt__search-icon" />
@@ -81,7 +81,7 @@
           <button type="button" class="emp-filter-sheet__apply" style="min-height:40px;padding:0 20px;border-radius:10px;border:none;" @click="onApplyFilters">Apply</button>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <div v-if="loading" class="emp-mgmt__grid ast-grid">
       <div v-for="n in 6" :key="n" class="emp-skeleton" />
