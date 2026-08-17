@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
+use App\Http\Controllers\Api\AgentPerformanceReportController;
 use App\Http\Controllers\Api\AltCRMLeadController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
@@ -717,6 +718,7 @@ Route::prefix('leads')->group(function(){
             Route::get('/users/{userId}', [ReportController::class, 'singleUserReport']);
             Route::get('/months', [ReportController::class, 'getMonthOptions']);
             Route::get('/years', [ReportController::class, 'getYearOptions']);
+            Route::get('/agent-performance',[AgentPerformanceReportController::class,'agentPerformance']);
         });
 });
   // =================sources=============

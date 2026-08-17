@@ -855,6 +855,7 @@ const settingsSidebarSections = computed(() => {
   }
   if (isSuperAdmin.value) {
     system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });
+     system.push({ path: '/agent-performance', label: 'Agent Performance', icon: 'lucide:coins' });
       system.push({ path: '/import-pitrix', label: 'Import Leads', icon: 'lucide:cloud-download' });
     system.push({ path: '/sync-bitrix-leads', label: 'Sync Leads', icon: 'lucide:refresh-cw' });
     system.push({ path: '/sync-responsible', label: 'Sync Responsible', icon: 'lucide:user-check' });

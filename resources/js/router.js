@@ -116,6 +116,8 @@ import DealCostSettings from './pages/settings/DealCostSettings.vue';
 
 
 import AttendanceMonthlyReport   from './pages/hr/attendance-monthly-reports.vue'
+
+import agentPerformance from './components/lead-reports/AgentPerformanceReport.vue'
 const baseRoutes = [
     { path: '/settings/deal-costs', component: DealCostSettings, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
@@ -154,6 +156,7 @@ const baseRoutes = [
   { path: '/settings/background', component: () => import('./pages/settings/background.vue'), meta: { requiresAuth: true } },
 
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/agent-performance', component: agentPerformance, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
   { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
