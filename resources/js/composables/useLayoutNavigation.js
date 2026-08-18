@@ -118,6 +118,7 @@ const SETTINGS_PREFIXES = [
   '/roles',
   '/add-role',
   '/lead-reports',
+  '/agent-performance',
   '/sales-intelligence',
   '/investment-analysis',
   '/settings',
@@ -287,7 +288,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
         label: 'System & Logs',
         type: 'route',
         path: '/system-overview',
-        matchPaths: ['/system-overview', '/logs', '/attendance-monthly-reports', '/project-map', '/import-pitrix', '/area-coordinates'],
+        matchPaths: ['/system-overview', '/logs', '/agent-performance', '/attendance-monthly-reports', '/project-map', '/import-pitrix', '/area-coordinates'],
       });
     }
 

@@ -196,8 +196,9 @@ class AssetController extends Controller
     {
         try {
             $asset = Asset::with([
-                'assetType', 
-                'branch', 
+                'assetType',
+                'branch',
+                'department',
                 'currentAssignment',
                 'currentAssignment.user',
                 'currentUser',

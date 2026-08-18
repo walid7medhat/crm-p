@@ -28,66 +28,7 @@
       </button>
     </div>
 
-    <!-- <div class="emp-mgmt__toolbar">
-      <div class="emp-mgmt__search-row">
-        <div class="emp-mgmt__search">
-          <iconify-icon icon="lucide:search" class="emp-mgmt__search-icon" />
-          <input
-            v-model="searchQuery"
-            type="search"
-            placeholder="Search asset name, ID, serial, employee, category…"
-            autocomplete="off"
-          />
-        </div>
-        <button type="button" class="emp-mgmt__toolbar-btn" @click="showFilters = !showFilters">
-          <iconify-icon icon="lucide:sliders-horizontal" />
-          <span v-if="!isMobile">Filters{{ activeFilterCount ? ` (${activeFilterCount})` : '' }}</span>
-        </button>
-        <button v-if="!isMobile" type="button" class="emp-mgmt__toolbar-btn" @click="exportList">
-          <iconify-icon icon="lucide:download" />
-          <span>Export</span>
-        </button>
-        <button v-if="!isMobile" type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="openCreate">
-          <iconify-icon icon="lucide:plus" />
-          <span>Add Asset</span>
-        </button>
-      </div>
-
-      <div class="emp-mgmt__chips">
-        <button
-          v-for="chip in quickChips"
-          :key="chip.key + chip.value"
-          type="button"
-          class="emp-mgmt__chip"
-          :class="{ 'is-active': filters[chip.key] === chip.value }"
-          @click="toggleChip(chip.key, chip.value)"
-        >
-          {{ chip.label }}
-        </button>
-        <button v-if="hasActiveFilters" type="button" class="emp-mgmt__chip emp-mgmt__chip--clear" @click="onClearFilters">
-          Clear all
-        </button>
-      </div>
-
-      <div v-if="showFilters && !isMobile" class="emp-filter-desktop">
-        <AssetsFilterFields
-          v-model="localFilters"
-          :asset-types="assetTypes"
-          :departments="departments"
-          :employees="employees"
-        />
-        <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;">
-          <button type="button" class="emp-filter-sheet__clear" style="min-height:40px;padding:0 16px;border-radius:10px;" @click="onClearFilters">Clear</button>
-          <button type="button" class="emp-filter-sheet__apply" style="min-height:40px;padding:0 20px;border-radius:10px;border:none;" @click="onApplyFilters">Apply</button>
-        </div>
-      </div>
-    </div> -->
-
-    <div v-if="loading" class="emp-mgmt__grid ast-grid">
-      <div v-for="n in 6" :key="n" class="emp-skeleton" />
-    </div>
-
-    <div v-else-if="error" class="emp-error">
+    <div v-if="error" class="emp-error">
       <div class="emp-error__icon"><iconify-icon icon="lucide:alert-circle" /></div>
       <h6>Could not load assets</h6>
       <p>{{ error }}</p>
@@ -95,28 +36,36 @@
     </div>
 
     <template v-else-if="activeView === 'inventory'">
-      <div v-if="!filteredAssets.length" class="emp-empty">
-        <div class="emp-empty__icon"><iconify-icon icon="lucide:package" /></div>
-        <h6>No assets found</h6>
-        <p>{{ hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first asset to get started.' }}</p>
-        <button v-if="!hasActiveFilters" type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="openCreate">Add Asset</button>
+      <div v-if="loading && !assets.length" class="emp-directory-table emp-directory-table--loading">
+        <div v-for="n in 6" :key="n" class="emp-directory-table__skeleton" />
       </div>
-      <div v-else class="emp-mgmt__grid ast-grid">
-        <AssetCard
-          v-for="asset in filteredAssets"
-          :key="asset.id"
-          :asset="asset"
-          @view="onView"
-          @assign="openAssign"
-          @maintenance="onMaintenance"
-          @edit="openEdit"
-        />
-      </div>
-      <div v-if="currentPage < lastPage" class="emp-load-more">
-        <button type="button" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? 'Loading…' : `Load more (${assets.length} of ${total})` }}
-        </button>
-      </div>
+      <AssetsTable
+        v-else
+        :assets="pagedAssets"
+        v-model:page="tablePage"
+        v-model:per-page="perPage"
+        v-model:selected-ids="selectedIds"
+        v-model:search-query="searchQuery"
+        :filters="filters"
+        :asset-types="assetTypes"
+        :departments="departments"
+        :employees="employees"
+        :total="filteredAssets.length"
+        :total-pages="totalPages"
+        :start-entry="startEntry"
+        :end-entry="endEntry"
+        :pagination-items="paginationItems"
+        :has-active-filters="hasActiveFilters"
+        @export="exportList"
+        @apply-filters="onPopupSearch"
+        @clear-filters="onClearFilters"
+        @view="onView"
+        @edit="openEdit"
+        @assign="openAssign"
+        @add-another="openCreateForPerson"
+        @maintenance="onMaintenance"
+        @delete="confirmDelete"
+      />
     </template>
 
     <template v-else>
@@ -154,7 +103,7 @@
 
     <!-- ===== MODIFIED: Create/Edit Modal with full fields matching the external modal ===== -->
     <Teleport to="body">
-      <div v-if="showFormModal" class="edit-overlay add-employee-overlay" @click.self="closeFormModal">
+      <div v-if="showFormModal" class="rec-create-job-overlay add-employee-overlay" @click.self="closeFormModal">
         <div class="add-employee-modal asset-create-modal">
           <div class="add-employee-head">
             <h6>{{ editingId ? 'Edit Asset' : 'Create New Asset' }}</h6>
@@ -207,52 +156,18 @@
             <section class="add-employee-section">
               <h6>User Details</h6>
               <div class="add-grid-two">
-                <div ref="assetUserPickerRef" class="add-field asset-user-picker-field">
+                <div class="add-field">
                   <label>Asset User</label>
-                  <button type="button" class="asset-user-trigger" @click.stop="toggleAssetUserPicker">
-                    <span>{{ selectedAssetResponsiblePerson?.name || 'Not Selected' }}</span>
-                    <iconify-icon icon="lucide:chevron-down" />
-                  </button>
-                  <div v-if="showAssetUserPicker" class="asset-user-dropdown" @click.stop>
-                    <div class="asset-user-dropdown-head">
-                      <span>Person</span>
-                      <button type="button" class="asset-user-close-btn" @click="closeAssetUserPicker">
-                        <iconify-icon icon="lucide:x" />
-                      </button>
-                    </div>
-                    <div class="search-input-wrapper mb-2">
-                      <input v-model="assetUserSearchQuery" type="text" class="asset-user-search-input" placeholder="Search Responsible Person" />
-                      <iconify-icon icon="lucide:search" class="search-icon" />
-                    </div>
-                    <div class="asset-user-list-scroll">
-                      <button
-                        v-for="person in filteredAssetResponsiblePersons"
-                        :key="person.id"
-                        type="button"
-                        class="asset-user-item"
-                        :class="{ selected: Number(form.asset_user_id) === Number(person.id) }"
-                        @click="selectAssetResponsiblePerson(person)"
-                      >
-                        <img :src="person.avatar || defaultPersonAvatar" class="asset-user-avatar" alt="user avatar" />
-                        <div class="asset-user-info">
-                          <div class="asset-user-head">
-                            <span class="asset-user-name">{{ person.name }}</span>
-                            <span v-if="person.role_name" class="user-position-badge">{{ person.role_name }}</span>
-                          </div>
-                          <div class="user-item-meta-line">
-                            <span class="meta-value">{{ person.parent_name || person.team_lead_name || '—' }}</span>
-                            <span class="meta-divider">|</span>
-                            <span class="meta-value">{{ person.branch_name || person.office_name || '—' }}</span>
-                          </div>
-                        </div>
-                      </button>
-                      <div v-if="!filteredAssetResponsiblePersons.length" class="text-center text-muted py-2">No persons found</div>
-                    </div>
-                  </div>
+                  <SearchableSelect
+                    v-model="form.asset_user_id"
+                    :options="employeeOptions"
+                    placeholder="Select employee"
+                  />
+                  <p class="ast-form-hint">The same employee can hold multiple assets.</p>
                 </div>
                 <div class="add-field">
                   <label>Date Of Handover</label>
-                  <input :value="formatDateDisplay(form.handover_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.handover_date')" />
+                  <HrFancyDateField v-model="form.handover_date" placeholder="dd/mm/yyyy" />
                 </div>
                 <div class="add-field">
                   <label>Branch Location</label>
@@ -280,7 +195,7 @@
                 </div>
                 <div class="add-field">
                   <label>Date Of Return</label>
-                  <input :value="formatDateDisplay(form.return_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.return_date')" />
+                  <HrFancyDateField v-model="form.return_date" placeholder="dd/mm/yyyy" />
                 </div>
               </div>
             </section>
@@ -291,7 +206,7 @@
               <div class="add-grid-two">
                 <div class="add-field">
                   <label>Purchase Date *</label>
-                  <input :value="formatDateDisplay(form.purchase_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.purchase_date')" />
+                  <HrFancyDateField v-model="form.purchase_date" placeholder="dd/mm/yyyy" />
                 </div>
                 <div class="add-field">
                   <label>Supplier Name</label>
@@ -299,7 +214,7 @@
                 </div>
                 <div class="add-field">
                   <label>Warranty Date</label>
-                  <input :value="formatDateDisplay(form.warranty_date)" type="text" placeholder="-- / -- / --" readonly @click="openDatePicker('form.warranty_date')" />
+                  <HrFancyDateField v-model="form.warranty_date" placeholder="dd/mm/yyyy" />
                 </div>
                 <div class="add-field">
                   <label>Condition *</label>
@@ -327,6 +242,7 @@
                     <button type="button" class="asset-qty-btn" @click="decrementQty">-</button>
                     <button type="button" class="asset-qty-btn" @click="incrementQty">+</button>
                   </div>
+                  <p v-if="!editingId" class="ast-form-hint">Quantity creates separate assets. All can be assigned to the same person.</p>
                 </div>
               </div>
             </section>
@@ -342,32 +258,38 @@
       </div>
     </Teleport>
 
-    <!-- Assign / Transfer modal -->
     <Teleport to="body">
-      <div v-if="showAssignModal" class="ast-modal-overlay" @click.self="showAssignModal = false">
-        <div class="ast-modal">
-          <h6>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h6>
-          <p v-if="actionAsset">{{ actionAsset.name }} ({{ actionAsset.assetCode }})</p>
-          <div class="ast-form-grid">
-            <label>
-              Employee *
-              <select v-model="assignForm.user_id">
-                <option value="">Select employee</option>
-                <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }}</option>
-              </select>
-            </label>
-            <label>
-              Handover date *
-              <input v-model="assignForm.handover_date" type="date" />
-            </label>
-            <label class="ast-form-full">
-              Notes
-              <textarea v-model="assignForm.notes" rows="2" />
-            </label>
+      <div v-if="showAssignModal" class="rec-create-job-overlay" @click.self="showAssignModal = false">
+        <div class="rec-create-job-modal ast-assign-modal">
+          <div class="rec-create-job-modal__head">
+            <h6>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h6>
+            <button type="button" class="rec-create-job-modal__close" @click="showAssignModal = false">
+              <iconify-icon icon="lucide:x" />
+            </button>
           </div>
-          <div class="ast-modal__actions">
-            <button type="button" class="emp-filter-sheet__clear" @click="showAssignModal = false">Cancel</button>
-            <button type="button" class="emp-filter-sheet__apply" :disabled="saving" @click="confirmAssign">
+          <div class="rec-create-job-modal__body">
+            <p v-if="actionAsset" class="ast-assign-modal__asset">{{ actionAsset.name }} ({{ actionAsset.assetId || actionAsset.assetCode }})</p>
+            <p class="ast-form-hint">You can assign more than one asset to the same employee.</p>
+            <section class="rec-create-job-panel">
+              <div class="rec-create-job-grid">
+                <div class="rec-create-job-field">
+                  <label>Employee <em>*</em></label>
+                  <SearchableSelect v-model="assignForm.user_id" :options="employeeOptions" placeholder="Select employee" />
+                </div>
+                <div class="rec-create-job-field">
+                  <label>Handover date <em>*</em></label>
+                  <HrFancyDateField v-model="assignForm.handover_date" placeholder="dd/mm/yyyy" />
+                </div>
+                <div class="rec-create-job-field rec-create-job-field--full">
+                  <label>Notes</label>
+                  <textarea v-model="assignForm.notes" rows="2" placeholder="Optional notes" />
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="rec-create-job-modal__footer">
+            <button type="button" class="rec-create-job-clear" @click="showAssignModal = false">Cancel</button>
+            <button type="button" class="rec-create-job-confirm" :disabled="saving" @click="confirmAssign">
               {{ saving ? 'Saving…' : 'Confirm' }}
             </button>
           </div>
@@ -407,11 +329,12 @@ import {
   updateAssetAssignment
 } from '@/services/assetsApi'
 import { fetchDepartments, fetchBranches } from '@/services/employeesApi'
-import AssetCard from '@/components/hr/assets/AssetCard.vue'
+import AssetsTable from '@/components/hr/assets/AssetsTable.vue'
 import AssetsFilterFields from '@/components/hr/assets/AssetsFilterFields.vue'
 import AssetTrackingPanel from '@/components/hr/assets/AssetTrackingPanel.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
+import HrFancyDateField from '@/components/hr/shared/HrFancyDateField.vue'
 
 defineProps({
   embedded: { type: Boolean, default: true },
@@ -421,6 +344,9 @@ const router = useRouter()
 const isMobile = ref(false)
 const showFilters = ref(false)
 const activeView = ref('inventory')
+const tablePage = ref(1)
+const perPage = ref(10)
+const selectedIds = ref([])
 const localFilters = ref({})
 const showFormModal = ref(false)
 const showAssignModal = ref(false)
@@ -520,6 +446,45 @@ const {
   clearFilters,
 } = useAssetsManagement()
 
+const employeeOptions = computed(() =>
+  (employees.value || []).map((item) => ({ value: item.id, label: item.name || item.email || `#${item.id}` })),
+)
+
+const totalPages = computed(() => Math.max(1, Math.ceil((filteredAssets.value?.length || 0) / perPage.value)))
+const startEntry = computed(() => (filteredAssets.value?.length ? (tablePage.value - 1) * perPage.value + 1 : 0))
+const endEntry = computed(() => Math.min(tablePage.value * perPage.value, filteredAssets.value?.length || 0))
+const pagedAssets = computed(() => {
+  const start = (tablePage.value - 1) * perPage.value
+  return (filteredAssets.value || []).slice(start, start + perPage.value)
+})
+const paginationItems = computed(() => {
+  const total = totalPages.value
+  const current = tablePage.value
+  if (total <= 1) return [{ type: 'page', n: 1 }]
+  if (total <= 7) return Array.from({ length: total }, (_, i) => ({ type: 'page', n: i + 1 }))
+  const items = []
+  const pushDots = () => {
+    if (items.length && items[items.length - 1].type === 'dots') return
+    items.push({ type: 'dots' })
+  }
+  items.push({ type: 'page', n: 1 })
+  const left = Math.max(2, current - 1)
+  const right = Math.min(total - 1, current + 1)
+  if (left > 2) pushDots()
+  for (let i = left; i <= right; i += 1) items.push({ type: 'page', n: i })
+  if (right < total - 1) pushDots()
+  items.push({ type: 'page', n: total })
+  return items
+})
+
+watch(() => filteredAssets.value?.length, () => {
+  if (tablePage.value > totalPages.value) tablePage.value = 1
+})
+
+watch(() => form.value.asset_user_id, (id) => {
+  if (id && form.value.status === 'available') form.value.status = 'assigned'
+})
+
 // ===== Computed =====
 const selectedAssetResponsiblePerson = computed(() =>
   assetResponsiblePersons.value.find((person) => Number(person.id) === Number(form.value.asset_user_id)) || null,
@@ -618,6 +583,20 @@ function toggleChip(key, value) {
   loadAssets(true)
 }
 
+function onPopupSearch(payload) {
+  searchQuery.value = payload.search || ''
+  filters.value = {
+    ...filters.value,
+    asset_type_id: payload.asset_type_id || '',
+    status: payload.status || '',
+    department_id: payload.department_id || '',
+    user_id: payload.user_id || '',
+    purchase_date_from: payload.purchase_date_from || '',
+  }
+  tablePage.value = 1
+  loadAssets(true)
+}
+
 function onApplyFilters() {
   filters.value = { ...localFilters.value }
   showFilters.value = false
@@ -634,6 +613,7 @@ function onClearFilters() {
     purchase_date_to: '',
     warranty_status: '',
   }
+  tablePage.value = 1
   clearFilters()
   showFilters.value = false
 }
@@ -642,11 +622,19 @@ function onView(asset) {
   router.push(`/hr/assets/${asset.id}`)
 }
 
-function openCreate() {
+function openCreate(prefill = {}) {
   editingId.value = null
-  form.value = defaultForm()
+  form.value = { ...defaultForm(), ...prefill }
   showFormModal.value = true
-  fetchAssetResponsiblePersons()
+}
+
+function openCreateForPerson(asset) {
+  openCreate({
+    asset_user_id: asset?.assignedUserId || '',
+    department_id: asset?.departmentId || '',
+    branch_id: asset?.branchId || '',
+    status: asset?.assignedUserId ? 'assigned' : 'available',
+  })
 }
 
 function openEdit(asset) {
@@ -740,13 +728,61 @@ function openEdit(asset) {
     actionAsset.value = asset
 
     showFormModal.value = true
-    fetchAssetResponsiblePersons()
 }
 
 function closeFormModal() {
   showFormModal.value = false
   editingId.value = null
   closeAssetUserPicker()
+}
+
+async function syncAssignment(assetId, isCreate = false) {
+  if (!form.value.asset_user_id || !assetId) return
+
+  const selectedUserId = Number(form.value.asset_user_id)
+  const handoverDate = form.value.handover_date || new Date().toISOString().slice(0, 10)
+  const returnDate = form.value.return_date || null
+  const notes = form.value.remarks || (isCreate ? 'Assigned during creation' : 'Assigned during edit')
+  const currentUserId =
+    actionAsset.value?.currentAssignment?.user_id ||
+    actionAsset.value?.current_assignment?.user_id ||
+    actionAsset.value?.current_user?.id ||
+    actionAsset.value?.currentUser?.id ||
+    actionAsset.value?.assignedUserId ||
+    actionAsset.value?.assetUserId ||
+    null
+  const currentAssignment =
+    actionAsset.value?.current_assignment ||
+    actionAsset.value?.currentAssignment ||
+    null
+
+  if (isCreate || !currentUserId) {
+    await assignAsset(assetId, {
+      user_id: selectedUserId,
+      handover_date: handoverDate,
+      return_date: returnDate,
+      notes,
+    })
+    return
+  }
+
+  if (Number(currentUserId) !== selectedUserId) {
+    await transferAsset(assetId, {
+      user_id: selectedUserId,
+      handover_date: handoverDate,
+      return_date: returnDate,
+      notes: form.value.remarks || 'Transferred during edit',
+    })
+    return
+  }
+
+  if (currentAssignment?.id) {
+    await updateAssetAssignment(currentAssignment.id, {
+      handover_date: handoverDate,
+      return_date: returnDate,
+      notes: form.value.remarks || null,
+    })
+  }
 }
 
 async function saveAsset() {
@@ -817,8 +853,7 @@ async function saveAsset() {
             supplier_name:
                 form.value.supplier_name || null,
 
-            quantity:
-                Number(form.value.quantity) || 1,
+            quantity: editingId.value ? (Number(form.value.quantity) || 1) : 1,
 
             condition:
                 form.value.condition || 'new',
@@ -836,146 +871,16 @@ async function saveAsset() {
         let result
 
         if (editingId.value) {
-
-            // EDIT ASSET
-            result = await updateAsset(
-                editingId.value,
-                payload
-            )
-
+            result = await updateAsset(editingId.value, payload)
+            await syncAssignment(result?.id || editingId.value)
         } else {
-
-            // CREATE ASSET
-            result = await createAsset(payload)
-        }
-
-
-        // ==========================================
-        // 2. ASSIGNMENT
-        // ==========================================
-
-        if (form.value.asset_user_id) {
-
-            const selectedUserId =
-                Number(form.value.asset_user_id)
-
-            const currentAssignment =
-                actionAsset.value?.current_assignment ||
-                actionAsset.value?.currentAssignment ||
-                null
-
-           
-              const currentUserId =
-                actionAsset.value?.currentAssignment?.user_id ||
-                actionAsset.value?.current_assignment?.user_id ||
-                actionAsset.value?.current_user?.id ||
-                actionAsset.value?.currentUser?.id ||
-                actionAsset.value?.assignedUserId ||
-                actionAsset.value?.assetUserId ||
-                null
-
-
-            // ==========================================
-            // DATES
-            // ==========================================
-
-            const handoverDate =
-                form.value.handover_date ||
-                new Date().toISOString().slice(0, 10)
-
-            const returnDate =
-                form.value.return_date || null
-
-
-            // ==========================================
-            // CASE 1: CREATE NEW ASSET
-            // ==========================================
-
-            if (!editingId.value) {
-
-                await assignAsset(result.id, {
-                    user_id: selectedUserId,
-
-                    handover_date: handoverDate,
-
-                    return_date: returnDate,
-
-                    notes:
-                        form.value.remarks ||
-                        'Assigned during creation',
-                })
+            const copies = Math.max(1, Number(form.value.quantity) || 1)
+            let lastResult = null
+            for (let i = 0; i < copies; i += 1) {
+                lastResult = await createAsset(payload)
+                await syncAssignment(lastResult.id, true)
             }
-
-
-            // ==========================================
-            // CASE 2: EDIT
-            // ASSET WAS NOT ASSIGNED BEFORE
-            // ==========================================
-
-            else if (!currentUserId) {
-
-                await assignAsset(editingId.value, {
-                    user_id: selectedUserId,
-
-                    handover_date: handoverDate,
-
-                    return_date: returnDate,
-
-                    notes:
-                        form.value.remarks ||
-                        'Assigned during edit',
-                })
-            }
-
-
-            // ==========================================
-            // CASE 3: EDIT
-            // USER CHANGED
-            // ==========================================
-
-            else if (
-                Number(currentUserId) !== selectedUserId
-            ) {
-
-                await transferAsset(editingId.value, {
-                    user_id: selectedUserId,
-
-                    handover_date: handoverDate,
-
-                    return_date: returnDate,
-
-                    notes:
-                        form.value.remarks ||
-                        'Transferred during edit',
-                })
-            }
-
-
-            // ==========================================
-            // CASE 4: EDIT
-            // SAME USER
-            // ==========================================
-
-            else {
-
-                if (currentAssignment?.id) {
-
-                    await updateAssetAssignment(
-                        currentAssignment.id,
-                        {
-                            handover_date:
-                                handoverDate,
-
-                            return_date:
-                                returnDate,
-
-                            notes:
-                                form.value.remarks ||
-                                null,
-                        }
-                    )
-                }
-            }
+            result = lastResult
         }
 
 
@@ -985,7 +890,9 @@ async function saveAsset() {
 
         await Swal.fire({
             icon: 'success',
-            title: 'Saved',
+            title: editingId.value
+              ? 'Asset updated'
+              : (Number(form.value.quantity) > 1 ? `${form.value.quantity} assets created` : 'Asset created'),
             timer: 1600,
             showConfirmButton: false,
             toast: true,
@@ -1020,9 +927,9 @@ async function saveAsset() {
 }
 function openAssign(asset, mode = 'assign') {
   actionAsset.value = asset
-  assignMode.value = mode
+  assignMode.value = asset?.status === 'assigned' || asset?.assignedUserId ? 'transfer' : mode
   assignForm.value = {
-    user_id: '',
+    user_id: asset?.assignedUserId || '',
     handover_date: new Date().toISOString().slice(0, 10),
     notes: '',
   }
@@ -1074,6 +981,24 @@ async function confirmAssign() {
     })
   } finally {
     saving.value = false
+  }
+}
+
+async function confirmDelete(asset) {
+  const result = await Swal.fire({
+    title: 'Delete this asset?',
+    text: asset?.name || '',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+  })
+  if (!result.isConfirmed) return
+  try {
+    await deleteAsset(asset.id)
+    Swal.fire({ icon: 'success', title: 'Asset deleted', timer: 1400, showConfirmButton: false, toast: true, position: 'top-end' })
+    await loadAssets(true)
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Failed to delete', text: e?.response?.data?.message || e?.message })
   }
 }
 
@@ -1230,7 +1155,6 @@ onMounted(async () => {
   window.addEventListener('resize', syncMobile)
   
   await loadOptions()
-  await fetchAssetResponsiblePersons()
   await loadAssets(true)
 })
 

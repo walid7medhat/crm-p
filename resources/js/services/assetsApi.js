@@ -45,6 +45,18 @@ function unwrapPaginated(payload) {
   }
 }
 
+function relationName(value, fallback = '—') {
+  if (value == null || value === '') return fallback
+  if (typeof value === 'string' || typeof value === 'number') {
+    const text = String(value).trim()
+    return text || fallback
+  }
+  if (typeof value === 'object') {
+    return value.name || value.title || value.code || fallback
+  }
+  return fallback
+}
+
 export function resolveWarrantyStatus(warrantyDate) {
   if (!warrantyDate) {
     return { key: 'none', label: 'No warranty' }
@@ -70,52 +82,61 @@ export function normalizeAsset(row) {
 
   const status = row.status || 'available'
   const condition = row.condition || 'new'
+  const assetType = row.asset_type || row.assetType
+  const currentUser = row.current_user || row.currentUser
+  const currentAssignment = row.current_assignment || row.currentAssignment
+  const assignments = Array.isArray(row.assignments) ? row.assignments : []
+  const histories = Array.isArray(row.histories) ? row.histories : []
 
   return {
-  id: row.id,
-  name: row.name || '—',
-  assetId: row.asset_code || `AST-${String(row.id).padStart(3, '0')}`,
-  serialNumber: row.serial_number || '—',
-  modelNumber: row.model_number || '—',
-  rdpNumber: row.rdp_number || '—',
+    id: row.id,
+    name: row.name || '—',
+    assetId: row.asset_code || `AST-${String(row.id).padStart(3, '0')}`,
+    serialNumber: row.serial_number || '—',
+    modelNumber: row.model_number || '—',
+    rdpNumber: row.rdp_number || '—',
 
-  category: row.asset_type?.name || '—',
-  assetTypeId: row.asset_type_id || row.asset_type?.id || null,
+    category: relationName(assetType),
+    assetTypeId: row.asset_type_id || assetType?.id || null,
 
-  assignedEmployee: row.current_user?.name || '—',
-  assignedAvatar: row.current_user?.avatar || null,
-  assignedUserId:
-  row.current_user?.id ||
-  row.currentAssignment?.user_id ||
-  row.current_assignment?.user_id ||
-  row.user_id ||
-  null,
+    assignedEmployee: relationName(currentUser) !== '—'
+      ? relationName(currentUser)
+      : relationName(currentAssignment?.user),
+    assignedAvatar: currentUser?.avatar || currentAssignment?.user?.avatar || null,
+    assignedUserId:
+      currentUser?.id ||
+      currentAssignment?.user_id ||
+      currentAssignment?.user?.id ||
+      row.user_id ||
+      null,
 
-  currentAssignment: row.currentAssignment || row.current_assignment,
-  department: row.department?.name || '—',
-  departmentId: row.department_id || row.department?.id || null,
+    currentAssignment,
+    department: relationName(row.department),
+    departmentId: row.department_id || row.department?.id || null,
 
-  branch: row.branch?.name || '—',
-  branchId: row.branch_id || row.branch?.id || null,
+    branch: relationName(row.branch),
+    branchId: row.branch_id || row.branch?.id || null,
 
-  status,
-  statusLabel: row.status_label || STATUS_LABELS[status] || status,
-  condition,
-  conditionLabel: CONDITION_LABELS[condition] || condition,
+    status,
+    statusLabel: row.status_label || STATUS_LABELS[status] || status,
+    condition,
+    conditionLabel: CONDITION_LABELS[condition] || condition,
 
-  purchaseDate: row.purchase_date || null,
-  warrantyDate: row.warranty_date || null,
-  warrantyStatus: resolveWarrantyStatus(row.warranty_date),
+    purchaseDate: row.purchase_date || null,
+    warrantyDate: row.warranty_date || null,
+    warrantyStatus: resolveWarrantyStatus(row.warranty_date),
 
-  handoverDate: row.current_assignment?.handover_date || null,
-  supplierName: row.supplier_name || '—',
-  unitPrice: row.unit_price ?? null,
-  quantity: row.quantity ?? 1,
-  description: row.description || '',
-  remarks: row.remarks || '',
-  imageIcon: 'lucide:package',
-  raw: row,
-}
+    handoverDate: currentAssignment?.handover_date || null,
+    supplierName: row.supplier_name || '—',
+    unitPrice: row.unit_price ?? null,
+    quantity: row.quantity ?? 1,
+    description: row.description || '',
+    remarks: row.remarks || '',
+    imageIcon: 'lucide:package',
+    assignments,
+    histories,
+    raw: row,
+  }
 }
 export async function updateAssetAssignment(assetId, payload) {
     const response = await api.put(
@@ -524,12 +545,17 @@ export const buildActivityTimeline = (history = []) => {
         color = '#6b7280'
     }
 
+    const title = action.charAt(0).toUpperCase() + action.slice(1)
+    const detail = details || `${title} by ${user}`
+
     return {
       id: record.id || index,
       date,
-      action: action.charAt(0).toUpperCase() + action.slice(1),
+      action: title,
+      title,
       user,
-      details,
+      details: detail,
+      detail,
       type,
       icon,
       color,
@@ -639,11 +665,25 @@ export const exportAssetsCsv = async (params = {}) => {
 export const fetchAsset = async (id) => {
   try {
     const response = await api.get(`/assets/${id}`)
-    return response.data.data || response.data
+    return normalizeAsset(response.data.data || response.data)
   } catch (error) {
     console.error('Error fetching asset:', error)
     throw error
   }
+}
+
+export function timelineFromAsset(asset) {
+  const histories = asset?.histories || asset?.raw?.histories || []
+  return buildActivityTimeline(histories)
+}
+
+export function maintenanceFromAsset(asset) {
+  const histories = asset?.histories || asset?.raw?.histories || []
+  return histories.filter((record) => String(record.action || '').toLowerCase() === 'maintenance')
+}
+
+export function assignmentsFromAsset(asset) {
+  return asset?.assignments || asset?.raw?.assignments || []
 }
 
 const REQUEST_STATUS_LABELS = {

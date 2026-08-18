@@ -110,7 +110,7 @@ export function useAssetsManagement() {
   }
 
   function buildParams(page = 1) {
-    const params = { page, per_page: 50 }
+    const params = { page, per_page: 200 }
     if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
     Object.entries(filters.value).forEach(([key, value]) => {
       if (value !== '' && value != null) params[key] = value

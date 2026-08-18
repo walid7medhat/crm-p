@@ -1,7 +1,7 @@
 <template>
-  <div class="dashboard-main-body hr-screen ast-detail-page">
+  <div class="dashboard-main-body hr-screen ast-detail-page ast-mgmt">
     <div class="ast-detail">
-      <button type="button" class="emp-mgmt__toolbar-btn" style="margin-bottom:12px;" @click="goBack">
+      <button type="button" class="ast-detail__back" @click="goBack">
         <iconify-icon icon="lucide:arrow-left" />
         <span>Back to assets</span>
       </button>
@@ -21,12 +21,12 @@
             <iconify-icon :icon="asset.imageIcon || 'lucide:package'" />
           </div>
           <div class="ast-detail__hero-body">
-            <h6>{{ asset.name }}</h6>
-            <p>{{ asset.assetId }} · {{ asset.category }} · {{ asset.serialNumber }}</p>
+            <h6>{{ displayText(asset.name) }}</h6>
+            <p>{{ heroMeta }}</p>
             <div class="ast-detail__badges">
-              <span class="ast-card__badge" :class="`ast-card__badge--${asset.status}`">{{ asset.statusLabel }}</span>
+              <span class="ast-card__badge" :class="`ast-card__badge--${asset.status}`">{{ displayText(asset.statusLabel) }}</span>
               <span class="ast-detail__warranty" :class="`ast-detail__warranty--${asset.warrantyStatus?.key}`">
-                {{ asset.warrantyStatus?.label }}
+                {{ displayText(asset.warrantyStatus?.label) }}
               </span>
             </div>
           </div>
@@ -46,16 +46,18 @@
             <section class="ast-detail__section">
               <h6>Asset information</h6>
               <div class="ast-detail__grid">
-                <div><label>Asset ID</label><span>{{ asset.assetId }}</span></div>
-                <div><label>Category</label><span>{{ asset.category }}</span></div>
-                <div><label>Assigned employee</label><span>{{ asset.assignedEmployee }}</span></div>
-                <div><label>Department</label><span>{{ asset.department }}</span></div>
-                <div><label>Branch</label><span>{{ asset.branch }}</span></div>
-                <div><label>Condition</label><span>{{ asset.conditionLabel }}</span></div>
+                <div><label>Asset ID</label><span>{{ displayText(asset.assetId) }}</span></div>
+                <div><label>Category</label><span>{{ displayText(asset.category) }}</span></div>
+                <div><label>Assigned employee</label><span>{{ displayText(asset.assignedEmployee) }}</span></div>
+                <div><label>Department</label><span>{{ displayText(asset.department) }}</span></div>
+                <div><label>Branch</label><span>{{ displayText(asset.branch) }}</span></div>
+                <div><label>Condition</label><span>{{ displayText(asset.conditionLabel) }}</span></div>
+                <div><label>Serial number</label><span>{{ displayText(asset.serialNumber) }}</span></div>
+                <div><label>Model</label><span>{{ displayText(asset.modelNumber) }}</span></div>
                 <div><label>Purchase date</label><span>{{ formatDate(asset.purchaseDate) }}</span></div>
-                <div><label>Supplier</label><span>{{ asset.supplierName }}</span></div>
-                <div><label>Unit price</label><span>{{ asset.unitPrice ?? '—' }}</span></div>
-                <div><label>Quantity</label><span>{{ asset.quantity }}</span></div>
+                <div><label>Supplier</label><span>{{ displayText(asset.supplierName) }}</span></div>
+                <div><label>Unit price</label><span>{{ formatMoney(asset.unitPrice) }}</span></div>
+                <div><label>Quantity</label><span>{{ asset.quantity ?? '—' }}</span></div>
               </div>
             </section>
 
@@ -63,31 +65,8 @@
               <h6>Warranty information</h6>
               <div class="ast-detail__grid">
                 <div><label>Warranty end</label><span>{{ formatDate(asset.warrantyDate) }}</span></div>
-                <div><label>Status</label><span>{{ asset.warrantyStatus?.label }}</span></div>
+                <div><label>Status</label><span>{{ displayText(asset.warrantyStatus?.label) }}</span></div>
                 <div><label>Handover date</label><span>{{ formatDate(asset.handoverDate) }}</span></div>
-              </div>
-            </section>
-
-            <section class="ast-detail__section">
-              <h6>Assignment history</h6>
-              <div v-if="!assignments.length" class="ast-tracking__empty">No assignments recorded.</div>
-              <div v-else class="ast-detail__history">
-                <article v-for="item in assignments" :key="item.id">
-                  <strong>{{ item.user?.name || `User #${item.user_id}` }}</strong>
-                  <p>{{ formatDate(item.handover_date) }} → {{ item.return_date ? formatDate(item.return_date) : 'Present' }}</p>
-                </article>
-              </div>
-            </section>
-
-            <section class="ast-detail__section">
-              <h6>Maintenance records</h6>
-              <div v-if="!maintenanceRecords.length" class="ast-tracking__empty">No maintenance records.</div>
-              <div v-else class="ast-detail__history">
-                <article v-for="(item, idx) in maintenanceRecords" :key="`m-${idx}`">
-                  <strong>Maintenance</strong>
-                  <p>{{ item.details }}</p>
-                  <small>{{ formatDateTime(item.created_at) }}</small>
-                </article>
               </div>
             </section>
 
@@ -99,22 +78,10 @@
                 <p v-if="!asset.description && !asset.remarks" class="ast-tracking__empty">No documents attached.</p>
               </div>
             </section>
-
-            <section class="ast-detail__section">
-              <h6>Activity timeline</h6>
-              <div v-if="!timeline.length" class="ast-tracking__empty">No activity yet.</div>
-              <div v-else class="ast-detail__timeline">
-                <article v-for="item in timeline" :key="item.id">
-                  <span>{{ item.title }}</span>
-                  <p>{{ item.detail }}</p>
-                  <small>{{ formatDateTime(item.date) }}</small>
-                </article>
-              </div>
-            </section>
           </div>
 
           <aside class="ast-detail__side">
-            <AssetTrackingPanel :asset="asset" :warranty-alerts="[asset].filter(a => ['expired','expiring_soon'].includes(a.warrantyStatus?.key)).map(a => ({ id:a.id, name:a.name, assetId:a.assetId, warrantyDate:a.warrantyDate, status:a.warrantyStatus }))" />
+            <AssetTrackingPanel :asset="asset" :warranty-alerts="warrantyAlerts" />
           </aside>
         </div>
       </template>
@@ -198,8 +165,6 @@ import {
   returnAsset,
   markAssetMaintenance,
   deleteAsset,
-  buildActivityTimeline,
-  getMaintenanceRecords,
 } from '@/services/assetsApi'
 import { fetchAgentEmployees } from '@/services/hrApi'
 import AssetTrackingPanel from '@/components/hr/assets/AssetTrackingPanel.vue'
@@ -216,9 +181,26 @@ const assignMode = ref('assign')
 const assignForm = ref({ user_id: '', handover_date: '', notes: '' })
 const editForm = ref({ name: '', serial_number: '', status: '', condition: '', warranty_date: '', description: '' })
 
-const assignments = computed(() => asset.value?.raw?.assignments || asset.value?.assignments || [])
-const timeline = computed(() => (asset.value ? buildActivityTimeline(asset.value.raw || asset.value) : []))
-const maintenanceRecords = computed(() => (asset.value ? getMaintenanceRecords(asset.value.raw || asset.value) : []))
+const heroMeta = computed(() => {
+  if (!asset.value) return ''
+  return [asset.value.assetId, asset.value.category, asset.value.serialNumber]
+    .map((value) => displayText(value))
+    .filter((value) => value && value !== '—')
+    .join(' · ')
+})
+
+const warrantyAlerts = computed(() => {
+  if (!asset.value) return []
+  const status = asset.value.warrantyStatus
+  if (!status || !['expired', 'expiring_soon'].includes(status.key)) return []
+  return [{
+    id: asset.value.id,
+    name: asset.value.name,
+    assetId: asset.value.assetId,
+    warrantyDate: asset.value.warrantyDate,
+    status,
+  }]
+})
 
 async function load() {
   loading.value = true
@@ -233,7 +215,21 @@ async function load() {
 }
 
 function goBack() {
-  router.push('/hr')
+  if (window.history.length > 1) router.back()
+  else router.push('/hr')
+}
+
+function displayText(value) {
+  if (value == null || value === '') return '—'
+  if (typeof value === 'object') return value.name || value.title || value.code || '—'
+  return value
+}
+
+function formatMoney(value) {
+  if (value == null || value === '') return '—'
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return '—'
+  return `AED ${amount.toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function openAssign() {
@@ -310,7 +306,7 @@ async function onMaintenance() {
   })
   if (!result.isConfirmed) return
   try {
-    await markAssetMaintenance(asset.value.id, result.value || '')
+    await markAssetMaintenance(asset.value.id, { notes: result.value || '' })
     Swal.fire({ icon: 'success', title: 'Updated', timer: 1600, showConfirmButton: false, toast: true, position: 'top-end' })
     await load()
   } catch (e) {
@@ -338,16 +334,10 @@ async function onDelete() {
 
 function formatDate(value) {
   if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return value
+  const raw = typeof value === 'object' ? (value.date || value) : value
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return typeof raw === 'string' ? raw : '—'
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function formatDateTime(value) {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return value
-  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 onMounted(async () => {

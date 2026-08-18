@@ -4,10 +4,11 @@
       <h6><iconify-icon icon="lucide:history" /> Assignment history</h6>
       <div v-if="!assignments.length" class="ast-tracking__empty">No assignment history yet.</div>
       <div v-else class="ast-tracking__list">
-        <article v-for="item in assignments" :key="item.id" class="ast-tracking__item">
+        <article v-for="item in assignments" :key="item.id || `${item.user_id}-${item.handover_date}`" class="ast-tracking__item">
           <div class="ast-tracking__dot" />
           <div>
             <strong>{{ item.user?.name || `User #${item.user_id}` }}</strong>
+            <p v-if="item.assetName">{{ item.assetName }}</p>
             <p>{{ formatDate(item.handover_date) }} → {{ item.return_date ? formatDate(item.return_date) : 'Present' }}</p>
             <small>{{ item.status }}</small>
           </div>
@@ -50,10 +51,10 @@
           v-for="alert in warrantyAlerts"
           :key="alert.id"
           class="ast-tracking__alert"
-          :class="`ast-tracking__alert--${alert.status.key}`"
+          :class="`ast-tracking__alert--${alert.status?.key || alert.warrantyStatus?.key}`"
         >
           <strong>{{ alert.name }}</strong>
-          <p>{{ alert.assetId }} · {{ alert.status.label }}</p>
+          <p>{{ alert.assetId }} · {{ alert.status?.label || alert.warrantyStatus?.label }}</p>
           <small>{{ formatDate(alert.warrantyDate) }}</small>
         </article>
       </div>
@@ -63,7 +64,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { buildActivityTimeline, getMaintenanceRecords } from '@/services/assetsApi'
+import { timelineFromAsset, maintenanceFromAsset, assignmentsFromAsset } from '@/services/assetsApi'
 
 const props = defineProps({
   asset: { type: Object, default: null },
@@ -71,9 +72,25 @@ const props = defineProps({
   warrantyAlerts: { type: Array, default: () => [] },
 })
 
-const assignments = computed(() => props.asset?.assignments || props.asset?.raw?.assignments || [])
-const timeline = computed(() => (props.asset ? buildActivityTimeline(props.asset.raw || props.asset) : []))
-const maintenanceRecords = computed(() => (props.asset ? getMaintenanceRecords(props.asset.raw || props.asset) : []))
+const assignments = computed(() => {
+  if (props.asset) return assignmentsFromAsset(props.asset)
+  return (props.assets || []).flatMap((item) =>
+    assignmentsFromAsset(item).map((assignment) => ({
+      ...assignment,
+      assetName: item.name,
+    }))
+  )
+})
+
+const timeline = computed(() => {
+  if (props.asset) return timelineFromAsset(props.asset)
+  return (props.assets || []).flatMap((item) => timelineFromAsset(item))
+})
+
+const maintenanceRecords = computed(() => {
+  if (props.asset) return maintenanceFromAsset(props.asset)
+  return (props.assets || []).flatMap((item) => maintenanceFromAsset(item))
+})
 
 function formatDate(value) {
   if (!value) return '—'

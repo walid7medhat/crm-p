@@ -157,6 +157,20 @@
           </span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
+        <button
+          v-if="isSalesProfile"
+          type="button"
+          class="vp-nav__item"
+          :class="{ 'is-active': activeTab === 'sales-performance' }"
+          role="tab"
+          @click="activeTab = 'sales-performance'; loadSalesPerformance()"
+        >
+          <span class="vp-nav__left">
+            <iconify-icon icon="lucide:chart-column" />
+            Sales Performance
+          </span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
 
         <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
           <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> My Documents</span>
@@ -488,6 +502,99 @@
               </button>
             </div>
           </section>
+        </div>
+
+        <div v-if="activeTab === 'sales-performance'" class="vp-panel vp-hub">
+          <div class="vp-panel__head">
+            <div>
+              <h3 class="vp-panel__title">Sales Performance</h3>
+              <p class="vp-panel__subtitle">Converted deals, lead quality, deal value, and commission for this sales profile.</p>
+            </div>
+            <div class="vp-sales-toolbar">
+              <div class="vp-sales-date">
+                <label>From</label>
+                <input v-model="salesPerformanceFilters.from_date" type="date" @change="loadSalesPerformance" />
+              </div>
+              <div class="vp-sales-date">
+                <label>To</label>
+                <input v-model="salesPerformanceFilters.to_date" type="date" @change="loadSalesPerformance" />
+              </div>
+              <button type="button" class="vp-btn-primary vp-btn-primary--sm" :disabled="salesPerformanceLoading" @click="loadSalesPerformance">
+                <span v-if="salesPerformanceLoading">Refreshing...</span>
+                <span v-else>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="salesPerformanceError" class="vp-sales-state vp-sales-state--error">
+            {{ salesPerformanceError }}
+          </div>
+
+          <div class="vp-sales-kpis">
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Converted Deals</span>
+              <strong class="vp-sales-kpi__value">{{ salesPerformanceSummary.converted_count }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Avg Lead Score</span>
+              <strong class="vp-sales-kpi__value">{{ salesPerformanceSummary.avg_lead_score ?? '—' }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Deal Value</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(salesPerformanceSummary.total_amount) }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Commission</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(salesPerformanceSummary.total_commission) }}</strong>
+            </article>
+          </div>
+
+          <div class="vp-sales-card">
+            <div class="vp-sales-card__head">
+              <div>
+                <h4 class="vp-section-title vp-section-title--sm">Deal Performance</h4>
+                <p class="vp-panel__subtitle">Based on the existing agent performance report data.</p>
+              </div>
+            </div>
+
+            <div v-if="salesPerformanceLoading" class="vp-sales-state">Loading performance data...</div>
+            <div v-else-if="!salesPerformanceDeals.length" class="vp-sales-state">
+              No converted deals found in the selected date range.
+            </div>
+            <div v-else class="vp-sales-table-wrap">
+              <table class="vp-sales-table">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Deal #</th>
+                    <th>Location</th>
+                    <th class="is-right">Lead Score</th>
+                    <th class="is-right">Amount</th>
+                    <th class="is-right">Commission</th>
+                    <th>Converted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="deal in salesPerformanceDeals" :key="deal.deal_id">
+                    <td>{{ deal.lead_name || '—' }}</td>
+                    <td>{{ deal.deal_number || `#${deal.deal_id}` }}</td>
+                    <td>
+                      {{ deal.location || '—' }}
+                      <span v-if="deal.location_extra" class="vp-sales-location-extra">+{{ deal.location_extra }} more</span>
+                    </td>
+                    <td class="is-right">
+                      <span class="vp-sales-score" :class="scoreClass(deal.lead_score)">
+                        {{ deal.lead_score ?? '—' }}
+                      </span>
+                    </td>
+                    <td class="is-right">{{ formatCurrency(deal.deal_amount, deal.currency) }}</td>
+                    <td class="is-right is-accent">{{ formatCurrency(deal.commission, deal.currency) }}</td>
+                    <td>{{ formatDateShort(deal.converted_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
 
@@ -1374,6 +1481,9 @@ export default {
           return ['team_lead', 'team lead', 'manager'].includes(name);
         });
       });
+    const isSalesProfile = computed(() => {
+      return !!user.value?.id;
+    });
     const userInitials = computed(() => {
       const name = String(user.value?.name || 'U').trim();
       const parts = name.split(/\s+/).filter(Boolean);
@@ -1423,6 +1533,71 @@ export default {
       if (attendanceStatus.status === 'Not Checked In') return 'bg-warning text-dark';
       return 'bg-secondary text-white';
     });
+    const currentMonthRange = () => {
+      const now = new Date();
+      const toStr = (d) => d.toISOString().slice(0, 10);
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: toStr(firstOfMonth), to: toStr(now) };
+    };
+    const defaultSalesRange = currentMonthRange();
+    const salesPerformanceLoading = ref(false);
+    const salesPerformanceError = ref('');
+    const salesPerformanceDeals = ref([]);
+    const salesPerformanceSummary = reactive({
+      converted_count: 0,
+      total_amount: 0,
+      total_commission: 0,
+      avg_lead_score: null,
+    });
+    const salesPerformanceFilters = reactive({
+      from_date: defaultSalesRange.from,
+      to_date: defaultSalesRange.to,
+    });
+    const formatCurrency = (value, currency = 'AED') => {
+      if (value === null || value === undefined || value === '') return '—';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency || 'AED',
+        maximumFractionDigits: 0,
+      }).format(Number(value) || 0);
+    };
+    const scoreClass = (score) => {
+      if (score === null || score === undefined) return '';
+      if (Number(score) >= 70) return 'is-hot';
+      if (Number(score) >= 40) return 'is-warm';
+      return 'is-cold';
+    };
+    const loadSalesPerformance = async () => {
+      if (!user.value?.id) return;
+      salesPerformanceLoading.value = true;
+      salesPerformanceError.value = '';
+      try {
+        const { data } = await api.get('/leads/reports/agent-performance', {
+          params: {
+            from_date: salesPerformanceFilters.from_date,
+            to_date: salesPerformanceFilters.to_date,
+            agent_id: user.value.id,
+            status: 'completed',
+          },
+        });
+        const agentData = Array.isArray(data?.data) ? data.data[0] : null;
+        salesPerformanceDeals.value = Array.isArray(agentData?.deals) ? agentData.deals : [];
+        salesPerformanceSummary.converted_count = Number(agentData?.converted_count) || 0;
+        salesPerformanceSummary.total_amount = Number(agentData?.total_amount) || 0;
+        salesPerformanceSummary.total_commission = Number(agentData?.total_commission) || 0;
+        salesPerformanceSummary.avg_lead_score = agentData?.avg_lead_score ?? null;
+      } catch (error) {
+        console.error('Error loading sales performance:', error);
+        salesPerformanceDeals.value = [];
+        salesPerformanceSummary.converted_count = 0;
+        salesPerformanceSummary.total_amount = 0;
+        salesPerformanceSummary.total_commission = 0;
+        salesPerformanceSummary.avg_lead_score = null;
+        salesPerformanceError.value = error?.response?.data?.message || 'Failed to load sales performance.';
+      } finally {
+        salesPerformanceLoading.value = false;
+      }
+    };
     
     const currentPasswordVisible = ref(false);
     const newPasswordVisible = ref(false);
@@ -1791,6 +1966,11 @@ onBeforeUnmount(() => {
     watch(() => vacationData.active, (newVal) => {
       if (newVal && agentsList.value.length === 0) {
         loadAgents();
+      }
+    });
+    watch(activeTab, (value) => {
+      if (value === 'sales-performance' && isSalesProfile.value) {
+        loadSalesPerformance();
       }
     });
     
@@ -2370,6 +2550,7 @@ const openLeaveDetail = (lv) => {
       dayOptions,
       isSuperAdmin,
       isTeamLead,
+      isSalesProfile,
       userInitials,
       displayAvatar,
       isOnline,
@@ -2416,6 +2597,8 @@ const openLeaveDetail = (lv) => {
 
       showDocumentDetailModal, viewingDocument, openDocumentDetail,
       showLeaveDetailModal, viewingLeave, openLeaveDetail,
+      salesPerformanceLoading, salesPerformanceError, salesPerformanceDeals, salesPerformanceSummary,
+      salesPerformanceFilters, loadSalesPerformance, formatCurrency, scoreClass,
     };
   }
 };
@@ -2504,4 +2687,154 @@ const openLeaveDetail = (lv) => {
   background: #f8fafc; border: 1px solid #edf1f6; border-radius: 8px; padding: 10px 12px;
 }
 .vp-detail-note--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.vp-sales-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vp-sales-date {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.vp-sales-date label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.vp-sales-date input {
+  height: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0 10px;
+  color: #0b0736;
+}
+.vp-btn-primary--sm {
+  min-height: 40px;
+  padding: 0 16px;
+}
+.vp-sales-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.vp-sales-kpi {
+  border: 1px solid #edf1f6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px;
+}
+.vp-sales-kpi__label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+.vp-sales-kpi__value {
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #0b0736;
+}
+.vp-sales-card {
+  border: 1px solid #edf1f6;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+.vp-sales-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 0;
+}
+.vp-sales-state {
+  padding: 20px;
+  color: #6b7280;
+}
+.vp-sales-state--error {
+  margin-bottom: 14px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.vp-sales-table-wrap {
+  overflow-x: auto;
+  padding: 8px 20px 20px;
+}
+.vp-sales-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+.vp-sales-table th,
+.vp-sales-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #edf1f6;
+  font-size: 13px;
+  color: #0b0736;
+}
+.vp-sales-table th {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  font-weight: 700;
+}
+.vp-sales-table .is-right {
+  text-align: right;
+}
+.vp-sales-table .is-accent {
+  color: #166534;
+  font-weight: 700;
+}
+.vp-sales-score {
+  display: inline-block;
+  min-width: 36px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.vp-sales-score.is-hot {
+  background: #dcfce7;
+  color: #166534;
+}
+.vp-sales-score.is-warm {
+  background: #fef3c7;
+  color: #92400e;
+}
+.vp-sales-score.is-cold {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.vp-sales-location-extra {
+  margin-left: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+@media (max-width: 991px) {
+  .vp-sales-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .vp-sales-kpis {
+    grid-template-columns: 1fr;
+  }
+  .vp-sales-toolbar {
+    align-items: stretch;
+  }
+}
 </style>
