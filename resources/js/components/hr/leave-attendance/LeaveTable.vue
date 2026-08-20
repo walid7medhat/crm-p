@@ -1,15 +1,14 @@
 <template>
   <div class="la-attendance-table-wrap emp-directory-table">
     <div class="emp-directory-table__head">
-      <h6 class="emp-directory-table__title">Manage Leave</h6>
+      <h6 class="emp-directory-table__title">Manage Leaves</h6>
       <div class="emp-directory-table__head-actions">
         <div class="emp-directory-table__search-wrap" ref="searchWrapRef">
           <label class="emp-directory-table__search">
-            <span class="emp-directory-table__search-plus" aria-hidden="true">+</span>
             <input
               :value="searchQuery"
               type="text"
-              placeholder="Filter and search Leave"
+              placeholder="Filter and search Leaves"
               autocomplete="off"
               @input="$emit('update:searchQuery', $event.target.value)"
               @focus="showFilters = true"
@@ -44,76 +43,21 @@
       </div>
     </div>
 
-    <div class="la-attendance-table-scroll">
-      <table class="la-attendance-table">
-        <thead>
-          <tr>
-            <th class="la-attendance-table__check">
-              <input
-                type="checkbox"
-                :checked="allSelected"
-                :indeterminate.prop="someSelected && !allSelected"
-                @change="toggleSelectAll"
-              />
-            </th>
-            <th>Date</th>
-            <th>Employee</th>
-            <th>Leave Period</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th class="la-attendance-table__action">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!records.length">
-            <td colspan="7" class="la-attendance-table__empty">
-              <iconify-icon icon="lucide:calendar-days" />
-              <p>No leave requests match your search.</p>
-            </td>
-          </tr>
-          <tr v-for="leave in records" :key="`leave-${leave.id}`">
-            <td class="la-attendance-table__check">
-              <input
-                type="checkbox"
-                :checked="selectedIds.includes(leave.id)"
-                @change="toggleRow(leave.id)"
-              />
-            </td>
-            <td class="la-attendance-table__date">{{ formatDate(leave.startDate) }}</td>
-            <td>
-              <div class="la-attendance-table__employee">
-                <img :src="leave.avatar" :alt="leave.employeeName" class="la-attendance-table__avatar" loading="lazy" />
-                <div>
-                  <p class="la-attendance-table__name">{{ leave.employeeName }}</p>
-                  <span class="la-attendance-table__emp-id">{{ formatEmpId(leave.empCode) }}</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="la-attendance-table__flow">
-                <span class="la-attendance-table__time">{{ formatDate(leave.startDate) }}</span>
-                <span class="la-attendance-table__duration-wrap">
-                  <i class="la-attendance-table__dot" />
-                  <i class="la-attendance-table__line" />
-                  <span class="la-attendance-table__duration">{{ leave.duration }}d</span>
-                  <i class="la-attendance-table__line" />
-                  <i class="la-attendance-table__dot" />
-                </span>
-                <span class="la-attendance-table__time">{{ formatDate(leave.endDate) }}</span>
-              </div>
-            </td>
-            <td class="la-attendance-table__muted">{{ leave.leaveType }}</td>
-            <td>
-              <span class="la-leave-status" :class="`is-${leave.status}`">{{ leave.statusLabel }}</span>
-            </td>
-            <td class="la-attendance-table__action">
-              <button type="button" class="la-attendance-table__menu-btn" @click.stop="openMenu(leave, $event)">
-                <iconify-icon icon="lucide:more-vertical" />
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="la-leave-grid">
+      <template v-if="records.length">
+        <LeaveRequestCard
+          v-for="leave in records"
+          :key="`leave-${leave.id}`"
+          :leave="leave"
+          @approve="$emit('approve', $event)"
+          @reject="$emit('reject', $event)"
+          @view="$emit('view', $event)"
+        />
+      </template>
+      <div v-else class="la-leave-grid__empty">
+        <iconify-icon icon="lucide:calendar-days" />
+        <p>No leave requests match your search.</p>
+      </div>
     </div>
 
     <div class="la-attendance-table__footer">
@@ -149,32 +93,13 @@
         </button>
       </div>
     </div>
-
-    <Teleport to="body">
-      <div
-        v-if="openMenuId"
-        class="la-attendance-table__menu"
-        :style="menuStyle"
-        @click.stop
-      >
-        <button v-if="menuRecord?.canApproveParent || menuRecord?.canApproveHr" type="button" @click="onApprove(menuRecord)">
-          <iconify-icon icon="lucide:check" /> Approve
-        </button>
-        <button v-if="menuRecord?.canReject" type="button" @click="onReject(menuRecord)">
-          <iconify-icon icon="lucide:x" /> Reject
-        </button>
-        <button type="button" @click="onView(menuRecord)">
-          <iconify-icon icon="lucide:eye" /> View
-        </button>
-      </div>
-    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { formatAttendanceDate } from '@/services/leaveAttendanceApi'
+import { ref, onMounted, onUnmounted } from 'vue'
 import LeaveAttendanceSearchPopup from '@/components/hr/leave-attendance/LeaveAttendanceSearchPopup.vue'
+import LeaveRequestCard from '@/components/hr/leave-attendance/LeaveRequestCard.vue'
 import { isInsideHrSearchPopup, useHrSearchPopupPortal } from '@/composables/useHrSearchPopupPortal'
 
 const props = defineProps({
@@ -208,72 +133,9 @@ const emit = defineEmits([
 ])
 
 const perPageOptions = [10, 25, 50, 100]
-const openMenuId = ref(null)
-const menuRecord = ref(null)
-const menuStyle = ref({})
 const showFilters = ref(false)
 const searchWrapRef = ref(null)
 const { popupStyle } = useHrSearchPopupPortal(searchWrapRef, showFilters)
-
-const allSelected = computed(
-  () => props.records.length > 0 && props.records.every((r) => props.selectedIds.includes(r.id))
-)
-const someSelected = computed(() => props.selectedIds.length > 0)
-
-function formatDate(value) {
-  return formatAttendanceDate(value)
-}
-
-function formatEmpId(code) {
-  if (!code || code === '—') return 'ID : —'
-  const raw = String(code).replace(/^ID\s*:\s*/i, '').replace(/^#/, '')
-  return `ID : #${raw}`
-}
-
-function toggleRow(id) {
-  const next = props.selectedIds.includes(id)
-    ? props.selectedIds.filter((item) => item !== id)
-    : [...props.selectedIds, id]
-  emit('update:selectedIds', next)
-}
-
-function toggleSelectAll(event) {
-  emit('update:selectedIds', event.target.checked ? props.records.map((r) => r.id) : [])
-}
-
-function openMenu(leave, event) {
-  if (openMenuId.value === leave.id) {
-    closeMenu()
-    return
-  }
-  menuRecord.value = leave
-  openMenuId.value = leave.id
-  const rect = event.currentTarget.getBoundingClientRect()
-  menuStyle.value = {
-    top: `${rect.bottom + 6}px`,
-    left: `${Math.max(12, rect.right - 180)}px`,
-  }
-}
-
-function closeMenu() {
-  openMenuId.value = null
-  menuRecord.value = null
-}
-
-function onApprove(leave) {
-  emit('approve', leave)
-  closeMenu()
-}
-
-function onReject(leave) {
-  emit('reject', leave)
-  closeMenu()
-}
-
-function onView(leave) {
-  emit('view', leave)
-  closeMenu()
-}
 
 function onPopupSearch(payload) {
   emit('apply-filters', payload)
@@ -290,9 +152,47 @@ function onDocClick(event) {
   if (showFilters.value && !searchWrapRef.value?.contains(event.target)) {
     showFilters.value = false
   }
-  closeMenu()
 }
 
 onMounted(() => document.addEventListener('click', onDocClick))
 onUnmounted(() => document.removeEventListener('click', onDocClick))
 </script>
+
+<style scoped>
+.la-leave-grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.la-leave-grid__empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 16px;
+  color: #94a3b8;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.la-leave-grid__empty iconify-icon {
+  font-size: 34px;
+  color: #c4b5fd;
+}
+
+@media (max-width: 1100px) {
+  .la-leave-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .la-leave-grid {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+}
+</style>
