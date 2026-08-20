@@ -36,7 +36,11 @@ class AiSalesIntelligenceController extends Controller
     {
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
-            if (!$user || !$user->hasRole('super_admin')) {
+            if (!$user) {
+                return ApiResponse::error('Forbidden', 403);
+            }
+
+            if (!$user->hasRole('super_admin') && !$this->isSelfServiceRequest($request, $user)) {
                 return ApiResponse::error('Forbidden', 403);
             }
 
@@ -55,6 +59,30 @@ class AiSalesIntelligenceController extends Controller
 
             return $next($request);
         });
+    }
+
+    /**
+     * Non-admins may only view or recalculate their own record, via `show`
+     * (GET /agents/{user}) or `recalculate` (POST /recalculate with
+     * user_id = self). Every other action (dashboard, agents list, alerts,
+     * scoring-rules management, full recalculate) stays super_admin only.
+     */
+    private function isSelfServiceRequest(Request $request, User $user): bool
+    {
+        $action = $request->route()?->getActionMethod();
+
+        if ($action === 'show') {
+            $routeUser = $request->route('user');
+            $routeUserId = $routeUser instanceof User ? $routeUser->id : (int) $routeUser;
+
+            return $routeUserId === $user->id;
+        }
+
+        if ($action === 'recalculate') {
+            return $request->integer('user_id') === $user->id;
+        }
+
+        return false;
     }
 
     public function dashboard(Request $request, AiAgentUserResolver $resolver): JsonResponse

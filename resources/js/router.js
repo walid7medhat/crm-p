@@ -157,7 +157,7 @@ const baseRoutes = [
 
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/agent-performance', component: agentPerformance, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
   { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
   { path: '/hr/employees/:id', component: EmployeeProfilePage, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },

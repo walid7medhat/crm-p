@@ -163,7 +163,7 @@
           class="vp-nav__item"
           :class="{ 'is-active': activeTab === 'sales-performance' }"
           role="tab"
-          @click="activeTab = 'sales-performance'; loadSalesPerformance()"
+          @click="activeTab = 'sales-performance'; loadSalesPerformance(); loadAiIntelligence()"
         >
           <span class="vp-nav__left">
             <iconify-icon icon="lucide:chart-column" />
@@ -594,6 +594,74 @@
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div class="vp-sales-card vp-ai-card">
+            <div class="vp-sales-card__head">
+              <div>
+                <h4 class="vp-section-title vp-section-title--sm">AI Sales Intelligence</h4>
+                <p class="vp-panel__subtitle">Behavior score, pipeline discipline, and coaching insights from the AI engine.</p>
+              </div>
+              <button type="button" class="vp-btn-primary vp-btn-primary--sm" :disabled="aiIntelLoading || aiIntelRecalculating" @click="recalculateAiIntelligence">
+                <span v-if="aiIntelRecalculating">Recalculating...</span>
+                <span v-else>Recalculate</span>
+              </button>
+            </div>
+
+            <div v-if="aiIntelLoading" class="vp-sales-state">Loading AI intelligence...</div>
+            <div v-else-if="aiIntelError" class="vp-sales-state">{{ aiIntelError }}</div>
+            <template v-else-if="aiIntelAgent">
+              <div class="vp-ai-kpis">
+                <article class="vp-ai-kpi">
+                  <span class="vp-sales-kpi__label">AI Score</span>
+                  <strong class="vp-ai-kpi__value" :class="aiScoreClass(aiOverallScore)">{{ aiOverallScore }}</strong>
+                </article>
+                <article class="vp-ai-kpi">
+                  <span class="vp-sales-kpi__label">Status</span>
+                  <strong class="vp-ai-kpi__text">{{ formatStatusLabel(aiIntelAgent.status) }}</strong>
+                </article>
+                <article class="vp-ai-kpi">
+                  <span class="vp-sales-kpi__label">Risk Level</span>
+                  <strong class="vp-ai-kpi__text">{{ formatStatusLabel(aiIntelAgent.risk_level) }}</strong>
+                </article>
+                <article class="vp-ai-kpi">
+                  <span class="vp-sales-kpi__label">Updated</span>
+                  <strong class="vp-ai-kpi__text">{{ formatDateShort(aiIntelAgent.computed_at) }}</strong>
+                </article>
+              </div>
+
+              <div class="vp-ai-subscores">
+                <div v-for="s in aiSubscoreItems" :key="s.key" class="vp-ai-subscore">
+                  <span class="vp-ai-subscore__label">{{ s.label }}</span>
+                  <div class="vp-ai-subscore__bar"><div :style="{ width: s.value + '%', background: s.color }" /></div>
+                  <span class="vp-ai-subscore__value">{{ s.value }}</span>
+                </div>
+                <p v-if="!aiSubscoreItems.length" class="vp-muted-note">No subscore data available.</p>
+              </div>
+
+              <div v-if="aiIntelAgent.executive_summary" class="vp-ai-summary">
+                <h5>Executive Summary</h5>
+                <p>{{ aiIntelAgent.executive_summary }}</p>
+              </div>
+
+              <div v-if="(aiIntelAgent.coaching_cards || []).length" class="vp-ai-coaching">
+                <h5>Coaching</h5>
+                <article v-for="(card, i) in aiIntelAgent.coaching_cards" :key="i" class="vp-ai-coach" :class="`is-${card.priority}`">
+                  <strong>{{ card.title }}</strong>
+                  <p>{{ card.body }}</p>
+                </article>
+              </div>
+
+              <div v-if="aiIntelObservations.length" class="vp-ai-observations-wrap">
+                <h5>Behavior Observations</h5>
+                <ul class="vp-ai-observations">
+                  <li v-for="(obs, i) in aiIntelObservations.slice(0, 8)" :key="i" :class="`is-${obs.severity}`">
+                    {{ obs.observation }}
+                  </li>
+                </ul>
+              </div>
+            </template>
+            <div v-else class="vp-sales-state">No AI intelligence data available yet.</div>
           </div>
         </div>
 
@@ -1283,6 +1351,7 @@ import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
 import SearchableSelect from '@/components/ui/SearchableSelect.vue';
+import { aiSalesIntelligenceApi } from '@/services/aiSalesIntelligenceApi';
 import Swal from 'sweetalert2';
 export default {
   name: 'UserProfile',
@@ -1598,7 +1667,84 @@ export default {
         salesPerformanceLoading.value = false;
       }
     };
-    
+
+    const aiIntelLoading = ref(false);
+    const aiIntelRecalculating = ref(false);
+    const aiIntelError = ref('');
+    const aiIntelAgent = ref(null);
+    const aiIntelObservations = ref([]);
+
+    const AI_SUBSCORE_LABELS = {
+      behavior: 'Behavior',
+      pipeline: 'Pipeline',
+      response: 'Response',
+      followup: 'Follow-up',
+      qualification: 'Qualification',
+      communication: 'Communication',
+    };
+    const AI_SUBSCORE_COLORS = {
+      behavior: '#f59e0b',
+      pipeline: '#6366f1',
+      response: '#8b5cf6',
+      followup: '#a855f7',
+      qualification: '#10b981',
+      communication: '#06b6d4',
+    };
+
+    const aiOverallScore = computed(() => Math.round(Number(aiIntelAgent.value?.overall_ai_score) || 0));
+
+    const aiSubscoreItems = computed(() => {
+      const scores = aiIntelAgent.value?.scores || {};
+      return Object.entries(AI_SUBSCORE_LABELS)
+        .map(([key, label]) => ({
+          key,
+          label,
+          value: Math.round(Number(scores[key]) || 0),
+          color: AI_SUBSCORE_COLORS[key],
+        }))
+        .filter((s) => s.value > 0);
+    });
+
+    const aiScoreClass = (score) => {
+      const value = Number(score) || 0;
+      if (value >= 85) return 'is-excellent';
+      if (value >= 70) return 'is-good';
+      if (value >= 50) return 'is-warn';
+      return 'is-critical';
+    };
+
+    const loadAiIntelligence = async () => {
+      if (!user.value?.id) return;
+      aiIntelLoading.value = true;
+      aiIntelError.value = '';
+      try {
+        const data = await aiSalesIntelligenceApi.showAgent(user.value.id);
+        aiIntelAgent.value = data?.agent || null;
+        aiIntelObservations.value = Array.isArray(data?.observations) ? data.observations : [];
+      } catch (error) {
+        aiIntelAgent.value = null;
+        aiIntelObservations.value = [];
+        aiIntelError.value = error?.status === 404
+          ? 'No AI intelligence data yet for this agent. Click Recalculate to generate it.'
+          : (error?.message || 'Failed to load AI intelligence data.');
+      } finally {
+        aiIntelLoading.value = false;
+      }
+    };
+
+    const recalculateAiIntelligence = async () => {
+      if (!user.value?.id) return;
+      aiIntelRecalculating.value = true;
+      try {
+        await aiSalesIntelligenceApi.recalculate({ user_id: user.value.id });
+        await loadAiIntelligence();
+      } catch (error) {
+        showNotification(error?.message || 'Failed to recalculate AI intelligence', 'error');
+      } finally {
+        aiIntelRecalculating.value = false;
+      }
+    };
+
     const currentPasswordVisible = ref(false);
     const newPasswordVisible = ref(false);
     const confirmPasswordVisible = ref(false);
@@ -2599,6 +2745,8 @@ const openLeaveDetail = (lv) => {
       showLeaveDetailModal, viewingLeave, openLeaveDetail,
       salesPerformanceLoading, salesPerformanceError, salesPerformanceDeals, salesPerformanceSummary,
       salesPerformanceFilters, loadSalesPerformance, formatCurrency, scoreClass,
+      aiIntelLoading, aiIntelRecalculating, aiIntelError, aiIntelAgent, aiIntelObservations,
+      aiOverallScore, aiSubscoreItems, aiScoreClass, loadAiIntelligence, recalculateAiIntelligence,
     };
   }
 };
@@ -2835,6 +2983,150 @@ const openLeaveDetail = (lv) => {
   }
   .vp-sales-toolbar {
     align-items: stretch;
+  }
+}
+
+.vp-ai-card {
+  padding: 20px;
+}
+.vp-ai-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.vp-ai-kpi {
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px 14px;
+}
+.vp-ai-kpi__value {
+  display: inline-block;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #64748b;
+}
+.vp-ai-kpi__value.is-excellent { color: #059669; }
+.vp-ai-kpi__value.is-good { color: #2563eb; }
+.vp-ai-kpi__value.is-warn { color: #d97706; }
+.vp-ai-kpi__value.is-critical { color: #dc2626; }
+.vp-ai-kpi__text {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0b0736;
+  text-transform: capitalize;
+}
+.vp-ai-subscores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.vp-ai-subscore {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+.vp-ai-subscore__bar {
+  height: 7px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+.vp-ai-subscore__bar > div {
+  height: 100%;
+  border-radius: 999px;
+}
+.vp-ai-subscore__value {
+  text-align: right;
+  font-weight: 700;
+  color: #0b0736;
+}
+.vp-ai-summary,
+.vp-ai-coaching,
+.vp-ai-observations-wrap {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #edf1f6;
+}
+.vp-ai-summary h5,
+.vp-ai-coaching h5,
+.vp-ai-observations-wrap h5 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: #6b7280;
+}
+.vp-ai-summary p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+}
+.vp-ai-coaching {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vp-ai-coach {
+  border: 1px solid #edf1f6;
+  border-left: 3px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px 12px;
+}
+.vp-ai-coach strong {
+  display: block;
+  font-size: 13px;
+  color: #0b0736;
+  margin-bottom: 3px;
+}
+.vp-ai-coach p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+.vp-ai-coach.is-critical { border-left-color: #ef4444; }
+.vp-ai-coach.is-high { border-left-color: #f59e0b; }
+.vp-ai-observations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vp-ai-observations li {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  color: #334155;
+}
+.vp-ai-observations li.is-warning { background: #fffbeb; border-color: #fde68a; }
+.vp-ai-observations li.is-critical { background: #fef2f2; border-color: #fecaca; }
+
+@media (max-width: 991px) {
+  .vp-ai-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .vp-ai-kpis {
+    grid-template-columns: 1fr;
+  }
+  .vp-ai-subscore {
+    grid-template-columns: 90px 1fr 30px;
   }
 }
 </style>
