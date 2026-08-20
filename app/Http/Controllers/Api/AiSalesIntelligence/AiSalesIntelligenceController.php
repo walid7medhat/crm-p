@@ -207,12 +207,24 @@ class AiSalesIntelligenceController extends Controller
         ], 'Agents loaded');
     }
 
-    public function show(User $user): JsonResponse
+    public function show(User $user, AiOrchestrator $orchestrator): JsonResponse
     {
         $metric = AiAgentMetric::query()->with('user')->where('user_id', $user->id)->first();
 
         if (!$metric) {
-            return ApiResponse::error('No AI metrics for this agent yet. Run recalculation.', 404);
+            // First time this agent is viewed: score them on the spot instead
+            // of forcing a manual "Recalculate" click. Scheduled/bulk
+            // recalculation still keeps the numbers fresh afterwards.
+            try {
+                $metric = $orchestrator->recalculateUser($user->id)->loadMissing('user');
+            } catch (Throwable $e) {
+                Log::error('AI Sales Intelligence auto-bootstrap for agent failed', [
+                    'user_id' => $user->id,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return ApiResponse::error('No AI metrics for this agent yet. Run recalculation.', 404);
+            }
         }
 
         $observations = AiAgentObservation::query()
