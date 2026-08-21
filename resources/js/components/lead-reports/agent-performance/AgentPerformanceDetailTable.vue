@@ -36,8 +36,12 @@
               <span class="ap-agent-card__stat-value">{{ formatMoney(agent.total_amount) }}</span>
             </div>
             <div class="ap-agent-card__stat ap-agent-card__stat--accent">
-              <span class="ap-agent-card__stat-label">Commission</span>
-              <span class="ap-agent-card__stat-value">{{ formatMoney(agent.total_commission) }}</span>
+              <span class="ap-agent-card__stat-label">Agent Commission</span>
+              <span class="ap-agent-card__stat-value">{{ formatMoney(agent.total_agent_commission) }}</span>
+            </div>
+            <div class="ap-agent-card__stat ap-agent-card__stat--hide-mobile">
+              <span class="ap-agent-card__stat-label">Company Commission</span>
+              <span class="ap-agent-card__stat-value">{{ formatMoney(agent.total_company_commission) }}</span>
             </div>
           </div>
 
@@ -57,7 +61,8 @@
                   <th>Deal #</th>
                   <th>Location</th>
                   <th class="num">Amount</th>
-                  <th class="num">Commission</th>
+                  <th class="num">Agent Comm.</th>
+                  <th class="num">Company Comm.</th>
                   <th>Converted</th>
                 </tr>
               </thead>
@@ -75,7 +80,11 @@
                     <span v-if="row.location_extra" class="location-extra">+{{ row.location_extra }} more</span>
                   </td>
                   <td class="num">{{ formatMoney(row.deal_amount, row.currency) }}</td>
-                  <td class="num num--accent">{{ formatMoney(row.commission, row.currency) }}</td>
+                  <td class="num num--accent">
+                    {{ formatMoney(row.agent_commission, row.currency) }}
+                    <span v-if="row.commission_percentage != null" class="location-extra">({{ row.commission_percentage }}%)</span>
+                  </td>
+                  <td class="num">{{ formatMoney(row.company_commission, row.currency) }}</td>
                   <td>{{ row.converted_at || '—' }}</td>
                 </tr>
               </tbody>
@@ -110,8 +119,12 @@
                   <span>{{ formatMoney(row.deal_amount, row.currency) }}</span>
                 </div>
                 <div>
-                  <span class="ap-deal-card__label">Commission</span>
-                  <span class="num--accent">{{ formatMoney(row.commission, row.currency) }}</span>
+                  <span class="ap-deal-card__label">Agent Comm.</span>
+                  <span class="num--accent">{{ formatMoney(row.agent_commission, row.currency) }}</span>
+                </div>
+                <div>
+                  <span class="ap-deal-card__label">Company Comm.</span>
+                  <span>{{ formatMoney(row.company_commission, row.currency) }}</span>
                 </div>
               </div>
             </article>

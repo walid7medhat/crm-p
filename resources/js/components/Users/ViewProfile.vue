@@ -544,8 +544,12 @@
               <strong class="vp-sales-kpi__value">{{ formatCurrency(salesPerformanceSummary.total_amount) }}</strong>
             </article>
             <article class="vp-sales-kpi">
-              <span class="vp-sales-kpi__label">Commission</span>
-              <strong class="vp-sales-kpi__value">{{ formatCurrency(salesPerformanceSummary.total_commission) }}</strong>
+              <span class="vp-sales-kpi__label">Agent Commission</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(salesPerformanceSummary.total_agent_commission) }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Company Commission</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(salesPerformanceSummary.total_company_commission) }}</strong>
             </article>
           </div>
 
@@ -570,7 +574,8 @@
                     <th>Location</th>
                     <th class="is-right">Lead Score</th>
                     <th class="is-right">Amount</th>
-                    <th class="is-right">Commission</th>
+                    <th class="is-right">Agent Comm.</th>
+                    <th class="is-right">Company Comm.</th>
                     <th>Converted</th>
                   </tr>
                 </thead>
@@ -588,7 +593,11 @@
                       </span>
                     </td>
                     <td class="is-right">{{ formatCurrency(deal.deal_amount, deal.currency) }}</td>
-                    <td class="is-right is-accent">{{ formatCurrency(deal.commission, deal.currency) }}</td>
+                    <td class="is-right is-accent">
+                      {{ formatCurrency(deal.agent_commission, deal.currency) }}
+                      <span v-if="deal.commission_percentage != null" class="vp-sales-location-extra">({{ deal.commission_percentage }}%)</span>
+                    </td>
+                    <td class="is-right">{{ formatCurrency(deal.company_commission, deal.currency) }}</td>
                     <td>{{ formatDateShort(deal.converted_at) }}</td>
                   </tr>
                 </tbody>
@@ -1616,6 +1625,8 @@ export default {
       converted_count: 0,
       total_amount: 0,
       total_commission: 0,
+      total_agent_commission: 0,
+      total_company_commission: 0,
       avg_lead_score: null,
     });
     const salesPerformanceFilters = reactive({
@@ -1654,6 +1665,8 @@ export default {
         salesPerformanceSummary.converted_count = Number(agentData?.converted_count) || 0;
         salesPerformanceSummary.total_amount = Number(agentData?.total_amount) || 0;
         salesPerformanceSummary.total_commission = Number(agentData?.total_commission) || 0;
+        salesPerformanceSummary.total_agent_commission = Number(agentData?.total_agent_commission) || 0;
+        salesPerformanceSummary.total_company_commission = Number(agentData?.total_company_commission) || 0;
         salesPerformanceSummary.avg_lead_score = agentData?.avg_lead_score ?? null;
       } catch (error) {
         console.error('Error loading sales performance:', error);
@@ -1661,6 +1674,8 @@ export default {
         salesPerformanceSummary.converted_count = 0;
         salesPerformanceSummary.total_amount = 0;
         salesPerformanceSummary.total_commission = 0;
+        salesPerformanceSummary.total_agent_commission = 0;
+        salesPerformanceSummary.total_company_commission = 0;
         salesPerformanceSummary.avg_lead_score = null;
         salesPerformanceError.value = error?.response?.data?.message || 'Failed to load sales performance.';
       } finally {

@@ -61,6 +61,7 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             'last_lead_assigned_at' => 'datetime',
             'lead_assign_count_date' => 'date',
             'lead_assign_daily_count' => 'integer',
+            'commission_percentage' => 'decimal:2',
         ];
     }
     /**

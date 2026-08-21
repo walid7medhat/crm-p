@@ -30,6 +30,7 @@ class UserRequest extends FormRequest
               'role_id' => 'nullable|exists:roles,id',
             // 'status' => 'required|in:active,in_active,blocked',
             'notes' => 'nullable|string',
+            'commission_percentage' => 'nullable|numeric|min:0|max:100',
         ];
     }
 

@@ -28,6 +28,7 @@ class UserResource extends JsonResource
             'display_name' => $this->display_name,
             'email'      => $this->email,
             'phone'      => $this->phone ?? null,
+            'commission_percentage' => $this->commission_percentage !== null ? (float) $this->commission_percentage : null,
             'avatar' => $this->avatar ?  asset('storage/'. $this->avatar) : null,
             'background_id' => $this->background_id,
             'background_url' => $this->background_url,

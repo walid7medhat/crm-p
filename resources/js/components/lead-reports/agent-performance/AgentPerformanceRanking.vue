@@ -45,8 +45,12 @@
             <span class="ap-ranking__metric-value">{{ formatMoney(agent.total_amount) }}</span>
           </div>
           <div class="ap-ranking__metric ap-ranking__metric--accent">
-            <span class="ap-ranking__metric-label">Commission</span>
-            <span class="ap-ranking__metric-value">{{ formatMoney(agent.total_commission) }}</span>
+            <span class="ap-ranking__metric-label">Agent Commission</span>
+            <span class="ap-ranking__metric-value">{{ formatMoney(agent.total_agent_commission) }}</span>
+          </div>
+          <div class="ap-ranking__metric ap-ranking__metric--hide-mobile">
+            <span class="ap-ranking__metric-label">Company Commission</span>
+            <span class="ap-ranking__metric-value">{{ formatMoney(agent.total_company_commission) }}</span>
           </div>
         </div>
       </li>

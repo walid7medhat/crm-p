@@ -42,6 +42,8 @@
           :avg-lead-score="teamAvgLeadScore"
           :avg-deal-value="avgDealValue"
           :avg-commission="avgCommissionPerDeal"
+          :avg-agent-commission="avgAgentCommissionPerDeal"
+          :avg-company-commission="avgCompanyCommissionPerDeal"
           :format-money="formatMoney"
         />
 
@@ -114,6 +116,8 @@ const {
   displayLeadScore,
   avgDealValue,
   avgCommissionPerDeal,
+  avgAgentCommissionPerDeal,
+  avgCompanyCommissionPerDeal,
   dateRangeLabel,
   breakdownItems,
   commissionChart,
@@ -133,6 +137,8 @@ const displaySummary = computed(() => summary.value ?? {
   deals_count: 0,
   total_amount: 0,
   total_commission: 0,
+  total_agent_commission: 0,
+  total_company_commission: 0,
 })
 
 function onFiltersUpdate(next) {

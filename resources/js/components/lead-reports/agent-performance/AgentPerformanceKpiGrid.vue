@@ -19,6 +19,8 @@ const props = defineProps({
   avgLeadScore: { type: [Number, null], default: null },
   avgDealValue: { type: [Number, null], default: null },
   avgCommission: { type: [Number, null], default: null },
+  avgAgentCommission: { type: [Number, null], default: null },
+  avgCompanyCommission: { type: [Number, null], default: null },
   formatMoney: { type: Function, required: true },
 })
 
@@ -48,13 +50,21 @@ const cards = computed(() => [
     tone: 'navy',
   },
   {
-    key: 'commission',
-    label: 'Total Commission',
-    value: props.formatMoney(props.summary?.total_commission),
-    sub: props.avgCommission != null ? `Avg ${props.formatMoney(props.avgCommission)} / deal` : '',
+    key: 'agent_commission',
+    label: 'Agent Commission',
+    value: props.formatMoney(props.summary?.total_agent_commission),
+    sub: props.avgAgentCommission != null ? `Avg ${props.formatMoney(props.avgAgentCommission)} / deal` : '',
     icon: 'lucide:coins',
     tone: 'gold',
     accent: true,
+  },
+  {
+    key: 'company_commission',
+    label: 'Company Commission',
+    value: props.formatMoney(props.summary?.total_company_commission),
+    sub: props.avgCompanyCommission != null ? `Avg ${props.formatMoney(props.avgCompanyCommission)} / deal` : '',
+    icon: 'lucide:building',
+    tone: 'navy',
   },
   {
     key: 'score',

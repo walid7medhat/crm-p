@@ -23,21 +23,26 @@ class AgentPerformanceReportController extends Controller
      */
     public function agentPerformance(Request $request)
     {
-        $fromDate = $request->from_date ?: now()->startOfMonth()->toDateString();
+        // No filter should mean no restriction: only constrain by converted_at
+        // when the caller actually passed a from/to date. Defaulting to "this
+        // month" here silently hid every agent whenever nothing had converted
+        // yet in the current month.
+        $hasDateFilter = $request->filled('from_date') || $request->filled('to_date');
+        $fromDate = $request->from_date ?: '2000-01-01';
         $toDate = $request->to_date ?: now()->toDateString();
 
         $deals = Deal::query()
             // inner join already enforces lead_id IS NOT NULL
             ->join('leads', 'leads.id', '=', 'deals.lead_id')
-            ->whereBetween('leads.converted_at', [
+            ->when($hasDateFilter, fn($q) => $q->whereBetween('leads.converted_at', [
                 $fromDate . ' 00:00:00',
                 $toDate . ' 23:59:59',
-            ])
+            ]))
             // REQUIRED: without this, leads.id clobbers deals.id
             ->select('deals.*')
             ->with([
                 'lead:id,lead_name,score,work_phone,converted_at',
-                'responsiblePerson:id,name,email',
+                'responsiblePerson:id,name,email,commission_percentage',
                 // mainProperty is the sort_order=0 property; its area is the
                 // actual location that sold (not the lead's requested area_id).
                 'mainProperty:id,deal_id,sort_order,area_id,unit_no',
@@ -67,6 +72,14 @@ class AgentPerformanceReportController extends Controller
                         $rate   = (float) $deal->deal_commission;      // percent, e.g. 5 = 5%
                         $commissionAmount = round($amount * $rate / 100, 2);
 
+                        // Single commission on the deal, split by the responsible
+                        // agent's commission_percentage (users table, admin-controlled,
+                        // default 50%). Agent gets that %, company keeps the rest.
+                        $agentPct = $deal->responsiblePerson?->commission_percentage;
+                        $agentPct = $agentPct !== null ? (float) $agentPct : 50.0;
+                        $agentCommission = round($commissionAmount * $agentPct / 100, 2);
+                        $companyCommission = round($commissionAmount - $agentCommission, 2);
+
                         return [
                             'lead_id'          => $deal->lead_id,
                             'lead_name'        => $deal->lead?->lead_name,
@@ -76,7 +89,10 @@ class AgentPerformanceReportController extends Controller
                             'deal_amount'      => $amount,
                             'currency'         => $deal->currency,
                             'commission_rate'  => $rate,               // the % itself
-                            'commission'       => $commissionAmount,   // AED value
+                            'commission'       => $commissionAmount,   // AED value (total)
+                            'commission_percentage' => $agentPct,      // agent's share of the commission
+                            'agent_commission'   => $agentCommission,
+                            'company_commission' => $companyCommission,
                             'location'         => $deal->mainProperty?->area?->name,
                             'location_extra'   => $extraAreas > 0 ? $extraAreas : null,
                             'unit_no'          => $deal->mainProperty?->unit_no,
@@ -95,6 +111,8 @@ class AgentPerformanceReportController extends Controller
                     'converted_count'  => $rows->count(),
                     'total_amount'     => round($rows->sum('deal_amount'), 2),
                     'total_commission' => round($rows->sum('commission'), 2),
+                    'total_agent_commission'   => round($rows->sum('agent_commission'), 2),
+                    'total_company_commission' => round($rows->sum('company_commission'), 2),
                     'avg_lead_score'   => $rows->pluck('lead_score')->filter()->avg()
                                             ? round($rows->pluck('lead_score')->filter()->avg(), 1)
                                             : null,
@@ -110,6 +128,8 @@ class AgentPerformanceReportController extends Controller
                 'deals_count'      => $report->sum('converted_count'),
                 'total_amount'     => round($report->sum('total_amount'), 2),
                 'total_commission' => round($report->sum('total_commission'), 2),
+                'total_agent_commission'   => round($report->sum('total_agent_commission'), 2),
+                'total_company_commission' => round($report->sum('total_company_commission'), 2),
             ],
             // Full area list (not scoped to current filters) so the
             // location dropdown doesn't shrink as filters narrow results.

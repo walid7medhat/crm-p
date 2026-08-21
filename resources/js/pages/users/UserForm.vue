@@ -132,6 +132,22 @@
 
                                 <div class="col-md-6">
                                     <div class="mb-3">
+                                        <label class="form-label">Agent Commission %</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" v-model.number="userForm.commission_percentage"
+                                                   :class="{'is-invalid': errors.commission_percentage}"
+                                                   min="0" max="100" step="0.01" placeholder="50">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                        <div class="invalid-feedback" v-if="errors.commission_percentage">
+                                            {{ errors.commission_percentage[0] }}
+                                        </div>
+                                        <small class="text-muted">Share of each deal's commission this user keeps; the rest goes to the company.</small>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
                                         <label class="form-label">Parent / Manager</label>
                                         <v-select
                                             v-model="userForm.parent_id"
@@ -268,6 +284,7 @@ export default {
             avatar: null,
             status: "active",
             notes: "",
+            commission_percentage: 50,
             last_login_at: null
         });
 
@@ -450,6 +467,7 @@ watch(roles, (newRoles) => {
                         avatar: null,
                         status: userData.status || "active",
                         notes: userData.notes || "",
+                        commission_percentage: userData.commission_percentage ?? 50,
                         last_login_at: userData.last_login_at || null
                     };
 

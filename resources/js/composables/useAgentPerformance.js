@@ -56,6 +56,18 @@ export function useAgentPerformance() {
     return Math.round((summary.value.total_commission / count) * 100) / 100
   })
 
+  const avgAgentCommissionPerDeal = computed(() => {
+    const count = summary.value?.deals_count || 0
+    if (!count) return null
+    return Math.round((summary.value.total_agent_commission / count) * 100) / 100
+  })
+
+  const avgCompanyCommissionPerDeal = computed(() => {
+    const count = summary.value?.deals_count || 0
+    if (!count) return null
+    return Math.round((summary.value.total_company_commission / count) * 100) / 100
+  })
+
   const dateRangeLabel = computed(() => {
     if (!filters.from_date || !filters.to_date) return ''
     return `${filters.from_date} — ${filters.to_date}`
@@ -67,7 +79,8 @@ export function useAgentPerformance() {
 
     const maxDeals = Math.max(...agents.value.map((a) => a.converted_count), 1)
     const maxAmount = Math.max(...agents.value.map((a) => a.total_amount), 1)
-    const maxCommission = Math.max(...agents.value.map((a) => a.total_commission), 1)
+    const maxAgentCommission = Math.max(...agents.value.map((a) => a.total_agent_commission ?? 0), 1)
+    const maxCompanyCommission = Math.max(...agents.value.map((a) => a.total_company_commission ?? 0), 1)
 
     return [
       {
@@ -87,12 +100,20 @@ export function useAgentPerformance() {
         icon: 'lucide:building-2',
       },
       {
-        key: 'commission',
-        label: 'Commission',
-        value: agent.total_commission,
-        display: formatMoney(agent.total_commission),
-        percent: Math.round((agent.total_commission / maxCommission) * 100),
+        key: 'agent_commission',
+        label: 'Agent Commission',
+        value: agent.total_agent_commission ?? 0,
+        display: formatMoney(agent.total_agent_commission ?? 0),
+        percent: Math.round(((agent.total_agent_commission ?? 0) / maxAgentCommission) * 100),
         icon: 'lucide:coins',
+      },
+      {
+        key: 'company_commission',
+        label: 'Company Commission',
+        value: agent.total_company_commission ?? 0,
+        display: formatMoney(agent.total_company_commission ?? 0),
+        percent: Math.round(((agent.total_company_commission ?? 0) / maxCompanyCommission) * 100),
+        icon: 'lucide:building',
       },
       {
         key: 'score',
@@ -204,6 +225,8 @@ export function useAgentPerformance() {
         deals_count: 0,
         total_amount: 0,
         total_commission: 0,
+        total_agent_commission: 0,
+        total_company_commission: 0,
       }
       if (agents.value.length && expanded.value.size === 0) {
         expanded.value = new Set([agents.value[0].agent_id])
@@ -235,6 +258,8 @@ export function useAgentPerformance() {
     displayLeadScore,
     avgDealValue,
     avgCommissionPerDeal,
+    avgAgentCommissionPerDeal,
+    avgCompanyCommissionPerDeal,
     dateRangeLabel,
     breakdownItems,
     commissionChart,
