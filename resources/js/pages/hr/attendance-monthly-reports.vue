@@ -248,12 +248,11 @@ const today = new Date()
       return this.formatDate(today)
     },
     calendarDatesInRange() {
-      if (!this.startDate || !this.endDate || !this.selectedMonth) return []
+      if (!this.startDate || !this.endDate) return []
 
       const normalizeDate = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
       const startDate = normalizeDate(new Date(`${this.startDate}T00:00:00`))
       const endDate = normalizeDate(new Date(`${this.endDate}T00:00:00`))
-      const month = `${this.selectedMonth}-01`
 
       if (
         Number.isNaN(startDate.getTime())
@@ -263,15 +262,10 @@ const today = new Date()
         return []
       }
 
-      const selected = new Date(month)
-      const selectedMonth = selected.getMonth()
-      const selectedYear = selected.getFullYear()
       const dates = []
       let current = new Date(startDate)
       while (current <= endDate) {
-        const date = normalizeDate(new Date(current))
-        const isSameMonth = date.getMonth() === selectedMonth && date.getFullYear() === selectedYear
-        if (isSameMonth) dates.push(new Date(date))
+        dates.push(normalizeDate(new Date(current)))
         current.setDate(current.getDate() + 1)
       }
       return dates
@@ -283,19 +277,16 @@ const today = new Date()
       return this.workingDatesInRange.length
     },
     employeeOptions() {
-      return [...new Set(this.processedRows.map((row) => row.employeeName))].sort((a, b) => a.localeCompare(b))
+      return [...new Set(this.groupedRows.map((row) => row.employeeName))].sort((a, b) => a.localeCompare(b))
     },
-    processedRows() {
+    groupedRows() {
       const start = this.normalizeDateObject(this.startDate)
       const end = this.normalizeDateObject(this.endDate)
-      console.log('FILTER RANGE:', start, end)
 
       const filteredRecords = this.rawRows.filter((record) => {
         const recordDateRaw = this.pickField(record, ['Date', 'date', 'attendance_date', 'day'])
         const recordDate = this.normalizeDateObject(recordDateRaw)
-        const inRange = !!recordDate && (!start || recordDate >= start) && (!end || recordDate <= end)
-        console.log('Record:', recordDate, inRange)
-        return inRange
+        return !!recordDate && (!start || recordDate >= start) && (!end || recordDate <= end)
       })
 
       const grouped = new Map()
@@ -480,6 +471,9 @@ const today = new Date()
       }
 
       return rows
+    },
+    processedRows() {
+      return this.groupedRows
         .filter((row) => {
           const q = this.searchQuery.trim().toLowerCase()
           if (q && !this.matchesSmartSearch(row, q)) return false
