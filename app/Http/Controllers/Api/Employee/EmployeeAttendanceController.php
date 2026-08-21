@@ -266,7 +266,7 @@ class EmployeeAttendanceController extends Controller
     {
         try {
             $user = Auth::user();
-            $today = Carbon::now()->toDateString();
+            $today = Carbon::now('Asia/Dubai')->toDateString();
 
             $attendance = Attendance::where('user_id', $user->id)
                 ->whereDate('date', $today)
@@ -295,7 +295,7 @@ class EmployeeAttendanceController extends Controller
     public function summary(Request $request)
     {
         try {
-            $date = $request->input('date', Carbon::now()->toDateString());
+            $date = $request->input('date', Carbon::now('Asia/Dubai')->toDateString());
 
             // Get all active employees
             $employees = User::where('status', 'active')
@@ -376,7 +376,7 @@ class EmployeeAttendanceController extends Controller
     public function dailyStats(Request $request)
     {
         try {
-            $date = $request->input('date', Carbon::now()->toDateString());
+            $date = $request->input('date', Carbon::now('Asia/Dubai')->toDateString());
 
             // Get attendance records for this date
             $attendanceRecords = Attendance::with('user')
@@ -461,11 +461,10 @@ class EmployeeAttendanceController extends Controller
      */
     private function checkHoliday($date)
     {
-        $carbonDate = Carbon::parse($date);
-        $dayOfWeek = $carbonDate->dayOfWeek;
+        $carbonDate = Carbon::parse($date, 'Asia/Dubai');
 
-        // Friday = 5, Saturday = 6 (Carbon: Sunday = 0)
-        if ($dayOfWeek == 5 || $dayOfWeek == 6) {
+        // Only Sunday (Carbon: Sunday = 0) is treated as the weekend.
+        if ($carbonDate->isSunday()) {
             return true;
         }
 
@@ -739,7 +738,7 @@ class EmployeeAttendanceController extends Controller
     public function syncLastMonth(Request $request)
     {
         try {
-            $lastMonth = Carbon::now()->subMonth();
+            $lastMonth = Carbon::now('Asia/Dubai')->subMonth();
             $startDate = $lastMonth->startOfMonth();
             $endDate = $lastMonth->endOfMonth();
 
@@ -752,8 +751,8 @@ class EmployeeAttendanceController extends Controller
             foreach ($employees as $employee) {
                 $date = clone $startDate;
                 while ($date <= $endDate) {
-                    // Skip weekends (Friday and Saturday)
-                    if ($date->dayOfWeek != 5 && $date->dayOfWeek != 6) {
+                    // Skip weekend (Sunday only)
+                    if (!$date->isSunday()) {
                         $exists = Attendance::where('user_id', $employee->id)
                             ->whereDate('date', $date)
                             ->exists();
