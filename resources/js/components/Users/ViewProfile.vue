@@ -171,6 +171,20 @@
           </span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
+        <button
+          v-if="canViewTeamPerformance"
+          type="button"
+          class="vp-nav__item"
+          :class="{ 'is-active': activeTab === 'team-performance' }"
+          role="tab"
+          @click="activeTab = 'team-performance'; loadTeamPerformance()"
+        >
+          <span class="vp-nav__left">
+            <iconify-icon icon="lucide:users" />
+            Team Performance
+          </span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
 
         <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
           <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> My Documents</span>
@@ -671,6 +685,102 @@
               </div>
             </template>
             <div v-else class="vp-sales-state">No AI intelligence data available yet.</div>
+          </div>
+        </div>
+
+        <!-- Team Performance -->
+        <div v-if="activeTab === 'team-performance'" class="vp-panel vp-hub">
+          <div class="vp-panel__head">
+            <div>
+              <h3 class="vp-panel__title">Team Performance</h3>
+              <p class="vp-panel__subtitle">Converted deals and commission split for your team hierarchy.</p>
+            </div>
+            <div class="vp-sales-toolbar">
+              <div class="vp-sales-date">
+                <label>From</label>
+                <input v-model="teamPerformanceFilters.from_date" type="date" @change="loadTeamPerformance" />
+              </div>
+              <div class="vp-sales-date">
+                <label>To</label>
+                <input v-model="teamPerformanceFilters.to_date" type="date" @change="loadTeamPerformance" />
+              </div>
+              <button type="button" class="vp-btn-primary vp-btn-primary--sm" :disabled="teamPerformanceLoading" @click="loadTeamPerformance">
+                <span v-if="teamPerformanceLoading">Refreshing...</span>
+                <span v-else>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="teamPerformanceError" class="vp-sales-state vp-sales-state--error">
+            {{ teamPerformanceError }}
+          </div>
+
+          <div class="vp-sales-kpis">
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Team Members</span>
+              <strong class="vp-sales-kpi__value">{{ teamPerformanceSummary.agents_count }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Converted Deals</span>
+              <strong class="vp-sales-kpi__value">{{ teamPerformanceSummary.deals_count }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Team Deal Value</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(teamPerformanceSummary.total_amount) }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Agent Commission</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(teamPerformanceSummary.total_agent_commission) }}</strong>
+            </article>
+            <article class="vp-sales-kpi">
+              <span class="vp-sales-kpi__label">Company Commission</span>
+              <strong class="vp-sales-kpi__value">{{ formatCurrency(teamPerformanceSummary.total_company_commission) }}</strong>
+            </article>
+          </div>
+
+          <div class="vp-sales-card">
+            <div class="vp-sales-card__head">
+              <div>
+                <h4 class="vp-section-title vp-section-title--sm">Team Members</h4>
+                <p class="vp-panel__subtitle">Every direct and indirect report with converted deals in range.</p>
+              </div>
+            </div>
+
+            <div v-if="teamPerformanceLoading" class="vp-sales-state">Loading team performance...</div>
+            <div v-else-if="!teamPerformanceAgents.length" class="vp-sales-state">
+              No converted deals found for your team in the selected date range.
+            </div>
+            <div v-else class="vp-sales-table-wrap">
+              <table class="vp-sales-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th class="is-right">Deals</th>
+                    <th class="is-right">Avg Lead Score</th>
+                    <th class="is-right">Deal Value</th>
+                    <th class="is-right">Agent Comm.</th>
+                    <th class="is-right">Company Comm.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="agent in teamPerformanceAgents" :key="agent.agent_id">
+                    <td>
+                      {{ agent.agent_name }}
+                      <span v-if="agent.agent_email" class="vp-sales-location-extra">{{ agent.agent_email }}</span>
+                    </td>
+                    <td class="is-right">{{ agent.converted_count }}</td>
+                    <td class="is-right">
+                      <span class="vp-sales-score" :class="scoreClass(agent.avg_lead_score)">
+                        {{ agent.avg_lead_score ?? '—' }}
+                      </span>
+                    </td>
+                    <td class="is-right">{{ formatCurrency(agent.total_amount) }}</td>
+                    <td class="is-right is-accent">{{ formatCurrency(agent.total_agent_commission) }}</td>
+                    <td class="is-right">{{ formatCurrency(agent.total_company_commission) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1562,6 +1672,10 @@ export default {
     const isSalesProfile = computed(() => {
       return !!user.value?.id;
     });
+    const canViewTeamPerformance = computed(() => {
+      const permissions = Array.isArray(user.value?.permissions) ? user.value.permissions : [];
+      return permissions.includes('view-team-performance');
+    });
     const userInitials = computed(() => {
       const name = String(user.value?.name || 'U').trim();
       const parts = name.split(/\s+/).filter(Boolean);
@@ -1757,6 +1871,52 @@ export default {
         showNotification(error?.message || 'Failed to recalculate AI intelligence', 'error');
       } finally {
         aiIntelRecalculating.value = false;
+      }
+    };
+
+    const teamPerformanceLoading = ref(false);
+    const teamPerformanceError = ref('');
+    const teamPerformanceAgents = ref([]);
+    const teamPerformanceSummary = reactive({
+      agents_count: 0,
+      deals_count: 0,
+      total_amount: 0,
+      total_commission: 0,
+      total_agent_commission: 0,
+      total_company_commission: 0,
+    });
+    const teamPerformanceFilters = reactive({
+      from_date: defaultSalesRange.from,
+      to_date: defaultSalesRange.to,
+    });
+
+    const loadTeamPerformance = async () => {
+      if (!canViewTeamPerformance.value) return;
+      teamPerformanceLoading.value = true;
+      teamPerformanceError.value = '';
+      try {
+        const { data } = await api.get('/leads/reports/team-performance', {
+          params: {
+            from_date: teamPerformanceFilters.from_date,
+            to_date: teamPerformanceFilters.to_date,
+          },
+        });
+        teamPerformanceAgents.value = Array.isArray(data?.data) ? data.data : [];
+        Object.assign(teamPerformanceSummary, data?.summary || {});
+      } catch (error) {
+        console.error('Error loading team performance:', error);
+        teamPerformanceAgents.value = [];
+        Object.assign(teamPerformanceSummary, {
+          agents_count: 0,
+          deals_count: 0,
+          total_amount: 0,
+          total_commission: 0,
+          total_agent_commission: 0,
+          total_company_commission: 0,
+        });
+        teamPerformanceError.value = error?.response?.data?.message || 'Failed to load team performance.';
+      } finally {
+        teamPerformanceLoading.value = false;
       }
     };
 
@@ -2762,6 +2922,8 @@ const openLeaveDetail = (lv) => {
       salesPerformanceFilters, loadSalesPerformance, formatCurrency, scoreClass,
       aiIntelLoading, aiIntelRecalculating, aiIntelError, aiIntelAgent, aiIntelObservations,
       aiOverallScore, aiSubscoreItems, aiScoreClass, loadAiIntelligence, recalculateAiIntelligence,
+      canViewTeamPerformance, teamPerformanceLoading, teamPerformanceError, teamPerformanceAgents,
+      teamPerformanceSummary, teamPerformanceFilters, loadTeamPerformance,
     };
   }
 };

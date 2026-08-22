@@ -119,6 +119,35 @@ class UserController extends Controller
     }
 }
 
+    /**
+     * Grant extra permissions directly to a user, on top of whatever their
+     * role already gives them. Super admin only, additive (never revokes an
+     * existing direct or role-inherited permission) — the frontend only
+     * offers permissions the user doesn't already effectively have.
+     */
+    public function assignPermissions(Request $request, User $user): JsonResponse
+    {
+        try {
+            if (! Auth::user()?->hasRole('super_admin')) {
+                return ApiResponse::error('Only super admins can assign permissions directly to a user', 403);
+            }
+
+            $validated = $request->validate([
+                'permissions' => 'required|array|min:1',
+                'permissions.*' => 'string|exists:permissions,name',
+            ]);
+
+            $user->givePermissionTo($validated['permissions']);
+
+            return ApiResponse::success(
+                new UserResource($user->load('roles', 'permissions')),
+                'Permissions assigned successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to assign permissions: ' . $e->getMessage());
+        }
+    }
+
 
  public function getUsersWithChildren(Request $request)
     {

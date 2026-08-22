@@ -639,6 +639,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/users', [UserController::class, 'store']);
     Route::put('users/{id}/biometric-code',[UserController::class,'updateBiometricCode']);
     Route::get('/users/{user}/permissions', [UserController::class, 'permissions']);
+    Route::post('/users/{user}/permissions', [UserController::class, 'assignPermissions']);
     Route::get('/users/{user}', [UserController::class, 'show']);
     Route::put('/users/{user}/status', [UserController::class, 'updateStatus']);
     Route::put('/users/{user}', [UserController::class, 'update']);
@@ -719,6 +720,8 @@ Route::prefix('leads')->group(function(){
             Route::get('/months', [ReportController::class, 'getMonthOptions']);
             Route::get('/years', [ReportController::class, 'getYearOptions']);
             Route::get('/agent-performance',[AgentPerformanceReportController::class,'agentPerformance']);
+            Route::get('/team-performance',[AgentPerformanceReportController::class,'teamPerformance'])
+                ->middleware('permission:view-team-performance');
         });
 });
   // =================sources=============

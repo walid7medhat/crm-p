@@ -195,7 +195,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">Role Permissions</label>
                                         <div class="permissions-preview">
-                                            <span v-for="permission in selectedRolePermissions" 
+                                            <span v-for="permission in selectedRolePermissions"
                                                   :key="permission"
                                                   class="badge bg-light text-dark me-2 mb-2">
                                                 {{ permission }}
@@ -205,7 +205,49 @@
                                     </div>
                                 </div>
 
-                            
+                                <!-- Direct Permission Assignment (super admin only) -->
+                                <div class="col-12" v-if="isSuperAdmin && isEditMode">
+                                    <hr class="my-2">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            <iconify-icon icon="lucide:shield-plus" class="me-1"></iconify-icon>
+                                            Assign Extra Permissions
+                                        </label>
+
+                                        <div v-if="userEffectivePermissions.length" class="permissions-preview mb-2">
+                                            <span v-for="permission in userEffectivePermissions"
+                                                  :key="permission"
+                                                  class="badge bg-primary-subtle text-primary me-2 mb-2">
+                                                {{ formatPermissionName(permission) }}
+                                            </span>
+                                        </div>
+                                        <small v-else class="text-muted d-block mb-2">This user has no permissions yet.</small>
+
+                                        <div class="d-flex gap-2">
+                                            <v-select
+                                                v-model="permissionsToAssign"
+                                                :options="availablePermissionsToAssign"
+                                                label="name"
+                                                :reduce="(perm) => perm.name"
+                                                :get-option-label="(perm) => formatPermissionName(perm.name)"
+                                                multiple
+                                                placeholder="Select permissions to grant..."
+                                                class="flex-grow-1"
+                                            />
+                                            <button type="button" class="btn btn-outline-primary flex-shrink-0"
+                                                    :disabled="!permissionsToAssign.length || assigningPermissions"
+                                                    @click="assignSelectedPermissions">
+                                                <span v-if="assigningPermissions">
+                                                    <iconify-icon icon="lucide:loader-2" class="spin"></iconify-icon>
+                                                </span>
+                                                <span v-else>Assign</span>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">On top of whatever the role above already grants. Only permissions this user doesn't already have are listed.</small>
+                                    </div>
+                                </div>
+
+
                             </div>
                         </div>
                     </div>
@@ -262,6 +304,33 @@ export default {
         const roles = ref([]);
         const availableManagers = ref([]);
         const selectedRolePermissions = ref([]);
+        const allPermissions = ref([]);
+        const userEffectivePermissions = ref([]);
+        const permissionsToAssign = ref([]);
+        const assigningPermissions = ref(false);
+
+        const isSuperAdmin = computed(() => {
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                const myRoles = me?.roles || [];
+                return myRoles.includes('super_admin');
+            } catch {
+                return false;
+            }
+        });
+
+        const availablePermissionsToAssign = computed(() => {
+            return allPermissions.value.filter(
+                (perm) => !userEffectivePermissions.value.includes(perm.name)
+            );
+        });
+
+        const formatPermissionName = (permissionName) => {
+            return String(permissionName || '')
+                .split('-')
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1).replace('_', ' '))
+                .join(' ');
+        };
         const validateEmailDomain = (email) => {
             if (!email) return true;
             return email.endsWith('@oiaproperties.com');
@@ -402,6 +471,91 @@ watch(roles, (newRoles) => {
             } catch (error) {
                 console.error("❌ Error fetching managers:", error);
                 availableManagers.value = [];
+            }
+        };
+
+        // Fetch all permissions in the system (super admin direct-assignment picker)
+        const fetchAllPermissions = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/permissions`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allPermissions.value = (data.data || data || []).map(perm => ({
+                        id: perm.id,
+                        name: perm.name
+                    }));
+                } else {
+                    allPermissions.value = [];
+                }
+            } catch (error) {
+                console.error("❌ Error fetching permissions:", error);
+                allPermissions.value = [];
+            }
+        };
+
+        // Fetch this user's effective permissions (role-inherited + direct)
+        const fetchUserPermissions = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/users/${userId.value}/permissions`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const list = data.data || data || [];
+                    userEffectivePermissions.value = list.map(perm => perm.name || perm);
+                } else {
+                    userEffectivePermissions.value = [];
+                }
+            } catch (error) {
+                console.error("❌ Error fetching user permissions:", error);
+                userEffectivePermissions.value = [];
+            }
+        };
+
+        // Grant the selected permissions directly to this user
+        const assignSelectedPermissions = async () => {
+            if (!permissionsToAssign.value.length) return;
+            assigningPermissions.value = true;
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/users/${userId.value}/permissions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ permissions: permissionsToAssign.value })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    const granted = data.data?.permissions || [];
+                    userEffectivePermissions.value = granted;
+                    permissionsToAssign.value = [];
+                    showNotification("✅ Permissions assigned successfully", "success");
+                } else {
+                    showNotification(`❌ ${data.message || 'Failed to assign permissions'}`, "error");
+                }
+            } catch (error) {
+                console.error("❌ Error assigning permissions:", error);
+                showNotification("❌ Failed to assign permissions", "error");
+            } finally {
+                assigningPermissions.value = false;
             }
         };
 
@@ -680,9 +834,13 @@ watch(roles, (newRoles) => {
             console.log('UserForm mounted, isEditMode:', isEditMode.value);
             await fetchRoles();
             await fetchManagers();
-            
+
             if (isEditMode.value) {
                 await fetchUser();
+
+                if (isSuperAdmin.value) {
+                    await Promise.all([fetchAllPermissions(), fetchUserPermissions()]);
+                }
             }
         });
 
@@ -707,7 +865,15 @@ watch(roles, (newRoles) => {
             isEmailValid,
             emailErrorMessage,
             validateEmailOnBlur,
-            validateEmailDomain
+            validateEmailDomain,
+            isSuperAdmin,
+            allPermissions,
+            userEffectivePermissions,
+            permissionsToAssign,
+            assigningPermissions,
+            availablePermissionsToAssign,
+            formatPermissionName,
+            assignSelectedPermissions
         };
     }
 };

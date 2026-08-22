@@ -23,6 +23,30 @@ class AgentPerformanceReportController extends Controller
      */
     public function agentPerformance(Request $request)
     {
+        return response()->json($this->buildReport($request));
+    }
+
+    /**
+     * Same report as agentPerformance(), scoped to the authenticated user's
+     * own hierarchy (themselves + every direct/indirect report), for a
+     * team_lead/manager to see their team's performance from their own
+     * profile without admin-wide access. Gated by the view-team-performance
+     * permission at the route level.
+     */
+    public function teamPerformance(Request $request)
+    {
+        $teamIds = $request->user()->getAllSubordinatesIds();
+
+        return response()->json($this->buildReport($request, $teamIds));
+    }
+
+    /**
+     * @param  list<int>|null  $restrictToResponsiblePersonIds  When given, only
+     *         deals owned by one of these user ids are included (used to scope
+     *         the report to a manager/team_lead's hierarchy).
+     */
+    private function buildReport(Request $request, ?array $restrictToResponsiblePersonIds = null): array
+    {
         // No filter should mean no restriction: only constrain by converted_at
         // when the caller actually passed a from/to date. Defaulting to "this
         // month" here silently hid every agent whenever nothing had converted
@@ -49,6 +73,7 @@ class AgentPerformanceReportController extends Controller
                 'mainProperty.area:id,name',
                 'properties:id,deal_id,area_id',
             ])
+            ->when($restrictToResponsiblePersonIds !== null, fn($q) => $q->whereIn('deals.responsible_person_id', $restrictToResponsiblePersonIds))
             // qualified: leads also has responsible_person_id
             ->when($request->agent_id, fn($q, $v) => $q->where('deals.responsible_person_id', $v))
             ->when($request->area_id, fn($q, $v) => $q->whereHas('properties', fn($p) => $p->where('area_id', $v)))
@@ -121,7 +146,7 @@ class AgentPerformanceReportController extends Controller
             ->sortByDesc('total_commission')
             ->values();
 
-        return response()->json([
+        return [
             'data' => $report,
             'summary' => [
                 'agents_count'     => $report->count(),
@@ -134,6 +159,6 @@ class AgentPerformanceReportController extends Controller
             // Full area list (not scoped to current filters) so the
             // location dropdown doesn't shrink as filters narrow results.
             'areas' => \App\Models\Area::query()->select('id', 'name')->orderBy('name')->get(),
-        ]);
+        ];
     }
 }
