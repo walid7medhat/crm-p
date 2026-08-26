@@ -15,6 +15,7 @@
       :clearable="clearable"
       :filterable="filterable"
       :append-to-body="appendToBody"
+      :multiple="multiple"
       @update:model-value="onInput"
     >
       <template #open-indicator="{ attributes }">
@@ -56,6 +57,8 @@ const props = defineProps({
   inputStyle: { type: [String, Object], default: '' },
   /** Compact toolbar layout (no extra vertical rhythm). */
   inline: { type: Boolean, default: false },
+  /** Allow selecting multiple options; modelValue becomes an array of reduced values. */
+  multiple: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])

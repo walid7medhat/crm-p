@@ -92,7 +92,7 @@
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
           <ul v-if="!isHr" v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
-            <li :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
+            <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
               <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
                 <img :src="leadsIcon" class="imgicon submenu-icon" alt="" />
                 <span>Leads</span>
@@ -540,6 +540,11 @@ const isSalesInListingTeam = computed(() => {
   
   return hasSalesRole && isInListingTeam;
 });
+const canShowLeadsTab = computed(() => {
+  if (!user.value) return false;
+  return isAdmin.value || proxy.$hasPermission('show-leads');
+});
+
 const isShowOnlyListing = computed(() => {
   if (!user.value) return false;
   
@@ -987,9 +992,9 @@ const mobileDockItems = computed(() => {
     });
   }
 
-  if (!isShowOnlyListing.value && !isHr.value) {
+  if (!isShowOnlyListing.value && !isHr.value && canShowLeadsTab.value) {
     items.push({ path: '/kanban', label: 'Leads', iconSrc: leadsIcon.value });
-   
+
   }
   if ( !isSalesInListingTeam.value && !isHr.value) {
     items.push({ path: '/kanban_deal', label: 'Deals', iconSrc: dealsIcon.value });

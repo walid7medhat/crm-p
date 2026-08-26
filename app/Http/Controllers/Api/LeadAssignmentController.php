@@ -56,6 +56,8 @@ class LeadAssignmentController extends Controller
             'sla_minutes' => 'sometimes|integer|min:0|max:10080',
             'sla_escalation_enabled' => 'sometimes|boolean',
             'fallback_user_id' => 'sometimes|nullable|integer|exists:users,id',
+            'priority_sales_user_ids' => 'sometimes|array',
+            'priority_sales_user_ids.*' => 'integer|exists:users,id',
             'exploration_epsilon' => 'sometimes|numeric|min:0|max:0.45',
             'cold_start_max_samples' => 'sometimes|integer|min:1|max:100',
             'cold_start_explore_ratio' => 'sometimes|numeric|min:0|max:0.5',

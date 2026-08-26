@@ -233,6 +233,21 @@
               <input v-model.number="form.fallback_user_id" type="number" min="0" class="lae-input" placeholder="optional" />
             </label>
           </div>
+          <h6 class="ui-h-section lae-subhead">Priority sales</h6>
+          <p class="lae-desc">
+            Selected reps get absolute priority: any lead is assigned to them first (in every mode) whenever they're
+            eligible. Falls back to the normal pool when none of them qualify.
+          </p>
+          <label class="lae-field">
+            <span>Priority sales users</span>
+            <SearchableSelect
+              v-model="form.priority_sales_user_ids"
+              :options="salesUserOptions"
+              :multiple="true"
+              :placeholder="salesUsersLoading ? 'Loading sales reps…' : 'Search and select sales reps…'"
+              class="lae-input"
+            />
+          </label>
         </div>
       </details>
 
@@ -507,6 +522,8 @@ const overrideLeadId = ref(null)
 const overrideUserId = ref(null)
 const stages = ref([])
 const revertStageId = ref(null)
+const salesUsers = ref([])
+const salesUsersLoading = ref(false)
 
 const queue = ref([])
 /** Full count in New stage (API meta); queue[] is capped for performance */
@@ -538,6 +555,7 @@ const form = reactive({
   sla_minutes: 1440,
   sla_escalation_enabled: true,
   fallback_user_id: null,
+  priority_sales_user_ids: [],
   exploration_epsilon: 0.1,
   cold_start_max_samples: 8,
   cold_start_explore_ratio: 0.15,
@@ -573,6 +591,10 @@ const mainLifecycleBadgeClass = computed(() => {
   if (form.auto_assign && (form.simple_mode_enabled || form.realtime_assignment_enabled) && !form.system_disabled) return 'is-running'
   return 'is-stopped'
 })
+
+const salesUserOptions = computed(() =>
+  (salesUsers.value || []).map((u) => ({ value: u.id, label: u.name || u.email || `#${u.id}` })),
+)
 
 const presentSalesRows = computed(() => {
   const rows = attendanceRows.value || []
@@ -659,6 +681,9 @@ const mapSettings = (row) => {
   form.sla_minutes = row.sla_minutes ?? 1440
   form.sla_escalation_enabled = row.sla_escalation_enabled !== false
   form.fallback_user_id = row.fallback_user_id ?? null
+  form.priority_sales_user_ids = Array.isArray(row.priority_sales_user_ids)
+    ? row.priority_sales_user_ids.map((id) => Number(id))
+    : []
   form.exploration_epsilon = row.exploration_epsilon != null ? Number(row.exploration_epsilon) : 0.1
   form.cold_start_max_samples = row.cold_start_max_samples ?? 8
   form.cold_start_explore_ratio = row.cold_start_explore_ratio != null ? Number(row.cold_start_explore_ratio) : 0.15
@@ -767,6 +792,18 @@ const loadInsights = async () => {
   }
 }
 
+const loadSalesUsers = async () => {
+  salesUsersLoading.value = true
+  try {
+    const res = await api.get('/auth/users/role/sales')
+    salesUsers.value = res?.data?.data || []
+  } catch {
+    salesUsers.value = []
+  } finally {
+    salesUsersLoading.value = false
+  }
+}
+
 const loadStages = async () => {
   try {
     const res = await api.get('/stages', { params: { stage_type: 'lead' } })
@@ -800,7 +837,7 @@ const loadAttendance = async () => {
 const reloadAll = async () => {
   loading.value = true
   try {
-    await Promise.all([loadSettings(), loadQueue(), loadLogs(), loadAttendance(), loadStats(), loadInsights(), loadStages()])
+    await Promise.all([loadSettings(), loadQueue(), loadLogs(), loadAttendance(), loadStats(), loadInsights(), loadStages(), loadSalesUsers()])
   } finally {
     loading.value = false
   }
@@ -830,6 +867,7 @@ const saveSettings = async () => {
       sla_minutes: form.sla_minutes,
       sla_escalation_enabled: form.sla_escalation_enabled,
       fallback_user_id: form.fallback_user_id > 0 ? form.fallback_user_id : null,
+      priority_sales_user_ids: (form.priority_sales_user_ids || []).map((id) => Number(id)),
       exploration_epsilon: form.exploration_epsilon,
       cold_start_max_samples: form.cold_start_max_samples,
       cold_start_explore_ratio: form.cold_start_explore_ratio,

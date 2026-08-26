@@ -486,6 +486,8 @@ class LeadAssignmentService
                             return null;
                         }
 
+                        $underCap = $this->applyPriorityFilter($underCap, $lockedSettings);
+
                         $n = count($underCap);
                         $slot = ((int) $lockedSettings->realtime_rotation_index) % $n;
                         $pickId = (int) $underCap[$slot];
@@ -786,6 +788,8 @@ class LeadAssignmentService
         if ($underCap === []) {
             return null;
         }
+
+        $underCap = $this->applyPriorityFilter($underCap, $lockedSettings);
 
         $n = count($underCap);
         $slot = ((int) $lockedSettings->simple_rotation_index) % $n;
@@ -1260,6 +1264,7 @@ class LeadAssignmentService
     public function pickBestAgent(Lead $lead, LeadAssignmentSetting $settings, ?int $excludeUserId = null): ?array
     {
         if (!$this->isWithinWorkingHours($settings)) {
+            \Log::info("isWithinWorkingHours");
             return null;
         }
 
@@ -1305,6 +1310,14 @@ class LeadAssignmentService
 
         if ($eligible->isEmpty()) {
             return null;
+        }
+
+        $priorityIds = $this->priorityUserIds($settings);
+        if ($priorityIds !== []) {
+            $priorityEligible = $eligible->filter(fn (User $user) => in_array((int) $user->id, $priorityIds, true))->values();
+            if ($priorityEligible->isNotEmpty()) {
+                $eligible = $priorityEligible;
+            }
         }
 
         if ($settings->strategy === 'round_robin') {
@@ -1900,8 +1913,41 @@ class LeadAssignmentService
 
     protected function baseSalesQuery()
     {
-        return User::query()
+        $query = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'sales'));
+
+        if (\Spatie\Permission\Models\Permission::where('name', 'show-leads')->exists()) {
+            $query->permission('show-leads');
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return list<int>
+     */
+    protected function priorityUserIds(LeadAssignmentSetting $settings): array
+    {
+        return array_values(array_unique(array_map('intval', $settings->priority_sales_user_ids ?? [])));
+    }
+
+    /**
+     * Absolute priority: if any of the already-eligible ids belong to the priority list,
+     * restrict to those; otherwise fall back to the full eligible set unchanged.
+     *
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    protected function applyPriorityFilter(array $ids, LeadAssignmentSetting $settings): array
+    {
+        $priorityIds = $this->priorityUserIds($settings);
+        if ($priorityIds === []) {
+            return $ids;
+        }
+
+        $filtered = array_values(array_intersect($ids, $priorityIds));
+
+        return $filtered !== [] ? $filtered : $ids;
     }
 
     /**
