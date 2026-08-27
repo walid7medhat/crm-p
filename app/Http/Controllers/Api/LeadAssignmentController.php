@@ -24,6 +24,11 @@ class LeadAssignmentController extends Controller
         return ApiResponse::success($service->dashboardStats(), 'Lead assignment stats');
     }
 
+    public function eligibleSales(LeadAssignmentService $service): JsonResponse
+    {
+        return ApiResponse::success($service->eligibleSalesUsers(), 'Eligible sales users loaded');
+    }
+
     public function insights(LeadAssignmentInsightsService $insights): JsonResponse
     {
         return ApiResponse::success($insights->build(), 'Lead assignment insights');

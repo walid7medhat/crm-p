@@ -167,11 +167,8 @@
               <span>Max leads / user</span>
               <input v-model.number="form.max_leads_per_user" type="number" min="1" max="500" class="lae-input" />
             </label>
-            <label class="lae-toggle" :class="{ 'is-on-active': form.require_attendance }">
-              <input v-model="form.require_attendance" type="checkbox" />
-              <span>Require clock-in</span>
-            </label>
           </div>
+          <p class="lae-desc">Attendance and branch match are always required (not configurable) — a rep must be present today and in the lead's branch to be assigned, in every mode.</p>
           <h6 class="ui-h-section lae-subhead">Scheduler</h6>
           <p class="lae-desc">When mode is Scheduled, runs at these times (server timezone from working hours).</p>
           <div class="lae-schedule-list">
@@ -236,7 +233,8 @@
           <h6 class="ui-h-section lae-subhead">Priority sales</h6>
           <p class="lae-desc">
             Selected reps get absolute priority: any lead is assigned to them first (in every mode) whenever they're
-            eligible. Falls back to the normal pool when none of them qualify.
+            eligible. Falls back to the normal pool when none of them qualify. List below only shows sales reps who
+            currently hold the <code>show-leads</code> permission (the same pool auto-assign draws from).
           </p>
           <label class="lae-field">
             <span>Priority sales users</span>
@@ -795,7 +793,7 @@ const loadInsights = async () => {
 const loadSalesUsers = async () => {
   salesUsersLoading.value = true
   try {
-    const res = await api.get('/auth/users/role/sales')
+    const res = await api.get('/lead-assignment/eligible-sales')
     salesUsers.value = res?.data?.data || []
   } catch {
     salesUsers.value = []

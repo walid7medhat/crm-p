@@ -474,12 +474,18 @@ class LeadAssignmentService
                             return null;
                         }
 
+                        $leadBranchId = $this->resolveLeadBranchId($lead);
+
                         $underCap = [];
                         foreach ($baseOrder as $uid) {
                             $uid = (int) $uid;
-                            if (((int) ($openCounts[$uid] ?? 0)) < (int) $lockedSettings->max_leads_per_user) {
-                                $underCap[] = $uid;
+                            if (((int) ($openCounts[$uid] ?? 0)) >= (int) $lockedSettings->max_leads_per_user) {
+                                continue;
                             }
+                            if ($leadBranchId !== null && $this->resolveUserBranchId($uid) !== $leadBranchId) {
+                                continue;
+                            }
+                            $underCap[] = $uid;
                         }
 
                         if ($underCap === []) {
@@ -777,15 +783,26 @@ class LeadAssignmentService
         $allSalesIds = $salesUsers->keys()->map(fn ($id) => (int) $id)->all();
         $openCounts = $this->openLeadCountsByUser($allSalesIds);
 
+        $leadBranchId = $this->resolveLeadBranchId($lead);
+
         $underCap = [];
         foreach ($orderedIds as $uid) {
             $uid = (int) $uid;
-            if (((int) ($openCounts[$uid] ?? 0)) < (int) $lockedSettings->max_leads_per_user) {
-                $underCap[] = $uid;
+            if (((int) ($openCounts[$uid] ?? 0)) >= (int) $lockedSettings->max_leads_per_user) {
+                continue;
             }
+            if ($leadBranchId !== null && $this->resolveUserBranchId($uid) !== $leadBranchId) {
+                continue;
+            }
+            $underCap[] = $uid;
         }
 
         if ($underCap === []) {
+            $lead->update([
+                'assignment_hold' => true,
+                'assignment_hold_reason' => 'no_eligible_sales_or_hours',
+            ]);
+
             return null;
         }
 
@@ -1277,12 +1294,16 @@ class LeadAssignmentService
 
         $attendanceByUserId = $this->todayAttendanceByUserId();
         $openCounts = $this->openLeadCountsByUser($candidates->pluck('id')->all());
+        $leadBranchId = $this->resolveLeadBranchId($lead);
 
-        $eligible = $candidates->filter(function (User $user) use ($settings, $attendanceByUserId, $openCounts, $excludeUserId) {
+        $eligible = $candidates->filter(function (User $user) use ($settings, $attendanceByUserId, $openCounts, $excludeUserId, $leadBranchId) {
             if ($excludeUserId !== null && (int) $user->id === $excludeUserId) {
                 return false;
             }
             if ($user->on_vacation) {
+                return false;
+            }
+            if ($leadBranchId !== null && $this->resolveUserBranchId($user->id) !== $leadBranchId) {
                 return false;
             }
             $open = (int) ($openCounts[$user->id] ?? 0);
@@ -1290,15 +1311,13 @@ class LeadAssignmentService
                 return false;
             }
 
-            if ($settings->require_attendance) {
-                $row = $attendanceByUserId[$user->id] ?? null;
-                if (!$row) {
-                    return false;
-                }
-                $st = strtolower((string) ($row['status'] ?? ''));
-                if (!in_array($st, ['present', 'late'], true)) {
-                    return false;
-                }
+            $row = $attendanceByUserId[$user->id] ?? null;
+            if (!$row) {
+                return false;
+            }
+            $st = strtolower((string) ($row['status'] ?? ''));
+            if (!in_array($st, ['present', 'late'], true)) {
+                return false;
             }
 
             return true;
@@ -1921,6 +1940,64 @@ class LeadAssignmentService
         }
 
         return $query;
+    }
+
+    /**
+     * Sales users currently eligible for auto-assignment (role=sales + show-leads permission).
+     * Used to populate admin pickers (e.g. Priority sales) so the list matches real eligibility.
+     */
+    public function eligibleSalesUsers(): Collection
+    {
+        return $this->baseSalesQuery()->orderBy('name')->get(['id', 'name', 'email']);
+    }
+
+    /** @var array<int, int|null> in-request memoization of user_id => branch admin_parent id */
+    protected array $userBranchCache = [];
+
+    /**
+     * A user's branch is the nearest admin ancestor whose own parent is the root
+     * (User::admin_parent, app/Models/User.php:260-276) — e.g. id 25 "abu dhabi", id 59 "Dubai".
+     */
+    protected function resolveUserBranchId(?int $userId): ?int
+    {
+        if (!$userId) {
+            return null;
+        }
+        if (array_key_exists($userId, $this->userBranchCache)) {
+            return $this->userBranchCache[$userId];
+        }
+
+        $user = User::query()->find($userId);
+        $branchId = $user?->admin_parent?->id;
+
+        return $this->userBranchCache[$userId] = $branchId;
+    }
+
+    /**
+     * Resolve which branch a lead belongs to:
+     * 1. explicit `leads.branch` string (Dubai/Abu Dhabi), when set
+     * 2. else the branch of `initial_responsible_person_id` (skipping the super-admin placeholder, id 1)
+     * 3. else the branch of the current `responsible_person_id`
+     */
+    protected function resolveLeadBranchId(Lead $lead): ?int
+    {
+        $branchName = strtolower(trim((string) ($lead->branch ?? '')));
+        if ($branchName === 'dubai') {
+            return 59;
+        }
+        if ($branchName === 'abu dhabi') {
+            return 25;
+        }
+
+        $initialId = (int) ($lead->initial_responsible_person_id ?? 0);
+        if ($initialId && $initialId !== 1) {
+            $branchId = $this->resolveUserBranchId($initialId);
+            if ($branchId) {
+                return $branchId;
+            }
+        }
+
+        return $this->resolveUserBranchId($lead->responsible_person_id);
     }
 
     /**

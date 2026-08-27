@@ -210,6 +210,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/lead-assignment/insights', [LeadAssignmentController::class, 'insights']);
     Route::put('/lead-assignment/settings', [LeadAssignmentController::class, 'update']);
     Route::get('/lead-assignment/queue', [LeadAssignmentController::class, 'queue']);
+    Route::get('/lead-assignment/eligible-sales', [LeadAssignmentController::class, 'eligibleSales']);
     Route::get('/lead-assignment/logs', [LeadAssignmentController::class, 'logs']);
     Route::post('/lead-assignment/run', [LeadAssignmentController::class, 'runNow']);
     Route::post('/lead-assignment/reassign', [LeadAssignmentController::class, 'reassign']);
