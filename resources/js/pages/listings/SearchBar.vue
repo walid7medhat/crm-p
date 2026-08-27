@@ -288,6 +288,17 @@
             <div class="listing-pop-title">More Filters</div>
 
             <div class="listing-filter-section">
+              <label class="listing-pop-label">Reference Number</label>
+              <input
+                type="text"
+                v-model="searchReferenceNumber"
+                class="range-input-side listing-ref-input"
+                placeholder="Search by reference number"
+                @input="handleFilterChange()"
+              >
+            </div>
+
+            <div class="listing-filter-section">
               <label class="listing-pop-label">Area (sqft)</label>
               <div class="listing-pop-grid listing-pop-grid--range">
                 <div>
@@ -482,6 +493,22 @@
         </div>
 
         <div class="bayut-filters-body">
+          <!-- Reference Number -->
+          <div class="mobile-filter-accordion">
+            <details :open="searchReferenceNumber.trim() !== ''">
+              <summary>
+                Reference Number
+                <small v-if="searchReferenceNumber">{{ searchReferenceNumber }}</small>
+              </summary>
+              <input
+                type="text"
+                v-model="searchReferenceNumber"
+                class="range-input-side listing-ref-input"
+                placeholder="Search by reference number"
+              >
+            </details>
+          </div>
+
           <!-- Purpose -->
           <section class="bayut-filter-section">
             <h6 class="bayut-filter-section__title">Purpose</h6>
@@ -1818,6 +1845,7 @@ const featuresButtonLabel = computed(() => {
       if (selectedCompletionStatus.value !== null) n++;
       if (selectedOccupancyStatus.value) n++;
       if (selectedAgent.value) n++;
+      if (searchReferenceNumber.value.trim() !== "") n++;
       const selectedAreas = Array.isArray(selectedArea.value) ? selectedArea.value : [];
       if (selectedAreas.length) n++;
       return n;
@@ -3127,6 +3155,10 @@ fetchProjects()
   border-color: #0B0736;
   outline: none;
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1);
+}
+
+.listing-ref-input {
+  text-align: left;
 }
 
 .range-track {
