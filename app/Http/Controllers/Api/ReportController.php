@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use App\Helpers\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Exports\LeadsBySourceReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -262,6 +264,97 @@ class ReportController extends Controller
                 : 0,
             'leads_by_stage_overall' => $leadsByStageOverall,
         ];
+    }
+
+    /**
+     * Stage IDs currently covered by the leads-by-source report.
+     */
+    private const LEADS_BY_SOURCE_STAGE_IDS = [6, 8];
+
+    /**
+     * تقرير مصادر الليدات لمراحل محددة: عدد الليدات لكل lead_source.
+     */
+    public function leadsBySourceReport(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole(['admin', 'super_admin'])) {
+                return ApiResponse::error('Unauthorized - Only admins can access reports', 403);
+            }
+
+            $report = $this->buildLeadsBySourceReport($request);
+
+            return ApiResponse::success([
+                'report' => $report,
+                'filters' => [
+                    'month' => $request->month,
+                    'year' => $request->year,
+                    'date_from' => $request->date_from,
+                    'date_to' => $request->date_to,
+                ],
+            ], 'Leads by source report retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to generate report: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * نفس تقرير المصادر لكن كملف اكسل قابل للتحميل.
+     */
+    public function leadsBySourceReportExport(Request $request)
+    {
+        $user = auth()->user();
+
+        if (!$user->hasRole(['admin', 'super_admin'])) {
+            return ApiResponse::error('Unauthorized - Only admins can access reports', 403);
+        }
+
+        $report = $this->buildLeadsBySourceReport($request);
+
+        return Excel::download(
+            new LeadsBySourceReportExport($report),
+            'leads-by-source-report.xlsx'
+        );
+    }
+
+    /**
+     * يبني بيانات تقرير المصادر لمراحل self::LEADS_BY_SOURCE_STAGE_IDS.
+     */
+    private function buildLeadsBySourceReport(Request $request): array
+    {
+        $dateFilter = $this->buildDateFilter($request);
+        $stages = Stage::whereIn('id', self::LEADS_BY_SOURCE_STAGE_IDS)->orderBy('order')->get();
+
+        $report = [];
+
+        foreach ($stages as $stage) {
+            $sourcesQuery = Lead::where('stage_id', $stage->id);
+
+            if ($dateFilter) {
+                $sourcesQuery->whereDate('created_at', '>=', $dateFilter['from'])
+                             ->whereDate('created_at', '<=', $dateFilter['to']);
+            }
+
+            $sources = $sourcesQuery
+                ->selectRaw("COALESCE(NULLIF(lead_source, ''), 'Unknown') as source, COUNT(*) as count")
+                ->groupBy('source')
+                ->orderByDesc('count')
+                ->get();
+
+            $report[] = [
+                'stage_id' => $stage->id,
+                'stage_name' => $stage->name,
+                'stage_color' => $stage->color,
+                'total' => $sources->sum('count'),
+                'sources' => $sources->map(fn ($row) => [
+                    'source' => $row->source,
+                    'count' => (int) $row->count,
+                ])->values(),
+            ];
+        }
+
+        return $report;
     }
 
     /**

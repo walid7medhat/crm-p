@@ -723,6 +723,8 @@ Route::prefix('leads')->group(function(){
             Route::get('/agent-performance',[AgentPerformanceReportController::class,'agentPerformance']);
             Route::get('/team-performance',[AgentPerformanceReportController::class,'teamPerformance'])
                 ->middleware('permission:view-team-performance');
+            Route::get('/leads-by-source', [ReportController::class, 'leadsBySourceReport']);
+            Route::get('/leads-by-source/export', [ReportController::class, 'leadsBySourceReportExport']);
         });
 });
   // =================sources=============
