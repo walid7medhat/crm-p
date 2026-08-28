@@ -134,7 +134,12 @@ onMounted(fetchReport)
 </script>
 
 <style scoped>
-.lead-source-report-page { background: #ffffff !important; min-height: 100vh; padding: 12px; }
+.lead-source-report-page.lead-source-report-page {
+  background: #ffffff !important;
+  background-image: none !important;
+  min-height: 100vh;
+  padding: 12px;
+}
 .lsr-shell { border: 1px solid #d9deea; background: #ffffff !important; border-radius: 14px; padding: 16px; }
 
 .lsr-toolbar { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 16px; }
@@ -163,4 +168,13 @@ onMounted(fetchReport)
 .lsr-table th { text-align: left; font-size: 12px; color: #8390a7; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid #ebeef3; }
 .lsr-table td { padding: 10px; border-bottom: 1px solid #f2f4f8; font-size: 13px; color: #10152f; }
 .lsr-no-rows { text-align: center; color: #8390a7; }
+
+@media (min-width: 768px) {
+  .lead-source-report-page.lead-source-report-page { padding: 20px; }
+  .lsr-toolbar { flex-direction: row; align-items: center; justify-content: space-between; }
+  .lsr-filters { flex-direction: row; align-items: center; }
+  .lsr-input { width: 160px; }
+  .lsr-btn { width: auto; }
+  .lsr-sep { padding: 0 2px; }
+}
 </style>
