@@ -34,27 +34,48 @@
       <template v-else>
         <div v-if="!stages.length" class="lsr-empty">No data found for the selected filters.</div>
 
+        <div v-if="grandSelectedCount > 0" class="lsr-selected-bar">
+          <span>{{ grandSelectedCount }} source{{ grandSelectedCount > 1 ? 's' : '' }} selected</span>
+          <strong>{{ grandSelectedTotal }} leads</strong>
+          <button type="button" class="lsr-link" @click="clearSelection">Clear selection</button>
+        </div>
+
         <div v-for="stage in stages" :key="stage.stage_id" class="lsr-stage-card">
           <div class="lsr-stage-head">
             <span class="lsr-stage-dot" :style="{ background: stage.stage_color || '#7c3aed' }" />
             <h3>{{ stage.stage_name }}</h3>
+            <span v-if="stageSelectedCount(stage) > 0" class="lsr-stage-selected">Selected: {{ stageSelectedTotal(stage) }}</span>
             <span class="lsr-stage-total">{{ stage.total }} leads</span>
           </div>
 
           <table class="lsr-table">
             <thead>
               <tr>
+                <th class="lsr-th-check">
+                  <input
+                    type="checkbox"
+                    :checked="isStageAllSelected(stage)"
+                    @change="toggleStageAll(stage, $event.target.checked)"
+                  />
+                </th>
                 <th>Source</th>
                 <th>Count</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in stage.sources" :key="row.source">
+                <td class="lsr-td-check">
+                  <input
+                    type="checkbox"
+                    :checked="isRowSelected(stage.stage_id, row.source)"
+                    @change="toggleRow(stage.stage_id, row.source, row.count, $event.target.checked)"
+                  />
+                </td>
                 <td>{{ row.source }}</td>
                 <td>{{ row.count }}</td>
               </tr>
               <tr v-if="!stage.sources.length">
-                <td colspan="2" class="lsr-no-rows">No leads in this stage</td>
+                <td colspan="3" class="lsr-no-rows">No leads in this stage</td>
               </tr>
             </tbody>
           </table>
@@ -65,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
@@ -82,9 +103,46 @@ const buildParams = () => ({
   ...(dateTo.value ? { date_to: dateTo.value } : {}),
 })
 
+// key: `${stageId}::${source}` -> count, for the currently checked rows
+const selected = reactive({})
+const rowKey = (stageId, source) => `${stageId}::${source}`
+
+const isRowSelected = (stageId, source) => Object.prototype.hasOwnProperty.call(selected, rowKey(stageId, source))
+
+const toggleRow = (stageId, source, count, checked) => {
+  const key = rowKey(stageId, source)
+  if (checked) {
+    selected[key] = count
+  } else {
+    delete selected[key]
+  }
+}
+
+const isStageAllSelected = (stage) => {
+  if (!stage.sources.length) return false
+  return stage.sources.every((row) => isRowSelected(stage.stage_id, row.source))
+}
+
+const toggleStageAll = (stage, checked) => {
+  stage.sources.forEach((row) => toggleRow(stage.stage_id, row.source, row.count, checked))
+}
+
+const stageSelectedCount = (stage) => stage.sources.filter((row) => isRowSelected(stage.stage_id, row.source)).length
+
+const stageSelectedTotal = (stage) =>
+  stage.sources.reduce((sum, row) => (isRowSelected(stage.stage_id, row.source) ? sum + row.count : sum), 0)
+
+const grandSelectedCount = computed(() => Object.keys(selected).length)
+const grandSelectedTotal = computed(() => Object.values(selected).reduce((sum, count) => sum + count, 0))
+
+const clearSelection = () => {
+  Object.keys(selected).forEach((key) => delete selected[key])
+}
+
 const fetchReport = async () => {
   loading.value = true
   error.value = ''
+  clearSelection()
   try {
     const response = await api.get('/leads/reports/leads-by-source', { params: buildParams() })
     stages.value = response?.data?.data?.report || []
@@ -158,15 +216,22 @@ onMounted(fetchReport)
 .lsr-link { border: none; background: transparent; color: #b3261e; text-decoration: underline; cursor: pointer; margin-left: auto; }
 .lsr-loading, .lsr-empty { padding: 24px; text-align: center; color: #8390a7; }
 
+.lsr-selected-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #eef1ff; border: 1px solid #d3d9ff; color: #10152f; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }
+.lsr-selected-bar strong { font-size: 15px; }
+.lsr-selected-bar .lsr-link { margin-left: auto; color: #3547ff; }
+
 .lsr-stage-card { background: #fff; border: 1px solid #ebeef3; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-.lsr-stage-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.lsr-stage-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .lsr-stage-head h3 { margin: 0; font-size: 16px; color: #10152f; }
 .lsr-stage-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.lsr-stage-selected { font-size: 12px; color: #3547ff; font-weight: 600; }
 .lsr-stage-total { margin-left: auto; font-size: 12px; color: #8390a7; font-weight: 600; }
 
 .lsr-table { width: 100%; border-collapse: collapse; }
 .lsr-table th { text-align: left; font-size: 12px; color: #8390a7; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid #ebeef3; }
 .lsr-table td { padding: 10px; border-bottom: 1px solid #f2f4f8; font-size: 13px; color: #10152f; }
+.lsr-th-check, .lsr-td-check { width: 36px; padding-right: 0 !important; }
+.lsr-th-check input, .lsr-td-check input { width: 16px; height: 16px; cursor: pointer; }
 .lsr-no-rows { text-align: center; color: #8390a7; }
 
 @media (min-width: 768px) {
