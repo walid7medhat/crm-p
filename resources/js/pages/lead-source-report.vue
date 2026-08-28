@@ -232,13 +232,35 @@ onMounted(fetchReport)
 .lsr-table td { padding: 10px; border-bottom: 1px solid #f2f4f8; font-size: 13px; color: #10152f; }
 .lsr-th-check, .lsr-td-check { width: 36px; padding-right: 0 !important; }
 .lsr-th-check input, .lsr-td-check input {
-  width: 17px;
-  height: 17px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 2px solid #b7bdd1;
+  border-radius: 5px;
+  background: #fff;
   cursor: pointer;
-  accent-color: #3547ff;
-  border-radius: 4px;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color .15s ease, background-color .15s ease;
 }
-.lsr-th-check input:hover, .lsr-td-check input:hover { accent-color: #263bd6; }
+.lsr-th-check input:hover, .lsr-td-check input:hover { border-color: #3547ff; }
+.lsr-th-check input:checked, .lsr-td-check input:checked {
+  background: #3547ff;
+  border-color: #3547ff;
+}
+.lsr-th-check input:checked::after, .lsr-td-check input:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 .lsr-no-rows { text-align: center; color: #8390a7; }
 
 @media (min-width: 768px) {
