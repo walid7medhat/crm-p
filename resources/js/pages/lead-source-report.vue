@@ -134,15 +134,15 @@ onMounted(fetchReport)
 </script>
 
 <style scoped>
-.lead-source-report-page { background: #dfe2ee; min-height: 100vh; padding: 12px; }
-.lsr-shell { border: 1px solid #d9deea; background: #f8f9fc; border-radius: 14px; padding: 16px; }
+.lead-source-report-page { background: #ffffff !important; min-height: 100vh; padding: 12px; }
+.lsr-shell { border: 1px solid #d9deea; background: #ffffff !important; border-radius: 14px; padding: 16px; }
 
-.lsr-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.lsr-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.lsr-input { height: 38px; border: 1px solid #ebeef3; border-radius: 8px; padding: 0 10px; color: #10152f; background: #fff; }
+.lsr-toolbar { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 16px; }
+.lsr-filters { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.lsr-input { height: 38px; width: 100%; border: 1px solid #ebeef3; border-radius: 8px; padding: 0 10px; color: #10152f; background: #fff; box-sizing: border-box; }
 .lsr-sep { color: #8390a7; font-size: 13px; }
 
-.lsr-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; border-radius: 8px; padding: 0 14px; font-size: 13px; font-weight: 600; border: 1px solid transparent; cursor: pointer; }
+.lsr-btn { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; width: 100%; border-radius: 8px; padding: 0 14px; font-size: 13px; font-weight: 600; border: 1px solid transparent; cursor: pointer; box-sizing: border-box; }
 .lsr-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .lsr-btn--ghost { background: #fff; border-color: #ebeef3; color: #10152f; }
 .lsr-btn--primary { background: #020b38; color: #fff; }
