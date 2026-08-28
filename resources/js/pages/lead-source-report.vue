@@ -231,7 +231,14 @@ onMounted(fetchReport)
 .lsr-table th { text-align: left; font-size: 12px; color: #8390a7; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid #ebeef3; }
 .lsr-table td { padding: 10px; border-bottom: 1px solid #f2f4f8; font-size: 13px; color: #10152f; }
 .lsr-th-check, .lsr-td-check { width: 36px; padding-right: 0 !important; }
-.lsr-th-check input, .lsr-td-check input { width: 16px; height: 16px; cursor: pointer; }
+.lsr-th-check input, .lsr-td-check input {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: #3547ff;
+  border-radius: 4px;
+}
+.lsr-th-check input:hover, .lsr-td-check input:hover { accent-color: #263bd6; }
 .lsr-no-rows { text-align: center; color: #8390a7; }
 
 @media (min-width: 768px) {
