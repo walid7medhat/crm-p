@@ -843,6 +843,7 @@ const mainMenuItems = computed(() => {
   }
 
   if (isAdmin.value) {
+    items.push({ path: '/lead-source-report', label: 'Leads by Source', icon: 'lucide:pie-chart' });
     items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', icon: 'lucide:target' });
   }
 

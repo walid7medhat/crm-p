@@ -86,7 +86,7 @@ const fetchReport = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await api.get('/reports/leads-by-source', { params: buildParams() })
+    const response = await api.get('/leads/reports/leads-by-source', { params: buildParams() })
     stages.value = response?.data?.data?.report || []
   } catch (err) {
     error.value = err?.response?.data?.message || 'Failed to load report'
@@ -104,7 +104,7 @@ const clearFilters = () => {
 const downloadReport = async () => {
   downloading.value = true
   try {
-    const response = await api.get('/reports/leads-by-source/export', {
+    const response = await api.get('/leads/reports/leads-by-source/export', {
       params: buildParams(),
       responseType: 'blob',
     })
