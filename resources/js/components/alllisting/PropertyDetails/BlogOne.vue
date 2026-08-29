@@ -6124,7 +6124,7 @@ const createPaymentDetailsSlide = () => {
     const nocAmount = nocFixedAmount;
     const isFullyPaid = scheduledAed >= nocRequired - 0.01;
     const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
-    const nocValueBadge = `<span style="color:${statusColor};">${fmtAed(nocAmount)}</span>`;
+    const nocValueBadge = `<span >${fmtAed(nocAmount)}</span>`;
 
     expenseRows.push(`
       <tr>
@@ -6249,9 +6249,17 @@ const createPaymentDetailsSlide = () => {
       </span>
     </div>
   ` : '';
-
+const noteBlock = `
+  <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:11.5% !important; z-index:20 !important; box-sizing:border-box !important;">
+    <div style="background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-left:1mm solid #FAA300 !important; border-radius:2mm !important; padding:2mm 3.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important;">
+      <p style="margin:0 !important; color:rgba(255,255,255,0.85) !important; font-size:${d.fsXs} !important; line-height:1.5 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
+        Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
+      </p>
+    </div>
+  </div>
+`;
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#f4f6f9 !important;">
+  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
     </div>
@@ -6285,7 +6293,7 @@ const createPaymentDetailsSlide = () => {
     ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
-      <p  style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+      ${noteBlock}
     </div>
     ${createFooter()}
   </div>
