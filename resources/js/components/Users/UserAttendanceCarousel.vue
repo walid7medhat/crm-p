@@ -20,9 +20,9 @@
     </div>
 
     <div v-else-if="!monthData.length" class="uac-empty">
-      <p>No attendance records found for your account.</p>
+      <p>No attendance records found for {{ userId ? "this employee's account" : 'your account' }}.</p>
       <p v-if="!hasBiometric" class="uac-empty-hint">
-        Your profile has no biometric code. Ask HR to link your employee ID (same as HR attendance) to your user account.
+        {{ userId ? 'This profile has' : 'Your profile has' }} no biometric code. Ask HR to link the employee ID (same as HR attendance) to the user account.
       </p>
       <p v-else class="uac-empty-hint">Records sync from the same biometric system used in HR attendance.</p>
     </div>
@@ -54,6 +54,30 @@
           >
             <i class="ri-arrow-right-s-line"></i>
           </button>
+        </div>
+      </div>
+
+      <div v-if="totalWorkingDays > 0" class="uac-insights">
+        <div class="uac-donut">
+          <apexchart type="donut" height="180" :options="donutOptions" :series="donutSeries" />
+        </div>
+        <div class="uac-rate-grid">
+          <div class="uac-rate-tile">
+            <span class="uac-rate-label">Present Rate</span>
+            <strong class="uac-rate-value rate-safe">{{ presentRate }}%</strong>
+          </div>
+          <div class="uac-rate-tile">
+            <span class="uac-rate-label">Late Rate</span>
+            <strong class="uac-rate-value rate-warning">{{ lateRate }}%</strong>
+          </div>
+          <div class="uac-rate-tile">
+            <span class="uac-rate-label">Absent Rate</span>
+            <strong class="uac-rate-value rate-danger">{{ absentRate }}%</strong>
+          </div>
+          <div class="uac-rate-tile">
+            <span class="uac-rate-label">Deduction</span>
+            <strong class="uac-rate-value" :class="`rate-${deductionClass}`">{{ deductionRate.toFixed(1) }}%</strong>
+          </div>
         </div>
       </div>
 
@@ -109,6 +133,10 @@ export default {
       type: Number,
       default: 12,
     },
+    userId: {
+      type: [Number, String],
+      default: null,
+    },
   },
   data() {
     return {
@@ -135,6 +163,42 @@ export default {
     canGoOlder() {
       return this.monthIndex < this.monthData.length - 1;
     },
+    totalWorkingDays() {
+      return this.currentMonth?.total_working_days || 0;
+    },
+    presentRate() {
+      if (!this.totalWorkingDays) return 0;
+      return Math.round((this.currentMonth.present / this.totalWorkingDays) * 100);
+    },
+    lateRate() {
+      if (!this.totalWorkingDays) return 0;
+      return Math.round((this.currentMonth.late / this.totalWorkingDays) * 100);
+    },
+    absentRate() {
+      if (!this.totalWorkingDays) return 0;
+      return Math.round((this.currentMonth.absent / this.totalWorkingDays) * 100);
+    },
+    deductionRate() {
+      return Number(this.currentMonth?.total_deduction_percent || 0);
+    },
+    deductionClass() {
+      if (this.deductionRate >= 25) return 'danger';
+      if (this.deductionRate >= 10) return 'warning';
+      return 'safe';
+    },
+    donutSeries() {
+      if (!this.currentMonth) return [0, 0, 0];
+      return [this.currentMonth.present, this.currentMonth.late, this.currentMonth.absent];
+    },
+    donutOptions() {
+      return {
+        labels: ['Present', 'Late', 'Absent'],
+        colors: ['#16a34a', '#f59e0b', '#ef4444'],
+        legend: { position: 'bottom', fontSize: '12px' },
+        dataLabels: { enabled: true },
+        stroke: { width: 2 },
+      };
+    },
   },
   mounted() {
     this.fetchHistory();
@@ -145,7 +209,9 @@ export default {
       this.error = null;
 
       try {
-        const response = await attendancesApi.profileHistory(this.months);
+        const response = this.userId
+          ? await attendancesApi.userHistory(this.userId, this.months)
+          : await attendancesApi.profileHistory(this.months);
         const payload = response.data || {};
         if (payload.success === false) {
           throw new Error(payload.message || 'Failed to load attendance');
@@ -312,6 +378,66 @@ export default {
 
 .uac-chip.absent {
   background: #fee2e2;
+  color: #991b1b;
+}
+
+.uac-insights {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  background: #fafaff;
+  border: 1px solid #eceff5;
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.uac-donut {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.uac-rate-grid {
+  flex: 1;
+  min-width: 220px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.uac-rate-tile {
+  background: #fff;
+  border: 1px solid #eceff5;
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.uac-rate-label {
+  display: block;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.uac-rate-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.uac-rate-value.rate-safe {
+  color: #166534;
+}
+
+.uac-rate-value.rate-warning {
+  color: #b45309;
+}
+
+.uac-rate-value.rate-danger {
   color: #991b1b;
 }
 

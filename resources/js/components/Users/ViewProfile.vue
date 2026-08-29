@@ -3024,7 +3024,7 @@ const openLeaveDetail = (lv) => {
   gap: 5px;
 }
 .vp-sales-date label {
-  font-size: 11px;
+  font-size: 12px;
   color: #6b7280;
   font-weight: 600;
   text-transform: uppercase;
@@ -3035,6 +3035,7 @@ const openLeaveDetail = (lv) => {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 0 10px;
+  font-size: 13px;
   color: #0b0736;
 }
 .vp-btn-primary--sm {
@@ -3080,6 +3081,7 @@ const openLeaveDetail = (lv) => {
 }
 .vp-sales-state {
   padding: 20px;
+  font-size: 13px;
   color: #6b7280;
 }
 .vp-sales-state--error {
@@ -3106,7 +3108,7 @@ const openLeaveDetail = (lv) => {
   color: #0b0736;
 }
 .vp-sales-table th {
-  font-size: 11px;
+  font-size: 12px;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: .03em;
@@ -3144,7 +3146,7 @@ const openLeaveDetail = (lv) => {
 }
 .vp-sales-location-extra {
   margin-left: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: #9ca3af;
 }
 
@@ -3180,7 +3182,7 @@ const openLeaveDetail = (lv) => {
 }
 .vp-ai-kpi__value {
   display: inline-block;
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1.1;
   font-weight: 700;
   color: #64748b;
@@ -3236,7 +3238,7 @@ const openLeaveDetail = (lv) => {
 .vp-ai-coaching h5,
 .vp-ai-observations-wrap h5 {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 12px !important;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .03em;
@@ -3268,8 +3270,8 @@ const openLeaveDetail = (lv) => {
 }
 .vp-ai-coach p {
   margin: 0;
-  font-size: 12px;
-  color: #64748b;
+  font-size: 13px;
+  color: #334155;
   line-height: 1.4;
 }
 .vp-ai-coach.is-critical { border-left-color: #ef4444; }
@@ -3285,7 +3287,7 @@ const openLeaveDetail = (lv) => {
 .vp-ai-observations li {
   padding: 8px 10px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 13px;
   background: #f9fafb;
   border: 1px solid #f3f4f6;
   color: #334155;

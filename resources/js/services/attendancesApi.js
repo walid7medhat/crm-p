@@ -296,6 +296,11 @@ const attendancesApi = {
       params: { months },
     })
   },
+  userHistory(userId, months = 12) {
+    return api.get(`/users/${userId}/attendance-history`, {
+      params: { months },
+    })
+  },
 }
 
 export default attendancesApi

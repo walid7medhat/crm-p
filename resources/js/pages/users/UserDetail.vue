@@ -143,12 +143,22 @@
                 <div class="user-content-tabs mb-4">
                     <nav>
                         <div class="nav nav-tabs" id="userTab" role="tablist">
-                            <button v-if="isAgent" class="nav-link active" id="properties-tab" data-bs-toggle="tab" 
+                            <button v-if="isAgent" class="nav-link active" id="properties-tab" data-bs-toggle="tab"
                                     data-bs-target="#properties" type="button" role="tab">
                                 <i class="ri-home-4-line me-2"></i>
                                 <span class="d-none d-md-inline">Properties</span>
                                 <span class="d-inline d-md-none">Properties</span>
                                 <span v-if="agentProperties.length > 0" class="badge bg-primary ms-2">{{ agentProperties.length }}</span>
+                            </button>
+                            <button v-if="isAgent && canViewAgentInsights" class="nav-link" id="performance-tab" data-bs-toggle="tab"
+                                    data-bs-target="#performance" type="button" role="tab" @click="loadSalesPerformance">
+                                <i class="ri-line-chart-line me-2"></i>
+                                <span>Performance</span>
+                            </button>
+                            <button v-if="canViewAgentInsights" class="nav-link" :class="{ active: !isAgent }" id="attendance-tab" data-bs-toggle="tab"
+                                    data-bs-target="#attendance" type="button" role="tab">
+                                <i class="ri-calendar-check-line me-2"></i>
+                                <span>Attendance</span>
                             </button>
                         </div>
                     </nav>
@@ -300,6 +310,93 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Performance Tab -->
+                    <div class="tab-pane fade" id="performance" role="tabpanel" v-if="isAgent && canViewAgentInsights">
+                        <div class="card border-0 shadow-sm perf-card">
+                            <div class="card-body">
+                                <div class="perf-toolbar">
+                                    <div class="perf-date">
+                                        <label>From</label>
+                                        <input v-model="salesPerformanceFilters.from_date" type="date" @change="loadSalesPerformance" />
+                                    </div>
+                                    <div class="perf-date">
+                                        <label>To</label>
+                                        <input v-model="salesPerformanceFilters.to_date" type="date" @change="loadSalesPerformance" />
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" :disabled="salesPerformanceLoading" @click="loadSalesPerformance">
+                                        <span v-if="salesPerformanceLoading">Refreshing...</span>
+                                        <span v-else>Refresh</span>
+                                    </button>
+                                </div>
+
+                                <div v-if="salesPerformanceError" class="alert alert-danger py-2 px-3 mt-3 mb-0">
+                                    {{ salesPerformanceError }}
+                                </div>
+
+                                <div class="perf-kpis">
+                                    <div class="perf-kpi">
+                                        <span class="perf-kpi-label">Converted Deals</span>
+                                        <strong class="perf-kpi-value">{{ salesPerformanceSummary.converted_count }}</strong>
+                                    </div>
+                                    <div class="perf-kpi">
+                                        <span class="perf-kpi-label">Avg Lead Score</span>
+                                        <strong class="perf-kpi-value">{{ salesPerformanceSummary.avg_lead_score ?? '—' }}</strong>
+                                    </div>
+                                    <div class="perf-kpi">
+                                        <span class="perf-kpi-label">Deal Value</span>
+                                        <strong class="perf-kpi-value">{{ formatCurrency(salesPerformanceSummary.total_amount) }}</strong>
+                                    </div>
+                                    <div class="perf-kpi">
+                                        <span class="perf-kpi-label">Agent Commission</span>
+                                        <strong class="perf-kpi-value">{{ formatCurrency(salesPerformanceSummary.total_agent_commission) }}</strong>
+                                    </div>
+                                </div>
+
+                                <div v-if="salesPerformanceDeals.length" class="perf-chart-row">
+                                    <apexchart type="donut" height="220" :options="perfDonutOptions" :series="perfDonutSeries" />
+                                </div>
+
+                                <div v-if="salesPerformanceLoading" class="text-center text-muted py-4">Loading performance data...</div>
+                                <div v-else-if="!salesPerformanceDeals.length" class="text-center text-muted py-4">
+                                    No converted deals found in the selected date range.
+                                </div>
+                                <div v-else class="table-responsive mt-3">
+                                    <table class="table table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Lead</th>
+                                                <th>Deal #</th>
+                                                <th class="text-end">Lead Score</th>
+                                                <th class="text-end">Amount</th>
+                                                <th class="text-end">Agent Commission</th>
+                                                <th>Converted</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="deal in salesPerformanceDeals" :key="deal.deal_id">
+                                                <td>{{ deal.lead_name || '—' }}</td>
+                                                <td>{{ deal.deal_number || `#${deal.deal_id}` }}</td>
+                                                <td class="text-end">{{ deal.lead_score ?? '—' }}</td>
+                                                <td class="text-end">{{ formatCurrency(deal.deal_amount, deal.currency) }}</td>
+                                                <td class="text-end">{{ formatCurrency(deal.agent_commission, deal.currency) }}</td>
+                                                <td>{{ formatDate(deal.converted_at) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Tab -->
+                    <div class="tab-pane fade" :class="{ 'show active': !isAgent }" id="attendance" role="tabpanel" v-if="canViewAgentInsights">
+                        <div class="card border-0 shadow-sm perf-card">
+                            <div class="card-body">
+                                <UserAttendanceCarousel :user-id="user.id" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -387,11 +484,14 @@
 <script>
 import { API_ENDPOINTS } from '@/config/api';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
+import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
+import api from '@/plugins/axios';
 
 export default {
     name: 'ViewUser',
     components: {
-        Breadcrumb
+        Breadcrumb,
+        UserAttendanceCarousel,
     },
     data() {
         return {
@@ -423,6 +523,18 @@ export default {
                 delegate_id: '',
             },
             delegateOptions: [],
+
+            // Sales Performance (agents only)
+            salesPerformanceLoading: false,
+            salesPerformanceError: '',
+            salesPerformanceDeals: [],
+            salesPerformanceSummary: {
+                converted_count: 0,
+                total_amount: 0,
+                total_agent_commission: 0,
+                avg_lead_score: null,
+            },
+            salesPerformanceFilters: this.defaultSalesRange(),
         };
     },
     computed: {
@@ -510,7 +622,50 @@ export default {
             } catch {
                 return false;
             }
-        }
+        },
+
+        /** Agent Attendance & Performance tabs are restricted to admins and the
+         *  agent's own direct manager (user.parent_id), not managers in general.
+         */
+        canViewAgentInsights() {
+            if (!this.user) return false;
+            if (!this.isAgent) return true;
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                if (!me) return false;
+                const roles = me.roles || [];
+                if (roles.includes('super_admin') || roles.includes('admin')) return true;
+                return Number(me.id) === Number(this.user.parent_id);
+            } catch {
+                return false;
+            }
+        },
+
+        perfScoreBuckets() {
+            const buckets = { hot: 0, warm: 0, cold: 0 };
+            for (const deal of this.salesPerformanceDeals) {
+                const score = Number(deal.lead_score);
+                if (Number.isNaN(score)) continue;
+                if (score >= 70) buckets.hot += 1;
+                else if (score >= 40) buckets.warm += 1;
+                else buckets.cold += 1;
+            }
+            return buckets;
+        },
+
+        perfDonutSeries() {
+            const b = this.perfScoreBuckets;
+            return [b.hot, b.warm, b.cold];
+        },
+
+        perfDonutOptions() {
+            return {
+                labels: ['Hot Leads', 'Warm Leads', 'Cold Leads'],
+                colors: ['#ef4444', '#f59e0b', '#3b82f6'],
+                legend: { position: 'bottom', fontSize: '12px' },
+                dataLabels: { enabled: true },
+            };
+        },
     },
     mounted() {
         this.fetchUser();
@@ -549,6 +704,9 @@ export default {
                     
                     if (this.isAgent) {
                         promises.push(this.fetchAgentProperties());
+                        if (this.canViewAgentInsights) {
+                            promises.push(this.loadSalesPerformance());
+                        }
                     }
 
                     await Promise.allSettled(promises);
@@ -855,7 +1013,59 @@ export default {
             if (window.$showNotification) {
                 window.$showNotification(message, type);
             }
-        }
+        },
+
+        defaultSalesRange() {
+            const now = new Date();
+            const toStr = (d) => d.toISOString().slice(0, 10);
+            const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            return { from_date: toStr(firstOfMonth), to_date: toStr(now) };
+        },
+
+        formatCurrency(value, currency = 'AED') {
+            if (value === null || value === undefined || value === '') return '—';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency || 'AED',
+                maximumFractionDigits: 0,
+            }).format(Number(value) || 0);
+        },
+
+        async loadSalesPerformance() {
+            if (!this.user?.id) return;
+            this.salesPerformanceLoading = true;
+            this.salesPerformanceError = '';
+            try {
+                const { data } = await api.get('/leads/reports/agent-performance', {
+                    params: {
+                        from_date: this.salesPerformanceFilters.from_date,
+                        to_date: this.salesPerformanceFilters.to_date,
+                        agent_id: this.user.id,
+                        status: 'completed',
+                    },
+                });
+                const agentData = Array.isArray(data?.data) ? data.data[0] : null;
+                this.salesPerformanceDeals = Array.isArray(agentData?.deals) ? agentData.deals : [];
+                this.salesPerformanceSummary = {
+                    converted_count: Number(agentData?.converted_count) || 0,
+                    total_amount: Number(agentData?.total_amount) || 0,
+                    total_agent_commission: Number(agentData?.total_agent_commission) || 0,
+                    avg_lead_score: agentData?.avg_lead_score ?? null,
+                };
+            } catch (error) {
+                console.error('Error loading sales performance:', error);
+                this.salesPerformanceDeals = [];
+                this.salesPerformanceSummary = {
+                    converted_count: 0,
+                    total_amount: 0,
+                    total_agent_commission: 0,
+                    avg_lead_score: null,
+                };
+                this.salesPerformanceError = error?.response?.data?.message || 'Failed to load sales performance.';
+            } finally {
+                this.salesPerformanceLoading = false;
+            }
+        },
     }
 };
 </script>
@@ -1740,6 +1950,89 @@ export default {
 .icons img{
     width: 17px;
     height: 17px;
+}
+
+/* ============ PERFORMANCE & ATTENDANCE TABS ============ */
+.perf-card {
+    border-radius: 0.75rem;
+}
+
+.perf-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.perf-date {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.perf-date label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+.perf-date input {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.perf-kpis {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.perf-kpi {
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+}
+
+.perf-kpi-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.perf-kpi-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.perf-chart-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+/* Pin every text element in the Performance tab to one scale: 0.75rem for
+   labels/meta, 0.8125rem for body/table/controls, 1.25rem for the one KPI
+   emphasis size. Bootstrap's untouched defaults (table, alert, btn-sm) would
+   otherwise render around 1rem and stand out next to the smaller labels. */
+.perf-card,
+.perf-card .btn,
+.perf-card .alert,
+.perf-card .table {
+    font-size: 0.8125rem;
+}
+
+.perf-card .table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6c757d;
+    font-weight: 600;
 }
 
 /* Vacation Mode modal (opened from "Vacation" button next to Edit User) */
