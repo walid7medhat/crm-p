@@ -700,7 +700,20 @@
           </Teleport>
 
       <ProfileThemeModal v-model="showThemeModal" />
-         
+
+      <Teleport to="body">
+        <div v-if="activeAnnouncementPopup" class="announcement-popup-overlay">
+          <div class="announcement-popup">
+            <div class="announcement-popup__icon"><iconify-icon icon="lucide:megaphone" /></div>
+            <h6 class="announcement-popup__title">{{ activeAnnouncementPopup.title }}</h6>
+            <p v-if="activeAnnouncementPopup.description" class="announcement-popup__desc">{{ activeAnnouncementPopup.description }}</p>
+            <button type="button" class="announcement-popup__btn" :disabled="closingAnnouncementPopup" @click="closeAnnouncementPopup">
+              {{ closingAnnouncementPopup ? 'Closing...' : 'Got it' }}
+            </button>
+          </div>
+        </div>
+      </Teleport>
+
     </div>
   </div>
 </template>
@@ -730,6 +743,7 @@ import SystemOverviewLangToggle from '@/components/system-overview/SystemOvervie
 import userAvatarPlaceholder from '@/assets/images/users/user1.png';
 import DealSearchModal from '@/components/kanban/deals/DealSearchModal.vue';
 import LeadSearchModal from '@/components/kanban/leadList/LeadSearchModal.vue';
+import { getUnreadAnnouncements, getAnnouncement } from '@/services/announcementsApi';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
 const { isMobileViewport, toggleMobileMenu } = useMobileNavigation();
 import api from '@/plugins/axios';
@@ -2018,12 +2032,63 @@ watch(
   },
 )
 
+// Due, unread announcements shown one at a time. Polled periodically so one
+// that becomes due while the user is already logged in (no refresh) still
+// pops up, not just on the initial page load.
+const pendingAnnouncementPopups = ref([]);
+const activeAnnouncementPopup = ref(null);
+const closingAnnouncementPopup = ref(false);
+let announcementPopupPollTimer = null;
+const ANNOUNCEMENT_POPUP_POLL_MS = 60000;
+
+async function loadPendingAnnouncementPopups() {
+  try {
+    const items = await getUnreadAnnouncements();
+    const incoming = Array.isArray(items) ? items : [];
+    const knownIds = new Set(pendingAnnouncementPopups.value.map((a) => a.id));
+    if (activeAnnouncementPopup.value) knownIds.add(activeAnnouncementPopup.value.id);
+
+    for (const item of incoming) {
+      if (!knownIds.has(item.id)) {
+        pendingAnnouncementPopups.value.push(item);
+        knownIds.add(item.id);
+      }
+    }
+
+    if (!activeAnnouncementPopup.value) {
+      showNextAnnouncementPopup();
+    }
+  } catch (error) {
+    console.warn('Unable to load announcement popups', error);
+  }
+}
+
+function showNextAnnouncementPopup() {
+  activeAnnouncementPopup.value = pendingAnnouncementPopups.value.shift() || null;
+}
+
+async function closeAnnouncementPopup() {
+  const item = activeAnnouncementPopup.value;
+  if (!item || closingAnnouncementPopup.value) return;
+  closingAnnouncementPopup.value = true;
+  try {
+    await getAnnouncement(item.id);
+  } catch (error) {
+    console.warn('Failed to mark announcement as read', error);
+  } finally {
+    closingAnnouncementPopup.value = false;
+    showNextAnnouncementPopup();
+  }
+}
+
 // تحميل بيانات المستخدم والإعدادات
 onMounted(() => {
   loadUserData();
   loadNotificationSettings();
   setupClickOutsideListener();
   fetchListingTabCounts();
+  loadPendingAnnouncementPopups();
+  announcementPopupPollTimer = setInterval(loadPendingAnnouncementPopups, ANNOUNCEMENT_POPUP_POLL_MS);
    if (isCrmRoute(route.path)) {
      restoreCrmSectionFromStorage();
    }
@@ -2059,6 +2124,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (announcementPopupPollTimer) clearInterval(announcementPopupPollTimer);
   document.removeEventListener('click', handleClickOutside);
   document.removeEventListener('mousedown', onDocumentPointerDown, true);
   document.removeEventListener('click', onDocumentClick);
@@ -2168,6 +2234,70 @@ const showBackButton = computed(() => {
 </script>
 
 <style scoped>
+/* Auto popup shown on login/page load for due, unread announcements. */
+.announcement-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.announcement-popup {
+  width: min(380px, 92vw);
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px 26px 24px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+.announcement-popup__icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #f3ecf7;
+  color: #733E87;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+.announcement-popup__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0B0736;
+}
+.announcement-popup__desc {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+.announcement-popup__btn {
+  min-width: 140px;
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 10px;
+  background: #0B0736;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.announcement-popup__btn:hover:not(:disabled) {
+  background: #733E87;
+}
+.announcement-popup__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Glass bar: brand gradient (matches style14.css tokens) */
 .navbar-header {
   position: relative;

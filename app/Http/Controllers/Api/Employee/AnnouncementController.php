@@ -101,19 +101,21 @@ class AnnouncementController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'start_date' => 'required|date',
+            'time' => 'nullable|date_format:H:i',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'branch_id' => 'nullable|exists:company_branches,id',
-            'department_id' => 'nullable|exists:departments,id',
+            'branch_id' => 'required|exists:company_branches,id',
+            'department_id' => 'required|exists:departments,id',
             'send_now'=>'boolean',
         ]);
-        
+
         try {
             DB::beginTransaction();
-            
+
             $announcement = Announcement::create([
                 'title' => $request->title,
                 'description' => $request->description,
                 'start_date' => $request->start_date,
+                'time' => $request->time,
                 'end_date' => $request->end_date,
                 'branch_id' => $request->branch_id,
                 'department_id' => $request->department_id,
@@ -146,9 +148,10 @@ class AnnouncementController extends Controller
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'start_date' => 'sometimes|date',
+            'time' => 'nullable|date_format:H:i',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'branch_id' => 'nullable|exists:company_branches,id',
-            'department_id' => 'nullable|exists:departments,id',
+            'branch_id' => 'sometimes|required|exists:company_branches,id',
+            'department_id' => 'sometimes|required|exists:departments,id',
         ]);
         
         try {
@@ -217,12 +220,13 @@ class AnnouncementController extends Controller
                     $q->whereNull('end_date')
                       ->orWhereDate('end_date', '>=', $today);
                 })
+                ->due()
                 ->whereDoesntHave('views', function($q) use ($user) {
                     $q->where('user_id', $user->id);
                 })
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+
             return ApiResponse::success($announcements, 'Unread announcements retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve unread announcements: ' . $e->getMessage());

@@ -11,10 +11,10 @@ class Announcement extends Model
     protected $table = 'announcements';
     
     protected $fillable = [
-        'title', 'description', 'start_date', 'end_date',
+        'title', 'description', 'start_date', 'time', 'end_date',
         'branch_id', 'department_id', 'created_by'
     ];
-    
+
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
@@ -58,57 +58,32 @@ class Announcement extends Model
     }
     
  
+    /** Users in this announcement's exact branch AND department. */
     public function getTargetUsers()
     {
-        $query = User::whereHas('employeeProfile');
-        
-        if ($this->branch_id && $this->department_id) {
-            $query->whereHas('employeeProfile', function($q) {
-                $q->where('company_branch_id', $this->branch_id)
-                  ->where('department_id', $this->department_id);
-            });
-        }
-        elseif ($this->branch_id) {
-            $query->whereHas('employeeProfile', function($q) {
-                $q->where('company_branch_id', $this->branch_id);
-            });
-        }
-        elseif ($this->department_id) {
-            $query->whereHas('employeeProfile', function($q) {
-                $q->where('department_id', $this->department_id);
-            });
+        if (!$this->branch_id || !$this->department_id) {
+            return collect();
         }
 
-        return $query->get();
+        return User::whereHas('employeeProfile', function ($q) {
+            $q->where('company_branch_id', $this->branch_id)
+              ->where('department_id', $this->department_id);
+        })->get();
     }
-  
+
     public function isTargetedUser($userId)
     {
         $user = User::find($userId);
         if (!$user || !$user->employeeProfile) {
             return false;
         }
-        
-        $employeeProfile = $user->employeeProfile;
-        
-        if (!$this->branch_id && !$this->department_id) {
-            return true;
+
+        if (!$this->branch_id || !$this->department_id) {
+            return false;
         }
-        
-        if ($this->branch_id && $this->department_id) {
-            return $employeeProfile->company_branch_id == $this->branch_id && 
-                   $employeeProfile->department_id == $this->department_id;
-        }
-        
-        if ($this->branch_id) {
-            return $employeeProfile->company_branch_id == $this->branch_id;
-        }
-        
-        if ($this->department_id) {
-            return $employeeProfile->department_id == $this->department_id;
-        }
-        
-        return false;
+
+        return $user->employeeProfile->company_branch_id == $this->branch_id
+            && $user->employeeProfile->department_id == $this->department_id;
     }
     
    
@@ -131,45 +106,46 @@ class Announcement extends Model
     }
     
   
+    /**
+     * Restrict to announcements whose scheduled date+time has already
+     * arrived. A date-only announcement (no time set) is due as soon as
+     * its start_date arrives; a timed one waits until that time of day.
+     */
+    public function scopeDue($query)
+    {
+        $now = now();
+        $today = $now->toDateString();
+        $currentTime = $now->format('H:i:s');
+
+        return $query->where(function ($q) use ($today, $currentTime) {
+            $q->whereDate('start_date', '<', $today)
+              ->orWhere(function ($q2) use ($currentTime) {
+                  $q2->whereNull('time')->orWhere('time', '<=', $currentTime);
+              });
+        });
+    }
+
+    /**
+     * Restrict to announcements targeted at this user's exact branch AND
+     * department. A user with no employee profile (or no branch/department
+     * on it) sees none — there is no "global" announcement anymore.
+     */
     public function scopeForUser($query, $userId)
     {
         $user = User::find($userId);
-        
-        if (!$user || !$user->employeeProfile) {
-            return $query;
+        $branchId = $user?->employeeProfile?->company_branch_id;
+        $departmentId = $user?->employeeProfile?->department_id;
+
+        if (!$branchId || !$departmentId) {
+            return $query->whereRaw('1 = 0');
         }
-        
-        $branchId = $user->employeeProfile->company_branch_id;
-        $departmentId = $user->employeeProfile->department_id;
-        
-        return $query->where(function($q) use ($branchId, $departmentId) {
-            $q->whereNull('branch_id')
-              ->whereNull('department_id');
-            
-            if ($branchId) {
-                $q->orWhere(function($q2) use ($branchId) {
-                    $q2->where('branch_id', $branchId)
-                       ->whereNull('department_id');
-                });
-            }
-            
-            if ($departmentId) {
-                $q->orWhere(function($q2) use ($departmentId) {
-                    $q2->whereNull('branch_id')
-                       ->where('department_id', $departmentId);
-                });
-            }
-            
-            if ($branchId && $departmentId) {
-                $q->orWhere(function($q2) use ($branchId, $departmentId) {
-                    $q2->where('branch_id', $branchId)
-                       ->where('department_id', $departmentId);
-                });
-            }
-        })->whereDate('start_date', '<=', now()->toDateString())
-          ->where(function($q) {
-              $q->whereNull('end_date')
-                ->orWhereDate('end_date', '>=', now()->toDateString());
-          });
+
+        return $query->where('branch_id', $branchId)
+            ->where('department_id', $departmentId)
+            ->whereDate('start_date', '<=', now()->toDateString())
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                  ->orWhereDate('end_date', '>=', now()->toDateString());
+            });
     }
 }

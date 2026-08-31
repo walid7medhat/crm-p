@@ -479,7 +479,10 @@
                     <tr v-for="item in pagedAnnouncementRows" :key="`announcement-row-${item.id}`">
                       <td class="announcement-grid__check"><input type="checkbox" /></td>
                       <td class="announcement-grid__title-cell">{{ item.title }}</td>
-                      <td>{{ item.startDate }}</td>
+                      <td>
+                        {{ item.startDate }}
+                        <span v-if="item.timeLabel" class="announcement-grid__time">{{ item.timeLabel }}</span>
+                      </td>
                       <td>{{ item.endDate || '--' }}</td>
                       <td>{{ item.branch }}</td>
                       <td>{{ item.department }}</td>
@@ -777,17 +780,16 @@
               </div>
               <div class="add-field">
                 <label>Start Date</label>
-                <div class="add-field-control">
-                  <input :value="formatDateDisplay(announcementForm.startDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.startDate')" />
-                  <iconify-icon icon="lucide:calendar" />
-                </div>
+                <input :value="formatDateDisplay(announcementForm.startDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.startDate')" />
               </div>
               <div class="add-field">
                 <label>End Date</label>
-                <div class="add-field-control">
-                  <input :value="formatDateDisplay(announcementForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.endDate')" />
-                  <iconify-icon icon="lucide:calendar" />
-                </div>
+                <input :value="formatDateDisplay(announcementForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('announcementForm.endDate')" />
+              </div>
+              <div class="add-field">
+                <label>Time</label>
+                <input v-model="announcementForm.time" type="time" />
+                <small class="announcement-time-hint">Popup shows once this date &amp; time arrive. Leave empty to show as soon as the date arrives.</small>
               </div>
               <div class="add-field add-field-full">
                 <label>Description</label>
@@ -834,6 +836,10 @@
               <div class="add-field">
                 <label>End Date</label>
                 <p class="announcement-view-value">{{ viewingAnnouncement.endDate || '--' }}</p>
+              </div>
+              <div class="add-field">
+                <label>Time</label>
+                <p class="announcement-view-value">{{ viewingAnnouncement.timeLabel || '--' }}</p>
               </div>
               <div class="add-field add-field-full">
                 <label>Description</label>
@@ -3319,6 +3325,7 @@ const defaultAnnouncementForm = () => ({
   branch: '',
   department: '',
   startDate: '',
+  time: '',
   endDate: '',
   description: '',
 })
@@ -3715,11 +3722,24 @@ const announcementsPaginationItems = computed(() => {
 const openAnnouncementMenuItem = computed(() =>
   announcementRows.value.find((row) => row.id === openAnnouncementRowMenuId.value) || null
 )
+function formatAnnouncementTime(value) {
+  if (!value) return ''
+  const match = String(value).match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return ''
+  let hour = Number(match[1])
+  const minute = match[2]
+  const period = hour >= 12 ? 'PM' : 'AM'
+  hour = hour % 12 || 12
+  return `${hour}:${minute} ${period}`
+}
+
 function mapAnnouncementToRow(item) {
   return {
     id: item.id,
     title: item.title,
     startDate: formatDate(item.start_date),
+    time: item.time || '',
+    timeLabel: formatAnnouncementTime(item.time),
     endDate: item.end_date ? formatDate(item.end_date) : '--',
     branch: item.branch?.name || 'All',
     department: item.department?.name || 'All',
@@ -3751,6 +3771,7 @@ const loadAnnouncementsData = async () => {
     loadingAnnouncements.value = false
   }
 }
+
 const filteredCareerRows = computed(() => {
   const keyword = careerSearchKeyword.value.trim().toLowerCase()
   if (!keyword) return careerRows.value
@@ -5014,6 +5035,7 @@ function openEditAnnouncement(item) {
     branch: item.branch_id || '',
     department: item.department_id || '',
     startDate: normalizeDateInput(item.raw?.start_date),
+    time: item.raw?.time ? String(item.raw.time).slice(0, 5) : '',
     endDate: item.raw?.end_date ? normalizeDateInput(item.raw.end_date) : '',
     description: item.raw?.description || '',
   }
@@ -5039,11 +5061,20 @@ const saveAnnouncement = async () => {
     showNotification('Please select a start date', 'error')
     return
   }
+  if (!announcementForm.value.branch) {
+    showNotification('Please select a branch', 'error')
+    return
+  }
+  if (!announcementForm.value.department) {
+    showNotification('Please select a department', 'error')
+    return
+  }
 
   const payload = {
     title: announcementForm.value.title,
     description: announcementForm.value.description || '',
     start_date: announcementForm.value.startDate,
+    time: announcementForm.value.time || null,
     end_date: announcementForm.value.endDate || null,
     branch_id: announcementForm.value.branch || null,
     department_id: announcementForm.value.department || null,
@@ -7910,6 +7941,12 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.announcement-grid__time {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
 .announcement-grid__empty {
   text-align: center;
   color: #9ca3af;
@@ -8070,8 +8107,7 @@ onBeforeUnmount(() => {
   min-height: 120px;
   padding: 12px 14px;
 }
-.announcement-modal .add-field-control input {
-  height: 50px;
+.announcement-modal .add-field input[readonly] {
   cursor: pointer;
 }
 .announcement-view-value {
@@ -8091,6 +8127,13 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+.announcement-time-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.4;
 }
 .attendance-row-action-cell {
   position: relative;
