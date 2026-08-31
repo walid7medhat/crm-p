@@ -2318,18 +2318,23 @@ const showBackButton = computed(() => {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.35);
-  z-index: 10050;
+  z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
 }
 .announcement-popup {
-  width: min(380px, 92vw);
+  width: min(380px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
   background: #fff;
   border-radius: 18px;
-  padding: 28px 26px 24px;
+  padding: 28px 22px 24px;
   text-align: center;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  box-sizing: border-box;
 }
 .announcement-popup__icon {
   width: 52px;
@@ -2342,12 +2347,14 @@ const showBackButton = computed(() => {
   align-items: center;
   justify-content: center;
   font-size: 24px;
+  flex-shrink: 0;
 }
 .announcement-popup__title {
   margin: 0 0 8px;
   font-size: 16px;
   font-weight: 700;
   color: #0B0736;
+  word-break: break-word;
 }
 .announcement-popup__desc {
   margin: 0 0 20px;
@@ -2355,9 +2362,12 @@ const showBackButton = computed(() => {
   line-height: 1.6;
   color: #4b5563;
   white-space: pre-wrap;
+  word-break: break-word;
+  text-align: center;
 }
 .announcement-popup__btn {
-  min-width: 140px;
+  width: 100%;
+  max-width: 220px;
   height: 42px;
   padding: 0 20px;
   border: none;
@@ -2375,6 +2385,18 @@ const showBackButton = computed(() => {
 .announcement-popup__btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 360px) {
+  .announcement-popup {
+    padding: 22px 16px 18px;
+    border-radius: 14px;
+  }
+  .announcement-popup__icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
 }
 
 /* Festive popup shown to a user on their own birthday. */
