@@ -174,6 +174,19 @@ export default {
       }
 
       const type = notification.type || notification?.data?.notification_type
+
+      if (type === 'App\\Notifications\\BirthdayColleagueNotification') {
+        const d = notification.data || {}
+        if (typeof window !== 'undefined' && typeof window.__openPropertyChat === 'function') {
+          window.__openPropertyChat(
+            { id: d.birthday_user_id, name: d.birthday_user_name, avatar: d.birthday_user_avatar },
+            null,
+            null,
+          )
+        }
+        return
+      }
+
       if (['request', 'approved', 'rejected'].includes(type)) {
         this.$router.push('/my-requests')
       } else if (notification?.data?.property_id) {

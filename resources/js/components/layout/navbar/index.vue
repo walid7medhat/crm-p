@@ -714,6 +714,19 @@
         </div>
       </Teleport>
 
+      <Teleport to="body">
+        <div v-if="activeBirthdayPopup" class="birthday-popup-overlay">
+          <div class="birthday-popup">
+            <div class="birthday-popup__emoji">🎉🎂🎈</div>
+            <h6 class="birthday-popup__title">Happy Birthday!</h6>
+            <p class="birthday-popup__desc">{{ activeBirthdayPopup.data?.message }}</p>
+            <button type="button" class="birthday-popup__btn" :disabled="closingBirthdayPopup" @click="closeBirthdayPopup">
+              {{ closingBirthdayPopup ? 'Closing...' : 'Thank you!' }}
+            </button>
+          </div>
+        </div>
+      </Teleport>
+
     </div>
   </div>
 </template>
@@ -2081,6 +2094,69 @@ async function closeAnnouncementPopup() {
   }
 }
 
+// Birthday self-celebration popup: shown once per unread `birthday_self`
+// database notification, polled the same way as announcement popups so it
+// still appears if the birthday notification lands while already logged in.
+// Dismissed ids are also remembered in sessionStorage so a slow/failed
+// mark-as-read call (or another poll tick firing before it lands) can never
+// bring the same popup back a second time in this browser tab.
+const activeBirthdayPopup = ref(null);
+const closingBirthdayPopup = ref(false);
+let birthdayPopupPollTimer = null;
+const BIRTHDAY_POPUP_POLL_MS = 60000;
+const BIRTHDAY_SELF_NOTIFICATION_TYPE = 'App\\Notifications\\BirthdaySelfNotification';
+const BIRTHDAY_POPUP_SEEN_KEY = 'birthday_popup_seen_ids';
+
+function getSeenBirthdayPopupIds() {
+  try {
+    return new Set(JSON.parse(sessionStorage.getItem(BIRTHDAY_POPUP_SEEN_KEY) || '[]'));
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function markBirthdayPopupSeen(id) {
+  try {
+    const seen = getSeenBirthdayPopupIds();
+    seen.add(id);
+    sessionStorage.setItem(BIRTHDAY_POPUP_SEEN_KEY, JSON.stringify([...seen]));
+  } catch (error) {
+    // sessionStorage unavailable (e.g. private mode) — server-side read_at still guards it.
+  }
+}
+
+async function loadBirthdayPopup() {
+  if (activeBirthdayPopup.value) return;
+  try {
+    const response = await api.get('/auth/notifications');
+    const items = response?.data?.data || [];
+    const seen = getSeenBirthdayPopupIds();
+    const unread = items.find(
+      (n) => n.type === BIRTHDAY_SELF_NOTIFICATION_TYPE && !n.read_at && !seen.has(n.id),
+    );
+    if (unread) {
+      markBirthdayPopupSeen(unread.id);
+      activeBirthdayPopup.value = unread;
+    }
+  } catch (error) {
+    console.warn('Unable to load birthday popup', error);
+  }
+}
+
+async function closeBirthdayPopup() {
+  const item = activeBirthdayPopup.value;
+  if (!item || closingBirthdayPopup.value) return;
+  closingBirthdayPopup.value = true;
+  try {
+    await api.post(`/auth/notifications/${item.id}/read`);
+  } catch (error) {
+    console.warn('Failed to mark birthday notification as read', error);
+  } finally {
+    closingBirthdayPopup.value = false;
+    activeBirthdayPopup.value = null;
+  }
+}
+
 // تحميل بيانات المستخدم والإعدادات
 onMounted(() => {
   loadUserData();
@@ -2089,6 +2165,8 @@ onMounted(() => {
   fetchListingTabCounts();
   loadPendingAnnouncementPopups();
   announcementPopupPollTimer = setInterval(loadPendingAnnouncementPopups, ANNOUNCEMENT_POPUP_POLL_MS);
+  loadBirthdayPopup();
+  birthdayPopupPollTimer = setInterval(loadBirthdayPopup, BIRTHDAY_POPUP_POLL_MS);
    if (isCrmRoute(route.path)) {
      restoreCrmSectionFromStorage();
    }
@@ -2125,6 +2203,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (announcementPopupPollTimer) clearInterval(announcementPopupPollTimer);
+  if (birthdayPopupPollTimer) clearInterval(birthdayPopupPollTimer);
   document.removeEventListener('click', handleClickOutside);
   document.removeEventListener('mousedown', onDocumentPointerDown, true);
   document.removeEventListener('click', onDocumentClick);
@@ -2294,6 +2373,64 @@ const showBackButton = computed(() => {
   background: #733E87;
 }
 .announcement-popup__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Festive popup shown to a user on their own birthday. */
+.birthday-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 10060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.birthday-popup {
+  width: min(400px, 92vw);
+  background: linear-gradient(160deg, #0B0736 0%, #733E87 100%);
+  border-radius: 20px;
+  padding: 32px 28px 26px;
+  text-align: center;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.35);
+}
+.birthday-popup__emoji {
+  font-size: 44px;
+  line-height: 1;
+  margin: 0 0 14px;
+}
+.birthday-popup__title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+.birthday-popup__desc {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: pre-wrap;
+}
+.birthday-popup__btn {
+  min-width: 150px;
+  height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 10px;
+  background: #fff;
+  color: #0B0736;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.birthday-popup__btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+.birthday-popup__btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

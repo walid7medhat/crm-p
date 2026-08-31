@@ -68,6 +68,7 @@ return Application::configure(basePath: dirname(__DIR__))
     // ->withoutOverlapping()
     // ->appendOutputTo(storage_path('logs/comments_sync.log')); 
         $schedule->command('activities:send-reminders')->everyMinute();
+        $schedule->command('birthdays:celebrate')->dailyAt('08:00');
         $schedule->command('leads:score')
                 ->everyTenMinutes()
                 ->withoutOverlapping()

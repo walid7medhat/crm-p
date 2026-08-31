@@ -57,6 +57,7 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birth_date' => 'date',
             'on_vacation' => 'boolean',
             'last_lead_assigned_at' => 'datetime',
             'lead_assign_count_date' => 'date',
