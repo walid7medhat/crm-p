@@ -1,7 +1,13 @@
 <template>
   <article class="la-attendance-row" :class="`la-attendance-row--${record.status}`">
     <div class="la-attendance-row__employee">
-      <img :src="record.avatar" :alt="record.name" class="la-attendance-row__avatar" loading="lazy" />
+      <img
+        :src="record.avatar"
+        :alt="record.name"
+        class="la-attendance-row__avatar"
+        loading="lazy"
+        @error="onAvatarError"
+      />
       <div class="la-attendance-row__identity">
         <p class="la-attendance-row__name">{{ record.name }}</p>
         <span class="la-attendance-row__meta">{{ record.department }}</span>
@@ -64,5 +70,13 @@ function formatTime(t) {
   const s = String(t)
   const m = s.match(/(\d{1,2}:\d{2})/)
   return m ? m[1] : s.slice(0, 5)
+}
+
+function onAvatarError(event) {
+  const el = event?.target
+  if (!el || el.dataset.avatarFallback === '1') return
+  el.dataset.avatarFallback = '1'
+  const name = el.alt || 'E'
+  el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`
 }
 </script>

@@ -1,7 +1,13 @@
 <template>
   <article class="la-leave-card">
     <div class="la-leave-card__head">
-      <img :src="leave.avatar" :alt="leave.employeeName" class="la-leave-card__avatar" loading="lazy" />
+      <img
+        :src="leave.avatar"
+        :alt="leave.employeeName"
+        class="la-leave-card__avatar"
+        loading="lazy"
+        @error="onAvatarError"
+      />
       <div class="la-leave-card__meta">
         <p class="la-leave-card__name">{{ leave.employeeName }}</p>
         <p class="la-leave-card__code">{{ formattedEmpCode }}</p>
@@ -147,6 +153,14 @@ function formatDate(v) {
   const d = new Date(v)
   if (Number.isNaN(d.getTime())) return v
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function onAvatarError(event) {
+  const el = event?.target
+  if (!el || el.dataset.avatarFallback === '1') return
+  el.dataset.avatarFallback = '1'
+  const name = el.alt || 'E'
+  el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`
 }
 </script>
 

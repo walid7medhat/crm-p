@@ -17,6 +17,40 @@ function unwrapPaginated(payload) {
   return { items: [], currentPage: 1, lastPage: 1, total: 0 }
 }
 
+function avatarFallback(name = 'E') {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'E')}&background=733e87&color=fff`
+}
+
+/** Relative DB paths (users/…) need /storage/; absolute APP_URL hosts must match the SPA origin. */
+export function resolveAvatarUrl(avatar, name = 'E') {
+  const fallback = avatarFallback(name)
+  if (!avatar || typeof avatar !== 'string') return fallback
+
+  const raw = avatar.trim()
+  if (!raw) return fallback
+  if (raw.startsWith('data:') || raw.includes('ui-avatars.com')) return raw
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw)
+      if (parsed.pathname.includes('/storage/') && typeof window !== 'undefined') {
+        const badLocal = /^(127\.0\.0\.1|localhost)$/i.test(parsed.hostname)
+        if (badLocal || parsed.origin !== window.location.origin) {
+          return `${window.location.origin}${parsed.pathname}${parsed.search}`
+        }
+      }
+      return raw
+    } catch {
+      return raw
+    }
+  }
+
+  const path = raw.startsWith('/') ? raw : `/storage/${raw.replace(/^\/+/, '')}`
+  if (path.startsWith('/storage/')) {
+    return typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+  }
+  return typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+}
 
 export function normalizeAttendanceRow(row) {
   if (!row) {
@@ -53,7 +87,7 @@ export function normalizeAttendanceRow(row) {
     workingHours: calcWorkingHours(checkIn, checkOut),
     overtimeHours: formatOt(row.overtime_minutes ?? row.ot_minutes),
     date,
-    avatar: row.avatar || row.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`,
+    avatar: resolveAvatarUrl(row.avatar || row.user?.avatar, name),
     raw: row,
   };
 
@@ -120,7 +154,7 @@ export function normalizeLeaveRow(req) {
     status: req.status,
     statusLabel: formatLeaveStatus(req.status),
     reason: req.reason || '—',
-    avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'E')}&background=733e87&color=fff`,
+    avatar: resolveAvatarUrl(user.avatar, user.name || 'E'),
     canApproveParent: req.status === 'pending_parent',
     canApproveHr: req.status === 'pending_hr',
     canReject: ['pending_parent', 'pending_hr'].includes(req.status),

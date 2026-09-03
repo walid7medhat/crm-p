@@ -81,7 +81,13 @@
             <td class="la-attendance-table__date">{{ formatDate(record.date) }}</td>
             <td>
               <div class="la-attendance-table__employee">
-                <img :src="record.avatar" :alt="record.name" class="la-attendance-table__avatar" loading="lazy" />
+                <img
+                  :src="record.avatar"
+                  :alt="record.name"
+                  class="la-attendance-table__avatar"
+                  loading="lazy"
+                  @error="onAvatarError"
+                />
                 <div>
                   <p class="la-attendance-table__name">{{ record.name }}</p>
                   <span class="la-attendance-table__emp-id">{{ formatEmpId(record.empCode) }}</span>
@@ -239,6 +245,14 @@ function formatEmpId(code) {
   if (!code || code === '—') return 'ID : —'
   const raw = String(code).replace(/^ID\s*:\s*/i, '').replace(/^#/, '')
   return `ID : #${raw}`
+}
+
+function onAvatarError(event) {
+  const el = event?.target
+  if (!el || el.dataset.avatarFallback === '1') return
+  el.dataset.avatarFallback = '1'
+  const name = el.alt || 'E'
+  el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`
 }
 
 function toggleRow(record) {
