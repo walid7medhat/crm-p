@@ -38,14 +38,23 @@
             <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" @click="editEmployee">
               <iconify-icon icon="lucide:pencil" /> Edit employee
             </button>
-            <button type="button" class="emp-mgmt__toolbar-btn" @click="goAttendance">
+            <button
+              type="button"
+              class="emp-mgmt__toolbar-btn"
+              :class="{ 'is-active': showingAttendance }"
+              @click="goAttendance"
+            >
               <iconify-icon icon="lucide:clock" /> Attendance
             </button>
           </div>
         </aside>
 
         <main class="emp-profile-page__main">
-          <div class="emp-profile-page__grid">
+          <div v-if="showingAttendance" class="emp-profile-page__attendance">
+            <UserAttendanceCarousel :user-id="employee.id" :key="employee.id" />
+          </div>
+
+          <div v-else class="emp-profile-page__grid">
             <section class="emp-profile-page__card">
               <h6>Personal information</h6>
               <div class="emp-profile-page__fields">
@@ -163,6 +172,7 @@ import {
   fetchEmployeeLeaveBalance,
   fetchEmployeeAssets,
 } from '@/services/employeesApi'
+import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -175,7 +185,8 @@ const assets = ref([])
 const leaveLoading = ref(false)
 const assetsLoading = ref(false)
 
-const activeTab = computed(() => route.query.tab || '')
+const activeTab = computed(() => String(route.query.tab || ''))
+const showingAttendance = computed(() => activeTab.value === 'attendance')
 
 const statusLabel = computed(() => {
   const map = { active: 'Active', on_leave: 'On Leave', terminated: 'Terminated', suspended: 'Suspended' }
@@ -269,7 +280,12 @@ function editEmployee() {
 }
 
 function goAttendance() {
-  router.push({ path: '/hr', query: { tab: 'Leave / Attendance', mode: 'attendance', employee: employee.value.id } })
+  if (!employee.value?.id) return
+  if (showingAttendance.value) {
+    router.replace({ path: route.path })
+    return
+  }
+  router.replace({ path: route.path, query: { tab: 'attendance' } })
 }
 
 onMounted(load)

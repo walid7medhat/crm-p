@@ -34,7 +34,7 @@
       :filters="filters"
       :departments="departments"
       :managers="agentManagers"
-      :total="filteredAttendance.length"
+      :total="attendanceTotal"
       :total-pages="attendanceTotalPages"
       :start-entry="attendanceStartEntry"
       :end-entry="attendanceEndEntry"
@@ -141,6 +141,7 @@ const {
   filteredLeaves,
   attendancePage,
   attendancePerPage,
+  attendanceTotal,
   attendanceTotalPages,
   attendanceStartEntry,
   attendanceEndEntry,
@@ -153,12 +154,13 @@ const {
   leaveEndEntry,
   leavePaginationItems,
   pagedLeaves,
+  leavesLoaded,
   loadAll,
+  loadLeaves,
   clearFilters,
 } = useLeaveAttendanceManagement()
 
-watch(filteredAttendance, () => {
-  attendancePage.value = 1
+watch(pagedAttendance, () => {
   selectedAttendanceIds.value = []
 })
 
@@ -167,17 +169,11 @@ watch(attendanceTotalPages, (tp) => {
 })
 
 watch(filteredLeaves, () => {
-  leaveTablePage.value = 1
   selectedLeaveIds.value = []
 })
 
 watch(leaveTotalPages, (tp) => {
   if (leaveTablePage.value > tp) leaveTablePage.value = tp
-})
-
-watch(searchQuery, () => {
-  attendancePage.value = 1
-  leaveTablePage.value = 1
 })
 
 activeView.value = props.initialView === 'leave' ? 'leave' : props.initialView === 'attendance' ? 'records' : props.initialView
@@ -197,6 +193,7 @@ function syncMobile() {
 
 function switchView(id) {
   activeView.value = id
+  if (id === 'leave' && !leavesLoaded.value) loadLeaves()
 }
 
 function onPopupSearch(payload) {

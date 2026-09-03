@@ -3,10 +3,9 @@ import {
   fetchAssetStatistics,
   fetchAssets,
   fetchAssetTypes,
-  resolveWarrantyStatus,
+  fetchAssignableUsers,
 } from '@/services/assetsApi'
 import { fetchDepartments, fetchBranches } from '@/services/employeesApi'
-import { fetchAgentEmployees } from '@/services/hrApi'
 
 const DEFAULT_FILTERS = () => ({
   asset_type_id: '',
@@ -83,20 +82,26 @@ export function useAssetsManagement() {
 
   async function loadOptions() {
     try {
-      const [types, depts, branchList, users] = await Promise.all([
+      const [types, depts, branchList] = await Promise.all([
         fetchAssetTypes(),
         fetchDepartments(),
         fetchBranches(),
-        fetchAgentEmployees(),
       ])
       assetTypes.value = types
       departments.value = depts
       branches.value = branchList
-      employees.value = users
     } catch {
       assetTypes.value = []
       departments.value = []
       branches.value = []
+    }
+  }
+
+  async function loadEmployees() {
+    if (employees.value.length) return
+    try {
+      employees.value = await fetchAssignableUsers()
+    } catch {
       employees.value = []
     }
   }
@@ -110,7 +115,7 @@ export function useAssetsManagement() {
   }
 
   function buildParams(page = 1) {
-    const params = { page, per_page: 200 }
+    const params = { page, per_page: 100 }
     if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
     Object.entries(filters.value).forEach(([key, value]) => {
       if (value !== '' && value != null) params[key] = value
@@ -137,7 +142,7 @@ export function useAssetsManagement() {
       currentPage.value = result?.currentPage ?? 1
       lastPage.value = result?.lastPage ?? 1
       total.value = result?.total ?? items.length
-      await loadStatistics()
+      loadStatistics()
     } catch (e) {
       error.value = e?.response?.data?.message || e?.message || 'Failed to load assets'
       if (reset) assets.value = []
@@ -170,9 +175,10 @@ export function useAssetsManagement() {
     { deep: true }
   )
 
-  onMounted(async () => {
-    await loadOptions()
-    await loadAssets(true)
+  onMounted(() => {
+    loadAssets(true)
+    loadOptions()
+    loadEmployees()
   })
 
   return {
@@ -197,6 +203,7 @@ export function useAssetsManagement() {
     warrantyAlerts,
     loadAssets,
     loadMore,
+    loadEmployees,
     clearFilters,
     loadStatistics,
   }

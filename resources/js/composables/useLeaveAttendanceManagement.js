@@ -4,7 +4,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 import {
   fetchAttendanceRecords,
   fetchLeaveRequests,
-  fetchLeaveStatistics,
   fetchLeaveTypes,
   fetchAgentEmployees,
   fetchPeriodReport,
@@ -43,13 +42,16 @@ export function useLeaveAttendanceManagement() {
   const analyticsData = ref(null)
   const calendarMonth = ref(new Date())
   
-  // ✅ Pagination variables (للـ Frontend فقط)
   const attendancePage = ref(1)
   const attendancePerPage = ref(10)
+  const attendanceServerTotal = ref(0)
+  const attendanceServerLastPage = ref(1)
   const leaveTablePage = ref(1)
   const leavePerPage = ref(10)
-  
+  const leavesLoaded = ref(false)
   let searchTimer = null
+  let pageWatchReady = false
+  let skipPageWatch = false
 
   const activeFilterCount = computed(() =>
     Object.values(filters.value).filter((v) => v !== '' && v != null).length
@@ -94,30 +96,10 @@ export function useLeaveAttendanceManagement() {
     return fields.some((f) => String(f || '').toLowerCase().includes(q))
   }
 
-  // ✅ filteredAttendance - كل البيانات بعد التصفية
-  const filteredAttendance = computed(() =>
-    attendanceRows.value.filter((row) => {
-      if (!matchesSearch(row, [row.name, row.employeeId, row.department, row.branch, row.empCode])) return false
-      if (filters.value.department && row.department !== filters.value.department) return false
-      if (filters.value.attendance_status && row.status !== filters.value.attendance_status) return false
-      return true
-    })
-  )
-
-  // ✅ pagedAttendance - البيانات المقسمة حسب الصفحة
-  const pagedAttendance = computed(() => {
-    const start = (attendancePage.value - 1) * attendancePerPage.value
-    const end = start + attendancePerPage.value
-    return filteredAttendance.value.slice(start, end)
-  })
-
-  // ✅ attendanceTotal - إجمالي عدد السجلات بعد التصفية
-  const attendanceTotal = computed(() => filteredAttendance.value.length)
-
-  // ✅ attendanceTotalPages - عدد الصفحات
-  const attendanceTotalPages = computed(() => {
-    return Math.max(1, Math.ceil(attendanceTotal.value / attendancePerPage.value))
-  })
+  const filteredAttendance = computed(() => attendanceRows.value)
+  const pagedAttendance = computed(() => attendanceRows.value)
+  const attendanceTotal = computed(() => attendanceServerTotal.value)
+  const attendanceTotalPages = computed(() => Math.max(1, attendanceServerLastPage.value))
 
   // ✅ attendanceStartEntry - أول عنصر في الصفحة
   const attendanceStartEntry = computed(() => {
@@ -194,23 +176,25 @@ export function useLeaveAttendanceManagement() {
 
   async function loadOptions() {
     try {
-      const [types, depts, users] = await Promise.all([
+      const [types, depts] = await Promise.all([
         fetchLeaveTypes(),
         fetchDepartments(),
-        fetchAgentEmployees(),
       ])
       leaveTypes.value = types
       departments.value = depts
-      agents.value = users
     } catch {
       leaveTypes.value = []
       departments.value = []
-      agents.value = []
     }
+    fetchAgentEmployees()
+      .then((users) => { agents.value = users })
+      .catch(() => { agents.value = [] })
   }
 
-  async function loadAttendance() {
+  function buildAttendanceParams() {
     const params = {
+      page: attendancePage.value,
+      per_page: attendancePerPage.value,
       status: filters.value.attendance_status || undefined,
       department: filters.value.department || undefined,
       search: searchQuery.value.trim() || undefined,
@@ -219,54 +203,65 @@ export function useLeaveAttendanceManagement() {
       params.start_date = filters.value.start_date || filters.value.end_date
       params.end_date = filters.value.end_date || filters.value.start_date
     } else {
-      const now = new Date()
-      params.start_date = localDateStringYMD(new Date(now.getFullYear(), now.getMonth(), 1))
-      params.end_date = selectedDate.value
+      params.date = selectedDate.value
     }
-    const result = await fetchAttendanceRecords(params)
+    return params
+  }
 
-    attendanceSummary.value = result.summary || {
-      total_employees: 0,
-      present_today: 0,
-      absent_today: 0,
-      late_today: 0,
+  async function loadAttendance({ silent = false, resetPage = false } = {}) {
+    if (resetPage && attendancePage.value !== 1) {
+      skipPageWatch = true
+      attendancePage.value = 1
+      skipPageWatch = false
     }
-
-    attendanceRows.value = result.rows || []
-    attendancePage.value = 1
+    if (!silent) {
+      loading.value = true
+      error.value = ''
+    }
+    try {
+      const result = await fetchAttendanceRecords(buildAttendanceParams())
+      attendanceSummary.value = result.summary || {
+        total_employees: 0,
+        present_today: 0,
+        absent_today: 0,
+        late_today: 0,
+      }
+      attendanceRows.value = result.rows || []
+      attendanceServerTotal.value = result.total || 0
+      attendanceServerLastPage.value = result.lastPage || 1
+    } catch (e) {
+      if (!silent) {
+        error.value = e?.response?.data?.message || e?.message || 'Failed to load data'
+      }
+      attendanceRows.value = []
+      attendanceServerTotal.value = 0
+      attendanceServerLastPage.value = 1
+    } finally {
+      if (!silent) loading.value = false
+    }
   }
 
   async function loadLeaves() {
-    const params = { per_page: 50, status: filters.value.leave_status }
+    const params = { per_page: 50, page: 1, status: filters.value.leave_status }
     if (filters.value.start_date) params.start_date = filters.value.start_date
     if (filters.value.end_date) params.end_date = filters.value.end_date
     if (filters.value.leave_type_id) params.leave_type_id = filters.value.leave_type_id
 
-    let page = 1
-    let lastPage = 1
-    const all = []
-    do {
-      const result = await fetchLeaveRequests({ ...params, page })
-      all.push(...(result.items || []))
-      lastPage = result.lastPage || 1
-      page += 1
-    } while (page <= lastPage && page <= 20)
-
-    leaveRows.value = all
+    const result = await fetchLeaveRequests(params)
+    leaveRows.value = result.items || []
     leavePage.value = 1
-    leaveLastPage.value = 1
+    leaveLastPage.value = result.lastPage || 1
     leaveTablePage.value = 1
+    leavesLoaded.value = true
   }
 
   async function loadAll() {
     loading.value = true
     error.value = ''
     try {
-      await Promise.all([
-        loadAttendance(),
-        loadLeaves(),
-        fetchLeaveStatistics().then((s) => { leaveStats.value = s }),
-      ])
+      const tasks = [loadAttendance({ silent: true })]
+      if (activeView.value === 'leave') tasks.push(loadLeaves())
+      await Promise.all(tasks)
     } catch (e) {
       error.value = e?.response?.data?.message || e?.message || 'Failed to load data'
     } finally {
@@ -292,11 +287,12 @@ export function useLeaveAttendanceManagement() {
 
   // ✅ مراقبة تغيير الصفحة - فقط إعادة حساب الـ Pagination
   watch(attendancePage, () => {
-    // Frontend pagination only; no refetch needed.
+    if (!pageWatchReady || skipPageWatch) return
+    loadAttendance({ silent: true })
   })
 
   watch(attendancePerPage, () => {
-    attendancePage.value = 1
+    loadAttendance({ silent: true, resetPage: true })
   })
 
   watch(leavePerPage, () => {
@@ -304,20 +300,32 @@ export function useLeaveAttendanceManagement() {
   })
 
   watch(selectedDate, () => {
-    attendancePage.value = 1
-    loadAttendance()
+    loadAttendance({ resetPage: true })
   })
 
   watch(searchQuery, () => {
     clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
-      attendancePage.value = 1
-    }, 200)
+      loadAttendance({ silent: true, resetPage: true })
+    }, 300)
   })
 
   onMounted(async () => {
-    await loadOptions()
-    await loadAll()
+    loadOptions()
+    if (activeView.value === 'leave') {
+      loading.value = true
+      error.value = ''
+      try {
+        await Promise.all([loadAttendance({ silent: true }), loadLeaves()])
+      } catch (e) {
+        error.value = e?.response?.data?.message || e?.message || 'Failed to load data'
+      } finally {
+        loading.value = false
+      }
+    } else {
+      await loadAttendance()
+    }
+    pageWatchReady = true
   })
 
   return {
@@ -357,6 +365,7 @@ export function useLeaveAttendanceManagement() {
     attendanceEndEntry,
     attendancePaginationItems,
     pagedAttendance,
+    leavesLoaded,
     leaveTablePage,
     leavePerPage,
     leaveTotalPages,

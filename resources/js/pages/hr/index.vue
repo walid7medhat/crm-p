@@ -6964,15 +6964,13 @@ onMounted(async () => {
 
   // Load leave and asset data
   await fetchLeaveRequestsData()
-  await fetchAssetsData()
-  await loadLeaveStatistics()
-  await loadAssetStatistics()
-  await fetchAssetResponsiblePersons()
+  fetchAssetsData()
+  loadLeaveStatistics()
+  loadAssetStatistics()
   await loadAnnouncementsData()
-  // Load attendance data
-  await fetchAttendanceData()
-  await loadAttendanceSummary()
-  await loadDailyAttendanceStats()
+  fetchAttendanceData()
+  loadAttendanceSummary()
+  loadDailyAttendanceStats()
 
    await loadDocumentTypesList()
   await loadRequestedDocuments()

@@ -30,26 +30,6 @@
         </div>
 
         <div class="emp-search-field">
-          <span class="emp-search-field__label">Department</span>
-          <EmpSearchSelect
-            :model-value="draft.department_id"
-            :options="departmentOptions"
-            placeholder="Select Department"
-            @update:model-value="patch('department_id', $event)"
-          />
-        </div>
-
-        <div class="emp-search-field">
-          <span class="emp-search-field__label">Designation</span>
-          <EmpSearchSelect
-            :model-value="draft.designation_id"
-            :options="designationOptions"
-            placeholder="Select Designation"
-            @update:model-value="patch('designation_id', $event)"
-          />
-        </div>
-
-        <div class="emp-search-field">
           <span class="emp-search-field__label">Joining Date</span>
           <HrFancyDateField v-model="draft.joining_date" placeholder="dd/mm/yyyy" />
         </div>
@@ -61,12 +41,17 @@
 
         <div class="emp-search-field">
           <span class="emp-search-field__label">Employee Status</span>
-          <EmpSearchSelect
-            :model-value="draft.status"
-            :options="statusOptions"
-            placeholder="Select Status"
-            @update:model-value="patch('status', $event)"
-          />
+          <select
+            class="emp-search-native"
+            :class="{ 'is-placeholder': !draft.status }"
+            :value="draft.status"
+            @change="patch('status', $event.target.value)"
+          >
+            <option value="">Select Status</option>
+            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
         </div>
       </div>
     </div>
@@ -82,65 +67,10 @@
 import { computed, reactive, watch } from 'vue'
 import HrFancyDateField from '@/components/hr/shared/HrFancyDateField.vue'
 
-const EmpSearchSelect = {
-  props: {
-    modelValue: { type: [String, Number], default: '' },
-    options: { type: Array, default: () => [] },
-    placeholder: { type: String, default: 'Select' },
-  },
-  emits: ['update:modelValue'],
-  data() {
-    return { open: false }
-  },
-  computed: {
-    selectedLabel() {
-      const match = this.options.find((opt) => String(opt.value) === String(this.modelValue))
-      return match?.label || ''
-    },
-  },
-  methods: {
-    toggle() {
-      this.open = !this.open
-    },
-    select(value) {
-      this.$emit('update:modelValue', value)
-      this.open = false
-    },
-    onDocClick(event) {
-      if (!this.$el?.contains(event.target)) this.open = false
-    },
-  },
-  mounted() {
-    document.addEventListener('click', this.onDocClick)
-  },
-  unmounted() {
-    document.removeEventListener('click', this.onDocClick)
-  },
-  template: `
-    <div class="emp-search-select" @click.stop="toggle">
-      <span :class="{ 'is-placeholder': !selectedLabel }">{{ selectedLabel || placeholder }}</span>
-      <iconify-icon icon="lucide:chevrons-up-down" />
-      <div v-if="open" class="emp-search-select__menu" @click.stop>
-        <button
-          v-for="opt in options"
-          :key="opt.value"
-          type="button"
-          :class="{ 'is-selected': String(opt.value) === String(modelValue) }"
-          @click="select(opt.value)"
-        >
-          <span>{{ opt.label }}</span>
-          <iconify-icon v-if="String(opt.value) === String(modelValue)" icon="lucide:check" />
-        </button>
-      </div>
-    </div>
-  `,
-}
-
 const props = defineProps({
   name: { type: String, default: '' },
   filters: { type: Object, default: () => ({}) },
   departments: { type: Array, default: () => [] },
-  designations: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['close', 'search', 'reset', 'update:name'])
@@ -188,10 +118,10 @@ function uniqueOptions(items) {
 }
 
 const departmentOptions = computed(() => uniqueOptions(props.departments))
-const designationOptions = computed(() => uniqueOptions(props.designations))
 const statusOptions = [
   { value: 'active', label: 'Active' },
   { value: 'in_active', label: 'In Active' },
+  { value: 'blocked', label: 'Blocked' },
 ]
 const sidebarChips = computed(() => [
   ...departmentOptions.value.map((item) => ({
@@ -200,8 +130,12 @@ const sidebarChips = computed(() => [
     value: item.value,
     label: item.label,
   })),
-  { key: 'status-active', type: 'status', value: 'active', label: 'Active' },
-  { key: 'status-inactive', type: 'status', value: 'in_active', label: 'In Active' },
+  ...statusOptions.map((item) => ({
+    key: `status-${item.value}`,
+    type: 'status',
+    value: item.value,
+    label: item.label,
+  })),
 ])
 
 function isChipActive(chip) {

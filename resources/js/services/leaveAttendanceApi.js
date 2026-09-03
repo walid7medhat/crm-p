@@ -37,8 +37,9 @@ export function normalizeAttendanceRow(row) {
   
   const branch = row.branch || row.branch_name || row.user?.employee_profile?.branch?.name || department;
   
+  const date = row.date ?? row.attendance_date
   const normalized = {
-    id: employeeId,
+    id: row.id ?? `${employeeId}-${date || ''}`,
     employeeId: employeeId,
     empCode: empCode ? `ID : #${String(empCode).replace(/^#/, '')}` : '—',
     name: name,
@@ -51,8 +52,8 @@ export function normalizeAttendanceRow(row) {
     checkOut: checkOut,
     workingHours: calcWorkingHours(checkIn, checkOut),
     overtimeHours: formatOt(row.overtime_minutes ?? row.ot_minutes),
-    date: row.date ?? row.attendance_date,
-    avatar: row.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`,
+    date,
+    avatar: row.avatar || row.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=733e87&color=fff`,
     raw: row,
   };
 
@@ -189,28 +190,13 @@ function extractAttendanceEmployees(raw) {
 }
 
 export async function fetchAttendanceRecords(params = {}) {
-  const perPage = 500
-  let page = 1
-  let allEmployees = []
-  let lastPayload = {}
-
-  while (true) {
-    const data = await fetchAttendance({ ...params, per_page: perPage, page })
-    const { employees, payload } = extractAttendanceEmployees(data)
-    lastPayload = payload
-
-    allEmployees = allEmployees.concat(employees)
-
-    const lastPage = Number(payload?.last_page ?? 1)
-    if (page >= lastPage || employees.length === 0) {
-      break
-    }
-    page += 1
-  }
-
-  const rows = allEmployees.map(normalizeAttendanceRow).filter(Boolean)
-  const summary = lastPayload?.summary ?? {
-    total_employees: Number(lastPayload?.total) || rows.length,
+  const page = Number(params.page) || 1
+  const perPage = Math.min(Number(params.per_page) || 10, 100)
+  const data = await fetchAttendance({ ...params, page, per_page: perPage })
+  const { employees, payload } = extractAttendanceEmployees(data)
+  const rows = employees.map(normalizeAttendanceRow).filter(Boolean)
+  const summary = payload?.summary ?? {
+    total_employees: Number(payload?.total) || rows.length,
     present_today: rows.filter((r) => r.status === 'present').length,
     absent_today: rows.filter((r) => r.status === 'absent').length,
     late_today: rows.filter((r) => r.status === 'late').length,
@@ -219,11 +205,11 @@ export async function fetchAttendanceRecords(params = {}) {
   return {
     summary,
     rows,
-    date: lastPayload?.date || params?.date || null,
-    currentPage: 1,
-    lastPage: 1,
-    total: Number(lastPayload?.total) || rows.length,
-    perPage: rows.length,
+    date: payload?.date || params?.date || null,
+    currentPage: Number(payload?.current_page) || page,
+    lastPage: Number(payload?.last_page) || 1,
+    total: Number(payload?.total) || rows.length,
+    perPage: Number(payload?.per_page) || perPage,
   }
 }
 

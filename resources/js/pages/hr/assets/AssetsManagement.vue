@@ -259,37 +259,35 @@
     </Teleport>
 
     <Teleport to="body">
-      <div v-if="showAssignModal" class="rec-create-job-overlay" @click.self="showAssignModal = false">
-        <div class="rec-create-job-modal ast-assign-modal">
-          <div class="rec-create-job-modal__head">
+      <div v-if="showAssignModal" class="ast-modal-overlay" @click.self="showAssignModal = false">
+        <div class="ast-modal">
+          <div class="ast-modal__head">
             <h6>{{ assignMode === 'transfer' ? 'Transfer Asset' : 'Assign Asset' }}</h6>
-            <button type="button" class="rec-create-job-modal__close" @click="showAssignModal = false">
+            <button type="button" class="ast-modal__close" aria-label="Close" @click="showAssignModal = false">
               <iconify-icon icon="lucide:x" />
             </button>
           </div>
-          <div class="rec-create-job-modal__body">
-            <p v-if="actionAsset" class="ast-assign-modal__asset">{{ actionAsset.name }} ({{ actionAsset.assetId || actionAsset.assetCode }})</p>
+          <div class="ast-modal__body">
+            <p v-if="actionAsset" class="ast-modal__asset">{{ actionAsset.name }} ({{ actionAsset.assetId || actionAsset.assetCode }})</p>
             <p class="ast-form-hint">You can assign more than one asset to the same employee.</p>
-            <section class="rec-create-job-panel">
-              <div class="rec-create-job-grid">
-                <div class="rec-create-job-field">
-                  <label>Employee <em>*</em></label>
-                  <SearchableSelect v-model="assignForm.user_id" :options="employeeOptions" placeholder="Select employee" />
-                </div>
-                <div class="rec-create-job-field">
-                  <label>Handover date <em>*</em></label>
-                  <HrFancyDateField v-model="assignForm.handover_date" placeholder="dd/mm/yyyy" />
-                </div>
-                <div class="rec-create-job-field rec-create-job-field--full">
-                  <label>Notes</label>
-                  <textarea v-model="assignForm.notes" rows="2" placeholder="Optional notes" />
-                </div>
-              </div>
-            </section>
+            <div class="ast-form-grid">
+              <label>
+                Employee
+                <SearchableSelect v-model="assignForm.user_id" :options="employeeOptions" placeholder="Select employee" />
+              </label>
+              <label>
+                Handover date
+                <HrFancyDateField v-model="assignForm.handover_date" placeholder="dd/mm/yyyy" />
+              </label>
+              <label class="ast-form-full">
+                Notes
+                <textarea v-model="assignForm.notes" rows="3" placeholder="Optional notes" />
+              </label>
+            </div>
           </div>
-          <div class="rec-create-job-modal__footer">
-            <button type="button" class="rec-create-job-clear" @click="showAssignModal = false">Cancel</button>
-            <button type="button" class="rec-create-job-confirm" :disabled="saving" @click="confirmAssign">
+          <div class="ast-modal__actions">
+            <button type="button" class="ast-modal__btn ast-modal__btn--ghost" @click="showAssignModal = false">Cancel</button>
+            <button type="button" class="ast-modal__btn ast-modal__btn--primary" :disabled="saving" @click="confirmAssign">
               {{ saving ? 'Saving…' : 'Confirm' }}
             </button>
           </div>
@@ -443,6 +441,7 @@ const {
   warrantyAlerts,
   loadAssets,
   loadMore,
+  loadEmployees,
   clearFilters,
 } = useAssetsManagement()
 
@@ -934,6 +933,7 @@ function openAssign(asset, mode = 'assign') {
     notes: '',
   }
   showAssignModal.value = true
+  loadEmployees()
 }
 
 async function confirmAssign() {

@@ -78,8 +78,10 @@ class AttendanceController extends Controller
     $endDate = $request->query('end_date');
     $statusFilter = strtolower((string) $request->query('status', 'all'));
     $employeeIdFilter = $request->query('employee_id');
-    $page = (int) $request->query('page', 1);
-    $perPage = (int) $request->query('per_page', 15);
+    $search = trim((string) $request->query('search', ''));
+    $departmentFilter = trim((string) $request->query('department', ''));
+    $page = max(1, (int) $request->query('page', 1));
+    $perPage = max(1, min(100, (int) $request->query('per_page', 15)));
 
     $defaultDate = Carbon::today('Asia/Dubai')->toDateString();
     $useRange = !$todayOnly && $startDate && $endDate;
@@ -89,34 +91,33 @@ class AttendanceController extends Controller
         ? ($date ? Carbon::parse($date)->toDateString() : $defaultDate)
         : ($date ?: ($rangeTo ?: $defaultDate));
 
-    try {
-        $syncDate = $targetDate;
-        if (Attendance::query()->whereDate('date', $syncDate)->count() === 0) {
-            $sync = $this->syncAttendanceFromApi($syncDate);
-            Log::info('Attendance auto-sync (empty date)', [
-                'date' => $syncDate,
-                'api_count' => $sync['api_count'],
-                'db_saved_count' => $sync['saved_count'],
+    // Range lists must not wait on remote biometric sync (30s+).
+    if (!$useRange) {
+        try {
+            $syncDate = $targetDate;
+            if (!Attendance::query()->where('date', $syncDate)->exists()) {
+                $this->syncAttendanceFromApi($syncDate);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Attendance auto-sync failed; serving DB only', [
+                'date' => $targetDate,
+                'error' => $e->getMessage(),
             ]);
         }
-    } catch (\Throwable $e) {
-        Log::warning('Attendance auto-sync failed; serving DB only', [
-            'date' => $targetDate,
-            'error' => $e->getMessage(),
-        ]);
     }
 
     $query = Attendance::query()
         ->with([
-            'user:id,name,email,avatar,status',
-            'user.employeeProfile.department',
-            'user.employeeProfile.companyBranch',
+            'user:id,name,email,avatar,status,biometric_code',
+            'user.employeeProfile:id,user_id,department_id,company_branch_id,employee_code',
+            'user.employeeProfile.department:id,name',
+            'user.employeeProfile.companyBranch:id,name',
         ]);
 
     if ($useRange) {
         $query->whereBetween('date', [$rangeFrom, $rangeTo]);
     } else {
-        $query->whereDate('date', $targetDate);
+        $query->where('date', $targetDate);
     }
 
     if ($employeeIdFilter !== null && $employeeIdFilter !== '') {
@@ -124,6 +125,20 @@ class AttendanceController extends Controller
         if ($norm) {
             $query->where('employee_id', $norm);
         }
+    }
+
+    if ($search !== '') {
+        $like = '%' . $search . '%';
+        $query->where(function ($q) use ($like) {
+            $q->where('employee_name', 'like', $like)
+                ->orWhere('employee_id', 'like', $like);
+        });
+    }
+
+    if ($departmentFilter !== '') {
+        $query->whereHas('user.employeeProfile.department', function ($q) use ($departmentFilter) {
+            $q->where('name', $departmentFilter);
+        });
     }
 
     if (in_array($statusFilter, ['present', 'absent', 'late'], true)) {
@@ -262,7 +277,7 @@ class AttendanceController extends Controller
                 'Accept' => 'application/json',
             ])
             ->withoutVerifying()
-            ->timeout(30)
+            ->timeout(8)
             ->get($url);
 
         if (!$response->successful()) {

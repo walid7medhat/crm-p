@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\AssetType;
 use App\Models\AssetAssignment;
 use App\Models\AssetHistory;
+use App\Models\User;
 use App\Helpers\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -82,7 +83,13 @@ class AssetController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Asset::with(['assetType', 'branch', 'currentAssignment.user', 'currentUser','department']);
+            $query = Asset::with([
+                'assetType',
+                'branch',
+                'department',
+                'currentAssignment.user:id,name,email,avatar',
+                'currentUser',
+            ]);
             
             if ($request->has('asset_type_id')) {
                 $query->where('asset_type_id', $request->asset_type_id);
@@ -137,8 +144,8 @@ class AssetController extends Controller
                 }
             }
             
-            $assets = $query->orderBy('created_at', 'desc')
-                ->paginate($request->per_page ?? 15);
+            $perPage = min(max((int) ($request->per_page ?? 15), 1), 100);
+            $assets = $query->orderBy('created_at', 'desc')->paginate($perPage);
             
             return ApiResponse::success($assets, 'Assets retrieved successfully');
         } catch (\Exception $e) {
@@ -192,22 +199,39 @@ class AssetController extends Controller
         }
     }
     
+    public function assignableUsers()
+    {
+        try {
+            $users = User::query()
+                ->whereHas('employeeProfile')
+                ->select('id', 'name', 'email')
+                ->orderBy('name')
+                ->limit(300)
+                ->get();
+
+            return ApiResponse::success($users, 'Assignable users retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve employees: ' . $e->getMessage());
+        }
+    }
+
     public function show($id)
     {
         try {
+            $userCols = fn ($q) => $q->select('id', 'name', 'email', 'avatar');
             $asset = Asset::with([
                 'assetType',
                 'branch',
                 'department',
-                'currentAssignment',
-                'currentAssignment.user',
+                'currentAssignment.user' => $userCols,
+                'currentAssignment.assignedBy' => $userCols,
                 'currentUser',
-                'assignments' => function($q) {
-                    $q->with('user', 'assignedBy')->latest();
+                'assignments' => function ($q) use ($userCols) {
+                    $q->with(['user' => $userCols, 'assignedBy' => $userCols])->latest()->limit(20);
                 },
-                'histories' => function($q) {
-                    $q->with('user', 'performedBy')->latest();
-                }
+                'histories' => function ($q) use ($userCols) {
+                    $q->with(['user' => $userCols, 'performedBy' => $userCols])->latest()->limit(30);
+                },
             ])->findOrFail($id);
             
             return ApiResponse::success($asset, 'Asset retrieved successfully');
@@ -514,23 +538,24 @@ class AssetController extends Controller
     public function statistics()
     {
         try {
+            $row = Asset::query()
+                ->selectRaw("
+                    COUNT(*) as total_assets,
+                    SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available,
+                    SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned,
+                    SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance,
+                    SUM(CASE WHEN status = 'disposed' THEN 1 ELSE 0 END) as disposed,
+                    SUM(CASE WHEN status = 'disposed' OR condition = 'damaged' THEN 1 ELSE 0 END) as lost_assets
+                ")
+                ->first();
+
             $stats = [
-                'total_assets' => Asset::count(),
-                'available' => Asset::where('status', 'available')->count(),
-                'assigned' => Asset::where('status', 'assigned')->count(),
-                'maintenance' => Asset::where('status', 'maintenance')->count(),
-                'lost_assets' => Asset::where(function ($q) {
-                    $q->where('status', 'disposed')->orWhere('condition', 'damaged');
-                })->count(),
-                'disposed' => Asset::where('status', 'disposed')->count(),
-                'by_type' => Asset::select('asset_types.name', DB::raw('count(assets.id) as count'))
-                    ->join('asset_types', 'assets.asset_type_id', '=', 'asset_types.id')
-                    ->groupBy('asset_types.name')
-                    ->get(),
-                'by_condition' => Asset::select('condition', DB::raw('count(*) as count'))
-                    ->groupBy('condition')
-                    ->get(),
-                
+                'total_assets' => (int) ($row->total_assets ?? 0),
+                'available' => (int) ($row->available ?? 0),
+                'assigned' => (int) ($row->assigned ?? 0),
+                'maintenance' => (int) ($row->maintenance ?? 0),
+                'lost_assets' => (int) ($row->lost_assets ?? 0),
+                'disposed' => (int) ($row->disposed ?? 0),
             ];
             
             return ApiResponse::success($stats, 'Statistics retrieved successfully');

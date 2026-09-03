@@ -278,6 +278,7 @@ Route::prefix('asset-types')->middleware(['auth:api'])->group(function () {
 // Assets Management
 Route::prefix('assets')->middleware(['auth:api'])->group(function () {
     Route::get('/get/statistics', [AssetController::class, 'statistics']);
+    Route::get('/assignable-users', [AssetController::class, 'assignableUsers']);
     Route::get('/', [AssetController::class, 'index']);
     Route::post('/store/new', [AssetController::class, 'store']);
     Route::get('/{id}', [AssetController::class, 'show']);

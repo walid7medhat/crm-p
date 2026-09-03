@@ -178,7 +178,7 @@ function onEdit(employee) {
 }
 
 function onAttendance(employee) {
-  router.push({ path: '/hr', query: { tab: 'Leave / Attendance', mode: 'attendance', employee: employee.id } })
+  router.push({ path: `/hr/employees/${employee.id}`, query: { tab: 'attendance' } })
 }
 
 function onLeave(employee) {

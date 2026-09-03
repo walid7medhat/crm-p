@@ -473,6 +473,17 @@ export const fetchResponsiblePersons = async () => {
   }
 }
 
+export const fetchAssignableUsers = async () => {
+  try {
+    const response = await api.get('/assets/assignable-users')
+    const data = response.data?.data ?? response.data ?? []
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching assignable users:', error)
+    return []
+  }
+}
+
 
 
 // ==================== Asset Activity Timeline ====================

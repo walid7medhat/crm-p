@@ -200,6 +200,11 @@ export default {
       };
     },
   },
+  watch: {
+    userId() {
+      this.fetchHistory();
+    },
+  },
   mounted() {
     this.fetchHistory();
   },
