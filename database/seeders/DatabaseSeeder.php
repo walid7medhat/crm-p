@@ -24,5 +24,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed default stages for kanban
         $this->call(StageSeeder::class);
+
+        // Seed default evaluation form sections/questions
+        $this->call(EvaluationSectionSeeder::class);
     }
 }

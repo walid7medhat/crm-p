@@ -269,8 +269,8 @@
   border-right: 1px solid var(--vp-border);
   position: sticky;
   top: 14px;
-  align-self: start;
-  max-height: none;
+  align-self: stretch;
+  max-height: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   min-height: 0;

@@ -868,6 +868,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/attendance-monthly-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
     system.push({ path: '/settings/background', label: 'Background', icon: 'lucide:image' });
     system.push({ path: '/settings/deal-costs', label: 'Deal Costs', icon: 'lucide:coins' });
+    system.push({ path: '/settings/evaluations', label: 'Evaluations', icon: 'lucide:clipboard-check' });
       
   }
 

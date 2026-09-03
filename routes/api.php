@@ -69,6 +69,10 @@ use App\Http\Controllers\Api\Employee\AssetRequestController;
 use App\Http\Controllers\Api\Employee\LeaveController;
 use App\Http\Controllers\Api\Employee\AnnouncementController;
 use App\Http\Controllers\Api\Employee\RecruitmentController;
+use App\Http\Controllers\Api\Employee\EvaluationSettingController;
+use App\Http\Controllers\Api\Employee\EvaluationSectionController;
+use App\Http\Controllers\Api\Employee\EvaluationQuestionController;
+use App\Http\Controllers\Api\Employee\EvaluationController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
 use App\Http\Controllers\Api\Listing\InternalUpdateController;
 use App\Http\Controllers\Api\Employee\EmployeeAttendanceController;
@@ -359,6 +363,22 @@ Route::middleware(['auth:api'])->prefix('announcements')->group(function () {
         ->middleware('permission:announcements-edit');
     Route::delete('/{id}', [AnnouncementController::class, 'destroy'])
         ->middleware('permission:announcements-delete');
+});
+Route::middleware(['auth:api'])->prefix('evaluations')->group(function () {
+    Route::get('/settings', [EvaluationSettingController::class, 'show']);
+    Route::put('/settings', [EvaluationSettingController::class, 'update']);
+
+    Route::apiResource('sections', EvaluationSectionController::class);
+    Route::get('/sections/{sectionId}/questions', [EvaluationQuestionController::class, 'index']);
+    Route::post('/sections/{sectionId}/questions', [EvaluationQuestionController::class, 'store']);
+    Route::put('/questions/{id}', [EvaluationQuestionController::class, 'update']);
+    Route::delete('/questions/{id}', [EvaluationQuestionController::class, 'destroy']);
+
+    Route::get('/pending-for-me', [EvaluationController::class, 'pendingForMe']);
+    Route::get('/my', [EvaluationController::class, 'myEvaluations']);
+    Route::get('/for-user/{userId}', [EvaluationController::class, 'forUser']);
+    Route::get('/{id}', [EvaluationController::class, 'show']);
+    Route::post('/{id}/submit', [EvaluationController::class, 'submit']);
 });
 // Document Requests
 Route::middleware(['auth:api'])->prefix('document-requests')->group(function () {

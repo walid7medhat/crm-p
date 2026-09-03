@@ -198,6 +198,10 @@
           <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
+        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-evaluations' }" role="tab" @click="activeTab = 'my-evaluations'; loadMyEvaluations()">
+          <span class="vp-nav__left"><iconify-icon icon="lucide:clipboard-check" /> My Evaluations</span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
         <button
             v-if="isTeamLead || isSuperAdmin"
             type="button"
@@ -210,6 +214,18 @@
             <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
             <span v-if="teamLeavePendingCount > 0" class="vp-nav__badge">{{ teamLeavePendingCount }}</span>
           </button>
+          <button
+              v-if="isTeamLead || isSuperAdmin"
+              type="button"
+              class="vp-nav__item"
+              :class="{ 'is-active': activeTab === 'pending-evaluations' }"
+              role="tab"
+              @click="activeTab = 'pending-evaluations'; loadPendingEvaluations()"
+            >
+              <span class="vp-nav__left"><iconify-icon icon="lucide:clipboard-list" /> Pending Evaluations</span>
+              <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+              <span v-if="pendingEvaluations.length > 0" class="vp-nav__badge">{{ pendingEvaluations.length }}</span>
+            </button>
           <button
               type="button"
               class="vp-nav__item"
@@ -1018,6 +1034,74 @@
                 <button v-if="lv.status === 'pending_parent'" type="button" class="vp-row-btn" title="Cancel request" @click="cancelMyLeave(lv)">
                   <iconify-icon icon="lucide:x-circle" />
                 </button>
+              </div>
+            </article>
+          </div>
+        </div>
+        <!-- My Evaluations -->
+        <div v-if="activeTab === 'my-evaluations'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">My Evaluations</h3>
+              <p class="vp-panel__subtitle">Evaluations completed by your manager.</p>
+            </div>
+          </div>
+
+          <div v-if="myEvaluationsLoading" class="vp-loading">Loading evaluations...</div>
+          <div v-else-if="!myEvaluations.length" class="vp-empty">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:clipboard-check" /></div>
+            <h4>No evaluations yet</h4>
+            <p>Your evaluation results will show up here once completed.</p>
+          </div>
+          <div v-else class="vp-req-list">
+            <article v-for="ev in myEvaluations" :key="ev.id" class="vp-req-row">
+              <div class="vp-req-col">
+                <strong>{{ ev.milestone_months }}-month review</strong>
+                <small>Milestone</small>
+              </div>
+              <div class="vp-req-col">
+                <strong>{{ formatDateShort(ev.submitted_at) }}</strong>
+                <small>Submitted On</small>
+              </div>
+              <div class="vp-req-actions">
+                <a v-if="ev.pdf_url" :href="ev.pdf_url" target="_blank" rel="noopener" class="vp-btn-primary vp-btn-primary--sm">
+                  <iconify-icon icon="lucide:file-text" />
+                  View PDF
+                </a>
+                <span v-else class="text-muted small">PDF unavailable</span>
+              </div>
+            </article>
+          </div>
+        </div>
+        <!-- Pending Evaluations (manager) -->
+        <div v-if="activeTab === 'pending-evaluations'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">Pending Evaluations</h3>
+              <p class="vp-panel__subtitle">Complete evaluations for your direct reports.</p>
+            </div>
+          </div>
+
+          <div v-if="pendingEvaluationsLoading" class="vp-loading">Loading pending evaluations...</div>
+          <div v-else-if="!pendingEvaluations.length" class="vp-empty">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:clipboard-list" /></div>
+            <h4>No pending evaluations</h4>
+            <p>You're all caught up.</p>
+          </div>
+          <div v-else class="vp-req-list">
+            <article v-for="ev in pendingEvaluations" :key="ev.id" class="vp-req-row">
+              <div class="vp-req-col">
+                <strong>{{ ev.user?.display_name || ev.user?.name || '—' }}</strong>
+                <small>Employee</small>
+              </div>
+              <div class="vp-req-col">
+                <strong>{{ ev.milestone_months }}-month review</strong>
+                <small>Milestone</small>
+              </div>
+              <div class="vp-req-actions">
+                <router-link :to="`/evaluations/${ev.id}`" class="vp-row-btn" title="Complete evaluation">
+                  <iconify-icon icon="lucide:pencil" />
+                </router-link>
               </div>
             </article>
           </div>
@@ -2560,6 +2644,37 @@ const filteredLeaveRequests = computed(() => {
   );
 });
 
+const myEvaluations = ref([]);
+const myEvaluationsLoading = ref(false);
+const pendingEvaluations = ref([]);
+const pendingEvaluationsLoading = ref(false);
+
+const loadMyEvaluations = async () => {
+  myEvaluationsLoading.value = true;
+  try {
+    const { data } = await api.get('/evaluations/my');
+    myEvaluations.value = data?.data || [];
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load evaluations', 'error');
+  } finally {
+    myEvaluationsLoading.value = false;
+  }
+};
+
+const loadPendingEvaluations = async () => {
+  pendingEvaluationsLoading.value = true;
+  try {
+    const { data } = await api.get('/evaluations/pending-for-me');
+    pendingEvaluations.value = data?.data || [];
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load pending evaluations', 'error');
+  } finally {
+    pendingEvaluationsLoading.value = false;
+  }
+};
+
 const loadMyLeave = async () => {
   leaveLoading.value = true;
   try {
@@ -2909,6 +3024,8 @@ const openLeaveDetail = (lv) => {
       myLeaveRequests, myLeaveBalance, myLeaveTypes, leaveLoading, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
       leaveSearch, leaveTypeOptions, halfDayTypeOptions, filteredLeaveRequests,
       loadMyLeave, openLeaveRequestModal, submitLeaveRequest, cancelMyLeave,
+      myEvaluations, myEvaluationsLoading, loadMyEvaluations,
+      pendingEvaluations, pendingEvaluationsLoading, loadPendingEvaluations,
       teamLeaveRequests, teamLeaveLoading, teamLeaveSearch, teamLeaveActingId, teamLeavePendingCount,
       teamLeaveStats, teamLeaveStatusFilter,
       filteredTeamLeaveRequests, loadTeamLeaveRequests, approveTeamLeave, rejectTeamLeave,

@@ -160,6 +160,12 @@
                                 <i class="ri-calendar-check-line me-2"></i>
                                 <span>Attendance</span>
                             </button>
+                            <button v-if="canViewEvaluations" class="nav-link" id="evaluations-tab" data-bs-toggle="tab"
+                                    data-bs-target="#evaluations" type="button" role="tab" @click="loadUserEvaluations">
+                                <i class="ri-clipboard-line me-2"></i>
+                                <span>Evaluations</span>
+                                <span v-if="userEvaluations.length > 0" class="badge bg-primary ms-2">{{ userEvaluations.length }}</span>
+                            </button>
                         </div>
                     </nav>
                 </div>
@@ -397,6 +403,40 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Evaluations Tab -->
+                    <div class="tab-pane fade" id="evaluations" role="tabpanel" v-if="canViewEvaluations">
+                        <div class="card border-0 shadow-sm perf-card">
+                            <div class="card-body">
+                                <div v-if="userEvaluationsLoading" class="text-center text-muted py-4">Loading evaluations...</div>
+                                <div v-else-if="!userEvaluations.length" class="text-center text-muted py-4">
+                                    No submitted evaluations yet.
+                                </div>
+                                <div v-else class="table-responsive">
+                                    <table class="table table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Milestone</th>
+                                                <th>Submitted</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="ev in userEvaluations" :key="ev.id">
+                                                <td>{{ ev.milestone_months }}-month review</td>
+                                                <td>{{ formatDate(ev.submitted_at) }}</td>
+                                                <td class="text-end">
+                                                    <a v-if="ev.pdf_url" :href="ev.pdf_url" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                                        <i class="ri-download-line me-1"></i>PDF
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -535,6 +575,10 @@ export default {
                 avg_lead_score: null,
             },
             salesPerformanceFilters: this.defaultSalesRange(),
+
+            // Evaluations
+            userEvaluations: [],
+            userEvaluationsLoading: false,
         };
     },
     computed: {
@@ -666,6 +710,15 @@ export default {
                 legend: { position: 'bottom', fontSize: '12px' },
                 dataLabels: { enabled: true },
             };
+        },
+
+        /** Evaluations tab: admins, the viewed user's own direct manager, or anyone
+         *  holding the 'view-evaluations' permission — same pattern as
+         *  canViewAgentAttendance/canViewAgentPerformance.
+         */
+        canViewEvaluations() {
+            if (!this.user) return false;
+            return this.$hasPermission('view-evaluations') || this.isAdminOrDirectManager();
         },
     },
     mounted() {
@@ -1081,6 +1134,20 @@ export default {
                 this.salesPerformanceError = error?.response?.data?.message || 'Failed to load sales performance.';
             } finally {
                 this.salesPerformanceLoading = false;
+            }
+        },
+
+        async loadUserEvaluations() {
+            if (!this.user?.id) return;
+            this.userEvaluationsLoading = true;
+            try {
+                const { data } = await api.get(`/evaluations/for-user/${this.user.id}`);
+                this.userEvaluations = data?.data || [];
+            } catch (error) {
+                console.error('Error loading evaluations:', error);
+                this.userEvaluations = [];
+            } finally {
+                this.userEvaluationsLoading = false;
             }
         },
     }
