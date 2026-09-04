@@ -71,6 +71,7 @@ class UserResource extends JsonResource
             'branch' => $this->employeeProfile?->companyBranch?->name,
             'position' => $this->employeeProfile?->designation?->name,
             'department' => $this->employeeProfile?->department?->name,
+            'joining_date' => $this->employeeProfile?->joining_date,
         ];
     }
 }

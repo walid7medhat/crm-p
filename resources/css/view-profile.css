@@ -562,6 +562,11 @@
   gap: 4px;
 }
 
+.vp-field__hint--error {
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .vp-form-actions {
   display: flex;
   justify-content: flex-end;

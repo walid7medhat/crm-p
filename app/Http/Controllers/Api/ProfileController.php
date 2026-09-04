@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\User\UserResource;
+use App\Models\EmployeeDocument;
+use App\Models\EmployeeProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -267,6 +269,177 @@ class ProfileController extends Controller
                 'success' => false,
                 'message' => 'Failed to change password',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get the authenticated user's UAE emergency contact.
+     */
+    public function getEmergencyContact(Request $request)
+    {
+        $employeeProfile = $request->user()->employeeProfile;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'name' => $employeeProfile?->emergency_contact_name,
+                'phone' => $employeeProfile?->emergency_phone,
+                'relation' => $employeeProfile?->emergency_contact_relation,
+            ],
+        ]);
+    }
+
+    /**
+     * Get the authenticated user's employee profile, creating a bare one if
+     * they don't have one yet (e.g. a user who was never onboarded through
+     * the HR "add employee" flow but still needs to save self-service data).
+     */
+    private function getOrCreateEmployeeProfile($user): EmployeeProfile
+    {
+        if ($user->employeeProfile) {
+            return $user->employeeProfile;
+        }
+
+        $profile = EmployeeProfile::create([
+            'user_id' => $user->id,
+            'employee_name' => $user->name,
+            'employee_code' => EmployeeProfile::generateEmployeeCode(),
+        ]);
+
+        $user->setRelation('employeeProfile', $profile);
+
+        return $profile;
+    }
+
+    /**
+     * Update the authenticated user's UAE emergency contact.
+     */
+    public function updateEmergencyContact(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $employeeProfile = $this->getOrCreateEmployeeProfile($user);
+
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+                'relation' => 'required|string|max:100',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $employeeProfile->update([
+                'emergency_contact_name' => $request->name,
+                'emergency_phone' => $request->phone,
+                'emergency_contact_relation' => $request->relation,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'name' => $employeeProfile->emergency_contact_name,
+                    'phone' => $employeeProfile->emergency_phone,
+                    'relation' => $employeeProfile->emergency_contact_relation,
+                ],
+                'message' => 'Emergency contact updated successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update emergency contact',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * List documents the authenticated user has uploaded to their own profile.
+     */
+    public function myDocuments(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $employeeProfile = $user->employeeProfile;
+
+            if (!$employeeProfile) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                ]);
+            }
+
+            $documents = $employeeProfile->documents()
+                ->where('document_type', 'employee_upload')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $documents,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load documents',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload a titled document to the authenticated user's own profile.
+     * Visible to HR and to the uploading employee; only HR can delete it
+     * (via the existing employees.documents.destroy endpoint).
+     */
+    public function uploadDocument(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $employeeProfile = $this->getOrCreateEmployeeProfile($user);
+
+            $validator = Validator::make($request->all(), [
+                'title' => 'required|string|max:255',
+                'file' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $file = $request->file('file');
+            $path = $file->store("employees/{$user->id}/employee_upload", 'public');
+
+            $document = EmployeeDocument::create([
+                'employee_profile_id' => $employeeProfile->id,
+                'document_type' => 'employee_upload',
+                'document_name' => $request->title,
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'file_size' => round($file->getSize() / 1024),
+                'mime_type' => $file->getClientMimeType(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $document,
+                'message' => 'Document uploaded successfully',
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload document',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

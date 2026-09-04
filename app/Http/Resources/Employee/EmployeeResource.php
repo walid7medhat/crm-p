@@ -48,6 +48,7 @@ class EmployeeResource extends JsonResource
                 'contract_end_date' => $this->employeeProfile->contract_end_date,
                 'gratuity_termination' => $this->employeeProfile->gratuity_termination,  // NEW
                 'emirates_id_number' => $this->employeeProfile->emirates_id_number,
+                'emirates_id_expiry_date' => $this->employeeProfile->emirates_id_expiry_date,
                 'certificate_name' => $this->employeeProfile->certificate_name,
                 'employment_status' => $this->employeeProfile->employment_status,
                 
@@ -59,6 +60,7 @@ class EmployeeResource extends JsonResource
                     'name' => $this->employeeProfile->emergency_contact_name,
                     'email' => $this->employeeProfile->emergency_email,
                     'phone' => $this->employeeProfile->emergency_phone,
+                    'relation' => $this->employeeProfile->emergency_contact_relation,
                 ],
                 'addresses' => [
                     'inside_uae' => $this->employeeProfile->address_inside_uae,

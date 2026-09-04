@@ -939,16 +939,44 @@
   flex-shrink: 0;
 }
 
-.emp-profile-docs a {
+.emp-profile-docs a,
+.emp-profile-docs li > span {
   color: #2563eb;
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.emp-profile-docs li > span {
+  color: #475467;
 }
 
 .emp-profile-docs a:hover {
   text-decoration: underline;
+}
+
+.emp-profile-docs__delete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #d92d20;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.emp-profile-docs__delete:hover {
+  background: #fef3f2;
+}
+
+.emp-profile-docs__delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .emp-profile-page__card h6 {

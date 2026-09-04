@@ -18,6 +18,10 @@ class InitializeLeaveBalance
             ->get();
         
         foreach ($leaveTypes as $type) {
+            // Annual leave accrues over time (see AccrueAnnualLeave command) rather than
+            // being granted in full at hire, so it starts at 0 here.
+            $initialDays = $type->name === 'Annual Leave - Paid Leave' ? 0 : $type->default_days;
+
             LeaveBalance::updateOrCreate(
                 [
                     'user_id' => $event->user->id,
@@ -25,9 +29,9 @@ class InitializeLeaveBalance
                     'year' => $currentYear,
                 ],
                 [
-                    'total_days' => $type->default_days,
+                    'total_days' => $initialDays,
                     'used_days' => 0,
-                    'remaining_days' => $type->default_days,
+                    'remaining_days' => $initialDays,
                 ]
             );
         }

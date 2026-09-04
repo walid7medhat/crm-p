@@ -133,7 +133,20 @@ return Application::configure(basePath: dirname(__DIR__))
     $schedule->command('interviews:send-reminders --hours=1')
         ->everyMinute()
         ->timezone('Asia/Dubai');
-        
+
+    $schedule->command('leave:accrue-annual')
+        ->dailyAt('01:00')
+        ->timezone('Asia/Dubai')
+        ->withoutOverlapping()
+        ->appendOutputTo(storage_path('logs/leave-accrue-annual.log'));
+
+    $schedule->command('employees:check-document-expiry --days=180')
+        ->dailyAt('09:15')
+        ->timezone('Asia/Dubai')
+        ->withoutOverlapping()
+        ->appendOutputTo(storage_path('logs/document-expiry.log'));
+
+
             // $schedule->command('bitrix:sync-leads')
             //     ->everyFifteenMinutes();
                 // ->withoutOverlapping();

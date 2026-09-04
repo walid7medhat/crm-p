@@ -9,9 +9,9 @@ class LeaveBalance extends Model
     protected $fillable = ['user_id', 'leave_type_id', 'total_days', 'used_days', 'remaining_days', 'year'];
     
     protected $casts = [
-        'total_days' => 'integer',
-        'used_days' => 'integer',
-        'remaining_days' => 'integer',
+        'total_days' => 'decimal:2',
+        'used_days' => 'decimal:2',
+        'remaining_days' => 'decimal:2',
     ];
     
     public function user()

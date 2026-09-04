@@ -1305,24 +1305,28 @@
                 <label>Leave Type *</label>
                 <SearchableSelect
                   v-model="applyLeaveForm.leaveType"
-                  :options="leaveTypeOptions"
+                  :options="applyLeaveTypeOptions"
                   placeholder="Select Type"
                 />
+                <small v-if="applyLeaveSelectedEmployee && !applyLeaveEligible" class="leave-inline-warning">{{ applyLeaveEligibilityNote }}</small>
               </div>
               <div class="add-field">
-                <label>Start Date</label>
+                <label>{{ isCompOffSelectedHr ? 'Date' : 'Start Date' }}</label>
                 <input :value="formatDateDisplay(applyLeaveForm.startDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('applyLeaveForm.startDate')" />
+                <small v-if="compOffWeekdayInfoHr" class="leave-inline-warning" :class="{ 'is-error': compOffWeekdayInfoHr.blocked }">
+                  {{ compOffWeekdayInfoHr.weekday }}<span v-if="compOffWeekdayInfoHr.blocked"> — Compensation Off can't be a Saturday or Monday</span>
+                </small>
               </div>
-              <div class="add-field">
+              <div class="add-field" v-if="!isCompOffSelectedHr">
                 <label>End Date</label>
                 <input :value="formatDateDisplay(applyLeaveForm.endDate)" type="text" placeholder="dd/mm/yyyy" readonly @click="openDatePicker('applyLeaveForm.endDate')" />
               </div>
               <div class="add-field add-field-full">
                   <div class="leave-half-day-checkbox">
                     <label class="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        v-model="applyLeaveForm.isHalfDay" 
+                      <input
+                        type="checkbox"
+                        v-model="applyLeaveForm.isHalfDay"
                         @change="onHalfDayChange"
                       />
                       <span>Half Day Leaves</span>
@@ -1338,6 +1342,9 @@
                     :options="halfDayTypeOptions"
                     placeholder="Select Half Day Type"
                   />
+                  <small v-if="isSickHalfPaidSelectedHr" class="leave-inline-warning" :class="{ 'is-error': sickHalfPaidTimeBlockedHr }">
+                    Sick Leave - Half Paid must be requested before 2:00 PM.
+                  </small>
                 </div>
               <div class="add-field add-field-full">
                 <label>Leave Reason</label>
@@ -1373,7 +1380,12 @@
 
         <div class="add-employee-footer">
           <button type="button" class="add-employee-clear-btn" @click="cancelApplyLeave">Cancel</button>
-          <button type="button" class="add-employee-save-btn" @click="submitApplyLeave">Apply</button>
+          <button
+            type="button"
+            class="add-employee-save-btn"
+            :disabled="applyLeaveSelectedEmployee && (!applyLeaveEligible || compOffWeekdayInfoHr?.blocked || sickHalfPaidTimeBlockedHr)"
+            @click="submitApplyLeave"
+          >Apply</button>
         </div>
       </div>
     </div>
@@ -1648,6 +1660,10 @@
               <div class="add-field">
                 <label>Emergency Phone Number</label>
                 <input v-model="addEmployeeForm.emergency_phone_number" type="text" placeholder="Enter Phone Number" />
+              </div>
+              <div class="add-field">
+                <label>Emergency Contact Relation</label>
+                <input v-model="addEmployeeForm.emergency_contact_relation" type="text" placeholder="e.g. Brother, Spouse, Friend" />
               </div>
             </div>
           </section>
@@ -3383,6 +3399,96 @@ const createAttendanceAttachment = ref(null)
 const applyLeaveEmployeeOptions = computed(() =>
   employeesDirectory.value.map((employee) => `#${employee.employee_code} ${employee.name}`),
 )
+
+const applyLeaveSelectedEmployee = computed(() => {
+  const text = String(applyLeaveForm.value.employee || '')
+  if (!text) return null
+  let emp = employeesDirectory.value.find((e) => `#${e.employee_code} ${e.name}` === text)
+  if (!emp) {
+    const employeeName = text.replace(/^#\w+\s+/, '').trim()
+    emp = employeesDirectory.value.find((e) => e.name === employeeName)
+  }
+  return emp || null
+})
+
+const applyLeaveEligible = computed(() => {
+  const joiningDate = applyLeaveSelectedEmployee.value?.joiningDate
+  if (!joiningDate || joiningDate === '-') return false
+  const joined = new Date(joiningDate)
+  if (Number.isNaN(joined.getTime())) return false
+  const sixMonthsLater = new Date(joined)
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6)
+  return new Date() >= sixMonthsLater
+})
+
+const applyLeaveEligibilityDate = computed(() => {
+  const joiningDate = applyLeaveSelectedEmployee.value?.joiningDate
+  if (!joiningDate || joiningDate === '-') return null
+  const joined = new Date(joiningDate)
+  if (Number.isNaN(joined.getTime())) return null
+  const sixMonthsLater = new Date(joined)
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6)
+  return sixMonthsLater
+})
+
+const applyLeaveEligibilityNote = computed(() => {
+  if (!applyLeaveSelectedEmployee.value) return ''
+  if (applyLeaveEligible.value) return ''
+  if (!applyLeaveEligibilityDate.value) return 'This employee is not eligible for leave until their joining date is set.'
+  const formatted = applyLeaveEligibilityDate.value.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return `This employee is not eligible for leave until they complete 6 months of service, from ${formatted}.`
+})
+
+const applyLeaveSickBalances = ref({ fullyPaidRemaining: 0, halfPaidRemaining: 0 })
+
+watch(
+  () => applyLeaveSelectedEmployee.value?.id,
+  async (employeeId) => {
+    applyLeaveSickBalances.value = { fullyPaidRemaining: 0, halfPaidRemaining: 0 }
+    if (!employeeId) return
+    try {
+      const balances = await fetchEmployeeLeaveBalance(employeeId)
+      const find = (name) => (Array.isArray(balances) ? balances : []).find((b) => b.leave_type?.name === name)
+      applyLeaveSickBalances.value = {
+        fullyPaidRemaining: Number(find('Sick Leave - Fully Paid')?.remaining_days ?? 0),
+        halfPaidRemaining: Number(find('Sick Leave - Half Paid')?.remaining_days ?? 0),
+      }
+    } catch (e) {
+      console.error('Failed to load employee sick leave balance:', e)
+    }
+  },
+)
+
+const applyLeaveTypeOptions = computed(() => {
+  const { fullyPaidRemaining, halfPaidRemaining } = applyLeaveSickBalances.value
+  return (leaveTypesData.value || [])
+    .filter((t) => {
+      if (t.name === 'Sick Leave - Half Paid' && fullyPaidRemaining > 0) return false
+      if (t.name === 'Sick Leave - Unpaid' && (fullyPaidRemaining > 0 || halfPaidRemaining > 0)) return false
+      return true
+    })
+    .map((t) => ({ value: t.id, label: t.name }))
+})
+
+const applyLeaveSelectedType = computed(() =>
+  (leaveTypesData.value || []).find((t) => t.id === Number(applyLeaveForm.value.leaveType)) || null,
+)
+const isCompOffSelectedHr = computed(() => applyLeaveSelectedType.value?.name === 'Compensation Off')
+const isSickHalfPaidSelectedHr = computed(() => applyLeaveSelectedType.value?.name === 'Sick Leave - Half Paid')
+
+const compOffWeekdayInfoHr = computed(() => {
+  if (!isCompOffSelectedHr.value || !applyLeaveForm.value.startDate) return null
+  const [y, m, d] = String(applyLeaveForm.value.startDate).split('-').map(Number)
+  if (!y || !m || !d) return null
+  const day = new Date(y, m - 1, d).getDay() // 0=Sun ... 6=Sat
+  const weekday = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' })
+  return { weekday, blocked: day === 6 || day === 1 }
+})
+
+const sickHalfPaidTimeBlockedHr = computed(() => {
+  if (!isSickHalfPaidSelectedHr.value || !applyLeaveForm.value.isHalfDay) return false
+  return new Date().getHours() >= 14
+})
 const attendanceDepartmentNameOptions = computed(() =>
   departmentsList.value.map((d) => d.name).filter(Boolean)
 )
@@ -3430,6 +3536,7 @@ const defaultAddEmployeeForm = () => ({
   emergency_contact_name: '',
   emergency_email: '',
   emergency_phone_number: '',
+  emergency_contact_relation: '',
   branch: '',
   designation: '',
   department: '',
@@ -5629,6 +5736,7 @@ function resetApplyLeaveForm() {
     halfDayType: null,
   }
   applyLeaveAttachment.value = null
+  applyLeaveSickBalances.value = { fullyPaidRemaining: 0, halfPaidRemaining: 0 }
 }
 
 function cancelApplyLeave() {
@@ -5652,49 +5760,68 @@ const submitApplyLeave = async () => {
       showNotification('Please select an employee', 'error')
       return
     }
-    
+
     if (!applyLeaveForm.value.leaveType) {
       showNotification('Please select a leave type', 'error')
       return
     }
-    
+
     if (!applyLeaveForm.value.startDate) {
       showNotification('Please select a start date', 'error')
       return
     }
-    
+
+    if (isCompOffSelectedHr.value) {
+      applyLeaveForm.value.endDate = applyLeaveForm.value.startDate
+    }
+
     if (!applyLeaveForm.value.endDate) {
       showNotification('Please select an end date', 'error')
       return
     }
-    
+
     const selectedEmployeeText = String(applyLeaveForm.value.employee || '')
     let linkedEmployee = null
-    
+
     linkedEmployee = employeesDirectory.value.find(
       (emp) => `#${emp.employee_code} ${emp.name}` === selectedEmployeeText
     )
-    
+
     if (!linkedEmployee) {
       const employeeName = selectedEmployeeText.replace(/^#\w+\s+/, '').trim()
       linkedEmployee = employeesDirectory.value.find(
         (emp) => emp.name === employeeName
       )
     }
-    
+
     if (!linkedEmployee) {
       showNotification('Employee not found. Please select a valid employee.', 'error')
       return
     }
-    
+
+    if (!applyLeaveEligible.value) {
+      showNotification(applyLeaveEligibilityNote.value || 'This employee is not eligible for leave yet.', 'error')
+      return
+    }
+
+    if (isCompOffSelectedHr.value && compOffWeekdayInfoHr.value?.blocked) {
+      showNotification(`Compensation Off cannot be requested for a ${compOffWeekdayInfoHr.value.weekday}.`, 'error')
+      return
+    }
+
+    if (sickHalfPaidTimeBlockedHr.value) {
+      showNotification('Half-day sick leave cannot be requested after 2:00 PM.', 'error')
+      return
+    }
+
     const data = {
        user_id: linkedEmployee.id,
-      leave_type_id: Number(applyLeaveForm.value.leaveType), 
+      leave_type_id: Number(applyLeaveForm.value.leaveType),
       start_date: applyLeaveForm.value.startDate,
       end_date: applyLeaveForm.value.endDate,
       reason: applyLeaveForm.value.reason || '',
-      is_half_day: false, 
-      half_day_type: null, 
+      is_half_day: !!applyLeaveForm.value.isHalfDay,
+      half_day_type: applyLeaveForm.value.isHalfDay ? applyLeaveForm.value.halfDayType : null,
     }
     
     console.log('📤 Sending leave request data:', data)
@@ -6141,6 +6268,7 @@ function mapRowToEmployeeForm(row) {
     emergency_contact_name: emergency.name || row.emergency_contact_name || '',
     emergency_email: emergency.email || row.emergency_email || '',
     emergency_phone_number: emergency.phone || row.emergency_phone_number || '',
+    emergency_contact_relation: emergency.relation || row.emergency_contact_relation || '',
     
     // ===== Company Details (IDs) =====
     branch_id: profile.company_branch_id || row.branchId || '',
@@ -6163,7 +6291,7 @@ function mapRowToEmployeeForm(row) {
     
     // ===== Documents =====
     emirates_id_number: profile.emirates_id_number || row.emirates_id_number || '',
-    documents_expiry_date: formatDateForInput(profile.documents_expiry_date || row.documents_expiry_date),
+    documents_expiry_date: formatDateForInput(profile.emirates_id_expiry_date || row.emirates_id_expiry_date || row.documents_expiry_date),
     labor_card_number: profile.labor_card_number || row.labor_card_number || '',
     labor_card_expiry_date: formatDateForInput(profile.labor_card_expiry_date || row.labor_card_expiry_date),
     passport_number: profile.passport_number || row.passport_number || '',
@@ -6587,6 +6715,7 @@ async function saveEmployeeForm() {
     formData.append('emergency_contact_name', addEmployeeForm.value.emergency_contact_name || '')
     formData.append('emergency_email', addEmployeeForm.value.emergency_email || '')
     formData.append('emergency_phone', addEmployeeForm.value.emergency_phone_number || '')
+    formData.append('emergency_contact_relation', addEmployeeForm.value.emergency_contact_relation || '')
     formData.append('address_inside_uae', addEmployeeForm.value.address_inside_uae || '')
     formData.append('address_outside_uae', addEmployeeForm.value.address_outside_uae || '')
     formData.append('employee_name', addEmployeeForm.value.full_name)
@@ -7073,6 +7202,16 @@ onBeforeUnmount(() => {
   border: none;
   padding: 10px;
   box-shadow: none;
+}
+.leave-inline-warning {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+.leave-inline-warning.is-error {
+  color: #dc2626;
+  font-weight: 600;
 }
 .hr-topbar {
   background: #fff;

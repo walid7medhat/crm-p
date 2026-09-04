@@ -79,6 +79,15 @@
               </div>
             </section>
             <section class="emp-profile-page__card">
+              <h6>Emergency Contact (UAE)</h6>
+              <div class="emp-profile-page__fields">
+                <div class="emp-profile-page__field"><label>Name</label><span>{{ employee.raw?.employee_profile?.emergency_contact?.name || '—' }}</span></div>
+                <div class="emp-profile-page__field"><label>Phone</label><span>{{ employee.raw?.employee_profile?.emergency_contact?.phone || '—' }}</span></div>
+                <div class="emp-profile-page__field"><label>Relation</label><span>{{ employee.raw?.employee_profile?.emergency_contact?.relation || '—' }}</span></div>
+              </div>
+            </section>
+
+            <section class="emp-profile-page__card">
                   <h6>Bank details</h6>
                   <div class="emp-profile-page__fields">
                     <div class="emp-profile-page__field">
@@ -155,12 +164,21 @@
                 <article v-for="group in documentGroups" :key="group.type" class="emp-profile-docs__group">
                   <p class="emp-profile-docs__type">{{ formatDocType(group.type) }}</p>
                   <ul>
-                    <li v-for="doc in group.files" :key="doc.id">
+                    <li v-for="doc in group.files" :key="doc.id" class="emp-profile-docs__item">
                       <iconify-icon icon="lucide:file-text" />
                       <a v-if="doc.file_url" :href="doc.file_url" target="_blank" rel="noopener">
-                        {{ doc.original_name || doc.name || 'View file' }}
+                        {{ doc.document_name || doc.original_name || doc.name || 'View file' }}
                       </a>
-                      <span v-else>{{ doc.original_name || doc.name || '—' }}</span>
+                      <span v-else>{{ doc.document_name || doc.original_name || doc.name || '—' }}</span>
+                      <button
+                        type="button"
+                        class="emp-profile-docs__delete"
+                        title="Delete document"
+                        :disabled="deletingDocumentId === doc.id"
+                        @click="handleDeleteDocument(doc)"
+                      >
+                        <iconify-icon icon="lucide:trash-2" />
+                      </button>
                     </li>
                   </ul>
                 </article>
@@ -191,6 +209,7 @@ import {
   fetchEmployeeLeaveBalance,
   fetchEmployeeAssets,
   fetchEmployeeEvaluations,
+  deleteEmployeeDocument,
 } from '@/services/employeesApi'
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue'
 
@@ -206,6 +225,7 @@ const evaluations = ref([])
 const leaveLoading = ref(false)
 const assetsLoading = ref(false)
 const evaluationsLoading = ref(false)
+const deletingDocumentId = ref(null)
 
 const activeTab = computed(() => String(route.query.tab || ''))
 const showingAttendance = computed(() => activeTab.value === 'attendance')
@@ -260,6 +280,30 @@ function formatDateTime(value) {
 
 function formatDocType(type) {
   return String(type).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+async function handleDeleteDocument(doc) {
+  if (!doc?.id) return
+  if (!window.confirm(`Delete "${doc.document_name || doc.original_name || 'this document'}"?`)) return
+
+  deletingDocumentId.value = doc.id
+  try {
+    await deleteEmployeeDocument(doc.id)
+    const docs = employee.value?.raw?.employee_profile?.documents
+    if (Array.isArray(docs)) {
+      employee.value.raw.employee_profile.documents = docs.filter((d) => d.id !== doc.id)
+    } else if (docs && typeof docs === 'object') {
+      Object.keys(docs).forEach((type) => {
+        if (Array.isArray(docs[type])) {
+          docs[type] = docs[type].filter((d) => d.id !== doc.id)
+        }
+      })
+    }
+  } catch (e) {
+    window.alert(e?.response?.data?.message || 'Failed to delete document')
+  } finally {
+    deletingDocumentId.value = null
+  }
 }
 
 async function loadExtras(id) {

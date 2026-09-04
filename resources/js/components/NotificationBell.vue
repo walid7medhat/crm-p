@@ -193,6 +193,12 @@ export default {
         return
       }
 
+      if (type === 'App\\Notifications\\DocumentExpiryNotification' || type === 'App\\Notifications\\PassportExpiryNotification') {
+        const employeeId = notification?.data?.user_id
+        if (employeeId) this.$router.push(`/hr/employees/${employeeId}`)
+        return
+      }
+
       if (['request', 'approved', 'rejected'].includes(type)) {
         this.$router.push('/my-requests')
       } else if (notification?.data?.property_id) {

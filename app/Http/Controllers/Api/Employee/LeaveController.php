@@ -144,12 +144,16 @@ class LeaveController extends Controller
         $currentYear = date('Y');
         
         $basicLeaveTypes = ['Annual Leave - Paid Leave', 'Sick Leave - Fully Paid'];
-        
+
         $leaveTypes = LeaveType::whereIn('name', $basicLeaveTypes)
             ->where('is_active', true)
             ->get();
-        
+
         foreach ($leaveTypes as $type) {
+            // Annual leave accrues over time (see AccrueAnnualLeave command) rather than
+            // being granted in full at hire, so it starts at 0 here.
+            $initialDays = $type->name === 'Annual Leave - Paid Leave' ? 0 : $type->default_days;
+
             LeaveBalance::updateOrCreate(
                 [
                     'user_id' => $userId,
@@ -157,14 +161,14 @@ class LeaveController extends Controller
                     'year' => $currentYear,
                 ],
                 [
-                    'total_days' => $type->default_days,
+                    'total_days' => $initialDays,
                     'used_days' => 0,
-                    'remaining_days' => $type->default_days,
+                    'remaining_days' => $initialDays,
                 ]
             );
         }
     }
-    
+
     // ==================== Leave Requests ====================
     
     public function index(Request $request)
@@ -240,32 +244,76 @@ class LeaveController extends Controller
             
             $user =User::find($request->user_id)?? Auth::user();
             $employeeProfile = $user->employeeProfile;
-            
+
             // Check if employee has completed 6 months
             $joiningDate = $employeeProfile->joining_date ?? null;
             if (!$joiningDate || Carbon::parse($joiningDate)->diffInMonths(now()) < 6) {
                 return ApiResponse::error('You are not eligible for leave. You must complete 6 months of service.', 422);
             }
-            
+
+            $leaveType = LeaveType::find($request->leave_type_id);
+            $requestStartDate = $request->start_date;
+            $requestEndDate = $request->end_date;
+
+            // Compensation Off: single day only, and can't fall on a Saturday or Monday
+            if ($leaveType && $leaveType->name === 'Compensation Off') {
+                $requestEndDate = $requestStartDate;
+                $compOffDate = Carbon::parse($requestStartDate);
+                if ($compOffDate->isSaturday() || $compOffDate->isMonday()) {
+                    return ApiResponse::error('Compensation Off cannot be requested for a Saturday or a Monday (' . $compOffDate->format('l, d M Y') . ').', 422);
+                }
+            }
+
+            // Sick Leave - Half Paid: cannot be applied for after 2:00 PM
+            if ($leaveType && $leaveType->name === 'Sick Leave - Half Paid' && $request->is_half_day) {
+                if (now()->format('H:i') >= '14:00') {
+                    return ApiResponse::error('Half-day sick leave cannot be requested after 2:00 PM.', 422);
+                }
+            }
+
+            // Sick leave tiers must be exhausted in order: Fully Paid -> Half Paid -> Unpaid
+            if ($leaveType && in_array($leaveType->name, ['Sick Leave - Half Paid', 'Sick Leave - Unpaid'])) {
+                $sickBalances = LeaveBalance::where('user_id', $user->id)
+                    ->where('year', date('Y'))
+                    ->whereHas('leaveType', function ($q) {
+                        $q->whereIn('name', ['Sick Leave - Fully Paid', 'Sick Leave - Half Paid']);
+                    })
+                    ->with('leaveType')
+                    ->get()
+                    ->keyBy(fn ($b) => $b->leaveType->name);
+
+                $fullyPaidRemaining = (float) ($sickBalances->get('Sick Leave - Fully Paid')->remaining_days ?? 0);
+                if ($fullyPaidRemaining > 0) {
+                    return ApiResponse::error('You must use up your Sick Leave - Fully Paid balance before applying for ' . $leaveType->name . '.', 422);
+                }
+
+                if ($leaveType->name === 'Sick Leave - Unpaid') {
+                    $halfPaidRemaining = (float) ($sickBalances->get('Sick Leave - Half Paid')->remaining_days ?? 0);
+                    if ($halfPaidRemaining > 0) {
+                        return ApiResponse::error('You must use up your Sick Leave - Half Paid balance before applying for Sick Leave - Unpaid.', 422);
+                    }
+                }
+            }
+
             // Calculate days
-            $startDate = Carbon::parse($request->start_date);
-            $endDate = Carbon::parse($request->end_date);
+            $startDate = Carbon::parse($requestStartDate);
+            $endDate = Carbon::parse($requestEndDate);
             $days = $startDate->diffInDays($endDate) + 1;
-            
+
             if ($request->is_half_day) {
                 $days = 0.5;
             }
-            
+
             // Check balance
             $balance = LeaveBalance::where('user_id', $user->id)
                 ->where('leave_type_id', $request->leave_type_id)
                 ->where('year', date('Y'))
                 ->first();
-            
+
             if ($balance && !$balance->hasEnoughBalance($days)) {
                 return ApiResponse::error('Insufficient leave balance', 422);
             }
-            
+
             // Upload attachment if any
             $attachmentPath = null;
             if ($request->hasFile('attachment')) {
@@ -280,8 +328,8 @@ class LeaveController extends Controller
                 'user_id' => $user->id,
                 'leave_type_id' => $request->leave_type_id,
                 'parent_id' => $parentId,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
+                'start_date' => $requestStartDate,
+                'end_date' => $requestEndDate,
                 'days' => $days,
                 'is_half_day' => $request->is_half_day ?? false,
                 'half_day_type' => $request->half_day_type,

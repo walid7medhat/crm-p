@@ -187,7 +187,7 @@
         </button>
 
         <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
-          <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> My Documents</span>
+          <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> Document Requests</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
         <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-assets' }" role="tab" @click="activeTab = 'my-assets'; loadMyAssets()">
@@ -196,6 +196,14 @@
         </button>
         <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-leave' }" role="tab" @click="activeTab = 'my-leave'; loadMyLeave()">
           <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
+        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'emergency-contact' }" role="tab" @click="activeTab = 'emergency-contact'; loadEmergencyContact()">
+          <span class="vp-nav__left"><iconify-icon icon="lucide:phone-call" /> Emergency Contact</span>
+          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
+        </button>
+        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'hr-documents' }" role="tab" @click="activeTab = 'hr-documents'; loadMyHrDocuments()">
+          <span class="vp-nav__left"><iconify-icon icon="lucide:folder-lock" /> My Documents</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
         <button
@@ -801,7 +809,7 @@
         <div v-if="activeTab === 'my-documents'" class="vp-panel vp-hub">
           <div class="vp-panel__head vp-hub__head">
             <div>
-              <h3 class="vp-panel__title">My Document Requests</h3>
+              <h3 class="vp-panel__title">Document Requests</h3>
               <p class="vp-panel__subtitle">Request certificates and track approval in one place.</p>
             </div>
             <button type="button" class="vp-btn-primary vp-hub__cta" @click="openDocRequestModal()">
@@ -966,11 +974,19 @@
               <h3 class="vp-panel__title">My Leave</h3>
               <p class="vp-panel__subtitle">Check your balance and apply for time off.</p>
             </div>
-            <button type="button" class="vp-btn-primary vp-hub__cta" @click="openLeaveRequestModal()">
+            <button
+              type="button"
+              class="vp-btn-primary vp-hub__cta"
+              :disabled="!leaveEligible"
+              :title="!leaveEligible ? leaveEligibilityNote : ''"
+              @click="openLeaveRequestModal()"
+            >
               Apply Leave
               <iconify-icon icon="lucide:plus" />
             </button>
           </div>
+
+          <p v-if="!leaveEligible" class="vp-muted-note vp-field__hint--error">{{ leaveEligibilityNote }}</p>
 
           <h4 class="vp-section-label">Leave balance</h4>
           <div v-if="leaveLoading" class="vp-loading">Loading leave data...</div>
@@ -1034,6 +1050,86 @@
             </article>
           </div>
         </div>
+        <!-- Emergency Contact -->
+        <div v-if="activeTab === 'emergency-contact'" class="vp-panel">
+          <div class="vp-panel__head">
+            <h3 class="vp-panel__title">Emergency Contact</h3>
+            <p class="vp-panel__subtitle">Someone in the UAE we can reach if anything happens to you.</p>
+          </div>
+
+          <div v-if="emergencyContactLoading" class="vp-loading">Loading...</div>
+          <form v-else class="vp-edit-form" @submit.prevent="saveEmergencyContact">
+            <div class="vp-field">
+              <label class="vp-field__label">Full Name <em class="required">*</em></label>
+              <input v-model="emergencyContactForm.name" type="text" class="vp-field__input" placeholder="Enter contact's full name" required />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">Phone Number <em class="required">*</em></label>
+              <input v-model="emergencyContactForm.phone" type="text" class="vp-field__input" placeholder="+971 00 000 0000" required />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">Relation <em class="required">*</em></label>
+              <input v-model="emergencyContactForm.relation" type="text" class="vp-field__input" placeholder="e.g. Brother, Friend, Spouse" required />
+            </div>
+            <div class="vp-form-actions">
+              <button type="submit" class="vp-btn-primary" :disabled="emergencyContactSaving">
+                {{ emergencyContactSaving ? 'Saving...' : 'Save Emergency Contact' }}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- HR Documents -->
+        <div v-if="activeTab === 'hr-documents'" class="vp-panel vp-hub">
+          <div class="vp-panel__head vp-hub__head">
+            <div>
+              <h3 class="vp-panel__title">My Documents</h3>
+              <p class="vp-panel__subtitle">Upload a document for HR. Only HR can view and manage these once submitted.</p>
+            </div>
+          </div>
+
+          <form class="vp-edit-form" @submit.prevent="uploadMyHrDocument">
+            <div class="vp-field">
+              <label class="vp-field__label">Title <em class="required">*</em></label>
+              <input v-model="hrDocumentForm.title" type="text" class="vp-field__input" placeholder="e.g. Updated Passport Copy" required />
+            </div>
+            <div class="vp-field">
+              <label class="vp-field__label">File <em class="required">*</em></label>
+              <input ref="hrDocumentFileInput" type="file" class="vp-field__input" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" @change="onHrDocumentFileChange" required />
+            </div>
+            <div class="vp-form-actions">
+              <button type="submit" class="vp-btn-primary" :disabled="hrDocumentUploading">
+                {{ hrDocumentUploading ? 'Uploading...' : 'Upload Document' }}
+              </button>
+            </div>
+          </form>
+
+          <h4 class="vp-section-label" style="margin-top:24px;">My uploaded documents</h4>
+          <div v-if="hrDocumentsLoading" class="vp-loading">Loading documents...</div>
+          <div v-else-if="!myHrDocuments.length" class="vp-empty vp-empty--compact">
+            <div class="vp-empty__icon"><iconify-icon icon="lucide:folder-lock" /></div>
+            <h4>No documents uploaded yet</h4>
+            <p>Documents you upload here are only visible to HR and you.</p>
+          </div>
+          <div v-else class="vp-req-list">
+            <article v-for="doc in myHrDocuments" :key="doc.id" class="vp-req-row">
+              <div class="vp-req-col">
+                <strong>{{ doc.document_name || doc.original_name }}</strong>
+                <small>Title</small>
+              </div>
+              <div class="vp-req-col vp-req-col--date">
+                <strong>{{ formatDateShort(doc.created_at) }}</strong>
+                <small>Uploaded On</small>
+              </div>
+              <div class="vp-req-actions">
+                <a v-if="doc.file_url" :href="doc.file_url" target="_blank" rel="noopener" class="vp-row-btn" title="View">
+                  <iconify-icon icon="lucide:eye" />
+                </a>
+              </div>
+            </article>
+          </div>
+        </div>
+
         <!-- My Evaluations -->
         <!-- Pending Evaluations (manager) -->
         <div v-if="activeTab === 'pending-evaluations'" class="vp-panel vp-hub">
@@ -1432,13 +1528,17 @@
               :options="leaveTypeOptions"
               placeholder="Select leave type"
             />
+            <span v-if="sickTierNote" class="vp-field__hint">{{ sickTierNote }}</span>
           </div>
           <div class="vp-modal__grid">
             <div class="vp-field">
-              <label class="vp-field__label">Start Date <em class="required">*</em></label>
+              <label class="vp-field__label">{{ isCompOffSelected ? 'Date' : 'Start Date' }} <em class="required">*</em></label>
               <input v-model="leaveRequestForm.start_date" type="date" class="vp-field__input" />
+              <span v-if="compOffWeekdayInfo" class="vp-field__hint" :class="{ 'vp-field__hint--error': compOffWeekdayInfo.blocked }">
+                {{ compOffWeekdayInfo.weekday }}<span v-if="compOffWeekdayInfo.blocked"> — Compensation Off can't be a Saturday or Monday</span>
+              </span>
             </div>
-            <div class="vp-field">
+            <div class="vp-field" v-if="!isCompOffSelected">
               <label class="vp-field__label">End Date <em class="required">*</em></label>
               <input v-model="leaveRequestForm.end_date" type="date" class="vp-field__input" />
             </div>
@@ -1459,6 +1559,9 @@
               placeholder="Select period"
               :clearable="false"
             />
+            <span v-if="isSickHalfPaidSelected" class="vp-field__hint" :class="{ 'vp-field__hint--error': sickHalfPaidTimeBlocked }">
+              Sick Leave - Half Paid must be requested before 2:00 PM.
+            </span>
           </div>
           <div class="vp-field">
             <label class="vp-field__label">Reason</label>
@@ -1474,7 +1577,12 @@
         </div>
         <div class="vp-modal__footer">
           <button type="button" class="vp-btn-ghost" @click="showLeaveRequestModal = false">Cancel</button>
-          <button type="button" class="vp-btn-primary" :disabled="leaveRequestSaving" @click="submitLeaveRequest">
+          <button
+            type="button"
+            class="vp-btn-primary"
+            :disabled="leaveRequestSaving || compOffWeekdayInfo?.blocked || sickHalfPaidTimeBlocked"
+            @click="submitLeaveRequest"
+          >
             {{ leaveRequestSaving ? 'Submitting...' : 'Submit Request' }}
           </button>
         </div>
@@ -2594,9 +2702,82 @@ const halfDayTypeOptions = [
   { value: 'afternoon', label: 'Afternoon' },
 ];
 
+const leaveEligible = computed(() => {
+  const joiningDate = user.value?.joining_date;
+  if (!joiningDate) return false;
+  const joined = new Date(joiningDate);
+  if (Number.isNaN(joined.getTime())) return false;
+  const sixMonthsLater = new Date(joined);
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  return new Date() >= sixMonthsLater;
+});
+
+const leaveEligibilityDate = computed(() => {
+  const joiningDate = user.value?.joining_date;
+  if (!joiningDate) return null;
+  const joined = new Date(joiningDate);
+  if (Number.isNaN(joined.getTime())) return null;
+  const sixMonthsLater = new Date(joined);
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  return sixMonthsLater;
+});
+
+const leaveEligibilityNote = computed(() => {
+  if (leaveEligible.value) return '';
+  if (!leaveEligibilityDate.value) return 'You are not eligible for leave until your joining date is set by HR.';
+  const formatted = leaveEligibilityDate.value.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return `You can apply for leave after completing 6 months of service, from ${formatted}.`;
+});
+
+const sickTierBalances = computed(() => {
+  const find = (name) => (myLeaveBalance.value || []).find((b) => b.leave_type?.name === name);
+  return {
+    fullyPaidRemaining: Number(find('Sick Leave - Fully Paid')?.remaining_days ?? 0),
+    halfPaidRemaining: Number(find('Sick Leave - Half Paid')?.remaining_days ?? 0),
+  };
+});
+
 const leaveTypeOptions = computed(() =>
-  (myLeaveTypes.value || []).map((type) => ({ value: type.id, label: type.name })),
+  (myLeaveTypes.value || [])
+    .filter((type) => {
+      const { fullyPaidRemaining, halfPaidRemaining } = sickTierBalances.value;
+      if (type.name === 'Sick Leave - Half Paid' && fullyPaidRemaining > 0) return false;
+      if (type.name === 'Sick Leave - Unpaid' && (fullyPaidRemaining > 0 || halfPaidRemaining > 0)) return false;
+      return true;
+    })
+    .map((type) => ({ value: type.id, label: type.name })),
 );
+
+const sickTierNote = computed(() => {
+  const { fullyPaidRemaining, halfPaidRemaining } = sickTierBalances.value;
+  if (fullyPaidRemaining > 0) {
+    return 'Sick Leave - Half Paid and Unpaid are hidden until your Sick Leave - Fully Paid balance is used up.';
+  }
+  if (halfPaidRemaining > 0) {
+    return 'Sick Leave - Unpaid is hidden until your Sick Leave - Half Paid balance is used up.';
+  }
+  return '';
+});
+
+const selectedLeaveType = computed(() =>
+  (myLeaveTypes.value || []).find((t) => t.id === leaveRequestForm.leave_type_id) || null,
+);
+const isCompOffSelected = computed(() => selectedLeaveType.value?.name === 'Compensation Off');
+const isSickHalfPaidSelected = computed(() => selectedLeaveType.value?.name === 'Sick Leave - Half Paid');
+
+const compOffWeekdayInfo = computed(() => {
+  if (!isCompOffSelected.value || !leaveRequestForm.start_date) return null;
+  const [y, m, d] = String(leaveRequestForm.start_date).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const day = new Date(y, m - 1, d).getDay(); // 0=Sun ... 6=Sat
+  const weekday = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' });
+  return { weekday, blocked: day === 6 || day === 1 };
+});
+
+const sickHalfPaidTimeBlocked = computed(() => {
+  if (!isSickHalfPaidSelected.value || !leaveRequestForm.is_half_day) return false;
+  return new Date().getHours() >= 14;
+});
 const filteredLeaveRequests = computed(() => {
   const query = leaveSearch.value.trim().toLowerCase();
   if (!query) return myLeaveRequests.value;
@@ -2605,6 +2786,87 @@ const filteredLeaveRequests = computed(() => {
       .some((value) => String(value || '').toLowerCase().includes(query)),
   );
 });
+
+// ===== Emergency Contact =====
+const emergencyContactLoading = ref(false);
+const emergencyContactSaving = ref(false);
+const emergencyContactForm = reactive({ name: '', phone: '', relation: '' });
+
+const loadEmergencyContact = async () => {
+  emergencyContactLoading.value = true;
+  try {
+    const { data } = await api.get('/profile/emergency-contact');
+    Object.assign(emergencyContactForm, {
+      name: data?.data?.name || '',
+      phone: data?.data?.phone || '',
+      relation: data?.data?.relation || '',
+    });
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load emergency contact', 'error');
+  } finally {
+    emergencyContactLoading.value = false;
+  }
+};
+
+const saveEmergencyContact = async () => {
+  emergencyContactSaving.value = true;
+  try {
+    await api.put('/profile/emergency-contact', { ...emergencyContactForm });
+    showNotification('Emergency contact saved', 'success');
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to save emergency contact', 'error');
+  } finally {
+    emergencyContactSaving.value = false;
+  }
+};
+
+// ===== HR Documents (self-upload, HR-only visibility) =====
+const myHrDocuments = ref([]);
+const hrDocumentsLoading = ref(false);
+const hrDocumentUploading = ref(false);
+const hrDocumentForm = reactive({ title: '', file: null });
+const hrDocumentFileInput = ref(null);
+
+const onHrDocumentFileChange = (event) => {
+  hrDocumentForm.file = event.target.files?.[0] || null;
+};
+
+const loadMyHrDocuments = async () => {
+  hrDocumentsLoading.value = true;
+  try {
+    const { data } = await api.get('/profile/documents');
+    myHrDocuments.value = data?.data || [];
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load documents', 'error');
+  } finally {
+    hrDocumentsLoading.value = false;
+  }
+};
+
+const uploadMyHrDocument = async () => {
+  if (!hrDocumentForm.title || !hrDocumentForm.file) {
+    showNotification('Please provide a title and a file', 'error');
+    return;
+  }
+  hrDocumentUploading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('title', hrDocumentForm.title);
+    formData.append('file', hrDocumentForm.file);
+    await api.post('/profile/documents', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    showNotification('Document uploaded successfully', 'success');
+    hrDocumentForm.title = '';
+    hrDocumentForm.file = null;
+    if (hrDocumentFileInput.value) hrDocumentFileInput.value.value = '';
+    await loadMyHrDocuments();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to upload document', 'error');
+  } finally {
+    hrDocumentUploading.value = false;
+  }
+};
 
 const pendingEvaluations = ref([]);
 const pendingEvaluationsLoading = ref(false);
@@ -2643,15 +2905,34 @@ const loadMyLeave = async () => {
 };
 
 const openLeaveRequestModal = () => {
+  if (!leaveEligible.value) {
+    showNotification(leaveEligibilityNote.value, 'error');
+    return;
+  }
   Object.assign(leaveRequestForm, { leave_type_id: '', start_date: '', end_date: '', reason: '', is_half_day: false, half_day_type: 'morning' });
   showLeaveRequestModal.value = true;
 };
 
 const submitLeaveRequest = async () => {
+  if (isCompOffSelected.value) {
+    leaveRequestForm.end_date = leaveRequestForm.start_date;
+  }
+
   if (!leaveRequestForm.leave_type_id || !leaveRequestForm.start_date || !leaveRequestForm.end_date) {
     showNotification('Please fill all required fields', 'error');
     return;
   }
+
+  if (isCompOffSelected.value && compOffWeekdayInfo.value?.blocked) {
+    showNotification(`Compensation Off cannot be requested for a ${compOffWeekdayInfo.value.weekday}.`, 'error');
+    return;
+  }
+
+  if (sickHalfPaidTimeBlocked.value) {
+    showNotification('Half-day sick leave cannot be requested after 2:00 PM.', 'error');
+    return;
+  }
+
   leaveRequestSaving.value = true;
   try {
     await api.post('/leaves', { ...leaveRequestForm });
@@ -2969,8 +3250,13 @@ const openLeaveDetail = (lv) => {
       filteredAssetRequests, loadMyAssets, openAssetRequestModal,
       submitAssetRequest, deleteMyAssetRequest,
       myLeaveRequests, myLeaveBalance, myLeaveTypes, leaveLoading, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
-      leaveSearch, leaveTypeOptions, halfDayTypeOptions, filteredLeaveRequests,
+      leaveSearch, leaveTypeOptions, halfDayTypeOptions, filteredLeaveRequests, sickTierNote,
+      leaveEligible, leaveEligibilityDate, leaveEligibilityNote,
+      selectedLeaveType, isCompOffSelected, isSickHalfPaidSelected, compOffWeekdayInfo, sickHalfPaidTimeBlocked,
       loadMyLeave, openLeaveRequestModal, submitLeaveRequest, cancelMyLeave,
+      emergencyContactLoading, emergencyContactSaving, emergencyContactForm, loadEmergencyContact, saveEmergencyContact,
+      myHrDocuments, hrDocumentsLoading, hrDocumentUploading, hrDocumentForm, hrDocumentFileInput,
+      onHrDocumentFileChange, loadMyHrDocuments, uploadMyHrDocument,
       pendingEvaluations, pendingEvaluationsLoading, loadPendingEvaluations,
       teamLeaveRequests, teamLeaveLoading, teamLeaveSearch, teamLeaveActingId, teamLeavePendingCount,
       teamLeaveStats, teamLeaveStatusFilter,

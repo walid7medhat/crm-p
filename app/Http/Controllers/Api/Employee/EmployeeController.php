@@ -207,7 +207,8 @@ class EmployeeController extends Controller
                 'joining_date' => $request->joining_date,
                 'contract_end_date' => $request->contract_end_date,
                 'emirates_id_number' => $request->emirates_id_number,
-                
+                'emirates_id_expiry_date' => $request->emirates_id_expiry_date ?? $request->documents_expiry_date,
+
                 'passport_number' => $request->passport_number,
                 'passport_expiry_date' => $request->passport_expiry_date,
                 'labor_card_number' => $request->labor_card_number,
@@ -239,6 +240,7 @@ class EmployeeController extends Controller
                 'emergency_contact_name' => $request->emergency_contact_name,
                 'emergency_email' => $request->emergency_email,
                 'emergency_phone' => $request->emergency_phone,
+                'emergency_contact_relation' => $request->emergency_contact_relation,
                 'address_inside_uae' => $request->address_inside_uae,
                 'address_outside_uae' => $request->address_outside_uae,
                 'home_country_phone' => $request->home_country_phone,
@@ -368,7 +370,8 @@ class EmployeeController extends Controller
                 'joining_date',
                 'contract_end_date',
                 'emirates_id_number',
-                
+                'emirates_id_expiry_date',
+
                 'passport_number',
                 'passport_expiry_date',
                 'labor_card_number',
@@ -401,10 +404,11 @@ class EmployeeController extends Controller
                 'emergency_contact_name',
                 'emergency_email',
                 'emergency_phone',
+                'emergency_contact_relation',
                 'address_inside_uae',
                 'address_outside_uae',
                 'home_country_phone',
-                
+
                 // NEW: Company Details
                 'sponsor',
                 'visa_quota',
@@ -414,7 +418,11 @@ class EmployeeController extends Controller
                 'contract_joining_date',
                 'gratuity_termination',
             ]);
-            
+
+            if (!$request->filled('emirates_id_expiry_date') && $request->filled('documents_expiry_date')) {
+                $employeeData['emirates_id_expiry_date'] = $request->documents_expiry_date;
+            }
+
             $user->employeeProfile->update($employeeData);
         }
         

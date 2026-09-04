@@ -15,10 +15,10 @@ class EmployeeProfile extends Model
         'company_branch_id', 'joining_date', 'probation_end_date', 
         'contract_end_date', 'contract_joining_date',  
         'gratuity_termination',  
-        'emirates_id_number',
-        
+        'emirates_id_number', 'emirates_id_expiry_date',
+
         'father_name', 'mother_name', 'religion',
-        'emergency_contact_name', 'emergency_email', 'emergency_phone',
+        'emergency_contact_name', 'emergency_email', 'emergency_phone', 'emergency_contact_relation',
         'address_inside_uae', 'address_outside_uae', 'home_country_phone',
         
         'sponsor', 'visa_quota', 'vehicle', 'visa_validity',
@@ -53,6 +53,7 @@ class EmployeeProfile extends Model
         'passport_expiry_date' => 'date',
         'labor_card_expiry_date' => 'date',
         'iloe_expiry_date' => 'date',
+        'emirates_id_expiry_date' => 'date',
     ];
     
     public function user()

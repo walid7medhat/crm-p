@@ -93,6 +93,8 @@ class StoreEmployeeRequest extends FormRequest
                 'emergency_contact_name' => 'nullable|string|max:255',
                 'emergency_email' => 'nullable|email',
                 'emergency_phone' => 'nullable|string|max:20',
+                'emergency_contact_relation' => 'nullable|string|max:100',
+                'emirates_id_expiry_date' => 'nullable|date',
                 'address_inside_uae' => 'nullable|string',
                 'address_outside_uae' => 'nullable|string',
                 'home_country_phone' => 'nullable|string|max:20',

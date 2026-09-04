@@ -192,6 +192,11 @@ export async function fetchEmployeeEvaluations(userId) {
   return response.data?.data ?? []
 }
 
+export async function deleteEmployeeDocument(documentId) {
+  const response = await api.delete(`/employees/documents/${documentId}`)
+  return response.data
+}
+
 
 /**
  * Create new employee
