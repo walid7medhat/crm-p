@@ -131,6 +131,25 @@
             </section>
 
             <section class="emp-profile-page__card emp-profile-page__card--wide">
+              <h6>Evaluations</h6>
+              <div v-if="evaluationsLoading" class="emp-skeleton" style="min-height:60px;" />
+              <p v-else-if="!evaluations.length" class="emp-profile-page__empty">No submitted evaluations yet</p>
+              <div v-else class="emp-profile-docs">
+                <article class="emp-profile-docs__group">
+                  <ul>
+                    <li v-for="ev in evaluations" :key="ev.id">
+                      <iconify-icon icon="lucide:file-text" />
+                      <a v-if="ev.pdf_url" :href="ev.pdf_url" target="_blank" rel="noopener">
+                        {{ ev.milestone_months }}-month review — {{ formatDate(ev.submitted_at) }}
+                      </a>
+                      <span v-else>{{ ev.milestone_months }}-month review — PDF unavailable</span>
+                    </li>
+                  </ul>
+                </article>
+              </div>
+            </section>
+
+            <section class="emp-profile-page__card emp-profile-page__card--wide">
               <h6>Documents</h6>
               <div v-if="documentGroups.length" class="emp-profile-docs">
                 <article v-for="group in documentGroups" :key="group.type" class="emp-profile-docs__group">
@@ -171,6 +190,7 @@ import {
   normalizeEmployee,
   fetchEmployeeLeaveBalance,
   fetchEmployeeAssets,
+  fetchEmployeeEvaluations,
 } from '@/services/employeesApi'
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue'
 
@@ -182,8 +202,10 @@ const error = ref('')
 const employee = ref(null)
 const leaveBalance = ref([])
 const assets = ref([])
+const evaluations = ref([])
 const leaveLoading = ref(false)
 const assetsLoading = ref(false)
+const evaluationsLoading = ref(false)
 
 const activeTab = computed(() => String(route.query.tab || ''))
 const showingAttendance = computed(() => activeTab.value === 'attendance')
@@ -243,16 +265,20 @@ function formatDocType(type) {
 async function loadExtras(id) {
   leaveLoading.value = true
   assetsLoading.value = true
+  evaluationsLoading.value = true
   try {
-    const [leave, assetList] = await Promise.all([
+    const [leave, assetList, evaluationList] = await Promise.all([
       fetchEmployeeLeaveBalance(id).catch(() => []),
       fetchEmployeeAssets(id).catch(() => []),
+      fetchEmployeeEvaluations(id).catch(() => []),
     ])
     leaveBalance.value = Array.isArray(leave) ? leave : []
     assets.value = Array.isArray(assetList) ? assetList : (assetList?.data || [])
+    evaluations.value = Array.isArray(evaluationList) ? evaluationList : []
   } finally {
     leaveLoading.value = false
     assetsLoading.value = false
+    evaluationsLoading.value = false
   }
 }
 

@@ -187,6 +187,11 @@ export async function fetchEmployeeAssets(userId) {
   return response.data?.data ?? []
 }
 
+export async function fetchEmployeeEvaluations(userId) {
+  const response = await api.get(`/evaluations/for-user/${userId}`)
+  return response.data?.data ?? []
+}
+
 
 /**
  * Create new employee

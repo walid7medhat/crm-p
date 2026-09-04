@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Api\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
-use App\Mail\EvaluationCompletedMail;
+use App\Mail\EvaluationCompletedHrMail;
 use App\Models\Evaluation;
 use App\Models\EvaluationAnswer;
 use App\Models\EvaluationSection;
 use App\Models\User;
+use App\Notifications\EvaluationCompletedHrNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,21 +45,8 @@ class EvaluationController extends Controller
     }
 
     /**
-     * The current user's own submitted evaluations.
-     * GET /evaluations/my
-     */
-    public function myEvaluations()
-    {
-        $evaluations = Evaluation::where('user_id', Auth::id())
-            ->where('status', 'submitted')
-            ->orderBy('submitted_at', 'desc')
-            ->get();
-
-        return ApiResponse::success($evaluations, 'My evaluations retrieved successfully');
-    }
-
-    /**
-     * A specific user's submitted evaluations (admin/super_admin, e.g. UserDetail.vue).
+     * A specific user's submitted evaluations (admin/super_admin/hr, e.g.
+     * UserDetail.vue and the HR employee profile page).
      * GET /evaluations/for-user/{userId}
      */
     public function forUser($userId)
@@ -69,7 +57,7 @@ class EvaluationController extends Controller
             return ApiResponse::error('User not found', 404);
         }
 
-        $isAdmin = $me->hasAnyRole(['super_admin', 'admin']);
+        $isAdmin = $me->hasAnyRole(['super_admin', 'admin', 'hr']);
         $hasPermission = $me->getAllPermissions()->pluck('name')->contains('view-evaluations');
         $isDirectManager = (int) $targetUser->parent_id === (int) $me->id;
 
@@ -167,8 +155,15 @@ class EvaluationController extends Controller
             Storage::disk('public')->put($path, $pdfBytes);
             $evaluation->update(['pdf_path' => $path]);
 
-            if ($evaluation->user->email) {
-                Mail::to($evaluation->user->email)->send(new EvaluationCompletedMail($evaluation, $evaluation->user, $pdfBytes));
+            $hrUsers = User::whereHas('roles', function ($q) {
+                $q->where('name', 'hr');
+            })->where('status', 'active')->get();
+
+            foreach ($hrUsers as $hrUser) {
+                if ($hrUser->email) {
+                    Mail::to($hrUser->email)->send(new EvaluationCompletedHrMail($evaluation, $evaluation->user, $pdfBytes));
+                }
+                $hrUser->notify(new EvaluationCompletedHrNotification($evaluation));
             }
 
             DB::commit();

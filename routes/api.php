@@ -375,7 +375,6 @@ Route::middleware(['auth:api'])->prefix('evaluations')->group(function () {
     Route::delete('/questions/{id}', [EvaluationQuestionController::class, 'destroy']);
 
     Route::get('/pending-for-me', [EvaluationController::class, 'pendingForMe']);
-    Route::get('/my', [EvaluationController::class, 'myEvaluations']);
     Route::get('/for-user/{userId}', [EvaluationController::class, 'forUser']);
     Route::get('/{id}', [EvaluationController::class, 'show']);
     Route::post('/{id}/submit', [EvaluationController::class, 'submit']);

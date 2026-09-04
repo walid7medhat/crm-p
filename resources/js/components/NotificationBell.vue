@@ -187,6 +187,12 @@ export default {
         return
       }
 
+      if (type === 'App\\Notifications\\EvaluationCompletedHrNotification') {
+        const employeeId = notification?.data?.employee_id
+        if (employeeId) this.$router.push(`/hr/employees/${employeeId}`)
+        return
+      }
+
       if (['request', 'approved', 'rejected'].includes(type)) {
         this.$router.push('/my-requests')
       } else if (notification?.data?.property_id) {

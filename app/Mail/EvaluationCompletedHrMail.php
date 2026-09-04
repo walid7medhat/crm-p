@@ -8,7 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class EvaluationCompletedMail extends Mailable
+class EvaluationCompletedHrMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -22,12 +22,15 @@ class EvaluationCompletedMail extends Mailable
     public function build()
     {
         $employeeName = $this->employee->displayName() ?? $this->employee->name;
+        $evaluatorName = $this->evaluation->evaluator?->displayName() ?? $this->evaluation->evaluator?->name ?? 'their manager';
 
-        $mail = $this->subject("Your {$this->evaluation->milestone_months}-month evaluation is ready")
-            ->view('emails.evaluation-completed')
+        $mail = $this->subject("Evaluation completed: {$employeeName}")
+            ->view('emails.evaluation-completed-hr')
             ->with([
                 'employeeName' => $employeeName,
+                'evaluatorName' => $evaluatorName,
                 'milestoneMonths' => $this->evaluation->milestone_months,
+                'profileUrl' => config('app.frontend_url') . '/hr/employees/' . $this->employee->id,
             ]);
 
         $mail->attachData($this->pdfContents, "evaluation-{$this->evaluation->id}.pdf", [

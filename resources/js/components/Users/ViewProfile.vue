@@ -198,10 +198,6 @@
           <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
-        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-evaluations' }" role="tab" @click="activeTab = 'my-evaluations'; loadMyEvaluations()">
-          <span class="vp-nav__left"><iconify-icon icon="lucide:clipboard-check" /> My Evaluations</span>
-          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
-        </button>
         <button
             v-if="isTeamLead || isSuperAdmin"
             type="button"
@@ -1039,40 +1035,6 @@
           </div>
         </div>
         <!-- My Evaluations -->
-        <div v-if="activeTab === 'my-evaluations'" class="vp-panel vp-hub">
-          <div class="vp-panel__head vp-hub__head">
-            <div>
-              <h3 class="vp-panel__title">My Evaluations</h3>
-              <p class="vp-panel__subtitle">Evaluations completed by your manager.</p>
-            </div>
-          </div>
-
-          <div v-if="myEvaluationsLoading" class="vp-loading">Loading evaluations...</div>
-          <div v-else-if="!myEvaluations.length" class="vp-empty">
-            <div class="vp-empty__icon"><iconify-icon icon="lucide:clipboard-check" /></div>
-            <h4>No evaluations yet</h4>
-            <p>Your evaluation results will show up here once completed.</p>
-          </div>
-          <div v-else class="vp-req-list">
-            <article v-for="ev in myEvaluations" :key="ev.id" class="vp-req-row">
-              <div class="vp-req-col">
-                <strong>{{ ev.milestone_months }}-month review</strong>
-                <small>Milestone</small>
-              </div>
-              <div class="vp-req-col">
-                <strong>{{ formatDateShort(ev.submitted_at) }}</strong>
-                <small>Submitted On</small>
-              </div>
-              <div class="vp-req-actions">
-                <a v-if="ev.pdf_url" :href="ev.pdf_url" target="_blank" rel="noopener" class="vp-btn-primary vp-btn-primary--sm">
-                  <iconify-icon icon="lucide:file-text" />
-                  View PDF
-                </a>
-                <span v-else class="text-muted small">PDF unavailable</span>
-              </div>
-            </article>
-          </div>
-        </div>
         <!-- Pending Evaluations (manager) -->
         <div v-if="activeTab === 'pending-evaluations'" class="vp-panel vp-hub">
           <div class="vp-panel__head vp-hub__head">
@@ -2644,23 +2606,8 @@ const filteredLeaveRequests = computed(() => {
   );
 });
 
-const myEvaluations = ref([]);
-const myEvaluationsLoading = ref(false);
 const pendingEvaluations = ref([]);
 const pendingEvaluationsLoading = ref(false);
-
-const loadMyEvaluations = async () => {
-  myEvaluationsLoading.value = true;
-  try {
-    const { data } = await api.get('/evaluations/my');
-    myEvaluations.value = data?.data || [];
-  } catch (e) {
-    console.error(e);
-    showNotification('Failed to load evaluations', 'error');
-  } finally {
-    myEvaluationsLoading.value = false;
-  }
-};
 
 const loadPendingEvaluations = async () => {
   pendingEvaluationsLoading.value = true;
@@ -3024,7 +2971,6 @@ const openLeaveDetail = (lv) => {
       myLeaveRequests, myLeaveBalance, myLeaveTypes, leaveLoading, showLeaveRequestModal, leaveRequestForm, leaveRequestSaving,
       leaveSearch, leaveTypeOptions, halfDayTypeOptions, filteredLeaveRequests,
       loadMyLeave, openLeaveRequestModal, submitLeaveRequest, cancelMyLeave,
-      myEvaluations, myEvaluationsLoading, loadMyEvaluations,
       pendingEvaluations, pendingEvaluationsLoading, loadPendingEvaluations,
       teamLeaveRequests, teamLeaveLoading, teamLeaveSearch, teamLeaveActingId, teamLeavePendingCount,
       teamLeaveStats, teamLeaveStatusFilter,
