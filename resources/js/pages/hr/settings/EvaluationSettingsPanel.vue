@@ -27,8 +27,8 @@
               <strong>{{ recurrenceMode === 'recurring' ? 'Recurring' : 'Single (one-time)' }}</strong>
               <small>
                 {{ recurrenceMode === 'recurring'
-                  ? 'Employees are evaluated again every 3/6 months for their whole tenure.'
-                  : 'Each employee gets one evaluation at the 3-month (Sales) or 6-month (other) milestone.' }}
+                  ? 'After their fixed check-ins, employees keep being evaluated again at the same interval for their whole tenure.'
+                  : 'Sales gets two check-ins (1 month, then 2 months). Everyone else gets one, at 6 months.' }}
               </small>
             </span>
           </label>

@@ -13,7 +13,17 @@ use Illuminate\Support\Facades\Mail;
 class CheckEmployeeEvaluations extends Command
 {
     protected $signature = 'evaluations:check-due';
-    protected $description = "Create evaluation cycles for active employees who've hit their 3/6-month tenure milestone";
+    protected $description = "Create evaluation cycles for active employees who've hit their tenure milestone(s)";
+
+    /**
+     * Sales gets two early check-ins (1 month, 2 months); everyone else gets
+     * a single check-in at 6 months. Each entry's index (1-based) is that
+     * evaluation's period_number.
+     */
+    private function milestoneSchedule(bool $isSales): array
+    {
+        return $isSales ? [1, 2] : [6];
+    }
 
     public function handle()
     {
@@ -33,16 +43,31 @@ class CheckEmployeeEvaluations extends Command
                 $profile = $user->employeeProfile;
                 $months = $profile->joining_date->diffInMonths(now());
                 $isSales = stripos($profile->designation?->name ?? '', 'sales') !== false;
-                $milestone = $isSales ? 3 : 6;
-                $currentPeriod = intdiv($months, $milestone);
+                $schedule = $this->milestoneSchedule($isSales);
 
-                if ($currentPeriod < 1) {
-                    continue;
+                // period_number => milestone_months for every checkpoint tenure has reached.
+                $dueMilestones = [];
+                foreach ($schedule as $index => $milestoneMonths) {
+                    if ($months >= $milestoneMonths) {
+                        $dueMilestones[$index + 1] = $milestoneMonths;
+                    }
                 }
 
-                $periodsToCreate = $recurring ? range(1, $currentPeriod) : [1];
+                // Recurring mode: once the fixed schedule is exhausted, keep firing
+                // using the gap between its last two checkpoints (or the schedule's
+                // only checkpoint, if it has just one).
+                if ($recurring && $months > end($schedule)) {
+                    $lastMilestone = end($schedule);
+                    $gap = count($schedule) > 1
+                        ? ($schedule[count($schedule) - 1] - $schedule[count($schedule) - 2])
+                        : $lastMilestone;
+                    $extraCycles = intdiv($months - $lastMilestone, $gap);
+                    for ($i = 1; $i <= $extraCycles; $i++) {
+                        $dueMilestones[count($schedule) + $i] = $lastMilestone + $i * $gap;
+                    }
+                }
 
-                foreach ($periodsToCreate as $period) {
+                foreach ($dueMilestones as $period => $milestoneMonths) {
                     $exists = Evaluation::where('user_id', $user->id)
                         ->where('period_number', $period)
                         ->exists();
@@ -51,14 +76,10 @@ class CheckEmployeeEvaluations extends Command
                         continue;
                     }
 
-                    if (! $recurring && $period > 1) {
-                        continue;
-                    }
-
                     $evaluation = Evaluation::create([
                         'user_id' => $user->id,
                         'evaluator_id' => $user->parent_id,
-                        'milestone_months' => $milestone,
+                        'milestone_months' => $milestoneMonths,
                         'period_number' => $period,
                         'designation_name_snapshot' => $profile->designation?->name,
                         'status' => 'pending',
