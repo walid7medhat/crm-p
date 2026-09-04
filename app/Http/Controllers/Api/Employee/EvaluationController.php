@@ -160,9 +160,9 @@ class EvaluationController extends Controller
             })->where('status', 'active')->get();
 
             foreach ($hrUsers as $hrUser) {
-                if ($hrUser->email) {
-                    Mail::to($hrUser->email)->send(new EvaluationCompletedHrMail($evaluation, $evaluation->user, $pdfBytes));
-                }
+                // if ($hrUser->email) {
+                //     Mail::to($hrUser->email)->send(new EvaluationCompletedHrMail($evaluation, $evaluation->user, $pdfBytes));
+                // }
                 $hrUser->notify(new EvaluationCompletedHrNotification($evaluation));
             }
 
