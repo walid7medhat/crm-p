@@ -1,187 +1,194 @@
 <template>
-  <div class="attendance-report-page">
-
-    <div class="toolbar no-print">
-      <div class="toolbar-title">
-        <h6>Attendance Monthly Deductions Dashboard</h6>
-        <p>Policy: 09:16-10:00 = 10% | 10:01-12:00 = 25% | after 12:01 = 100%</p>
-      </div>
-      <div class="toolbar-actions">
-        <div class="date-fields">
-          <label>Month</label>
-          <input v-model="selectedMonth" type="month" @change="applyMonthSelection" />
-          <label>From</label>
-          <input v-model="startDate" type="date" :max="maxDate" @change="validateDateRange"/>
-          <label>To</label>
-          <input v-model="endDate" type="date" :max="maxDate" @change="validateDateRange"/>
-        </div>
-        <label class="btn upload-btn">
-          Upload CSV/JSON
-          <input type="file" accept=".csv,.json" @change="handleFileUpload" />
-        </label>
-        <button class="btn primary" @click="fetchReport">
-          Search
-        </button>
-        <button class="btn success" @click="exportReport">Export Report</button>
-        <button class="btn print" @click="printPage">Print</button>
-      </div>
-    </div>
-
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span>Total Employees</span>
-        <strong>{{ summary.totalEmployees }}</strong>
-      </div>
-      <div class="kpi-card">
-        <span>Total Working Days</span>
-        <strong>{{ summary.totalWorkingDays }}</strong>
-      </div>
-      <div class="kpi-card danger">
-        <span>Absent Days</span>
-        <strong>{{ summary.totalAbsentDays }}</strong>
-      </div>
-      <div class="kpi-card warning">
-        <span>10% Deduction Days</span>
-        <strong>{{ summary.totalTenPercentDays }}</strong>
-      </div>
-      <div class="kpi-card warning">
-        <span>25% Deduction Days</span>
-        <strong>{{ summary.totalTwentyFivePercentDays }}</strong>
-      </div>
-      <div class="kpi-card danger">
-        <span>100% Deduction Days</span>
-        <strong>{{ summary.totalHundredPercentDays }}</strong>
-      </div>
-      <div class="kpi-card present-kpi">
-        <span>Present Days</span>
-        <strong>{{ summary.totalPresentDays }}</strong>
-      </div>
-    </div>
-
-    <div class="charts-grid no-print">
-      <div class="chart-card">
-        <h6>Deduction Distribution</h6>
-        <apexchart type="bar" height="280" :options="barChartOptions" :series="barChartSeries" />
-      </div>
-      <div class="chart-card">
-        <h6>Attendance vs Absence</h6>
-        <apexchart type="donut" height="280" :options="donutChartOptions" :series="donutChartSeries" />
-      </div>
-    </div>
-
-    <div class="table-controls no-print">
-      <div class="search-wrap">
-        <i class="ri-search-line"></i>
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="search-input"
-          placeholder="Search by name, risk (high/medium/low), 10%/25%/100%, total days, deduction %, or date..."
-        />
-        <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">Clear</button>
-      </div>
-      <select v-model="riskFilter">
-        <option value="all">All Flags</option>
-        <option value="high-absence">High Absence</option>
-        <option value="high-100">High 100% Deduction</option>
-      </select>
-      <select v-model="employeeFilter">
-        <option value="all">All Employees</option>
-        <option v-for="emp in employeeOptions" :key="emp" :value="emp">{{ emp }}</option>
-      </select>
-      <select v-model="sortBy">
-        <option value="name">Sort: Name</option>
-        <option value="totalDays">Sort: Total Days</option>
-        <option value="noDeductionDays">Sort: Present Days</option>
-        <option value="absentDays">Sort: Absent Days</option>
-        <option value="d10">Sort: 10% Days</option>
-        <option value="d25">Sort: 25% Days</option>
-        <option value="d100">Sort: 100% Days</option>
-        <option value="totalDeductionPercent">Sort: Total Deduction %</option>
-      </select>
-      <button class="btn" @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'">
-        {{ sortOrder === 'asc' ? 'Asc' : 'Desc' }}
-      </button>
-    </div>
-
-    <div class="table-shell">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Employee Name</th>
-            <th>Total Days</th>
-            <th>Present Days</th>
-            <th>Absent Days</th>
-            <th>Weekend Days</th>
-            <th>10% Days Count</th>
-            <th>25% Days Count</th>
-            <th>100% Days Count</th>
-            <th>View</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(row, index) in processedRows"
-            :key="row.employeeName"
-            :class="riskClass(row)"
-          >
-            <td class="center">{{ index + 1 }}</td>
-            <td>
-              <button class="employee-link" @click="openEmployeeProfile(row)">
-                {{ row.employeeName }}
-              </button>
-            </td>
-            <td class="center">{{ row.totalDays }}</td>
-            <td class="center">{{ row.presentDays }}</td>
-            <td class="center">{{ row.absentDays }}</td>
-            <td class="center">{{ row.weekendDays }}</td>
-            <td class="center deduction-10">{{ row.d10 }}</td>
-            <td class="center deduction-25">{{ row.d25 }}</td>
-            <td class="center deduction-100">{{ row.d100 }}</td>
-            <td class="center">
-              <button class="btn btn-view-attendance" @click="openEmployeeProfile(row)">View</button>
-            </td>
-          </tr>
-          <tr v-if="!processedRows.length">
-            <td colspan="10" class="empty-cell">No data found for selected date range.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div v-if="selectedEmployee" class="modal-overlay no-print" @click.self="closeEmployeeProfile">
-      <div class="profile-modal">
-        <button class="modal-close" @click="closeEmployeeProfile">×</button>
-        <div class="profile-head">
-          <div class="profile-avatar">{{ initials(selectedEmployee.employeeName) }}</div>
-          <div>
-            <h6>{{ selectedEmployee.employeeName }}</h6>
-            <p>{{ selectedEmployee.totalDays }} working days in selected range</p>
+  <div class="ar-page">
+    <div class="ar-shell">
+      <div class="ar-top no-print">
+        <div class="ar-top__left">
+          <h6 class="ar-title">Monthly deductions</h6>
+          <div class="ar-policy">
+            <span><b>10%</b> 09:16–10:00</span>
+            <span><b>25%</b> 10:01–12:00</span>
+            <span><b>100%</b> after 12:01</span>
           </div>
         </div>
-        <div class="profile-stats">
-          <div class="chip green">0% days: {{ selectedEmployee.noDeductionDays }}</div>
-          <div class="chip slate">Absent days: {{ selectedEmployee.absentDays }}</div>
-          <div class="chip sky">Weekend days: {{ selectedEmployee.weekendDays }}</div>
-          <div class="chip yellow">10% days: {{ selectedEmployee.d10 }}</div>
-          <div class="chip orange">25% days: {{ selectedEmployee.d25 }}</div>
-          <div class="chip red">100% days: {{ selectedEmployee.d100 }}</div>
+        <label class="ar-people-search">
+          <iconify-icon icon="lucide:search" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search employee by name…"
+          />
+          <button v-if="searchQuery" type="button" class="ar-people-search__clear" @click="searchQuery = ''">Clear</button>
+        </label>
+      </div>
+
+      <div class="ar-toolbar no-print">
+        <div class="ar-toolbar__dates">
+          <label class="ar-field">
+            <span>Month</span>
+            <input v-model="selectedMonth" type="month" @change="applyMonthSelection" />
+          </label>
+          <label class="ar-field">
+            <span>From</span>
+            <input v-model="startDate" type="date" :max="maxDate" @change="validateDateRange" />
+          </label>
+          <label class="ar-field">
+            <span>To</span>
+            <input v-model="endDate" type="date" :max="maxDate" @change="validateDateRange" />
+          </label>
+          <select v-model="employeeFilter" class="ar-select">
+            <option value="all">All employees</option>
+            <option v-for="emp in employeeOptions" :key="emp" :value="emp">{{ emp }}</option>
+          </select>
+          <select v-model="riskFilter" class="ar-select">
+            <option value="all">All flags</option>
+            <option value="high-absence">High absence</option>
+            <option value="high-100">High 100%</option>
+          </select>
         </div>
-        <div class="profile-meta">
-          <p><strong>Present Days:</strong> {{ selectedEmployee.presentDays }}</p>
-          <p><strong>Absent Days:</strong> {{ selectedEmployee.absentDays }}</p>
-          <p><strong>Weekend Days:</strong> {{ selectedEmployee.weekendDays }}</p>
-          <p><strong>Validation:</strong> {{ selectedEmployee.presentDays }} + {{ selectedEmployee.absentDays }} = {{ selectedEmployee.totalDays }}</p>
-          <p><strong>Total Deduction %:</strong> {{ selectedEmployee.totalDeductionPercent.toFixed(1) }}%</p>
+        <div class="ar-toolbar__actions">
+          <label class="ar-btn ar-upload">
+            <iconify-icon icon="lucide:upload" />
+            Upload
+            <input type="file" accept=".csv,.json" @change="handleFileUpload" />
+          </label>
+          <button type="button" class="ar-btn ar-btn--primary" @click="fetchReport">
+            <iconify-icon icon="lucide:refresh-cw" />
+            Run
+          </button>
+          <button type="button" class="ar-btn" @click="exportReport">
+            <iconify-icon icon="lucide:download" />
+            Export
+          </button>
+          <button type="button" class="ar-btn" @click="printPage">
+            <iconify-icon icon="lucide:printer" />
+            Print
+          </button>
         </div>
-        <div class="breakdown-table-shell mt-3">
-          <table class="breakdown-table">
+      </div>
+
+      <div class="ar-kpi">
+        <article v-for="kpi in kpiCards" :key="kpi.label" class="ar-kpi__card" :class="kpi.tone">
+          <span>{{ kpi.label }}</span>
+          <strong>{{ kpi.value }}</strong>
+        </article>
+      </div>
+
+      <div class="ar-charts no-print">
+        <div class="ar-card">
+          <p class="ar-card__title">Deduction distribution</p>
+          <apexchart type="bar" height="200" :options="barChartOptions" :series="barChartSeries" />
+        </div>
+        <div class="ar-card">
+          <p class="ar-card__title">Attendance vs absence</p>
+          <apexchart type="donut" height="200" :options="donutChartOptions" :series="donutChartSeries" />
+        </div>
+      </div>
+
+      <div class="ar-card ar-table-card">
+        <div class="ar-table-head no-print">
+          <p class="ar-card__title">Employees <span>{{ processedRows.length }}</span></p>
+          <div class="ar-table-head__right">
+            <select v-model="sortBy" class="ar-select ar-select--sm">
+              <option value="name">Name</option>
+              <option value="totalDays">Total days</option>
+              <option value="noDeductionDays">Present</option>
+              <option value="absentDays">Absent</option>
+              <option value="d10">10%</option>
+              <option value="d25">25%</option>
+              <option value="d100">100%</option>
+              <option value="totalDeductionPercent">Deduction %</option>
+            </select>
+            <button type="button" class="ar-btn ar-btn--sm" @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'">
+              {{ sortOrder === 'asc' ? 'Asc' : 'Desc' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="ar-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th class="center">#</th>
+                <th>Employee</th>
+                <th class="center">Total</th>
+                <th class="center">Present</th>
+                <th class="center">Absent</th>
+                <th class="center">Weekend</th>
+                <th class="center">10%</th>
+                <th class="center">25%</th>
+                <th class="center">100%</th>
+                <th class="center no-print"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, index) in processedRows"
+                :key="row.employeeName"
+                :class="riskClass(row)"
+              >
+                <td class="center ar-muted">{{ index + 1 }}</td>
+                <td>
+                  <button type="button" class="ar-employee" @click="openEmployeeProfile(row)">
+                    <span class="ar-employee__avatar">{{ initials(row.employeeName) }}</span>
+                    <span class="ar-employee__name">{{ row.employeeName }}</span>
+                  </button>
+                </td>
+                <td class="center">{{ row.totalDays }}</td>
+                <td class="center">{{ row.presentDays }}</td>
+                <td class="center">{{ row.absentDays }}</td>
+                <td class="center">{{ row.weekendDays }}</td>
+                <td class="center"><span class="ar-pill ar-pill--warn">{{ row.d10 }}</span></td>
+                <td class="center"><span class="ar-pill ar-pill--orange">{{ row.d25 }}</span></td>
+                <td class="center"><span class="ar-pill ar-pill--danger">{{ row.d100 }}</span></td>
+                <td class="center no-print">
+                  <button type="button" class="ar-link" @click="openEmployeeProfile(row)">View</button>
+                </td>
+              </tr>
+              <tr v-if="!processedRows.length">
+                <td colspan="10" class="ar-empty">No employees found for this range.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="selectedEmployee" class="ar-modal-overlay no-print" @click.self="closeEmployeeProfile">
+      <div class="ar-modal" role="dialog" aria-modal="true">
+        <header class="ar-modal__head">
+          <div class="ar-modal__identity">
+            <div class="ar-modal__avatar">{{ initials(selectedEmployee.employeeName) }}</div>
+            <div>
+              <p class="ar-modal__name">{{ selectedEmployee.employeeName }}</p>
+              <p class="ar-modal__meta">{{ selectedEmployee.totalDays }} working days · {{ selectedEmployee.totalDeductionPercent.toFixed(1) }}% avg deduction</p>
+            </div>
+          </div>
+          <button type="button" class="ar-modal__close" aria-label="Close" @click="closeEmployeeProfile">
+            <iconify-icon icon="lucide:x" />
+          </button>
+        </header>
+
+        <div class="ar-modal__stats">
+          <div class="ar-stat"><span>On time</span><strong>{{ selectedEmployee.noDeductionDays }}</strong></div>
+          <div class="ar-stat"><span>Present</span><strong>{{ selectedEmployee.presentDays }}</strong></div>
+          <div class="ar-stat"><span>Absent</span><strong>{{ selectedEmployee.absentDays }}</strong></div>
+          <div class="ar-stat"><span>Weekend</span><strong>{{ selectedEmployee.weekendDays }}</strong></div>
+          <div class="ar-stat tone-warn"><span>10%</span><strong>{{ selectedEmployee.d10 }}</strong></div>
+          <div class="ar-stat tone-orange"><span>25%</span><strong>{{ selectedEmployee.d25 }}</strong></div>
+          <div class="ar-stat tone-danger"><span>100%</span><strong>{{ selectedEmployee.d100 }}</strong></div>
+        </div>
+
+        <p class="ar-modal__note">
+          Validation: {{ selectedEmployee.presentDays }} present + {{ selectedEmployee.absentDays }} absent = {{ selectedEmployee.totalDays }} working days
+        </p>
+
+        <div class="ar-breakdown">
+          <table>
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Punch In</th>
-                <th>Punch Out</th>
+                <th>Punch in</th>
+                <th>Punch out</th>
                 <th>Status</th>
                 <th>Deduction</th>
               </tr>
@@ -193,8 +200,8 @@
                 <td>{{ formatMinutes(item.checkOutMinutes) }}</td>
                 <td>{{ item.status }}</td>
                 <td>
-                  <span class="chip" :class="deductionClass(item.deduction, item.status)">
-                    {{ item.deduction === null ? '-' : `${item.deduction}%` }}
+                  <span class="ar-pill" :class="deductionPillClass(item.deduction, item.status)">
+                    {{ item.deduction === null ? '—' : `${item.deduction}%` }}
                   </span>
                 </td>
               </tr>
@@ -530,11 +537,27 @@ const today = new Date()
     },
     barChartOptions() {
       return {
-        chart: { toolbar: { show: false } },
-        xaxis: { categories: ['10% Days', '25% Days', '100% Days'] },
-        colors: ['#ff9f1a'],
-        dataLabels: { enabled: true },
-        plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
+        chart: { toolbar: { show: false }, fontFamily: 'inherit', parentHeightOffset: 0 },
+        xaxis: {
+          categories: ['10%', '25%', '100%'],
+          labels: { style: { colors: '#6b7280', fontSize: '11px' } },
+          axisBorder: { show: false },
+          axisTicks: { show: false },
+        },
+        yaxis: {
+          labels: { style: { colors: '#9ca3af', fontSize: '10px' } },
+        },
+        colors: ['#0b0736'],
+        dataLabels: {
+          enabled: true,
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#fff'] },
+        },
+        plotOptions: {
+          bar: { borderRadius: 6, columnWidth: '45%' },
+        },
+        grid: { borderColor: '#f0ecf5', strokeDashArray: 3 },
+        legend: { show: false },
+        tooltip: { theme: 'light' },
       }
     },
     donutChartSeries() {
@@ -542,11 +565,48 @@ const today = new Date()
     },
     donutChartOptions() {
       return {
-        labels: ['Present Days', 'Absent Days'],
-        colors: ['#10b981', '#ef4444'],
-        legend: { position: 'bottom' },
-        dataLabels: { enabled: true },
+        labels: ['Present', 'Absent'],
+        colors: ['#0b0736', '#dc2626'],
+        legend: {
+          position: 'bottom',
+          fontSize: '11px',
+          labels: { colors: '#6b7280' },
+          markers: { width: 7, height: 7, radius: 7 },
+        },
+        dataLabels: { enabled: false },
+        stroke: { width: 0 },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '72%',
+              labels: {
+                show: true,
+                name: { show: true, fontSize: '11px', color: '#6b7280', offsetY: 12 },
+                value: { show: true, fontSize: '18px', fontWeight: 700, color: '#0b0736', offsetY: -8 },
+                total: {
+                  show: true,
+                  label: 'Days',
+                  fontSize: '11px',
+                  color: '#9ca3af',
+                  formatter: () => String(this.summary.totalPresentDays + this.summary.totalAbsentDays),
+                },
+              },
+            },
+          },
+        },
       }
+    },
+    kpiCards() {
+      const s = this.summary
+      return [
+        { label: 'Employees', value: s.totalEmployees, tone: '' },
+        { label: 'Working days', value: s.totalWorkingDays, tone: '' },
+        { label: 'Present', value: s.totalPresentDays, tone: 'is-present' },
+        { label: 'Absent', value: s.totalAbsentDays, tone: 'is-danger' },
+        { label: '10% days', value: s.totalTenPercentDays, tone: 'is-warn' },
+        { label: '25% days', value: s.totalTwentyFivePercentDays, tone: 'is-orange' },
+        { label: '100% days', value: s.totalHundredPercentDays, tone: 'is-danger' },
+      ]
     },
   },
   methods: {
@@ -847,6 +907,15 @@ const today = new Date()
       if (value === 25) return 'orange'
       return 'red'
     },
+    deductionPillClass(value, status = '') {
+      if (status === 'Absent') return 'ar-pill--muted'
+      if (status === 'Weekend') return 'ar-pill--sky'
+      if (value === 0) return 'ar-pill--ok'
+      if (value === 10) return 'ar-pill--warn'
+      if (value === 25) return 'ar-pill--orange'
+      if (value === 100) return 'ar-pill--danger'
+      return 'ar-pill--muted'
+    },
     getDateRange(start, end) {
       if (!start || !end) return []
       const dates = []
@@ -947,431 +1016,519 @@ const today = new Date()
 </script>
 
 <style scoped>
-* { box-sizing: border-box; }
-
-.attendance-report-page {
-  padding: 16px;
-  background: #F4F0F8;
-  min-height: 100vh;
-}
-
-.toolbar {
-  background: #fff;
-  border: 1px solid #e8ebf4;
-  border-radius: 14px;
-  padding: 14px;
-  display: grid;
-  gap: 12px;
-  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.06);
-}
-
-.toolbar-title h2 {
-  margin: 0;
-  font-size: 20px;
+.ar-page {
+  --navy: #0b0736;
+  --purple: #733e87;
+  --border: #ece8f3;
+  --muted: #6b7280;
+  padding: 0;
+  background: transparent;
+  min-height: 0;
+  font-size: 13px;
   color: #111827;
 }
 
-.toolbar-title p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #6b7280;
+.ar-shell {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(11, 7, 54, 0.06);
 }
 
-.toolbar-actions {
+.ar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f0f7;
+}
+.ar-top__left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ar-title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  color: var(--navy) !important;
+}
+.ar-policy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ar-policy span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f7f5fa;
+  border: 1px solid var(--border);
+  font-size: 11px !important;
+  color: #4b5563;
+  font-weight: 500;
+}
+.ar-policy b {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.ar-people-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: min(340px, 100%);
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #faf8fc;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+.ar-people-search input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #111827 !important;
+}
+.ar-people-search__clear {
+  border: none;
+  background: #eef2f7;
+  color: #4b5563;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.ar-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ar-toolbar__dates,
+.ar-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  align-items: center;
+  align-items: flex-end;
 }
-
-.date-fields {
+.ar-field {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
 }
-
-.date-fields label {
-  font-size: 12px;
-  color: #4b5563;
+.ar-field span {
+  font-size: 10px !important;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
-
-input, select {
-  border: 1px solid #d9deea;
+.ar-field input,
+.ar-select {
+  height: 34px;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  min-height: 36px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: 12px !important;
+  color: #111827;
+  background: #fff;
+  min-width: 120px;
+}
+.ar-select--sm {
+  min-width: 110px;
+  height: 30px;
+}
+.ar-field input:focus,
+.ar-select:focus {
+  outline: none;
+  border-color: var(--navy);
 }
 
-.btn {
-  border: 1px solid #d9deea;
+.ar-btn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   background: #fff;
   color: #111827;
-  border-radius: 8px;
-  min-height: 36px;
-  padding: 0 12px;
-  font-size: 13px;
+  font-size: 12px !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
 }
-.upload-btn {
+.ar-btn--primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.ar-btn--sm {
+  height: 30px;
+  padding: 0 10px;
+}
+.ar-upload {
   position: relative;
   overflow: hidden;
 }
-.upload-btn input[type='file'] {
+.ar-upload input[type='file'] {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
 
-.btn.primary { background: #0B0736; border-color: #0B0736; color: #fff; }
-.btn.success { background: #16a34a; border-color: #16a34a; color: #fff; }
-.btn.print { background: #733E87; border-color: #733E87; color: #fff; }
-
-.kpi-grid {
-  margin-top: 12px;
+.ar-kpi {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
 }
-
-.kpi-card {
-  background: #fff;
-  border: 1px solid #e8ebf4;
-  border-radius: 12px;
+.ar-kpi__card {
+  background: #faf8fc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   padding: 10px 12px;
-  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.05);
+  min-height: 58px;
 }
-
-.kpi-card span {
+.ar-kpi__card span {
   display: block;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.kpi-card strong {
-  font-size: 22px;
-  color: #111827;
+  margin: 0 0 2px;
+  font-size: 11px !important;
+  font-weight: 600;
+  color: var(--muted);
   line-height: 1.2;
 }
+.ar-kpi__card strong {
+  display: block;
+  margin: 0;
+  font-size: 18px !important;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.15;
+}
+.ar-kpi__card.is-present strong { color: var(--purple); }
+.ar-kpi__card.is-warn strong { color: #c2410c; }
+.ar-kpi__card.is-orange strong { color: #ea580c; }
+.ar-kpi__card.is-danger strong { color: #dc2626; }
 
-.kpi-card.warning strong { color: #f59e0b; }
-.kpi-card.danger strong { color: #ef4444; }
-.kpi-card.present-kpi strong { color: #733E87; }
-
-.charts-grid {
-  margin-top: 12px;
+.ar-charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: 1.15fr 1fr;
   gap: 10px;
+  margin-bottom: 12px;
 }
-
-.chart-card {
+.ar-card {
   background: #fff;
-  border: 1px solid #e8ebf4;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px;
-  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.05);
+  padding: 12px;
+}
+.ar-card__title {
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--navy) !important;
+  line-height: 1.3 !important;
+}
+.ar-card__title span {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f3f0f7;
+  color: var(--muted);
+  font-size: 11px !important;
+  font-weight: 700;
 }
 
-.chart-card h6 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: #111827;
+.ar-table-card {
+  padding: 12px;
 }
-
-.table-controls {
-  margin-top: 12px;
+.ar-table-head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
-  gap: 8px;
 }
-
-.search-input {
-  min-width: 440px;
-  border: none;
-  outline: none;
-  background: transparent;
-  flex: 1;
+.ar-table-head__right {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
-
-.search-wrap {
-  min-width: min(560px, 100%);
-  background: #fff;
-  border: 1px solid #d9deea;
+.ar-table-shell {
+  overflow: auto;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  min-height: 38px;
+}
+.ar-table-shell table,
+.ar-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+.ar-table-shell th,
+.ar-table-shell td,
+.ar-breakdown th,
+.ar-breakdown td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f3f0f7;
+  font-size: 12px !important;
+  vertical-align: middle;
+}
+.ar-table-shell th,
+.ar-breakdown th {
+  background: #faf8fc;
+  color: var(--muted);
+  font-size: 11px !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.ar-table-shell tbody tr:last-child td,
+.ar-breakdown tbody tr:last-child td { border-bottom: none; }
+.ar-table-shell tbody tr:hover { background: #faf8fc; }
+.center { text-align: center; }
+.ar-muted { color: #9ca3af; }
+.ar-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 28px 12px !important;
+}
+
+.ar-employee {
+  border: none;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
-}
-
-.search-wrap > i {
-  color: #9ca3af;
-  font-size: 16px;
-}
-
-.search-clear {
-  border: none;
-  background: #f3f4f6;
-  color: #374151;
-  border-radius: 999px;
-  font-size: 11px;
-  padding: 3px 8px;
-  line-height: 1.2;
-}
-
-.table-shell {
-  margin-top: 10px;
-  background: #fff;
-  border: 1px solid #e8ebf4;
-  border-radius: 12px;
-  overflow: auto;
-  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.05);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #eef1f6;
-  font-size: 13px;
-}
-
-th {
-  background: #F4F0F8;
+  padding: 0;
+  cursor: pointer;
   text-align: left;
-  color: #4b5563;
-  font-weight: 600;
+  max-width: 280px;
 }
-
-.center { text-align: center; }
-
-.employee-link {
+.ar-employee__avatar,
+.ar-modal__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ar-employee__name {
+  font-size: 12px !important;
+  font-weight: 600;
+  color: var(--navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-link {
   border: none;
   background: transparent;
-  color: #0B0736;
-  font-weight: 600;
+  color: var(--purple);
+  font-size: 12px !important;
+  font-weight: 700;
+  cursor: pointer;
   padding: 0;
 }
 
-.btn-view-attendance {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
-}
-
-.deduction-10 { color: #d97706; font-weight: 700; }
-.deduction-25 { color: #ea580c; font-weight: 700; }
-.deduction-100 { color: #dc2626; font-weight: 700; }
-
-.total-badge {
+.ar-pill {
   display: inline-flex;
-  min-width: 74px;
+  min-width: 24px;
   justify-content: center;
-  padding: 4px 10px;
+  padding: 2px 7px;
   border-radius: 999px;
+  font-size: 11px !important;
   font-weight: 700;
-  font-size: 12px;
+  background: #f3f4f6;
+  color: #4b5563;
 }
-.total-badge.safe { background: #dcfce7; color: #166534; }
-.total-badge.warning { background: #fef3c7; color: #b45309; }
-.total-badge.danger { background: #fee2e2; color: #b91c1c; }
+.ar-pill--ok { background: #ecfdf5; color: #047857; }
+.ar-pill--warn { background: #fff7ed; color: #c2410c; }
+.ar-pill--orange { background: #ffedd5; color: #ea580c; }
+.ar-pill--danger { background: #fef2f2; color: #dc2626; }
+.ar-pill--muted { background: #f3f4f6; color: #6b7280; }
+.ar-pill--sky { background: #e0f2fe; color: #0369a1; }
 
-tr.risk-high { background: #fff7f7; }
-tr.risk-medium { background: #fffdf4; }
-tr.risk-low { background: #f6fff8; }
+tr.risk-high { background: #fff8f8; }
+tr.risk-medium { background: #fffdf7; }
 
-.empty-cell {
-  text-align: center;
-  color: #9ca3af;
-  padding: 26px;
-}
-
-.modal-overlay {
+.ar-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  display: grid;
-  place-items: center;
-  z-index: 1200;
+  z-index: 13000;
+  background: rgba(11, 7, 54, 0.45);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
-
-.profile-modal,
-.breakdown-modal {
-  width: min(760px, 94vw);
-  max-height: 88vh;
+.ar-modal {
+  width: min(760px, 96vw);
+  max-height: min(86vh, 860px);
   overflow: auto;
   background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e8ebf4;
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.18);
-  padding: 16px;
-  position: relative;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(11, 7, 54, 0.25);
 }
-
-.modal-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  border: none;
-  background: transparent;
-  font-size: 24px;
-  line-height: 1;
-  color: #6b7280;
-}
-
-.profile-head {
+.ar-modal__head {
   display: flex;
-  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f0f7;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.ar-modal__identity {
+  display: flex;
   align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
-
-.profile-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: #0B0736;
-  color: #fff;
-  font-weight: 700;
-}
-
-.profile-head h4 {
-  margin: 0;
-  font-size: 18px;
-  color: #111827;
-}
-
-.profile-head p {
-  margin: 4px 0 0;
-  color: #6b7280;
+.ar-modal__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   font-size: 12px;
 }
-
-.profile-stats {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.ar-modal__name {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--navy) !important;
 }
-
-.chip {
+.ar-modal__meta {
+  margin: 2px 0 0 !important;
+  font-size: 12px !important;
+  color: var(--muted) !important;
+}
+.ar-modal__close {
+  width: 30px;
+  height: 30px;
+  border: none;
   border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 700;
+  background: #f3f4f6;
+  color: #4b5563;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
-.chip.green { background: #dcfce7; color: #166534; }
-.chip.yellow { background: #fef9c3; color: #a16207; }
-.chip.orange { background: #ffedd5; color: #c2410c; }
-.chip.red { background: #fee2e2; color: #b91c1c; }
-.chip.slate { background: #e5e7eb; color: #374151; }
-.chip.sky { background: #e0f2fe; color: #075985; }
-
-.profile-meta {
-  margin-top: 12px;
-  color: #374151;
-  font-size: 13px;
+.ar-modal__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  gap: 8px;
+  padding: 12px 16px;
 }
-
-.profile-actions {
-  margin-top: 14px;
-  display: flex;
-  justify-content: flex-end;
+.ar-stat {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #faf8fc;
+  border: 1px solid var(--border);
 }
-
-.breakdown-modal h4 {
-  margin: 0 0 12px;
-  color: #111827;
+.ar-stat span {
+  display: block;
+  font-size: 10px !important;
+  color: var(--muted);
+  font-weight: 600;
 }
-
-.breakdown-table-shell {
-  border: 1px solid #e8ebf4;
+.ar-stat strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px !important;
+  color: var(--navy);
+}
+.ar-stat.tone-warn strong { color: #c2410c; }
+.ar-stat.tone-orange strong { color: #ea580c; }
+.ar-stat.tone-danger strong { color: #dc2626; }
+.ar-modal__note {
+  margin: 0 16px 12px !important;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #faf8fc;
+  border: 1px dashed #ddd3e8;
+  font-size: 12px !important;
+  color: #4b5563;
+}
+.ar-breakdown {
+  margin: 0 16px 16px;
+  border: 1px solid var(--border);
   border-radius: 10px;
   overflow: auto;
 }
+.ar-breakdown table { min-width: 520px; }
 
-.breakdown-table {
-  min-width: 520px;
+@media (max-width: 1100px) {
+  .ar-kpi { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-
-@media (max-width: 768px) {
-  .attendance-report-page {
-    padding: 10px;
-  }
-  .date-fields {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-  .date-fields input {
-    flex: 1;
-    min-width: 140px;
-  }
-  .search-wrap {
-    min-width: 100%;
-  }
-  .search-input {
-    min-width: 0;
-  }
+@media (max-width: 860px) {
+  .ar-charts { grid-template-columns: 1fr; }
+  .ar-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ar-people-search { width: 100%; }
+  .ar-toolbar__dates,
+  .ar-toolbar__actions { width: 100%; }
+}
+@media (max-width: 520px) {
+  .ar-kpi { grid-template-columns: 1fr 1fr; }
 }
 
 @media print {
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-
-  .modal-overlay {
-    display: none !important;
-  }
-
-  .attendance-report-page {
-    background: #fff;
-    padding: 0;
-  }
-
-  .table-shell {
-    border: none;
-    overflow: visible !important;
-    box-shadow: none !important;
-  }
-
-  table {
+  @page { size: A4 landscape; margin: 8mm; }
+  .no-print { display: none !important; }
+  .ar-modal-overlay { display: none !important; }
+  .ar-shell { box-shadow: none; border: none; padding: 0; }
+  .ar-table-shell { overflow: visible !important; }
+  .ar-table-shell table {
     min-width: 100% !important;
-    width: 100% !important;
     table-layout: fixed;
-    page-break-inside: auto;
   }
-
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
   th, td {
-    font-size: 11px;
-    padding: 6px 4px;
+    font-size: 10px !important;
+    padding: 5px 3px;
     white-space: normal;
     word-break: break-word;
   }
-
-  .employee-link {
-    color: #111827 !important;
-    text-decoration: none !important;
-    pointer-events: none;
-  }
+  .ar-employee { pointer-events: none; }
+  .ar-employee__avatar { display: none; }
 }
 </style>

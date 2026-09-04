@@ -865,11 +865,9 @@ const settingsSidebarSections = computed(() => {
       system.push({ path: '/import-pitrix', label: 'Import Leads', icon: 'lucide:cloud-download' });
     system.push({ path: '/sync-bitrix-leads', label: 'Sync Leads', icon: 'lucide:refresh-cw' });
     system.push({ path: '/sync-responsible', label: 'Sync Responsible', icon: 'lucide:user-check' });
-    system.push({ path: '/attendance-monthly-reports', label: 'Reports', icon: 'lucide:bar-chart-3' });
     system.push({ path: '/settings/background', label: 'Background', icon: 'lucide:image' });
     system.push({ path: '/settings/deal-costs', label: 'Deal Costs', icon: 'lucide:coins' });
-    system.push({ path: '/settings/evaluations', label: 'Evaluations', icon: 'lucide:clipboard-check' });
-      
+
   }
 
   const chat = isCustomAdmin.value

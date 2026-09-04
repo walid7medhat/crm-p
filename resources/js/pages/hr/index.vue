@@ -25,9 +25,9 @@
               @click.stop="onHeaderTabClick(tab, $event)"
             >
               {{ tab }}
-              <iconify-icon v-if="tab !== 'Overview'" icon="lucide:chevron-down" class="hr-tab-chevron" />
+              <iconify-icon v-if="headerTabMenus[tab]" icon="lucide:chevron-down" class="hr-tab-chevron" />
             </button>
-            <div v-if="!isMobileViewport && tab !== 'Overview' && openHeaderMenu === tab" class="hr-tab-menu">
+            <div v-if="!isMobileViewport && headerTabMenus[tab] && openHeaderMenu === tab" class="hr-tab-menu">
               <button
                 v-for="item in headerTabMenus[tab]"
                 :key="item"
@@ -102,6 +102,12 @@
               Schedule Interview
               <iconify-icon icon="lucide:plus" />
             </button>
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+          </template>
+          <template v-else-if="activeTab === 'Evaluations'">
+            <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
+          </template>
+          <template v-else-if="activeTab === 'Reports'">
             <button type="button" class="hr-icon-btn" title="Settings" @click="openHrSettings()"><iconify-icon icon="lucide:settings" /></button>
           </template>
           <template v-else>
@@ -575,6 +581,18 @@
         </div>
       </div>
 
+      <div class="hr-content-card hr-evaluations-card" v-else-if="activeTab === 'Evaluations'">
+        <div class="hr-content-shell overview-shell hr-evaluations-shell">
+          <EvaluationSettingsPanel />
+        </div>
+      </div>
+
+      <div class="hr-content-card hr-reports-card" v-else-if="activeTab === 'Reports'">
+        <div class="hr-content-shell overview-shell hr-reports-shell">
+          <AttendanceMonthlyReport />
+        </div>
+      </div>
+
       <div v-else class="hr-content-card">
         <div class="hr-content-shell hr-empty-tab"></div>
       </div>
@@ -582,7 +600,7 @@
 
     <Teleport to="body">
       <div
-        v-if="isMobileViewport && openHeaderMenu && openHeaderMenu !== 'Overview'"
+        v-if="isMobileViewport && openHeaderMenu && headerTabMenus[openHeaderMenu]"
         class="hr-mob-nav-sheet"
         role="dialog"
         aria-modal="true"
@@ -2064,6 +2082,8 @@ import ApplicantsManagement from '@/pages/hr/recruitment/ApplicantsManagement.vu
 import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
 import AssetRequestsManagement from '@/pages/hr/assets/AssetRequestsManagement.vue'
 import HrSettingsHub from '@/pages/hr/settings/HrSettingsHub.vue'
+import EvaluationSettingsPanel from '@/pages/hr/settings/EvaluationSettingsPanel.vue'
+import AttendanceMonthlyReport from '@/pages/hr/attendance-monthly-reports.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
@@ -2353,7 +2373,7 @@ const fetchRealEmployees = async () => {
 }
 
 // ========== UI State ==========
-const headerTabs = ['Overview', 'Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets']
+const headerTabs = ['Overview', 'Employees', 'Payroll', 'Leave / Attendance', 'Career', 'Assets', 'Evaluations', 'Reports']
 const activeTab = ref('Overview')
 const openHeaderMenu = ref(null)
 const topbarTabsRef = ref(null)
@@ -6993,6 +7013,28 @@ onMounted(async () => {
     activeTab.value = 'Employees'
     await openEditEmployee({ id: editId })
   }
+
+  const settingsTab = route.query.settings
+  const moduleTab = route.query.tab
+  if (typeof moduleTab === 'string' && headerTabs.includes(moduleTab)) {
+    activeTab.value = moduleTab
+    const nextQuery = { ...route.query }
+    delete nextQuery.tab
+    delete nextQuery.settings
+    router.replace({ query: nextQuery })
+  } else if (typeof settingsTab === 'string' && settingsTab) {
+    // Legacy deep-link: /hr?settings=evaluations → Evaluations module
+    if (settingsTab === 'evaluations') {
+      activeTab.value = 'Evaluations'
+    } else if (settingsTab === 'reports') {
+      activeTab.value = 'Reports'
+    } else {
+      openHrSettings(settingsTab)
+    }
+    const nextQuery = { ...route.query }
+    delete nextQuery.settings
+    router.replace({ query: nextQuery })
+  }
 })
 onBeforeUnmount(() => {
   if (attendanceSearchBlurTimer) clearTimeout(attendanceSearchBlurTimer)
@@ -7469,11 +7511,23 @@ onBeforeUnmount(() => {
 .hr-content-card.hr-recruitment-card,
 .hr-recruitment-shell,
 .hr-content-card.hr-assets-card,
-.hr-assets-shell {
+.hr-assets-shell,
+.hr-content-card.hr-evaluations-card,
+.hr-evaluations-shell,
+.hr-content-card.hr-reports-card,
+.hr-reports-shell {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+}
+.hr-reports-shell :deep(.ar-page) {
+  padding: 0;
+  background: transparent;
+  min-height: 0;
+}
+.hr-evaluations-shell :deep(.ev-page) {
+  padding: 0;
 }
 .career-summary-row {
   margin-bottom: 12px;

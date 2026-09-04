@@ -992,7 +992,7 @@ function  hasActions(order) {
 
 /* Filter Tabs */
 .filter-tabs {
-    display: flex;
+    display: flex; 
     gap: 8px;
     border-bottom: 1px solid #e9ecef;
     padding-bottom: 16px;
