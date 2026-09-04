@@ -30,6 +30,30 @@ class EvaluationController extends Controller
     ];
 
     /**
+     * All evaluations across every employee (admin/super_admin/hr), e.g. the
+     * HR "All Evaluations" tab.
+     * GET /evaluations
+     */
+    public function index(Request $request)
+    {
+        $me = Auth::user();
+        if (! $me->hasAnyRole(['super_admin', 'admin', 'hr'])) {
+            return ApiResponse::error('Access denied', 403);
+        }
+
+        $query = Evaluation::with([
+            'user:id,name,display_name,avatar',
+            'evaluator:id,name,display_name',
+        ])->orderBy('created_at', 'desc');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return ApiResponse::success($query->get(), 'Evaluations retrieved successfully');
+    }
+
+    /**
      * Pending evaluations the current user (as manager/evaluator) needs to fill in.
      * GET /evaluations/pending-for-me
      */

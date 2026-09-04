@@ -365,6 +365,7 @@ Route::middleware(['auth:api'])->prefix('announcements')->group(function () {
         ->middleware('permission:announcements-delete');
 });
 Route::middleware(['auth:api'])->prefix('evaluations')->group(function () {
+    Route::get('/', [EvaluationController::class, 'index']);
     Route::get('/settings', [EvaluationSettingController::class, 'show']);
     Route::put('/settings', [EvaluationSettingController::class, 'update']);
 

@@ -583,7 +583,8 @@
 
       <div class="hr-content-card hr-evaluations-card" v-else-if="activeTab === 'Evaluations'">
         <div class="hr-content-shell overview-shell hr-evaluations-shell">
-          <EvaluationSettingsPanel />
+          <AllEvaluationsList v-if="evaluationSectionMode === 'all'" />
+          <EvaluationSettingsPanel v-else />
         </div>
       </div>
 
@@ -2083,6 +2084,7 @@ import AssetsManagement from '@/pages/hr/assets/AssetsManagement.vue'
 import AssetRequestsManagement from '@/pages/hr/assets/AssetRequestsManagement.vue'
 import HrSettingsHub from '@/pages/hr/settings/HrSettingsHub.vue'
 import EvaluationSettingsPanel from '@/pages/hr/settings/EvaluationSettingsPanel.vue'
+import AllEvaluationsList from '@/pages/hr/evaluations/AllEvaluationsList.vue'
 import AttendanceMonthlyReport from '@/pages/hr/attendance-monthly-reports.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
@@ -2433,6 +2435,7 @@ const assetsPage = ref(1)
 const assetsPerPage = 10
 const careerSectionMode = ref('manage-recruitments')
 const assetsSectionMode = ref('manage-assets')
+const evaluationSectionMode = ref('all')
 const careerSearchKeyword = ref('')
 const careerPage = ref(1)
 const careerPerPage = 10
@@ -2761,6 +2764,7 @@ const headerTabMenus = {
   'Leave / Attendance': ['Leave Management', 'Attendance Management', 'Announcements'],
   Career: ['Manage Recruitments', 'Interviews'],
   Assets: ['Manage Assets', 'Asset Requests'],
+  Evaluations: ['All Evaluations', 'Manage Sections'],
 }
 
 function isHeaderTabActive(tab) {
@@ -2820,6 +2824,10 @@ function isHeaderMenuItemActive(tab, item) {
   if (tab === 'Assets') {
     if (item === 'Asset Requests') return activeTab.value === 'Assets' && assetsSectionMode.value === 'requests'
     if (item === 'Manage Assets') return activeTab.value === 'Assets' && assetsSectionMode.value === 'manage-assets'
+  }
+  if (tab === 'Evaluations') {
+    if (item === 'All Evaluations') return activeTab.value === 'Evaluations' && evaluationSectionMode.value === 'all'
+    if (item === 'Manage Sections') return activeTab.value === 'Evaluations' && evaluationSectionMode.value === 'settings'
   }
   return false
 }
@@ -4731,8 +4739,11 @@ function onHeaderMenuSelect(tab, item) {
   } else if (tab === 'Assets') {
     activeTab.value = 'Assets'
     assetsSectionMode.value = item === 'Asset Requests' ? 'requests' : 'manage-assets'
+  } else if (tab === 'Evaluations') {
+    activeTab.value = 'Evaluations'
+    evaluationSectionMode.value = item === 'Manage Sections' ? 'settings' : 'all'
   }
-  
+
   // إغلاق القائمة المنسدلة
   openHeaderMenu.value = null
 }
