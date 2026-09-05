@@ -87,14 +87,40 @@
               </div>
             </section>
 
+            <section class="emp-profile-page__card emp-profile-page__card--wide">
+              <h6>Health Disclosure</h6>
+              <p v-if="!checkedHealthItems.length" class="emp-profile-page__empty">No health conditions disclosed</p>
+              <div v-else class="emp-profile-page__fields">
+                <div v-for="item in checkedHealthItems" :key="item.key" class="emp-profile-page__field">
+                  <label>{{ item.label }}</label>
+                  <span>{{ item.note || 'Disclosed, no additional notes' }}</span>
+                </div>
+              </div>
+            </section>
+
             <section class="emp-profile-page__card">
                   <h6>Bank details</h6>
                   <div class="emp-profile-page__fields">
                     <div class="emp-profile-page__field">
+                      <label>Account Holder Name</label>
+                      <span>{{ employee.raw?.employee_profile?.bank_details?.bank_account_holder_name || '—' }}</span>
+                    </div>
+                    <div class="emp-profile-page__field">
                       <label>Bank</label>
                       <span>{{ employee.raw?.employee_profile?.bank_details?.bank_name || '—' }}</span>
                     </div>
-
+                    <div class="emp-profile-page__field">
+                      <label>Account Number</label>
+                      <span>{{ employee.raw?.employee_profile?.bank_details?.account_number || '—' }}</span>
+                    </div>
+                    <div class="emp-profile-page__field">
+                      <label>Branch Location</label>
+                      <span>{{ employee.raw?.employee_profile?.bank_details?.branch_location || '—' }}</span>
+                    </div>
+                    <div class="emp-profile-page__field">
+                      <label>Swift Code</label>
+                      <span>{{ employee.raw?.employee_profile?.bank_details?.swift_code || '—' }}</span>
+                    </div>
                     <div class="emp-profile-page__field">
                       <label>IBAN</label>
                       <span>{{ employee.raw?.employee_profile?.bank_details?.iban_number || '—' }}</span>
@@ -236,6 +262,28 @@ const statusLabel = computed(() => {
 })
 
 const badgeClass = computed(() => `emp-card__badge--${employee.value?.employmentStatus || 'active'}`)
+
+const HEALTH_DISCLOSURE_LABELS = {
+  physical_disability: 'Physical Disability',
+  major_illness_surgery: 'Major accidents / illnesses / surgery',
+  hypertension: 'Hypertension',
+  diabetes: 'Diabetes',
+  asthma: 'Asthma',
+  chronic_kidney_disease: 'Chronic Kidney Disease',
+  fatty_liver_disease: 'Fatty Liver Disease',
+}
+
+const checkedHealthItems = computed(() => {
+  const items = employee.value?.raw?.employee_profile?.health_disclosure
+  if (!Array.isArray(items)) return []
+  return items
+    .filter((item) => item?.checked)
+    .map((item) => ({
+      key: item.key,
+      label: HEALTH_DISCLOSURE_LABELS[item.key] || item.key,
+      note: item.note || '',
+    }))
+})
 
 const documentGroups = computed(() => {
   const docs = employee.value?.raw?.employee_profile?.documents

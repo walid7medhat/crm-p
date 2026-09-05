@@ -7208,6 +7208,8 @@ onBeforeUnmount(() => {
   margin-top: 4px;
   font-size: 11px;
   color: #6b7280;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 .leave-inline-warning.is-error {
   color: #dc2626;

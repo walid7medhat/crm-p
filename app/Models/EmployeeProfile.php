@@ -19,6 +19,7 @@ class EmployeeProfile extends Model
 
         'father_name', 'mother_name', 'religion',
         'emergency_contact_name', 'emergency_email', 'emergency_phone', 'emergency_contact_relation',
+        'health_disclosure',
         'address_inside_uae', 'address_outside_uae', 'home_country_phone',
         
         'sponsor', 'visa_quota', 'vehicle', 'visa_validity',
@@ -54,6 +55,7 @@ class EmployeeProfile extends Model
         'labor_card_expiry_date' => 'date',
         'iloe_expiry_date' => 'date',
         'emirates_id_expiry_date' => 'date',
+        'health_disclosure' => 'array',
     ];
     
     public function user()

@@ -62,6 +62,7 @@ class EmployeeResource extends JsonResource
                     'phone' => $this->employeeProfile->emergency_phone,
                     'relation' => $this->employeeProfile->emergency_contact_relation,
                 ],
+                'health_disclosure' => $this->employeeProfile->health_disclosure,
                 'addresses' => [
                     'inside_uae' => $this->employeeProfile->address_inside_uae,
                     'outside_uae' => $this->employeeProfile->address_outside_uae,

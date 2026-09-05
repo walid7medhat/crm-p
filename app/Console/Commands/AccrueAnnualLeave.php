@@ -13,7 +13,7 @@ class AccrueAnnualLeave extends Command
 {
     protected $signature = 'leave:accrue-annual';
 
-    protected $description = 'Accrue Annual Leave balances: 14 days after 6 months of service, then +2.5 days per month after that';
+    protected $description = 'Accrue Annual Leave balances: 14 days after 6 months of service, then +2.5 days for every month after that, uncapped, growing with total tenure';
 
     public function handle()
     {
@@ -35,9 +35,14 @@ class AccrueAnnualLeave extends Command
 
         foreach ($users as $user) {
             $joiningDate = Carbon::parse($user->employeeProfile->joining_date);
-            $months = $joiningDate->diffInMonths($today);
+            // diffInMonths() returns a precise float (e.g. 8.4) in this Carbon
+            // version; floor it to a whole month count so the 2.5-day-per-month
+            // accrual always lands on a clean half-day increment.
+            $totalMonths = (int) floor($joiningDate->diffInMonths($today));
 
-            $expected = $months < 6 ? 0 : 14 + max(0, $months - 6) * 2.5;
+            // 14 days once 6 months of service are complete, then +2.5 days
+            // for every month after that. Uncapped: grows with total tenure.
+            $expected = $totalMonths < 6 ? 0 : 14 + ($totalMonths - 6) * 2.5;
 
             $balance = LeaveBalance::firstOrNew([
                 'user_id' => $user->id,

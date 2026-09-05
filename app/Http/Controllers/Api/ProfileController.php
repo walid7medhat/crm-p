@@ -443,4 +443,63 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get the authenticated user's health disclosure checklist answers.
+     */
+    public function getHealthDisclosure(Request $request)
+    {
+        $employeeProfile = $request->user()->employeeProfile;
+
+        return response()->json([
+            'success' => true,
+            'data' => $employeeProfile?->health_disclosure ?? [],
+        ]);
+    }
+
+    /**
+     * Save the authenticated user's health disclosure checklist answers.
+     */
+    public function updateHealthDisclosure(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $employeeProfile = $this->getOrCreateEmployeeProfile($user);
+
+            $validator = Validator::make($request->all(), [
+                'items' => 'required|array',
+                'items.*.key' => 'required|string|max:100',
+                'items.*.checked' => 'required|boolean',
+                'items.*.note' => 'nullable|string|max:1000',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $items = array_map(fn ($item) => [
+                'key' => $item['key'],
+                'checked' => (bool) $item['checked'],
+                'note' => $item['checked'] ? ($item['note'] ?? null) : null,
+            ], $validator->validated()['items']);
+
+            $employeeProfile->update(['health_disclosure' => $items]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $employeeProfile->health_disclosure,
+                'message' => 'Health disclosure saved successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save health disclosure',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

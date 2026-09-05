@@ -198,14 +198,6 @@
           <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
-        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'emergency-contact' }" role="tab" @click="activeTab = 'emergency-contact'; loadEmergencyContact()">
-          <span class="vp-nav__left"><iconify-icon icon="lucide:phone-call" /> Emergency Contact</span>
-          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
-        </button>
-        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'hr-documents' }" role="tab" @click="activeTab = 'hr-documents'; loadMyHrDocuments()">
-          <span class="vp-nav__left"><iconify-icon icon="lucide:folder-lock" /> My Documents</span>
-          <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
-        </button>
         <button
             v-if="isTeamLead || isSuperAdmin"
             type="button"
@@ -251,7 +243,14 @@
             <h3 class="vp-panel__title">Edit Profile</h3>
           </div>
 
-          <form class="vp-edit-form" @submit.prevent="updateProfile">
+          <div class="vp-filter-chips vp-edit-subnav">
+            <button type="button" class="vp-chip" :class="{ 'is-active': editProfileSubTab === 'info' }" @click="editProfileSubTab = 'info'">Profile Info</button>
+            <button type="button" class="vp-chip" :class="{ 'is-active': editProfileSubTab === 'emergency' }" @click="editProfileSubTab = 'emergency'">Emergency Contact</button>
+            <button type="button" class="vp-chip" :class="{ 'is-active': editProfileSubTab === 'documents' }" @click="editProfileSubTab = 'documents'">My Documents</button>
+            <button type="button" class="vp-chip" :class="{ 'is-active': editProfileSubTab === 'health' }" @click="editProfileSubTab = 'health'">Health Disclosure</button>
+          </div>
+
+          <form v-if="editProfileSubTab === 'info'" class="vp-edit-form" @submit.prevent="updateProfile">
             <div class="vp-field">
               <label class="vp-field__label">First Name</label>
               <input
@@ -305,6 +304,119 @@
               </button>
             </div>
           </form>
+
+          <!-- Emergency Contact -->
+          <section v-if="editProfileSubTab === 'emergency'" class="vp-edit-section vp-edit-section--flush">
+            <div class="vp-edit-section__head">
+              <p class="vp-panel__subtitle">Someone in the UAE we can reach if anything happens to you.</p>
+            </div>
+
+            <div v-if="emergencyContactLoading" class="vp-loading">Loading...</div>
+            <form v-else class="vp-edit-form" @submit.prevent="saveEmergencyContact">
+              <div class="vp-field">
+                <label class="vp-field__label">Full Name <em class="required">*</em></label>
+                <input v-model="emergencyContactForm.name" type="text" class="vp-field__input" placeholder="Enter contact's full name" required />
+              </div>
+              <div class="vp-field">
+                <label class="vp-field__label">Phone Number <em class="required">*</em></label>
+                <input v-model="emergencyContactForm.phone" type="text" class="vp-field__input" placeholder="+971 00 000 0000" required />
+              </div>
+              <div class="vp-field">
+                <label class="vp-field__label">Relation <em class="required">*</em></label>
+                <input v-model="emergencyContactForm.relation" type="text" class="vp-field__input" placeholder="e.g. Brother, Friend, Spouse" required />
+              </div>
+              <div class="vp-form-actions">
+                <button type="submit" class="vp-btn-primary" :disabled="emergencyContactSaving">
+                  {{ emergencyContactSaving ? 'Saving...' : 'Save Emergency Contact' }}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- My Documents (self-upload, HR-only visibility) -->
+          <section v-if="editProfileSubTab === 'documents'" class="vp-edit-section vp-edit-section--flush">
+            <div class="vp-edit-section__head">
+              <p class="vp-panel__subtitle">Upload a document for HR. Only HR can view and manage these once submitted.</p>
+            </div>
+
+            <form class="vp-edit-form" @submit.prevent="uploadMyHrDocument">
+              <div class="vp-field">
+                <label class="vp-field__label">Title <em class="required">*</em></label>
+                <input v-model="hrDocumentForm.title" type="text" class="vp-field__input" placeholder="e.g. Updated Passport Copy" required />
+              </div>
+              <div class="vp-field">
+                <label class="vp-field__label">File <em class="required">*</em></label>
+                <input ref="hrDocumentFileInput" type="file" class="vp-field__input" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" @change="onHrDocumentFileChange" required />
+              </div>
+              <div class="vp-form-actions">
+                <button type="submit" class="vp-btn-primary" :disabled="hrDocumentUploading">
+                  {{ hrDocumentUploading ? 'Uploading...' : 'Upload Document' }}
+                </button>
+              </div>
+            </form>
+
+            <h4 class="vp-section-label" style="margin-top:20px;">My uploaded documents</h4>
+            <div v-if="hrDocumentsLoading" class="vp-loading">Loading documents...</div>
+            <div v-else-if="!myHrDocuments.length" class="vp-empty vp-empty--compact">
+              <div class="vp-empty__icon"><iconify-icon icon="lucide:folder-lock" /></div>
+              <h4>No documents uploaded yet</h4>
+              <p>Documents you upload here are only visible to HR and you.</p>
+            </div>
+            <div v-else class="vp-req-list">
+              <article v-for="doc in myHrDocuments" :key="doc.id" class="vp-req-row">
+                <div class="vp-req-col">
+                  <strong>{{ doc.document_name || doc.original_name }}</strong>
+                  <small>Title</small>
+                </div>
+                <div class="vp-req-col vp-req-col--date">
+                  <strong>{{ formatDateShort(doc.created_at) }}</strong>
+                  <small>Uploaded On</small>
+                </div>
+                <div class="vp-req-actions">
+                  <a v-if="doc.file_url" :href="doc.file_url" target="_blank" rel="noopener" class="vp-row-btn" title="View">
+                    <iconify-icon icon="lucide:eye" />
+                  </a>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- Health Disclosure -->
+          <section v-if="editProfileSubTab === 'health'" class="vp-edit-section vp-edit-section--flush">
+            <div class="vp-edit-section__head">
+              <p class="vp-panel__subtitle">Please answer honestly — HR can see your answers.</p>
+            </div>
+
+            <div v-if="healthDisclosureLoading" class="vp-loading">Loading...</div>
+            <form v-else class="vp-health-form" @submit.prevent="saveHealthDisclosure">
+              <div v-for="item in healthDisclosureItems" :key="item.key">
+                <p v-if="item.groupHeading" class="vp-health-group-heading">{{ item.groupHeading }}</p>
+                <div class="vp-health-item" :class="{ 'is-checked': item.checked }">
+                  <label class="vp-health-checkbox">
+                    <input type="checkbox" v-model="item.checked" />
+                    <span class="vp-health-checkbox__box">
+                      <iconify-icon icon="lucide:check" />
+                    </span>
+                    <span class="vp-health-checkbox__label">{{ item.label }}</span>
+                    <span v-if="item.checked" class="vp-health-checkbox__badge">Yes</span>
+                  </label>
+                  <textarea
+                    v-if="item.checked"
+                    v-model="item.note"
+                    class="vp-field__input vp-field__textarea vp-health-note"
+                    rows="2"
+                    maxlength="1000"
+                    :placeholder="item.notePlaceholder"
+                  ></textarea>
+                </div>
+              </div>
+              <div class="vp-form-actions">
+                <button type="submit" class="vp-btn-primary" :disabled="healthDisclosureSaving">
+                  {{ healthDisclosureSaving ? 'Saving...' : 'Save Health Disclosure' }}
+                </button>
+              </div>
+            </form>
+          </section>
         </div>
 
         <!-- Change Password -->
@@ -1050,86 +1162,6 @@
             </article>
           </div>
         </div>
-        <!-- Emergency Contact -->
-        <div v-if="activeTab === 'emergency-contact'" class="vp-panel">
-          <div class="vp-panel__head">
-            <h3 class="vp-panel__title">Emergency Contact</h3>
-            <p class="vp-panel__subtitle">Someone in the UAE we can reach if anything happens to you.</p>
-          </div>
-
-          <div v-if="emergencyContactLoading" class="vp-loading">Loading...</div>
-          <form v-else class="vp-edit-form" @submit.prevent="saveEmergencyContact">
-            <div class="vp-field">
-              <label class="vp-field__label">Full Name <em class="required">*</em></label>
-              <input v-model="emergencyContactForm.name" type="text" class="vp-field__input" placeholder="Enter contact's full name" required />
-            </div>
-            <div class="vp-field">
-              <label class="vp-field__label">Phone Number <em class="required">*</em></label>
-              <input v-model="emergencyContactForm.phone" type="text" class="vp-field__input" placeholder="+971 00 000 0000" required />
-            </div>
-            <div class="vp-field">
-              <label class="vp-field__label">Relation <em class="required">*</em></label>
-              <input v-model="emergencyContactForm.relation" type="text" class="vp-field__input" placeholder="e.g. Brother, Friend, Spouse" required />
-            </div>
-            <div class="vp-form-actions">
-              <button type="submit" class="vp-btn-primary" :disabled="emergencyContactSaving">
-                {{ emergencyContactSaving ? 'Saving...' : 'Save Emergency Contact' }}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- HR Documents -->
-        <div v-if="activeTab === 'hr-documents'" class="vp-panel vp-hub">
-          <div class="vp-panel__head vp-hub__head">
-            <div>
-              <h3 class="vp-panel__title">My Documents</h3>
-              <p class="vp-panel__subtitle">Upload a document for HR. Only HR can view and manage these once submitted.</p>
-            </div>
-          </div>
-
-          <form class="vp-edit-form" @submit.prevent="uploadMyHrDocument">
-            <div class="vp-field">
-              <label class="vp-field__label">Title <em class="required">*</em></label>
-              <input v-model="hrDocumentForm.title" type="text" class="vp-field__input" placeholder="e.g. Updated Passport Copy" required />
-            </div>
-            <div class="vp-field">
-              <label class="vp-field__label">File <em class="required">*</em></label>
-              <input ref="hrDocumentFileInput" type="file" class="vp-field__input" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" @change="onHrDocumentFileChange" required />
-            </div>
-            <div class="vp-form-actions">
-              <button type="submit" class="vp-btn-primary" :disabled="hrDocumentUploading">
-                {{ hrDocumentUploading ? 'Uploading...' : 'Upload Document' }}
-              </button>
-            </div>
-          </form>
-
-          <h4 class="vp-section-label" style="margin-top:24px;">My uploaded documents</h4>
-          <div v-if="hrDocumentsLoading" class="vp-loading">Loading documents...</div>
-          <div v-else-if="!myHrDocuments.length" class="vp-empty vp-empty--compact">
-            <div class="vp-empty__icon"><iconify-icon icon="lucide:folder-lock" /></div>
-            <h4>No documents uploaded yet</h4>
-            <p>Documents you upload here are only visible to HR and you.</p>
-          </div>
-          <div v-else class="vp-req-list">
-            <article v-for="doc in myHrDocuments" :key="doc.id" class="vp-req-row">
-              <div class="vp-req-col">
-                <strong>{{ doc.document_name || doc.original_name }}</strong>
-                <small>Title</small>
-              </div>
-              <div class="vp-req-col vp-req-col--date">
-                <strong>{{ formatDateShort(doc.created_at) }}</strong>
-                <small>Uploaded On</small>
-              </div>
-              <div class="vp-req-actions">
-                <a v-if="doc.file_url" :href="doc.file_url" target="_blank" rel="noopener" class="vp-row-btn" title="View">
-                  <iconify-icon icon="lucide:eye" />
-                </a>
-              </div>
-            </article>
-          </div>
-        </div>
-
         <!-- My Evaluations -->
         <!-- Pending Evaluations (manager) -->
         <div v-if="activeTab === 'pending-evaluations'" class="vp-panel vp-hub">
@@ -1636,6 +1668,7 @@ export default {
     const instance = getCurrentInstance();
     const user = ref({});
     const activeTab = ref('edit-profile');
+    const editProfileSubTab = ref('info');
     const profileImage = ref(user1);
     const defaultAvatarImg = ref(defaultAvatar);
 
@@ -2422,7 +2455,10 @@ onMounted(() => {
   loadUserData()
   loadVacationData()
   loadAttendanceStatus()
-  loadMyAnnouncements() 
+  loadMyAnnouncements()
+  loadEmergencyContact()
+  loadMyHrDocuments()
+  loadHealthDisclosure()
   window.addEventListener('app-notification', handleAppNotification)
 })
 
@@ -2868,6 +2904,61 @@ const uploadMyHrDocument = async () => {
   }
 };
 
+// ===== Health Disclosure =====
+const healthDisclosureLoading = ref(false);
+const healthDisclosureSaving = ref(false);
+
+function defaultHealthDisclosureItems() {
+  return [
+    { key: 'physical_disability', label: 'Do you have any Physical Disability?', notePlaceholder: 'Please mention the Physical Disability', checked: false, note: '' },
+    { key: 'major_illness_surgery', label: 'Have you had any major accidents / illnesses / surgery?', notePlaceholder: 'Please provide details', checked: false, note: '' },
+    { key: 'hypertension', label: 'Hypertension', notePlaceholder: 'Add any details (optional)', checked: false, note: '', groupHeading: 'Have you had, or do you currently have, any of the following chronic illnesses?' },
+    { key: 'diabetes', label: 'Diabetes', notePlaceholder: 'Add any details (optional)', checked: false, note: '' },
+    { key: 'asthma', label: 'Asthma', notePlaceholder: 'Add any details (optional)', checked: false, note: '' },
+    { key: 'chronic_kidney_disease', label: 'Chronic Kidney Disease', notePlaceholder: 'Add any details (optional)', checked: false, note: '' },
+    { key: 'fatty_liver_disease', label: 'Fatty Liver Disease', notePlaceholder: 'Add any details (optional)', checked: false, note: '' },
+  ];
+}
+
+const healthDisclosureItems = reactive(defaultHealthDisclosureItems());
+
+const loadHealthDisclosure = async () => {
+  healthDisclosureLoading.value = true;
+  try {
+    const { data } = await api.get('/profile/health-disclosure');
+    const saved = Array.isArray(data?.data) ? data.data : [];
+    const byKey = Object.fromEntries(saved.map((item) => [item.key, item]));
+    const merged = defaultHealthDisclosureItems().map((item) => ({
+      ...item,
+      checked: !!byKey[item.key]?.checked,
+      note: byKey[item.key]?.note || '',
+    }));
+    healthDisclosureItems.splice(0, healthDisclosureItems.length, ...merged);
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to load health disclosure', 'error');
+  } finally {
+    healthDisclosureLoading.value = false;
+  }
+};
+
+const saveHealthDisclosure = async () => {
+  healthDisclosureSaving.value = true;
+  try {
+    const items = healthDisclosureItems.map((item) => ({
+      key: item.key,
+      checked: !!item.checked,
+      note: item.checked ? (item.note || '') : '',
+    }));
+    await api.put('/profile/health-disclosure', { items });
+    showNotification('Health disclosure saved', 'success');
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to save health disclosure', 'error');
+  } finally {
+    healthDisclosureSaving.value = false;
+  }
+};
+
 const pendingEvaluations = ref([]);
 const pendingEvaluationsLoading = ref(false);
 
@@ -3195,6 +3286,7 @@ const openLeaveDetail = (lv) => {
     return {
       user,
       activeTab,
+      editProfileSubTab,
       profileImage,
       defaultAvatar: defaultAvatarImg,
       formData,
@@ -3257,6 +3349,7 @@ const openLeaveDetail = (lv) => {
       emergencyContactLoading, emergencyContactSaving, emergencyContactForm, loadEmergencyContact, saveEmergencyContact,
       myHrDocuments, hrDocumentsLoading, hrDocumentUploading, hrDocumentForm, hrDocumentFileInput,
       onHrDocumentFileChange, loadMyHrDocuments, uploadMyHrDocument,
+      healthDisclosureLoading, healthDisclosureSaving, healthDisclosureItems, loadHealthDisclosure, saveHealthDisclosure,
       pendingEvaluations, pendingEvaluationsLoading, loadPendingEvaluations,
       teamLeaveRequests, teamLeaveLoading, teamLeaveSearch, teamLeaveActingId, teamLeavePendingCount,
       teamLeaveStats, teamLeaveStatusFilter,

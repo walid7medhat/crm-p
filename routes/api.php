@@ -649,6 +649,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::put('/profile/emergency-contact', [ProfileController::class, 'updateEmergencyContact']);
     Route::get('/profile/documents', [ProfileController::class, 'myDocuments']);
     Route::post('/profile/documents', [ProfileController::class, 'uploadDocument']);
+    Route::get('/profile/health-disclosure', [ProfileController::class, 'getHealthDisclosure']);
+    Route::put('/profile/health-disclosure', [ProfileController::class, 'updateHealthDisclosure']);
 
     // Background images: any authenticated user can list & pick one for themselves.
     Route::get('/backgrounds', [BackgroundController::class, 'index']);
