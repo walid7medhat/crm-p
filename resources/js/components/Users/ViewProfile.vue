@@ -1565,14 +1565,14 @@
           <div class="vp-modal__grid">
             <div class="vp-field">
               <label class="vp-field__label">{{ isCompOffSelected ? 'Date' : 'Start Date' }} <em class="required">*</em></label>
-              <input v-model="leaveRequestForm.start_date" type="date" class="vp-field__input" />
+              <AdvancedDatePicker v-model="leaveRequestForm.start_date" placeholder="Select date" />
               <span v-if="compOffWeekdayInfo" class="vp-field__hint" :class="{ 'vp-field__hint--error': compOffWeekdayInfo.blocked }">
                 {{ compOffWeekdayInfo.weekday }}<span v-if="compOffWeekdayInfo.blocked"> — Compensation Off can't be a Saturday or Monday</span>
               </span>
             </div>
             <div class="vp-field" v-if="!isCompOffSelected">
               <label class="vp-field__label">End Date <em class="required">*</em></label>
-              <input v-model="leaveRequestForm.end_date" type="date" class="vp-field__input" />
+              <AdvancedDatePicker v-model="leaveRequestForm.end_date" placeholder="Select date" />
             </div>
           </div>
           <label class="vp-toggle">
@@ -1656,6 +1656,7 @@ import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
 import SearchableSelect from '@/components/ui/SearchableSelect.vue';
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue';
 import { aiSalesIntelligenceApi } from '@/services/aiSalesIntelligenceApi';
 import Swal from 'sweetalert2';
 export default {
@@ -1663,6 +1664,7 @@ export default {
   components: {
     UserAttendanceCarousel,
     SearchableSelect,
+    AdvancedDatePicker,
   },
   setup() {
     const instance = getCurrentInstance();
