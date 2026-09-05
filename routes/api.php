@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\Deal\DealController;
 use App\Http\Controllers\Api\Deal\LeadConversionController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceCheckinController;
+use App\Http\Controllers\Api\DocumentExpirySettingsController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
@@ -529,6 +530,12 @@ Route::middleware('jwt.auth')->group(function () {
 
 
         });
+
+    Route::prefix('document-expiry-settings')->group(function () {
+        Route::get('/', [DocumentExpirySettingsController::class, 'show']);
+        Route::put('/', [DocumentExpirySettingsController::class, 'update']);
+    });
+
     // === Lead Conversion API ===
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);

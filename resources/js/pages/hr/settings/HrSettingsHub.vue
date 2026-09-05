@@ -102,6 +102,41 @@
             />
           </div>
 
+          <div v-else-if="activeTab === 'expiry-alerts'" class="hr-set-stack">
+            <section class="hr-set-panel">
+              <div class="hr-set-panel__head">
+                <p class="hr-set-panel__title">Expiry alert timing</p>
+                <p>How many days before each document expires HR gets emailed and notified. Defaults to 15 days.</p>
+              </div>
+              <div v-if="loading.documentExpiry" class="hr-set-empty">Loading...</div>
+              <form v-else class="hr-set-form is-open" @submit.prevent="saveDocumentExpirySettings">
+                <div class="hr-set-form__grid is-wide">
+                  <div class="hr-set-field">
+                    <label>Passport <em class="required">*</em></label>
+                    <input v-model.number="documentExpiryForm.passport_days" type="number" min="1" max="365" required />
+                  </div>
+                  <div class="hr-set-field">
+                    <label>Labor Card <em class="required">*</em></label>
+                    <input v-model.number="documentExpiryForm.labor_card_days" type="number" min="1" max="365" required />
+                  </div>
+                  <div class="hr-set-field">
+                    <label>Emirates ID <em class="required">*</em></label>
+                    <input v-model.number="documentExpiryForm.emirates_id_days" type="number" min="1" max="365" required />
+                  </div>
+                  <div class="hr-set-field">
+                    <label>Residency Visa <em class="required">*</em></label>
+                    <input v-model.number="documentExpiryForm.residency_days" type="number" min="1" max="365" required />
+                  </div>
+                </div>
+                <div class="hr-set-form__actions">
+                  <button type="submit" class="hr-set-btn hr-set-btn--primary" :disabled="saving.documentExpiry">
+                    {{ saving.documentExpiry ? 'Saving...' : 'Save expiry alert settings' }}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+
           <div v-else-if="activeTab === 'leave'" class="hr-set-stack">
             <div class="hr-set-subnav">
               <button type="button" :class="{ 'is-active': leaveSub === 'all' }" @click="leaveSub = 'all'">All</button>
@@ -301,6 +336,7 @@ import {
   deleteAssetType,
 } from '@/services/assetsApi'
 import { fetchAttendanceSettings, updateAttendanceSettings } from '@/services/attendancesApi'
+import { fetchDocumentExpirySettings, updateDocumentExpirySettings } from '@/services/documentExpirySettingsApi'
 
 const CAREER_DEFAULTS_KEY = 'hr.career.defaults'
 
@@ -313,6 +349,7 @@ const emit = defineEmits(['close'])
 const tabs = [
   { id: 'employees', label: 'Employees', hint: 'Departments, titles, branches', icon: 'lucide:users' },
   { id: 'documents', label: 'Documents', hint: 'Requestable certificates', icon: 'lucide:file-text' },
+  { id: 'expiry-alerts', label: 'Expiry Alerts', hint: 'Days before HR is notified', icon: 'lucide:calendar-clock' },
   { id: 'leave', label: 'Leave', hint: 'Types, days, attachments', icon: 'lucide:calendar-off' },
   { id: 'attendance', label: 'Attendance', hint: 'Check-in window', icon: 'lucide:calendar-check' },
   { id: 'career', label: 'Career', hint: 'Hiring defaults', icon: 'lucide:briefcase' },
@@ -356,6 +393,7 @@ const filteredLeaveTypes = computed(() => {
 const loading = reactive({
   employees: false,
   documents: false,
+  documentExpiry: false,
   leave: false,
   attendance: false,
   assets: false,
@@ -365,6 +403,7 @@ const saving = reactive({
   designation: false,
   branch: false,
   documentType: false,
+  documentExpiry: false,
   leaveType: false,
   attendance: false,
   assetType: false,
@@ -439,6 +478,13 @@ const attendanceForm = reactive({
   start_time: '09:00',
   end_time: '10:00',
   department_ids: [],
+})
+
+const documentExpiryForm = reactive({
+  passport_days: 15,
+  labor_card_days: 15,
+  emirates_id_days: 15,
+  residency_days: 15,
 })
 
 const careerForm = reactive(loadCareerDefaults())
@@ -531,6 +577,18 @@ async function loadDocuments() {
   }
 }
 
+async function loadDocumentExpirySettings() {
+  loading.documentExpiry = true
+  try {
+    const settings = await fetchDocumentExpirySettings()
+    Object.assign(documentExpiryForm, settings)
+  } catch (error) {
+    notify(error.response?.data?.message || 'Failed to load expiry alert settings', 'error')
+  } finally {
+    loading.documentExpiry = false
+  }
+}
+
 async function loadLeave() {
   loading.leave = true
   try {
@@ -572,6 +630,7 @@ async function loadAssets() {
 async function loadTab(tab) {
   if (tab === 'employees') await loadEmployeesCatalogs()
   if (tab === 'documents' || tab === 'career') await loadDocuments()
+  if (tab === 'expiry-alerts') await loadDocumentExpirySettings()
   if (tab === 'leave') await loadLeave()
   if (tab === 'attendance') await loadAttendance()
   if (tab === 'assets') await loadAssets()
@@ -744,6 +803,23 @@ async function saveAttendance() {
     notify(error.response?.data?.message || 'Failed to save attendance settings', 'error')
   } finally {
     saving.attendance = false
+  }
+}
+
+async function saveDocumentExpirySettings() {
+  saving.documentExpiry = true
+  try {
+    await updateDocumentExpirySettings({
+      passport_days: Number(documentExpiryForm.passport_days),
+      labor_card_days: Number(documentExpiryForm.labor_card_days),
+      emirates_id_days: Number(documentExpiryForm.emirates_id_days),
+      residency_days: Number(documentExpiryForm.residency_days),
+    })
+    notify('Expiry alert settings saved')
+  } catch (error) {
+    notify(error.response?.data?.message || 'Failed to save expiry alert settings', 'error')
+  } finally {
+    saving.documentExpiry = false
   }
 }
 

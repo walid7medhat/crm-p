@@ -140,7 +140,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ->withoutOverlapping()
         ->appendOutputTo(storage_path('logs/leave-accrue-annual.log'));
 
-    $schedule->command('employees:check-document-expiry --days=180')
+    $schedule->command('employees:check-document-expiry')
         ->dailyAt('09:15')
         ->timezone('Asia/Dubai')
         ->withoutOverlapping()
