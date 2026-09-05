@@ -126,15 +126,48 @@ class LeaveController extends Controller
     {
         try {
             $currentYear = date('Y');
-            
+
             $balances = LeaveBalance::with('leaveType')
                 ->where('user_id', $userId)
                 ->where('year', $currentYear)
                 ->get();
-            
+
             return ApiResponse::success($balances, 'Employee leave balance retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve balance: ' . $e->getMessage());
+        }
+    }
+
+    // HR/Admin manually adjusts an employee's balance for one leave type.
+    public function updateEmployeeBalance(Request $request, $userId, $leaveTypeId)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('super_admin') && !$user->hasRole('hr')) {
+            return ApiResponse::error('Only HR can update leave balances', 403);
+        }
+
+        $request->validate([
+            'total_days' => 'required|numeric|min:0|max:9999',
+            'used_days' => 'nullable|numeric|min:0|max:9999',
+        ]);
+
+        try {
+            $year = date('Y');
+
+            $balance = LeaveBalance::firstOrNew([
+                'user_id' => $userId,
+                'leave_type_id' => $leaveTypeId,
+                'year' => $year,
+            ]);
+
+            $balance->total_days = $request->total_days;
+            $balance->used_days = $request->filled('used_days') ? $request->used_days : ($balance->used_days ?? 0);
+            $balance->remaining_days = max(0, $balance->total_days - $balance->used_days);
+            $balance->save();
+
+            return ApiResponse::success($balance->load('leaveType'), 'Leave balance updated successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to update leave balance: ' . $e->getMessage());
         }
     }
     

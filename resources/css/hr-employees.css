@@ -1017,6 +1017,65 @@
   color: #64748b;
 }
 
+.emp-leave-balance-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.emp-leave-balance-row {
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fafbfd;
+}
+
+.emp-leave-balance-row__name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0b0736;
+  margin-bottom: 6px;
+}
+
+.emp-leave-balance-row__view {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #475467;
+}
+
+.emp-leave-balance-row__edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.emp-leave-balance-row__edit label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.emp-leave-balance-row__edit input[type="number"] {
+  width: 64px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.emp-leave-balance-row__remaining {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
 .emp-profile-page__asset-list {
   margin: 0;
   padding: 0;

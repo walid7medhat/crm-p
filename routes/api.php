@@ -327,6 +327,7 @@ Route::middleware(['auth:api'])->prefix('leaves')->group(function () {
     Route::get('/my-balance', [LeaveController::class, 'getMyBalance']);
     Route::get('/balance/{userId}', [LeaveController::class, 'getEmployeeBalance'])
         ->middleware('permission:view-employee-balance');
+    Route::put('/balance/{userId}/{leaveTypeId}', [LeaveController::class, 'updateEmployeeBalance']);
 
     // Leave Requests
     Route::get('/statistics', [LeaveController::class, 'statistics']);

@@ -141,14 +141,32 @@
               </div>
             </section>
 
-            <section v-if="activeTab === 'leave' || !activeTab" class="emp-profile-page__card">
+            <section v-if="activeTab === 'leave' || !activeTab" class="emp-profile-page__card emp-profile-page__card--wide">
               <h6>Leave summary</h6>
               <div v-if="leaveLoading" class="emp-skeleton" style="min-height:60px;" />
               <div v-else-if="!leaveBalance.length" class="emp-profile-page__empty">No leave balance data</div>
-              <div v-else class="emp-profile-page__fields">
-                <div v-for="bal in leaveBalance" :key="bal.id" class="emp-profile-page__field">
-                  <label>{{ bal.leave_type?.name || 'Leave' }}</label>
-                  <span>{{ bal.remaining_days ?? bal.balance ?? 0 }} days left</span>
+              <div v-else class="emp-leave-balance-list">
+                <div v-for="bal in leaveBalance" :key="bal.id" class="emp-leave-balance-row">
+                  <div class="emp-leave-balance-row__name">{{ bal.leave_type?.name || 'Leave' }}</div>
+
+                  <div v-if="editingBalanceId === bal.id" class="emp-leave-balance-row__edit">
+                    <label>Total <input type="number" min="0" step="0.5" v-model.number="balanceEditForm.total_days" /></label>
+                    <label>Used <input type="number" min="0" step="0.5" v-model.number="balanceEditForm.used_days" /></label>
+                    <span class="emp-leave-balance-row__remaining">
+                      = {{ Math.max(0, (balanceEditForm.total_days || 0) - (balanceEditForm.used_days || 0)) }} remaining
+                    </span>
+                    <button type="button" class="emp-mgmt__toolbar-btn emp-mgmt__toolbar-btn--primary" :disabled="balanceSaving" @click="saveBalanceEdit(bal)">
+                      {{ balanceSaving ? 'Saving...' : 'Save' }}
+                    </button>
+                    <button type="button" class="emp-mgmt__toolbar-btn" :disabled="balanceSaving" @click="cancelBalanceEdit">Cancel</button>
+                  </div>
+
+                  <div v-else class="emp-leave-balance-row__view">
+                    <span>{{ bal.total_days ?? 0 }} total &middot; {{ bal.used_days ?? 0 }} used &middot; <strong>{{ bal.remaining_days ?? bal.balance ?? 0 }} left</strong></span>
+                    <button type="button" class="emp-profile-docs__delete" title="Edit balance" @click="startBalanceEdit(bal)">
+                      <iconify-icon icon="lucide:pencil" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -236,6 +254,7 @@ import {
   fetchEmployeeAssets,
   fetchEmployeeEvaluations,
   deleteEmployeeDocument,
+  updateEmployeeLeaveBalance,
 } from '@/services/employeesApi'
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue'
 
@@ -252,6 +271,9 @@ const leaveLoading = ref(false)
 const assetsLoading = ref(false)
 const evaluationsLoading = ref(false)
 const deletingDocumentId = ref(null)
+const editingBalanceId = ref(null)
+const balanceEditForm = ref({ total_days: 0, used_days: 0 })
+const balanceSaving = ref(false)
 
 const activeTab = computed(() => String(route.query.tab || ''))
 const showingAttendance = computed(() => activeTab.value === 'attendance')
@@ -351,6 +373,37 @@ async function handleDeleteDocument(doc) {
     window.alert(e?.response?.data?.message || 'Failed to delete document')
   } finally {
     deletingDocumentId.value = null
+  }
+}
+
+function startBalanceEdit(bal) {
+  editingBalanceId.value = bal.id
+  balanceEditForm.value = {
+    total_days: Number(bal.total_days) || 0,
+    used_days: Number(bal.used_days) || 0,
+  }
+}
+
+function cancelBalanceEdit() {
+  editingBalanceId.value = null
+}
+
+async function saveBalanceEdit(bal) {
+  balanceSaving.value = true
+  try {
+    const updated = await updateEmployeeLeaveBalance(employee.value.id, bal.leave_type_id, {
+      total_days: balanceEditForm.value.total_days,
+      used_days: balanceEditForm.value.used_days,
+    })
+    const idx = leaveBalance.value.findIndex((b) => b.id === bal.id)
+    if (idx !== -1) {
+      leaveBalance.value[idx] = { ...leaveBalance.value[idx], ...updated }
+    }
+    editingBalanceId.value = null
+  } catch (e) {
+    window.alert(e?.response?.data?.message || 'Failed to update leave balance')
+  } finally {
+    balanceSaving.value = false
   }
 }
 

@@ -182,6 +182,11 @@ export async function fetchEmployeeLeaveBalance(userId) {
   return response.data?.data ?? []
 }
 
+export async function updateEmployeeLeaveBalance(userId, leaveTypeId, payload) {
+  const response = await api.put(`/leaves/balance/${userId}/${leaveTypeId}`, payload)
+  return response.data?.data ?? response.data
+}
+
 export async function fetchEmployeeAssets(userId) {
   const response = await api.get(`/assets/employee/${userId}/assets`)
   return response.data?.data ?? []
