@@ -2053,7 +2053,6 @@ function handleClickOutside(event) {
 
 watch(isProfilePanelOpen, (open) => {
   if (open && user.value?.id) {
-    visibleTeamCount.value = teamPageSize;
     fetchProfileAndTeam();
   }
 });
