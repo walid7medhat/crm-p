@@ -140,14 +140,15 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="teamMembersList.length > teamPageSize" class="profile-team-see-more-wrap">
+                <div v-if="teamMembersTotal > teamPageSize" class="profile-team-see-more-wrap">
                   <button
                     v-if="hasMoreTeamMembers"
                     type="button"
                     class="profile-show-all-team profile-see-more-btn"
+                    :disabled="teamLoadingMore"
                     @click="loadMoreTeamMembers"
                   >
-                    Show All Team
+                    {{ teamLoadingMore ? 'Loading...' : 'Show All Team' }}
                   </button>
                 </div>
                 <p v-if="teamMembersList.length === 0 && !profileLoading" class="profile-team-empty">No team members under you.</p>
@@ -254,7 +255,9 @@ const personalInfoEdit = ref({
 // Team states
 const fetchedTeamMembers = ref([])
 const teamPageSize = 6
-const visibleTeamCount = ref(teamPageSize)
+const teamMembersTotal = ref(0)
+const teamPage = ref(1)
+const teamLoadingMore = ref(false)
 
 // Helper functions
 function getUserInitials(name) {
@@ -309,8 +312,8 @@ const lastActiveText = computed(() => {
 })
 
 const teamMembersList = computed(() => fetchedTeamMembers.value)
-const visibleTeamMembers = computed(() => teamMembersList.value.slice(0, visibleTeamCount.value))
-const hasMoreTeamMembers = computed(() => teamMembersList.value.length > visibleTeamCount.value)
+const visibleTeamMembers = computed(() => teamMembersList.value)
+const hasMoreTeamMembers = computed(() => teamMembersList.value.length < teamMembersTotal.value)
 
 function teamMemberDisplayName(member) {
   if (member.first_name != null || member.last_name != null) {
@@ -319,8 +322,24 @@ function teamMemberDisplayName(member) {
   return member.name || '—'
 }
 
-function loadMoreTeamMembers() {
-  visibleTeamCount.value += teamPageSize
+async function loadMoreTeamMembers() {
+  const userId = Number(props.userId)
+  if (!userId || Number.isNaN(userId) || teamLoadingMore.value || !hasMoreTeamMembers.value) return
+  teamLoadingMore.value = true
+  try {
+    const nextPage = teamPage.value + 1
+    const teamRes = await api.get(`/users/${userId}/team-members/recursive`, { params: { page: nextPage, per_page: teamPageSize } })
+    const list = teamRes.data?.data
+    if (Array.isArray(list) && list.length) {
+      fetchedTeamMembers.value = [...fetchedTeamMembers.value, ...mapTeamMembers(list)]
+      teamPage.value = nextPage
+      teamMembersTotal.value = teamRes.data?.meta?.total ?? teamMembersTotal.value
+    }
+  } catch (error) {
+    console.error('Failed to load more team members:', error)
+  } finally {
+    teamLoadingMore.value = false
+  }
 }
 
 function normalizeUserPayload(raw) {
@@ -360,31 +379,38 @@ async function fetchUserFromAPI() {
   }
 }
 
+function mapTeamMembers(list) {
+  return (list || []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    first_name: m.first_name,
+    last_name: m.last_name,
+    email: m.email,
+    phone: m.phone,
+    avatar: m.avatar,
+    role_name: m.role_name,
+    role: m.role_name,
+    status: m.status,
+    online: m.status === 'active',
+    created_at: m.created_at,
+  }))
+}
+
 async function fetchTeamMembers() {
   const userId = Number(props.userId)
   if (!userId || Number.isNaN(userId)) return
+  teamPage.value = 1
   try {
-    const teamRes = await api.get(`/users/${userId}/team-members/recursive`).catch(() => ({ data: { data: [] } }))
+    const teamRes = await api.get(`/users/${userId}/team-members/recursive`, { params: { page: 1, per_page: teamPageSize } }).catch(() => ({ data: { data: [] } }))
     const list = teamRes.data?.data
     if (Array.isArray(list)) {
-      fetchedTeamMembers.value = list.map((m) => ({
-        id: m.id,
-        name: m.name,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        email: m.email,
-        phone: m.phone,
-        avatar: m.avatar,
-        role_name: m.role_name,
-        role: m.role_name,
-        status: m.status,
-        online: m.status === 'active',
-        created_at: m.created_at,
-      }))
+      fetchedTeamMembers.value = mapTeamMembers(list)
+      teamMembersTotal.value = teamRes.data?.meta?.total ?? list.length
     }
   } catch (error) {
     console.error('Failed to fetch team:', error)
     fetchedTeamMembers.value = []
+    teamMembersTotal.value = 0
   }
 }
 
@@ -469,10 +495,10 @@ watch(
       profileError.value = ''
       profileLoading.value = false
       fetchedTeamMembers.value = []
+      teamMembersTotal.value = 0
       return
     }
     if (userId) {
-      visibleTeamCount.value = teamPageSize
       fetchProfileAndTeam()
     }
   },

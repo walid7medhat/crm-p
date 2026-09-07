@@ -657,14 +657,15 @@
                           </div>
                         </div>
                       </div>
-                      <div v-if="teamMembersList.length > teamPageSize" class="profile-team-see-more-wrap">
+                      <div v-if="teamMembersTotal > teamPageSize" class="profile-team-see-more-wrap">
                         <button
                           v-if="hasMoreTeamMembers"
                           type="button"
                           class="profile-show-all-team profile-see-more-btn"
+                          :disabled="teamLoadingMore"
                           @click="loadMoreTeamMembers"
                         >
-                          Show All Team
+                          {{ teamLoadingMore ? 'Loading...' : 'Show All Team' }}
                         </button>
                       </div>
                       <p v-if="teamMembersList.length === 0 && !profileLoading" class="profile-team-empty">No team members under you.</p>
@@ -1945,16 +1946,38 @@ function onAvatarChange(event) {
 // Fetched from API: current user profile + team members (who is under this user by role)
 const profileLoading = ref(false);
 const fetchedTeamMembers = ref([]);
+const teamMembersTotal = ref(0);
+const teamPage = ref(1);
+const teamLoadingMore = ref(false);
+
+function mapTeamMembers(list) {
+  return (list || []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    first_name: m.first_name,
+    last_name: m.last_name,
+    email: m.email,
+    phone: m.phone,
+    avatar: m.avatar,
+    role_name: m.role_name,
+    role: m.role_name,
+    status: m.status,
+    online: m.status === 'active',
+    created_at: m.created_at,
+  }));
+}
 
 async function fetchProfileAndTeam() {
   const currentUser = user.value;
   if (!currentUser?.id) return;
   profileLoading.value = true;
   fetchedTeamMembers.value = [];
+  teamMembersTotal.value = 0;
+  teamPage.value = 1;
   try {
     const [profileRes, teamRes] = await Promise.all([
       api.get(`/users/${currentUser.id}`),
-      api.get(`/users/${currentUser.id}/team-members/recursive`).catch(() => ({ data: { data: [] } })),
+      api.get(`/users/${currentUser.id}/team-members/recursive`, { params: { page: 1, per_page: teamPageSize } }).catch(() => ({ data: { data: [] } })),
     ]);
     if (profileRes.data?.data) {
       const apiUser = profileRes.data.data;
@@ -1962,20 +1985,8 @@ async function fetchProfileAndTeam() {
     }
     const list = teamRes.data?.data;
     if (Array.isArray(list)) {
-      fetchedTeamMembers.value = list.map((m) => ({
-        id: m.id,
-        name: m.name,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        email: m.email,
-        phone: m.phone,
-        avatar: m.avatar,
-        role_name: m.role_name,
-        role: m.role_name,
-        status: m.status,
-        online: m.status === 'active',
-        created_at: m.created_at,
-      }));
+      fetchedTeamMembers.value = mapTeamMembers(list);
+      teamMembersTotal.value = teamRes.data?.meta?.total ?? list.length;
     }
   } catch (e) {
     console.warn('Profile/team fetch failed:', e);
@@ -2002,18 +2013,29 @@ const isShowOnlyListing = computed(() => {
   return isAdminUser;
 });
 const teamPageSize = 6;
-const visibleTeamCount = ref(teamPageSize);
 
-const visibleTeamMembers = computed(() => teamMembersList.value.slice(0, visibleTeamCount.value));
+const visibleTeamMembers = computed(() => teamMembersList.value);
 
-const hasMoreTeamMembers = computed(() => teamMembersList.value.length > visibleTeamCount.value);
+const hasMoreTeamMembers = computed(() => teamMembersList.value.length < teamMembersTotal.value);
 
-function loadMoreTeamMembers() {
-  visibleTeamCount.value += teamPageSize;
-}
-
-function showAllTeamMembers() {
-  visibleTeamCount.value = teamMembersList.value.length;
+async function loadMoreTeamMembers() {
+  const currentUser = user.value;
+  if (!currentUser?.id || teamLoadingMore.value || !hasMoreTeamMembers.value) return;
+  teamLoadingMore.value = true;
+  try {
+    const nextPage = teamPage.value + 1;
+    const res = await api.get(`/users/${currentUser.id}/team-members/recursive`, { params: { page: nextPage, per_page: teamPageSize } });
+    const list = res.data?.data;
+    if (Array.isArray(list) && list.length) {
+      fetchedTeamMembers.value = [...fetchedTeamMembers.value, ...mapTeamMembers(list)];
+      teamPage.value = nextPage;
+      teamMembersTotal.value = res.data?.meta?.total ?? teamMembersTotal.value;
+    }
+  } catch (e) {
+    console.warn('Load more team members failed:', e);
+  } finally {
+    teamLoadingMore.value = false;
+  }
 }
 
 // إعداد listener للنقر خارج dropdowns

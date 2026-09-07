@@ -497,7 +497,14 @@ public function show(User $user): JsonResponse
             }
             
             $teamMembers = $user->children()
-                ->with(['roles', 'parent'])
+                ->with([
+                    'roles',
+                    'parent.roles',
+                    'addedBy',
+                    'employeeProfile.companyBranch',
+                    'employeeProfile.designation',
+                    'employeeProfile.department',
+                ])
                 ->orderBy('created_at', 'desc')
                 ->get();
             
@@ -514,7 +521,7 @@ public function show(User $user): JsonResponse
      * Get ALL team members under a user (full hierarchy: team leads + sales + etc.)
      * Returns a flat list of every user who reports to this user, at any level.
      */
-    public function getTeamMembersRecursive(User $user): JsonResponse
+    public function getTeamMembersRecursive(Request $request, User $user): JsonResponse
     {
         try {
             $currentUser = Auth::user();
@@ -524,23 +531,47 @@ public function show(User $user): JsonResponse
             }
 
             $descendantIds = $this->collectDescendantIds($user->id);
+            $total = count($descendantIds);
 
-            if (empty($descendantIds)) {
-                return ApiResponse::success([], 'Team members retrieved successfully');
+            if ($total === 0) {
+                return ApiResponse::success([], 'Team members retrieved successfully', 200, [
+                    'total' => 0,
+                    'per_page' => 0,
+                    'current_page' => 1,
+                    'has_more' => false,
+                ]);
             }
 
-            $teamMembers = User::whereIn('id', $descendantIds)
-                ->with(['roles', 'parent'])
+            $perPage = max(1, (int) $request->query('per_page', 6));
+            $page = max(1, (int) $request->query('page', 1));
+            $pageIds = array_slice($descendantIds, ($page - 1) * $perPage, $perPage);
+
+            $teamMembers = User::whereIn('id', $pageIds)
+                ->with([
+                    'roles',
+                    'parent.roles',
+                    'addedBy',
+                    'employeeProfile.companyBranch',
+                    'employeeProfile.designation',
+                    'employeeProfile.department',
+                ])
                 ->get()
-                ->sortBy(function ($u) use ($descendantIds) {
-                    $pos = array_search($u->id, $descendantIds);
+                ->sortBy(function ($u) use ($pageIds) {
+                    $pos = array_search($u->id, $pageIds);
                     return $pos !== false ? $pos : 9999;
                 })
                 ->values();
 
             return ApiResponse::success(
                 UserResource::collection($teamMembers),
-                'Team members retrieved successfully'
+                'Team members retrieved successfully',
+                200,
+                [
+                    'total' => $total,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'has_more' => ($page * $perPage) < $total,
+                ]
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve team members: ' . $e->getMessage());
