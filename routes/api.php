@@ -608,6 +608,10 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/active-agents', [DashboardController::class, 'getActiveAgents']);
     Route::get('/dashboard/leads-overview', [DashboardController::class, 'getLeadsOverview']);
     Route::get('/dashboard/analytics-overview', [DashboardController::class, 'getAnalyticsOverview']);
+    Route::get('/dashboard/analytics-overview/crm', [DashboardController::class, 'getAnalyticsCrm']);
+    Route::get('/dashboard/analytics-overview/deals', [DashboardController::class, 'getAnalyticsDeals']);
+    Route::get('/dashboard/analytics-overview/listing', [DashboardController::class, 'getAnalyticsListing']);
+    Route::get('/dashboard/analytics-overview/hr', [DashboardController::class, 'getAnalyticsHr']);
     Route::get('/dashboard/my-latest-orders', [DashboardController::class, 'getMyLatestOrders']);
     Route::get('/dashboard/my-latest-requests', [DashboardController::class, 'getMyLatestRequests']);
     Route::get('/dashboard/top-agent-performance', [DashboardController::class, 'getTopAgentPerformance']);

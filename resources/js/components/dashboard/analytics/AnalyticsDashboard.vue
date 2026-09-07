@@ -100,7 +100,7 @@
             <!-- Pipeline stages -->
             <div class="adx-uni-leads__stages">
               <p class="adx-uni-panel-title">Lead pipeline</p>
-              <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
               <div v-else class="adx-uni-stage-grid">
                 <div
                   v-for="pill in leadStatusPills"
@@ -117,7 +117,7 @@
             <!-- Lead sources -->
             <div class="adx-uni-leads__sources">
               <p class="adx-uni-panel-title">Lead sources</p>
-              <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--round" />
+              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--round" />
               <template v-else>
                 <div ref="leadSourcesChartRef" class="adx-uni-chart adx-uni-chart--donut" />
                 <ul v-if="leadSourceRows.length" class="adx-uni-source-list">
@@ -179,7 +179,7 @@
             <!-- Funnel -->
             <div class="adx-uni-leads__funnel">
               <p class="adx-uni-panel-title">Conversion funnel</p>
-              <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
               <div v-else class="adx-uni-funnel-scroll">
                 <div
                   v-for="(stage, i) in crmFunnelStages"
@@ -202,14 +202,14 @@
             <!-- Trend -->
             <div class="adx-uni-leads__trend">
               <p class="adx-uni-panel-title">Leads trend — last 7 days</p>
-              <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
+              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
               <div v-else ref="leadsChartRef" class="adx-uni-chart" />
             </div>
 
             <!-- Agent ranking -->
             <div class="adx-uni-leads__agents">
               <p class="adx-uni-panel-title">Top agents</p>
-              <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
               <ul v-else-if="leadAgents.length" class="adx-uni-agent-list">
                 <li v-for="(agent, idx) in leadAgents" :key="agent.id" class="adx-uni-agent" :class="{ 'adx-uni-agent--top': idx < 3 }">
                   <span class="adx-uni-agent__rank">{{ idx + 1 }}</span>
@@ -260,7 +260,7 @@
 
           <div class="adx-uni-crm__funnel">
             <p class="adx-uni-panel-title">Deal stages</p>
-            <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+            <div v-if="dealsLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
             <div v-else class="adx-uni-funnel-scroll">
               <div
                 v-for="(stage, i) in dealStageRows"
@@ -282,7 +282,7 @@
 
           <div class="adx-uni-crm__trend">
             <p class="adx-uni-panel-title">Deals trend</p>
-            <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
+            <div v-if="dealsLoading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
             <div v-else ref="dealsChartRef" class="adx-uni-chart" />
           </div>
         </div>
@@ -307,7 +307,7 @@
 
         <div class="adx-uni-list">
           <div class="adx-uni-list__donut">
-            <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--round" />
+            <div v-if="listingLoading" class="adx-uni-skeleton adx-uni-skeleton--round" />
             <template v-else>
               <div ref="listingChartRef" class="adx-uni-chart adx-uni-chart--donut" />
               <div class="adx-uni-list__donut-center">
@@ -336,7 +336,7 @@
                 />
               </div>
             </div>
-            <p v-if="!loading && !listingHasData" class="adx-uni-empty">No listings in your portfolio yet</p>
+            <p v-if="!listingLoading && !listingHasData" class="adx-uni-empty">No listings in your portfolio yet</p>
           </div>
 
           <div class="adx-uni-list__callouts">
@@ -425,7 +425,7 @@
 
           <div class="adx-uni-hr__attendance">
             <p class="adx-uni-panel-title">Attendance — last 7 days</p>
-            <div v-if="loading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
+            <div v-if="hrLoading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
             <div v-else ref="hrChartRef" class="adx-uni-chart" />
           </div>
         </div>
@@ -463,14 +463,10 @@ const showListing = computed(() => canViewModule('listing') || canViewModule('cr
 const showHr = computed(() => canViewModule('hr') || canViewModule('crm'))
 
 const {
-  loading, error, data, dateFrom, dateTo, periodLabel,
+  crmLoading, dealsLoading, listingLoading, hrLoading,
+  error, crm, deals, listing, hr, dateFrom, dateTo, periodLabel,
   load, setCustomRange,
 } = useAnalyticsDashboard()
-
-const crm = computed(() => data.value?.crm || {})
-const deals = computed(() => data.value?.deals || {})
-const listing = computed(() => data.value?.listing || {})
-const hr = computed(() => data.value?.hr || {})
 
 const greetingName = computed(() => {
   try {
@@ -738,21 +734,46 @@ function renderHrChart() {
   hrChart.render()
 }
 
-async function renderAllCharts() {
-  if (loading.value) return
+// Each band renders as soon as its own section's data is ready — a slow Listings
+// or HR fetch no longer blocks the Leads charts (or vice versa).
+async function renderLeadsCharts() {
+  if (crmLoading.value || !showLeads.value) return
   await nextTick()
   requestAnimationFrame(() => {
-    if (showLeads.value) {
-      renderLeadsChart()
-      renderLeadSourcesChart()
-    }
-    if (showDeals.value) renderDealsChart()
-    if (showListing.value) renderListingChart()
-    if (showHr.value) renderHrChart()
+    renderLeadsChart()
+    renderLeadSourcesChart()
   })
 }
 
-watch([loading, crm, deals, listing, hr, isMobileViewport, showListing], () => renderAllCharts(), { deep: true })
+async function renderDealsCharts() {
+  if (dealsLoading.value || !showDeals.value) return
+  await nextTick()
+  requestAnimationFrame(() => renderDealsChart())
+}
+
+async function renderListingCharts() {
+  if (listingLoading.value || !showListing.value) return
+  await nextTick()
+  requestAnimationFrame(() => renderListingChart())
+}
+
+async function renderHrCharts() {
+  if (hrLoading.value || !showHr.value) return
+  await nextTick()
+  requestAnimationFrame(() => renderHrChart())
+}
+
+function renderAllCharts() {
+  renderLeadsCharts()
+  renderDealsCharts()
+  renderListingCharts()
+  renderHrCharts()
+}
+
+watch([crmLoading, crm, isMobileViewport], () => renderLeadsCharts(), { deep: true })
+watch([dealsLoading, deals, isMobileViewport], () => renderDealsCharts(), { deep: true })
+watch([listingLoading, listing, isMobileViewport, showListing], () => renderListingCharts(), { deep: true })
+watch([hrLoading, hr, isMobileViewport], () => renderHrCharts(), { deep: true })
 
 let resizeTimer = null
 function onResize() {
@@ -761,7 +782,7 @@ function onResize() {
 }
 
 onMounted(() => {
-  load(true).then(() => renderAllCharts())
+  load(true)
   window.addEventListener('resize', onResize)
 })
 

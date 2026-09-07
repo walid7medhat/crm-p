@@ -26,6 +26,31 @@ export async function fetchAnalyticsOverview(params = {}) {
   }
 }
 
+/**
+ * Per-section analytics endpoints — same underlying query logic as the overview above,
+ * but fetched independently so each dashboard band can render as soon as its own
+ * (fast) data is ready instead of waiting on the slowest section in one combined call.
+ */
+export async function fetchAnalyticsCrm(params = {}) {
+  const res = await api.get('/dashboard/analytics-overview/crm', { params })
+  return res.data?.crm || {}
+}
+
+export async function fetchAnalyticsDeals(params = {}) {
+  const res = await api.get('/dashboard/analytics-overview/deals', { params })
+  return res.data?.deals || {}
+}
+
+export async function fetchAnalyticsListing(params = {}) {
+  const res = await api.get('/dashboard/analytics-overview/listing', { params })
+  return res.data?.listing || {}
+}
+
+export async function fetchAnalyticsHr(params = {}) {
+  const res = await api.get('/dashboard/analytics-overview/hr', { params })
+  return res.data?.hr || {}
+}
+
 export function buildPeriodParams({ period, dateFrom, dateTo }) {
   const params = { period: period || 'monthly' }
   if (period === 'custom' && dateFrom) params.date_from = dateFrom

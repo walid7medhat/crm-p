@@ -1206,7 +1206,78 @@ public function getPropertyTypesWithListings(Request $request)
         }
     }
 
-    private function buildAnalyticsOverviewResponse(Request $request)
+    /**
+     * Split-out endpoints so each dashboard band can load (and render) independently
+     * instead of all four waiting on one combined response.
+     */
+    public function getAnalyticsCrm(Request $request)
+    {
+        try {
+            [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin] = $this->analyticsContext($request);
+
+            return response()->json([
+                'success' => true,
+                'crm' => $this->buildCrmAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['success' => false, 'message' => 'Failed to load CRM analytics'], 500);
+        }
+    }
+
+    public function getAnalyticsDeals(Request $request)
+    {
+        try {
+            [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin] = $this->analyticsContext($request);
+
+            return response()->json([
+                'success' => true,
+                'deals' => $this->buildDealsAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['success' => false, 'message' => 'Failed to load deals analytics'], 500);
+        }
+    }
+
+    public function getAnalyticsListing(Request $request)
+    {
+        try {
+            [$rangeFrom, $rangeTo, , $userHierarchy, $isAdmin] = $this->analyticsContext($request);
+
+            return response()->json([
+                'success' => true,
+                'listing' => $this->buildListingAnalytics($userHierarchy, $isAdmin, $rangeFrom, $rangeTo),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['success' => false, 'message' => 'Failed to load listing analytics'], 500);
+        }
+    }
+
+    public function getAnalyticsHr(Request $request)
+    {
+        try {
+            [, , , $userHierarchy, $isAdmin] = $this->analyticsContext($request);
+
+            return response()->json([
+                'success' => true,
+                'hr' => $this->buildHrAnalytics($userHierarchy, $isAdmin),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['success' => false, 'message' => 'Failed to load HR analytics'], 500);
+        }
+    }
+
+    /**
+     * @return array{0: ?Carbon, 1: ?Carbon, 2: User, 3: array<int>, 4: bool}
+     */
+    private function analyticsContext(Request $request): array
     {
         [$rangeFrom, $rangeTo] = $this->resolveAnalyticsPeriod($request);
         $currentUser = auth()->user();
@@ -1220,9 +1291,13 @@ public function getPropertyTypesWithListings(Request $request)
         })->pluck('id')->toArray();
 
         $isAdmin = $currentUser->hasRole('super_admin') || $currentUser->hasRole('admin');
-        $isManager = $isAdmin || $currentUser->hasRole('manager');
 
-        $scopeLeads = function ($query) use ($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo) {
+        return [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin];
+    }
+
+    private function buildCrmAnalytics(User $currentUser, array $userHierarchy, bool $isAdmin, ?Carbon $rangeFrom, ?Carbon $rangeTo, ?array $salesMetrics = null): array
+    {
+        $scopeLeads = function ($query) use ($userHierarchy, $isAdmin, $rangeFrom, $rangeTo) {
             if (! $isAdmin) {
                 $query->whereIn('responsible_person_id', $userHierarchy);
             }
@@ -1233,30 +1308,6 @@ public function getPropertyTypesWithListings(Request $request)
             return $query;
         };
 
-        $scopeListingsRole = function ($query) use ($userHierarchy, $isAdmin) {
-            if (! $isAdmin) {
-                $query->where(function ($q) use ($userHierarchy) {
-                    $q->whereIn('agent_id', $userHierarchy)
-                        ->orWhereIn('added_by', $userHierarchy);
-                });
-            }
-
-            return $query;
-        };
-
-        $scopeListingsInPeriod = function ($query) use ($scopeListingsRole, $rangeFrom, $rangeTo) {
-            $scopeListingsRole($query);
-            if ($rangeFrom || $rangeTo) {
-                $this->applyCreatedBetween($query, $rangeFrom, $rangeTo);
-            }
-
-            return $query;
-        };
-
-        // Legacy alias — period-scoped (used only where period matters)
-        $scopeListings = $scopeListingsInPeriod;
-
-        // ── CRM ──
         $leadBase = $scopeLeads(Lead::query());
         $totalLeads = (clone $leadBase)->count();
         $newLeads = (clone $leadBase)->where('created_at', '>=', now()->subDays(7))->count();
@@ -1362,6 +1413,113 @@ public function getPropertyTypesWithListings(Request $request)
         $days = min(14, max(7, ($rangeFrom && $rangeTo) ? $rangeFrom->diffInDays($rangeTo) + 1 : 14));
         $trendSeries = $this->buildDailyTrend($leadBase, $days, 'M j');
 
+        $revenueFromLeads = (clone $leadBase)->whereNotNull('converted_at')->sum('budget_to') ?: 0;
+
+        $salesMetrics ??= $this->computeConvertedSalesMetrics($currentUser, $isAdmin, $rangeFrom, $rangeTo);
+
+        return [
+            'total_leads' => $totalLeads,
+            'new_leads' => $newLeads,
+            'contacted' => $contacted,
+            'no_answer' => $noAnswer,
+            'follow_up' => $followUp,
+            'qualified' => $qualified,
+            'cold' => $heatCount(['cold', 'Cold']),
+            'warm' => $heatCount(['warm', 'Warm']),
+            'hot' => $heatCount(['hot', 'Hot']),
+            'negotiation' => $negotiation,
+            'converted' => $converted,
+            'lost' => $lost,
+            'conversion_rate' => $conversionRate,
+            'revenue_from_leads' => (float) $revenueFromLeads,
+            'total_sale' => $salesMetrics['total_sale'],
+            'total_commission' => $salesMetrics['total_commission'],
+            'avg_response_time_min' => 18,
+            'calls_answered' => $answered,
+            'calls_no_answer' => $noAnswer,
+            'follow_up_overdue' => max(0, $followUp - $contacted),
+            'funnel' => ['labels' => $funnelLabels, 'values' => $funnelValues],
+            'lead_sources' => $leadSources,
+            'agent_ranking' => $agentRanking,
+            'best_closer' => $bestCloser,
+            'trend' => $trendSeries,
+        ];
+    }
+
+    private function buildDealsAnalytics(User $currentUser, array $userHierarchy, bool $isAdmin, ?Carbon $rangeFrom, ?Carbon $rangeTo, ?array $salesMetrics = null): array
+    {
+        $scopeDeals = function ($query) use ($userHierarchy, $isAdmin, $rangeFrom, $rangeTo) {
+            if (! $isAdmin) {
+                $query->whereIn('responsible_person_id', $userHierarchy);
+            }
+            if ($rangeFrom || $rangeTo) {
+                $this->applyCreatedBetween($query, $rangeFrom, $rangeTo);
+            }
+
+            return $query;
+        };
+
+        $dealBase = $scopeDeals(Deal::query());
+        $totalDeals = (clone $dealBase)->count();
+        $primaryDeals = (clone $dealBase)->where('deal_type', 'primary')->count();
+        $secondaryDeals = (clone $dealBase)->where('deal_type', 'secondary')->count();
+        $rentalDeals = (clone $dealBase)->where('deal_type', 'rental')->count();
+
+        $dealStageCounts = (clone $dealBase)
+            ->select('stage_id', DB::raw('count(*) as total'))
+            ->whereNotNull('stage_id')
+            ->groupBy('stage_id')
+            ->pluck('total', 'stage_id');
+
+        $dealStages = Stage::query()
+            ->where('stage_type', 'deal')
+            ->orderBy('order')
+            ->get(['id', 'name', 'deal_type'])
+            ->map(fn ($s) => [
+                'label' => $s->name,
+                'type' => $s->deal_type,
+                'count' => (int) ($dealStageCounts[$s->id] ?? 0),
+            ])
+            ->values();
+
+        $dealTrend = $this->buildDailyTrend($scopeDeals(Deal::query()), 7, 'D');
+
+        $salesMetrics ??= $this->computeConvertedSalesMetrics($currentUser, $isAdmin, $rangeFrom, $rangeTo);
+
+        return [
+            'total_deals' => $totalDeals,
+            'primary' => $primaryDeals,
+            'secondary' => $secondaryDeals,
+            'rental' => $rentalDeals,
+            'total_sale' => $salesMetrics['total_sale'],
+            'total_commission' => $salesMetrics['total_commission'],
+            'stages' => $dealStages,
+            'trend' => $dealTrend,
+        ];
+    }
+
+    private function buildListingAnalytics(array $userHierarchy, bool $isAdmin, ?Carbon $rangeFrom, ?Carbon $rangeTo): array
+    {
+        $scopeListingsRole = function ($query) use ($userHierarchy, $isAdmin) {
+            if (! $isAdmin) {
+                $query->where(function ($q) use ($userHierarchy) {
+                    $q->whereIn('agent_id', $userHierarchy)
+                        ->orWhereIn('added_by', $userHierarchy);
+                });
+            }
+
+            return $query;
+        };
+
+        $scopeListingsInPeriod = function ($query) use ($scopeListingsRole, $rangeFrom, $rangeTo) {
+            $scopeListingsRole($query);
+            if ($rangeFrom || $rangeTo) {
+                $this->applyCreatedBetween($query, $rangeFrom, $rangeTo);
+            }
+
+            return $query;
+        };
+
         // ── Listings (inventory = all time; trend = selected period) ──
         $listingBase = $scopeListingsRole(Listing::query());
         $listingsTotal = (clone $listingBase)->count();
@@ -1417,56 +1575,65 @@ public function getPropertyTypesWithListings(Request $request)
             ->when($rangeTo, fn ($q) => $q->where('created_at', '<=', $rangeTo))
             ->count();
 
-        // ── Deals ──
-        $scopeDeals = function ($query) use ($userHierarchy, $isAdmin, $rangeFrom, $rangeTo) {
-            if (! $isAdmin) {
-                $query->whereIn('responsible_person_id', $userHierarchy);
-            }
-            if ($rangeFrom || $rangeTo) {
-                $this->applyCreatedBetween($query, $rangeFrom, $rangeTo);
-            }
+        return [
+            'total_listings' => $listingsTotal,
+            'active_listings' => $listingsActive,
+            'pending_approval' => $listingsPending,
+            'sold_listings' => $listingsSold,
+            'expired_listings' => $listingsExpired,
+            'total_views' => $topListings->sum('views'),
+            'inquiry_requests' => $inquiryCount,
+            'viewing_appointments' => $inquiryCount,
+            'whatsapp_clicks' => (int) round($listingsActive * 2.4),
+            'saved_listings' => (int) round($listingsActive * 0.6),
+            'conversion_rate' => $listingsTotal > 0 ? round(($listingsSold / $listingsTotal) * 100, 1) : 0,
+            'top_listings' => $topListings,
+            'property_types' => $propertyTypes,
+            'trend' => $listingTrend,
+        ];
+    }
 
-            return $query;
-        };
-
-        $dealBase = $scopeDeals(Deal::query());
-        $totalDeals = (clone $dealBase)->count();
-        $primaryDeals = (clone $dealBase)->where('deal_type', 'primary')->count();
-        $secondaryDeals = (clone $dealBase)->where('deal_type', 'secondary')->count();
-        $rentalDeals = (clone $dealBase)->where('deal_type', 'rental')->count();
-
-        $dealStageCounts = (clone $dealBase)
-            ->select('stage_id', DB::raw('count(*) as total'))
-            ->whereNotNull('stage_id')
-            ->groupBy('stage_id')
-            ->pluck('total', 'stage_id');
-
-        $dealStages = Stage::query()
-            ->where('stage_type', 'deal')
-            ->orderBy('order')
-            ->get(['id', 'name', 'deal_type'])
-            ->map(fn ($s) => [
-                'label' => $s->name,
-                'type' => $s->deal_type,
-                'count' => (int) ($dealStageCounts[$s->id] ?? 0),
-            ])
-            ->values();
-
-        $dealTrend = $this->buildDailyTrend($scopeDeals(Deal::query()), 7, 'D');
-
+    private function buildHrAnalytics(array $userHierarchy, bool $isAdmin): array
+    {
         // ── HR (summary from users; attendance approximated) ──
         $employeesBase = User::query()->where('status', 'active');
         if (! $isAdmin) {
             $employeesBase->whereIn('id', $userHierarchy);
         }
-        $totalEmployees = (clone $employeesBase)->count();
-        $activeEmployees = (clone $employeesBase)->where('status', 'active')->count();
+        $activeEmployees = (clone $employeesBase)->count();
+        $totalEmployees = $activeEmployees;
 
-        // ── Finance (derived / placeholder where no ledger exists) ──
-        $revenueFromLeads = (clone $leadBase)->whereNotNull('converted_at')->sum('budget_to') ?: 0;
-        $avgDeal = $converted > 0 ? round($revenueFromLeads / $converted) : 0;
+        return [
+            'total_employees' => $totalEmployees,
+            'active_employees' => $activeEmployees,
+            'late_employees' => (int) max(0, round($totalEmployees * 0.08)),
+            'absent_employees' => (int) max(0, round($totalEmployees * 0.04)),
+            'on_leave' => (int) max(0, round($totalEmployees * 0.06)),
+            'vacation_requests' => (int) max(0, round($totalEmployees * 0.12)),
+            'payroll_status' => 'on_track',
+            'productivity_score' => 87,
+            'attendance_trend' => array_map(fn ($i) => [
+                'label' => now()->subDays(6 - $i)->format('D'),
+                'present' => max(0, $activeEmployees - random_int(0, 3)),
+                'absent' => random_int(0, 2),
+            ], range(0, 6)),
+        ];
+    }
+
+    private function buildAnalyticsOverviewResponse(Request $request)
+    {
+        [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin] = $this->analyticsContext($request);
+        $isManager = $isAdmin || $currentUser->hasRole('manager');
 
         $salesMetrics = $this->computeConvertedSalesMetrics($currentUser, $isAdmin, $rangeFrom, $rangeTo);
+
+        $crm = $this->buildCrmAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo, $salesMetrics);
+        $deals = $this->buildDealsAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo, $salesMetrics);
+        $listing = $this->buildListingAnalytics($userHierarchy, $isAdmin, $rangeFrom, $rangeTo);
+        $hr = $this->buildHrAnalytics($userHierarchy, $isAdmin);
+
+        $revenueFromLeads = $crm['revenue_from_leads'];
+        $avgDeal = $crm['converted'] > 0 ? round($revenueFromLeads / $crm['converted']) : 0;
 
         $roleScope = $isAdmin ? 'company' : ($isManager ? 'team' : 'personal');
 
@@ -1480,74 +1647,10 @@ public function getPropertyTypesWithListings(Request $request)
                 'date_from' => $rangeFrom?->toDateString(),
                 'date_to' => $rangeTo?->toDateString(),
             ],
-            'crm' => [
-                'total_leads' => $totalLeads,
-                'new_leads' => $newLeads,
-                'contacted' => $contacted,
-                'no_answer' => $noAnswer,
-                'follow_up' => $followUp,
-                'qualified' => $qualified,
-                'cold' => $heatCount(['cold', 'Cold']),
-                'warm' => $heatCount(['warm', 'Warm']),
-                'hot' => $heatCount(['hot', 'Hot']),
-                'negotiation' => $negotiation,
-                'converted' => $converted,
-                'lost' => $lost,
-                'conversion_rate' => $conversionRate,
-                'revenue_from_leads' => (float) $revenueFromLeads,
-                'total_sale' => $salesMetrics['total_sale'],
-                'total_commission' => $salesMetrics['total_commission'],
-                'avg_response_time_min' => 18,
-                'calls_answered' => $answered,
-                'calls_no_answer' => $noAnswer,
-                'follow_up_overdue' => max(0, $followUp - $contacted),
-                'funnel' => ['labels' => $funnelLabels, 'values' => $funnelValues],
-                'lead_sources' => $leadSources,
-                'agent_ranking' => $agentRanking,
-                'best_closer' => $bestCloser,
-                'trend' => $trendSeries,
-            ],
-            'deals' => [
-                'total_deals' => $totalDeals,
-                'primary' => $primaryDeals,
-                'secondary' => $secondaryDeals,
-                'rental' => $rentalDeals,
-                'total_sale' => $salesMetrics['total_sale'],
-                'total_commission' => $salesMetrics['total_commission'],
-                'stages' => $dealStages,
-                'trend' => $dealTrend,
-            ],
-            'listing' => [
-                'total_listings' => $listingsTotal,
-                'active_listings' => $listingsActive,
-                'pending_approval' => $listingsPending,
-                'sold_listings' => $listingsSold,
-                'expired_listings' => $listingsExpired,
-                'total_views' => $topListings->sum('views'),
-                'inquiry_requests' => $inquiryCount,
-                'viewing_appointments' => $inquiryCount,
-                'whatsapp_clicks' => (int) round($listingsActive * 2.4),
-                'saved_listings' => (int) round($listingsActive * 0.6),
-                'conversion_rate' => $listingsTotal > 0 ? round(($listingsSold / $listingsTotal) * 100, 1) : 0,
-                'top_listings' => $topListings,
-                'property_types' => $propertyTypes,
-                'trend' => $listingTrend,
-            ],
-            'hr' => [
-                'total_employees' => $totalEmployees,
-                'active_employees' => $activeEmployees,
-                'late_employees' => (int) max(0, round($totalEmployees * 0.08)),
-                'absent_employees' => (int) max(0, round($totalEmployees * 0.04)),
-                'on_leave' => (int) max(0, round($totalEmployees * 0.06)),
-                'vacation_requests' => (int) max(0, round($totalEmployees * 0.12)),
-                'payroll_status' => 'on_track',
-                'productivity_score' => 87,
-                'attendance_trend' => array_map(fn ($i) => [
-                    'label' => now()->subDays(6 - $i)->format('D'),
-                    'present' => max(0, $activeEmployees - random_int(0, 3)),
-                    'absent' => random_int(0, 2),
-                ], range(0, 6)),
-            ],
+            'crm' => $crm,
+            'deals' => $deals,
+            'listing' => $listing,
+            'hr' => $hr,
             'finance' => [
                 'revenue' => (float) $revenueFromLeads,
                 'expenses' => (float) round($revenueFromLeads * 0.42),
@@ -1562,22 +1665,22 @@ public function getPropertyTypesWithListings(Request $request)
                 'avg_deal_value' => $avgDeal,
             ],
             'support' => [
-                'open_tickets' => (int) max(0, round($totalLeads * 0.05)),
-                'sla_breaches' => (int) max(0, round($totalLeads * 0.01)),
+                'open_tickets' => (int) max(0, round($crm['total_leads'] * 0.05)),
+                'sla_breaches' => (int) max(0, round($crm['total_leads'] * 0.01)),
                 'avg_response_time_hrs' => 2.4,
                 'satisfaction' => 4.6,
                 'categories' => [
-                    ['name' => 'Listings', 'count' => (int) max(1, round($listingsTotal * 0.2))],
-                    ['name' => 'Leads', 'count' => (int) max(1, round($totalLeads * 0.35))],
-                    ['name' => 'Technical', 'count' => (int) max(1, round($totalEmployees * 0.1))],
-                    ['name' => 'Billing', 'count' => (int) max(1, round($totalEmployees * 0.05))],
+                    ['name' => 'Listings', 'count' => (int) max(1, round($listing['total_listings'] * 0.2))],
+                    ['name' => 'Leads', 'count' => (int) max(1, round($crm['total_leads'] * 0.35))],
+                    ['name' => 'Technical', 'count' => (int) max(1, round($hr['total_employees'] * 0.1))],
+                    ['name' => 'Billing', 'count' => (int) max(1, round($hr['total_employees'] * 0.05))],
                 ],
             ],
-            'ai_insights' => $this->buildAnalyticsInsights($totalLeads, $converted, $listingsActive, $conversionRate),
+            'ai_insights' => $this->buildAnalyticsInsights($crm['total_leads'], $crm['converted'], $listing['active_listings'], $crm['conversion_rate']),
             'notifications' => [
-                ['id' => 1, 'type' => 'alert', 'title' => 'Follow-ups overdue', 'message' => max(0, $followUp - $contacted).' leads need attention', 'time' => '2m ago'],
-                ['id' => 2, 'type' => 'success', 'title' => 'Conversion up', 'message' => "Rate at {$conversionRate}% this period", 'time' => '1h ago'],
-                ['id' => 3, 'type' => 'info', 'title' => 'Listings pending', 'message' => "{$listingsPending} awaiting approval", 'time' => '3h ago'],
+                ['id' => 1, 'type' => 'alert', 'title' => 'Follow-ups overdue', 'message' => $crm['follow_up_overdue'].' leads need attention', 'time' => '2m ago'],
+                ['id' => 2, 'type' => 'success', 'title' => 'Conversion up', 'message' => "Rate at {$crm['conversion_rate']}% this period", 'time' => '1h ago'],
+                ['id' => 3, 'type' => 'info', 'title' => 'Listings pending', 'message' => "{$listing['pending_approval']} awaiting approval", 'time' => '3h ago'],
             ],
         ]);
     }
