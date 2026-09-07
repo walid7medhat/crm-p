@@ -118,8 +118,8 @@
                 <!-- Dynamic Form Based on missingFields -->
                 <div v-if="missingFields.length > 0" class="dynamic-form">
     <!-- 🟨 Status & Meta -->
-                        <div 
-                            v-if="['status_lead','lead_type','deal_name','property_status','available_date','branch','why_lost_lead','lost_reason'].some(f => missingFields.includes(f))" 
+                        <div
+                            v-if="showLeadQualificationCard"
                             class="box-shadow lead_qualification lead-qualification-card"
                         >
                              <h5 class="section-title ">Lead Qualification</h5>
@@ -371,8 +371,8 @@
                             </div>
                        </div>
                         <!-- 🟦 Basic Info -->
-                        <div 
-                            v-if="['budget_from','budget_to','area_id','property_type_id','bedrooms','purpose_buying'].some(f => missingFields.includes(f))" 
+                        <div
+                            v-if="showClientRequirementCard"
                             class="box-shadow client-req-order"
                         >
                           <h5 class="section-title">Client Requirement</h5>
@@ -750,6 +750,33 @@ const isPlotsOrLand = computed(() => {
 // Add this computed property
 const isRentOnly = computed(() => {
     return formData.value.lead_type === 'rent';
+});
+
+// These mirror the exact conditions of the fields rendered inside each card below —
+// a card must only show when it actually has something to fill in. Checking the raw
+// `missingFields` array alone isn't enough: a field can be "missing" per the required-
+// fields list yet still be suppressed by isRentOnly/isPlotsOrLand, or (for deal_name)
+// rendered in its own standalone box outside this card entirely — either way that left
+// the card showing as an empty header with nothing inside it.
+const showLeadQualificationCard = computed(() => {
+    const f = props.missingFields || [];
+    return f.includes('status_lead')
+        || f.includes('lead_type')
+        || (f.includes('property_status') && !isRentOnly.value)
+        || f.includes('available_date')
+        || f.includes('branch')
+        || f.includes('why_lost_lead')
+        || f.includes('lost_reason');
+});
+
+const showClientRequirementCard = computed(() => {
+    const f = props.missingFields || [];
+    return f.includes('budget_from')
+        || f.includes('budget_to')
+        || f.includes('area_id')
+        || (f.includes('bedrooms') && !isPlotsOrLand.value)
+        || f.includes('property_type_id')
+        || (f.includes('purpose_buying') && !isRentOnly.value);
 });
 
 const budgetFromDisplay = ref('')

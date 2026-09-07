@@ -3721,17 +3721,20 @@ async function moveLeadWithStageChange(lead, newStageId) {
 
 async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...additionalData }) {
     console.log('handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
-    
+
+    const lead = pendingStageChange.value?.leadData
+    if (!lead) {
+        console.error('No lead data found')
+        return
+    }
+
+    const isConversion = pendingStageChange.value?.isConversion || false
+    const targetStageOrder = pendingStageChange.value?.targetStageOrder || 0
+    // Closing the modal below clears `pendingStageChange` (see the showStageChangeModal
+    // watcher), so grab this now — the catch block needs it to revert the optimistic move.
+    const originalStageId = pendingStageChange.value?.originalStageId ?? lead.stage_id
+
     try {
-        const lead = pendingStageChange.value?.leadData
-        if (!lead) {
-            console.error('No lead data found')
-            return
-        }
-
-        const isConversion = pendingStageChange.value?.isConversion || false
-        const targetStageOrder = pendingStageChange.value?.targetStageOrder || 0
-
         // Prepare payload with correct field names for backend
         const payload = {
             stage_id: targetStageId,
@@ -3768,73 +3771,73 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
 
         console.log('Sending payload to backend:', payload)
 
+        // Move the card and close the modal right away — don't make the user wait
+        // on the network round trip to see the result of what they just submitted.
+        // The API call below still runs, and reconciles/reverts once it settles.
+        lead.stage_id = targetStageId
+        if (payload.salutation) lead.salutation = payload.salutation
+        if (payload.budget_from) lead.budget_from = payload.budget_from
+        if (payload.budget_to) lead.budget_to = payload.budget_to
+        if (payload.lead_type) lead.lead_type = payload.lead_type
+        if (payload.property_status) lead.property_status = payload.property_status
+        if (payload.area_id) lead.area_id = payload.area_id
+        if (payload.property_type_id) lead.property_type_id = payload.property_type_id
+        if (payload.bedrooms) lead.bedrooms = payload.bedrooms
+        if (payload.purpose_buying) lead.purpose_buying = payload.purpose_buying
+        if (payload.lead_source) lead.lead_source = payload.lead_source
+        if (payload.available_date) lead.available_date = payload.available_date
+        if (payload.branch) lead.branch = payload.branch
+        if (payload.why_lost_lead) lead.why_lost_lead = payload.why_lost_lead
+        if (payload.status_lead) lead.status_lead = payload.status_lead
+        if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
+        if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
+        if (payload.deal_name) lead.deal_name = payload.deal_name
+        handleUpdatedLead(lead, 'updated')
+        showStageChangeModal.value = false
+
         // Send request
         const response = await api.post(`/leads/${leadId}/change-stage`, payload)
-        
-        console.log('Backend response:', response.data)
-        
-        $showNotification(response.data?.message || 'Lead data updated successfully', 'success')
-        
-        // Update lead data locally
-        if (lead) {
-            lead.stage_id = targetStageId
-            if (payload.salutation) lead.salutation = payload.salutation
-            if (payload.budget_from) lead.budget_from = payload.budget_from
-            if (payload.budget_to) lead.budget_to = payload.budget_to
-            if (payload.lead_type) lead.lead_type = payload.lead_type
-            if (payload.property_status) lead.property_status = payload.property_status
-            if (payload.area_id) lead.area_id = payload.area_id
-            if (payload.property_type_id) lead.property_type_id = payload.property_type_id
-            if (payload.bedrooms) lead.bedrooms = payload.bedrooms
-            if (payload.purpose_buying) lead.purpose_buying = payload.purpose_buying
-            if (payload.lead_source) lead.lead_source = payload.lead_source
-            if (payload.available_date) lead.available_date = payload.available_date
-            if (payload.branch) lead.branch = payload.branch
-            if (payload.why_lost_lead) lead.why_lost_lead = payload.why_lost_lead
-            
-            if (payload.status_lead) lead.status_lead = payload.status_lead
-            if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
-            if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
-            if (payload.deal_name) lead.deal_name = payload.deal_name
 
-            // Prefer the authoritative server copy (fresh activity/updated timestamps, etc.)
-            const freshLead = response.data?.data
-            if (freshLead) {
-                Object.assign(lead, freshLead)
-            }
+        console.log('Backend response:', response.data)
+
+        $showNotification(response.data?.message || 'Lead data updated successfully', 'success')
+
+        // Reconcile with the authoritative server copy (fresh activity/updated timestamps, etc.)
+        const freshLead = response.data?.data
+        if (freshLead) {
+            Object.assign(lead, freshLead)
+            handleUpdatedLead(lead, 'updated')
         }
 
-        // Close modal
-        showStageChangeModal.value = false
-        
         await nextTick()
-        
+
         // If this was for conversion (stage 6), open conversion modal
         if (isConversion && targetStageOrder === 6) {
             console.log('Opening conversion modal')
             selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
             selectedLeadData.value = lead
-            
+
             await nextTick()
             if (convertModalRef.value) {
                 convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
             }
         }
-        
+
         clearPendingStageChange()
-        // Move the card locally from the data we already have instead of refetching
-        // the whole board — a full fetchLeads() re-shows the "Loading…" overlay and
-        // resets every column back to its first page, discarding any "load more".
-        if (lead?.id) {
-            handleUpdatedLead(lead, 'updated')
-        }
 
     } catch (error) {
         console.error('Error in handleStageChangeWithReason:', error)
-        const errorMessage = error.response?.data?.message || 
-                            error.response?.data?.error || 
+        const errorMessage = error.response?.data?.message ||
+                            error.response?.data?.error ||
                             'Failed to update lead data'
         $showNotification(errorMessage, 'error')
+
+        // The card was already moved optimistically — put it back since the save failed.
+        if (lead?.id && originalStageId) {
+            lead.stage_id = originalStageId
+            handleUpdatedLead(lead, 'updated')
+        }
+        clearPendingStageChange()
         throw error
     }
 }
