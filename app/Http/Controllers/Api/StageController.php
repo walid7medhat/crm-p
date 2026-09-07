@@ -983,7 +983,7 @@ class StageController extends Controller
                     });
                 }
                 if ($request->filled('search')) {
-                    LeadTextSearch::apply($leadsQuery, (string) $request->search, [
+                    LeadTextSearch::apply($leadsQuery->getQuery(), (string) $request->search, [
                         'comments' => false,
                         'relations' => true,
                         'admin' => true,
