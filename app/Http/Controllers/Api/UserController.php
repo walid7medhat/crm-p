@@ -530,7 +530,9 @@ public function show(User $user): JsonResponse
                 return ApiResponse::error('Access denied', 403);
             }
 
-            $descendantIds = $this->collectDescendantIds($user->id);
+            $descendantIds = ($user->hasRole('super_admin') || $user->hasRole('admin'))
+                ? User::where('id', '!=', $user->id)->orderBy('created_at', 'desc')->pluck('id')->toArray()
+                : $this->collectDescendantIds($user->id);
             $total = count($descendantIds);
 
             if ($total === 0) {
