@@ -1177,10 +1177,18 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             }
 
             $value = (string) $value;
+            $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-            // ✅ حل مشكلة url
-            $value = preg_replace('/\[url=(.*?)\](.*?)\[\/url\]/i', '$2', $value);
-            $value = preg_replace('/\[url\](.*?)\[\/url\]/i', '$1', $value);
+            // Bitrix BBCode links → plain URL / label
+            $value = preg_replace('/\[url=([^\]]+)\](.*?)\[\/url\]/is', '$2', $value);
+            $value = preg_replace('/\[url\](.*?)\[\/url\]/is', '$1', $value);
+
+            // Strip common Bitrix BBCode wrappers ([p], [b], …) keep inner text
+            $value = preg_replace(
+                '/\[(\/)?(p|b|i|u|s|code|quote|list|\*|size|color|font|left|center|right|justify)(=[^\]]*)?\]/i',
+                '',
+                $value
+            );
 
             // line breaks
             $value = preg_replace('/<br\s*\/?>/i', "\n", $value);
