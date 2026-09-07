@@ -72,9 +72,13 @@
             
             <div class="info-group" v-if="lead?.more_information">
                 <label class="form-label-custom">Comments</label>
-                <div class="info-value">
-                    <span >{{ lead?.more_information || '—' }}</span>
-                  
+                <div class="info-value info-value-block">
+                    <span
+                        v-if="formattedMoreInformation"
+                        class="bitrix-rich-text"
+                        v-html="formattedMoreInformation"
+                    ></span>
+                    <span v-else>—</span>
                 </div>
             </div>
             
@@ -780,6 +784,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import { formatLeadBudgetRange, formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
+import { formatBitrixRichText } from '@/utils/bitrixRichText'
 import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
 
 const props = defineProps({
@@ -802,6 +807,10 @@ const emit = defineEmits(['person-updated', 'edit-request', 'edit-section', 'lea
 
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const showMatchingProperties = ref(false)
+
+const formattedMoreInformation = computed(() =>
+  formatBitrixRichText(props.lead?.more_information)
+)
 
 watch(
     () => props.lead?.id,
@@ -2140,6 +2149,20 @@ const saveClientRequirement = async () => {
 }
 
 .facebook-link:hover {
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+.bitrix-rich-text :deep(.bitrix-rich-link),
+.bitrix-rich-text .bitrix-rich-link {
+    color: #2563eb;
+    text-decoration: underline;
+    text-decoration-color: #2563eb;
+    word-break: break-all;
+}
+
+.bitrix-rich-text :deep(.bitrix-rich-link:hover),
+.bitrix-rich-text .bitrix-rich-link:hover {
     color: #1d4ed8;
     text-decoration: none;
 }

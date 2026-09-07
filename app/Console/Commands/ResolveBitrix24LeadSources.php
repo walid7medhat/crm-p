@@ -197,8 +197,15 @@ private function cleanRichText($value): ?string
     $clean = html_entity_decode($original, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
     // فك روابط Bitrix
-    $clean = preg_replace('/\[url=(.*?)\](.*?)\[\/url\]/i', '$2', $clean);
-    $clean = preg_replace('/\[url\](.*?)\[\/url\]/i', '$1', $clean);
+    $clean = preg_replace('/\[url=([^\]]+)\](.*?)\[\/url\]/is', '$2', $clean);
+    $clean = preg_replace('/\[url\](.*?)\[\/url\]/is', '$1', $clean);
+
+    // إزالة BBCode مثل [p] [/p]
+    $clean = preg_replace(
+        '/\[(\/)?(p|b|i|u|s|code|quote|list|\*|size|color|font|left|center|right|justify)(=[^\]]*)?\]/i',
+        '',
+        $clean
+    );
 
     // تحويل br
     $clean = preg_replace('/<br\s*\/?>/i', "\n", $clean);
