@@ -1321,16 +1321,29 @@ public function getPropertyTypesWithListings(Request $request)
             ->map(fn ($r) => ['source' => $r->lead_source ?: 'Unknown', 'count' => (int) $r->total])
             ->values();
 
-        $agentRanking = User::query()
-            ->when(! $isAdmin, fn ($q) => $q->whereIn('id', $userHierarchy))
+        $agentCounts = (clone $leadBase)
+            ->select(
+                'responsible_person_id',
+                DB::raw('count(*) as leads_count'),
+                DB::raw('sum(case when converted_at is not null then 1 else 0 end) as converted_count')
+            )
+            ->whereNotNull('responsible_person_id')
+            ->groupBy('responsible_person_id')
+            ->get();
+
+        $agentUsers = User::whereIn('id', $agentCounts->pluck('responsible_person_id'))
             ->get(['id', 'name', 'avatar'])
-            ->map(function ($u) use ($scopeLeads) {
-                $leadsCount = $scopeLeads(Lead::query()->where('responsible_person_id', $u->id))->count();
-                $convertedCount = $scopeLeads(Lead::query()->where('responsible_person_id', $u->id)->whereNotNull('converted_at'))->count();
+            ->keyBy('id');
+
+        $agentRanking = $agentCounts
+            ->map(function ($row) use ($agentUsers) {
+                $u = $agentUsers->get($row->responsible_person_id);
+                $leadsCount = (int) $row->leads_count;
+                $convertedCount = (int) $row->converted_count;
 
                 return [
-                    'id' => $u->id,
-                    'name' => User::shortName($u->name),
+                    'id' => $row->responsible_person_id,
+                    'name' => $u ? User::shortName($u->name) : 'Unknown',
                     'leads' => $leadsCount,
                     'converted' => $convertedCount,
                     'rate' => $leadsCount > 0 ? round(($convertedCount / $leadsCount) * 100, 1) : 0,
@@ -1346,15 +1359,8 @@ public function getPropertyTypesWithListings(Request $request)
         $funnelLabels = $countByStage->pluck('name')->take(8)->all();
         $funnelValues = $countByStage->pluck('count')->take(8)->all();
 
-        $trendSeries = [];
         $days = min(14, max(7, ($rangeFrom && $rangeTo) ? $rangeFrom->diffInDays($rangeTo) + 1 : 14));
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $day = now()->subDays($i)->startOfDay();
-            $trendSeries[] = [
-                'label' => $day->format('M j'),
-                'value' => (clone $leadBase)->whereDate('created_at', $day)->count(),
-            ];
-        }
+        $trendSeries = $this->buildDailyTrend($leadBase, $days, 'M j');
 
         // ── Listings (inventory = all time; trend = selected period) ──
         $listingBase = $scopeListingsRole(Listing::query());
@@ -1403,14 +1409,7 @@ public function getPropertyTypesWithListings(Request $request)
             ])
             ->values();
 
-        $listingTrend = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = now()->subDays($i)->startOfDay();
-            $listingTrend[] = [
-                'label' => $day->format('D'),
-                'value' => $scopeListingsInPeriod(Listing::query())->whereDate('created_at', $day)->count(),
-            ];
-        }
+        $listingTrend = $this->buildDailyTrend($scopeListingsInPeriod(Listing::query()), 7, 'D');
 
         $inquiryCount = ListingAccessRequest::query()
             ->when(! $isAdmin, fn ($q) => $q->whereIn('requested_by', $userHierarchy))
@@ -1453,14 +1452,7 @@ public function getPropertyTypesWithListings(Request $request)
             ])
             ->values();
 
-        $dealTrend = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = now()->subDays($i)->startOfDay();
-            $dealTrend[] = [
-                'label' => $day->format('D'),
-                'value' => $scopeDeals(Deal::query())->whereDate('created_at', $day)->count(),
-            ];
-        }
+        $dealTrend = $this->buildDailyTrend($scopeDeals(Deal::query()), 7, 'D');
 
         // ── HR (summary from users; attendance approximated) ──
         $employeesBase = User::query()->where('status', 'active');
@@ -1588,6 +1580,32 @@ public function getPropertyTypesWithListings(Request $request)
                 ['id' => 3, 'type' => 'info', 'title' => 'Listings pending', 'message' => "{$listingsPending} awaiting approval", 'time' => '3h ago'],
             ],
         ]);
+    }
+
+    /**
+     * Build a per-day count series for the last $days days using a single grouped query
+     * instead of one COUNT query per day.
+     */
+    private function buildDailyTrend($baseQuery, int $days, string $labelFormat): array
+    {
+        $start = now()->subDays($days - 1)->startOfDay();
+
+        $counts = (clone $baseQuery)
+            ->where('created_at', '>=', $start)
+            ->selectRaw('DATE(created_at) as d, count(*) as total')
+            ->groupBy('d')
+            ->pluck('total', 'd');
+
+        $series = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $day = now()->subDays($i)->startOfDay();
+            $series[] = [
+                'label' => $day->format($labelFormat),
+                'value' => (int) ($counts[$day->toDateString()] ?? 0),
+            ];
+        }
+
+        return $series;
     }
 
     private function resolveAnalyticsPeriod(Request $request): array
