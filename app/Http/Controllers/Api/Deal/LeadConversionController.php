@@ -167,7 +167,7 @@ class LeadConversionController extends Controller
                 'converted_to_deal_id' => $deal->id,
                 'converted_at' => Carbon::now(),
             ]);
-            $newStage = $lead->stage;
+            $newStage = $lead->fresh()->stage;
             
             $changes = [
                 'old_stage' => $oldStage->name,
@@ -202,7 +202,12 @@ class LeadConversionController extends Controller
                     'responsiblePerson',
                     'documents',
                     'properties'
-                ]))
+                ])),
+                // Fresh (post-update) lead so the client can move/remove its Kanban
+                // card locally instead of refetching the whole board.
+                'lead' => new \App\Http\Resources\Lead\LeadResource(
+                    $lead->fresh(['stage', 'responsiblePerson', 'addedBy'])
+                ),
             ], 201);
 
         } catch (\Exception $e) {

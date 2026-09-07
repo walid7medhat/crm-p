@@ -231,6 +231,9 @@ const submitConversion = async () => {
             const createdDeal = {
                 ...(response.data.data || {}),
                 deal_type: response.data.data?.deal_type ?? form.value.deal_type,
+                // Fresh post-conversion lead (new stage_id, converted_to_deal_id, ...) so
+                // listeners can move/remove the Kanban card locally instead of refetching.
+                _lead: response.data.lead || null,
             }
             emit('converted', createdDeal)
             hide()

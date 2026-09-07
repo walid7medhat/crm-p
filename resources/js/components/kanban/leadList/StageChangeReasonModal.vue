@@ -125,7 +125,7 @@
                              <h5 class="section-title ">Lead Qualification</h5>
 
                             <div
-                                v-if="targetStageOrder === 6 || missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
+                                v-if="missingFields.includes('status_lead') || missingFields.includes('lead_type') || missingFields.includes('property_status')"
                                 class="lead-qualification-trio"
                             >
                             <!-- Lead Status -->

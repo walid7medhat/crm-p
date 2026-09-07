@@ -148,6 +148,13 @@ const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
 
 function handleLeadConverted(deal) {
+    // Let the Kanban board move/remove this lead's card immediately (it just became
+    // a deal) instead of relying on a websocket broadcast or a full board refetch.
+    const updatedLead = deal?._lead
+    if (updatedLead?.id) {
+        lead.value = { ...lead.value, ...updatedLead }
+        emit('lead-updated', lead.value)
+    }
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
     show.value = false

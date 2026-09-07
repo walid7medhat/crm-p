@@ -177,13 +177,23 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 
     public function getAllSubordinatesIds()
     {
-        $subordinatesIds = [$this->id]; 
-        
-        foreach ($this->children as $child) {
-            $subordinatesIds = array_merge($subordinatesIds, $child->getAllSubordinatesIds());
+        // Level-by-level batch query instead of one query per user in the tree —
+        // the previous recursive version walked `children` node-by-node, which
+        // triggered a lazy-loaded query for every single subordinate (huge N+1
+        // on any manager/team_lead with a deep or wide team).
+        $ids = [$this->id];
+        $queue = [$this->id];
+
+        while (!empty($queue)) {
+            $children = static::whereIn('parent_id', $queue)->pluck('id')->all();
+            if (empty($children)) {
+                break;
+            }
+            $ids = array_merge($ids, $children);
+            $queue = $children;
         }
-        
-        return $subordinatesIds;
+
+        return $ids;
     }
 
 

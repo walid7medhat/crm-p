@@ -9,7 +9,7 @@
         >
             <div class="kanban-search-overlay__card">
                 <div class="kanban-empty-spinner" />
-                <span class="kanban-search-overlay__text">Updating…</span>
+                <span class="kanban-search-overlay__text">Loading…</span>
             </div>
         </div>
         <div
@@ -1847,7 +1847,14 @@ function handleLeadConverted(deal) {
     }
 
     $showNotification('Lead converted to deal successfully', 'success')
-    fetchLeads(true)
+    // Move/remove the card locally from the fresh post-conversion lead instead of
+    // refetching the whole board — much faster and avoids a visible reload.
+    const updatedLead = deal?._lead
+    if (updatedLead?.id) {
+        handleUpdatedLead(updatedLead, 'updated')
+    } else {
+        fetchLeads(true)
+    }
     emit('deal-created', payload)
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
@@ -2604,7 +2611,11 @@ function getLeadPriorityClass(lead) {
 }
 
 function leadUpdatedAtMs(lead) {
-    const raw = lead?.updated_at ?? lead?.created_at
+    // Sort by the same "activity time" shown on the card, not the raw updated_at —
+    // otherwise a freshly stage-changed card can land behind cards that only look
+    // less recently active because their DB updated_at ticked more recently.
+    const raw = lead?.last_activity_at ?? lead?.bitrix24_last_activity_at ?? lead?.assigned_at
+        ?? lead?.updated_at ?? lead?.created_at
     if (!raw) return 0
     const t = new Date(raw).getTime()
     return Number.isFinite(t) ? t : 0
@@ -3672,16 +3683,23 @@ async function applyProgrammaticStageChange(lead, targetColumn) {
 
 async function moveLeadWithStageChange(lead, newStageId) {
     try {
-        await api.post(`/leads/${lead.id}/change-stage`, {
+        const response = await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
         })
+        const freshLead = response?.data?.data
+        if (freshLead) {
+            Object.assign(lead, freshLead)
+        }
         lead.stage_id = newStageId
         columns.value.forEach((col) => {
             col.leads = col.leads.filter((l) => l.id !== lead.id)
         })
         const targetCol = columns.value.find((c) => c.status === newStageId)
         if (targetCol && !targetCol.leads.some((l) => l.id === lead.id)) {
-            targetCol.leads.push(lead)
+            // Just-moved card must land on top of its new column, sorted by the same
+            // "activity time" shown on the card rather than being appended at the end.
+            targetCol.leads.unshift(lead)
+            sortColumnLeadsByUpdatedAt(columns.value.indexOf(targetCol))
         }
         showLeadNotification(
             buildCrmLeadNotificationEvent(
@@ -3778,8 +3796,14 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
             if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
             if (payload.deal_name) lead.deal_name = payload.deal_name
+
+            // Prefer the authoritative server copy (fresh activity/updated timestamps, etc.)
+            const freshLead = response.data?.data
+            if (freshLead) {
+                Object.assign(lead, freshLead)
+            }
         }
-        
+
         // Close modal
         showStageChangeModal.value = false
         
@@ -3798,8 +3822,13 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         }
         
         clearPendingStageChange()
-        await fetchLeads(true)
-        
+        // Move the card locally from the data we already have instead of refetching
+        // the whole board — a full fetchLeads() re-shows the "Loading…" overlay and
+        // resets every column back to its first page, discarding any "load more".
+        if (lead?.id) {
+            handleUpdatedLead(lead, 'updated')
+        }
+
     } catch (error) {
         console.error('Error in handleStageChangeWithReason:', error)
         const errorMessage = error.response?.data?.message || 
