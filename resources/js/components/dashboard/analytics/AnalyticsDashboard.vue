@@ -460,12 +460,12 @@
             </svg>
             <div class="adx-uni-hr__ring-center">
               <strong>{{ personalAttendanceRate }}%</strong>
-              <span>days attended</span>
+              <span>my days attended</span>
             </div>
           </div>
 
           <div class="adx-uni-attendance__stats">
-            <p class="adx-uni-panel-title">This month</p>
+            <p class="adx-uni-panel-title">My attendance this month</p>
             <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
             <template v-else>
               <div class="adx-uni-attendance-chips">
