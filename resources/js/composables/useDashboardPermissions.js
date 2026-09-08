@@ -26,6 +26,12 @@ export function useDashboardPermissions() {
   const isManager = computed(() => isAdmin.value || roles.value.includes('manager'))
   const isAgent = computed(() => !isManager.value)
   const isHr = computed(() => roles.value.includes('hr'))
+  // Sales agent embedded in the listing team — same definition as header/index.vue.
+  const isSalesInListingTeam = computed(() => {
+    const hasSalesRole = roles.value.includes('sales') || roles.value.includes('Sales')
+    const isInListingTeam = user.value?.is_listing_team === true || user.value?.is_listing_team === 1
+    return hasSalesRole && isInListingTeam
+  })
 
   const scopeLabel = computed(() => {
     if (isAdmin.value) return 'Company analytics'
@@ -33,12 +39,15 @@ export function useDashboardPermissions() {
     return 'My analytics'
   })
 
-  // 'leads-show' is the single permission gating both the Leads and Deals kanban
-  // (they're tabs of the same view — see kanban_deal.vue). HR is excluded outright,
-  // regardless of any other role/permission overlap, matching the header nav.
+  // 'show-leads' gates the Leads kanban (same permission the router/header nav use — there is
+  // no 'leads-show' permission in the database). Deals has no permission gate at all — it
+  // mirrors header/index.vue's sidebar rule: open to everyone except HR and a sales agent
+  // embedded in the listing team. HR is excluded from 'crm'/'listing' outright, regardless of
+  // any other role/permission overlap, matching the header nav.
   const canViewModule = (module) => {
     const map = {
-      crm: () => !isHr.value && (isManager.value || hasPermission(user.value, 'leads-show')),
+      crm: () => !isHr.value && (isManager.value || hasPermission(user.value, 'show-leads')),
+      deals: () => !isHr.value && !isSalesInListingTeam.value,
       listing: () =>
         !isHr.value && (
           isManager.value
@@ -46,7 +55,7 @@ export function useDashboardPermissions() {
           || hasPermission(user.value, 'listings-list')
           || hasPermission(user.value, 'listings-show')
           || user.value?.is_listing_team
-          || hasPermission(user.value, 'leads-show')
+          || hasPermission(user.value, 'show-leads')
         ),
       hr: () => isAdmin.value || hasPermission(user.value, 'hr-view') || isHr.value,
       finance: () => isAdmin.value || hasPermission(user.value, 'finance-view'),
@@ -64,6 +73,7 @@ export function useDashboardPermissions() {
     isManager,
     isAgent,
     isHr,
+    isSalesInListingTeam,
     scopeLabel,
     canViewModule,
     hasPermission: (p) => hasPermission(user.value, p),

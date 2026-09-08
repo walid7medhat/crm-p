@@ -458,7 +458,7 @@ const { isMobileViewport, toggleMobileMenu } = useMobileNavigation()
 const { canViewModule, scopeLabel } = useDashboardPermissions()
 
 const showLeads = computed(() => canViewModule('crm'))
-const showDeals = computed(() => canViewModule('crm'))
+const showDeals = computed(() => canViewModule('deals'))
 const showListing = computed(() => canViewModule('listing') || canViewModule('crm'))
 const showHr = computed(() => canViewModule('hr') || canViewModule('crm'))
 
