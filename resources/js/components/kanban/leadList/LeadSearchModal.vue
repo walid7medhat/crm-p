@@ -162,43 +162,39 @@
 
                             </div>
 
-                            <div v-else-if="field.id === 'purpose_purchase' && form.leadType !== 'rent'" class="col-md-6 mt-3">
+                            <v-select
 
-                                <label class="form-label-custom">{{ field.label }}</label>
+                                v-else-if="field.id === 'purpose_purchase' && form.leadType !== 'rent'"
 
-                                <v-select
+                                v-model="form[field.formKey]"
 
-                                    v-model="form[field.formKey]"
+                                :options="field.options"
 
-                                    :options="field.options"
+                                :reduce="opt => opt.value"
 
-                                    :reduce="opt => opt.value"
+                                label="text"
 
-                                    label="text"
+                                :placeholder="field.placeholder || 'Select'"
 
-                                    :placeholder="field.placeholder || 'Select'"
+                                :clearable="hasValue(form[field.formKey])"
 
-                                    :clearable="hasValue(form[field.formKey])"
+                                append-to-body
 
-                                    append-to-body
+                                class="custom-v-select"
 
-                                    class="custom-v-select"
+                            >
 
-                                >
+                                <template #open-indicator="{ attributes }">
 
-                                    <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
 
-                                        <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
 
-                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
 
-                                        </span>
+                                </template>
 
-                                    </template>
-
-                                </v-select>
-
-                            </div>
+                            </v-select>
 
                             <CrmPhoneInput
 
@@ -1007,43 +1003,39 @@
 
                             </div>
 
-                            <div v-else-if="field.id === 'purpose_purchase' && form.leadType !== 'rent'" class="col-md-6 mt-3">
+                            <v-select
 
-                                <label class="form-label-custom">{{ field.label }}</label>
+                                v-else-if="field.id === 'purpose_purchase' && form.leadType !== 'rent'"
 
-                                <v-select
+                                v-model="form[field.formKey]"
 
-                                    v-model="form[field.formKey]"
+                                :options="field.options"
 
-                                    :options="field.options"
+                                :reduce="opt => opt.value"
 
-                                    :reduce="opt => opt.value"
+                                label="text"
 
-                                    label="text"
+                                :placeholder="field.placeholder || 'Select'"
 
-                                    :placeholder="field.placeholder || 'Select'"
+                                :clearable="hasValue(form[field.formKey])"
 
-                                    :clearable="hasValue(form[field.formKey])"
+                                append-to-body
 
-                                    append-to-body
+                                class="custom-v-select"
 
-                                    class="custom-v-select"
+                            >
 
-                                >
+                                <template #open-indicator="{ attributes }">
 
-                                    <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
 
-                                        <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
 
-                                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
 
-                                        </span>
+                                </template>
 
-                                    </template>
-
-                                </v-select>
-
-                            </div>
+                            </v-select>
 
                             <CrmPhoneInput
 

@@ -137,9 +137,9 @@ const baseRoutes = [
       },
 
       { path: '/attendance-monthly-reports', component: AttendanceMonthlyReport, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  // Kanban Route (super_admin only — see meta.requiresSuperAdmin)
-  { path: '/kanban', component: Kanban, meta: { requiresAuth: true} },
-  { path: '/kanban_deal', component: kanban_deal, meta: { requiresAuth: true} },
+  // Kanban Route — Leads tab requires the 'show-leads' permission (or admin)
+  { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresPermission: 'show-leads' } },
+  { path: '/kanban_deal', component: kanban_deal, meta: { requiresAuth: true, requiresPermission: 'show-leads'} },
   {
     path: '/project-map',
     name: 'project-map',
@@ -377,6 +377,16 @@ const isHrFromStorage = () => {
     return false
   }
 }
+const hasPermissionFromStorage = (permission) => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.permissions) && u.permissions.includes(permission)
+  } catch {
+    return false
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -428,6 +438,13 @@ router.beforeEach((to, from, next) => {
           next('/')
           return
       }
+
+  const requiredPermission = to.matched.find((r) => r.meta.requiresPermission)?.meta.requiresPermission
+  if (requiredPermission && !isAdminFromStorage() && !hasPermissionFromStorage(requiredPermission)) {
+    console.log(`Permission "${requiredPermission}" required — redirecting home`)
+    next('/')
+    return
+  }
 
   if (to.path === '/sign-in' && isValidToken) {
     console.log('User authenticated, redirecting to home')

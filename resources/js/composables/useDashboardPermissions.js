@@ -25,6 +25,7 @@ export function useDashboardPermissions() {
   const isAdmin = computed(() => isSuperAdmin.value || roles.value.includes('admin'))
   const isManager = computed(() => isAdmin.value || roles.value.includes('manager'))
   const isAgent = computed(() => !isManager.value)
+  const isHr = computed(() => roles.value.includes('hr'))
 
   const scopeLabel = computed(() => {
     if (isAdmin.value) return 'Company analytics'
@@ -32,18 +33,22 @@ export function useDashboardPermissions() {
     return 'My analytics'
   })
 
+  // 'leads-show' is the single permission gating both the Leads and Deals kanban
+  // (they're tabs of the same view — see kanban_deal.vue). HR is excluded outright,
+  // regardless of any other role/permission overlap, matching the header nav.
   const canViewModule = (module) => {
     const map = {
-      crm: () => isManager.value || hasPermission(user.value, 'leads-list') || hasPermission(user.value, 'leads-show'),
+      crm: () => !isHr.value && (isManager.value || hasPermission(user.value, 'leads-show')),
       listing: () =>
-        isManager.value
-        || roles.value.includes('only show listings')
-        || hasPermission(user.value, 'listings-list')
-        || hasPermission(user.value, 'listings-show')
-        || user.value?.is_listing_team
-        || hasPermission(user.value, 'leads-list')
-        || hasPermission(user.value, 'leads-show'),
-      hr: () => isAdmin.value || hasPermission(user.value, 'hr-view') || roles.value.includes('hr'),
+        !isHr.value && (
+          isManager.value
+          || roles.value.includes('only show listings')
+          || hasPermission(user.value, 'listings-list')
+          || hasPermission(user.value, 'listings-show')
+          || user.value?.is_listing_team
+          || hasPermission(user.value, 'leads-show')
+        ),
+      hr: () => isAdmin.value || hasPermission(user.value, 'hr-view') || isHr.value,
       finance: () => isAdmin.value || hasPermission(user.value, 'finance-view'),
       support: () => isManager.value || isAdmin.value,
       ai: () => true,
@@ -58,6 +63,7 @@ export function useDashboardPermissions() {
     isAdmin,
     isManager,
     isAgent,
+    isHr,
     scopeLabel,
     canViewModule,
     hasPermission: (p) => hasPermission(user.value, p),
