@@ -1951,8 +1951,8 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
         person?.reports_to_name ||
         person?.manager?.name ||
         person?.team_lead?.name ||
-        (type === 'responsible' ? (task?.parent?.name || task?.manager?.name || task?.team_lead?.name) : null) ||
-        (isActivityPersonType(type) ? (person?.parent_name || task?.parent?.manager_name || task?.parent?.manager?.name || task?.manager?.name) : null) ||
+        // NOTE: task?.parent is the lead's added-by user, not the responsible/activity
+        // person's manager — never fall back to it here, it silently shows the wrong name.
         'Not specified'
     const branch =
         person?.office_name ||

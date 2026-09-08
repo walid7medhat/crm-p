@@ -290,7 +290,8 @@ class StageController extends Controller
         $baseLeadsQuery = Lead::query();
         $kanbanEagerLoads = [
             'addedBy:id,name,display_name,avatar',
-            'responsiblePerson:id,name,display_name,avatar',
+            // parent_id: needed by KanbanLeadCardResource to resolve reports-to/branch (parent/admin_parent/office chain).
+            'responsiblePerson:id,name,display_name,avatar,parent_id',
             'propertyType:id,name',
             'area:id,name',
         ];
@@ -777,7 +778,7 @@ class StageController extends Controller
 
             $leadsQuery = $stage->leads()->with([
                 'addedBy:id,name,display_name,avatar',
-                'responsiblePerson:id,name,display_name,avatar',
+                'responsiblePerson:id,name,display_name,avatar,parent_id',
                 'propertyType:id,name',
                 'area:id,name',
             ]);

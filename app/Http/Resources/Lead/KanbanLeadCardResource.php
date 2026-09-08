@@ -76,11 +76,13 @@ class KanbanLeadCardResource extends JsonResource
             'duplicate_ids' => [],
             'is_reverted' => ! is_null($this->revert),
             'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
-            'responsible_person' => $this->whenLoaded('responsiblePerson', fn () => $this->formatLeadPoolUser($this->responsiblePerson)),
+            'responsible_person' => $this->whenLoaded('responsiblePerson', fn () => $this->formatLeadPoolUser($this->responsiblePerson, withHierarchy: true)),
             'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,
             'last_activity_at' => $lastActivityAt,
-            'last_activity_user' => $this->formatLeadPoolUser($lastActivityUser),
+            // Richer payload (parent/admin_parent/office via UserResource) — this is what feeds
+            // the "Activity" person hover card's Reports To/Branch, unlike the other slim fields above.
+            'last_activity_user' => $this->formatActivityUser($lastActivityUser),
             'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
             'api_first_question' => null,
@@ -93,17 +95,42 @@ class KanbanLeadCardResource extends JsonResource
     }
 
     /**
+     * Per-request memoization of user_id => [admin_parent_id, admin_parent_name, office_name],
+     * so the same responsible person repeated across many kanban cards only walks their
+     * parent chain once (see admin_parent/office accessors on User, User.php:271-304).
+     *
+     * @var array<int, array{admin_parent_id: int|null, admin_parent_name: string|null, office_name: string|null}>
+     */
+    protected static array $hierarchyCache = [];
+
+    protected function resolveHierarchy($user): array
+    {
+        if (! array_key_exists($user->id, static::$hierarchyCache)) {
+            $adminParent = $user->admin_parent;
+            $office = $user->office;
+
+            static::$hierarchyCache[$user->id] = [
+                'admin_parent_id' => $adminParent?->id,
+                'admin_parent_name' => \App\Models\User::resolveDisplayName($adminParent),
+                'office_name' => \App\Models\User::resolveDisplayName($office),
+            ];
+        }
+
+        return static::$hierarchyCache[$user->id];
+    }
+
+    /**
      * Compact user payload for pool/kanban cards (avoids UserResource children/parent role queries).
      *
      * @return array<string, mixed>|null
      */
-    protected function formatLeadPoolUser($user): ?array
+    protected function formatLeadPoolUser($user, bool $withHierarchy = false): ?array
     {
         if (! $user) {
             return null;
         }
 
-        return [
+        $payload = [
             'id' => $user->id,
             'name' => \App\Models\User::resolveDisplayName($user),
             'display_name' => $user->display_name,
@@ -111,5 +138,18 @@ class KanbanLeadCardResource extends JsonResource
             'avatar' => $user->avatar ? asset('storage/'.$user->avatar) : null,
             'status' => $user->status,
         ];
+
+        if ($withHierarchy) {
+            // "Reports To" = direct parent; "Branch" = office (see leads.vue / ResponsiblePersonSection.vue).
+            $payload['parent_id'] = $user->parent_id;
+            $payload['parent_name'] = \App\Models\User::resolveDisplayName($user->parent);
+
+            $hierarchy = $this->resolveHierarchy($user);
+            $payload['admin_parent_id'] = $hierarchy['admin_parent_id'];
+            $payload['admin_parent_name'] = $hierarchy['admin_parent_name'];
+            $payload['office_name'] = $hierarchy['office_name'];
+        }
+
+        return $payload;
     }
 }
