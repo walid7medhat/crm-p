@@ -48,11 +48,12 @@
           <button
             type="button"
             class="uac-nav-btn"
-            :disabled="loading || !canGoOlder"
+            :disabled="loading || loadingMore || !canGoOlder"
             @click="goOlder"
             aria-label="Older month"
           >
-            <i class="ri-arrow-right-s-line"></i>
+            <i v-if="loadingMore" class="spinner-border spinner-border-sm" style="width:12px;height:12px;" role="status"></i>
+            <i v-else class="ri-arrow-right-s-line"></i>
           </button>
         </div>
       </div>
@@ -129,9 +130,22 @@ import attendancesApi from '@/services/attendancesApi';
 export default {
   name: 'UserAttendanceCarousel',
   props: {
+    /** Max total months of history reachable via the "Older" arrow. */
     months: {
       type: Number,
       default: 12,
+    },
+    /** How many months to fetch on first paint — kept small so the page
+     *  doesn't wait on a full-year remote biometric sync just to show the
+     *  current month. Older months are fetched on demand as the user navigates. */
+    initialMonths: {
+      type: Number,
+      default: 3,
+    },
+    /** How many extra months to fetch each time the user reaches the oldest loaded month. */
+    monthsBatchSize: {
+      type: Number,
+      default: 3,
     },
     userId: {
       type: [Number, String],
@@ -141,10 +155,12 @@ export default {
   data() {
     return {
       loading: false,
+      loadingMore: false,
       error: null,
       monthData: [],
       monthIndex: 0,
       hasBiometric: true,
+      requestedMonths: 0,
     };
   },
   computed: {
@@ -154,14 +170,14 @@ export default {
     sortedDays() {
       if (!this.currentMonth?.daily_breakdown) return [];
       return [...this.currentMonth.daily_breakdown].sort(
-        (a, b) => new Date(b.date) - new Date(a.date),
+        (a, b) => new Date(a.date) - new Date(b.date),
       );
     },
     canGoNewer() {
       return this.monthIndex > 0;
     },
     canGoOlder() {
-      return this.monthIndex < this.monthData.length - 1;
+      return this.monthIndex < this.monthData.length - 1 || this.requestedMonths < this.months;
     },
     totalWorkingDays() {
       return this.currentMonth?.total_working_days || 0;
@@ -212,11 +228,12 @@ export default {
     async fetchHistory() {
       this.loading = true;
       this.error = null;
+      this.requestedMonths = Math.min(this.months, Math.max(1, this.initialMonths));
 
       try {
         const response = this.userId
-          ? await attendancesApi.userHistory(this.userId, this.months)
-          : await attendancesApi.profileHistory(this.months);
+          ? await attendancesApi.userHistory(this.userId, this.requestedMonths)
+          : await attendancesApi.profileHistory(this.requestedMonths);
         const payload = response.data || {};
         if (payload.success === false) {
           throw new Error(payload.message || 'Failed to load attendance');
@@ -237,8 +254,42 @@ export default {
     goNewer() {
       if (this.canGoNewer) this.monthIndex -= 1;
     },
-    goOlder() {
-      if (this.canGoOlder) this.monthIndex += 1;
+    async goOlder() {
+      if (this.monthIndex < this.monthData.length - 1) {
+        this.monthIndex += 1;
+        return;
+      }
+      if (this.requestedMonths >= this.months || this.loadingMore) return;
+      await this.loadMoreMonths();
+      if (this.monthIndex < this.monthData.length - 1) {
+        this.monthIndex += 1;
+      }
+    },
+    // Fetches a wider window (current requestedMonths + a batch) so the
+    // "Older" arrow can keep going without having loaded a year up front.
+    // The API always returns months ordered from "now" backwards, so a
+    // larger fetch simply appends older months at the same indices.
+    async loadMoreMonths() {
+      const nextRequested = Math.min(this.months, this.requestedMonths + this.monthsBatchSize);
+      if (nextRequested === this.requestedMonths) return;
+
+      this.loadingMore = true;
+      try {
+        const response = this.userId
+          ? await attendancesApi.userHistory(this.userId, nextRequested)
+          : await attendancesApi.profileHistory(nextRequested);
+        const payload = response.data || {};
+        if (payload.success === false) {
+          throw new Error(payload.message || 'Failed to load attendance');
+        }
+        this.monthData = Array.isArray(payload.data) ? payload.data : this.monthData;
+        this.requestedMonths = nextRequested;
+      } catch (e) {
+        // Keep whatever is already shown; older months just won't be reachable this attempt.
+        console.error('Failed to load older attendance months:', e);
+      } finally {
+        this.loadingMore = false;
+      }
     },
     statusClass(status) {
       return `status-${String(status || '').toLowerCase()}`;
