@@ -241,6 +241,11 @@ const updateResponsiblePerson = async () => {
             role_name: selectedPerson?.role_name,
             manager_name: selectedPerson?.parent_name,
             branch_name: selectedPerson?.branch_name,
+            // Displayed subline reads these field names (same shape as the lead's initial
+            // responsible_person payload from UserResource) — without them it keeps showing
+            // the previous person's "Reports To"/"Branch" instead of the new one's.
+            admin_parent_name: selectedPerson?.parent_name,
+            office_name: selectedPerson?.branch_name,
         })
         window.$showNotification?.('Responsible person updated successfully!', 'success')
         showPersonModal.value = false
