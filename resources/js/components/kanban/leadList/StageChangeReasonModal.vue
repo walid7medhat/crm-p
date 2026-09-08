@@ -938,7 +938,7 @@ const handleClickOutside = (event) => {
 const branchOptions = [
     { value: 'Abu Dhabi', text: 'Abu Dhabi' },
     { value: 'Dubai', text: 'Dubai' },
-    { value: 'Sharjah', text: 'Sharjah' }
+    // { value: 'Sharjah', text: 'Sharjah' }
 ]
 
 const lostReasonOptions = [
