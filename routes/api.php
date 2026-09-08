@@ -647,6 +647,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::get('/profile/attendance-history', [AttendanceController::class, 'myAttendanceHistory']);
+    Route::get('/dashboard/attendance-summary', [AttendanceController::class, 'dashboardAttendanceSummary']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);

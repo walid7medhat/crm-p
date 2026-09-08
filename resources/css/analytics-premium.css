@@ -1830,6 +1830,7 @@
 .adx-uni-band--deals,
 .adx-uni-band--listings,
 .adx-uni-band--hr,
+.adx-uni-band--attendance,
 .adx-uni-band--crm {
   background: var(--uni-card);
   border-color: var(--uni-border);
@@ -2729,6 +2730,196 @@
   background: var(--uni-card-inner);
   border: 1px solid var(--uni-border);
   overflow: visible;
+}
+
+/* ── Attendance band: ring | stats | team (team panel only for managers) ── */
+.adx-uni-band__icon--attendance {
+  background: linear-gradient(135deg, var(--uni-purple), var(--uni-purple-mid));
+}
+
+.adx-uni-attendance {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(160px, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.adx-uni-attendance--manager {
+  grid-template-columns: minmax(130px, 0.7fr) minmax(150px, 0.9fr) minmax(220px, 1.4fr);
+}
+
+.adx-uni-attendance__ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #f3eef9 0%, #ebe6f4 100%);
+  border: 1px solid var(--uni-border);
+  min-height: 148px;
+}
+
+.adx-uni-ring__fg--attendance {
+  stroke: var(--uni-purple);
+}
+
+.adx-uni-attendance__stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--uni-card-inner);
+  border: 1px solid var(--uni-border);
+  min-height: 148px;
+}
+
+.adx-uni-attendance-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.adx-uni-attendance-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--uni-border);
+}
+
+.adx-uni-attendance-chip strong {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.adx-uni-attendance-chip span {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--uni-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.adx-uni-attendance-chip--good { background: #f0fdf4; border-color: #bbf7d0; }
+.adx-uni-attendance-chip--good strong { color: var(--ap-green, #22c55e); }
+.adx-uni-attendance-chip--warn { background: #fffbeb; border-color: #fde68a; }
+.adx-uni-attendance-chip--warn strong { color: var(--uni-gold); }
+.adx-uni-attendance-chip--danger { background: #fef2f2; border-color: #fecaca; }
+.adx-uni-attendance-chip--danger strong { color: var(--ap-red, #ef4444); }
+
+.adx-uni-attendance__team {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--uni-card-inner);
+  border: 1px solid var(--uni-border);
+  min-height: 148px;
+}
+
+.adx-uni-attendance-team-count {
+  margin-left: 6px;
+  font-weight: 600;
+  color: var(--uni-text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.adx-uni-attendance-team-rate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.adx-uni-attendance-team-rate__track {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.adx-uni-attendance-team-rate__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--uni-purple), var(--uni-purple-mid));
+  transition: width 0.5s ease;
+}
+
+.adx-uni-attendance-team-rate strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--uni-purple-mid);
+  flex-shrink: 0;
+}
+
+.adx-uni-attendance-list {
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.adx-uni-attendance-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.adx-uni-attendance-avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--uni-card-inner);
+  color: var(--uni-text-muted);
+  font-size: 14px;
+}
+
+.adx-uni-attendance-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.adx-uni-attendance-status--good { background: #f0fdf4; color: #15803d; }
+.adx-uni-attendance-status--warn { background: #fffbeb; color: #b45309; }
+.adx-uni-attendance-status--danger { background: #fef2f2; color: #b91c1c; }
+
+@media (max-width: 1280px) {
+  .adx-uni-attendance,
+  .adx-uni-attendance--manager {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: auto;
+  }
+
+  .adx-uni-attendance__ring,
+  .adx-uni-attendance__team {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .adx-uni-attendance,
+  .adx-uni-attendance--manager {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .adx-uni-attendance__ring,
+  .adx-uni-attendance__stats,
+  .adx-uni-attendance__team {
+    min-height: auto;
+  }
 }
 
 /* Scrollable page — show all analysis (no clipping) */

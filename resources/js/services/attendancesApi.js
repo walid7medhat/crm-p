@@ -290,6 +290,15 @@ export async function updateAttendanceSettings(payload) {
   return response.data?.data ?? response.data
 }
 
+/**
+ * "This month so far" attendance widget for the home dashboard: the viewer's own
+ * progress, plus (for managers/team leads) their team's aggregate for the same period.
+ */
+export async function fetchDashboardAttendanceSummary() {
+  const response = await api.get('/dashboard/attendance-summary')
+  return response.data?.data ?? { is_manager: false, personal: null, team: null }
+}
+
 const attendancesApi = {
   profileHistory(months = 12) {
     return api.get('/profile/attendance-history', {

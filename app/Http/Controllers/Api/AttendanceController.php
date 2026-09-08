@@ -499,6 +499,94 @@ public function generatePeriodReport(Request $request)
 }
 
 /**
+ * Compact "this month so far" attendance widget for the home dashboard: the
+ * viewer's own progress, plus — for managers/team leads — their team's
+ * aggregate for the same period. Reads straight from the `attendances` table
+ * (kept fresh by the `attendance:sync` schedule every 5 minutes); no live
+ * remote sync here, so this stays fast even for a large team.
+ */
+public function dashboardAttendanceSummary(Request $request)
+{
+    $user = $request->user();
+    if (!$user) {
+        return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+    }
+
+    $now = Carbon::now('Asia/Dubai');
+    $startDate = $now->copy()->startOfMonth();
+    // Cap at "today" (not endOfMonth) so days that haven't happened yet this
+    // month aren't counted as absences.
+    $endDate = $now->copy();
+
+    $personal = array_merge([
+        'month' => $startDate->format('Y-m'),
+        'label' => $startDate->format('F Y'),
+        'period_start' => $startDate->format('Y-m-d'),
+        'period_end' => $endDate->format('Y-m-d'),
+    ], $this->buildUserPeriodReport($user, $startDate, $endDate));
+
+    $isManager = $user->hasRole('manager') || $user->hasRole('team_lead');
+    $team = null;
+
+    if ($isManager) {
+        $subordinateIds = array_values(array_diff($user->getAllSubordinatesIds(), [$user->id]));
+
+        if (!empty($subordinateIds)) {
+            $members = User::whereIn('id', $subordinateIds)
+                ->where('status', 'active')
+                ->with('roles')
+                ->get(['id', 'name', 'display_name', 'avatar']);
+
+            $totals = ['present' => 0, 'late' => 0, 'absent' => 0, 'total_working_days' => 0];
+            $memberRows = [];
+
+            foreach ($members as $member) {
+                $report = $this->buildUserPeriodReport($member, $startDate, $endDate);
+                $totals['present'] += $report['present'];
+                $totals['late'] += $report['late'];
+                $totals['absent'] += $report['absent'];
+                $totals['total_working_days'] += $report['total_working_days'];
+
+                $memberRows[] = [
+                    'id' => $member->id,
+                    'name' => User::resolveDisplayName($member),
+                    'avatar' => $member->avatar ? asset('storage/'.$member->avatar) : null,
+                    'role_name' => $member->roles->first()?->name,
+                    'present' => $report['present'],
+                    'late' => $report['late'],
+                    'absent' => $report['absent'],
+                    'total_working_days' => $report['total_working_days'],
+                ];
+            }
+
+            // Surface the members who need attention first.
+            usort($memberRows, fn ($a, $b) => [$b['absent'], $b['late']] <=> [$a['absent'], $a['late']]);
+
+            $totalPossible = $totals['present'] + $totals['late'] + $totals['absent'];
+            $team = [
+                'member_count' => count($memberRows),
+                'present' => $totals['present'],
+                'late' => $totals['late'],
+                'absent' => $totals['absent'],
+                'attendance_rate' => $totalPossible > 0
+                    ? round((($totals['present'] + $totals['late']) / $totalPossible) * 100, 1)
+                    : 0,
+                'members' => $memberRows,
+            ];
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'is_manager' => $isManager,
+            'personal' => $personal,
+            'team' => $team,
+        ],
+    ]);
+}
+
+/**
  * Monthly attendance history for the authenticated user (My Profile).
  */
 public function myAttendanceHistory(Request $request)

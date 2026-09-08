@@ -430,6 +430,104 @@
           </div>
         </div>
       </section>
+
+      <!-- 5. Attendance (everyone who doesn't see the HR band above) -->
+      <section v-if="showAttendance" class="adx-uni-band adx-uni-band--attendance">
+        <header class="adx-uni-band__head">
+          <div class="adx-uni-band__title">
+            <span class="adx-uni-band__icon adx-uni-band__icon--attendance">
+              <iconify-icon icon="lucide:calendar-check-2" width="18" height="18" />
+            </span>
+            <div>
+              <h2>{{ isAttendanceManager ? 'Team Attendance' : 'My Attendance' }}</h2>
+              <p>{{ attendancePeriodLabel || 'This month' }} so far</p>
+            </div>
+          </div>
+          <router-link to="/view-profile" class="adx-uni-band__link">
+            My Profile <iconify-icon icon="lucide:arrow-right" width="14" height="14" />
+          </router-link>
+        </header>
+
+        <div class="adx-uni-attendance" :class="{ 'adx-uni-attendance--manager': isAttendanceManager }">
+          <div class="adx-uni-attendance__ring">
+            <svg class="adx-uni-ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="adx-uni-ring__bg" cx="60" cy="60" r="52" />
+              <circle
+                class="adx-uni-ring__fg adx-uni-ring__fg--attendance"
+                cx="60" cy="60" r="52"
+                :stroke-dasharray="`${personalRingDash} 327`"
+              />
+            </svg>
+            <div class="adx-uni-hr__ring-center">
+              <strong>{{ personalAttendanceRate }}%</strong>
+              <span>my attendance</span>
+            </div>
+          </div>
+
+          <div class="adx-uni-attendance__stats">
+            <p class="adx-uni-panel-title">This month</p>
+            <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+            <div v-else class="adx-uni-attendance-chips">
+              <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good">
+                <strong>{{ formatNumber(personalAttendance.present) }}</strong>
+                <span>Present</span>
+              </div>
+              <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn">
+                <strong>{{ formatNumber(personalAttendance.late) }}</strong>
+                <span>Late</span>
+              </div>
+              <div class="adx-uni-attendance-chip adx-uni-attendance-chip--danger">
+                <strong>{{ formatNumber(personalAttendance.absent) }}</strong>
+                <span>Absent</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isAttendanceManager" class="adx-uni-attendance__team">
+            <p class="adx-uni-panel-title">
+              Team attendance
+              <span class="adx-uni-attendance-team-count">{{ teamAttendance.member_count }} members</span>
+            </p>
+            <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+            <template v-else>
+              <div class="adx-uni-attendance-team-rate">
+                <div class="adx-uni-attendance-team-rate__track">
+                  <div class="adx-uni-attendance-team-rate__fill" :style="{ width: `${teamAttendanceRate}%` }" />
+                </div>
+                <strong>{{ teamAttendanceRate }}%</strong>
+              </div>
+              <ul v-if="teamAttendance.members?.length" class="adx-uni-agent-list adx-uni-attendance-list">
+                <li
+                  v-for="member in teamAttendance.members.slice(0, 6)"
+                  :key="member.id"
+                  class="adx-uni-agent"
+                >
+                  <img
+                    v-if="member.avatar"
+                    :src="member.avatar"
+                    alt=""
+                    class="adx-uni-attendance-avatar"
+                  />
+                  <span v-else class="adx-uni-attendance-avatar adx-uni-attendance-avatar--placeholder">
+                    <iconify-icon icon="lucide:user-round" />
+                  </span>
+                  <div class="adx-uni-agent__info">
+                    <span class="adx-uni-agent__name">{{ member.name }}</span>
+                    <span class="adx-uni-agent__meta">{{ member.role_name || '—' }}</span>
+                  </div>
+                  <span
+                    class="adx-uni-attendance-status"
+                    :class="`adx-uni-attendance-status--${attendanceStatusTone(member)}`"
+                  >
+                    {{ member.present }}P · {{ member.late }}L · {{ member.absent }}A
+                  </span>
+                </li>
+              </ul>
+              <p v-else class="adx-uni-empty">No team members yet</p>
+            </template>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -442,6 +540,7 @@ import { useMobileNavigation } from '@/composables/useMobileNavigation.js'
 import { useAnalyticsDashboard } from '@/composables/useAnalyticsDashboard.js'
 import { useDashboardPermissions } from '@/composables/useDashboardPermissions.js'
 import { parseToDate } from '@/composables/useAdvancedDateModel.js'
+import { fetchDashboardAttendanceSummary } from '@/services/attendancesApi.js'
 
 const PURPLE = '#7c5cbf'
 const PURPLE_DARK = '#5b3d8f'
@@ -460,7 +559,9 @@ const { canViewModule, scopeLabel } = useDashboardPermissions()
 const showLeads = computed(() => canViewModule('crm'))
 const showDeals = computed(() => canViewModule('deals'))
 const showListing = computed(() => canViewModule('listing') || canViewModule('crm'))
-const showHr = computed(() => canViewModule('hr') || canViewModule('crm'))
+// HR band is for HR/admins only now — everyone else gets the Attendance band below instead.
+const showHr = computed(() => canViewModule('hr'))
+const showAttendance = computed(() => !showHr.value)
 
 const {
   crmLoading, dealsLoading, listingLoading, hrLoading,
@@ -583,6 +684,50 @@ const hrPresence = computed(() => [
   { label: 'Absent', value: Number(hr.value.absent_employees) || 0, color: GOLD },
   { label: 'On leave', value: Number(hr.value.on_leave) || 0, color: SLATE },
 ])
+
+// ── Attendance band (everyone who doesn't get the HR band) ──
+const attendanceLoading = ref(true)
+const attendanceData = ref({ is_manager: false, personal: null, team: null })
+
+const personalAttendance = computed(() => attendanceData.value.personal || {})
+const teamAttendance = computed(() => attendanceData.value.team)
+const isAttendanceManager = computed(() => !!attendanceData.value.is_manager && !!teamAttendance.value)
+
+function attendanceRate(present, late, total) {
+  const t = Number(total) || 0
+  if (!t) return 0
+  const good = (Number(present) || 0) + (Number(late) || 0)
+  return Math.min(100, Math.round((good / t) * 100))
+}
+
+const personalAttendanceRate = computed(() => attendanceRate(
+  personalAttendance.value.present,
+  personalAttendance.value.late,
+  personalAttendance.value.total_working_days,
+))
+const personalRingDash = computed(() => Math.round((personalAttendanceRate.value / 100) * 327))
+
+const teamAttendanceRate = computed(() => Math.min(100, Math.round(Number(teamAttendance.value?.attendance_rate) || 0)))
+const teamRingDash = computed(() => Math.round((teamAttendanceRate.value / 100) * 327))
+
+const attendancePeriodLabel = computed(() => personalAttendance.value.label || '')
+
+function attendanceStatusTone(member) {
+  if (Number(member.absent) > 0) return 'danger'
+  if (Number(member.late) > 0) return 'warn'
+  return 'good'
+}
+
+async function loadAttendanceSummary() {
+  attendanceLoading.value = true
+  try {
+    attendanceData.value = await fetchDashboardAttendanceSummary()
+  } catch (e) {
+    attendanceData.value = { is_manager: false, personal: null, team: null }
+  } finally {
+    attendanceLoading.value = false
+  }
+}
 
 function applyDateRange() {
   if (dateFrom.value && dateTo.value) {
@@ -783,6 +928,9 @@ function onResize() {
 
 onMounted(() => {
   load(true)
+  if (showAttendance.value) {
+    loadAttendanceSummary()
+  }
   window.addEventListener('resize', onResize)
 })
 
