@@ -98,7 +98,7 @@
                 <span>Leads</span>
               </a>
             </li>
-            <li v-if="!isSalesInListingTeam" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
+            <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
               <a href="/kanban_deal" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
                 <img :src="dealsIcon" class="imgicon submenu-icon" alt="" />
                 <span>Deals</span>
@@ -528,18 +528,6 @@ const isAdmin = computed(() => {
   return isAdminUser;
 });
 
-const isSalesInListingTeam = computed(() => {
-  if (!user.value) return false;
-  
-  // التحقق: المستخدم لديه role = sales وهو داخل listing_team
-  const hasSalesRole = user.value.roles?.includes('sales') || 
-                       user.value.roles?.includes('Sales');
-  
-  const isInListingTeam = user.value.is_listing_team === true || 
-                          user.value.is_listing_team === 1;
-  
-  return hasSalesRole && isInListingTeam;
-});
 const canShowLeadsTab = computed(() => {
   if (!user.value) return false;
   return isAdmin.value || proxy.$hasPermission('show-leads');
@@ -992,7 +980,7 @@ const mobileDockItems = computed(() => {
     items.push({ path: '/kanban', label: 'Leads', iconSrc: leadsIcon.value });
 
   }
-  if ( !isSalesInListingTeam.value && !isHr.value) {
+  if (!isShowOnlyListing.value && !isHr.value && canShowLeadsTab.value) {
     items.push({ path: '/kanban_deal', label: 'Deals', iconSrc: dealsIcon.value });
   }
 

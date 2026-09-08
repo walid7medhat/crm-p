@@ -292,6 +292,20 @@ class UserController extends Controller
                 }
             }
 
+            // Default Leads/Deals visibility: everyone gets it unless they land under a
+            // listing_team=1 manager's org (User::is_listing_team walks the parent chain).
+            // Never blocks user creation if this fails for any reason.
+            if (! $user->is_listing_team) {
+                try {
+                    $user->givePermissionTo('show-leads');
+                } catch (\Throwable $e) {
+                    \Log::warning('Failed to grant show-leads permission to new user', [
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             $user->load(['roles', 'parent']);
 
             return ApiResponse::success(

@@ -39,15 +39,14 @@ export function useDashboardPermissions() {
     return 'My analytics'
   })
 
-  // 'show-leads' gates the Leads kanban (same permission the router/header nav use — there is
-  // no 'leads-show' permission in the database). Deals has no permission gate at all — it
-  // mirrors header/index.vue's sidebar rule: open to everyone except HR and a sales agent
-  // embedded in the listing team. HR is excluded from 'crm'/'listing' outright, regardless of
-  // any other role/permission overlap, matching the header nav.
+  // 'show-leads' gates both the Leads and Deals kanban — same permission the router/header nav
+  // use (there is no separate 'show-deals' permission; deals access mirrors leads access
+  // exactly). HR is excluded from 'crm'/'listing' outright, regardless of any other
+  // role/permission overlap, matching the header nav.
   const canViewModule = (module) => {
     const map = {
       crm: () => !isHr.value && (isManager.value || hasPermission(user.value, 'show-leads')),
-      deals: () => !isHr.value && !isSalesInListingTeam.value,
+      deals: () => !isHr.value && (isManager.value || hasPermission(user.value, 'show-leads')),
       listing: () =>
         !isHr.value && (
           isManager.value
