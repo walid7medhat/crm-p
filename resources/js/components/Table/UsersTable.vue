@@ -342,8 +342,10 @@ export default {
             sortKey: '',
             sortAsc: true,
             users: [],
+            meta: { total: 0, last_page: 1, current_page: 1, per_page: 10 },
             statusLoading: null,
-                  defaultAvatar: '/assets/images/user.png'
+            searchDebounceTimer: null,
+            defaultAvatar: '/assets/images/user.png'
 
         };
     },
@@ -351,59 +353,23 @@ export default {
         entriesPerPage() {
             return Number(this.selectedShow);
         },
-        filteredUsers() {
-            let result = [...this.users];
-            result = result.filter(user => user.id != 1);
-            if (this.searchText) {
-                const search = this.searchText.toLowerCase();
-                result = result.filter(user =>
-                    (user.name && user.name.toLowerCase().includes(search)) ||
-                    (user.email && user.email.toLowerCase().includes(search)) ||
-                    (user.role_name && user.role_name.toLowerCase().includes(search)) ||
-                    (user.parent_name && user.parent_name.toLowerCase().includes(search)) ||
-                    (user.phone && user.phone.includes(search))
-                );
-            }
-
-            // Sorting
-            if (this.sortKey) {
-                result.sort((a, b) => {
-                    let valA = a[this.sortKey];
-                    let valB = b[this.sortKey];
-
-                    if (this.sortKey === 'created_at' || this.sortKey === 'last_login_at') {
-                        valA = new Date(valA || 0);
-                        valB = new Date(valB || 0);
-                    } else if (this.sortKey === 'status') {
-                        // Sort by status order: active > in_active > blocked
-                        const statusOrder = { 'active': 1, 'in_active': 2, 'blocked': 3 };
-                        valA = statusOrder[a.status] || 4;
-                        valB = statusOrder[b.status] || 4;
-                    } else {
-                        valA = String(valA || '').toLowerCase();
-                        valB = String(valB || '').toLowerCase();
-                    }
-
-                    return this.sortAsc ? valA > valB ? 1 : -1 : valA < valB ? 1 : -1;
-                });
-            }
-
-            return result;
-        },
+        // Pagination, search, and sorting now happen on the backend (see fetchUsers) —
+        // `users` is already just the current page, so this is a plain alias kept so the
+        // template doesn't need to change.
         paginatedUsers() {
-            return this.filteredUsers.slice(this.startIndex, this.endIndex);
+            return this.users;
         },
         totalEntries() {
-            return this.filteredUsers.length;
+            return this.meta.total;
         },
         totalPages() {
-            return Math.ceil(this.totalEntries / this.entriesPerPage);
+            return this.meta.last_page;
         },
         startIndex() {
-            return (this.currentPage - 1) * this.entriesPerPage;
+            return (this.meta.current_page - 1) * this.meta.per_page;
         },
         endIndex() {
-            return Math.min(this.startIndex + this.entriesPerPage, this.totalEntries);
+            return this.startIndex + this.users.length;
         },
         displayedPages() {
             const pages = [];
@@ -444,9 +410,15 @@ export default {
     watch: {
         selectedShow() {
             this.currentPage = 1;
+            this.fetchUsers();
         },
         searchText() {
             this.currentPage = 1;
+            // Debounce so we don't hit the API on every keystroke.
+            clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = setTimeout(() => {
+                this.fetchUsers();
+            }, 400);
         }
     },
     mounted() {
@@ -574,13 +546,25 @@ export default {
             }
         },
 
-        // API methods
+        // API methods — pagination, search, and sorting are all done server-side now
+        // (passing page/per_page opts the backend into `paginate()` instead of it
+        // returning every user), so this only ever fetches the one page being viewed.
         async fetchUsers() {
             try {
                 this.loading = true;
-                
+
                 const token = localStorage.getItem('token');
-                const response = await fetch(API_ENDPOINTS.USERS, {
+                const params = new URLSearchParams({
+                    page: String(this.currentPage),
+                    per_page: String(this.entriesPerPage),
+                    sort_by: this.sortKey || 'created_at',
+                    sort_dir: this.sortAsc ? 'asc' : 'desc',
+                });
+                if (this.searchText) {
+                    params.set('search', this.searchText);
+                }
+
+                const response = await fetch(`${API_ENDPOINTS.USERS}?${params.toString()}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': 'Bearer ' + token,
@@ -594,21 +578,19 @@ export default {
                 }
 
                 const data = await response.json();
-                
-                // Handle different response formats
-                if (data.data) {
-                    this.users = data.data;
-                } else if (Array.isArray(data)) {
-                    this.users = data;
-                } else {
-                    this.users = [];
-                }
-                
-                console.log('Users loaded:', this.users);
-                
+
+                this.users = Array.isArray(data.data) ? data.data : [];
+                this.meta = {
+                    total: data.meta?.total ?? this.users.length,
+                    last_page: data.meta?.last_page ?? 1,
+                    current_page: data.meta?.current_page ?? this.currentPage,
+                    per_page: data.meta?.per_page ?? this.entriesPerPage,
+                };
+
             } catch (error) {
                 console.error('Error fetching users:', error);
                 this.users = [];
+                this.meta = { total: 0, last_page: 1, current_page: 1, per_page: this.entriesPerPage };
                 this.showNotification('Failed to load users. Please try again.', 'error');
             } finally {
                 this.loading = false;
@@ -690,8 +672,13 @@ export default {
                     });
 
                     if (response.ok) {
-                        this.users = this.users.filter(u => u.id !== user.id);
                         this.showNotification(`User "${user.name}" has been deleted successfully.`, 'success');
+                        // Re-fetch this page rather than splicing locally — `meta.total`/
+                        // `last_page` need to stay accurate now that the backend paginates.
+                        if (this.users.length === 1 && this.currentPage > 1) {
+                            this.currentPage -= 1;
+                        }
+                        await this.fetchUsers();
                     } else {
                         const errorData = await response.json();
                         throw new Error(errorData.message || 'Failed to delete user');
@@ -792,11 +779,14 @@ export default {
                 this.sortKey = key;
                 this.sortAsc = true;
             }
+            this.currentPage = 1;
+            this.fetchUsers();
         },
 
         goToPage(page) {
-            if (page >= 1 && page <= this.totalPages) {
+            if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
                 this.currentPage = page;
+                this.fetchUsers();
             }
         },
 

@@ -35,14 +35,23 @@ class UserController extends Controller
         try {
             $user = Auth::user();
             
+            $isPaginated = $request->has('page') || $request->has('per_page');
+
             // Start the query
             $query = User::with([
                 'roles',
                 'permissions',
-                'parent',
+                'parent.roles',
                 'addedBy',
-                'children'
+                'employeeProfile.companyBranch',
+                'employeeProfile.designation',
+                'employeeProfile.department',
             ])
+            // UserResource recursively rebuilds a full nested resource for every entry in
+            // `children` — eager-loading it here is what the paginated table doesn't need
+            // (it never reads `children`), so skip it there to avoid that blow-up; the
+            // legacy full-list consumers (team tree, manager drill-down) still get it.
+            ->when(!$isPaginated, fn ($q) => $q->with('children'))
             ->when($request->has('status'), function($query) use ($request) {
                 $query->where('status', $request->status);
             });
@@ -95,8 +104,41 @@ class UserController extends Controller
                             // $q->where('is_active',true)->whereNotIn('status',['converted','draft'])->where('is_archived',false);
                   });
             }
-            $users = $query->orderBy('created_at','desc')->where('id','!=',auth()->user()->id)->get();
-            
+
+            $query->where('id', '!=', auth()->user()->id);
+
+            $allowedSorts = ['id', 'name', 'last_login_at', 'created_at'];
+            $sortBy = in_array($request->get('sort_by'), $allowedSorts, true) ? $request->get('sort_by') : 'created_at';
+            $sortDir = strtolower($request->get('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            $query->orderBy($sortBy, $sortDir);
+
+            // Pagination is opt-in (only when the caller sends page/per_page) so existing
+            // consumers that expect the full list back (team tree, activity log filters,
+            // manager drill-down) keep working unchanged.
+            if ($isPaginated) {
+                // The users table (management list) always hides the seed super_admin
+                // account — only meaningful once we're actually paginating that list.
+                $query->where('id', '!=', 1);
+
+                $perPage = max(1, (int) $request->get('per_page', 10));
+                $page = max(1, (int) $request->get('page', 1));
+                $paginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+                return ApiResponse::success(
+                    UserResource::collection($paginated->items()),
+                    'Users retrieved successfully',
+                    200,
+                    [
+                        'current_page' => $paginated->currentPage(),
+                        'per_page' => $paginated->perPage(),
+                        'total' => $paginated->total(),
+                        'last_page' => $paginated->lastPage(),
+                    ]
+                );
+            }
+
+            $users = $query->get();
+
             return ApiResponse::success(
                 UserResource::collection($users),
                 'Users retrieved successfully'
