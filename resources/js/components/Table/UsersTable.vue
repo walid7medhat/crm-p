@@ -91,7 +91,7 @@
                                         <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
                                     </span>
                                 </th>
-                                <th scope="col">Location</th>
+                                <th scope="col" v-if="hasAdminRole() || hasSuperAdminRole()">Location</th>
 
                                 <th scope="col">Actions</th>
                                 <th scope="col" @click="sortBy('created_at')" class="sortable">
@@ -110,7 +110,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="d-flex align-items-center">
+                                    <div class="d-flex align-items-center user-name-link" style="cursor: pointer;" @click="viewUser(user.id)">
                                         <div class="position-relative">
                                             <img
                                                 :src="avatarUrl(user)"
@@ -121,7 +121,7 @@
                                                 style="object-fit: cover;"
                                                 @error="handleImageError"
                                             />
-                                            <span v-if="isUserOnline(user)" 
+                                            <span v-if="isUserOnline(user)"
                                                   class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white"
                                                   style="width: 10px; height: 10px;"></span>
                                         </div>
@@ -184,7 +184,9 @@
                                             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                                         </div>
                                     </div>
-                                    <span v-else class="text-muted">No permission</span>
+                                    <span v-else class="text-sm fw-medium" :class="user.status === 'active' ? 'text-success' : 'text-muted'">
+                                        {{ user.status === 'active' ? 'Active' : 'Inactive' }}
+                                    </span>
                                 </td>
                                 <td>
                                     <span v-if="user.last_login_at" class="text-sm">
@@ -192,7 +194,7 @@
                                     </span>
                                     <span v-else class="text-muted text-sm">Never</span>
                                 </td>
-                                <td>
+                                <td v-if="hasAdminRole() || hasSuperAdminRole()">
                                     <a v-if="user.last_login_location && user.last_login_lat && user.last_login_lng"
                                        :href="mapsLink(user)"
                                        target="_blank"
@@ -1005,6 +1007,15 @@ export default {
 
 .sortable:hover {
     background-color: #f8f9fa;
+}
+
+.user-name-link h6 {
+    transition: color 0.15s;
+}
+
+.user-name-link:hover h6 {
+    color: #0B0736;
+    text-decoration: underline;
 }
 
 .loading, .no-data {

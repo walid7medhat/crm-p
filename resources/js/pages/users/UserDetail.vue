@@ -77,7 +77,7 @@
                                                     {{ user.admin_parent_name }}
                                                 </span>
                                         </div>
-                                        <div class="col-12" v-if="user.last_login_location" >
+                                        <div class="col-12" v-if="user.last_login_location && isAdminOrSuperAdmin" >
                                                 <label class="col-3">Location:</label>
                                                 <span class=" text-muted col-12 mb-0">
                                                     <i class="ri-map-pin-line me-1"></i>{{ user.last_login_location }}
@@ -648,6 +648,17 @@ export default {
         
         soldAgentProperties() {
             return this.agentProperties.filter(p => p.status === 'converted').length;
+        },
+
+        /** Last-login location is sensitive — only admin/super_admin can see it. */
+        isAdminOrSuperAdmin() {
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                const roles = me?.roles || [];
+                return roles.includes('super_admin') || roles.includes('admin');
+            } catch {
+                return false;
+            }
         },
 
         /** Current logged-in user can manage vacation for the viewed user.
