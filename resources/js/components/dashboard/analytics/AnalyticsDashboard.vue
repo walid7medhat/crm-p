@@ -449,7 +449,7 @@
         </header>
 
         <div class="adx-uni-attendance" :class="{ 'adx-uni-attendance--manager': isAttendanceManager }">
-          <div class="adx-uni-attendance__ring">
+          <div class="adx-uni-attendance__ring" title="On-time + late days ÷ working days so far this month">
             <svg class="adx-uni-ring" viewBox="0 0 120 120" aria-hidden="true">
               <circle class="adx-uni-ring__bg" cx="60" cy="60" r="52" />
               <circle
@@ -460,27 +460,35 @@
             </svg>
             <div class="adx-uni-hr__ring-center">
               <strong>{{ personalAttendanceRate }}%</strong>
-              <span>my attendance</span>
+              <span>days attended</span>
             </div>
           </div>
 
           <div class="adx-uni-attendance__stats">
             <p class="adx-uni-panel-title">This month</p>
             <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
-            <div v-else class="adx-uni-attendance-chips">
-              <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good">
-                <strong>{{ formatNumber(personalAttendance.present) }}</strong>
-                <span>Present</span>
+            <template v-else>
+              <div class="adx-uni-attendance-chips">
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good" title="Checked in before 9:16 AM">
+                  <strong>{{ formatNumber(personalAttendance.present) }}</strong>
+                  <span>Present</span>
+                </div>
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn" title="Checked in after 9:16 AM">
+                  <strong>{{ formatNumber(personalAttendance.late) }}</strong>
+                  <span>Late</span>
+                </div>
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--danger" title="No check-in recorded for that working day">
+                  <strong>{{ formatNumber(personalAttendance.absent) }}</strong>
+                  <span>Absent</span>
+                </div>
               </div>
-              <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn">
-                <strong>{{ formatNumber(personalAttendance.late) }}</strong>
-                <span>Late</span>
-              </div>
-              <div class="adx-uni-attendance-chip adx-uni-attendance-chip--danger">
-                <strong>{{ formatNumber(personalAttendance.absent) }}</strong>
-                <span>Absent</span>
-              </div>
-            </div>
+              <p class="adx-uni-attendance-legend">
+                <iconify-icon icon="lucide:info" width="12" height="12" />
+                <strong>Present</strong> = in before 9:16&nbsp;AM ·
+                <strong>Late</strong> = in after 9:16&nbsp;AM ·
+                <strong>Absent</strong> = no check-in that day
+              </p>
+            </template>
           </div>
 
           <div v-if="isAttendanceManager" class="adx-uni-attendance__team">
@@ -501,6 +509,7 @@
                   v-for="member in teamAttendance.members.slice(0, 6)"
                   :key="member.id"
                   class="adx-uni-agent"
+                  :class="{ 'adx-uni-agent--top': member.is_self }"
                 >
                   <img
                     v-if="member.avatar"
@@ -512,12 +521,13 @@
                     <iconify-icon icon="lucide:user-round" />
                   </span>
                   <div class="adx-uni-agent__info">
-                    <span class="adx-uni-agent__name">{{ member.name }}</span>
+                    <span class="adx-uni-agent__name">{{ member.name }}{{ member.is_self ? ' (You)' : '' }}</span>
                     <span class="adx-uni-agent__meta">{{ member.role_name || '—' }}</span>
                   </div>
                   <span
                     class="adx-uni-attendance-status"
                     :class="`adx-uni-attendance-status--${attendanceStatusTone(member)}`"
+                    title="P = Present (in before 9:16 AM) · L = Late · A = Absent"
                   >
                     {{ member.present }}P · {{ member.late }}L · {{ member.absent }}A
                   </span>

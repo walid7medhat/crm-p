@@ -2813,6 +2813,23 @@
 .adx-uni-attendance-chip--danger { background: #fef2f2; border-color: #fecaca; }
 .adx-uni-attendance-chip--danger strong { color: var(--ap-red, #ef4444); }
 
+.adx-uni-attendance-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 10px 0 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--uni-text-muted);
+  line-height: 1.5;
+}
+
+.adx-uni-attendance-legend strong {
+  font-weight: 700;
+  color: var(--uni-text);
+}
+
 .adx-uni-attendance__team {
   display: flex;
   flex-direction: column;

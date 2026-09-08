@@ -529,7 +529,10 @@ public function dashboardAttendanceSummary(Request $request)
     $team = null;
 
     if ($isManager) {
-        $subordinateIds = array_values(array_diff($user->getAllSubordinatesIds(), [$user->id]));
+        // Includes the manager/team lead themselves (getAllSubordinatesIds() already
+        // puts $user->id first) so their own attendance shows up alongside their team,
+        // not just in the separate personal ring above.
+        $subordinateIds = $user->getAllSubordinatesIds();
 
         if (!empty($subordinateIds)) {
             $members = User::whereIn('id', $subordinateIds)
@@ -552,6 +555,7 @@ public function dashboardAttendanceSummary(Request $request)
                     'name' => User::resolveDisplayName($member),
                     'avatar' => $member->avatar ? asset('storage/'.$member->avatar) : null,
                     'role_name' => $member->roles->first()?->name,
+                    'is_self' => (int) $member->id === (int) $user->id,
                     'present' => $report['present'],
                     'late' => $report['late'],
                     'absent' => $report['absent'],
@@ -559,8 +563,15 @@ public function dashboardAttendanceSummary(Request $request)
                 ];
             }
 
-            // Surface the members who need attention first.
-            usort($memberRows, fn ($a, $b) => [$b['absent'], $b['late']] <=> [$a['absent'], $a['late']]);
+            // Pin the viewer's own row first (easy to find "me"), then surface the
+            // members who need attention most.
+            usort($memberRows, function ($a, $b) {
+                if ($a['is_self'] !== $b['is_self']) {
+                    return $a['is_self'] ? -1 : 1;
+                }
+
+                return [$b['absent'], $b['late']] <=> [$a['absent'], $a['late']];
+            });
 
             $totalPossible = $totals['present'] + $totals['late'] + $totals['absent'];
             $team = [
