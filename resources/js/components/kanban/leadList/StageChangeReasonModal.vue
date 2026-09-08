@@ -1230,36 +1230,13 @@ const handleSubmit = async () => {
     }
     
     try {
-        const createLeadComment = async (text) => {
-            const formData = new FormData()
-            formData.append('lead_id', String(props.leadId))
-            formData.append('comment', text || '')
-            await api.post('/leads/add/new/comments', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            })
-        }
-
-        if (props.interactionMode && formData.value.interaction_result === 'no_answer') {
-            const payload = {
-                lead_id: props.leadId,
-                title: formData.value.interaction_note,
-                reminder_date: (reminderDate.value instanceof Date ? reminderDate.value : new Date(reminderDate.value)).toISOString()
-            }
-            if (reminders.value.length > 0) {
-                payload.reminders = reminders.value
-            }
-            await api.post('/leads/activities', payload)
-        }
-
+        // Do not await comment/activity APIs here — fold them into the single
+        // change-stage request so the modal can close immediately.
         const reasonText = props.interactionMode
             ? (formData.value.interaction_result === 'answered'
                 ? `Answered: ${formData.value.interaction_note}`
                 : `No Answer - Reminder: ${formData.value.interaction_note}`)
             : formData.value.reason
-
-        if (props.interactionMode && formData.value.interaction_result === 'answered') {
-            await createLeadComment(reasonText)
-        }
 
         const submitData = props.interactionMode
             ? {
@@ -1267,6 +1244,13 @@ const handleSubmit = async () => {
                 targetStageId: props.targetStageId,
                 reason: reasonText,
                 interaction_result: formData.value.interaction_result,
+                ...(formData.value.interaction_result === 'no_answer' && {
+                    activity_title: formData.value.interaction_note,
+                    activity_reminder_date: (reminderDate.value instanceof Date
+                        ? reminderDate.value
+                        : new Date(reminderDate.value)).toISOString(),
+                    ...(reminders.value.length > 0 && { activity_reminders: reminders.value }),
+                }),
                 ...(formData.value.interaction_result !== 'no_answer' && {
                     salutation: formData.value.salutation,
                     budget_from: formData.value.budget_from,

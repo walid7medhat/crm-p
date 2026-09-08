@@ -959,6 +959,12 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             // Stage 9: Lead Pool - استخدام status_lead
             'status_lead_pool' => 'nullable|string|max:100|in:no_answer,canceled,wrong_person,contacted',
             'interaction_result' => 'nullable|string|max:20|in:answered,no_answer',
+
+            // Call-result activity (Contacted / Follow Up) — created in this request
+            'activity_title' => 'nullable|string|max:500',
+            'activity_reminder_date' => 'nullable|date',
+            'activity_reminders' => 'nullable|array',
+            'activity_reminders.*' => 'integer',
             
             // Stage 10: Unqualified - استخدام status_lead
             'unqualified_status' => 'nullable',
@@ -1095,12 +1101,34 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         // تحديث الـ Lead
         $lead->update($updateData);
 
-        // إضافة التعليق إذا وجد
-        if($request->reason && $newStage->order != 3) {
+        // Call-result "No Answer": create reminder activity in the same request
+        // so the frontend does not need a second round-trip before change-stage.
+        if ($request->input('interaction_result') === 'no_answer' && $request->filled('activity_title')) {
+            $activity = LeadActivity::create([
+                'lead_id' => $lead->id,
+                'user_id' => auth()->id(),
+                'title' => $request->activity_title,
+                'reminder_date' => $request->activity_reminder_date ?: now(),
+                'reminders' => $request->activity_reminders ?: [],
+                'is_completed' => false,
+            ]);
+            $activity->calculateNextReminder();
+            $activity->save();
+
+            LeadHistoryHelper::log(
+                $lead->id,
+                [
+                    'action' => 'activity_created',
+                    'id' => $activity->id,
+                    'title' => $activity->title,
+                ]
+            );
+        } elseif ($request->reason) {
+            // Answered / normal stage reason comment (including Contacted order 3)
             LeadComment::create([
                 'lead_id' => $lead->id,
                 'comment' => $request->reason,
-                'user_id' => auth()->user()->id
+                'user_id' => auth()->id(),
             ]);
         }
 
@@ -1160,7 +1188,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             ]
         );
 
-        // تسجيل تغييرات الحقول الأخرى
+        // تسجيل تغييرات الحقول الأخرى (history only — one broadcast below)
         if (!empty($fields)) {
             LeadHistoryHelper::log(
                 $lead->id,
@@ -1169,10 +1197,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'fields' => $fields
                 ]
             );
-            $this->broadcastLeadUpdated($lead, 'updated');
         }
 
-        // =================== Broadcast ===================
+        // =================== Broadcast (single event) ===================
         $broadcastChanges = [
             'old_stage' => $oldStage->name,
             'new_stage' => $newStage->name,
@@ -1189,15 +1216,18 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         } else {
             $this->broadcastLeadUpdated($lead, 'stage_changed', $broadcastChanges);
         }
+
+        // Lightweight kanban card payload (avoids LeadResource history/duplicate queries)
+        $lead->loadMissing([
+            'stage:id,name,order,color',
+            'responsiblePerson:id,name,display_name,email,avatar,status',
+            'addedBy:id,name,display_name,email,avatar,status',
+            'propertyType:id,name',
+            'area:id,name',
+        ]);
         
         return ApiResponse::success(
-            new LeadResource($lead->load([
-                'stage',
-                'responsiblePerson',
-                'participants',
-                'observers.user',
-                'integration:id,project_id',
-            ])),
+            new KanbanLeadCardResource($lead),
             'Lead stage and data updated successfully'
         );
 

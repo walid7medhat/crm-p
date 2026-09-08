@@ -3756,6 +3756,9 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (additionalData.lost_reason) payload.why_lost_lead = additionalData.lost_reason
         if (additionalData.interaction_result) payload.interaction_result = additionalData.interaction_result
         if (additionalData.deal_name) payload.deal_name = additionalData.deal_name
+        if (additionalData.activity_title) payload.activity_title = additionalData.activity_title
+        if (additionalData.activity_reminder_date) payload.activity_reminder_date = additionalData.activity_reminder_date
+        if (additionalData.activity_reminders) payload.activity_reminders = additionalData.activity_reminders
         
         if (additionalData.lead_status) {
             if (targetStageOrder === 4 || (isConversion && targetStageOrder === 6)) {
@@ -3769,11 +3772,8 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             }
         }
 
-        console.log('Sending payload to backend:', payload)
-
         // Move the card and close the modal right away — don't make the user wait
         // on the network round trip to see the result of what they just submitted.
-        // The API call below still runs, and reconciles/reverts once it settles.
         lead.stage_id = targetStageId
         if (payload.salutation) lead.salutation = payload.salutation
         if (payload.budget_from) lead.budget_from = payload.budget_from
@@ -3792,51 +3792,53 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (payload.status_lead_pool) lead.status_lead = payload.status_lead_pool
         if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
         if (payload.deal_name) lead.deal_name = payload.deal_name
+        if (payload.interaction_result) lead.interaction_result = payload.interaction_result
+        lead.updated_at = new Date().toISOString()
         handleUpdatedLead(lead, 'updated')
         showStageChangeModal.value = false
-
-        // Send request
-        const response = await api.post(`/leads/${leadId}/change-stage`, payload)
-
-        console.log('Backend response:', response.data)
-
-        $showNotification(response.data?.message || 'Lead data updated successfully', 'success')
-
-        // Reconcile with the authoritative server copy (fresh activity/updated timestamps, etc.)
-        const freshLead = response.data?.data
-        if (freshLead) {
-            Object.assign(lead, freshLead)
-            handleUpdatedLead(lead, 'updated')
-        }
-
-        await nextTick()
-
-        // If this was for conversion (stage 6), open conversion modal
-        if (isConversion && targetStageOrder === 6) {
-            console.log('Opening conversion modal')
-            selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
-            selectedLeadData.value = lead
-
-            await nextTick()
-            if (convertModalRef.value) {
-                convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
-            }
-        }
-
+        $showNotification('Lead stage updated successfully', 'success')
         clearPendingStageChange()
 
-    } catch (error) {
-        console.error('Error in handleStageChangeWithReason:', error)
-        const errorMessage = error.response?.data?.message ||
-                            error.response?.data?.error ||
-                            'Failed to update lead data'
-        $showNotification(errorMessage, 'error')
+        // Fire API in background; reconcile lightly / revert on failure.
+        try {
+            const response = await api.post(`/leads/${leadId}/change-stage`, payload)
+            const freshLead = response.data?.data
+            if (freshLead && lead) {
+                const preserve = {
+                    duplicate_no: lead.duplicate_no,
+                    duplicate_ids: lead.duplicate_ids,
+                    has_service_duplicate: lead.has_service_duplicate,
+                }
+                Object.assign(lead, freshLead, preserve)
+                handleUpdatedLead(lead, 'updated')
+            }
 
-        // The card was already moved optimistically — put it back since the save failed.
-        if (lead?.id && originalStageId) {
-            lead.stage_id = originalStageId
-            handleUpdatedLead(lead, 'updated')
+            await nextTick()
+
+            if (isConversion && targetStageOrder === 6) {
+                selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
+                selectedLeadData.value = lead
+                await nextTick()
+                if (convertModalRef.value) {
+                    convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
+                }
+            }
+        } catch (error) {
+            console.error('Error in handleStageChangeWithReason:', error)
+            const errorMessage = error.response?.data?.message ||
+                                error.response?.data?.error ||
+                                'Failed to update lead data'
+            $showNotification(errorMessage, 'error')
+
+            if (lead?.id && originalStageId) {
+                lead.stage_id = originalStageId
+                handleUpdatedLead(lead, 'updated')
+            }
+            throw error
         }
+
+    } catch (error) {
+        console.error('Error preparing stage change:', error)
         clearPendingStageChange()
         throw error
     }

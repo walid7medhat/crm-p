@@ -482,72 +482,73 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
 
         console.log('📤 Sending payload to backend:', JSON.stringify(payload, null, 2))
 
-        // Send request
-        const response = await api.post(`/leads/${leadId}/change-stage`, payload)
-        
-        console.log('✅ Backend response:', response.data)
-        
-        $showNotification(response.data?.message || 'Lead data updated successfully', 'success')
-        
-        // ✅ تحديث الـ lead data محلياً
-        if (response.data?.data) {
-            lead.value = { ...lead.value, ...response.data.data }
-        } else {
-            if (payload.salutation) lead.value.salutation = payload.salutation
-            if (payload.stage_id) lead.value.stage_id = payload.stage_id
-            if (payload.budget_from) lead.value.budget_from = payload.budget_from
-            if (payload.budget_to) lead.value.budget_to = payload.budget_to
-            if (payload.lead_type) lead.value.lead_type = payload.lead_type
-            if (payload.property_status) lead.value.property_status = payload.property_status
-            if (payload.area_id) lead.value.area_id = payload.area_id
-            if (payload.property_type_id) lead.value.property_type_id = payload.property_type_id
-            if (payload.bedrooms) lead.value.bedrooms = payload.bedrooms
-            if (payload.purpose_buying) lead.value.purpose_buying = payload.purpose_buying
-            if (payload.lead_source) lead.value.lead_source = payload.lead_source
-            if (payload.available_date) lead.value.available_date = payload.available_date
-            if (payload.branch) lead.value.branch = payload.branch
-            if (payload.why_lost_lead) lead.value.why_lost_lead = payload.why_lost_lead
-            
-            if (payload.status_lead) lead.value.status_lead = payload.status_lead
-            if (payload.status_lead_pool) lead.value.status_lead = payload.status_lead_pool
-            if (payload.unqualified_status) lead.value.status_lead = payload.unqualified_status
-            if (payload.deal_name) lead.value.deal_name = payload.deal_name
-        }
-        
-        // Update stage selector
+        // Apply optimistically and close modal immediately (same as Kanban).
+        if (payload.salutation) lead.value.salutation = payload.salutation
+        if (payload.stage_id) lead.value.stage_id = payload.stage_id
+        if (payload.budget_from) lead.value.budget_from = payload.budget_from
+        if (payload.budget_to) lead.value.budget_to = payload.budget_to
+        if (payload.lead_type) lead.value.lead_type = payload.lead_type
+        if (payload.property_status) lead.value.property_status = payload.property_status
+        if (payload.area_id) lead.value.area_id = payload.area_id
+        if (payload.property_type_id) lead.value.property_type_id = payload.property_type_id
+        if (payload.bedrooms !== undefined && payload.bedrooms !== '') lead.value.bedrooms = payload.bedrooms
+        if (payload.purpose_buying) lead.value.purpose_buying = payload.purpose_buying
+        if (payload.lead_source) lead.value.lead_source = payload.lead_source
+        if (payload.available_date) lead.value.available_date = payload.available_date
+        if (payload.branch) lead.value.branch = payload.branch
+        if (payload.why_lost_lead) lead.value.why_lost_lead = payload.why_lost_lead
+        if (payload.status_lead) lead.value.status_lead = payload.status_lead
+        if (payload.status_lead_pool) lead.value.status_lead = payload.status_lead_pool
+        if (payload.unqualified_status) lead.value.status_lead = payload.unqualified_status
+        if (payload.deal_name) lead.value.deal_name = payload.deal_name
+        if (payload.interaction_result) lead.value.interaction_result = payload.interaction_result
+
         if (targetStageId) {
             leadStageId.value = targetStageId
         }
-        
-        // Close modal
+
         showStageChangeModal.value = false
-        
-        // Emit update to parent
+        $showNotification('Lead stage updated successfully', 'success')
         emit('lead-updated', lead.value)
-        
         clearPendingStageChange()
-        
-        // ✅ إعادة جلب البيانات للتأكد من التحديث
-        await fetchLead()
-        
-        // If this was for conversion (stage 6), open conversion modal
-        if (isConversion && targetStageOrder === 6) {
-            console.log('Opening conversion modal')
-            selectedLeadForConversion.value = leadId
-            selectedLeadData.value = lead.value
-            
-            await nextTick()
-            if (convertModalRef.value) {
-                convertModalRef.value.show()
+
+        try {
+            const response = await api.post(`/leads/${leadId}/change-stage`, {
+                ...payload,
+                ...(additionalData.activity_title && { activity_title: additionalData.activity_title }),
+                ...(additionalData.activity_reminder_date && { activity_reminder_date: additionalData.activity_reminder_date }),
+                ...(additionalData.activity_reminders && { activity_reminders: additionalData.activity_reminders }),
+            })
+
+            if (response.data?.data) {
+                lead.value = { ...lead.value, ...response.data.data }
+                emit('lead-updated', lead.value)
             }
+
+            // Background refresh — do not block the UI
+            fetchLead().catch(() => {})
+
+            if (isConversion && targetStageOrder === 6) {
+                selectedLeadForConversion.value = leadId
+                selectedLeadData.value = lead.value
+                await nextTick()
+                if (convertModalRef.value) {
+                    convertModalRef.value.show()
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error in handleStageChangeWithReason:', error)
+            const errorMessage = error.response?.data?.message ||
+                                error.response?.data?.error ||
+                                'Failed to update lead data'
+            $showNotification(errorMessage, 'error')
+            // Refresh to restore authoritative state after failed optimistic update
+            await fetchLead()
+            throw error
         }
         
     } catch (error) {
-        console.error('❌ Error in handleStageChangeWithReason:', error)
-        const errorMessage = error.response?.data?.message || 
-                            error.response?.data?.error || 
-                            'Failed to update lead data'
-        $showNotification(errorMessage, 'error')
+        console.error('❌ Error preparing stage change:', error)
         throw error
     }
 }
