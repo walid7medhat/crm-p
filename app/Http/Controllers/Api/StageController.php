@@ -309,10 +309,10 @@ class StageController extends Controller
                 $baseLeadsQuery->whereNull('revert');
             }
         } else {
-            $baseLeadsQuery->where(function ($q) use ($user) {
-                $q->where('responsible_person_id', $user->id)
-                  ->orWhere('added_by', $user->id);
-            })->whereNull('revert');
+            // Once reassigned, a lead a sales agent merely added no longer belongs to them —
+            // visibility is by current responsible person only, not by who created it.
+            $baseLeadsQuery->where('responsible_person_id', $user->id)
+                ->whereNull('revert');
         }
 
         // ================= apply all filters (unchanged logic) =================
@@ -796,10 +796,10 @@ class StageController extends Controller
                 }
             } 
             else {
-                $leadsQuery->where(function ($q) use ($user) {
-                    $q->where('responsible_person_id', $user->id)
-                      ->orWhere('added_by', $user->id);
-                })->whereNull('revert');
+                // Once reassigned, a lead a sales agent merely added no longer belongs to them —
+                // visibility is by current responsible person only, not by who created it.
+                $leadsQuery->where('responsible_person_id', $user->id)
+                    ->whereNull('revert');
             }
 
             // ================= نفس الفلاتر =================
@@ -1254,10 +1254,9 @@ public function getOffices()
                               ->orWhere('responsible_person_id', $user->id);
                     });
                 } else {
-                    $leadsQuery->where(function($query) use ($user) {
-                        $query->where('responsible_person_id', $user->id)
-                              ->orWhere('added_by', $user->id);
-                    });
+                    // Once reassigned, a lead a sales agent merely added no longer belongs to
+                    // them — visibility is by current responsible person only.
+                    $leadsQuery->where('responsible_person_id', $user->id);
                 }
             }
             

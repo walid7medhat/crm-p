@@ -252,10 +252,9 @@ class LeadController extends Controller
                             ->orWhereIn('added_by', $subordinatesIds);
                     });
                 } else {
-                    $leadsQuery->where(function ($query) use ($user) {
-                        $query->where('responsible_person_id', $user->id)
-                            ->orWhere('added_by', $user->id);
-                    });
+                    // Once reassigned, a lead a sales agent merely added no longer belongs to
+                    // them — visibility is by current responsible person only.
+                    $leadsQuery->where('responsible_person_id', $user->id);
                 }
 
                 // Paginated response (used by Lead Pool view) — flat leads array + pagination meta.
@@ -348,10 +347,9 @@ class LeadController extends Controller
                       ->orWhereIn('added_by', $subordinatesIds);
                 });
             } else {
-                $query->where(function ($q) use ($user) {
-                    $q->where('responsible_person_id', $user->id)
-                      ->orWhere('added_by', $user->id);
-                });
+                // Once reassigned, a lead a sales agent merely added no longer belongs to
+                // them — visibility is by current responsible person only.
+                $query->where('responsible_person_id', $user->id);
             }
 
             return ApiResponse::success(['total' => $query->count()], 'Total leads count');
