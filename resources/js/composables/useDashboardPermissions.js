@@ -41,12 +41,15 @@ export function useDashboardPermissions() {
 
   // 'show-leads' gates both the Leads and Deals kanban — same permission the router/header nav
   // use (there is no separate 'show-deals' permission; deals access mirrors leads access
-  // exactly). HR is excluded from 'crm'/'listing' outright, regardless of any other
-  // role/permission overlap, matching the header nav.
+  // exactly). Only admins bypass the permission outright (matching header/index.vue's
+  // canShowLeadsTab) — NOT isManager, since that would let a listing-team manager through
+  // regardless of the hierarchy-aware permission grant, defeating the whole point of it.
+  // HR is excluded from 'crm'/'listing' outright, regardless of any other role/permission
+  // overlap, matching the header nav.
   const canViewModule = (module) => {
     const map = {
-      crm: () => !isHr.value && (isManager.value || hasPermission(user.value, 'show-leads')),
-      deals: () => !isHr.value && (isManager.value || hasPermission(user.value, 'show-leads')),
+      crm: () => !isHr.value && (isAdmin.value || hasPermission(user.value, 'show-leads')),
+      deals: () => !isHr.value && (isAdmin.value || hasPermission(user.value, 'show-leads')),
       listing: () =>
         !isHr.value && (
           isManager.value
