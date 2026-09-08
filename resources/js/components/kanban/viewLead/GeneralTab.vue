@@ -351,9 +351,9 @@ const handlePersonUpdated = (updatedPerson) => {
             name: updatedPerson.name,
             avatar: updatedPerson.avatar,
             role_name: updatedPerson.role_name || props.lead?.responsible_person?.role_name,
+            parent_name: updatedPerson.parent_name,
             manager_name: updatedPerson.manager_name,
             branch_name: updatedPerson.branch_name,
-            admin_parent_name: updatedPerson.admin_parent_name,
             office_name: updatedPerson.office_name,
         }
     })

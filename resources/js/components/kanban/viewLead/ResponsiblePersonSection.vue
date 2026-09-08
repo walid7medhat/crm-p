@@ -43,11 +43,11 @@
                             </div>
                             <div class="person-hover-line">
                                 <span>Reports To</span>
-                                <b>{{ lead?.responsible_person?.manager_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</b>
+                                <b>{{ lead?.responsible_person?.parent_name || lead?.responsible_person?.manager_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</b>
                             </div>
                             <div class="person-hover-line">
                                 <span>Branch</span>
-                                <b>{{ lead?.responsible_person?.branch_name || lead?.lead_branch_source || 'Not specified' }}</b>
+                                <b>{{ lead?.responsible_person?.office_name || lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.branch_name || lead?.lead_branch_source || 'Not specified' }}</b>
                             </div>
                         </div>
                     </transition>
@@ -58,11 +58,11 @@
                     </div>
                     <div class="info-subline">
                            <span class="sub-key">Reports To: </span>
-                           <span class="sub-value"> {{ lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</span>
+                           <span class="sub-value"> {{ lead?.responsible_person?.parent_name || lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</span>
                        </div>
                     <div class="info-subline">
                         <span class="sub-key">Branch: </span>
-                        <span class="sub-value"> {{ lead?.responsible_person?.office_name || lead?.lead_branch_source || 'Not specified' }}</span>
+                        <span class="sub-value"> {{ lead?.responsible_person?.office_name || lead?.responsible_person?.admin_parent_name || lead?.lead_branch_source || 'Not specified' }}</span>
                     </div>
                 </div>
             </div>
@@ -239,13 +239,12 @@ const updateResponsiblePerson = async () => {
             name: selectedPerson?.name,
             avatar: selectedPerson?.avatar,
             role_name: selectedPerson?.role_name,
+            // "Reports To" = direct parent, "Branch" = office (getAvailableResponsiblePersons
+            // already resolves branch_name from the office hierarchy, not employeeProfile).
+            parent_name: selectedPerson?.parent_name,
             manager_name: selectedPerson?.parent_name,
-            branch_name: selectedPerson?.branch_name,
-            // Displayed subline reads these field names (same shape as the lead's initial
-            // responsible_person payload from UserResource) — without them it keeps showing
-            // the previous person's "Reports To"/"Branch" instead of the new one's.
-            admin_parent_name: selectedPerson?.parent_name,
             office_name: selectedPerson?.branch_name,
+            branch_name: selectedPerson?.branch_name,
         })
         window.$showNotification?.('Responsible person updated successfully!', 'success')
         showPersonModal.value = false

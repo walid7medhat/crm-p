@@ -1944,17 +1944,19 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
     const name = person?.name || person?.full_name || fallbackName
     const position = person?.position || person?.designation || person?.job_title || person?.role_name || person?.role || 'Team Member'
     const manager =
+        person?.parent_name ||
+        person?.parent?.name ||
         person?.manager_name ||
         person?.team_lead_name ||
         person?.reports_to_name ||
-        person?.parent_name ||
         person?.manager?.name ||
         person?.team_lead?.name ||
-        person?.parent?.name ||
         (type === 'responsible' ? (task?.parent?.name || task?.manager?.name || task?.team_lead?.name) : null) ||
         (isActivityPersonType(type) ? (person?.parent_name || task?.parent?.manager_name || task?.parent?.manager?.name || task?.manager?.name) : null) ||
         'Not specified'
     const branch =
+        person?.office_name ||
+        person?.admin_parent_name ||
         person?.branch_name ||
         person?.branch?.name ||
         person?.office ||
@@ -2004,6 +2006,8 @@ const enrichPersonHoverFromApi = async (userId, leadId, type, basePerson, task, 
                     ...user,
                     position: user.position || user.role_name || basePerson?.position,
                     branch_name: user.branch || user.branch_name || basePerson?.branch_name,
+                    office_name: user.office_name || basePerson?.office_name,
+                    admin_parent_name: user.admin_parent_name || basePerson?.admin_parent_name,
                     parent_name: user.parent_name || basePerson?.parent_name,
                 },
                 task,
