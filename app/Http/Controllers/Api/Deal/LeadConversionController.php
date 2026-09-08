@@ -193,21 +193,38 @@ class LeadConversionController extends Controller
 
             DB::commit();
 
+            // Lightweight payloads — full DealResource/LeadResource add history queries
+            // and make "Add Deal" feel stuck for seconds.
+            $deal->loadMissing(['stage:id,name,order,color,deal_type']);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Lead converted to deal successfully',
-                'data' => new DealResource($deal->load([
-                    'stage',
-                    'parties',
-                    'responsiblePerson',
-                    'documents',
-                    'properties'
-                ])),
-                // Fresh (post-update) lead so the client can move/remove its Kanban
-                // card locally instead of refetching the whole board.
-                'lead' => new \App\Http\Resources\Lead\LeadResource(
-                    $lead->fresh(['stage', 'responsiblePerson', 'addedBy'])
-                ),
+                'data' => [
+                    'id' => $deal->id,
+                    'deal_id' => $deal->id,
+                    'deal_number' => $deal->deal_number,
+                    'deal_type' => $deal->deal_type,
+                    'deal_name' => $deal->deal_name,
+                    'stage_id' => $deal->stage_id,
+                    'lead_id' => $deal->lead_id,
+                    'source' => $deal->source,
+                    'currency' => $deal->currency,
+                    'responsible_person_id' => $deal->responsible_person_id,
+                    'stage' => $deal->stage ? [
+                        'id' => $deal->stage->id,
+                        'name' => $deal->stage->name,
+                        'order' => $deal->stage->order,
+                        'color' => $deal->stage->color,
+                    ] : null,
+                ],
+                'lead' => [
+                    'id' => $lead->id,
+                    'stage_id' => $lead->stage_id,
+                    'converted_to_deal_id' => $lead->converted_to_deal_id,
+                    'converted_at' => $lead->converted_at,
+                    'updated_at' => $lead->updated_at,
+                ],
             ], 201);
 
         } catch (\Exception $e) {

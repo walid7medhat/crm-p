@@ -111,6 +111,11 @@ button.vs__clear {
   box-sizing: border-box !important;
 }
 
+/* Stage change (Move Lead) modal — v-select append-to-body must clear overlay */
+body.stage-change-modal-open .vs__dropdown-menu {
+  z-index: 12050 !important;
+}
+
 /* Stage completion modal is stacked above ViewDealModal; dropdown is append-to-body.
    Must clear DateTimePicker / DOB overlay (45000). */
 body.complete-stage-open .vs__dropdown-menu {

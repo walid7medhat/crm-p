@@ -33,6 +33,7 @@
       v-if="showLayout"
       v-model="showLeadViewModal"
       :leadId="leadViewModalId"
+      :initialLead="leadViewModalSeed"
       @lead-updated="notifyLeadViewUpdated"
     />
   </div>
@@ -71,6 +72,7 @@ export default {
     const {
       showLeadViewModal,
       leadViewModalId,
+      leadViewModalSeed,
       openLeadView,
       notifyLeadViewUpdated,
     } = useLeadViewModal()
@@ -155,6 +157,7 @@ export default {
       closeChat,
       showLeadViewModal,
       leadViewModalId,
+      leadViewModalSeed,
       notifyLeadViewUpdated,
     }
   }

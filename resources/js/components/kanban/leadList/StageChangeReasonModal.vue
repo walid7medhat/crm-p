@@ -985,14 +985,21 @@ const locationSecondLine = (value) => {
     return rest || 'UAE'
 }
 
-const areaOptions = computed(() => (areas.value || []).map(area => ({
-    value: area.id,
-    text: area.name
-})))
+const areaOptions = computed(() => (areas.value || []).map((area) => {
+    const place = area.name || area.title || ''
+    const parentPath = area.area_parents_title || area.subtitle || area.parent || ''
+    const text = parentPath && place && !String(place).includes(',')
+        ? `${place}, ${parentPath}`
+        : (place || parentPath || `Area #${area.id}`)
+    return {
+        value: area.id,
+        text,
+    }
+}))
 
-const propertyTypeOptions = computed(() => (propertyTypes.value || []).map(type => ({
+const propertyTypeOptions = computed(() => (propertyTypes.value || []).map((type) => ({
     value: type.id,
-    text: type.name
+    text: type.name || type.title || `Type #${type.id}`,
 })))
 
 const formData = ref({
@@ -1019,16 +1026,34 @@ const formData = ref({
 })
 
 const loadLookupData = async () => {
-    try {
-        const [areasRes, typesRes] = await Promise.all([
-            api.get('/listings/areas'),
-            api.get('/listings/property-types')
-        ])
-        areas.value = areasRes.data.data || []
-        propertyTypes.value = typesRes.data.data || []
-    } catch (error) {
-        console.error('Error loading lookup data:', error)
+    const unwrapList = (payload) => {
+        if (Array.isArray(payload)) return payload
+        if (Array.isArray(payload?.data)) return payload.data
+        if (Array.isArray(payload?.data?.data)) return payload.data.data
+        return []
     }
+
+    // Load independently so a slow/failing areas call does not blank property types.
+    // Use has_listings=true — same fast path as Create Lead / Lead Info.
+    const loadAreas = api.get('/listings/areas', { params: { has_listings: true } })
+        .then((areasRes) => {
+            areas.value = unwrapList(areasRes.data?.data ?? areasRes.data)
+        })
+        .catch((error) => {
+            console.error('Error loading areas:', error)
+            areas.value = []
+        })
+
+    const loadTypes = api.get('/listings/property-types')
+        .then((typesRes) => {
+            propertyTypes.value = unwrapList(typesRes.data?.data ?? typesRes.data)
+        })
+        .catch((error) => {
+            console.error('Error loading property types:', error)
+            propertyTypes.value = []
+        })
+
+    await Promise.all([loadAreas, loadTypes])
 }
 
 const closeModal = () => {
@@ -1238,6 +1263,13 @@ const handleSubmit = async () => {
                 : `No Answer - Reminder: ${formData.value.interaction_note}`)
             : formData.value.reason
 
+        const areaLabel = formData.value.area_id
+            ? (areaOptions.value.find((o) => o.value === formData.value.area_id)?.text || '')
+            : ''
+        const propertyTypeLabel = formData.value.property_type_id
+            ? (propertyTypeOptions.value.find((o) => o.value === formData.value.property_type_id)?.text || '')
+            : ''
+
         const submitData = props.interactionMode
             ? {
                 leadId: props.leadId,
@@ -1259,6 +1291,8 @@ const handleSubmit = async () => {
                     property_status: formData.value.property_status,
                     area_id: formData.value.area_id,
                     property_type_id: formData.value.property_type_id,
+                    ...(areaLabel && { area: areaLabel }),
+                    ...(propertyTypeLabel && { property_type: propertyTypeLabel }),
                     bedrooms: bedroomsValue,
                     purpose_buying: formData.value.purpose_buying,
                     lead_status: formData.value.lead_status,
@@ -1279,6 +1313,8 @@ const handleSubmit = async () => {
                 }),
                 area_id: formData.value.area_id,
                 property_type_id: formData.value.property_type_id,
+                ...(areaLabel && { area: areaLabel }),
+                ...(propertyTypeLabel && { property_type: propertyTypeLabel }),
                 ...(!checkIsPlotsOrLand() && {
                     bedrooms: bedroomsValue,
                 }),
@@ -1322,6 +1358,9 @@ const checkIsPlotsOrLand = () => {
 }
 
 watch(visible, (newVal) => {
+    if (typeof document !== 'undefined') {
+        document.body.classList.toggle('stage-change-modal-open', !!newVal)
+    }
     if (newVal) {
         loadLookupData()
         if (props.leadData) {
@@ -1356,6 +1395,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    document.body.classList.remove('stage-change-modal-open')
     document.removeEventListener('click', handleClickOutside)
     removeReminderDropdownListeners()
     removeBudgetDropdownListeners()
@@ -2564,4 +2604,15 @@ defineExpose({
  .vs__dropdown-option{
         font-size: 14px !important;
     }
+
+/* append-to-body menus must sit above the stage-change overlay (z-index 2000) */
+body.stage-change-modal-open .vs__dropdown-menu {
+    z-index: 12050 !important;
+}
+body.stage-change-modal-open .vs__dropdown-menu .location-option-name,
+body.stage-change-modal-open .vs__dropdown-menu .location-option-subtitle,
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
 </style>

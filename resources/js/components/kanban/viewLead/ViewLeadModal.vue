@@ -118,6 +118,11 @@ const props = defineProps({
         type: [Number, String],
         default: null
     },
+    /** Local card/lead snapshot so the modal can paint before GET finishes. */
+    initialLead: {
+        type: Object,
+        default: null
+    },
     /** Use a higher value when opening on top of another modal (e.g. view deal). */
     zIndex: {
         type: Number,
@@ -341,8 +346,7 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
 
         await nextTick()
         if (convertModalRef.value) {
-            
-            convertModalRef.value.show()
+            convertModalRef.value.show(lead.value.id, lead.value)
         }
         return
     }
@@ -502,6 +506,8 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         if (payload.unqualified_status) lead.value.status_lead = payload.unqualified_status
         if (payload.deal_name) lead.value.deal_name = payload.deal_name
         if (payload.interaction_result) lead.value.interaction_result = payload.interaction_result
+        if (additionalData.area) lead.value.area = additionalData.area
+        if (additionalData.property_type) lead.value.property_type = additionalData.property_type
 
         if (targetStageId) {
             leadStageId.value = targetStageId
@@ -511,6 +517,17 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         $showNotification('Lead stage updated successfully', 'success')
         emit('lead-updated', lead.value)
         clearPendingStageChange()
+
+        // Open convert picker immediately — don't wait for change-stage to finish.
+        if (isConversion && targetStageOrder === 6) {
+            selectedLeadForConversion.value = leadId
+            selectedLeadData.value = lead.value
+            nextTick(() => {
+                if (convertModalRef.value) {
+                    convertModalRef.value.show(leadId, lead.value)
+                }
+            })
+        }
 
         try {
             const response = await api.post(`/leads/${leadId}/change-stage`, {
@@ -526,16 +543,7 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
             }
 
             // Background refresh — do not block the UI
-            fetchLead().catch(() => {})
-
-            if (isConversion && targetStageOrder === 6) {
-                selectedLeadForConversion.value = leadId
-                selectedLeadData.value = lead.value
-                await nextTick()
-                if (convertModalRef.value) {
-                    convertModalRef.value.show()
-                }
-            }
+            fetchLead({ silent: true }).catch(() => {})
         } catch (error) {
             console.error('❌ Error in handleStageChangeWithReason:', error)
             const errorMessage = error.response?.data?.message ||
@@ -558,19 +566,40 @@ const clearPendingStageChange = () => {
     missingFieldsForLead.value = []
 }
 
-const fetchLead = async () => {
+const fetchLead = async ({ silent = false } = {}) => {
     if (!props.leadId) return
-    isLoadingLead.value = true
-    // Drop stale lead so the spinner shows immediately for the new open.
-    if (lead.value?.id !== props.leadId) {
+    const leadIdNum = Number(props.leadId)
+    const seed = props.initialLead
+    const seedMatches = seed && Number(seed.id) === leadIdNum
+
+    // Paint from local card data immediately so submitted stage-change fields show now.
+    if (seedMatches) {
+        if (!lead.value || Number(lead.value.id) !== leadIdNum) {
+            lead.value = { ...seed }
+        } else {
+            lead.value = { ...lead.value, ...seed }
+        }
+        if (seed.stage_id) leadStageId.value = seed.stage_id
+    } else if (!lead.value || Number(lead.value.id) !== leadIdNum) {
         lead.value = null
     }
+
+    if (!silent) {
+        isLoadingLead.value = !lead.value
+    }
+
     try {
         const response = await api.get(`/leads/${props.leadId}`)
-        lead.value = response.data.data
+        const fresh = response.data.data
+        if (fresh) {
+            lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
+            if (fresh.stage_id) leadStageId.value = fresh.stage_id
+        }
     } catch (error) {
         console.error('❌ Error fetching lead:', error)
-        $showNotification('Failed to load lead details', 'error')
+        if (!lead.value) {
+            $showNotification('Failed to load lead details', 'error')
+        }
     } finally {
         isLoadingLead.value = false
     }

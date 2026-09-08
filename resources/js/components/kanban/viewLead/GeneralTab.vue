@@ -561,13 +561,15 @@ onMounted(() => {
 
 watch(
     () => props.lead?.id,
-    (id) => {
-        showActivityTimeline.value = false
-        if (!id) return
-        // Let the lead info paint first; timeline/history is secondary.
-        setTimeout(() => {
-            showActivityTimeline.value = true
-        }, 150)
+    (id, prevId) => {
+        if (!id) {
+            showActivityTimeline.value = false
+            return
+        }
+        // Keep timeline mounted when refreshing the same lead so comments/activities
+        // stay visible and new submits appear instantly.
+        if (id === prevId && showActivityTimeline.value) return
+        showActivityTimeline.value = true
     },
     { immediate: true }
 )

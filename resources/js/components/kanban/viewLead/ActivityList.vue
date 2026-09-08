@@ -857,6 +857,24 @@ watch(() => props.leadId, (newLeadId) => {
 
 // Add new activity to the list (called from parent when activity is created)
 const addActivity = (newActivity) => {
+    if (!newActivity) return
+
+    if (newActivity._removeTempId) {
+        activities.value = activities.value.filter((a) => String(a.id) !== String(newActivity._removeTempId))
+        return
+    }
+
+    if (newActivity._replaceTempId) {
+        const idx = activities.value.findIndex((a) => String(a.id) === String(newActivity._replaceTempId))
+        const transformedActivity = transformActivity(newActivity)
+        if (idx !== -1) {
+            activities.value.splice(idx, 1, transformedActivity)
+        } else {
+            activities.value.unshift(transformedActivity)
+        }
+        return
+    }
+
     // Transform the new activity to match the expected structure
     const transformedActivity = transformActivity(newActivity)
     

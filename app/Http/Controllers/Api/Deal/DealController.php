@@ -271,11 +271,12 @@ class DealController extends Controller
                 'stage_name' => $stage->name,
                 'stage_color' => $stage->color,
                 'deal_type' => $stage->deal_type,
+                'order' => $stage->order,
                 'deals_count' => $totalCount,
                 'total_count' => $totalCount,
                 'current_page' => 1,
                 'per_page' => $perPage,
-                'deals' => DealResource::collection($stageDeals),
+                'deals' => DealResource::collection($stageDeals)->resolve(),
                 'has_more_pages' => $stageDeals->hasMorePages()
             ];
         });

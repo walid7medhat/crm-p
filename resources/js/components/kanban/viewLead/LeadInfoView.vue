@@ -1511,14 +1511,21 @@ const buildPersistedRequirementList = (rows, sourceId = 'primary') => {
 }
 
 const fetchClientReqLookups = async () => {
+    const unwrapList = (payload) => {
+        if (Array.isArray(payload)) return payload
+        if (Array.isArray(payload?.data)) return payload.data
+        if (Array.isArray(payload?.data?.data)) return payload.data.data
+        return []
+    }
+
     if (clientReqAreas.value.length === 0) {
         try {
             isLoadingClientReqAreas.value = true
             const response = await api.get('/listings/areas/?has_listings=true')
-            const data = response.data.data || response.data
+            const data = unwrapList(response.data?.data ?? response.data)
             clientReqAreas.value = data.map((area) => ({
                 id: area.id,
-                name: area.name || area.title,
+                name: area.name || area.title || `Area #${area.id}`,
                 parent: area.area_parents_title || null,
             }))
         } catch (e) {
@@ -1531,10 +1538,10 @@ const fetchClientReqLookups = async () => {
         try {
             isLoadingClientReqPropertyTypes.value = true
             const res = await api.get('/listings/property-types')
-            const data = res.data.data || res.data
+            const data = unwrapList(res.data?.data ?? res.data)
             clientReqPropertyTypeOptions.value = data.map((item) => ({
                 value: item.id,
-                text: item.name,
+                text: item.name || item.title || `Type #${item.id}`,
             }))
         } catch (e) {
             console.error(e)

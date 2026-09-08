@@ -482,6 +482,24 @@ onMounted(() => {
 
 // Method to add a new comment to the list
 const addComment = (newComment) => {
+    if (!newComment) return
+
+    if (newComment._removeTempId) {
+        comments.value = comments.value.filter((c) => String(c.id) !== String(newComment._removeTempId))
+        return
+    }
+
+    if (newComment._replaceTempId) {
+        const idx = comments.value.findIndex((c) => String(c.id) === String(newComment._replaceTempId))
+        const transformedComment = transformComment(newComment)
+        if (idx !== -1) {
+            comments.value.splice(idx, 1, transformedComment)
+        } else {
+            comments.value.unshift(transformedComment)
+        }
+        return
+    }
+
     // Transform the new comment to match the expected structure
     const transformedComment = transformComment(newComment)
     

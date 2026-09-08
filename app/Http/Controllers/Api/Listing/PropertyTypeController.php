@@ -65,7 +65,7 @@ class PropertyTypeController extends Controller
             });
             
             return ApiResponse::success(
-                PropertyTypeResource::collection($propertyTypes),
+                PropertyTypeResource::collection($propertyTypes)->resolve(),
                 'Property types retrieved successfully'
             );
         } catch (\Exception $e) {
@@ -286,7 +286,7 @@ class PropertyTypeController extends Controller
         $propertyTypes = $query->orderBy('parent_id', 'desc')->get();
         
         return ApiResponse::success(
-            PropertyTypeResource::collection($propertyTypes),
+            PropertyTypeResource::collection($propertyTypes)->resolve(),
             'Property types retrieved successfully (cache fallback)'
         );
     }

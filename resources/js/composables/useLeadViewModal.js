@@ -5,6 +5,8 @@ import api from '@/plugins/axios'
 
 export const showLeadViewModal = ref(false)
 export const leadViewModalId = ref(null)
+/** Optional kanban/card payload so View Lead can paint before GET /leads/{id} returns. */
+export const leadViewModalSeed = ref(null)
 const leadUpdatedListeners = new Set()
 
 let router = null
@@ -20,6 +22,7 @@ export function useLeadViewModal() {
   return {
     showLeadViewModal,
     leadViewModalId,
+    leadViewModalSeed,
     openLeadView,
     closeLeadView,
     onLeadViewUpdated,
@@ -31,11 +34,18 @@ export function useLeadViewModal() {
   }
 }
 
-export function openLeadView(leadId) {
+/**
+ * @param {number|string} leadId
+ * @param {object|null} [leadData] Local card/lead object for instant paint
+ */
+export function openLeadView(leadId, leadData = null) {
   const id = Number(leadId)
   if (!id) return
 
   leadViewModalId.value = id
+  leadViewModalSeed.value = leadData && typeof leadData === 'object'
+    ? { ...leadData, id: leadData.id || id }
+    : null
   showLeadViewModal.value = true
   api.get(`/leads/${id}/history/view`).catch(() => {})
   
@@ -46,24 +56,13 @@ export function openLeadView(leadId) {
     }).catch(() => {})
   }
 }
-export function openLeadViewWithUrl(leadId) {
-  const id = Number(leadId)
-  if (!id) return
-
-  leadViewModalId.value = id
-  showLeadViewModal.value = true
-  api.get(`/leads/${id}/history/view`).catch(() => {})
-  
-  if (router) {
-    router.push({
-      path: '/kanban',
-      query: { lead: id }
-    }).catch(() => {})
-  }
+export function openLeadViewWithUrl(leadId, leadData = null) {
+  openLeadView(leadId, leadData)
 }
 
 export function closeLeadViewWithUrl() {
   showLeadViewModal.value = false
+  leadViewModalSeed.value = null
   if (router && route?.query?.lead) {
     router.push({
       path: '/kanban',
@@ -74,6 +73,7 @@ export function closeLeadViewWithUrl() {
 
 export function closeLeadView() {
   showLeadViewModal.value = false
+  leadViewModalSeed.value = null
   if (router && route?.query?.lead) {
     router.push({
       path: '/kanban',

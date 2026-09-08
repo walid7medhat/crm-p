@@ -274,6 +274,14 @@ const handleSave = async () => {
         if (!props.leadId) {
             errorMessage.value = 'Lead ID is required'
             $showNotification('Lead ID is required', 'error')
+            isSubmitting.value = false
+            return
+        }
+
+        if (!activityText.value?.trim()) {
+            errorMessage.value = 'Title is required'
+            $showNotification('Please enter an activity title', 'warning')
+            isSubmitting.value = false
             return
         }
         
@@ -284,57 +292,70 @@ const handleSave = async () => {
         const formattedReminderDate = reminderDateTime instanceof Date 
             ? reminderDateTime.toISOString() 
             : new Date(reminderDateTime).toISOString()
+
+        const title = activityText.value
+        const remindersSnapshot = [...reminders.value]
+        const tempId = `temp-${Date.now()}`
+
+        // Show activity in the list immediately; sync with server in background.
+        emit('activity-created', {
+            id: tempId,
+            title,
+            reminder_date: formattedReminderDate,
+            created_at: new Date().toISOString(),
+            is_completed: false,
+            status: 'Pending',
+            reminders: remindersSnapshot,
+            user_name: currentUser.value?.name || currentUser.value?.display_name || 'You',
+            user_avatar: currentUser.value?.avatar_url || currentUser.value?.avatar || null,
+            _optimistic: true,
+        })
+        handleCancel()
+        $showNotification('Activity created successfully!', 'success')
+        isSubmitting.value = false
         
         const payload = {
             lead_id: props.leadId,
-            title: activityText.value,
+            title,
             reminder_date: formattedReminderDate,
         }
-        
-        // Add reminders array if any selected
-        if (reminders.value.length > 0) {
-            payload.reminders = reminders.value
+        if (remindersSnapshot.length > 0) {
+            payload.reminders = remindersSnapshot
         }
-        
-        const response = await api.post('/leads/activities', payload)
-        
-        console.log('✅ Activity saved successfully:', response.data)
-        
-        // Success: reset form and show notification
-        handleCancel()
-        $showNotification('Activity created successfully!', 'success')
-        
-        // Emit event to parent with the created activity data
-        const activityData = response.data?.data || response.data
-        emit('activity-created', activityData)
+
+        try {
+            const response = await api.post('/leads/activities', payload)
+            const activityData = response.data?.data || response.data
+            if (activityData) {
+                emit('activity-created', {
+                    ...activityData,
+                    _replaceTempId: tempId,
+                })
+            }
+        } catch (error) {
+            console.error('❌ Error saving activity:', error)
+            emit('activity-created', { _removeTempId: tempId })
+
+            if (error.response && error.response.status === 422) {
+                const errors = error.response.data.errors || {}
+                if (errors.title) {
+                    errorMessage.value = errors.title[0] || 'Title is required'
+                } else if (errors.reminder_date) {
+                    errorMessage.value = errors.reminder_date[0] || 'Reminder date is invalid'
+                } else {
+                    errorMessage.value = 'Please fix the validation errors below.'
+                }
+                $showNotification('Please check the form for errors', 'warning')
+            } else {
+                errorMessage.value = error.response?.data?.message || 'Failed to create activity. Please try again.'
+                $showNotification(errorMessage.value, 'error')
+            }
+        }
         
     } catch (error) {
         console.error('❌ Error saving activity:', error)
-        
-        // Handle validation errors (422 status)
-        if (error.response && error.response.status === 422) {
-            const errors = error.response.data.errors || {}
-            validationErrors.value = errors
-            
-            // Extract specific field errors
-            if (errors.title) {
-                errorMessage.value = errors.title[0] || 'Title is required'
-            } else if (errors.reminder_date) {
-                errorMessage.value = errors.reminder_date[0] || 'Reminder date is invalid'
-            } else if (errors.reminder_option) {
-                errorMessage.value = errors.reminder_option[0] || 'Reminder option is invalid'
-            } else {
-                errorMessage.value = 'Please fix the validation errors below.'
-            }
-            
-            $showNotification('Please check the form for errors', 'warning')
-        } else {
-            // General error
-            errorMessage.value = error.response?.data?.message || 'Failed to create activity. Please try again.'
-            $showNotification(errorMessage.value, 'error')
-        }
-    } finally {
         isSubmitting.value = false
+        $showNotification(error.response?.data?.message || 'Failed to create activity. Please try again.', 'error')
     }
 }
 

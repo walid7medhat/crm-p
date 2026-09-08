@@ -955,16 +955,25 @@ watch(() => props.modelValue, async (val) => {
   show.value = val
   if (val && props.deal?.deal_type) {
     dealType.value = props.deal.deal_type
-    await hydrateDealForView()
     await fetchStagesFromAPI(props.deal.deal_type)
+    selectedStageIndex.value = currentStageIndex.value
+    await hydrateDealForView().catch(() => {})
     selectedStageIndex.value = currentStageIndex.value
   }
 })
 watch(() => show.value, async (isOpen) => {
   if (isOpen && props.deal?.id) {
-    await fetchEditLookups()  // ✅ حمل البيانات أولاً
-    await hydrateDealForView()
-    await fetchStagesFromAPI(props.deal.deal_type)
+    // Load stages first so the stage bar is visible even if lookups are slow.
+    const type = props.deal.deal_type
+    if (type) {
+      dealType.value = type
+      await fetchStagesFromAPI(type)
+      selectedStageIndex.value = currentStageIndex.value
+    }
+    await Promise.all([
+      fetchEditLookups().catch(() => {}),
+      hydrateDealForView().catch(() => {}),
+    ])
     selectedStageIndex.value = currentStageIndex.value
   }
 })

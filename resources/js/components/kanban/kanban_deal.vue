@@ -197,12 +197,20 @@ function updateKanbanMobileBreakpoint() {
 const handleDealCreatedFromLeads = async (createdDeal) => {
     const dealType = await switchToDealsSection(createdDeal)
     const autoEditSection = dealType === 'rental' ? 'tenant_details' : 'buyer_details'
-    await openDealView(createdDeal, { autoEditSection })
 
-    nextTick(() => {
-        const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
-        dealsComponent?.fetchDeals?.(true)
-    })
+    // Let Deals mount and load stages first so the board doesn't stay on
+    // "Could not load stages" while the deal modal also hammers the API.
+    await nextTick()
+    const dealsComponent = Array.isArray(dealsRef.value) ? dealsRef.value[0] : dealsRef.value
+    if (dealsComponent?.fetchDeals) {
+        try {
+            await dealsComponent.fetchDeals(true)
+        } catch (e) {
+            console.warn('Deals board refresh after conversion failed', e)
+        }
+    }
+
+    await openDealView(createdDeal, { autoEditSection })
 }
 
 function onConvertedDealUpdated() {

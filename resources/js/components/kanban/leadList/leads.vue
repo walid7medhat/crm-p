@@ -1851,7 +1851,12 @@ function handleLeadConverted(deal) {
     // refetching the whole board — much faster and avoids a visible reload.
     const updatedLead = deal?._lead
     if (updatedLead?.id) {
-        handleUpdatedLead(updatedLead, 'updated')
+        let existing = null
+        for (const col of columns.value) {
+            existing = col.leads?.find((l) => l && l.id === updatedLead.id) || null
+            if (existing) break
+        }
+        handleUpdatedLead({ ...(existing || {}), ...updatedLead }, 'updated')
     } else {
         fetchLeads(true)
     }
@@ -3163,7 +3168,7 @@ const viewLead = (task) => {
     }
     if (task?.id) {
             console.log('📌 Opening lead from card:', task.id)
-             openLeadView(task.id)
+             openLeadView(task.id, task)
         
     }
 }
@@ -3234,9 +3239,10 @@ function onMobileColumnAddLead() {
 }
 
 function openViewLeadFromMobileSheet() {
-    const id = mobileQuickLead.value?.id
+    const lead = mobileQuickLead.value
+    const id = lead?.id
     if (id) {
-        openLeadView(id)
+        openLeadView(id, lead)
     }
     closeMobileQuickSheet()
 }
@@ -3793,11 +3799,24 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (payload.unqualified_status) lead.status_lead = payload.unqualified_status
         if (payload.deal_name) lead.deal_name = payload.deal_name
         if (payload.interaction_result) lead.interaction_result = payload.interaction_result
+        if (additionalData.area) lead.area = additionalData.area
+        if (additionalData.property_type) lead.property_type = additionalData.property_type
         lead.updated_at = new Date().toISOString()
         handleUpdatedLead(lead, 'updated')
         showStageChangeModal.value = false
         $showNotification('Lead stage updated successfully', 'success')
         clearPendingStageChange()
+
+        // Open convert deal-type picker immediately (don't wait for change-stage).
+        if (isConversion && targetStageOrder === 6) {
+            selectedLeadForConversion.value = lead?.id || lead?.lead_id || leadId
+            selectedLeadData.value = lead
+            nextTick(() => {
+                if (convertModalRef.value) {
+                    convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
+                }
+            })
+        }
 
         // Fire API in background; reconcile lightly / revert on failure.
         try {
@@ -3811,17 +3830,6 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
                 }
                 Object.assign(lead, freshLead, preserve)
                 handleUpdatedLead(lead, 'updated')
-            }
-
-            await nextTick()
-
-            if (isConversion && targetStageOrder === 6) {
-                selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
-                selectedLeadData.value = lead
-                await nextTick()
-                if (convertModalRef.value) {
-                    convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
-                }
             }
         } catch (error) {
             console.error('Error in handleStageChangeWithReason:', error)

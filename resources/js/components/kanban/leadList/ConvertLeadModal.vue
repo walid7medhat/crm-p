@@ -193,29 +193,36 @@ const submitConversion = async () => {
         return
     }
 
+    if (loading.value) return
     loading.value = true
 
-    try {
-        const resolvedLeadId = resolveLeadId()
-        if (!resolvedLeadId) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Conversion failed',
-                text: 'Lead ID is missing. Please reopen the convert modal and try again.',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3500
-            })
-            loading.value = false
-            return
-        }
+    const resolvedLeadId = resolveLeadId()
+    if (!resolvedLeadId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Conversion failed',
+            text: 'Lead ID is missing. Please reopen the convert modal and try again.',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3500
+        })
+        loading.value = false
+        return
+    }
 
+    const dealType = form.value.deal_type
+    const leadDataSnapshot = props.leadData || null
+
+    // Close immediately so Add Deal feels instant; API runs in the background.
+    hide()
+
+    try {
         const response = await api.post('/leads/convert/to-deal', {
             lead_id: resolvedLeadId,
             leadId: resolvedLeadId,
             id: resolvedLeadId,
-            deal_type: form.value.deal_type
+            deal_type: dealType
         })
 
         if (response.data.success) {
@@ -230,15 +237,31 @@ const submitConversion = async () => {
 
             const createdDeal = {
                 ...(response.data.data || {}),
-                deal_type: response.data.data?.deal_type ?? form.value.deal_type,
-                // Fresh post-conversion lead (new stage_id, converted_to_deal_id, ...) so
-                // listeners can move/remove the Kanban card locally instead of refetching.
+                deal_type: response.data.data?.deal_type ?? dealType,
                 _lead: response.data.lead || null,
             }
             emit('converted', createdDeal)
-            hide()
         }
     } catch (error) {
+        const alreadyConvertedId = error.response?.data?.deal_id
+        // Treat "already converted" as success and open the existing deal.
+        if (error.response?.status === 400 && alreadyConvertedId) {
+            emit('converted', {
+                id: alreadyConvertedId,
+                deal_id: alreadyConvertedId,
+                deal_type: dealType,
+                _lead: {
+                    id: resolvedLeadId,
+                    converted_to_deal_id: alreadyConvertedId,
+                },
+            })
+            return
+        }
+
+        // Re-open so the user can retry without dragging the lead again.
+        show(resolvedLeadId, leadDataSnapshot)
+        form.value.deal_type = dealType
+
         const backendDebug = error?.response?.data?.debug?.payload
             ? ` | payload: ${JSON.stringify(error.response.data.debug.payload)}`
             : ''

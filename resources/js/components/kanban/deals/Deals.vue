@@ -475,17 +475,22 @@ const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change'])
 const openDealModal = async (dealData) => {
     console.log('🎯 Opening deal modal with data:', dealData)
     
-    // 1. تغيير التاب النشط إلى نوع الديل الجديد
     const newDealType = dealData.deal_type || 'primary'
     
     if (activeTypeTab.value !== newDealType) {
         console.log(`Switching from ${activeTypeTab.value} to ${newDealType}`)
+        try {
+            localStorage.setItem(DEAL_TYPE_KEY, newDealType)
+        } catch {
+            /* ignore */
+        }
         activeTypeTab.value = newDealType
-        // انتظر تحميل البيانات
-        await fetchDeals(true)
+        // Ensure board stages for this deal type load (queued if a fetch is already running).
+        fetchDeals(true).catch(() => {})
+    } else if (!columns.value.length) {
+        fetchDeals(true).catch(() => {})
     }
     
-    // 2. تجهيز بيانات الديل للمودال
     selectedDeal.value = {
         ...dealData,
         deal_type: newDealType,
@@ -494,16 +499,10 @@ const openDealModal = async (dealData) => {
         stage: dealData.stage
     }
     
-    console.log('Selected deal set, opening modal:', selectedDeal.value)
-    
-    // 3. Open deal modal in buyer/tenant edit mode after lead conversion
     const editSection = newDealType === 'rental' ? 'tenant_details' : 'buyer_details'
     autoEditSection.value = editSection
     await nextTick()
     showViewDealModal.value = true
-    
-    console.log('Modal should be open, showViewDealModal =', showViewDealModal.value)
-    
 }
 const handleDealCreated = (createdDeal) => {
     console.log('Deal created event received in deals component:', createdDeal)
@@ -569,6 +568,8 @@ const mobileActionSheet = ref({
 const echoListeners = ref([])
 const pollingInterval = ref(null)
 const isFetching = ref(false)
+const pendingFetchDeals = ref(false)
+const fetchWaiters = ref([])
 const abortController = ref(null)
 const fetchDebounceTimer = ref(null)
 
@@ -923,8 +924,13 @@ async function fetchDeals(immediate = false, externalFilters = null) {
     runtimeFilters.value = {}
   }
 
-  // Prevent concurrent requests
-  if (isFetching.value) return
+  // If a fetch is already running, queue one more and wait for the queue to settle.
+  if (isFetching.value) {
+    pendingFetchDeals.value = true
+    return new Promise((resolve) => {
+      fetchWaiters.value.push(resolve)
+    })
+  }
   
   // Clear any pending debounce
   if (fetchDebounceTimer.value) {
@@ -1001,7 +1007,9 @@ async function executeFetchDeals() {
   }
   
   abortController.value = new AbortController();
+  const requestId = abortController.value
   isFetching.value = true;
+  error.value = null;
   if (!columns.value.length) {
     loading.value = true;
   }
@@ -1014,45 +1022,72 @@ async function executeFetchDeals() {
         ...props.filters,
         ...runtimeFilters.value,
         per_page: 10 
-      }
+      },
+      signal: requestId.signal,
     });
     
-    if (response.data.success) {
-      stagesData.value = response.data.data.map(stage => {
-        const stageStyle = resolveDealStageStyle(activeTypeTab.value, {
-          order: stage.order,
-          name: stage.stage_name,
-        })
-        return {
+    const payload = response.data?.data ?? response.data
+    const stagesList = Array.isArray(payload)
+      ? payload
+      : (Array.isArray(payload?.data) ? payload.data : [])
+
+    if (response.data?.success === false && stagesList.length === 0) {
+      throw new Error(response.data?.message || 'Failed to fetch deals')
+    }
+
+    stagesData.value = stagesList.map(stage => {
+      const stageStyle = resolveDealStageStyle(activeTypeTab.value, {
+        order: stage.order,
+        name: stage.stage_name,
+      })
+      const dealsRaw = stage.deals
+      const deals = Array.isArray(dealsRaw)
+        ? dealsRaw
+        : (Array.isArray(dealsRaw?.data) ? dealsRaw.data : [])
+      return {
         stage_id: stage.stage_id,
-         order: stage.order,
+        order: stage.order,
         title: stage.stage_name,
         headerBg: stageStyle.gradient,
         headerGradient: stageStyle.gradient,
         dotColor: stageStyle.dotColor,
         color: stageStyle.dotColor,
         deals_count: stage.deals_count,
-        deals: stage.deals || [], // أول 10 صفقات
+        deals,
         currentPage: 1,
-        hasMoreDeals: (stage.deals?.length || 0) < (stage.total_count || stage.deals_count || 0),
+        hasMoreDeals: (deals?.length || 0) < (stage.total_count || stage.deals_count || 0),
         loadingMore: false,
         total_count: stage.total_count || stage.deals_count || 0
       }
-      });
-      error.value = null;
-    } else {
-      throw new Error('Failed to fetch deals');
-    }
+    });
+    error.value = null;
   } catch (err) {
-    if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+    const canceled = err?.code === 'ERR_CANCELED'
+      || err?.name === 'AbortError'
+      || err?.name === 'CanceledError'
+      || axios.isCancel?.(err)
+    if (!canceled) {
       console.error('Error fetching deals:', err);
       error.value = getApiErrorMessage(err, 'Failed to load deals. Please try again.');
     }
   } finally {
     loading.value = false;
     isFetching.value = false;
-    abortController.value = null;
+    if (abortController.value === requestId) {
+      abortController.value = null;
+    }
     markKanbanReady();
+
+    if (pendingFetchDeals.value) {
+      pendingFetchDeals.value = false
+      // Re-run with latest tab/filters after the in-flight request finished.
+      await fetchDeals(true)
+    }
+
+    const waiters = fetchWaiters.value.splice(0, fetchWaiters.value.length)
+    waiters.forEach((resolve) => {
+      try { resolve() } catch (_) { /* ignore */ }
+    })
   }
 }
 

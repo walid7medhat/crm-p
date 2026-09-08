@@ -388,109 +388,91 @@ const handleSave = async () => {
             isSubmitting.value = false
             return
         }
+
+        const commentBody = commentText.value || ''
+        const filesSnapshot = [...selectedFiles.value]
+        const mentionsSnapshot = [...mentionedUsers.value]
+        let currentUser = null
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null')
+        } catch {
+            currentUser = null
+        }
+
+        // Show comment in the list immediately; sync with server in background.
+        const tempId = `temp-${Date.now()}`
+        const optimisticComment = {
+            id: tempId,
+            comment: commentBody,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user_id: currentUser?.id ?? null,
+            user_name: currentUser?.name || currentUser?.display_name || 'You',
+            user_avatar: currentUser?.avatar_url || currentUser?.avatar || null,
+            user_role_name: Array.isArray(currentUser?.roles) ? currentUser.roles[0] : (currentUser?.role || null),
+            attachments: filesSnapshot.map((file, index) => ({
+                id: `temp-file-${index}`,
+                file_name: file.name,
+                file_type: file.type,
+                file_size: file.size,
+            })),
+            mentioned_users: mentionsSnapshot,
+            mentions: mentionsSnapshot,
+            _optimistic: true,
+        }
+        emit('comment-created', optimisticComment)
+        handleCancel()
+        $showNotification('Comment created successfully!', 'success')
+        isSubmitting.value = false
         
-        // Create FormData for file uploads
         const formData = new FormData()
-        
-        // Add lead_id
         formData.append('lead_id', props.leadId)
-        
-        // Add comment text (required field)
-        formData.append('comment', commentText.value || '')
-        
-        // Add attachments array
-        selectedFiles.value.forEach((file) => {
+        formData.append('comment', commentBody)
+        filesSnapshot.forEach((file) => {
             formData.append('attachments[]', file)
         })
-
-        // Add mentioned_users array (user ids)
-        mentionedUsers.value.forEach((u) => {
+        mentionsSnapshot.forEach((u) => {
             formData.append('mentioned_users[]', u.id)
         })
 
-        // Make API call
-        const response = await api.post('/leads/add/new/comments', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-        })
-        
-        console.log('✅ Comment saved successfully:', response.data)
-        
-        // Emit event with the new comment data
-        if (response.data?.data) {
-            emit('comment-created', response.data.data)
+        try {
+            const response = await api.post('/leads/add/new/comments', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                },
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity
+            })
+
+            if (response.data?.data) {
+                emit('comment-created', {
+                    ...response.data.data,
+                    _replaceTempId: tempId,
+                })
+            }
+        } catch (error) {
+            console.error('❌ Error saving comment:', error)
+            emit('comment-created', { _removeTempId: tempId })
+
+            if (error.response && (error.response.status === 413 || error.response.status === 431)) {
+                $showNotification('File size is too large. Please reduce file sizes or remove some files.', 'error')
+            } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                $showNotification('Request timed out. Please try with smaller files.', 'error')
+            } else if (error.response && error.response.status === 422) {
+                $showNotification('Please check the form for errors', 'warning')
+            } else if (error.response) {
+                $showNotification(error.response?.data?.message || 'Failed to create comment. Please try again.', 'error')
+            } else if (error.request) {
+                $showNotification('Network error. Please check your connection.', 'error')
+            } else {
+                $showNotification(error.message || 'Failed to create comment. Please try again.', 'error')
+            }
         }
-        
-        // Success: reset form and show notification
-        handleCancel()
-        $showNotification('Comment created successfully!', 'success')
         
     } catch (error) {
         console.error('❌ Error saving comment:', error)
-        
-        // Handle "POST data too large" or request entity too large errors
-        if (error.response && (error.response.status === 413 || error.response.status === 431)) {
-            errorMessage.value = 'File size is too large. Please reduce file sizes or remove some files. Maximum 2MB per file, 5 files total.'
-            $showNotification('File size is too large. Please reduce file sizes or remove some files.', 'error')
-            validationErrors.value = {
-                attachments: ['Total file size exceeds server limit. Please reduce file sizes.']
-            }
-        }
-        // Handle network errors or request timeout
-        else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            errorMessage.value = 'Request timed out. File size may be too large. Please try with smaller files.'
-            $showNotification('Request timed out. Please try with smaller files.', 'error')
-        }
-        // Handle validation errors (422 status)
-        else if (error.response && error.response.status === 422) {
-            const errors = error.response.data.errors || {}
-            validationErrors.value = errors
-            
-            // Extract error messages
-            const errorMessages = []
-            Object.keys(errors).forEach(key => {
-                if (Array.isArray(errors[key])) {
-                    errorMessages.push(...errors[key])
-                } else {
-                    errorMessages.push(errors[key])
-                }
-            })
-            
-            errorMessage.value = errorMessages[0] || 'Please fix the validation errors below.'
-            $showNotification('Please check the form for errors', 'warning')
-        }
-        // Handle other HTTP errors
-        else if (error.response) {
-            const status = error.response.status
-            let errorMsg = error.response?.data?.message || 'Failed to create comment. Please try again.'
-            
-            // Provide more specific error messages
-            if (status === 413 || status === 431) {
-                errorMsg = 'File size is too large. Please reduce file sizes or remove some files.'
-            } else if (status === 500) {
-                errorMsg = 'Server error. Please try again later or contact support.'
-            } else if (status === 503) {
-                errorMsg = 'Service temporarily unavailable. Please try again later.'
-            }
-            
-            errorMessage.value = errorMsg
-            $showNotification(errorMsg, 'error')
-        }
-        // Handle network errors
-        else if (error.request) {
-            errorMessage.value = 'Network error. Please check your connection and try again.'
-            $showNotification('Network error. Please check your connection.', 'error')
-        }
-        // Handle other errors
-        else {
-            errorMessage.value = error.message || 'Failed to create comment. Please try again.'
-            $showNotification(errorMessage.value, 'error')
-        }
-    } finally {
         isSubmitting.value = false
+        $showNotification(error.message || 'Failed to create comment. Please try again.', 'error')
     }
 }
 

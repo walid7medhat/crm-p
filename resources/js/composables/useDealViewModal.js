@@ -43,21 +43,26 @@ export async function openDealView(dealOrId, options = {}) {
   let deal = normalizeDealPayload(dealOrId)
   if (!deal?.id) return false
 
+  // Open immediately with what we have; hydrate deal_type in background if missing.
+  dealViewPayload.value = deal
+  dealViewAutoEditSection.value = resolveAutoEditSection(deal, options.autoEditSection)
+  showDealViewModal.value = true
+
   if (!deal.deal_type) {
     try {
       const res = await api.get(`/deals/${deal.id}`)
       const full = res.data?.data ?? res.data
-      if (full && typeof full === 'object') {
-        deal = { ...deal, ...full }
+      if (full && typeof full === 'object' && showDealViewModal.value) {
+        dealViewPayload.value = { ...dealViewPayload.value, ...full }
+        if (!options.autoEditSection) {
+          dealViewAutoEditSection.value = resolveAutoEditSection(dealViewPayload.value, null)
+        }
       }
     } catch (error) {
       console.warn('Could not preload deal before opening modal', error)
     }
   }
 
-  dealViewPayload.value = deal
-  dealViewAutoEditSection.value = resolveAutoEditSection(deal, options.autoEditSection)
-  showDealViewModal.value = true
   return true
 }
 
