@@ -135,10 +135,23 @@ function pathMatches(path, prefixes) {
   return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
-/** List pages only — detail/form routes must not overwrite the remembered listings entry. */
+const LISTINGS_FORM_PATHS = [
+  '/property-form',
+  '/add-developer',
+  '/add-property_type',
+  '/add-unit_view',
+  '/add-layout_type',
+  '/add-area',
+  '/add-features',
+  '/add-projects',
+];
+
+/** List pages only — detail/create/edit forms must not overwrite the remembered listings entry. */
 export function isListingsRememberablePath(path) {
   if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return false;
   if (path === '/property-details' || path.startsWith('/property-details/')) return false;
+  if (LISTINGS_FORM_PATHS.includes(path)) return false;
+  if (path.endsWith('/edit')) return false;
   return true;
 }
 

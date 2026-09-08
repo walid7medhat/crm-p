@@ -170,8 +170,8 @@ const baseRoutes = [
   { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/settings/roi-calculator', component: RoiCalculatorPage, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/settings/roe-calculator', component: RoeCalculatorPage, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/settings/roi-calculator', component: RoiCalculatorPage, meta: { requiresAuth: true } },
+  { path: '/settings/roe-calculator', component: RoeCalculatorPage, meta: { requiresAuth: true } },
    { path: '/home', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
    { path: '/', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 

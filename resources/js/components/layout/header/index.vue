@@ -891,24 +891,20 @@ const settingsSidebarSections = computed(() => {
   });
 });
 
-const calculatorMenuItems = computed(() =>
-  isAdmin.value
-    ? [
-        {
-          path: '/settings/roi-calculator',
-          label: 'ROI',
-          name: 'Return on Investment',
-          icon: 'lucide:percent',
-        },
-        {
-          path: '/settings/roe-calculator',
-          label: 'ROE',
-          name: 'Return on Equity',
-          icon: 'lucide:trending-up',
-        },
-      ]
-    : [],
-);
+const calculatorMenuItems = computed(() => [
+  {
+    path: '/settings/roi-calculator',
+    label: 'ROI',
+    name: 'Return on Investment',
+    icon: 'lucide:percent',
+  },
+  {
+    path: '/settings/roe-calculator',
+    label: 'ROE',
+    name: 'Return on Equity',
+    icon: 'lucide:trending-up',
+  },
+]);
 
 const allCalculatorMenuPaths = computed(() => calculatorMenuItems.value.map((i) => i.path));
 
@@ -935,7 +931,7 @@ const mobileDockItems = computed(() => {
   const moreChildren = [];
   const moreSections = [];
 
-  if (isAdmin.value && calculatorMenuItems.value.length) {
+  if (calculatorMenuItems.value.length) {
     moreChildren.push(...calculatorMenuItems.value.map((it) => ({
       path: it.path,
       label: `${it.label} · ${it.name}`,
