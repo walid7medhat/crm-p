@@ -342,6 +342,8 @@ const logout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   localStorage.removeItem('refreshToken')
+  localStorage.removeItem('impersonator_token')
+  localStorage.removeItem('impersonator_user')
 
   window.location.href = '/sign-in'
 }

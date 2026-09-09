@@ -683,6 +683,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/users/{user}/permissions', [UserController::class, 'assignPermissions']);
     Route::get('/users/{user}', [UserController::class, 'show']);
     Route::put('/users/{user}/status', [UserController::class, 'updateStatus']);
+    Route::post('/users/{user}/impersonate', [AuthController::class, 'impersonate']);
     Route::put('/users/{user}', [UserController::class, 'update']);
     Route::delete('/users/{user}', [UserController::class, 'destroy']);
     Route::get('/users/managers/available', [UserController::class, 'getAvailableManagers']);

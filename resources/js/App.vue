@@ -1,5 +1,15 @@
 <template>
   <div id="app">
+    <button
+      v-if="impersonatorUser"
+      type="button"
+      class="impersonation-pill"
+      :title="`Signed in as this account — originally ${impersonatorUser.name}`"
+      @click="returnToSuperAdmin"
+    >
+      <iconify-icon icon="lucide:user-round-cog" width="16" height="16" />
+      <span>Return to Super Admin</span>
+    </button>
     <AppLoader :show="isAppLoading" @hidden="onLoaderHidden" />
     <Header v-if="showLayout && !isAppLoading" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
@@ -53,6 +63,7 @@ import { useAppLoader } from './composables/useAppLoader.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
 import { useLeadViewModal } from './composables/useLeadViewModal.js'
+import { useImpersonation } from './composables/useImpersonation.js'
 
 export default {
   name: 'App',
@@ -76,6 +87,7 @@ export default {
       openLeadView,
       notifyLeadViewUpdated,
     } = useLeadViewModal()
+    const { impersonatorUser, returnToSuperAdmin } = useImpersonation()
     const showLayout = computed(() => route.meta.layout !== false)
     const isDashboardHome = computed(() => !!route.meta?.dashboardHome)
     const chatOpen = ref(false)
@@ -159,6 +171,8 @@ export default {
       leadViewModalId,
       leadViewModalSeed,
       notifyLeadViewUpdated,
+      impersonatorUser,
+      returnToSuperAdmin,
     }
   }
 }
@@ -173,6 +187,47 @@ export default {
   max-width: 100vw;
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+/* Super-admin "switch account" indicator — floating so it never collides with
+   the app's fixed header/navbar layout. Mirrors ChatFloatingButton's bottom-right
+   pattern but on the opposite corner. */
+.impersonation-pill {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 99999;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0b0736 0%, #733e87 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(11, 7, 54, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.impersonation-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(11, 7, 54, 0.45);
+}
+
+@media (max-width: 768px) {
+  .impersonation-pill {
+    left: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .impersonation-pill span {
+    display: none;
+  }
 }
 
 /* Auth pages: fill viewport and center content vertically */

@@ -2322,6 +2322,8 @@ function logout() {
   localStorage.removeItem('user');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('searchFilters');
+  localStorage.removeItem('impersonator_token');
+  localStorage.removeItem('impersonator_user');
   sessionStorage.removeItem('token');
   router.push('/sign-in');
 }

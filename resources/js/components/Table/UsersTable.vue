@@ -210,11 +210,11 @@
                                 </td>
                                     <td>
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                                type="button" 
-                                                data-bs-toggle="dropdown" 
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
                                                 aria-expanded="false"
-                                                :disabled="!hasAnyUserPermission()">
+                                                :disabled="!hasAnyUserPermission() && !hasSuperAdminRole()">
                                             Actions
                                         </button>
                                         <ul class="dropdown-menu">
@@ -225,7 +225,7 @@
                                                     View User
                                                 </a>
                                             </li>
-                                            
+
                                             <!-- Edit Action -->
                                             <li v-if="this.$hasPermission('users-edit') && user.id != 1">
                                                 <a class="dropdown-item" href="javascript:void(0)" @click="editUser(user.id)">
@@ -233,7 +233,15 @@
                                                     Edit User
                                                 </a>
                                             </li>
-                                            
+
+                                            <!-- Switch Account (super_admin only) -->
+                                            <li v-if="hasSuperAdminRole() && user.id !== currentUserId() && user.status === 'active'">
+                                                <a class="dropdown-item" href="javascript:void(0)" @click="switchToUser(user)">
+                                                    <iconify-icon icon="lucide:repeat" class="me-2"></iconify-icon>
+                                                    Switch to This Account
+                                                </a>
+                                            </li>
+
                                             <!-- Delete Action -->
                                             <li v-if="this.$hasPermission('users-delete') && user.id != 1">
                                                 <a class="dropdown-item text-danger" href="javascript:void(0)" @click="deleteUser(user)">
@@ -241,9 +249,9 @@
                                                     Delete User
                                                 </a>
                                             </li>
-                                            
+
                                             <!-- No Actions Available -->
-                                            <li v-if="!hasAnyUserPermission()">
+                                            <li v-if="!hasAnyUserPermission() && !hasSuperAdminRole()">
                                                 <span class="dropdown-item text-muted">No actions available</span>
                                             </li>
                                         </ul>
@@ -333,8 +341,13 @@
 import { API_ENDPOINTS } from '../../config/api';
 import api from '@/plugins/axios';
 import { useRouter } from 'vue-router';
+import { useImpersonation } from '@/composables/useImpersonation.js';
 export default {
     name: 'UsersTable',
+    setup() {
+        const { switchToUser: rawSwitchToUser } = useImpersonation();
+        return { rawSwitchToUser };
+    },
     data() {
         return {
             loading: true,
@@ -474,6 +487,41 @@ export default {
         hasSuperAdminRole() {
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
             return userData.roles && userData.roles.includes('super_admin');
+        },
+
+        currentUserId() {
+            try {
+                const userData = JSON.parse(localStorage.getItem('user') || '{}');
+                return userData.id;
+            } catch {
+                return null;
+            }
+        },
+
+        // Super admin only — log in as this user (see UsersTable "Switch to This
+        // Account" action). Stashes the current super admin session first so
+        // "Return to Super Admin" (shown app-wide while impersonating) can restore
+        // it without a second login.
+        async switchToUser(user) {
+            if (!this.hasSuperAdminRole()) {
+                this.showNotification('Only super admins can switch accounts', 'warning');
+                return;
+            }
+
+            const confirmed = await this.showConfirm(
+                'Switch account?',
+                `You will be logged in as "${user.name}". You can return to your super admin account anytime from the banner at the top of the page.`,
+                'info'
+            );
+            if (!confirmed) return;
+
+            try {
+                await this.rawSwitchToUser(user);
+            } catch (error) {
+                console.error('Error switching account:', error);
+                const message = error.response?.data?.message || error.message || 'Failed to switch account';
+                this.showNotification(message, 'error');
+            }
         },
 
         // New method to confirm status change

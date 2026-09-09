@@ -146,6 +146,11 @@ return [
         'path' => storage_path('logs/bitrix_missing.log'),
         'level' => 'info',
     ],
+    'bitrix_deleted' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/bitrix_deleted.log'),
+        'level' => 'info',
+    ],
     ],
 
 ];

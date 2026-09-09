@@ -179,6 +179,49 @@ public function resetPassword(Request $request): JsonResponse
     }
 }
 
+    /**
+     * "Switch account" — super_admin only. Mints a JWT for the target user, same
+     * shape as login(), so the frontend can drop it straight into localStorage.
+     * The frontend is responsible for stashing the super admin's own token first
+     * so "Return to Super Admin" can restore it without a second login.
+     */
+    public function impersonate(User $user): JsonResponse
+    {
+        try {
+            $currentUser = auth()->user();
+
+            if (!$currentUser || !$currentUser->hasRole('super_admin')) {
+                return ApiResponse::error('Only super admins can switch accounts', 403);
+            }
+
+            if ((int) $currentUser->id === (int) $user->id) {
+                return ApiResponse::error('You are already using this account', 422);
+            }
+
+            if ($user->status !== 'active') {
+                return ApiResponse::error('Cannot switch to an inactive account', 422);
+            }
+
+            $token = auth()->login($user);
+            $user->load('roles', 'permissions');
+
+            \Log::info('Super admin switched account', [
+                'super_admin_id' => $currentUser->id,
+                'super_admin_name' => $currentUser->name,
+                'target_user_id' => $user->id,
+                'target_user_name' => $user->name,
+            ]);
+
+            return ApiResponse::success([
+                'user' => new UserResource($user),
+                'token' => $token,
+            ], 'Switched account successfully');
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to switch account: ' . $e->getMessage());
+        }
+    }
+
     public function profile()
     {
             $user = auth()->user()->load('roles', 'permissions');
