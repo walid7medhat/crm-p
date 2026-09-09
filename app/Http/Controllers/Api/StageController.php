@@ -301,10 +301,9 @@ class StageController extends Controller
             // super admin sees everything
         } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
             $subordinatesIds = $user->getAllSubordinatesIds();
-            $baseLeadsQuery->where(function ($q) use ($subordinatesIds, $user) {
-                $q->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
-                  ->orWhereIn('added_by', $subordinatesIds);
-            });
+            // Current responsible person only — a lead reassigned outside the team
+            // must stop showing up here just because someone on the team added it.
+            $baseLeadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
             if ($user->hasAnyRole(['manager', 'team_lead'])) {
                 $baseLeadsQuery->whereNull('revert');
             }
@@ -787,10 +786,9 @@ class StageController extends Controller
             } 
             elseif ($user->hasAnyRole(['manager', 'team_lead','admin'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();
-                $leadsQuery->where(function ($q) use ($subordinatesIds, $user) {
-                    $q->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
-                      ->orWhereIn('added_by', $subordinatesIds);
-                });
+                // Current responsible person only — a lead reassigned outside the team
+                // must stop showing up here just because someone on the team added it.
+                $leadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
                 if($user->hasAnyRole(['manager', 'team_lead'])){
                     $leadsQuery->whereNull('revert');
                 }
@@ -1246,13 +1244,12 @@ public function getOffices()
             // Apply lead visibility based on user role
             if (!($user->hasRole('super_admin') || $user->hasRole('admin'))) {
                 if ($user->hasRole(['manager', 'team_lead'])) {
+                    // getAllSubordinatesIds() already includes the manager's own id.
+                    // Current responsible person only — a lead reassigned outside the
+                    // team must stop showing up here just because someone on the team
+                    // added it.
                     $subordinatesIds = $user->getAllSubordinatesIds();
-                    
-                    $leadsQuery->where(function($query) use ($subordinatesIds, $user) {
-                        $query->whereIn('responsible_person_id', $subordinatesIds)
-                              ->orWhereIn('added_by', $subordinatesIds)
-                              ->orWhere('responsible_person_id', $user->id);
-                    });
+                    $leadsQuery->whereIn('responsible_person_id', $subordinatesIds);
                 } else {
                     // Once reassigned, a lead a sales agent merely added no longer belongs to
                     // them — visibility is by current responsible person only.

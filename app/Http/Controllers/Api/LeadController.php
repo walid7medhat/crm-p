@@ -247,10 +247,9 @@ class LeadController extends Controller
                     // super admin sees everything
                 } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();
-                    $leadsQuery->where(function ($query) use ($subordinatesIds, $user) {
-                        $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
-                            ->orWhereIn('added_by', $subordinatesIds);
-                    });
+                    // Current responsible person only — a lead reassigned outside the
+                    // team must stop showing up here just because someone on the team added it.
+                    $leadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
                 } else {
                     // Once reassigned, a lead a sales agent merely added no longer belongs to
                     // them — visibility is by current responsible person only.
@@ -342,10 +341,9 @@ class LeadController extends Controller
                 // super_admin sees everything — no extra constraint
             } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();
-                $query->where(function ($q) use ($subordinatesIds, $user) {
-                    $q->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]))
-                      ->orWhereIn('added_by', $subordinatesIds);
-                });
+                // Current responsible person only — a lead reassigned outside the
+                // team must stop showing up here just because someone on the team added it.
+                $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
             } else {
                 // Once reassigned, a lead a sales agent merely added no longer belongs to
                 // them — visibility is by current responsible person only.
