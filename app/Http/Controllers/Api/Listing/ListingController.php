@@ -156,8 +156,10 @@ class ListingController extends Controller
         return ApiResponse::success([
             'filters' => $parsed['filters'],
             'query_params' => $parsed['query_params'],
+            'matched_areas' => $parsed['matched_areas'] ?? [],
             'language' => $parsed['language'],
             'transcript' => $parsed['transcript'],
+            'normalized_transcript' => $parsed['normalized_transcript'] ?? null,
             'results' => ListingGridResource::collection($paginator)->resolve(),
             'count' => (int) ($result['pagination']['total'] ?? $paginator->total()),
         ], 'Voice search completed successfully', 200, $result['pagination']);
