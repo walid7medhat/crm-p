@@ -60,7 +60,30 @@ class VoiceSearchService
             array_filter($extracted, fn ($v) => $v !== null && $v !== '')
         );
 
-        $queryParams = $this->toListingQueryParams($mergedDisplay);
+        $matchedAreas = [];
+        if (! empty($mergedDisplay['area'])) {
+            $resolved = $this->resolveAreaMatch((string) $mergedDisplay['area']);
+            if ($resolved) {
+                // Prefer the REAL DB name so the SearchBar can display/match it.
+                $mergedDisplay['area'] = $resolved['name'];
+                $matchedAreas[] = $resolved;
+                \Log::info('voice_search.area_matched', [
+                    'transcript' => $raw,
+                    'normalized' => $normalized,
+                    'detected_area' => $areaName,
+                    'matched_area' => $resolved['name'],
+                    'matched_id' => $resolved['id'],
+                ]);
+            } else {
+                \Log::info('voice_search.area_unmatched', [
+                    'transcript' => $raw,
+                    'normalized' => $normalized,
+                    'detected_area' => $areaName,
+                ]);
+            }
+        }
+
+        $queryParams = $this->toListingQueryParams($mergedDisplay, $matchedAreas);
 
         return [
             'language' => $language,
@@ -69,6 +92,8 @@ class VoiceSearchService
             'filters' => $mergedDisplay,
             'display' => $mergedDisplay,
             'query_params' => $queryParams,
+            // Real Area objects for SearchBar selectedArea (same shape as manual pick).
+            'matched_areas' => $matchedAreas,
         ];
     }
 
@@ -118,9 +143,10 @@ class VoiceSearchService
      * Map display filters to existing ListingController::getListingsData() query keys.
      *
      * @param  array<string, mixed>  $filters
+     * @param  list<array{id:int,name:string}>  $matchedAreas
      * @return array<string, mixed>
      */
-    public function toListingQueryParams(array $filters): array
+    public function toListingQueryParams(array $filters, array $matchedAreas = []): array
     {
         $params = [];
 
@@ -161,7 +187,11 @@ class VoiceSearchService
             }
         }
 
-        if (! empty($filters['area'])) {
+        if (! empty($matchedAreas)) {
+            $ids = array_values(array_unique(array_map(fn ($a) => (int) $a['id'], $matchedAreas)));
+            $params['area_ids'] = $ids;
+            $params['area_id'] = $ids[0];
+        } elseif (! empty($filters['area'])) {
             $areaId = $this->resolveAreaId((string) $filters['area']);
             if ($areaId) {
                 $params['area_ids'] = [$areaId];
@@ -249,6 +279,27 @@ class VoiceSearchService
             }
         }
 
+        // Speech / ASR fallbacks (spaces dropped, "sell", Arabic).
+        $compact = preg_replace('/\s+/u', '', $normalized) ?? $normalized;
+        if (preg_match('/\b(for\s*sale|forsale|to\s*buy|to\s*sell|buying|selling)\b/u', $normalized)
+            || str_contains($compact, 'forsale')
+            || str_contains($compact, 'tosell')
+            || preg_match('/(للبيع|للشراء)/u', $normalized)) {
+            return 'sale';
+        }
+        if (preg_match('/\b(for\s*rent|forrent|to\s*rent|rental|leasing)\b/u', $normalized)
+            || str_contains($compact, 'forrent')
+            || preg_match('/(للايجار|للإيجار|للايجار)/u', $normalized)) {
+            return 'rent';
+        }
+        // Trailing bare "sale" / "rent" (e.g. "villa sale").
+        if (preg_match('/\b(sale|sell|buy)\s*$/u', $normalized)) {
+            return 'sale';
+        }
+        if (preg_match('/\b(rent|rental)\s*$/u', $normalized)) {
+            return 'rent';
+        }
+
         return null;
     }
 
@@ -263,12 +314,28 @@ class VoiceSearchService
             }
         }
 
-        // Dynamic DB match for known area names (cached briefly).
+        // Dynamic DB match for known area names (exact phrase in transcript).
         $areas = $this->cachedAreaNames();
+        usort($areas, fn ($a, $b) => mb_strlen((string) $b) <=> mb_strlen((string) $a));
         foreach ($areas as $name) {
             $n = $this->normalizeText($name);
             if ($n !== '' && $this->containsPhrase($normalized, $n)) {
                 return $name;
+            }
+        }
+
+        // Fuzzy: after "in" / "في" / "بـ" match spoken fragment to DB via areaMatchKey.
+        if (preg_match('/(?:\bin|في|ب)\s+(.+)$/u', $normalized, $m)) {
+            $tail = trim((string) $m[1]);
+            // Drop trailing price/bed noise.
+            $tail = preg_replace('/\b(under|below|less than|max|above|over|with|for)\b.*$/u', '', $tail) ?? $tail;
+            $tail = preg_replace('/(تحت|اقل من|أقل من|بسعر|غرف|غرفة|bedroom|bath).*$/u', '', $tail) ?? $tail;
+            $tail = trim($tail);
+            if ($tail !== '') {
+                $resolved = $this->resolveAreaMatch($tail);
+                if ($resolved) {
+                    return $resolved['name'];
+                }
             }
         }
 
@@ -368,6 +435,43 @@ class VoiceSearchService
         return null;
     }
 
+    /**
+     * Resolve spoken/canonical area text to a REAL Area row.
+     *
+     * @return array{id:int,name:string,type:?string,subtitle:?string}|null
+     */
+    public function resolveAreaMatch(string $canonicalName): ?array
+    {
+        $areaId = $this->resolveAreaId($canonicalName);
+        if (! $areaId) {
+            return null;
+        }
+
+        try {
+            $area = Area::query()->select('id', 'name', 'type', 'parent_id')->find($areaId);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (! $area) {
+            return null;
+        }
+
+        $subtitle = null;
+        try {
+            $subtitle = $area->area_title ?? $area->title ?? null;
+        } catch (\Throwable $e) {
+            $subtitle = null;
+        }
+
+        return [
+            'id' => (int) $area->id,
+            'name' => (string) $area->name,
+            'type' => $area->type ? (string) $area->type : null,
+            'subtitle' => $subtitle ? (string) $subtitle : null,
+        ];
+    }
+
     protected function resolveAreaId(string $canonicalName): ?int
     {
         if (! \Illuminate\Support\Facades\Schema::hasTable('areas')) {
@@ -375,11 +479,15 @@ class VoiceSearchService
         }
 
         try {
-            $areas = Cache::remember('voice_search_areas_v1', 300, function () {
+            $areas = Cache::remember('voice_search_areas_v2', 300, function () {
                 return Area::query()
-                    ->select('id', 'name')
+                    ->select('id', 'name', 'type')
                     ->get()
-                    ->map(fn ($a) => ['id' => (int) $a->id, 'name' => (string) $a->name])
+                    ->map(fn ($a) => [
+                        'id' => (int) $a->id,
+                        'name' => (string) $a->name,
+                        'type' => (string) ($a->type ?? ''),
+                    ])
                     ->all();
             });
         } catch (\Throwable $e) {
@@ -387,19 +495,79 @@ class VoiceSearchService
         }
 
         $needle = $this->normalizeText($canonicalName);
-        foreach ($areas as $area) {
-            if ($this->normalizeText($area['name']) === $needle) {
-                return $area['id'];
-            }
+        $needleKey = $this->areaMatchKey($needle);
+        if ($needleKey === '') {
+            return null;
         }
+
+        $bestId = null;
+        $bestScore = 0;
+
         foreach ($areas as $area) {
             $name = $this->normalizeText($area['name']);
-            if ($name !== '' && (str_contains($name, $needle) || str_contains($needle, $name))) {
-                return $area['id'];
+            $nameKey = $this->areaMatchKey($name);
+            if ($nameKey === '') {
+                continue;
+            }
+
+            $score = 0;
+            if ($name === $needle || $nameKey === $needleKey) {
+                $score = 100;
+            } elseif (str_contains($nameKey, $needleKey) || str_contains($needleKey, $nameKey)) {
+                // Prefer shorter containment distance (Reem → Al Reem Island over tiny substrings).
+                $score = 70 + (int) max(0, 20 - abs(mb_strlen($nameKey) - mb_strlen($needleKey)));
+            } else {
+                continue;
+            }
+
+            // Prefer higher-level places (city/area) over tiny sub_communities when scores tie.
+            $typeBoost = match ($area['type'] ?? '') {
+                'city' => 3,
+                'area' => 2,
+                'community' => 1,
+                default => 0,
+            };
+            $score += $typeBoost;
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestId = $area['id'];
             }
         }
 
-        return null;
+        return $bestId;
+    }
+
+    /**
+     * Strip common prefixes/suffixes so "Reem" ≈ "Al Reem Island" ≈ "الريم".
+     */
+    protected function areaMatchKey(string $normalized): string
+    {
+        $text = $normalized;
+        // Remove Arabic definite article.
+        $text = preg_replace('/^ال/u', '', $text) ?? $text;
+        // Remove english "al " / "al-" prefix.
+        $text = preg_replace('/^al[\s\-]+/u', '', $text) ?? $text;
+        // Remove island / jazira noise.
+        $text = preg_replace('/\b(island|isle)\b/u', '', $text) ?? $text;
+        $text = preg_replace('/\b(جزيره|جزيرة)\b/u', '', $text) ?? $text;
+
+        // Hudayriyat speech variants: حضريات (Haa+Dad) ≈ حدريات ≈ هدريات — same place.
+        $text = preg_replace('/[حهخ]ض?ري[اا]?ت/u', 'حدريات', $text) ?? $text;
+        $text = preg_replace('/[هه]دري[اا]?ت/u', 'حدريات', $text) ?? $text;
+        $text = str_replace(
+            ['حضريات', 'هدريات', 'حدريات', 'hadariyat', 'hedriyat', 'hudriyat'],
+            ['حدريات', 'حدريات', 'حدريات', 'hudayriat', 'hudayriat', 'hudayriat'],
+            $text
+        );
+
+        // Collapse spaces / hyphens.
+        $text = preg_replace('/[\s\-]+/u', '', $text) ?? $text;
+
+        // Common transliteration variants for Hudayriyat (DB: Hudayriat).
+        $text = str_replace(['hudayriyat', 'hadariyat', 'hedriyat', 'hudriyat'], 'hudayriat', $text);
+
+        return trim($text);
     }
 
     /**
@@ -412,7 +580,7 @@ class VoiceSearchService
         }
 
         try {
-            return Cache::remember('voice_search_area_names_v1', 300, function () {
+            return Cache::remember('voice_search_area_names_v2', 300, function () {
                 return Area::query()->pluck('name')->filter()->values()->all();
             });
         } catch (\Throwable $e) {

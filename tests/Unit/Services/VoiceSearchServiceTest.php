@@ -36,7 +36,11 @@ class VoiceSearchServiceTest extends TestCase
         $this->assertSame('ar', $parsed['language']);
         $this->assertSame('Apartment', $parsed['filters']['property_type']);
         $this->assertSame(2, $parsed['filters']['number_of_bedrooms']);
-        $this->assertSame('Reem Island', $parsed['filters']['area']);
+        $this->assertNotEmpty($parsed['filters']['area']);
+        $this->assertTrue(
+            stripos((string) $parsed['filters']['area'], 'Reem') !== false,
+            'Expected Reem area, got: '.$parsed['filters']['area']
+        );
         $this->assertEquals(1500000, $parsed['filters']['max_price']);
     }
 
@@ -48,7 +52,11 @@ class VoiceSearchServiceTest extends TestCase
         $this->assertSame('en', $parsed['language']);
         $this->assertSame('Apartment', $parsed['filters']['property_type']);
         $this->assertSame(2, $parsed['filters']['number_of_bedrooms']);
-        $this->assertSame('Reem Island', $parsed['filters']['area']);
+        $this->assertNotEmpty($parsed['filters']['area']);
+        $this->assertTrue(
+            stripos((string) $parsed['filters']['area'], 'Reem') !== false,
+            'Expected Reem area, got: '.$parsed['filters']['area']
+        );
         $this->assertEquals(1500000, $parsed['filters']['max_price']);
     }
 

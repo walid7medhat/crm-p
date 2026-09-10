@@ -266,10 +266,11 @@ function clearAutoSubmit() {
 function scheduleAutoSubmit() {
   clearAutoSubmit();
   // After a short pause of final speech, auto-run search.
+  // Keep this long enough so "villa for sale" is not cut after "villa".
   autoSubmitTimer = setTimeout(() => {
     if (status.value === 'listening') stopListening();
     if (canSearch.value) submitTranscript();
-  }, 1100);
+  }, 2000);
 }
 
 async function submitTranscript() {
@@ -288,9 +289,21 @@ async function submitTranscript() {
     });
 
     const payload = data?.data || {};
+    if (typeof console !== 'undefined') {
+      // Temporary debug: voice → area pipeline
+      // eslint-disable-next-line no-console
+      console.log('[voice-search] response', {
+        transcript: payload.transcript || text,
+        normalized: payload.normalized_transcript,
+        filters: payload.filters,
+        matched_areas: payload.matched_areas,
+        query_params: payload.query_params,
+      });
+    }
     emit('filters-applied', {
       filters: payload.filters || {},
       query_params: payload.query_params || {},
+      matched_areas: payload.matched_areas || [],
       language: payload.language,
       transcript: payload.transcript || text,
       count: payload.count,

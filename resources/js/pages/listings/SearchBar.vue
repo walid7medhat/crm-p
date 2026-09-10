@@ -1097,14 +1097,44 @@ const isMyListingPage = computed(() => {
       showVoiceSearchModal.value = true;
     };
 
-    const resolveAreaFromVoice = (filters, queryParams) => {
+    /**
+     * Map voice-search area result onto the same selectedArea shape as manual v-select picks:
+     * [{ id, name, subtitle }]. Prefer backend matched_areas (real DB rows); never drop a
+     * resolved area_id just because it is missing from the local autocomplete cache.
+     */
+    const resolveAreaFromVoice = (filters, queryParams, matchedAreasPayload = []) => {
+      const fromApi = Array.isArray(matchedAreasPayload)
+        ? matchedAreasPayload
+            .filter((a) => a && a.id != null)
+            .map((a) => {
+              const local = areas.value.find((x) => Number(x.id) === Number(a.id));
+              return {
+                id: Number(a.id),
+                name: local?.name || a.name || String(filters?.area || ''),
+                subtitle: local?.subtitle || a.subtitle || a.name || '',
+                area_parents_title: local?.area_parents_title || a.subtitle || '',
+              };
+            })
+        : [];
+      if (fromApi.length) return fromApi;
+
       const areaIds = Array.isArray(queryParams?.area_ids)
-        ? queryParams.area_ids.map(Number)
+        ? queryParams.area_ids.map(Number).filter(Boolean)
         : (queryParams?.area_id ? [Number(queryParams.area_id)] : []);
-      const matchedById = areaIds
-        .map((id) => areas.value.find((a) => Number(a.id) === Number(id)))
-        .filter(Boolean);
-      if (matchedById.length) return matchedById;
+
+      if (areaIds.length) {
+        return areaIds.map((id) => {
+          const local = areas.value.find((a) => Number(a.id) === Number(id));
+          if (local) return local;
+          // Backend resolved a real ID — still apply it so applyFilters sends area_ids.
+          return {
+            id: Number(id),
+            name: String(filters?.area || `Area ${id}`),
+            subtitle: String(filters?.area || ''),
+            area_parents_title: String(filters?.area || ''),
+          };
+        });
+      }
 
       const areaName = String(filters?.area || '').trim().toLowerCase();
       if (!areaName) return [];
@@ -1136,8 +1166,9 @@ const isMyListingPage = computed(() => {
     const applyVoiceSearchResult = (payload) => {
       const filters = payload?.filters || {};
       const queryParams = payload?.query_params || {};
+      const matchedAreas = payload?.matched_areas || [];
 
-      const nextAreas = resolveAreaFromVoice(filters, queryParams);
+      const nextAreas = resolveAreaFromVoice(filters, queryParams, matchedAreas);
       if (nextAreas.length) {
         selectedArea.value = nextAreas;
       }
@@ -1167,9 +1198,46 @@ const isMyListingPage = computed(() => {
         priceTo.value = Number(queryParams.max_price ?? filters.max_price) || 10000000;
       }
 
-      const purpose = String(filters.listing_status || queryParams.listing_status || '').toLowerCase();
-      if (purpose === 'sale') selectedSaleRent.value = 'Sale';
-      if (purpose === 'rent') selectedSaleRent.value = 'Rent';
+      const purpose = String(
+        filters.listing_status
+        || queryParams.listing_status
+        || filters.purpose
+        || ''
+      ).toLowerCase().trim();
+      if (['sale', 'buy', 'sell', 'selling', 'buying'].includes(purpose)) {
+        selectedSaleRent.value = 'Sale';
+      } else if (['rent', 'rental', 'lease', 'leasing'].includes(purpose)) {
+        selectedSaleRent.value = 'Rent';
+      } else {
+        // Safety net: if backend missed purpose, read it from the spoken transcript.
+        const tr = String(payload?.transcript || '').toLowerCase();
+        const trAr = String(payload?.transcript || '');
+        if (/\b(for\s*sale|forsale|to\s*buy|to\s*sell|selling|buying)\b/.test(tr)
+          || /للبيع|للشراء/.test(trAr)
+          || /\b(sale|sell|buy)\s*$/.test(tr)) {
+          selectedSaleRent.value = 'Sale';
+        } else if (/\b(for\s*rent|forrent|to\s*rent|rental|leasing)\b/.test(tr)
+          || /للايجار|للإيجار|ايجار|إيجار/.test(trAr)
+          || /\brent\s*$/.test(tr)) {
+          selectedSaleRent.value = 'Rent';
+        }
+      }
+
+      if (typeof console !== 'undefined') {
+        // Temporary debug: confirm SearchBar state matches manual area selection
+        // eslint-disable-next-line no-console
+        console.log('[voice-search] SearchBar after apply', {
+          transcript: payload?.transcript,
+          listing_status: filters.listing_status || queryParams.listing_status,
+          selectedSaleRent: selectedSaleRent.value,
+          selectedArea: selectedArea.value,
+          selectedPropertyTypes: selectedPropertyTypes.value,
+          area_ids_will_send: (Array.isArray(selectedArea.value) ? selectedArea.value : [])
+            .map((a) => a?.id)
+            .filter(Boolean),
+          query_params: queryParams,
+        });
+      }
 
       // Reuse existing SearchBar → parent filters-changed → /listings/properties flow.
       applyFilters();
