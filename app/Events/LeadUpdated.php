@@ -166,7 +166,9 @@ class LeadUpdated implements ShouldBroadcast
         $this->addChannelIfNotSales($channels, $observer->user_id);
     }
 
-    // hierarchy managers
+    // hierarchy managers — also reaches any 'admin'-role user who actually
+    // manages this lead's responsible person, since admin is scoped like
+    // manager/team_lead everywhere else (index()/totalCount()/canViewLead()).
     if ($this->lead->responsible_person_id) {
         $responsibleUser = User::find($this->lead->responsible_person_id);
 
@@ -177,12 +179,14 @@ class LeadUpdated implements ShouldBroadcast
         }
     }
 
-    // Admins
-    $admins = User::whereHas('roles', function ($q) {
-        $q->whereIn('name', ['super_admin', 'admin']);
+    // Super admins always receive every broadcast, matching their unrestricted
+    // visibility everywhere else. 'admin' is NOT included here unconditionally —
+    // it's scoped to subordinates, reached only via the hierarchy walk above.
+    $superAdmins = User::whereHas('roles', function ($q) {
+        $q->where('name', 'super_admin');
     })->pluck('id');
 
-    foreach ($admins as $adminId) {
+    foreach ($superAdmins as $adminId) {
         $this->addChannelIfNotSales($channels, $adminId);
     }
 

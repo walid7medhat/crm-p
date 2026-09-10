@@ -199,21 +199,21 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 
     public function canViewLead(Lead $lead): bool
     {
-        if ($this->hasRole('admin') || $this->hasRole('super_admin') || $lead->stage_id==10) {
+        if ($this->hasRole('super_admin') || $lead->stage_id==10) {
             return true;
         }
 
         if ($this->hasRole('sales')) {
-            return 
-                   $lead->responsible_person_id === $this->id ||
-                   $lead->added_by === $this->id;
+            // Current responsible person only — matches LeadController::index()'s
+            // "reassigned leads no longer belong to whoever merely added them" rule.
+            return $lead->responsible_person_id === $this->id;
         }
 
+        // admin / manager / team_lead — subordinates only (getAllSubordinatesIds()
+        // already includes $this->id), matching LeadController::index()/totalCount().
         $subordinatesIds = $this->getAllSubordinatesIds();
-        
-        return 
-               in_array($lead->responsible_person_id, $subordinatesIds) ||
-               in_array($lead->added_by, $subordinatesIds);
+
+        return in_array($lead->responsible_person_id, $subordinatesIds);
     }
 
     public function isManagerOrTeamLead(): bool
