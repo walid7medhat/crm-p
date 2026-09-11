@@ -15,8 +15,10 @@
                         placeholder="Month"
                         :clearable="false"
                         :searchable="false"
+                        :append-to-body="false"
                         class="dob-v-select"
                         aria-label="Month"
+                        @open="onDobSelectOpen"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -36,8 +38,10 @@
                         placeholder="Day"
                         :clearable="false"
                         :searchable="false"
+                        :append-to-body="false"
                         class="dob-v-select"
                         aria-label="Day"
+                        @open="onDobSelectOpen"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -56,8 +60,10 @@
                         placeholder="Year"
                         :clearable="false"
                         :searchable="false"
+                        :append-to-body="false"
                         class="dob-v-select"
                         aria-label="Year"
+                        @open="onDobSelectOpen"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -157,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import { Modal } from 'bootstrap'
 import vSelect from 'vue-select'
 
@@ -217,6 +223,23 @@ const dobYearOptions = computed(() => {
 
 function reduceDobOption(o) {
     return o.value
+}
+
+// The Month/Day/Year dropdowns can hold a long list (e.g. 80+ years); vue-select
+// highlights the current value by default but doesn't scroll it into view on
+// open, so it opens at the very top of the list. Bring the current selection
+// into the visible area as soon as the dropdown opens.
+function onDobSelectOpen() {
+    nextTick(() => {
+        requestAnimationFrame(() => {
+            const highlighted = document.querySelector(
+                '.dob-v-select.vs--open .vs__dropdown-menu .vs__dropdown-option--highlight'
+            )
+            if (highlighted && typeof highlighted.scrollIntoView === 'function') {
+                highlighted.scrollIntoView({ block: 'center' })
+            }
+        })
+    })
 }
 
 const emit = defineEmits(['update:modelValue', 'update:show', 'apply', 'cancel'])

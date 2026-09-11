@@ -20,6 +20,8 @@
 
         body-class="p-0"
 
+        no-focus
+
     >
 
         <div class="lead-search-shell">

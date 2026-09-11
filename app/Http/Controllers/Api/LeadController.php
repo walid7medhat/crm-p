@@ -243,7 +243,7 @@ class LeadController extends Controller
         
                 // Apply permission scope to the query (without consuming it with ->get()) so
                 // we can either paginate or fetch all leads depending on the request.
-                if ($user->hasRole('super_admin') || $user->id == 30 || $request->stage_id==10) {
+                if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33 || $request->stage_id==10) {
                     // super admin sees everything
                 } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();
@@ -337,7 +337,7 @@ class LeadController extends Controller
             $user = auth()->user();
             $query = Lead::query();
 
-            if ($user->hasRole('super_admin') || $user->id == 30) {
+            if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
                 // super_admin sees everything — no extra constraint
             } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
                 $subordinatesIds = $user->getAllSubordinatesIds();
