@@ -86,23 +86,13 @@
                 <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
                     <label class="form-label-custom">{{ formatQuestion(question) }}</label>
                     <div class="info-value">
-                        <a v-if="question === 'link' || question === 'Page_URL' || question ==='inbox_url'" :href="answer" target="_blank" class="facebook-link">
-                            {{ answer }}
-                        </a>
-                        <span v-else>
-                            {{ answer }}
-                        </span>
+                        <span class="bitrix-rich-text" v-html="formatAnswerValue(answer)"></span>
                     </div>
                 </div>
                 <div class="info-group" v-for="(answer, question) in metaQuestions" :key="`meta-${question}`">
                     <label class="form-label-custom">{{ formatQuestion(question) }}</label>
                     <div class="info-value ">
-                        <a v-if="question === 'link' || question === 'Page_URL' || question ==='inbox_url'" :href="answer" target="_blank" class="facebook-link">
-                            {{ answer }}
-                        </a>
-                        <span v-else>
-                            {{ answer }}
-                        </span>
+                        <span class="bitrix-rich-text" v-html="formatAnswerValue(answer)"></span>
                     </div>
                 </div>
             </template>
@@ -811,6 +801,10 @@ const showMatchingProperties = ref(false)
 const formattedMoreInformation = computed(() =>
   formatBitrixRichText(props.lead?.more_information)
 )
+
+// Any question answer that contains a URL (not just the known link/Page_URL/
+// inbox_url keys) renders as a clickable link — same rich-text handling as Comments.
+const formatAnswerValue = (value) => formatBitrixRichText(value)
 
 watch(
     () => props.lead?.id,

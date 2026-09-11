@@ -597,7 +597,16 @@ const fetchLead = async ({ silent = false } = {}) => {
         }
     } catch (error) {
         console.error('❌ Error fetching lead:', error)
-        if (!lead.value) {
+        if (error?.response?.status === 403) {
+            // Never leave a half-populated modal showing (e.g. seeded from a kanban
+            // card thumbnail) for a lead this user isn't actually authorized to view.
+            lead.value = null
+            $showNotification(
+                error.response?.data?.message || 'You do not have permission to view this lead',
+                'error'
+            )
+            show.value = false
+        } else if (!lead.value) {
             $showNotification('Failed to load lead details', 'error')
         }
     } finally {
