@@ -24,6 +24,21 @@ class Bitrix24FieldLabels
     private const CACHE_TTL = 86400; // labels rarely change — cache a day
 
     /**
+     * Manually-curated overrides for fields Bitrix24 never exposes a real label
+     * for over REST (checked crm.lead.userfield.list, crm.lead.fields, and
+     * crm.webform.list — none carry the CRM Form question text for these).
+     * Resolves instantly and has zero dependency on Bitrix being reachable at
+     * all. Add to this list whenever a new unlabeled UF_CRM_* code shows up —
+     * find the real question text in Bitrix24's own lead view and copy it here.
+     *
+     * @var array<string,string>
+     */
+    private const KNOWN_LABELS = [
+        'UF_CRM_1649761345243' => 'Purpose you are looking to purchase?',
+        'UF_CRM_68D4F6FE4AEAA' => 'How can we contact you?',
+    ];
+
+    /**
      * @return array<string,string> FIELD_NAME => human label
      */
     public static function map(): array
@@ -59,6 +74,12 @@ class Bitrix24FieldLabels
     {
         if (!$fieldName) {
             return null;
+        }
+
+        // Manual overrides first — no Bitrix API call needed, so this still
+        // works even if the portal/webhook is ever unreachable.
+        if (isset(self::KNOWN_LABELS[$fieldName])) {
+            return self::KNOWN_LABELS[$fieldName];
         }
 
         return self::map()[$fieldName] ?? null;
