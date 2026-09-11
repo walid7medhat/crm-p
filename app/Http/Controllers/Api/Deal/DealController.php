@@ -1760,14 +1760,17 @@ class DealController extends Controller
         if ($user->hasAnyRole(['super_admin']) || $user->id==30) {
             return true;
         }
-        
+
+        // Current responsible person only — matches Deal::scopeVisibleFor()
+        // and DealController::show(), which already dropped the added_by
+        // fallback (a deal reassigned outside the team shouldn't stay
+        // accessible just because someone on the team added it).
         if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
             $subordinatesIds = $user->getAllSubordinatesIds();
-            return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$user->id])) 
-                   || $deal->added_by == $user->id;
+            return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$user->id]));
         }
-        
-        return $deal->responsible_person_id == $user->id || $deal->added_by == $user->id;
+
+        return $deal->responsible_person_id == $user->id;
     }
 
 

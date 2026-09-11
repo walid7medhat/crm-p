@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { resetSidebarLayout } from './composables/useSidebar.js'
+import { clearAuthToken } from './plugins/axios.js'
 
 // DashBoard
 import Ai from './pages/dashboard/ai.vue'
@@ -338,12 +339,27 @@ const isTokenValid = () => {
 
 const logout = () => {
   resetSidebarLayout()
+
+  // Every token source axios/resolveAuthToken() knows how to read from —
+  // token, access_token (localStorage + sessionStorage).
+  clearAuthToken()
+
   localStorage.removeItem('searchFilters')
-  localStorage.removeItem('token')
   localStorage.removeItem('user')
   localStorage.removeItem('refreshToken')
   localStorage.removeItem('impersonator_token')
   localStorage.removeItem('impersonator_user')
+
+  // Defensive: expire any auth cookie a server response may have set, since
+  // resolveAuthToken() falls back to reading these.
+  document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
+  document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/'
+
+  // Per-user kanban board cache (leads.vue) — wipe every cached board so the
+  // next person to sign in on this browser never even briefly sees it.
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith('kanban_leads_stages_cache_v2'))
+    .forEach((key) => localStorage.removeItem(key))
 
   window.location.href = '/sign-in'
 }

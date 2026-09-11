@@ -1184,6 +1184,14 @@ const VISIBLE_LEADS_INCREMENT = 15
 const visibleLeadCounts = ref({})
 const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v2'
 const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // keep board visible across refreshes
+
+// Namespaced per user id — otherwise switching accounts on the same browser
+// paints the previous user's cached board (including leads they can't see)
+// for the moment before the background refetch corrects it.
+function getKanbanCacheKey() {
+    const uid = user.value?.id ?? getUserFromStorage()?.id ?? 'anon'
+    return `${KANBAN_LEADS_CACHE_KEY}:${uid}`
+}
 const responsiblePersons = ref([])
 const loading = ref(true)
 const isSearching = ref(false)
@@ -1644,7 +1652,7 @@ function saveColumnsToCache() {
             // Persist exact stage totals so the badge is not the loaded page size
             stagePagination: stagePagination.value || {},
         }
-        localStorage.setItem(KANBAN_LEADS_CACHE_KEY, JSON.stringify(payload))
+        localStorage.setItem(getKanbanCacheKey(), JSON.stringify(payload))
     } catch (e) {
         // ignore cache errors
     }
@@ -1662,7 +1670,7 @@ function syncStageOrderMapFromColumns(cols) {
 
 function loadCachedColumns() {
     try {
-        const raw = localStorage.getItem(KANBAN_LEADS_CACHE_KEY)
+        const raw = localStorage.getItem(getKanbanCacheKey())
         if (!raw) return false
         const parsed = JSON.parse(raw)
         if (!parsed || !Array.isArray(parsed.columns)) return false
