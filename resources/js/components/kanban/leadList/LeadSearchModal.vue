@@ -1887,6 +1887,8 @@
 
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
+import { Modal } from 'bootstrap'
+
 import { BModal, BFormInput } from 'bootstrap-vue-3'
 
 import vSelect from 'vue-select'
@@ -1942,6 +1944,39 @@ const FIELD_STORAGE_KEY = 'selectedLeadFields'
 const showDateModal = ref(false)
 
 const showBudgetDropdown = ref(false)
+
+/** Bootstrap's modal focus-trap fights any input Teleported to <body> (the
+ *  budget dropdown, the date picker panel) — it forces focus back into the
+ *  modal the instant you click/type into them, which reads as the whole
+ *  search modal "closing". Suspend the trap while either panel is open,
+ *  same fix already used by DateTimePicker.vue for the same problem. */
+const bsModalFocusRestore = []
+
+function suspendSearchModalFocusTrap() {
+    document.querySelectorAll('.modal.show').forEach((el) => {
+        const inst = Modal.getInstance(el)
+        if (!inst?._config || inst._config.focus === false) return
+        bsModalFocusRestore.push({ inst, focus: inst._config.focus })
+        inst._config.focus = false
+    })
+}
+
+function restoreSearchModalFocusTrap() {
+    bsModalFocusRestore.forEach(({ inst, focus }) => {
+        if (inst?._config) inst._config.focus = focus
+    })
+    bsModalFocusRestore.length = 0
+}
+
+watch([showBudgetDropdown, showDateModal], ([budgetOpen, dateOpen], [prevBudgetOpen, prevDateOpen] = []) => {
+    const isOpen = budgetOpen || dateOpen
+    const wasOpen = prevBudgetOpen || prevDateOpen
+    if (isOpen && !wasOpen) {
+        suspendSearchModalFocusTrap()
+    } else if (!isOpen && wasOpen) {
+        restoreSearchModalFocusTrap()
+    }
+})
 
 const budgetTriggerRef = ref(null)
 
@@ -6569,6 +6604,8 @@ onBeforeUnmount(() => {
     document.removeEventListener('click', onDocumentClick)
 
     removeBudgetDropdownListeners()
+
+    restoreSearchModalFocusTrap()
 
 })
 

@@ -781,6 +781,16 @@ watch(() => props.modelValue, (val) => {
     show.value = val
 })
 
+// Navigating away entirely (e.g. "More properties" / a matching listing card
+// inside GeneralTab) should just close the modal — not fight the pending
+// navigation with the /kanban redirect below (route.query.lead is already
+// gone on the new route by the time this fires, so that guard no-ops).
+watch(() => route.path, (newPath) => {
+    if (show.value && newPath !== '/kanban') {
+        show.value = false
+    }
+})
+
 
 watch(show, (val) => {
   if (val) {

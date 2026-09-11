@@ -18,7 +18,7 @@
                         :append-to-body="false"
                         class="dob-v-select"
                         aria-label="Month"
-                        @open="onDobSelectOpen"
+                        @open="scrollDobOptionIntoView(dobMonthOneBased - 1)"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -41,7 +41,7 @@
                         :append-to-body="false"
                         class="dob-v-select"
                         aria-label="Day"
-                        @open="onDobSelectOpen"
+                        @open="scrollDobOptionIntoView(dobSelDayOneBased - 1)"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -63,7 +63,7 @@
                         :append-to-body="false"
                         class="dob-v-select"
                         aria-label="Year"
-                        @open="onDobSelectOpen"
+                        @open="scrollDobOptionIntoView(dobYearOptions.indexOf(dobSelYear))"
                     >
                         <template #open-indicator="{ attributes }">
                             <span v-bind="attributes" class="dob-vs-open">
@@ -225,18 +225,19 @@ function reduceDobOption(o) {
     return o.value
 }
 
-// The Month/Day/Year dropdowns can hold a long list (e.g. 80+ years); vue-select
-// highlights the current value by default but doesn't scroll it into view on
-// open, so it opens at the very top of the list. Bring the current selection
-// into the visible area as soon as the dropdown opens.
-function onDobSelectOpen() {
+// The Month/Day/Year dropdowns can hold a long list (e.g. 80+ years); it
+// otherwise opens at the very top of the list. Scroll the currently selected
+// option into view as soon as the dropdown opens, computed directly from its
+// index in the options list rather than relying on vue-select's internal
+// "highlighted" state (more reliable across versions/timing).
+function scrollDobOptionIntoView(index) {
+    if (index == null || index < 0) return
     nextTick(() => {
         requestAnimationFrame(() => {
-            const highlighted = document.querySelector(
-                '.dob-v-select.vs--open .vs__dropdown-menu .vs__dropdown-option--highlight'
-            )
-            if (highlighted && typeof highlighted.scrollIntoView === 'function') {
-                highlighted.scrollIntoView({ block: 'center' })
+            const menu = document.querySelector('.dob-v-select.vs--open .vs__dropdown-menu')
+            const target = menu && menu.children ? menu.children[index] : null
+            if (target && typeof target.scrollIntoView === 'function') {
+                target.scrollIntoView({ block: 'center' })
             }
         })
     })
@@ -642,6 +643,10 @@ onBeforeUnmount(() => {
     min-width: 0;
     position: relative;
     z-index: 2;
+    /* vue-select's own CSS hardcodes a 160px dropdown floor via this
+       variable — wider than any of these 3 compact fields. Zero it out
+       here so the dropdown can never grow past the field/modal width. */
+    --vs-dropdown-min-width: 0px;
 }
 
 .dob-select-field:has(.vs--open) {
@@ -703,13 +708,22 @@ onBeforeUnmount(() => {
 
 :deep(.dob-v-select .vs__dropdown-menu) {
     z-index: 100 !important;
-    max-height: 220px !important;
+    max-height: 190px !important;
     overflow-y: auto !important;
+    /* vue-select defaults to a 160px floor, wider than this compact
+       3-column field — pin it to the trigger's own width and never let
+       it grow past it, so it can't spill past the modal's own edge. */
+    min-width: 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 :deep(.dob-v-select .vs__dropdown-menu .vs__dropdown-option) {
     font-size: 11px !important;
     padding: 6px 10px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 :deep(.dob-v-select .vs__open-indicator),

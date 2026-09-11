@@ -42,7 +42,6 @@
                         :key="item.id"
                         :to="`/property-details/${item.id}`"
                         class="matching-card matching-card-link"
-                        @click="handleNavigateAway"
                     >
                         <div class="matching-card-media">
                             <img
@@ -118,7 +117,7 @@
             </div>
 
             <div class="matching-more-wrap">
-                <router-link :to="moreRoute" class="matching-btn-more" @click="handleNavigateAway">More properties</router-link>
+                <router-link :to="moreRoute" class="matching-btn-more">More properties</router-link>
             </div>
         </template>
     </div>
@@ -127,7 +126,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
-import { showLeadViewModal, leadViewModalSeed } from '@/composables/useLeadViewModal.js'
 
 const matchingScrollEl = ref(null)
 const canScrollPrev = ref(false)
@@ -475,15 +473,6 @@ function completionBadge(item) {
 
 function onImgError(e) {
     e.target.style.display = 'none'
-}
-
-/** Router-link cards/buttons navigate away from the kanban — close the globally
- *  mounted lead modal so it doesn't stay floating on top of the new page.
- *  Only clears the modal state directly (not closeLeadView()) — that helper
- *  also pushes back to /kanban, which races with and cancels this navigation. */
-function handleNavigateAway() {
-    showLeadViewModal.value = false
-    leadViewModalSeed.value = null
 }
 </script>
 <style scoped>
