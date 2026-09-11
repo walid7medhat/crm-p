@@ -7,13 +7,20 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Resolves Bitrix24 custom lead field codes (e.g. UF_CRM_1649761345243) to the
- * human label configured for them in Bitrix24 (crm.lead.userfield.list) —
- * without this, the "More Information" section on a lead just shows the raw
- * machine-generated field code, which is meaningless to a user.
+ * human label configured for them in Bitrix24 — without this, the "More
+ * Information" section on a lead just shows the raw machine-generated field
+ * code, which is meaningless to a user.
+ *
+ * Uses crm.lead.fields (not crm.lead.userfield.list) — on this portal,
+ * userfield.list returns the field definitions but no label at all (no
+ * EDIT_FORM_LABEL/LIST_COLUMN_LABEL/FILTER_LABEL keys present), whereas
+ * crm.lead.fields returns a `title` per field, including custom UF_CRM_*
+ * ones. Bitrix24LeadImporter::ensureFieldMaps() already relies on this same
+ * endpoint for STATUS_ID/SOURCE_ID enum labels.
  */
 class Bitrix24FieldLabels
 {
-    private const CACHE_KEY = 'bitrix24_lead_userfield_labels';
+    private const CACHE_KEY = 'bitrix24_lead_field_labels';
     private const CACHE_TTL = 86400; // labels rarely change — cache a day
 
     /**
@@ -24,22 +31,19 @@ class Bitrix24FieldLabels
         return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
             try {
                 $client = new Bitrix24Client();
-                $response = $client->call('crm.lead.userfield.list', []);
+                $response = $client->call('crm.lead.fields', []);
             } catch (\Throwable $e) {
-                Log::warning('Bitrix24FieldLabels: failed to load userfield list: ' . $e->getMessage());
+                Log::warning('Bitrix24FieldLabels: failed to load lead fields: ' . $e->getMessage());
                 return [];
             }
 
             $map = [];
-            foreach ($response['result'] ?? [] as $field) {
-                $name = $field['FIELD_NAME'] ?? null;
-                if (!$name) {
+            foreach ($response['result'] ?? [] as $name => $field) {
+                if (!is_array($field)) {
                     continue;
                 }
 
-                $label = self::extractLabel($field['EDIT_FORM_LABEL'] ?? null)
-                    ?? self::extractLabel($field['LIST_COLUMN_LABEL'] ?? null)
-                    ?? self::extractLabel($field['FILTER_LABEL'] ?? null);
+                $label = self::extractLabel($field['title'] ?? ($field['formLabel'] ?? null));
 
                 if ($label) {
                     $map[$name] = $label;
