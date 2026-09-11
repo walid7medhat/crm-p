@@ -318,7 +318,16 @@ async function deleteExistingServerFile(typeId, file) {
     if (!filePath) {
       throw new Error('Missing file path for property document')
     }
-    const documentType = typeId === 'spa' ? 'spa_document' : 'payment_proof'
+    const PROPERTY_DOC_TYPE_MAP = {
+      spa: 'spa_document',
+      spa_document: 'spa_document',
+      payment_proof: 'payment_proof',
+      eoi: 'eoi_documents',
+      booking: 'booking_documents',
+      mou: 'mou_documents',
+      noc: 'noc_documents',
+    }
+    const documentType = PROPERTY_DOC_TYPE_MAP[typeId] || 'payment_proof'
     await axios.delete('/api/deals/property-document', {
       data: {
         deal_id: props.dealId,

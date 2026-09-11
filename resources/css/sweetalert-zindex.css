@@ -1,0 +1,7 @@
+/* Some modals (e.g. CompleteStageFieldsModal) push their own overlay/dropdowns
+   up to z-index 46200+ while open. SweetAlert2's default z-index (1060) sits
+   well below that, so confirm/alert dialogs render hidden behind those modals.
+   Force SweetAlert2 above every modal layer in the app. */
+.swal2-container {
+  z-index: 1000000 !important;
+}
