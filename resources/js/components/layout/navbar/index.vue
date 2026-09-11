@@ -1571,9 +1571,11 @@ function armIgnoreOutsideClick(ms = 150) {
 function isInsideSearchUi(target) {
     if (!target || typeof target.closest !== 'function') return false;
 
-    // Main search popup + date/budget overlays.
+    // Main search popup + date/budget overlays (budget-dropdown is Teleported
+    // to <body> from inside LeadSearchModal/DealSearchModal, so it lives
+    // outside both `anchor` and `panel` below and must be matched by class).
     if (target.closest(
-        '.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal, .lead-search-budget-dropdown'
+        '.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal, .budget-dropdown'
     )) {
         return true;
     }
