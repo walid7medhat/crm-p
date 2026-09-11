@@ -33,6 +33,27 @@ use Illuminate\Http\UploadedFile;
 class DealController extends Controller
 {
     /**
+     * Broadcasting is a best-effort, real-time side channel (e.g. Pusher rejects
+     * any event whose payload exceeds 10KB). A failure here must never roll back
+     * or fail the actual deal update, so every dispatch goes through this helper.
+     */
+    private function broadcastDealUpdate(Deal $deal, string $actionType, ?int $userId = null, ?array $changes = null, bool $toOthers = false): void
+    {
+        try {
+            $pending = broadcast(new DealUpdated($deal, $actionType, $userId, $changes));
+            if ($toOthers) {
+                $pending->toOthers();
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to broadcast deal update', [
+                'deal_id' => $deal->id,
+                'action_type' => $actionType,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * 1. جلب كل الصفقات مع فلترة متقدمة
      */
     public function index(Request $request)
@@ -216,7 +237,7 @@ class DealController extends Controller
                 'properties'
             ]);
 
-            broadcast(new DealUpdated($deal, 'updated'))->toOthers();
+            $this->broadcastDealUpdate($deal, 'updated', null, null, true);
 
             DB::commit();
 
@@ -363,7 +384,7 @@ class DealController extends Controller
                 'new_person' => $responsiblePerson?->name
             ];
             
-            broadcast(new DealUpdated($deal, 'assigned', null, $changes));
+            $this->broadcastDealUpdate($deal, 'assigned', null, $changes);
             
             DealHistoryHelper::log($deal->id, [
                 'action' => 'assigned',
@@ -730,7 +751,7 @@ class DealController extends Controller
             DB::commit();
 
             $deal->load(['parties', 'documents', 'stage', 'properties']);
-            broadcast(new DealUpdated($deal, 'updated'));
+            $this->broadcastDealUpdate($deal, 'updated');
 
             return response()->json([
                 'success' => true,
@@ -886,7 +907,7 @@ class DealController extends Controller
 
             DB::commit();
 
-            broadcast(new DealUpdated($deal->fresh(), 'stage_changed'));
+            $this->broadcastDealUpdate($deal->fresh(), 'stage_changed');
 
             return response()->json([
                 'success' => true,
@@ -960,7 +981,7 @@ class DealController extends Controller
             DB::commit();
 
             $deal->load(['stage', 'parties', 'documents', 'properties']);
-            broadcast(new DealUpdated($deal, 'stage_changed'));
+            $this->broadcastDealUpdate($deal, 'stage_changed');
 
             return response()->json([
                 'success' => true,
@@ -1109,7 +1130,7 @@ class DealController extends Controller
 
             DB::commit();
 
-            broadcast(new DealUpdated($deal->fresh(), 'updated'));
+            $this->broadcastDealUpdate($deal->fresh(), 'updated');
 
             return response()->json([
                 'success' => true,
@@ -1197,7 +1218,7 @@ class DealController extends Controller
             }
 
             $document->delete();
-            broadcast(new DealUpdated($deal->fresh(), 'updated'));
+            $this->broadcastDealUpdate($deal->fresh(), 'updated');
             
             return response()->json([
                 'success' => true,

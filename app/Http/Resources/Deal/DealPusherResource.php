@@ -3,7 +3,6 @@
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\User\UserResource;
 
 class DealPusherResource extends JsonResource
 {
@@ -51,7 +50,15 @@ class DealPusherResource extends JsonResource
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
              
             'responsible_person_id' => $this->responsible_person_id,
-            'responsible_person' => new UserResource($this->responsiblePerson),
+            // Kept minimal on purpose: this payload is broadcast over Pusher, which
+            // rejects events whose data exceeds 10KB. The full UserResource (parent
+            // chain, roles/permissions, login history, branch/department, etc.) was
+            // pushing large deals over that limit and failing the whole update.
+            'responsible_person' => $this->whenLoaded('responsiblePerson', fn () => $this->responsiblePerson ? [
+                'id' => $this->responsiblePerson->id,
+                'name' => \App\Models\User::resolveDisplayName($this->responsiblePerson),
+                'avatar' => $this->responsiblePerson->avatar ? asset('storage/' . $this->responsiblePerson->avatar) : null,
+            ] : null),
             
             'buyer_name' => (function () {
                 $buyer = $this->parties

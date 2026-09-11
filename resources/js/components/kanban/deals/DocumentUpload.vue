@@ -328,7 +328,7 @@ async function deleteExistingServerFile(typeId, file) {
       noc: 'noc_documents',
     }
     const documentType = PROPERTY_DOC_TYPE_MAP[typeId] || 'payment_proof'
-    await axios.delete('/api/deals/property-document', {
+    await axios.delete('/deals/property-document', {
       data: {
         deal_id: props.dealId,
         property_id: props.propertyId,

@@ -24,6 +24,24 @@ use Illuminate\Support\Facades\Log;
 
 class LeadConversionController extends Controller
 {
+    /**
+     * Broadcasting is a best-effort, real-time side channel (e.g. Pusher rejects
+     * any event whose payload exceeds 10KB). A failure here must never fail the
+     * actual lead-to-deal conversion, so every dispatch goes through this helper.
+     */
+    private function broadcastDealUpdate(Deal $deal, string $actionType, ?int $userId = null, ?array $changes = null): void
+    {
+        try {
+            broadcast(new DealUpdated($deal, $actionType, $userId, $changes));
+        } catch (\Throwable $e) {
+            Log::error('Failed to broadcast deal update', [
+                'deal_id' => $deal->id,
+                'action_type' => $actionType,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function convert(Request $request)
     {
         $leadId = $request->input('lead_id')
@@ -182,7 +200,7 @@ class LeadConversionController extends Controller
             
             try {
                 broadcast(new LeadUpdated($lead, 'stage_changed', auth()->id(), $changes, 'crm'));
-                broadcast(new DealUpdated($deal, 'created'));
+                $this->broadcastDealUpdate($deal, 'created');
             } catch (\Throwable $e) {
                 Log::warning('Broadcast failed during lead conversion', [
                     'lead_id' => $lead->id,
@@ -340,7 +358,7 @@ class LeadConversionController extends Controller
             DealHistoryHelper::log($deal->id, ['action' => 'created']);
             
             try {
-                broadcast(new DealUpdated($deal, 'created'));
+                $this->broadcastDealUpdate($deal, 'created');
             } catch (\Throwable $e) {
                 Log::warning('Broadcast failed during deal create/store', [
                     'deal_id' => $deal->id,
