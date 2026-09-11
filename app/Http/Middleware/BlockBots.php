@@ -12,13 +12,19 @@ class BlockBots
     {
         $user = auth()->user();
 
-        // استثناء السوبر أدمن والمستخدم 30
-        $isExempt = $user && ($user->hasRole('super_admin') || $user->id == 30);
-        if ($isExempt) {
+        // Full bypass for super_admin and user 30
+        if ($user && ($user->hasRole('super_admin') || $user->id == 30)) {
             return $next($request);
         }
 
-        // فحص حالة الحساب
+        // Power users get much higher limits instead of a full bypass — they
+        // still go through the account-status/bot-detection checks below,
+        // just with a far higher ceiling before hitting a 429.
+        $powerUserIds = [33];
+        $isPowerUser = $user && in_array($user->id, $powerUserIds, true);
+        $rateMultiplier = $isPowerUser ? 10 : 1;
+
+        // Account status check
         if ($user && $user->status != 'active') {
             Auth::logout();
             $request->session()->invalidate();
@@ -26,7 +32,7 @@ class BlockBots
             abort(403, 'Account inactive');
         }
 
-        // فحص User-Agent
+        // User-Agent check
         $agent = strtolower($request->header('User-Agent') ?? '');
         $botKeywords = ['curl', 'python', 'scrapy', 'wget', 'perl', 'ruby', 'java/', 'http-client'];
         
@@ -41,9 +47,9 @@ class BlockBots
         }
 
         // --------------------------------------
-        // 1. المعدل العام (للصفحات العادية)
+        // 1. Global rate (for normal pages)
         // --------------------------------------
-        $globalLimit = $user ? 400 : 120;
+        $globalLimit = ($user ? 400 : 120) * $rateMultiplier;
         $key = 'hits_' . ($user?->id ?? $request->ip());
         $count = cache()->get($key, 0);
         $count++;
@@ -55,19 +61,19 @@ class BlockBots
         }
 
         // --------------------------------------
-        // 2. اكتشاف إساءة استخدام endpoint (مختلف حسب النوع)
+        // 2. Per-endpoint abuse detection (limit varies by request type)
         // --------------------------------------
         $path = $request->path();
         $method = $request->method();
         
-        // تحديد حدود مختلفة حسب نوع الـ endpoint
+        // Different thresholds depending on the endpoint type
         $limits = [
-            'write' => $user ? 60 : 20,
-            'read' => $user ? 300 : 100,
+            'write' => ($user ? 60 : 20) * $rateMultiplier,
+            'read' => ($user ? 300 : 100) * $rateMultiplier,
             'auth' => 10,
         ];
         
-        // تحديد أي نوع ينتمي إليه هذا الـ endpoint
+        // Classify which type this endpoint belongs to
         $isWriteRequest = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE']);
         $isAuthRequest = str_contains($path, 'login') || str_contains($path, 'register');
         
@@ -83,22 +89,22 @@ class BlockBots
         $routeCount = cache()->get($routeKey, 0);
         $routeCount++;
         
-        // مدة أقل للعمليات المتكررة (30 ثانية بدلاً من 60)
-        $duration = $isAuthRequest ? 60 * 5 : 60; // Auth: 5 دقائق، غيره: دقيقة
+        // Shorter window for repeated actions
+        $duration = $isAuthRequest ? 60 * 5 : 60; // Auth: 5 minutes, everything else: 1 minute
         cache()->put($routeKey, $routeCount, now()->addSeconds($duration));
         
         if ($routeCount > $limit) {
             abort(429, "Rate limit exceeded for this action. Please wait {$duration} seconds.");
         }
         
-        // فحص الحظر المؤقت
+        // Temporary block check
         $tempBlockKey = 'temp_block_' . ($user?->id ?? $request->ip());
         if (cache()->get($tempBlockKey)) {
             abort(429, 'You are temporarily blocked. Please try again later.');
         }
 
         // --------------------------------------
-        // 3. كشف الاندفاع (Burst) - حماية ضد الـ DoS فقط
+        // 3. Burst detection — DoS protection only
         // --------------------------------------
         $burstKey = 'burst_' . ($user?->id ?? $request->ip());
         $burstCount = cache()->get($burstKey, 0);
@@ -110,9 +116,9 @@ class BlockBots
             cache()->put($burstKey, $burstCount, now()->addSeconds(10));
         }
         
-        // 200 طلب في 10 ثواني = 20 طلب في الثانية (هذا DoS حقيقي، وليس مستخدم عادي)
-        if ($burstCount > 200) {
-            // حتى هنا لا تحظر الحساب نهائياً، فقط حظر مؤقت
+        // 200 requests in 10 seconds = 20 requests/second — real DoS, not a normal user
+        if ($burstCount > 200 * $rateMultiplier) {
+            // Even here, don't ban the account permanently — just a temporary block
             $tempBlockKey = 'temp_block_' . ($user?->id ?? $request->ip());
             cache()->put($tempBlockKey, true, now()->addMinutes(15));
             

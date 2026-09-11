@@ -127,7 +127,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
-import { closeLeadView } from '@/composables/useLeadViewModal.js'
+import { showLeadViewModal, leadViewModalSeed } from '@/composables/useLeadViewModal.js'
 
 const matchingScrollEl = ref(null)
 const canScrollPrev = ref(false)
@@ -478,9 +478,12 @@ function onImgError(e) {
 }
 
 /** Router-link cards/buttons navigate away from the kanban — close the globally
- *  mounted lead modal so it doesn't stay floating on top of the new page. */
+ *  mounted lead modal so it doesn't stay floating on top of the new page.
+ *  Only clears the modal state directly (not closeLeadView()) — that helper
+ *  also pushes back to /kanban, which races with and cancels this navigation. */
 function handleNavigateAway() {
-    closeLeadView()
+    showLeadViewModal.value = false
+    leadViewModalSeed.value = null
 }
 </script>
 <style scoped>
