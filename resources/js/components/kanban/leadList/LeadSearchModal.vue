@@ -4523,6 +4523,8 @@ const isFormEmpty = () => {
 }
 
 function applySearch(options = {}) {
+    showBudgetDropdown.value = false
+    removeBudgetDropdownListeners()
  if (isFormEmpty()) {
         show.value = false  
         emit('update:modelValue', false) 
