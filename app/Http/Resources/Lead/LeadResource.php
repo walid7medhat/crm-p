@@ -6,6 +6,7 @@ use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
 use App\Models\Integration;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\Bitrix24\Bitrix24FieldLabels;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LeadResource extends JsonResource
@@ -22,7 +23,8 @@ class LeadResource extends JsonResource
         if (! empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) {
             foreach ($rawMetaData['field_data'] as $field) {
                 if (isset($field['name']) && isset($field['values'][0])) {
-                    $facebookFields[$field['name']] = $field['values'][0];
+                    $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
+                    $facebookFields[$label] = $field['values'][0];
                 }
             }
         }
@@ -317,7 +319,8 @@ class LeadResource extends JsonResource
                     $fieldValue = $field['values'][0];
 
                     if (! in_array($fieldName, $basicFields)) {
-                        $facebookFields[$fieldName] = $fieldValue;
+                        $label = Bitrix24FieldLabels::resolve($fieldName) ?? $fieldName;
+                        $facebookFields[$label] = $fieldValue;
                     }
                 }
             }

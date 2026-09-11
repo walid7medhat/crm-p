@@ -3,21 +3,23 @@
 namespace App\Http\Resources\Lead;
 
 use App\Models\Integration;
+use App\Services\Bitrix24\Bitrix24FieldLabels;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PusherLeadResource extends JsonResource
 {
     public function toArray($request): array
     {
-         $rawMetaData = is_string($this->raw_meta_data) 
-            ? json_decode($this->raw_meta_data, true) 
+         $rawMetaData = is_string($this->raw_meta_data)
+            ? json_decode($this->raw_meta_data, true)
             : $this->raw_meta_data;
 $facebookFields = [];
 
 if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) {
     foreach ($rawMetaData['field_data'] as $field) {
         if (isset($field['name']) && isset($field['values'][0])) {
-            $facebookFields[$field['name']] = $field['values'][0];
+            $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
+            $facebookFields[$label] = $field['values'][0];
         }
     }
 }
@@ -187,7 +189,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
                 $fieldValue = $field['values'][0];
                 
                 if (!in_array($fieldName, $basicFields)) {
-                    $facebookFields[$fieldName] = $fieldValue;
+                    $label = Bitrix24FieldLabels::resolve($fieldName) ?? $fieldName;
+                    $facebookFields[$label] = $fieldValue;
                 }
             }
         }
