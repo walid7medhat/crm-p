@@ -2409,6 +2409,7 @@ function logout() {
   localStorage.removeItem('user');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('searchFilters');
+  localStorage.removeItem('listingSearchFilters');
   localStorage.removeItem('impersonator_token');
   localStorage.removeItem('impersonator_user');
 
