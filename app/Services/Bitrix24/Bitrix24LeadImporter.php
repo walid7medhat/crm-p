@@ -815,6 +815,12 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
      * filtered out — only the *extras* (custom UF_* fields, anything not in
      * STANDARD_B24_KEYS) remain, so LeadResource::facebook_questions_answers
      * surfaces Q&A pairs the user actually wants to see.
+     *
+     * The human label (Bitrix24FieldLabels::resolve()) is baked into `name`
+     * here, permanently, at import time — not resolved live on every page
+     * view — so the stored data stays readable even if Bitrix24 becomes
+     * unreachable later. The original raw code is preserved as `code` so a
+     * mislabeled field can still be corrected/re-resolved later.
      */
     private function buildFieldData(array $b24Lead): array
     {
@@ -828,6 +834,10 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             if (isset($skip[$name])) {
                 continue;
             }
+
+            $code = (string) $name;
+            $label = Bitrix24FieldLabels::resolve($code) ?? $code;
+
             if (is_array($value)) {
                 $values = [];
                 foreach ($value as $entry) {
@@ -845,7 +855,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                 if (empty($values)) {
                     continue;
                 }
-                $fieldData[] = ['name' => (string) $name, 'values' => $values];
+                $fieldData[] = ['name' => $label, 'code' => $code, 'values' => $values];
                 continue;
             }
             if (is_scalar($value)) {
@@ -853,7 +863,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                 if ($strVal === '') {
                     continue;
                 }
-                $fieldData[] = ['name' => (string) $name, 'values' => [$strVal]];
+                $fieldData[] = ['name' => $label, 'code' => $code, 'values' => [$strVal]];
             }
         }
         return $fieldData;
