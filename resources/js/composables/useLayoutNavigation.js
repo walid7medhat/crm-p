@@ -120,7 +120,6 @@ const SETTINGS_PREFIXES = [
   '/lead-reports',
   '/lead-source-report',
   '/agent-performance',
-  '/ai-lead-intelligence',
   '/sales-intelligence',
   '/investment-analysis',
   '/settings',
@@ -320,7 +319,6 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
     const insightPaths = [
       '/lead-reports',
       '/lead-source-report',
-      '/ai-lead-intelligence',
       '/sales-intelligence',
       '/investment-analysis',
       '/settings/city-investments',
@@ -328,7 +326,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       '/settings/kanban',
       '/settings/stage-visibility',
     ];
-    // Insights module: admin/super_admin only. AI Lead Intelligence itself is super_admin-only (route + API).
+    // Insights module: admin/super_admin only.
     if (isAdmin || isSuperAdmin) {
       tabs.push({
         id: 'insights',

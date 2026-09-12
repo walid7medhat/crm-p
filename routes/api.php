@@ -55,7 +55,6 @@ use App\Http\Controllers\Api\Bitrix24SyncController;
 use App\Http\Controllers\Api\Bitrix24WebhookController;
 use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
 use App\Http\Controllers\Api\AiSalesIntelligence\AiSalesIntelligenceController;
-use App\Http\Controllers\Api\AiLeadIntelligence\AiLeadIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
@@ -455,17 +454,6 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/scoring-rules', [AiSalesIntelligenceController::class, 'updateScoringRules']);
         Route::post('/scoring-rules/reset', [AiSalesIntelligenceController::class, 'resetScoringRules']);
         Route::post('/recalculate', [AiSalesIntelligenceController::class, 'recalculate']);
-    });
-
-    // AI Lead Intelligence — super_admin only
-    Route::prefix('ai-lead-intelligence')->middleware('role:super_admin')->group(function () {
-        Route::get('/overview', [AiLeadIntelligenceController::class, 'overview']);
-        Route::get('/priority-leads', [AiLeadIntelligenceController::class, 'priorityLeads']);
-        Route::get('/at-risk', [AiLeadIntelligenceController::class, 'atRisk']);
-        Route::get('/property-opportunities', [AiLeadIntelligenceController::class, 'propertyOpportunities']);
-        Route::get('/neglected', [AiLeadIntelligenceController::class, 'neglected']);
-        Route::get('/actions-today', [AiLeadIntelligenceController::class, 'actionsToday']);
-        Route::post('/refresh', [AiLeadIntelligenceController::class, 'refresh']);
     });
 
     Route::get('/attendance/today', [AttendanceController::class, 'today']);

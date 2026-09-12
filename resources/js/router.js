@@ -101,7 +101,6 @@ import HrDashboard from './pages/hr/index.vue'
 import EmployeeProfilePage from './pages/hr/employees/EmployeeProfilePage.vue'
 import AssetDetailsPage from './pages/hr/assets/AssetDetailsPage.vue'
 import SalesIntelligence from './pages/sales-intelligence/index.vue'
-import AiLeadIntelligence from './pages/ai-lead-intelligence/index.vue'
 
 
 import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
@@ -161,7 +160,6 @@ const baseRoutes = [
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: LeadSourceReport, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/agent-performance', component: agentPerformance, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/ai-lead-intelligence', component: AiLeadIntelligence, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
   { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
