@@ -58,6 +58,7 @@ export function useImpersonation() {
     setAuthToken(token)
     storeSessionUser(targetUser)
     impersonatorUser.value = readStoredUser(localStorage.getItem(IMPERSONATOR_USER_KEY))
+    localStorage.removeItem('listingSearchFilters')
 
     window.location.href = '/'
   }
@@ -72,6 +73,7 @@ export function useImpersonation() {
     localStorage.setItem('user', originalUser)
     localStorage.removeItem(IMPERSONATOR_TOKEN_KEY)
     localStorage.removeItem(IMPERSONATOR_USER_KEY)
+    localStorage.removeItem('listingSearchFilters')
     impersonatorUser.value = null
 
     window.location.href = '/'

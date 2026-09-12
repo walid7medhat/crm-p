@@ -342,6 +342,7 @@ const logout = () => {
   clearAuthToken()
 
   localStorage.removeItem('searchFilters')
+  localStorage.removeItem('listingSearchFilters')
   localStorage.removeItem('user')
   localStorage.removeItem('refreshToken')
   localStorage.removeItem('impersonator_token')

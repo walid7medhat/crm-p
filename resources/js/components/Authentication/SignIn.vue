@@ -270,6 +270,10 @@ export default {
             })
           );
 
+          // Don't let a previous user's saved listing filters leak into this session
+          // (shared computer / switched account without a clean logout).
+          localStorage.removeItem('listingSearchFilters');
+
           const isAdminUser = userData.roles?.includes('only show listings');
           if (!isAdminUser) {
             window.location.href = '/';
