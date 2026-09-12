@@ -469,7 +469,7 @@ class StageController extends Controller
                     }
                 });
             }
-            if ($request->filled('search')) {
+            if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
                 LeadTextSearch::apply($q, (string) $request->search, [
                     'comments' => false,
                     'relations' => true,
@@ -479,7 +479,8 @@ class StageController extends Controller
             }
         });
 
-        $isTextSearch = $request->filled('search');
+        // Below min length is ignored (normal board) — avoids 1-char full-table LIKE scans.
+        $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
         // Temporary benchmark switch — see config/lead_scoring.php → kanban_search.skip_ranking
         $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
 
@@ -528,27 +529,38 @@ class StageController extends Controller
         $stagesWithLeads = [];
         $allLeadsForMeta = collect();
 
-        // Exact per-stage totals for the header badge (one grouped COUNT — not soft perPage+1).
-        $exactCountsByStage = (clone $baseLeadsQuery)
-            ->whereIn('stage_id', $stageIds)
-            ->reorder()
-            ->toBase()
-            ->selectRaw('stage_id, COUNT(*) as cnt')
-            ->groupBy('stage_id')
-            ->pluck('cnt', 'stage_id');
+        // Exact per-stage totals for header badges — skip during free-text search.
+        // Search uses soft has_more (limit+1) so we do not repeat the LIKE predicate in COUNT(*).
+        $exactCountsByStage = collect();
+        if (! $isTextSearch) {
+            $exactCountsByStage = (clone $baseLeadsQuery)
+                ->whereIn('stage_id', $stageIds)
+                ->reorder()
+                ->toBase()
+                ->selectRaw('stage_id, COUNT(*) as cnt')
+                ->groupBy('stage_id')
+                ->pluck('cnt', 'stage_id');
+        }
 
         if ($isTextSearch) {
             $idsByStage = [];
+            $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
 
             if ($skipSearchRanking) {
-                // RAW SEARCH PATH (no ranking): same filters, simple id order, no ROW_NUMBER /
-                // activity reordering. Re-enable ranking with KANBAN_SEARCH_SKIP_RANKING=false.
+                // Phase 1: ONE search pass (ROW_NUMBER) instead of N per-stage LIKE queries.
+                // Same id order as the previous skip-ranking path; bounded to perPage+1 per stage.
+                $rankedQuery = (clone $baseLeadsQuery)
+                    ->whereIn('stage_id', $stageIds)
+                    ->select('leads.id', 'leads.stage_id')
+                    ->selectRaw('ROW_NUMBER() OVER (PARTITION BY stage_id ORDER BY id ASC) as rn');
+
+                $rankedRows = Lead::fromSub($rankedQuery, 'ranked_leads')
+                    ->where('rn', '<=', $perPage + 1)
+                    ->get(['id', 'stage_id', 'rn']);
+
                 foreach ($stages as $stage) {
-                    $idsByStage[$stage->id] = (clone $baseLeadsQuery)
+                    $idsByStage[$stage->id] = $rankedRows
                         ->where('stage_id', $stage->id)
-                        ->select('leads.id')
-                        ->orderBy('leads.id')
-                        ->limit($perPage + 1)
                         ->pluck('id')
                         ->all();
                 }
@@ -559,8 +571,6 @@ class StageController extends Controller
                     (strlen($searchDigits) >= 4 && preg_match('/^[\d\s\+\-\(\)]+$/', $searchTerm) === 1)
                     || str_contains($searchTerm, '@')
                 );
-
-                $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
 
                 if ($isNarrowSearch) {
                     // Phone/email: few matches expected — one scan, no window ranking.
@@ -641,8 +651,9 @@ class StageController extends Controller
                     ->filter()
                     ->values();
 
-                $total = (int) ($exactCountsByStage[$stage->id] ?? 0);
-                $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
+                // Soft totals during search: badge falls back to loaded length when total is null;
+                // has_more_pages drives Load More without an exact COUNT(*).
+                $loaded = $leads->count();
                 $allLeadsForMeta = $allLeadsForMeta->merge($leads);
 
                 $stagesWithLeads[] = [
@@ -650,14 +661,14 @@ class StageController extends Controller
                     'name' => $stage->name,
                     'order' => $stage->order,
                     'color' => $stage->color,
-                    'lead_count' => $total,
+                    'lead_count' => $loaded,
                     'leads' => $leads,
                     'pagination' => [
                         'current_page' => 1,
-                        'last_page' => $lastPage,
+                        'last_page' => $hasMore ? 2 : 1,
                         'per_page' => $perPage,
-                        'total' => $total,
-                        'has_more_pages' => $total > $perPage,
+                        'total' => $hasMore ? null : $loaded,
+                        'has_more_pages' => $hasMore,
                     ],
                     'created_at' => $stage->created_at?->toISOString(),
                     'updated_at' => $stage->updated_at?->toISOString(),
@@ -981,7 +992,7 @@ class StageController extends Controller
                         }
                     });
                 }
-                if ($request->filled('search')) {
+                if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
                     LeadTextSearch::apply($leadsQuery->getQuery(), (string) $request->search, [
                         'comments' => false,
                         'relations' => true,
@@ -999,21 +1010,31 @@ class StageController extends Controller
                         ->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
                         // ->orderBy('id', 'desc');
                 }
-                    
-                    
-                        $paginatedLeads = $leadsQuery->paginate($perPage, ['*'], 'page', $page);
 
-            // ================= pagination =================
-            // $paginatedLeads = $leadsQuery
-            //     // ->when(
-            //     //     Schema::hasColumn('leads', 'score'),
-            //     //     fn ($q) => $q->orderByDesc('score')->orderBy('created_at', 'desc'),
-            //     //     fn ($q) => $q->orderBy('created_at', 'desc')
-            //     // )
-            //     ->orderBy('updated_at', 'desc')
-            //     ->paginate($perPage, ['*'], 'page', $page);
+            $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
+            $page = max(1, (int) $page);
 
-            $leadsCollection = $paginatedLeads->getCollection();
+            if ($isTextSearch) {
+                // Soft pagination during search: avoid COUNT(*) over the LIKE predicate.
+                // Frontend only needs has_more_pages (+ optional soft total).
+                $offset = ($page - 1) * $perPage;
+                $rows = (clone $leadsQuery)->skip($offset)->take($perPage + 1)->get();
+                $hasMore = $rows->count() > $perPage;
+                $leadsCollection = $rows->take($perPage)->values();
+                $currentPage = $page;
+                $lastPage = $hasMore ? ($page + 1) : $page;
+                $total = $hasMore ? null : (($page - 1) * $perPage + $leadsCollection->count());
+                $perPageOut = $perPage;
+            } else {
+                $paginatedLeads = $leadsQuery->paginate($perPage, ['*'], 'page', $page);
+                $leadsCollection = $paginatedLeads->getCollection();
+                $currentPage = $paginatedLeads->currentPage();
+                $lastPage = $paginatedLeads->lastPage();
+                $total = $paginatedLeads->total();
+                $perPageOut = $paginatedLeads->perPage();
+                $hasMore = $paginatedLeads->hasMorePages();
+            }
+
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($leadsCollection);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($leadsCollection);
             KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
@@ -1030,11 +1051,11 @@ class StageController extends Controller
                 'stage_id' => $stage->id,
                 'leads' => $leadsPayload,
                 'pagination' => [
-                    'current_page' => $paginatedLeads->currentPage(),
-                    'last_page' => $paginatedLeads->lastPage(),
-                    'per_page' => $paginatedLeads->perPage(),
-                    'total' => $paginatedLeads->total(),
-                    'has_more_pages' => $paginatedLeads->hasMorePages()
+                    'current_page' => $currentPage,
+                    'last_page' => $lastPage,
+                    'per_page' => $perPageOut,
+                    'total' => $total,
+                    'has_more_pages' => $hasMore,
                 ]
             ], 'More leads retrieved successfully');
 

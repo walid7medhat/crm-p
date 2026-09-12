@@ -955,6 +955,21 @@ const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
 
 function applySearchToApi() {
     const term = (search.value || '').trim()
+    const digits = term.replace(/\D+/g, '')
+    const isPhoneLike = digits.length >= 4 && /^[\d\s+\-()]+$/.test(term)
+    const isEmailLike = term.includes('@')
+    // Phase 1: do not hit the API for 1-char text (or tiny email fragments).
+    // Empty term still clears / restores the normal board.
+    if (term) {
+        if (isPhoneLike) {
+            // phone path — already gated at ≥4 digits
+        } else if (isEmailLike) {
+            if (term.length < 3) return
+        } else if (term.length < 2) {
+            return
+        }
+    }
+
     let query = null
 
     if (lastQuery.value && Object.keys(lastQuery.value).length) {
@@ -1479,7 +1494,15 @@ const removeFilter = (f) => {
           activeFilter.value = null;
             activeFilters.value = [];
             lastQuery.value = null;
+            if (searchDebounceTimer.value) {
+                clearTimeout(searchDebounceTimer.value);
+                searchDebounceTimer.value = null;
+            }
+            suppressSearchWatcher.value = true;
             search.value = '';
+            nextTick(() => {
+                suppressSearchWatcher.value = false;
+            });
     }
 
     const payload = { query: lastQuery.value, activeFilters: activeFilters.value };
@@ -1507,7 +1530,15 @@ const clearMoreFilters = () => {
         activeFilter.value = null;
         activeFilters.value = [];
         lastQuery.value = null;
+        if (searchDebounceTimer.value) {
+            clearTimeout(searchDebounceTimer.value);
+            searchDebounceTimer.value = null;
+        }
+        suppressSearchWatcher.value = true;
         search.value = '';
+        nextTick(() => {
+            suppressSearchWatcher.value = false;
+        });
     }
     
     const payload = { query: lastQuery.value, activeFilters: activeFilters.value };
@@ -1522,8 +1553,17 @@ const clearSearchFilter = () => {
     activeFilter.value = null;
     activeFilters.value = [];
     lastQuery.value = null;
+    // Prevent watch(search) from firing a second clear/refetch after this explicit dispatch.
+    if (searchDebounceTimer.value) {
+        clearTimeout(searchDebounceTimer.value);
+        searchDebounceTimer.value = null;
+    }
+    suppressSearchWatcher.value = true;
     search.value = '';
     showSearchModal.value = false;
+    nextTick(() => {
+        suppressSearchWatcher.value = false;
+    });
     
     if (activeKanbanTab.value === 'deals') {
         window.dispatchEvent(new CustomEvent('kanban-deal-search', { detail: null }));
