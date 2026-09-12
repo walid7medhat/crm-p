@@ -10,6 +10,35 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class LeadTextSearch
 {
+    /** Minimum length for general text search terms (Phase 1). */
+    public const MIN_TEXT_LENGTH = 2;
+
+    /** Minimum length for email-like terms containing "@". */
+    public const MIN_EMAIL_LENGTH = 3;
+
+    /**
+     * Whether a free-text term should trigger LeadTextSearch filtering.
+     * Phone path keeps the existing ≥4 digit gate; text requires MIN_TEXT_LENGTH.
+     */
+    public static function isActionable(string $search): bool
+    {
+        $term = trim($search);
+        if ($term === '') {
+            return false;
+        }
+
+        $digits = preg_replace('/\D+/', '', $term) ?? '';
+        if (strlen($digits) >= 4 && preg_match('/^[\d\s\+\-\(\)]+$/', $term) === 1) {
+            return true;
+        }
+
+        if (str_contains($term, '@')) {
+            return mb_strlen($term) >= self::MIN_EMAIL_LENGTH;
+        }
+
+        return mb_strlen($term) >= self::MIN_TEXT_LENGTH;
+    }
+
     /**
      * @param  Builder<\App\Models\Lead>  $query
      * @param  array{comments?: bool, relations?: bool, admin?: bool, lean?: bool}  $options
@@ -18,7 +47,7 @@ class LeadTextSearch
     public static function apply(Builder $query, string $search, array $options = []): Builder
     {
         $term = trim($search);
-        if ($term === '') {
+        if ($term === '' || ! self::isActionable($term)) {
             return $query;
         }
 

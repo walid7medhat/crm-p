@@ -54,7 +54,7 @@ class LeadController extends Controller
                 $user = auth()->user();
                 $perPage = $request->get('per_page', 20);
                 $isPaginatedPool = $request->filled('paginate') && (string) $request->paginate === '1';
-                $isTextSearch = $request->filled('search');
+                $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
                 $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
 
                 // Lead Pool cards only need light relations — avoid heavy graph loads.
@@ -237,7 +237,7 @@ class LeadController extends Controller
                         }
                     });
                 }
-                if ($request->filled('search')) {
+                if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
                     $isAdminSearch = $user->hasRole(['admin', 'super_admin']);
                     LeadTextSearch::apply($leadsQuery, (string) $request->search, [
                         'comments' => false,

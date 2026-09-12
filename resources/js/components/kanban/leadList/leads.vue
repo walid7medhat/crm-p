@@ -1334,8 +1334,10 @@ const leadAssignmentBoardRefreshTimer = ref(null)
 const pollingInterval = ref(null)
 const isFetching = ref(false)
 const abortController = ref(null)
+const moreLeadsAbortController = ref(null)
 const fetchDebounceTimer = ref(null)
 let fetchGeneration = 0
+let moreLeadsGeneration = 0
 
 // Stage editing state
 const editingStageId = ref(null)
@@ -1519,6 +1521,12 @@ const executeFetchLeads = async (options = {}) => {
     if (abortController.value) {
         abortController.value.abort()
     }
+    // Cancel in-flight load-more so a stale page cannot append after a new search.
+    if (moreLeadsAbortController.value) {
+        moreLeadsAbortController.value.abort()
+        moreLeadsAbortController.value = null
+    }
+    moreLeadsGeneration += 1
 
     const generation = ++fetchGeneration
     abortController.value = new AbortController()
@@ -1724,7 +1732,7 @@ async function fetchMoreLeadsFromApi(stageId) {
     // لو بتحمل حالياً، متعملش حاجة
     if (loadingMoreLeads.value[stageId]) return
     
-    // لوصلت لآخر صفحة، متعملش حاجة
+    // لووصلت لآخر صفحة، متعملش حاجة
     const stage = columns.value.find(c => c.status === stageId)
     if (!stage || !stage.pagination?.has_more_pages) return
     
@@ -1732,6 +1740,13 @@ async function fetchMoreLeadsFromApi(stageId) {
         ...loadingMoreLeads.value,
         [stageId]: true
     }
+
+    if (moreLeadsAbortController.value) {
+        moreLeadsAbortController.value.abort()
+    }
+    moreLeadsAbortController.value = new AbortController()
+    const generation = ++moreLeadsGeneration
+    const signal = moreLeadsAbortController.value.signal
     
     try {
         const nextPage = (stage.pagination?.current_page || 1) + 1
@@ -1745,8 +1760,11 @@ async function fetchMoreLeadsFromApi(stageId) {
             ...buildLeadSearchApiParams(q),
         }
         const response = await api.get(`/stages/kanban/stage/${stageId}/more-leads`, {
-            params
+            params,
+            signal,
         })
+
+        if (generation !== moreLeadsGeneration) return
         
         const responseData = response?.data?.data
         const newLeads = responseData?.leads || []
@@ -1792,15 +1810,21 @@ async function fetchMoreLeadsFromApi(stageId) {
         }
         
     } catch (error) {
+        if (error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
+            return
+        }
         console.error('Error loading more leads:', error)
         $showNotification('Failed to load more leads', 'error')
     } finally {
-        loadingMoreLeads.value = {
-            ...loadingMoreLeads.value,
-            [stageId]: false
+        if (generation === moreLeadsGeneration) {
+            loadingMoreLeads.value = {
+                ...loadingMoreLeads.value,
+                [stageId]: false
+            }
         }
     }
 }
+
 function onColumnScroll(column, event) {
     const el = event?.target
     if (!el) return
