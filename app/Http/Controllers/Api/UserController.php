@@ -955,6 +955,15 @@ public function nonOiaDuplicateReport(Request $request): JsonResponse
         return mb_strtolower(preg_replace('/\s+/', ' ', trim($name ?? '')));
     };
 
+    // Group by first+last name token instead of the exact full string — a shortened
+    // name ("Pasant onsy") and the full legal name ("Pasant Yousry Mohamed Onsy")
+    // never match on exact string equality, but share the same first/last token.
+    $nameKey = function (?string $name) use ($normalize): ?string {
+        $tokens = array_values(array_filter(explode(' ', $normalize($name)), fn ($t) => $t !== ''));
+        if (empty($tokens)) return null;
+        return $tokens[0] . '|' . $tokens[count($tokens) - 1];
+    };
+
     $listingCounts = \DB::table('listings')
         ->select('agent_id', \DB::raw('COUNT(*) as c'))
         ->whereNotNull('agent_id')
@@ -986,12 +995,13 @@ public function nonOiaDuplicateReport(Request $request): JsonResponse
         ];
     };
 
-    // Group ALL users by normalized name so a non-oia user's duplicate can be
-    // found even when the "real" counterpart is on @oiaproperties.com.
+    // Group ALL users by first+last name token so a non-oia user's duplicate can be
+    // found even when the "real" counterpart is on @oiaproperties.com and/or uses a
+    // shortened version of the full name.
     $byName = [];
     foreach ($users as $user) {
-        $key = $normalize($user->name);
-        if ($key === '') continue;
+        $key = $nameKey($user->name);
+        if ($key === null) continue;
         $byName[$key][] = $user;
     }
 
@@ -1002,7 +1012,8 @@ public function nonOiaDuplicateReport(Request $request): JsonResponse
             continue;
         }
 
-        $group = $byName[$normalize($user->name)] ?? [$user];
+        $key = $nameKey($user->name);
+        $group = $key !== null ? ($byName[$key] ?? [$user]) : [$user];
         $isDuplicate = count($group) > 1;
         $duplicateMatches = $isDuplicate
             ? array_values(array_map($summarize, array_filter($group, fn ($u) => $u->id !== $user->id)))
