@@ -858,6 +858,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/sync-responsible', label: 'Sync Responsible', icon: 'lucide:user-check' });
     system.push({ path: '/settings/background', label: 'Background', icon: 'lucide:image' });
     system.push({ path: '/settings/deal-costs', label: 'Deal Costs', icon: 'lucide:coins' });
+    system.push({ path: '/settings/user-duplicates-report', label: 'Non-OIA & Duplicate Users', icon: 'lucide:user-search' });
 
   }
 

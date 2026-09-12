@@ -121,6 +121,7 @@ import agentPerformance from './components/lead-reports/AgentPerformanceReport.v
 const baseRoutes = [
     { path: '/settings/deal-costs', component: DealCostSettings, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/settings/evaluations', component: EvaluationSettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/settings/user-duplicates-report', component: () => import('./pages/settings/user-duplicates-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/sync-bitrix-leads', component: SyncBitrixLeads, meta: { requiresAuth: true, requiresAdmin: true } },

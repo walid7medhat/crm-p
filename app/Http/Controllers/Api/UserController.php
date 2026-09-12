@@ -938,4 +938,90 @@ public function updateBiometricCode(Request $request, $id)
         'data' => $user
     ]);
 }
+
+/**
+ * Data-hygiene report: every user whose email is NOT on the @oiaproperties.com
+ * domain, flagged when another user (on any domain) shares the same name —
+ * with each side's listings/leads counts so it's obvious which account is the
+ * "real" one to keep. Admin/super_admin only (enforced in routes/api.php).
+ */
+public function nonOiaDuplicateReport(Request $request): JsonResponse
+{
+    $users = User::select('id', 'name', 'display_name', 'email', 'status', 'created_at')
+        ->orderBy('name')
+        ->get();
+
+    $normalize = function (?string $name): string {
+        return mb_strtolower(preg_replace('/\s+/', ' ', trim($name ?? '')));
+    };
+
+    $listingCounts = \DB::table('listings')
+        ->select('agent_id', \DB::raw('COUNT(*) as c'))
+        ->whereNotNull('agent_id')
+        ->groupBy('agent_id')
+        ->pluck('c', 'agent_id');
+
+    $leadResponsibleCounts = \DB::table('leads')
+        ->select('responsible_person_id', \DB::raw('COUNT(*) as c'))
+        ->whereNotNull('responsible_person_id')
+        ->groupBy('responsible_person_id')
+        ->pluck('c', 'responsible_person_id');
+
+    $leadAddedCounts = \DB::table('leads')
+        ->select('added_by', \DB::raw('COUNT(*) as c'))
+        ->whereNotNull('added_by')
+        ->groupBy('added_by')
+        ->pluck('c', 'added_by');
+
+    $summarize = function ($user) use ($listingCounts, $leadResponsibleCounts, $leadAddedCounts) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'status' => $user->status,
+            'listings_count' => (int) ($listingCounts[$user->id] ?? 0),
+            'leads_responsible_count' => (int) ($leadResponsibleCounts[$user->id] ?? 0),
+            'leads_added_count' => (int) ($leadAddedCounts[$user->id] ?? 0),
+            'created_at' => optional($user->created_at)->toDateTimeString(),
+        ];
+    };
+
+    // Group ALL users by normalized name so a non-oia user's duplicate can be
+    // found even when the "real" counterpart is on @oiaproperties.com.
+    $byName = [];
+    foreach ($users as $user) {
+        $key = $normalize($user->name);
+        if ($key === '') continue;
+        $byName[$key][] = $user;
+    }
+
+    $rows = [];
+    foreach ($users as $user) {
+        $email = mb_strtolower($user->email ?? '');
+        if ($email === '' || str_ends_with($email, '@oiaproperties.com')) {
+            continue;
+        }
+
+        $group = $byName[$normalize($user->name)] ?? [$user];
+        $isDuplicate = count($group) > 1;
+        $duplicateMatches = $isDuplicate
+            ? array_values(array_map($summarize, array_filter($group, fn ($u) => $u->id !== $user->id)))
+            : [];
+
+        $rows[] = array_merge($summarize($user), [
+            'is_duplicate' => $isDuplicate,
+            'duplicate_matches' => $duplicateMatches,
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'total_users' => $users->count(),
+            'non_oia_count' => count($rows),
+            'duplicate_count' => count(array_filter($rows, fn ($r) => $r['is_duplicate'])),
+            'rows' => $rows,
+        ],
+    ]);
+}
 }

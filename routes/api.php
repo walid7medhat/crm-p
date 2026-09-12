@@ -625,7 +625,12 @@ Route::middleware(['jwt.auth'])->group(function () {
      Route::get('/team/hierarchy', [TeamController::class, 'getTeamHierarchy']);
     Route::get('/team/my-team', [TeamController::class, 'getMyTeam']);
     Route::get('/users/with-children', [UserController::class, 'getUsersWithChildren']);
-    
+
+    // Data-hygiene report: non-@oiaproperties.com users + duplicate-name detection.
+    Route::middleware('role:super_admin|admin')->group(function () {
+        Route::get('/users/reports/non-oia-duplicates', [UserController::class, 'nonOiaDuplicateReport']);
+    });
+
      // User routes
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
