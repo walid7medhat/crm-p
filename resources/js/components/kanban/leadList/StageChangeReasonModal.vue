@@ -15,7 +15,7 @@
                 <div v-if="interactionMode || targetStageOrder !== 6" class="mb-4 box-shadow">
                     <template v-if="interactionMode">
                         <label class="form-label">Call Result <span class="text-danger">*</span></label>
-                        <div class="call-result-grid mb-3">
+                        <div ref="callResultGridRef" class="call-result-grid mb-3" :class="{ 'is-invalid': fieldErrors.interaction_result }">
                             <button
                                 type="button"
                                 class="call-result-card"
@@ -42,9 +42,11 @@
                             </label>
                             <textarea
                                 id="interaction-note"
+                                ref="interactionNoteRef"
                                 v-model="formData.interaction_note"
                                 rows="3"
                                 class="form-control reason-textarea"
+                                :class="{ 'is-invalid': fieldErrors.interaction_note }"
                                 placeholder="Write purpose..."
                                 required
                             ></textarea>
@@ -56,9 +58,11 @@
                             </label>
                             <textarea
                                 id="interaction-note-reminder"
+                                ref="interactionNoteRef"
                                 v-model="formData.interaction_note"
                                 rows="5"
                                 class="form-control reason-textarea reason-textarea-lg"
+                                :class="{ 'is-invalid': fieldErrors.interaction_note }"
                                 placeholder="Type reminder activity title"
                                 required
                             ></textarea>
@@ -94,9 +98,11 @@
                         </label>
                         <textarea
                             id="reason"
+                            ref="reasonInputRef"
                             v-model="formData.reason"
                             rows="3"
                             class="form-control reason-textarea"
+                            :class="{ 'is-invalid': fieldErrors.reason }"
                             placeholder="Text Here"
                             required
                         ></textarea>
@@ -106,10 +112,12 @@
                 <!-- Deal Name (first section, standalone) -->
                 <div v-if="missingFields.includes('deal_name') && targetStageOrder === 6" class="form-group mb-3">
                     <label class="form-label">Deal Name <span class="text-danger">*</span></label>
-                    <input 
-                        type="text" 
-                        v-model="formData.deal_name" 
-                        class="form-control deal-name-input" 
+                    <input
+                        type="text"
+                        ref="dealNameInputRef"
+                        v-model="formData.deal_name"
+                        class="form-control deal-name-input"
+                        :class="{ 'is-invalid': fieldErrors.deal_name }"
                         placeholder="Enter deal name"
                         required
                     />
@@ -133,7 +141,8 @@
                                     <!-- حالة خاصة للمرحلة 6 (Converted) -->
                                     <template v-if="targetStageOrder === 6">
                                         <label class="form-label ">Quality Status</label>
-                                        <v-select 
+                                        <v-select
+                                            ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
                                             :options="convertedStatusOptions"
                                             :reduce="opt => opt.value"
@@ -142,6 +151,7 @@
                                             :searchable="false"
                                             :clearable="false"
                                             class="custom-v-select searchable-select lead-qual-select--unified"
+                                            :class="{ 'is-invalid': fieldErrors.status_lead }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -154,7 +164,8 @@
                                     <!-- حالة المرحلة 4 (Quality Status: Hot/Warm/Cold) -->
                                     <template v-else-if="targetStageOrder === 4">
                                         <label class="form-label ">Quality Status</label>
-                                        <v-select 
+                                        <v-select
+                                            ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
                                             :options="hotWarmLeadOptions"
                                             :reduce="opt => opt.value"
@@ -163,6 +174,7 @@
                                             :searchable="false"
                                             :clearable="false"
                                             class="custom-v-select searchable-select lead-qual-select lead-qual-select--quality lead-qual-select--unified"
+                                            :class="{ 'is-invalid': fieldErrors.status_lead }"
                                         >
                                             <template #selected-option="option">
                                                 <span class="qs-sel">
@@ -213,12 +225,14 @@
                                         <label class="form-label ">Quality Status</label>
                                         <v-select append-to-body
                                             v-if="targetStageOrder === 9"
+                                            ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
                                             :options="leadPoolStatusOptions"
                                             :reduce="opt => opt.value"
                                             label="text"
                                             placeholder="Select Status"
                                             class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                            :class="{ 'is-invalid': fieldErrors.status_lead }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -229,12 +243,14 @@
                                 
                                         <v-select append-to-body
                                             v-else-if="targetStageOrder === 10"
+                                            ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
                                             :options="unqualifiedStatusOptions"
                                             :reduce="opt => opt.value"
                                             label="text"
                                             placeholder="Select Status"
                                             class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                            :class="{ 'is-invalid': fieldErrors.status_lead }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -245,12 +261,14 @@
                                 
                                         <v-select append-to-body
                                             v-else
+                                            ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
                                             :options="defaultLeadStatusOptions"
                                             :reduce="opt => opt.value"
                                             label="text"
                                             placeholder="Not Selected"
                                             class="custom-v-select searchable-select lead-qual-select lead-qual-select--unified"
+                                            :class="{ 'is-invalid': fieldErrors.status_lead }"
                                         >
                                             <template #open-indicator="{ attributes }">
                                                 <span v-bind="attributes">
@@ -264,12 +282,14 @@
                         <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Lead Type <span class="text-danger">*</span></label>
                             <v-select append-to-body
+                                ref="leadTypeSelectRef"
                                 v-model="formData.lead_type"
                                 :options="leadTypeOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
                                 placeholder="Select Lead Type"
                                 class="custom-v-select searchable-select lead-qual-select lead-qual-select--enhanced lead-qual-select--unified"
+                                :class="{ 'is-invalid': fieldErrors.lead_type }"
                                 @update:model-value="handleLeadTypeChange"
                             >
                                 <template #open-indicator="{ attributes }">
@@ -284,12 +304,14 @@
                         <div v-if="missingFields.includes('property_status')  && !isRentOnly" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Property Status <span class="text-danger">*</span></label>
                             <v-select append-to-body
+                                ref="propertyStatusSelectRef"
                                 v-model="formData.property_status"
                                 :options="propertyStatusOptions"
                                 :reduce="opt => opt.value"
                                 label="text"
                                 placeholder="Select Property Status"
                                 class="custom-v-select searchable-select lead-qual-select lead-qual-select--enhanced lead-qual-select--unified"
+                                :class="{ 'is-invalid': fieldErrors.property_status }"
                             >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -303,9 +325,11 @@
                             <div v-if="missingFields.includes('available_date')" class="form-group mb-3">
                                 <label class="form-label">Available Date</label>
                                 <AdvancedDatePicker
+                                    ref="availableDateRef"
                                     v-model="formData.available_date"
                                     date-only
                                     placeholder="Select date"
+                                    :invalid="fieldErrors.available_date"
                                 />
                             </div>
 
@@ -313,12 +337,14 @@
                             <div v-if="missingFields.includes('branch')" class="form-group mb-3">
                                 <label class="form-label">Branch</label>
                                 <v-select append-to-body
+                                    ref="branchSelectRef"
                                     v-model="formData.branch"
                                     :options="branchOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Branch"
                                     class="custom-v-select searchable-select"
+                                    :class="{ 'is-invalid': fieldErrors.branch }"
                                 >
                                     <template #open-indicator="{ attributes }">
                                         <span v-bind="attributes">
@@ -332,12 +358,14 @@
                             <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3 lost-reason-field">
                                 <label class="form-label">Why Lost</label>
                                 <v-select append-to-body
+                                    ref="lostReasonSelectRef"
                                     v-model="formData.lost_reason"
                                     :options="lostReasonOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Reason"
                                     class="custom-v-select searchable-select lost-reason-select"
+                                    :class="{ 'is-invalid': fieldErrors.lost_reason }"
                                 >
                                     <template #open-indicator="{ attributes }">
                                         <span v-bind="attributes">
@@ -355,12 +383,14 @@
                             <div v-if="missingFields.includes('salutation')" class="form-group mb-3">
                                 <label class="form-label">Salutation</label>
                                 <v-select append-to-body
+                                    ref="salutationSelectRef"
                                     v-model="formData.salutation"
                                     :options="salutationOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
                                     class="custom-v-select searchable-select"
+                                    :class="{ 'is-invalid': fieldErrors.salutation }"
                                 >
                                  <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -385,6 +415,7 @@
                                   <button
                                       type="button"
                                       class="custom-date-trigger"
+                                      :class="{ 'is-invalid': fieldErrors.budget_from || fieldErrors.budget_to }"
                                       @click.stop="toggleBudgetDropdown"
                                   >
                                       <span>{{ budgetDisplay }}</span>
@@ -396,12 +427,14 @@
                             <div v-if="missingFields.includes('area_id')" class="form-group mb-3" style="order: 1;">
                                 <label class="form-label">Location / Area</label>
                                 <v-select append-to-body
+                                    ref="areaSelectRef"
                                     v-model="formData.area_id"
                                     :options="areaOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
                                     class="custom-v-select searchable-select"
+                                    :class="{ 'is-invalid': fieldErrors.area_id }"
                                 >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -428,12 +461,14 @@
                             <div v-if="missingFields.includes('bedrooms') && !isPlotsOrLand" class="form-group mb-3" style="order: 5;">
                                 <label class="form-label">How Many Bedrooms?</label>
                                 <v-select append-to-body
+                                    ref="bedroomsSelectRef"
                                     v-model="formData.bedrooms"
                                     :options="bedroomOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Select Bedrooms"
                                     class="custom-v-select searchable-select"
+                                    :class="{ 'is-invalid': fieldErrors.bedrooms }"
                                 >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -445,12 +480,14 @@
                             <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3" style="order: 2;">
                                 <label class="form-label">Property Type</label>
                                 <v-select append-to-body
+                                    ref="propertyTypeSelectRef"
                                     v-model="formData.property_type_id"
                                     :options="propertyTypeOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
                                     class="custom-v-select searchable-select"
+                                    :class="{ 'is-invalid': fieldErrors.property_type_id }"
                                 >
                                <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -465,12 +502,14 @@
                             <div v-if="missingFields.includes('purpose_buying')  && !isRentOnly" class="form-group mb-3" style="order: 8;">
                                 <label class="form-label">Purpose Of Purchase</label>
                                 <v-select append-to-body
+                                    ref="purposeSelectRef"
                                     v-model="formData.purpose_buying"
                                     :options="purposeOptions"
                                     :reduce="opt => opt.value"
                                     label="text"
                                     placeholder="Not Selected"
                                     class="custom-v-select searchable-select"
+                                    :class="{ 'is-invalid': fieldErrors.purpose_buying }"
                                 >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -535,12 +574,14 @@
                     <div v-if="missingFields.includes('budget_from')" class="budget-col">
                         <label class="budget-input-label">From</label>
                         <input
+                            ref="budgetFromInputRef"
                             v-model="budgetFromDisplay"
                             type="text"
                             inputmode="numeric"
                             autocomplete="off"
                             placeholder="0"
                             class="form-control budget-input budget-dropdown-input"
+                            :class="{ 'is-invalid': fieldErrors.budget_from }"
                             @mousedown.stop
                             @click.stop
                             @input="onBudgetFromInput"
@@ -549,12 +590,14 @@
                     <div v-if="missingFields.includes('budget_to')" class="budget-col">
                         <label class="budget-input-label">To</label>
                         <input
+                            ref="budgetToInputRef"
                             v-model="budgetToDisplay"
                             type="text"
                             inputmode="numeric"
                             autocomplete="off"
                             placeholder="0"
                             class="form-control budget-input budget-dropdown-input"
+                            :class="{ 'is-invalid': fieldErrors.budget_to }"
                             @mousedown.stop
                             @click.stop
                             @input="onBudgetToInput"
@@ -733,6 +776,104 @@ const reminders = ref([])
 const reminderButtonRef = ref(null)
 const reminderDropdownPanelRef = ref(null)
 const reminderDropdownStyle = ref({})
+
+// Per-field validation error flags, driven by handleSubmit and cleared automatically
+// once the field is filled in (see the formData watcher below). Keyed by the same
+// names used in `missingFields` (plus reason/interaction_result/interaction_note,
+// which are validated separately since they aren't part of that list).
+const fieldErrors = ref({})
+
+function setFieldError(field) {
+    fieldErrors.value = { ...fieldErrors.value, [field]: true }
+}
+
+// Refs used only to scroll to / focus the first invalid field on a failed submit.
+const reasonInputRef = ref(null)
+const interactionNoteRef = ref(null)
+const callResultGridRef = ref(null)
+const dealNameInputRef = ref(null)
+const salutationSelectRef = ref(null)
+const leadTypeSelectRef = ref(null)
+const propertyStatusSelectRef = ref(null)
+const areaSelectRef = ref(null)
+const propertyTypeSelectRef = ref(null)
+const bedroomsSelectRef = ref(null)
+const purposeSelectRef = ref(null)
+const leadStatusSelectRef = ref(null)
+const availableDateRef = ref(null)
+const branchSelectRef = ref(null)
+const lostReasonSelectRef = ref(null)
+const budgetFromInputRef = ref(null)
+const budgetToInputRef = ref(null)
+
+async function focusField(field) {
+    await nextTick()
+
+    if (field === 'budget_from' || field === 'budget_to') {
+        if (!showBudgetDropdown.value) {
+            await toggleBudgetDropdown()
+        }
+        await nextTick()
+        const input = field === 'budget_to' ? budgetToInputRef.value : budgetFromInputRef.value
+        input?.focus?.()
+        return
+    }
+
+    const refMap = {
+        reason: reasonInputRef,
+        interaction_note: interactionNoteRef,
+        interaction_result: callResultGridRef,
+        deal_name: dealNameInputRef,
+        salutation: salutationSelectRef,
+        lead_type: leadTypeSelectRef,
+        property_status: propertyStatusSelectRef,
+        area_id: areaSelectRef,
+        property_type_id: propertyTypeSelectRef,
+        bedrooms: bedroomsSelectRef,
+        purpose_buying: purposeSelectRef,
+        status_lead: leadStatusSelectRef,
+        available_date: availableDateRef,
+        branch: branchSelectRef,
+        lost_reason: lostReasonSelectRef,
+    }
+
+    const target = refMap[field]?.value
+    const el = target?.$el || target
+    if (!el) return
+
+    el.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    const focusable = el.querySelector?.('input, textarea, button') || el
+    focusable?.focus?.()
+}
+
+// A field is "filled" once it satisfies the same check handleSubmit uses to
+// require it — this is what lets the red state clear itself as the user types.
+function isFieldFilled(field) {
+    switch (field) {
+        case 'interaction_result':
+            return !!formData.value.interaction_result
+        case 'interaction_note':
+            return !!formData.value.interaction_note?.trim()
+        case 'reason':
+            return !!formData.value.reason?.trim()
+        case 'deal_name':
+            return !!formData.value.deal_name?.trim()
+        case 'status_lead':
+            return !!formData.value.lead_status
+        case 'lost_reason':
+            return !!formData.value.lost_reason
+        case 'budget_from':
+        case 'budget_to': {
+            const filled = formData.value[field] !== '' && formData.value[field] != null
+            const from = parseFloat(formData.value.budget_from)
+            const to = parseFloat(formData.value.budget_to)
+            const rangeOk = !(from && to && from > to)
+            return filled && rangeOk
+        }
+        default:
+            return formData.value[field] !== '' && formData.value[field] != null
+    }
+}
 
 
 // Add this computed property with your other computed properties
@@ -1093,6 +1234,7 @@ const resetForm = () => {
     showDateTimePicker.value = false
     removeReminderDropdownListeners()
     isSubmitting.value = false
+    fieldErrors.value = {}
 }
 
 // Validation for budget range
@@ -1110,20 +1252,36 @@ const validateBudgetRange = () => {
     return true
 }
 
+// Auto-clear the red "is-invalid" state the moment a field becomes valid again —
+// covers text inputs/textareas, v-selects, the date picker and the budget pair.
+watch(formData, () => {
+    Object.keys(fieldErrors.value).forEach((field) => {
+        if (fieldErrors.value[field] && isFieldFilled(field)) {
+            fieldErrors.value = { ...fieldErrors.value, [field]: false }
+        }
+    })
+}, { deep: true })
+
 const handleSubmit = async () => {
     if (props.interactionMode) {
         if (!formData.value.interaction_result) {
             $showNotification('Please select answer or no answer', 'warning')
+            setFieldError('interaction_result')
+            focusField('interaction_result')
             return
         }
         if (!formData.value.interaction_note.trim()) {
             $showNotification('Please provide a note', 'warning')
+            setFieldError('interaction_note')
+            focusField('interaction_note')
             return
         }
     } else {
         // Validate reason
         if (props.targetStageOrder !== 6 && !formData.value.reason.trim()) {
             $showNotification('Please provide a reason', 'warning')
+            setFieldError('reason')
+            focusField('reason')
             return
         }
     }
@@ -1138,112 +1296,149 @@ const handleSubmit = async () => {
         // 1. Salutation - يتم تجاهله في وضع no_answer
         if (field === 'salutation' && !formData.value.salutation && !isNoAnswerMode) {
             $showNotification('Please select salutation', 'warning')
+            setFieldError('salutation')
+            focusField('salutation')
             return
         }
-        
+
         // 2. Lead Type - يتم تجاهله في وضع no_answer
         if (field === 'lead_type' && !formData.value.lead_type && !isNoAnswerMode) {
             $showNotification('Please select lead type (Sale/Rent)', 'warning')
+            setFieldError('lead_type')
+            focusField('lead_type')
             return
         }
-        
+
         // 3. Property Status - يتم إخفاؤه إذا كان lead type = rent أو في وضع no_answer
         if (field === 'property_status' && !formData.value.property_status && !isNoAnswerMode && !isRentOnly) {
             $showNotification('Please select property status', 'warning')
+            setFieldError('property_status')
+            focusField('property_status')
             return
         }
-        
+
         // 4. Budget From
         if (field === 'budget_from' && !formData.value.budget_from && !isNoAnswerMode) {
             $showNotification('Please enter minimum budget', 'warning')
+            setFieldError('budget_from')
+            focusField('budget_from')
             return
         }
-        
+
         // 5. Budget To
         if (field === 'budget_to' && !formData.value.budget_to && !isNoAnswerMode) {
             $showNotification('Please enter maximum budget', 'warning')
+            setFieldError('budget_to')
+            focusField('budget_to')
             return
         }
-        
+
         // 6. Validate budget range if both are present
-        if ((field === 'budget_from' || field === 'budget_to') && 
+        if ((field === 'budget_from' || field === 'budget_to') &&
             formData.value.budget_from && formData.value.budget_to && !isNoAnswerMode) {
             if (!validateBudgetRange()) {
                 $showNotification(budgetRangeError.value, 'warning')
+                setFieldError('budget_from')
+                setFieldError('budget_to')
+                focusField('budget_from')
                 return
             }
         }
-        
+
         // 7. Area ID
         if (field === 'area_id' && !formData.value.area_id && !isNoAnswerMode) {
             $showNotification('Please select area', 'warning')
+            setFieldError('area_id')
+            focusField('area_id')
             return
         }
-        
+
         // 8. Property Type ID
         if (field === 'property_type_id' && !formData.value.property_type_id && !isNoAnswerMode) {
             $showNotification('Please select property type', 'warning')
+            setFieldError('property_type_id')
+            focusField('property_type_id')
             return
         }
-        
+
         // 9. Bedrooms - يتم إخفاؤه إذا كان property type = plots/land
         if (field === 'bedrooms' && !formData.value.bedrooms && !isNoAnswerMode && !isPlotsOrLand) {
             $showNotification('Please select bedrooms', 'warning')
+            setFieldError('bedrooms')
+            focusField('bedrooms')
             return
         }
-        
+
         // 10. Purpose Buying - يتم إخفاؤه إذا كان lead type = rent
         if (field === 'purpose_buying' && !formData.value.purpose_buying && !isNoAnswerMode && !isRentOnly) {
             $showNotification('Please select purpose', 'warning')
+            setFieldError('purpose_buying')
+            focusField('purpose_buying')
             return
         }
-        
+
         // 11. Status Lead
         if (field === 'status_lead' && !isNoAnswerMode) {
             const targetOrder = props.targetStageOrder
-            
+
             if (targetOrder === 4) {
                 if (!formData.value.lead_status) {
                     $showNotification('Please select lead status (cold/warm/hot)', 'warning')
+                    setFieldError('status_lead')
+                    focusField('status_lead')
                     return
                 }
             } else if (targetOrder === 6) {
                 if (!formData.value.lead_status) {
                     $showNotification('Please select conversion status', 'warning')
+                    setFieldError('status_lead')
+                    focusField('status_lead')
                     return
                 }
             } else if (targetOrder === 9) {
                 if (!formData.value.lead_status) {
                     $showNotification('Please select lead pool status', 'warning')
+                    setFieldError('status_lead')
+                    focusField('status_lead')
                     return
                 }
             } else if (targetOrder === 10) {
                 if (!formData.value.lead_status) {
                     $showNotification('Please select unqualified status', 'warning')
+                    setFieldError('status_lead')
+                    focusField('status_lead')
                     return
                 }
             }
         }
-        
+
         // 12. Available Date
         if (field === 'available_date' && !formData.value.available_date) {
             $showNotification('Please select available date', 'warning')
+            setFieldError('available_date')
+            focusField('available_date')
             return
         }
-        
+
         // 13. Branch
         if (field === 'branch' && !formData.value.branch) {
             $showNotification('Please select branch', 'warning')
+            setFieldError('branch')
+            focusField('branch')
             return
         }
-        
+
         // 14. Lost Reason
         if ((field === 'why_lost_lead' || field === 'lost_reason') && !formData.value.lost_reason) {
             $showNotification('Please select lost reason', 'warning')
+            setFieldError('lost_reason')
+            focusField('lost_reason')
             return
         }
         if (field === 'deal_name'  && !formData.value.deal_name.trim()) {
             $showNotification('Please enter deal name', 'warning')
+            setFieldError('deal_name')
+            focusField('deal_name')
             return
         }
     }
@@ -1541,6 +1736,14 @@ defineExpose({
     outline: none;
     border-color: #0ea5e9;
     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+/* Validation error state — red border, cleared automatically once the field is filled */
+.reason-textarea.is-invalid,
+.form-control.is-invalid,
+.deal-name-input.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
 }
 
 .form-group {
@@ -1851,6 +2054,11 @@ defineExpose({
     font-family: 'Montserrat';
 }
 
+:deep(.custom-v-select.is-invalid .vs__dropdown-toggle) {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+}
+
 :deep(.custom-v-select .vs__dropdown-toggle) {
     height: 42px;
     border-radius: 10px;
@@ -1965,6 +2173,11 @@ defineExpose({
 
 .budget-field-wrap {
     position: relative;
+}
+
+.custom-date-trigger.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
 }
 
 .custom-date-trigger {
@@ -2184,6 +2397,12 @@ defineExpose({
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+}
+
+.call-result-grid.is-invalid {
+    outline: 2px solid #dc3545;
+    outline-offset: 4px;
+    border-radius: 12px;
 }
 
 .call-result-card {
