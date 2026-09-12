@@ -1841,15 +1841,22 @@
 
                     <label class="budget-input-label">From</label>
 
-                    <b-form-input
+                    <!-- Plain native input, not <b-form-input>: bootstrap-vue-3's BFormInput
+                         keeps showing the raw keystroke instead of a reformatted prop value
+                         when the update happened in the same tick as its own input event, so
+                         the comma formatting from setBudgetValue() never actually rendered. -->
+                    <input
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
 
-                        :model-value="form.budgetFrom"
+                        :value="form.budgetFrom"
 
                         placeholder="0"
 
-                        class="custom-input budget-dropdown-input"
+                        class="form-control custom-input budget-dropdown-input"
 
-                        @update:model-value="(val) => setBudgetValue('budgetFrom', val)"
+                        @input="(e) => setBudgetValue('budgetFrom', e.target.value)"
 
                     />
 
@@ -1859,15 +1866,18 @@
 
                     <label class="budget-input-label">To</label>
 
-                    <b-form-input
+                    <input
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
 
-                        :model-value="form.budgetTo"
+                        :value="form.budgetTo"
 
                         placeholder="0"
 
-                        class="custom-input budget-dropdown-input"
+                        class="form-control custom-input budget-dropdown-input"
 
-                        @update:model-value="(val) => setBudgetValue('budgetTo', val)"
+                        @input="(e) => setBudgetValue('budgetTo', e.target.value)"
 
                     />
 
@@ -2736,6 +2746,14 @@ watch(show, (val) => {
 
         syncFormFromQuery(props.currentQuery)
 
+    } else {
+        // Reused as a toggled dropdown panel (navbar opens/closes it constantly),
+        // so a budget/date popup left stuck open by the click-outside bug above
+        // would otherwise render already-open — at a stale position — the next
+        // time this panel is shown.
+        showBudgetDropdown.value = false
+        showDateModal.value = false
+        removeBudgetDropdownListeners()
     }
 
 })
@@ -6570,7 +6588,12 @@ function restoreDefaultFields() {
 
 
 onMounted(async () => {
-    document.addEventListener('click', onDocumentClick)
+    // Capture phase: several triggers in this form (budget trigger, date-range
+    // trigger, the office multi-select) use @click.stop / @mousedown.stop, which
+    // would otherwise stop the click before it ever reaches this document
+    // listener — leaving the budget dropdown stuck open no matter what else on
+    // the page gets clicked.
+    document.addEventListener('click', onDocumentClick, true)
     updateUserFromStorage()
 
     try {
@@ -6603,7 +6626,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
 
-    document.removeEventListener('click', onDocumentClick)
+    document.removeEventListener('click', onDocumentClick, true)
 
     removeBudgetDropdownListeners()
 

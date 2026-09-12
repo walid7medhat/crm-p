@@ -1103,6 +1103,9 @@ const clearClientData = () => {
         } else {
             validationErrors.value = {}
             errorMessage.value = ''
+            // Otherwise a budget popup left stuck open by the click-outside bug
+            // below would render already-open the next time this modal opens.
+            closeBudgetDropdown()
         }
     })
     // Watch form.stage_id to see if it gets updated
@@ -1199,18 +1202,21 @@ const clearClientData = () => {
     onMounted(() => {
         syncMobileModal()
         window.addEventListener('resize', syncMobileModal, { passive: true })
-        document.addEventListener('click', onDocumentClick)
+        // Capture phase: several triggers in this form use @click.stop, which would
+        // otherwise stop the click before it ever reaches this document listener,
+        // leaving the budget dropdown stuck open no matter what else gets clicked.
+        document.addEventListener('click', onDocumentClick, true)
         fetchUsers()
         fetchSources()
-         fetchStages() 
-        fetchAreas() 
+         fetchStages()
+        fetchAreas()
         fetchPropertyTypes()
-         fetchCurrentUserRole() 
+         fetchCurrentUserRole()
     })
-    
+
     onBeforeUnmount(() => {
         window.removeEventListener('resize', syncMobileModal)
-        document.removeEventListener('click', onDocumentClick)
+        document.removeEventListener('click', onDocumentClick, true)
     })
     
     const salutationOptions = [

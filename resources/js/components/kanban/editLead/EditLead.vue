@@ -1230,7 +1230,10 @@ watch(() => form.value.responsible_person_id, () => {
 // Initialize on mount
 onMounted(async () => {
     initializeForm()
-    document.addEventListener('click', onDocumentClick)
+    // Capture phase: several triggers in this form use @click.stop, which would
+    // otherwise stop the click before it ever reaches this document listener,
+    // leaving the budget dropdown stuck open no matter what else gets clicked.
+    document.addEventListener('click', onDocumentClick, true)
     await fetchUsers()
 
     if (props.lead?.area_id || props.lead?.property_type_id) {
@@ -1255,7 +1258,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocumentClick)
+    document.removeEventListener('click', onDocumentClick, true)
 })
 
 const handleAvatarError = () => {

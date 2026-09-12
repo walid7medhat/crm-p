@@ -791,7 +791,10 @@ const fetchAllAreas = async () => {
 onMounted(async () => {
   ensurePropertyDocumentArrays(localProperty.value)
   fetchAllAreas()
-     document.addEventListener('click', onDocumentClick)
+     // Capture phase: several triggers in this form use @click.stop, which would
+     // otherwise stop the click before it ever reaches this document listener,
+     // leaving the budget dropdown stuck open no matter what else gets clicked.
+     document.addEventListener('click', onDocumentClick, true)
 
   // Hydrate listing picker when a listing_id is already set (edit / change-stage flows).
   if (localProperty.value.area_id && localProperty.value.listing_id &&
@@ -802,7 +805,7 @@ onMounted(async () => {
   }
 })
 onBeforeUnmount(() => {
-    document.removeEventListener('click', onDocumentClick)
+    document.removeEventListener('click', onDocumentClick, true)
     removeBudgetDropdownListeners()
 })
 watch(
