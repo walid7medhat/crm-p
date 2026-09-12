@@ -1892,6 +1892,12 @@ function hasPropertyMissing(propIndex) {
 
   // Check for required fields for this specific property
   const hasMissing = missingKeys.some(key => {
+    // Document keys (property_0_document_eoi, property_document_spa, ...) don't map to a
+    // plain property attribute — property[field] would always read undefined and flag the
+    // card "missing" forever, even after the file is uploaded. Documents are checked below
+    // via getMissingPropertyDocTypesForProperty, which actually looks at the uploaded files.
+    if (key.includes('_document_') || key.includes('document_')) return false
+
     // Pattern: property_0_unit_no, property_0_area_id, etc.
     const match = key.match(/property_(\d+)_(.+)/)
     if (match) {
@@ -1911,7 +1917,8 @@ function hasPropertyMissing(propIndex) {
     return false
   })
 
-  return hasMissing
+  if (hasMissing) return true
+  return getMissingPropertyDocTypesForProperty(propIndex).length > 0
 }
 
 function isBedroomsExcludedForProperty(property) {
