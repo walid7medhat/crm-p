@@ -536,11 +536,45 @@ function selectStage(index) {
       })
     }
 }
+// Opening the deal modal (especially right after converting a lead, which auto-opens
+// the buyer-details edit section) used to fire this same GET /deals/{id} up to three
+// times at once — once from the modelValue watcher, once from the show watcher, once
+// from loadDealForEdit — plus fetchEditLookups() twice (5 requests each). On a dev
+// server with few concurrent workers those ~13 simultaneous requests queue up behind
+// each other, which is what made "loading buyer details" feel like it hung. Sharing
+// one in-flight request per deal id (and one for the lookups) collapses that back down
+// to a single round trip no matter how many callers ask for it at once.
+let dealDetailInFlight = null
+let dealDetailInFlightId = null
+async function fetchDealDetailShared(dealId) {
+  if (dealDetailInFlight && dealDetailInFlightId === dealId) {
+    return dealDetailInFlight
+  }
+  dealDetailInFlightId = dealId
+  dealDetailInFlight = axios.get(`/deals/${dealId}`)
+    .then((response) => response.data?.data ?? response.data)
+    .finally(() => {
+      dealDetailInFlight = null
+      dealDetailInFlightId = null
+    })
+  return dealDetailInFlight
+}
+
+let editLookupsInFlight = null
+function ensureEditLookupsLoaded() {
+  if (!editLookupsInFlight) {
+    editLookupsInFlight = fetchEditLookups().catch((error) => {
+      editLookupsInFlight = null
+      throw error
+    })
+  }
+  return editLookupsInFlight
+}
+
 async function hydrateDealForView() {
   if (!show.value || !props.deal?.id) return
   try {
-    const response = await axios.get(`/deals/${props.deal.id}`)
-    const fullDeal = response.data?.data ?? response.data
+    const fullDeal = await fetchDealDetailShared(props.deal.id)
     hydratedDeal.value = fullDeal || null
     if (fullDeal?.deal_type) {
       dealType.value = fullDeal.deal_type
@@ -556,13 +590,12 @@ async function loadDealForEdit() {
     editHydrationRequestId.value = requestId
     editLoading.value = true
     try {
-        const response = await axios.get(`/deals/${props.deal.id}`)
-        const dealData = response.data?.data || response.data
+        const dealData = await fetchDealDetailShared(props.deal.id)
         hydratedDeal.value = dealData || hydratedDeal.value
         // Ignore stale async responses when user switches deals quickly.
         if (editHydrationRequestId.value !== requestId) return
         editFormData.value = dealToFormData(dealData)
-        await fetchEditLookups()
+        await ensureEditLookupsLoaded()
     } catch (error) {
         console.error('Error loading deal for edit:', error)
     } finally {
@@ -785,11 +818,10 @@ async function startEditDeal(sectionKey = null) {
   editShowErrors.value = false
   editFieldErrors.value = {}
   try {
-    const [dealRes] = await Promise.all([
-      axios.get(`/deals/${props.deal.id}`),
-      fetchEditLookups()
+    const [raw] = await Promise.all([
+      fetchDealDetailShared(props.deal.id),
+      ensureEditLookupsLoaded()
     ])
-    const raw = dealRes.data?.data ?? dealRes.data
     editFormData.value = dealToFormData(raw)
   } catch (e) {
     console.error('Failed to load deal for edit', e)
@@ -951,30 +983,27 @@ async function saveTitle() {
     isEditingTitle.value = false
   }
 }
-watch(() => props.modelValue, async (val) => {
+// This used to be two separate watchers (one on props.modelValue, one on show.value)
+// that both ran the full stages+deal+lookups fetch sequence — since the modelValue
+// watcher sets show.value itself, both fired on every open, doubling every request.
+// Now there's a single watcher, and stages + the deal fetch in parallel (they don't
+// depend on each other) instead of sequentially.
+watch(() => props.modelValue, (val) => {
   show.value = val
-  if (val && props.deal?.deal_type) {
-    dealType.value = props.deal.deal_type
-    await fetchStagesFromAPI(props.deal.deal_type)
-    selectedStageIndex.value = currentStageIndex.value
-    await hydrateDealForView().catch(() => {})
-    selectedStageIndex.value = currentStageIndex.value
-  }
 })
 watch(() => show.value, async (isOpen) => {
   if (isOpen && props.deal?.id) {
-    // Load stages first so the stage bar is visible even if lookups are slow.
     const type = props.deal.deal_type
-    if (type) {
-      dealType.value = type
-      await fetchStagesFromAPI(type)
-      selectedStageIndex.value = currentStageIndex.value
-    }
+    if (type) dealType.value = type
     await Promise.all([
-      fetchEditLookups().catch(() => {}),
+      type ? fetchStagesFromAPI(type) : Promise.resolve(),
       hydrateDealForView().catch(() => {}),
     ])
     selectedStageIndex.value = currentStageIndex.value
+    // Edit lookups (users/sources/property-types/developers/areas) are only needed
+    // once an edit section opens — fetch in the background so they never delay the
+    // initial view, but kick them off now so they're warm by the time edit is used.
+    ensureEditLookupsLoaded().catch(() => {})
   }
 })
 
@@ -1033,6 +1062,7 @@ watch(show, (val) => {
     editFormData.value = {}
     editFieldErrors.value = {}
     editShowErrors.value = false
+    editLookupsInFlight = null
   }
   emit('update:modelValue', val)
 })
