@@ -155,6 +155,7 @@
                   class="search-input"
                   :class="{ 'search-input--has-selection': hasAnySearchCriteria, 'search-input--loading': isSearchLoading }"
                   :readonly="!!resolvedActiveFilters.length"
+                  :disabled="isAnyModalOpen"
                   @update:model-value="onSearchInputUpdate"
                   @focus="onSearchFocus"
                   @blur="onSearchBlur"
@@ -383,6 +384,7 @@
                         class="search-input"
                         :class="{ 'search-input--has-selection': hasAnySearchCriteria, 'search-input--loading': isSearchLoading }"
                         :readonly="!!resolvedActiveFilters.length"
+                        :disabled="isAnyModalOpen"
                         @update:model-value="onSearchInputUpdate"
                         @focus="onSearchFocus"
                         @blur="onSearchBlur"
@@ -1603,6 +1605,10 @@ let ignoreSearchOutsideClick = false;
 let ignoreSearchOutsideClickTimer = null;
 const searchModalMounted = ref(false);
 let modalOpenObserver = null;
+// True while any *other* app modal (Create Lead/Deal, Add Stage, Settings, ...) is
+// showing — disables the nav search input outright so it can't silently steal
+// focus/keystrokes meant for that modal's own fields.
+const isAnyModalOpen = ref(false);
 
 function armIgnoreOutsideClick(ms = 150) {
     ignoreSearchOutsideClick = true;
@@ -2278,13 +2284,14 @@ onMounted(() => {
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   loadStoredDealType()
 
-  // If the search input already has focus the instant another modal (Create Lead/
-  // Deal, Add Stage, Settings, ...) opens, the CSS pointer-events guard above can't
-  // help — no new click happens, so nothing redirects the keystrokes. Blur it as
-  // soon as a modal shows so typing goes to the modal's own (now genuinely focused)
-  // field instead of silently reopening/filling the search popup.
+  // Disable the nav search input the instant another modal (Create Lead/Deal, Add
+  // Stage, Settings, ...) opens, so it can't silently steal focus/keystrokes meant
+  // for that modal's own fields. Also blurs it if it already had focus right as the
+  // modal appeared (a click-based guard can't catch that — no new click happens).
   modalOpenObserver = new MutationObserver(() => {
-    if (!document.querySelector('.modal.show')) return
+    const open = !!document.querySelector('.modal.show')
+    isAnyModalOpen.value = open
+    if (!open) return
     const active = document.activeElement
     if (active && active.classList?.contains('search-input')) {
       active.blur()
