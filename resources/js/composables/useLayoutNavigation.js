@@ -328,17 +328,13 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       '/settings/kanban',
       '/settings/stage-visibility',
     ];
-    const canShowAli = typeof hasPermission === 'function'
-      ? hasPermission('show-leads')
-      : false;
-    if (isAdmin || isSuperAdmin || canShowAli) {
+    // Insights module: admin/super_admin only. AI Lead Intelligence itself is super_admin-only (route + API).
+    if (isAdmin || isSuperAdmin) {
       tabs.push({
         id: 'insights',
         label: 'Insights',
         type: 'route',
-        path: canShowAli && !isAdmin && !isSuperAdmin
-          ? '/ai-lead-intelligence'
-          : (isSuperAdmin ? '/lead-reports' : '/settings/lead-scoring'),
+        path: isSuperAdmin ? '/lead-reports' : '/settings/lead-scoring',
         matchPaths: insightPaths,
       });
     }

@@ -457,8 +457,8 @@ Route::middleware('jwt.auth')->group(function () {
         Route::post('/recalculate', [AiSalesIntelligenceController::class, 'recalculate']);
     });
 
-    // AI Lead Intelligence (Phase 2 contracts — Phase 3 fills real CRM aggregations)
-    Route::prefix('ai-lead-intelligence')->group(function () {
+    // AI Lead Intelligence — super_admin only
+    Route::prefix('ai-lead-intelligence')->middleware('role:super_admin')->group(function () {
         Route::get('/overview', [AiLeadIntelligenceController::class, 'overview']);
         Route::get('/priority-leads', [AiLeadIntelligenceController::class, 'priorityLeads']);
         Route::get('/at-risk', [AiLeadIntelligenceController::class, 'atRisk']);
