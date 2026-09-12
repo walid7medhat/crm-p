@@ -1192,8 +1192,9 @@ public function getMatchingListings(Request $request)
                             $query->where('name', 'manager');
                         })
                         ->where('listing_team', 1)
+                        ->where('status', 'active')
                         ->get();
-                        
+
                     foreach ($managers as $manager) {
                         $manager->notify(new ListingNeedsApproval($listing));
                     }
@@ -1203,7 +1204,7 @@ public function getMatchingListings(Request $request)
                         if ($agent && $agent->parent) { // parent = team_lead
                             $teamLead = $agent->parent;
 
-                            if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team) {
+                            if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
                                 $teamLead->notify(new ListingNeedsApproval($listing));
                             }
                         }
@@ -1913,8 +1914,9 @@ private function sendResubmissionNotification($listing, $user)
             $query->where('name', 'manager');
         })
         ->where('listing_team', 1)
+        ->where('status', 'active')
         ->get();
-        
+
         foreach ($managers as $manager) {
             $manager->notify(new ListingNeedsApproval($listing, $user));
         }
@@ -1924,7 +1926,7 @@ private function sendResubmissionNotification($listing, $user)
             if ($agent && $agent->parent) { // parent = team_lead
                 $teamLead = $agent->parent;
 
-                if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team) {
+                if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
                     $teamLead->notify(new ListingNeedsApproval($listing));
                 }
             }
