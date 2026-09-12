@@ -113,6 +113,7 @@ import Logs from './pages/logs/index.vue'
 import SystemOverview from './pages/system-overview/SystemOverview.vue'
 import DealCostSettings from './pages/settings/DealCostSettings.vue';
 import EvaluationSettings from './pages/settings/EvaluationSettings.vue';
+import UserDuplicatesReport from './pages/settings/user-duplicates-report.vue';
 
 
 import AttendanceMonthlyReport   from './pages/hr/attendance-monthly-reports.vue'
@@ -121,7 +122,7 @@ import agentPerformance from './components/lead-reports/AgentPerformanceReport.v
 const baseRoutes = [
     { path: '/settings/deal-costs', component: DealCostSettings, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/settings/evaluations', component: EvaluationSettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-    { path: '/settings/user-duplicates-report', component: () => import('./pages/settings/user-duplicates-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/settings/user-duplicates-report', component: UserDuplicatesReport, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },
     { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/sync-bitrix-leads', component: SyncBitrixLeads, meta: { requiresAuth: true, requiresAdmin: true } },
