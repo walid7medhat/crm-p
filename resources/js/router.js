@@ -3,9 +3,7 @@ import { resetSidebarLayout } from './composables/useSidebar.js'
 import { clearAuthToken } from './plugins/axios.js'
 
 // DashBoard
-import Ai from './pages/dashboard/ai.vue'
 import HomeAnalytics from './pages/dashboard/home-analytics.vue'
-import Crm from './pages/dashboard/crm.vue'
 import AllLsting from './components/alllisting/AllLsting.vue'
 import PropertyShow from './components/alllisting/PropertyShow.vue'
 import PropertyForm from './pages/listings/property-form.vue'
@@ -25,7 +23,6 @@ import UsersList from './pages/users/UsersList.vue'
 import UserForm from './pages/users/UserForm.vue'
 import UserDetail from './pages/users/UserDetail.vue'
 import TeamTree from './components/Table/TeamTree.vue'
-import InvitedUsers from './pages/users/invitedUsers.vue'
 
 // Role and Permission
 import AssignRole from './pages/roleAccess/assign-role.vue'

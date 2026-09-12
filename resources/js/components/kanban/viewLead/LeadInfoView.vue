@@ -67,8 +67,39 @@
             
         </div>
 
-        <div class="info-section" v-if="hasAdditionalQuestions || lead?.more_information">
+        <div class="info-section" v-if="portalLinks.length || hasAdditionalQuestions || lead?.more_information">
             <div class="info-section-title">More Information</div>
+
+            <div v-if="portalLinks.length" class="info-group portal-links-group">
+                <label class="form-label-custom">Property Portal Links</label>
+                <div class="portal-links">
+                    <a
+                        v-for="(link, idx) in portalLinks"
+                        :key="`${link.portal}-${idx}`"
+                        :href="link.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="portal-link-chip"
+                        :class="`portal-link-chip--${link.portal}`"
+                    >
+                        <iconify-icon
+                            :icon="link.portal === 'bayut' ? 'lucide:building-2' : (link.portal === 'propertyfinder' ? 'lucide:search' : 'lucide:external-link')"
+                        ></iconify-icon>
+                        <span class="portal-link-chip__label">{{ link.label }}</span>
+                        <span class="portal-link-chip__url">{{ link.url }}</span>
+                    </a>
+                </div>
+            </div>
+            <div
+                v-else-if="expectsPortalLink"
+                class="info-group portal-links-group"
+            >
+                <label class="form-label-custom">Property Portal Links</label>
+                <div class="portal-links-missing">
+                    No Property Finder / Bayut listing URL was found in Bitrix comments or fields for this lead.
+                    Re-sync from Bitrix after the latest update so HTML/WhatsApp links are preserved.
+                </div>
+            </div>
             
             <div class="info-group" v-if="lead?.more_information">
                 <label class="form-label-custom">Comments</label>
@@ -96,7 +127,7 @@
                     </div>
                 </div>
             </template>
-            <div v-else class="info-empty">
+            <div v-else-if="!lead?.more_information && !portalLinks.length" class="info-empty">
                 No additional information
             </div>
         </div>
@@ -774,7 +805,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import { formatLeadBudgetRange, formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
-import { formatBitrixRichText } from '@/utils/bitrixRichText'
+import { formatBitrixRichText, extractPortalLinks } from '@/utils/bitrixRichText'
 import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
 
 const props = defineProps({
@@ -806,10 +837,94 @@ const formattedMoreInformation = computed(() =>
 // inbox_url keys) renders as a clickable link — same rich-text handling as Comments.
 const formatAnswerValue = (value) => formatBitrixRichText(value)
 
+const commentPortalLinks = ref([])
+
+const expectsPortalLink = computed(() => {
+  const haystack = [
+    props.lead?.lead_source,
+    props.lead?.source_information,
+    props.lead?.lead_branch_source,
+  ].filter(Boolean).join(' ').toLowerCase()
+  return /property\s*finder|propertyfinder|bayut/.test(haystack)
+})
+
+const portalLinks = computed(() => {
+  const chunks = []
+
+  const pushChunk = (value) => {
+    if (value == null) return
+    if (typeof value === 'string' || typeof value === 'number') {
+      const text = String(value).trim()
+      if (text) chunks.push(text)
+      return
+    }
+    if (Array.isArray(value)) {
+      value.forEach(pushChunk)
+      return
+    }
+    if (typeof value === 'object') {
+      // Bitrix field_data rows: { name, values: [...] }
+      if (Array.isArray(value.values)) {
+        pushChunk(value.values)
+        return
+      }
+      Object.values(value).forEach(pushChunk)
+    }
+  }
+
+  pushChunk(props.lead?.more_information)
+  pushChunk(props.lead?.website)
+  pushChunk(props.lead?.source_information)
+  pushChunk(props.lead?.facebook_questions_answers)
+  pushChunk(props.lead?.meta)
+  pushChunk(props.lead?.raw_meta_data)
+  pushChunk(props.lead?.field_mappings_data)
+
+  const merged = []
+  const seen = new Set()
+  const pushAll = (list) => {
+    ;(list || []).forEach((link) => {
+      const key = String(link.url || '').toLowerCase().replace(/\/+$/, '')
+      if (!key || seen.has(key)) return
+      seen.add(key)
+      merged.push(link)
+    })
+  }
+
+  chunks.forEach((chunk) => pushAll(extractPortalLinks(chunk)))
+  pushAll(commentPortalLinks.value)
+
+  return merged.sort((a, b) => {
+    const rank = { propertyfinder: 0, bayut: 1, other: 2 }
+    return (rank[a.portal] ?? 9) - (rank[b.portal] ?? 9)
+  })
+})
+
+async function loadPortalLinksFromComments(leadId) {
+  commentPortalLinks.value = []
+  if (!leadId) return
+  try {
+    const response = await api.get(`/leads/${leadId}/comments`, { params: { per_page: 50 } })
+    const payload = response?.data?.data ?? response?.data
+    const rows = Array.isArray(payload?.data)
+      ? payload.data
+      : (Array.isArray(payload) ? payload : [])
+    const found = []
+    rows.forEach((row) => {
+      extractPortalLinks(row?.comment).forEach((link) => found.push(link))
+    })
+    commentPortalLinks.value = found
+  } catch (error) {
+    // Non-blocking — More Information / comment list still show links when available
+    console.warn('Could not load comments for portal links', error)
+  }
+}
+
 watch(
     () => props.lead?.id,
     (id) => {
         showMatchingProperties.value = false
+        loadPortalLinksFromComments(id)
         if (!id) return
         // Matching listings can be heavy — load after lead details are visible.
         setTimeout(() => {
@@ -944,7 +1059,12 @@ const maskValue = (value) => {
 // Format question function
 const formatQuestion = (question) => {
     if (!question) return ''
-    return question
+    const raw = String(question)
+    // Prefer readable labels for Bitrix custom fields
+    if (/^UF_CRM_/i.test(raw)) {
+        return 'Bitrix custom field'
+    }
+    return raw
         .replace(/_/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase())
 }
@@ -2166,6 +2286,69 @@ const saveClientRequirement = async () => {
 .bitrix-rich-text .bitrix-rich-link:hover {
     color: #1d4ed8;
     text-decoration: none;
+}
+
+.portal-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.portal-link-chip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    text-decoration: none;
+    color: #0f172a;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.portal-link-chip:hover {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+
+.portal-link-chip iconify-icon {
+    font-size: 16px;
+    margin-top: 2px;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+.portal-link-chip--bayut iconify-icon {
+    color: #16a34a;
+}
+
+.portal-link-chip--propertyfinder iconify-icon {
+    color: #d97706;
+}
+
+.portal-link-chip__label {
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 110px;
+    color: #334155;
+}
+
+.portal-link-chip__url {
+    font-size: 12px;
+    color: #2563eb;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+.portal-links-missing {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #64748b;
+    background: #fff7ed;
+    border: 1px dashed #fdba74;
+    border-radius: 10px;
+    padding: 10px 12px;
 }
 
 /* Avatar Styles */

@@ -872,26 +872,42 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
     private function importComments(Lead $lead, int $b24LeadId): void
     {
         $comments = $this->client->listTimelineComments($b24LeadId);
+        $portalBodies = [];
+
         foreach ($comments as $c) {
             $b24CommentId = (int) ($c['ID'] ?? 0);
 
-            // Skip already-imported comments (idempotent re-runs).
-            if ($b24CommentId > 0 &&
-                LeadComment::where('lead_id', $lead->id)
-                    ->where('bitrix24_id', $b24CommentId)
-                    ->exists()
-            ) {
-                continue;
-            }
-
-            $authorId = $this->mapBitrixUser($c['AUTHOR_ID'] ?? null) ?? $this->fallbackUserId;
-            $body = trim(strip_tags((string) ($c['COMMENT'] ?? '')));
+            // Preserve Property Finder / Bayut URLs inside HTML/BBCode comments.
+            $body = $this->cleanRichText($c['COMMENT'] ?? '') ?? '';
             if ($body === '') {
                 continue;
             }
+
+            if (preg_match('/propertyfinder\.|bayut\.com|property-finder/i', $body)) {
+                $portalBodies[] = $body;
+            }
+
+            // Skip already-imported comments (idempotent re-runs), but refresh
+            // the body when Bitrix content changed (e.g. previously strip_tags lost links).
+            if ($b24CommentId > 0) {
+                $existingComment = LeadComment::where('lead_id', $lead->id)
+                    ->where('bitrix24_id', $b24CommentId)
+                    ->first();
+                if ($existingComment) {
+                    if ($existingComment->comment !== $body) {
+                        $existingComment->update([
+                            'comment' => $body,
+                            'updated_at' => now(),
+                        ]);
+                    }
+                    continue;
+                }
+            }
+
+            $authorId = $this->mapBitrixUser($c['AUTHOR_ID'] ?? null) ?? $this->fallbackUserId;
             $createdAt = $this->parseDate($c['CREATED'] ?? null) ?? now();
 
-            $comment = LeadComment::create([
+            LeadComment::create([
                 'lead_id'     => $lead->id,
                 'user_id'     => $authorId,
                 'comment'     => $body,
@@ -899,17 +915,41 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                 'created_at'  => $createdAt,
                 'updated_at'  => $createdAt,
             ]);
-
-            // Mirror LeadActivityController::storeComment so timeline shows imports.
-            // LeadHistoryHelper::log($lead->id, [
-            //     'action'     => 'comment_added',
-            //     'comment_id' => $comment->id,
-            //     'comment'    => Str::limit($comment->comment, 50),
-            //     'source'     => 'bitrix24',
-            //      'created_at'  => $createdAt,
-            //     'updated_at'  => $createdAt,
-            // ]);
         }
+
+        // Surface portal links in More Information when Bitrix COMMENTS is empty
+        // but timeline comments contain Property Finder / Bayut URLs.
+        $this->hydrateMoreInformationFromPortalComments($lead, $portalBodies);
+    }
+
+    /**
+     * If More Information has no portal URL yet, copy timeline comment text that
+     * contains Property Finder / Bayut links so Lead View can show them.
+     *
+     * @param  list<string>  $portalBodies
+     */
+    private function hydrateMoreInformationFromPortalComments(Lead $lead, array $portalBodies): void
+    {
+        $portalBodies = array_values(array_unique(array_filter(array_map('trim', $portalBodies))));
+        if ($portalBodies === []) {
+            return;
+        }
+
+        $current = trim((string) ($lead->more_information ?? ''));
+        $hasPortalInMore = $current !== '' && preg_match('/propertyfinder\.|bayut\.com|property-finder|https?:\/\//i', $current);
+
+        if ($hasPortalInMore) {
+            return;
+        }
+
+        $merged = $current !== ''
+            ? $current . "\n\n" . implode("\n\n", $portalBodies)
+            : implode("\n\n", $portalBodies);
+
+        Lead::withoutEvents(fn () => $lead->update([
+            'more_information' => $merged,
+        ]));
+        $lead->more_information = $merged;
     }
 
     private function importActivities(Lead $lead, int $b24LeadId): void
@@ -1050,6 +1090,14 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             'position'         => $b24Lead['POST'] ?? null,
             'budget'           => $this->numericOrNull($b24Lead['OPPORTUNITY'] ?? null),
             'more_information' => $this->cleanRichText($b24Lead['COMMENTS'] ?? null),
+            'raw_meta_data'    => json_encode(
+                ['field_data' => $this->buildFieldData($b24Lead)],
+                JSON_UNESCAPED_UNICODE
+            ),
+            'bitrix24_data'    => json_encode(
+                $b24Lead + ['_users' => $this->collectUserInfo($b24Lead)],
+                JSON_UNESCAPED_UNICODE
+            ),
         ];
         foreach ($editable as $field => $value) {
             if ($value !== null && $value !== '' && (string) $existing->{$field} !== (string) $value) {
@@ -1189,8 +1237,46 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             $value = (string) $value;
             $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-            // Bitrix BBCode links → plain URL / label
-            $value = preg_replace('/\[url=([^\]]+)\](.*?)\[\/url\]/is', '$2', $value);
+            // HTML anchors → keep the href (Bitrix/WhatsApp often wraps PF/Bayut links this way).
+            // strip_tags alone would drop href="..." and leave only the label.
+            $value = preg_replace_callback(
+                '/<a\s+[^>]*href\s*=\s*([\'"])(.*?)\1[^>]*>(.*?)<\/a>/is',
+                static function (array $m): string {
+                    $href = trim(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    $label = trim(strip_tags(html_entity_decode($m[3], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                    if ($href === '') {
+                        return $label;
+                    }
+                    if ($label !== '' && strcasecmp($label, $href) !== 0 && !preg_match('#^https?://#i', $label)) {
+                        return $href . ' ' . $label;
+                    }
+                    return $href;
+                },
+                $value
+            );
+
+            // Bare href attributes that survived broken markup
+            $value = preg_replace_callback(
+                '/href\s*=\s*([\'"])(https?:\/\/[^\'"]+)\1/i',
+                static function (array $m): string {
+                    return ' ' . $m[2] . ' ';
+                },
+                $value
+            );
+
+            // Bitrix BBCode links → keep a usable URL (prefer href; fall back to label)
+            $value = preg_replace_callback(
+                '/\[url=([^\]]+)\](.*?)\[\/url\]/is',
+                static function (array $m): string {
+                    $href = trim(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    $label = trim(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    if ($href !== '') {
+                        return $href;
+                    }
+                    return $label;
+                },
+                $value
+            );
             $value = preg_replace('/\[url\](.*?)\[\/url\]/is', '$1', $value);
 
             // Strip common Bitrix BBCode wrappers ([p], [b], …) keep inner text
@@ -1203,10 +1289,13 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             // line breaks
             $value = preg_replace('/<br\s*\/?>/i', "\n", $value);
 
-            // remove HTML
+            // remove remaining HTML
             $value = strip_tags($value);
 
-            // ✅ أهم سطر (بيحل مشكلة الكومة ,)
+            // Collapse messy whitespace but keep newlines
+            $value = preg_replace("/[ \t]+/", ' ', $value);
+            $value = preg_replace("/\n{3,}/", "\n\n", $value);
+
             $value = trim($value, " \t\n\r\0\x0B,;");
 
             return $value !== '' ? $value : null;

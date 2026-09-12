@@ -23,7 +23,7 @@ use App\Models\FloorPlanImage;
 class ProjectController extends Controller
 {
     // Cache constants
-    const CACHE_TTL = 1800; 
+    const CACHE_TTL = 1800;
     const CACHE_PREFIX = 'projects_';
     const CACHE_TAG = 'projects';
     const PAGINATION_CACHE_TTL = 900; // 15 Min
@@ -40,7 +40,7 @@ class ProjectController extends Controller
     {
         try {
             $filtersHash = md5(serialize($request->all()));
-            $cacheKey = self::CACHE_PREFIX . 'index_' . Auth::id() . '_' . $filtersHash;
+            $cacheKey = self::versionedKey('index_' . Auth::id() . '_' . $filtersHash);
 
             if (method_exists(Cache::getStore(), 'tags')) {
                 $result = Cache::tags([self::CACHE_TAG])->remember(
@@ -69,11 +69,11 @@ class ProjectController extends Controller
         }
     }
 
- 
+
    private function getProjectsData(Request $request): array
 {
     $query = Project::with(['developer', 'area', 'images', 'mainImage']);
-    
+
     // Filters
     if ($request->has('search')) {
         $search = $request->search;
@@ -86,19 +86,19 @@ class ProjectController extends Controller
               });
         });
     }
-    
+
     if ($request->has('status')) {
         $query->where('status', $request->status);
     }
-    
+
     if ($request->has('developer_id')) {
         $query->where('developer_id', $request->developer_id);
     }
-    
+
     if ($request->has('min_price')) {
         $query->where('from_price', '>=', $request->min_price);
     }
-    
+
     if ($request->has('max_price')) {
         $query->where('to_price', '<=', $request->max_price);
     }
@@ -116,7 +116,7 @@ class ProjectController extends Controller
     // Get ALL projects without pagination
     // if ($request->has('get_all') && $request->get('get_all') === 'true') {
         $projects = $query->get();
-        
+
         return [
             'projects' => $projects,
             'pagination' => [
@@ -131,7 +131,7 @@ class ProjectController extends Controller
     // Default: Use pagination
     $perPage = $request->get('per_page', 15);
     $projects = $query->paginate($perPage);
-    
+
     return [
         'projects' => $projects,
         'pagination' => $projects->toArray()
@@ -143,13 +143,13 @@ class ProjectController extends Controller
     public function store(ProjectRequest $request): JsonResponse
     {
         Log::info('Starting project creation');
-        
+
         try {
             DB::beginTransaction();
 
             $data = $request->validated();
             $data['added_by'] = Auth::id();
-            
+
             Log::info('Validated data', array_keys($data));
 
             unset($data['main_image']);
@@ -170,24 +170,24 @@ class ProjectController extends Controller
             // Handle main image upload with compression
             if ($request->hasFile('main_image')) {
                 Log::info('Processing main image upload');
-                
+
                 $mainImageFile = $request->file('main_image');
                 $compressionResult = ImageHelper::compressAndConvertToWebP(
-                    $mainImageFile, 
+                    $mainImageFile,
                     "projects/{$project->id}",
                     ['quality' => 90, 'max_width' => 1920]
                 );
-                
+
                 // Set all images as non-main first
                 ProjectImage::where('project_id', $project->id)->update(['is_main' => false]);
-                
+
                 // Create main image
                 $project->images()->create([
                     'image_path' => $compressionResult['path'],
                     'is_main' => true,
                     'sort_order' => 0
                 ]);
-                
+
                 Log::info('Main image uploaded', ['path' => $compressionResult['path']]);
             }
 
@@ -195,16 +195,16 @@ class ProjectController extends Controller
             // Handle additional images upload
                 if ($request->hasFile('images')) {
                     Log::info('Processing additional images', ['count' => count($request->file('images'))]);
-                    
+
                     $maxOrder = $project->images()->max('sort_order') ?? 0;
-                    
+
                     foreach ($request->file('images') as $index => $imageFile) {
                         $compressionResult = ImageHelper::compressAndConvertToWebP(
-                            $imageFile, 
+                            $imageFile,
                             "projects/{$project->id}/gallery",
                             ['quality' => 85, 'max_width' => 1920]
                         );
-                        
+
                         $project->images()->create([
                             'image_path' => $compressionResult['path'],
                             'is_main' => false,
@@ -217,23 +217,23 @@ class ProjectController extends Controller
                 Log::info('Processing floor plan images upload', [
                     'count' => count($request->file('floor_plan_images'))
                 ]);
-                
+
                   foreach ($request->floor_plan_images as $index => $data) {
                     $imageFile = $data['file'];
                     $name = $data['name'] ?? "Floor Plan " . ($index + 1);
                     $compressionResult = ImageHelper::compressAndConvertToWebP(
-                        $imageFile, 
+                        $imageFile,
                         "projects/{$project->id}/floor-plans",
                         ['quality' => 85, 'max_width' => 1920]
                     );
-                    
+
                     $project->floorPlanImages()->create([
                         'image_path' => $compressionResult['path'],
                         'sort_order' => $index,
                         'name'=>$name
                     ]);
                 }
-                
+
                 Log::info('Floor plan images uploaded', [
                     'count' => count($request->file('floor_plan_images'))
                 ]);
@@ -269,11 +269,11 @@ class ProjectController extends Controller
     {
         try {
             Log::info('📝 SHOW METHOD CALLED with ID:', ['id' => $id, 'type' => gettype($id)]);
-            
-            $cacheKey = self::CACHE_PREFIX . 'show_' . $id;
-            
+
+            $cacheKey = self::versionedKey('show_' . $id);
+
             $project = null;
-            
+
             if (method_exists(Cache::getStore(), 'tags')) {
                 $project = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::CACHE_TTL, function () use ($id) {
                     return $this->getProjectData($id);
@@ -283,7 +283,7 @@ class ProjectController extends Controller
                     return $this->getProjectData($id);
                 });
             }
-            
+
             return ApiResponse::success(
                 new ProjectResource($project),
                 'Project retrieved successfully'
@@ -300,15 +300,15 @@ class ProjectController extends Controller
     private function getProjectData($id)
     {
         Log::info('🔍 Looking for project with ID:', ['id' => $id]);
-        
+
         $project = Project::with([
-            'developer', 
-            'images', 
-            'mainImage', 
+            'developer',
+            'images',
+            'mainImage',
             'features',
             'addedBy','floorPlanImages'
         ])->find($id);
-        
+
         if (!$project) {
             Log::error('❌ Project not found with ID:', ['id' => $id]);
             throw new \Exception('Project not found');
@@ -318,13 +318,13 @@ class ProjectController extends Controller
             'id' => $project->id,
             'title' => $project->title
         ]);
-        
+
         return $project;
     }
 
     // PUT: api/listings/projects/{id}
     public function update(ProjectRequest $request, $id): JsonResponse
-    {          
+    {
 
         try {
             Log::info('🔄 UPDATE METHOD CALLED', [
@@ -337,7 +337,7 @@ class ProjectController extends Controller
 
             $user = Auth::user();
             $project = Project::find($id);
-            
+
             if (!$project) {
                 Log::error('❌ Project not found for update:', ['id' => $id]);
                 return ApiResponse::error('Project not found', 404);
@@ -353,7 +353,7 @@ class ProjectController extends Controller
             // }
 
             $data = $request->validated();
-            
+
             Log::info('📋 Validated data for update:', array_keys($data));
 
             // Remove files from data array before updating project
@@ -364,7 +364,7 @@ class ProjectController extends Controller
             // Handle main image upload
             if ($request->hasFile('main_image')) {
                 Log::info('🖼️ Processing new main image upload');
-                
+
                 // Delete old main image if exists
                 $oldMainImage = $project->mainImage;
                 if ($oldMainImage) {
@@ -372,24 +372,24 @@ class ProjectController extends Controller
                     $oldMainImage->delete();
                     Log::info('🗑️ Deleted old main image', ['path' => $oldMainImage->image_path]);
                 }
-                
+
                 $mainImageFile = $request->file('main_image');
                 $compressionResult = ImageHelper::compressAndConvertToWebP(
-                    $mainImageFile, 
+                    $mainImageFile,
                     "projects/{$project->id}",
                     ['quality' => 90, 'max_width' => 1920]
                 );
-                
+
                 // Set all images as non-main first
                 ProjectImage::where('project_id', $project->id)->update(['is_main' => false]);
-                
+
                 // Create new main image
                 $project->images()->create([
                     'image_path' => $compressionResult['path'],
                     'is_main' => true,
                     'sort_order' => 0
                 ]);
-                
+
                 $data['main_image_path'] = $compressionResult['path'];
                 Log::info('✅ New main image uploaded', ['path' => $compressionResult['path']]);
             }
@@ -408,7 +408,7 @@ class ProjectController extends Controller
             }
 
             Log::info('📝 Updating project with data:', $data);
-            
+
             // Update project
             $project->update($data);
 
@@ -427,18 +427,18 @@ class ProjectController extends Controller
                     }
                 }
             }
-            
+
             // Handle new gallery images upload
             if ($request->hasFile('images')) {
                 $maxOrder = $project->images()->max('sort_order') ?? 0;
-                
+
                 foreach ($request->file('images') as $index => $imageFile) {
                     $compressionResult = ImageHelper::compressAndConvertToWebP(
-                        $imageFile, 
+                        $imageFile,
                         "projects/{$project->id}/gallery",
                         ['quality' => 85, 'max_width' => 1920]
                     );
-                    
+
                     $project->images()->create([
                         'image_path' => $compressionResult['path'],
                         'is_main' => false,
@@ -451,20 +451,20 @@ class ProjectController extends Controller
             Log::info('🔄 Processing floor plan images update', [
                 'count' => count($request->file('floor_plan_images'))
             ]);
-            
+
             // Get current max order
             $maxOrder = $project->floorPlanImages()->max('sort_order') ?? 0;
-            
+
              foreach ($request->floor_plan_images as $index => $data) {
                  if(isset($data['file'])){
                     $imageFile = $data['file'];
                     $name = $data['name'] ?? "Floor Plan " . ($maxOrder + $index + 1);
                     $compressionResult = ImageHelper::compressAndConvertToWebP(
-                        $imageFile, 
+                        $imageFile,
                         "projects/{$project->id}/floor-plans",
                         ['quality' => 85, 'max_width' => 1920]
                     );
-                    
+
                     $project->floorPlanImages()->create([
                         'image_path' => $compressionResult['path'],
                         'sort_order' => $maxOrder + $index + 1,
@@ -472,7 +472,7 @@ class ProjectController extends Controller
                     ]);
                  }
             }
-            
+
             Log::info('✅ New floor plan images uploaded', [
                 'count' => count($request->file('floor_plan_images'))
             ]);
@@ -492,7 +492,7 @@ class ProjectController extends Controller
             Log::info('🗑️ Deleting floor plan images', [
                 'ids' => $request->delete_floor_plan_images
             ]);
-            
+
             foreach ($request->delete_floor_plan_images as $imageId) {
                 $floorPlanImage = FloorPlanImage::find($imageId);
                 if ($floorPlanImage && $floorPlanImage->project_id === $project->id) {
@@ -537,11 +537,11 @@ class ProjectController extends Controller
         try {
             $user = Auth::user();
             $project = Project::find($projectId);
-            
+
             if (!$project) {
                 return ApiResponse::error('Project not found', 404);
             }
-            
+
             // Check if user has permission to delete this project
             if ($project->added_by !== $user->id && ! $user->hasRole(['admin', 'super_admin'])) {
                 return ApiResponse::error('You are not authorized to delete this project', 403);
@@ -579,11 +579,13 @@ class ProjectController extends Controller
         }
     }
 
-   
-   
+
+
     private function clearCache(): void
     {
         try {
+            self::bumpCacheEpoch();
+
             if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_TAG])->flush();
                 Log::info('Projects cache cleared using tags');
@@ -592,35 +594,45 @@ class ProjectController extends Controller
             }
         } catch (\Exception $e) {
             Log::warning('Projects cache clear error: ' . $e->getMessage());
-            
-            Cache::flush();
-            Log::info('Full cache flush as fallback for projects');
+            self::bumpCacheEpoch();
         }
+    }
+
+    private static function cacheEpoch(): string
+    {
+        return (string) Cache::get('projects_epoch', '0');
+    }
+
+    private static function bumpCacheEpoch(): void
+    {
+        Cache::put('projects_epoch', (string) (microtime(true) * 1000), 86400 * 30);
+    }
+
+    private static function versionedKey(string $suffix): string
+    {
+        return self::CACHE_PREFIX . 'e' . self::cacheEpoch() . '_' . $suffix;
     }
 
     private function clearCacheWithoutTags(): void
     {
         try {
             $cacheDriver = config('cache.default');
-            
+
             if ($cacheDriver === 'redis') {
                 $this->clearRedisCache();
-            } 
-            elseif ($cacheDriver === 'file') {
-                $this->clearFileCache();
             }
             else {
-                Cache::flush();
-                Log::info('All cache flushed for database driver in projects');
+                // File/database: hashed keys invalidated via epoch bump above.
+                Log::info('Projects cache invalidated via epoch for driver: ' . $cacheDriver);
             }
-            
+
             Log::info('Projects cache cleared without tags for driver: ' . $cacheDriver);
         } catch (\Exception $e) {
             Log::warning('Projects cache clear without tags error: ' . $e->getMessage());
         }
     }
 
-  
+
     private function clearRedisCache(): void
     {
         $redis = Cache::getRedis();
@@ -629,9 +641,9 @@ class ProjectController extends Controller
             self::CACHE_PREFIX . 'index_*',
             self::CACHE_PREFIX . 'show_*'
         ];
-        
+
         $totalDeleted = 0;
-        
+
         foreach ($patterns as $pattern) {
             $iterator = null;
             do {
@@ -642,24 +654,24 @@ class ProjectController extends Controller
                 }
             } while ($iterator > 0);
         }
-        
+
         Log::info("Deleted {$totalDeleted} Redis cache keys for projects");
     }
 
-   
+
     private function clearFileCache(): void
     {
         $storage = Storage::disk('framework_cache');
         $files = $storage->files();
         $deletedCount = 0;
-        
+
         $patterns = [
             self::CACHE_PREFIX . 'index_',
             self::CACHE_PREFIX . 'show_',
             self::CACHE_PREFIX . 'developers_',
             self::CACHE_PREFIX . 'features_'
         ];
-        
+
         foreach ($files as $file) {
             foreach ($patterns as $pattern) {
                 if (str_contains($file, $pattern)) {
@@ -669,11 +681,11 @@ class ProjectController extends Controller
                 }
             }
         }
-        
+
         Log::info("Deleted {$deletedCount} file cache keys for projects");
     }
 
-    
+
     private function clearSpecificCache(int $projectId): void
     {
         try {
@@ -684,7 +696,7 @@ class ProjectController extends Controller
         }
     }
 
-    
+
     private function fallbackIndex(Request $request, \Exception $e = null): JsonResponse
     {
         try {
@@ -701,7 +713,7 @@ class ProjectController extends Controller
         }
     }
 
-    
+
     private function fallbackShow($project, \Exception $e = null): JsonResponse
     {
         try {
@@ -716,7 +728,7 @@ class ProjectController extends Controller
         }
     }
 
-    
+
     public function clearCacheManual(): JsonResponse
     {
         try {
@@ -727,7 +739,7 @@ class ProjectController extends Controller
         }
     }
 
-    
+
     public function checkCacheStatus(): JsonResponse
     {
         try {
@@ -738,7 +750,7 @@ class ProjectController extends Controller
                 'cache_prefix' => self::CACHE_PREFIX,
                 'cache_tag' => self::CACHE_TAG,
             ];
-            
+
             return ApiResponse::success($status, 'Projects cache status retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to check cache status: ' . $e->getMessage());
@@ -771,7 +783,11 @@ public function getFloorPlans( $id)
             'data' => $floorPlans
         ]);
     } catch (\Exception $e) {
-        dd($e);
+        Log::error('Failed to fetch floor plans', [
+            'project_id' => $id ?? null,
+            'message' => $e->getMessage(),
+            'exception' => $e,
+        ]);
         return response()->json([
             'success' => false,
             'message' => 'Failed to fetch floor plans'
@@ -818,7 +834,7 @@ public function getFloorPlans( $id)
             ]);
 
             $project = Project::findOrFail($projectId);
-            
+
             // بنجيب الصور اللي project_id = projectId AND area_id = areaId
             $floorPlans = FloorPlanImage::where('project_id', $projectId)
                 ->where('area_id', $areaId)
@@ -853,9 +869,9 @@ public function getFloorPlans( $id)
             ], 500);
         }
     }
-     
-     
-     
+
+
+
  public function updateFloorPlans(Request $request, $id)
 {
     try {
@@ -874,31 +890,31 @@ public function getFloorPlans( $id)
         Log::info('=== START UPDATE FLOOR PLANS ===');
         Log::info('Project ID: ' . $id);
         Log::info('Area ID: ' . $areaId);
-        
+
         // 🔴 الحل: نستخدم file() مباشرة ونتأكد منها يدوياً
         $uploadedFiles = $request->file('floor_plan_images');
-        
+
         if (!empty($uploadedFiles) && is_array($uploadedFiles)) {
             Log::info('Files found!', ['count' => count($uploadedFiles)]);
-            
+
             // نجيب أقصى ترتيب للصور في المنطقة دي
             $maxOrder = FloorPlanImage::where('project_id', $project->id)
                 ->where('area_id', $areaId)
                 ->max('sort_order') ?? 0;
-            
+
             $processedCount = 0;
-            
+
             foreach ($uploadedFiles as $index => $fileData) {
                 Log::info('Processing index ' . $index);
-                
+
                 // الفايل جوا array مع key 'file'
                 if (isset($fileData['file']) && $fileData['file'] instanceof \Illuminate\Http\UploadedFile) {
                     $file = $fileData['file'];
-                    
+
                     // نجيب الاسم من الـ request (لو موجود)
-                    $name = $request->input("floor_plan_images.{$index}.name") ?? 
+                    $name = $request->input("floor_plan_images.{$index}.name") ??
                            "Floor Plan " . ($maxOrder + $processedCount + 1);
-                    
+
                     Log::info('File details:', [
                         'original_name' => $file->getClientOriginalName(),
                         'name' => $name,
@@ -906,15 +922,15 @@ public function getFloorPlans( $id)
                         'mime' => $file->getMimeType(),
                         'is_valid' => $file->isValid() ? 'Yes' : 'No'
                     ]);
-                    
+
                     if ($file->isValid()) {
                         // نضغط الصورة
                         $compressionResult = ImageHelper::compressAndConvertToWebP(
-                            $file, 
+                            $file,
                             "projects/{$project->id}/floor-plans/area-{$areaId}",
                             ['quality' => 85, 'max_width' => 1920]
                         );
-                        
+
                         // نضيف الصورة
                         $newImage = FloorPlanImage::create([
                             'project_id' => $project->id,
@@ -924,13 +940,13 @@ public function getFloorPlans( $id)
                             'name' => $name,
                             'file_size' => $file->getSize()
                         ]);
-                        
+
                         Log::info('✅ Added image: ' . $newImage->id . ' - ' . $name);
                         $processedCount++;
                     }
                 }
             }
-            
+
             Log::info("Processed {$processedCount} files");
         } else {
             Log::info('No files found');
@@ -943,7 +959,7 @@ public function getFloorPlans( $id)
                 foreach ($imageIds as $imageId) {
                     $floorPlanImage = FloorPlanImage::find($imageId);
                     if ($floorPlanImage && $floorPlanImage->project_id == $project->id) {
-                        
+
                         if ($floorPlanImage->image_path) {
                             ImageHelper::deleteImage($floorPlanImage->image_path);
                         }
@@ -996,7 +1012,7 @@ public function getFloorPlans( $id)
         DB::rollBack();
         Log::error('❌ Error: ' . $e->getMessage());
         Log::error('Stack trace: ' . $e->getTraceAsString());
-        
+
         return response()->json([
             'success' => false,
             'message' => 'Failed: ' . $e->getMessage()

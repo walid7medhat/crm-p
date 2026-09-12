@@ -326,6 +326,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       '/settings/kanban',
       '/settings/stage-visibility',
     ];
+    // Insights module: admin/super_admin only.
     if (isAdmin || isSuperAdmin) {
       tabs.push({
         id: 'insights',

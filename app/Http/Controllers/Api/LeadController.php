@@ -58,6 +58,7 @@ class LeadController extends Controller
                 $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
 
                 // Lead Pool cards only need light relations — avoid heavy graph loads.
+                // Grouped list path needs relations LeadResource reads (propertyType/area/createdHistory).
                 $leadsQuery = Lead::with($isPaginatedPool
                     ? [
                         'addedBy:id,name,display_name,avatar,email,parent_id,status',
@@ -72,6 +73,11 @@ class LeadController extends Controller
                         'participants',
                         'observers.user',
                         'integration:id,project_id',
+                        'propertyType:id,name',
+                        'area:id,name',
+                        'area.parent:id,name,parent_id',
+                        'area.parent.parent:id,name,parent_id',
+                        'createdHistory',
                     ]);
 
                 // ================= Full filter set (ported from StageController so lead-pool search
@@ -266,19 +272,18 @@ class LeadController extends Controller
                     }
 
                     // Always use the light Kanban card resource for pool cards (LeadResource is ~20x heavier).
-                    KanbanLeadCardResource::setKanbanMeta([], []);
-
                     try {
                         // Lead Pool: always simplePaginate — COUNT(*) over ~50k+ pool rows is too slow.
                         $paginator = $leadsQuery->simplePaginate($perPage);
-                        $items = $paginator->items();
-                        $activityMap = [];
-                        foreach ($items as $item) {
-                            if (! empty($item->bitrix24_last_activity_by_id)) {
-                                $activityMap[(int) $item->bitrix24_last_activity_by_id] = null;
-                            }
-                        }
-                        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId($activityMap);
+                        $items = collect($paginator->items());
+
+                        $duplicateCounts = $this->leadPoolDuplicateCountsByWorkPhone($items);
+                        $serviceDupFlags = $this->leadPoolServiceDuplicateFlags($items);
+                        KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+                        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
+                            $this->leadPoolActivityUsersForLeads($items)
+                        );
+
                         $payload = KanbanLeadCardResource::collection($items)->resolve();
 
                         return response()->json([
@@ -300,21 +305,27 @@ class LeadController extends Controller
                     }
                 }
 
-                // Default: grouped-by-stage response (existing callers).
+                // Default: grouped-by-stage response (existing callers such as lead-reports).
+                // Cannot force pagination here — callers expect the full filtered set grouped by stage.
                 $leads = $leadsQuery->latest()->get();
 
-                $stagesWithLeads = $leads->groupBy('stage_id')->map(function($leadsGroup, $stageId) {
-                    $stage = $leadsGroup->first()->stage;
-                    return [
-                        'stage_name' => $stage?->name ?? 'No Stage',
-                        'stage_id' => $stage?->id,
-                        'leads' => LeadResource::collection($leadsGroup),
-                    ];
-                })->values();
-                return ApiResponse::success(
-                    $stagesWithLeads,
-                    'Leads grouped by stage retrieved successfully'
-                );
+                try {
+                    LeadResource::primeForCollection($leads);
+                    $stagesWithLeads = $leads->groupBy('stage_id')->map(function ($leadsGroup, $stageId) {
+                        $stage = $leadsGroup->first()->stage;
+                        return [
+                            'stage_name' => $stage?->name ?? 'No Stage',
+                            'stage_id' => $stage?->id,
+                            'leads' => LeadResource::collection($leadsGroup),
+                        ];
+                    })->values();
+                    return ApiResponse::success(
+                        $stagesWithLeads,
+                        'Leads grouped by stage retrieved successfully'
+                    );
+                } finally {
+                    LeadResource::clearCollectionPrime();
+                }
         
             } catch (\Exception $e) {
                 return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
@@ -1666,6 +1677,114 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
     }
 
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<int, \App\Models\User|null>
+     */
+    private function leadPoolActivityUsersForLeads($leads): array
+    {
+        $b24Ids = $leads
+            ->pluck('bitrix24_last_activity_by_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($b24Ids === []) {
+            return [];
+        }
+
+        $map = array_fill_keys($b24Ids, null);
+
+        $users = User::query()
+            ->whereIn('bitrix24_id', $b24Ids)
+            ->with([
+                'parent:id,name,display_name,avatar',
+                'roles:id,name',
+                'employeeProfile.companyBranch:id,name',
+                'employeeProfile.designation:id,name',
+            ])
+            ->get(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id']);
+
+        foreach ($users as $user) {
+            $map[(int) $user->bitrix24_id] = $user;
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<string, int>
+     */
+    private function leadPoolDuplicateCountsByWorkPhone($leads): array
+    {
+        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
+        if ($phones === []) {
+            return [];
+        }
+
+        $rows = Lead::query()
+            ->select('work_phone', \DB::raw('COUNT(*) as cnt'))
+            ->whereIn('work_phone', $phones)
+            ->whereNotNull('work_phone')
+            ->groupBy('work_phone')
+            ->get();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[$row->work_phone] = max(0, (int) $row->cnt - 1);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<int, bool>
+     */
+    private function leadPoolServiceDuplicateFlags($leads): array
+    {
+        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
+        $emails = $leads->pluck('email')->filter()->unique()->values()->all();
+
+        if ($phones === [] && $emails === []) {
+            return [];
+        }
+
+        $blacklistQuery = Lead::query()
+            ->where('status_lead', 'blacklist')
+            ->where(function ($q) use ($phones, $emails) {
+                if ($phones !== []) {
+                    $q->whereIn('work_phone', $phones);
+                }
+                if ($emails !== []) {
+                    $method = $phones !== [] ? 'orWhereIn' : 'whereIn';
+                    $q->{$method}('email', $emails);
+                }
+            });
+
+        $blacklistPhones = [];
+        $blacklistEmails = [];
+        foreach ($blacklistQuery->get(['id', 'work_phone', 'email']) as $row) {
+            if ($row->work_phone) {
+                $blacklistPhones[$row->work_phone] = true;
+            }
+            if ($row->email) {
+                $blacklistEmails[$row->email] = true;
+            }
+        }
+
+        $flags = [];
+        foreach ($leads as $lead) {
+            $flags[$lead->id] =
+                ($lead->work_phone && isset($blacklistPhones[$lead->work_phone]))
+                || ($lead->email && isset($blacklistEmails[$lead->email]));
+        }
+
+        return $flags;
+    }
 
 public function export()
 {

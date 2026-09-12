@@ -28,9 +28,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\ListingAccessRequestNotification;
 use App\Http\Controllers\Api\SourceController;
-use App\Models\UserInvitation;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
@@ -77,46 +75,6 @@ use App\Http\Controllers\Api\Employee\EvaluationController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
 use App\Http\Controllers\Api\Listing\InternalUpdateController;
 use App\Http\Controllers\Api\Employee\EmployeeAttendanceController;
-Route::get('/test-email', function () {
-    try {
-        // Test basic email
-        Mail::raw('This is a test email', function ($message) {
-            $message->to('')
-                    ->subject('Test Email');
-        });
-        
-        return 'Email sent successfully! Check your email inbox.';
-    } catch (\Exception $e) {
-        return 'Email error: ' . $e->getMessage();
-    }
-});
-
-Route::get('/test-invitation-email', function () {
-    try {
-        // Create test invitation
-        $invitation = new UserInvitation([
-            'email' => 'test@example.com',
-            'token' => Str::random(60),
-            'expires_at' => now()->addDays(7),
-            'invited_by' => 1,
-        ]);
-
-        // Test invitation email
-        Mail::send(new App\Mail\UserInvitationMail($invitation));
-        
-        return 'Invitation email sent successfully!';
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage();
-    }
-});
-/* Preview account-activated email design in browser (no mail sent) */
-Route::get('/preview-account-activated-email', function () {
-    $userName = 'Walid';
-    $userEmail = 'walidmedhat.uae@gmail.com';
-    return response()->view('emails.account-activated', [
-        'userName' => $userName,
-    ])->header('Content-Type', 'text/html');
-});
 
 /* Test account-activated email – actually sends to walidmedhat.uae@gmail.com (requires SMTP in .env) */
 Route::get('/test-account-activated-email', function () {
@@ -150,15 +108,8 @@ Route::get('/save-account-activated-email-html', function () {
         'open_url' => 'file://' . $path,
     ]);
 });
-Route::get('/test-server', function() {
-    return response()->json([
-        'gd_installed' => extension_loaded('gd'),
-        'gd_info' => function_exists('gd_info') ? gd_info() : 'GD not available',
-        'intervention_loaded' => class_exists('Intervention\Image\ImageManagerStatic'),
-        'storage_working' => class_exists('Illuminate\Support\Facades\Storage'),
-    ]);
-});
-    Route::post('auth/register', [AuthController::class, 'register']);
+
+Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])

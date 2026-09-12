@@ -263,48 +263,145 @@ class DealController extends Controller
     public function getDealsGroupedByStage(Request $request)
     {
         $user = auth()->user();
-        
-        $stages = Stage::where('stage_type','deal')
-            ->when($request->deal_type, fn($q) => $q->where('deal_type', $request->deal_type))
+        $perPage = max(1, (int) $request->input('per_page', 10));
+
+        $stages = Stage::where('stage_type', 'deal')
+            ->when($request->deal_type, fn ($q) => $q->where('deal_type', $request->deal_type))
             ->orderBy('deal_type')
             ->orderBy('order')
             ->get();
-        
-        $perPage = $request->input('per_page', 10);
-        
-        $result = $stages->map(function($stage) use ($user, $request, $perPage) {
-            $dealsQuery = Deal::with([
-                'lead',
-                'responsiblePerson',
-                'parties',
-                'documents',
-                'properties'
-            ])
+
+        if ($stages->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+            ]);
+        }
+
+        $stageIds = $stages->pluck('id')->all();
+
+        // Shared filter/permission base — counts and ID pages reuse this instead of
+        // per-stage count() + paginate() (which was ~3 queries × N stages).
+        $baseQuery = Deal::query()
             ->visibleFor($user)
             ->filter($request)
-            ->where('stage_id', $stage->id)->orderBy('updated_at','desc');
-            
-            $totalCount = $dealsQuery->count();
-            $stageDeals = $dealsQuery->paginate($perPage, ['*'], 'page', 1);
-            
-            return [
-                'stage_id' => $stage->id,
-                'stage_name' => $stage->name,
-                'stage_color' => $stage->color,
-                'deal_type' => $stage->deal_type,
-                'order' => $stage->order,
-                'deals_count' => $totalCount,
-                'total_count' => $totalCount,
-                'current_page' => 1,
-                'per_page' => $perPage,
-                'deals' => DealResource::collection($stageDeals)->resolve(),
-                'has_more_pages' => $stageDeals->hasMorePages()
-            ];
-        });
-        
+            ->whereIn('stage_id', $stageIds);
+
+        $countsByStage = (clone $baseQuery)
+            ->reorder()
+            ->toBase()
+            ->selectRaw('stage_id, COUNT(*) as cnt')
+            ->groupBy('stage_id')
+            ->pluck('cnt', 'stage_id');
+
+        // ID-first: top (per_page + 1) deal ids per stage via window (MySQL 8+).
+        $rankedQuery = (clone $baseQuery)
+            ->reorder()
+            ->select('deals.id', 'deals.stage_id')
+            ->selectRaw(
+                'ROW_NUMBER() OVER (PARTITION BY deals.stage_id ORDER BY deals.updated_at DESC, deals.id DESC) as rn'
+            );
+
+        // SoftDeletes must not wrap the outer fromSub (subquery has no deleted_at).
+        $rankedRows = Deal::query()
+            ->withoutGlobalScopes()
+            ->fromSub($rankedQuery, 'ranked_deals')
+            ->where('rn', '<=', $perPage + 1)
+            ->orderBy('stage_id')
+            ->orderBy('rn')
+            ->get(['id', 'stage_id', 'rn']);
+
+        $idsByStage = [];
+        foreach ($stages as $stage) {
+            $idsByStage[$stage->id] = [];
+        }
+        foreach ($rankedRows as $row) {
+            $idsByStage[(int) $row->stage_id][] = (int) $row->id;
+        }
+
+        $pageIds = [];
+        foreach ($idsByStage as $stageId => $ids) {
+            $pageIds = array_merge($pageIds, array_slice($ids, 0, $perPage));
+        }
+        $pageIds = array_values(array_unique($pageIds));
+
+        $userEager = [
+            'background',
+            'roles:id,name',
+            'employeeProfile.companyBranch:id,name',
+            'employeeProfile.designation:id,name',
+            'employeeProfile.department:id,name',
+            'parent.background',
+            'parent.roles:id,name',
+            'parent.employeeProfile.companyBranch:id,name',
+            'parent.employeeProfile.designation:id,name',
+            'parent.parent.background',
+            'parent.parent.roles:id,name',
+            'parent.parent.employeeProfile.companyBranch:id,name',
+            'parent.parent.employeeProfile.designation:id,name',
+            'parent.parent.parent.background',
+            'parent.parent.parent.roles:id,name',
+            'parent.parent.parent.employeeProfile.companyBranch:id,name',
+            'parent.parent.parent.employeeProfile.designation:id,name',
+        ];
+
+        $dealsById = $pageIds === []
+            ? collect()
+            : Deal::query()
+                ->whereIn('id', $pageIds)
+                ->with([
+                    'lead:id,lead_name,email,work_phone,converted_at',
+                    'stage:id,name,color,order,deal_type,stage_type',
+                    'responsiblePerson' => fn ($q) => $q->with($userEager),
+                    'addedBy' => fn ($q) => $q->with($userEager),
+                    'parties.documents',
+                    'documents',
+                    'properties.propertyType:id,name',
+                    'properties.area.parent.parent.parent.parent',
+                    'listing.agent:id,name,display_name,avatar,background_id',
+                    'listing.agent.background',
+                    'listing.area.parent.parent.parent.parent',
+                ])
+                ->get()
+                ->keyBy('id');
+
+        try {
+            DealResource::primeForCollection($dealsById->values());
+
+            $result = $stages->map(function ($stage) use ($idsByStage, $dealsById, $countsByStage, $perPage) {
+                $stageIdList = $idsByStage[$stage->id] ?? [];
+                $hasMoreFromIds = count($stageIdList) > $perPage;
+                $pageStageIds = array_slice($stageIdList, 0, $perPage);
+
+                $stageDeals = collect($pageStageIds)
+                    ->map(fn ($id) => $dealsById->get($id))
+                    ->filter()
+                    ->values();
+
+                $totalCount = (int) ($countsByStage[$stage->id] ?? 0);
+
+                return [
+                    'stage_id' => $stage->id,
+                    'stage_name' => $stage->name,
+                    'stage_color' => $stage->color,
+                    'deal_type' => $stage->deal_type,
+                    'order' => $stage->order,
+                    'deals_count' => $totalCount,
+                    'total_count' => $totalCount,
+                    'current_page' => 1,
+                    'per_page' => $perPage,
+                    'deals' => DealResource::collection($stageDeals)->resolve(),
+                    // Match LengthAwarePaginator::hasMorePages() for page 1.
+                    'has_more_pages' => $hasMoreFromIds || $totalCount > $perPage,
+                ];
+            })->values();
+        } finally {
+            DealResource::clearCollectionPrime();
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $result
+            'data' => $result,
         ]);
     }
 

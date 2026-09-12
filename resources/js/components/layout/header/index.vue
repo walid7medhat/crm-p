@@ -825,6 +825,9 @@ const mainMenuItems = computed(() => {
 
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
+  }
+
+  if (isSuperAdmin.value) {
     items.push({ path: '/sales-intelligence', label: 'AI Sales Intelligence', icon: 'lucide:brain-circuit' });
     items.push({ path: '/investment-analysis', label: 'Investment Analysis', icon: 'lucide:line-chart' });
     items.push({ path: '/settings/city-investments', label: 'City Investments', icon: 'lucide:landmark' });

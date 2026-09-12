@@ -5,13 +5,235 @@ namespace App\Http\Resources\Lead;
 use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
 use App\Models\Integration;
 use App\Models\Lead;
+use App\Models\LeadHistory;
 use App\Models\User;
 use App\Services\Bitrix24\Bitrix24FieldLabels;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 
 class LeadResource extends JsonResource
 {
     use ResolvesLeadLastActivity;
+
+    /** @var array<int, array<int>> lead_id => duplicate lead ids (same work_phone) */
+    protected static array $duplicateIdsByLeadId = [];
+
+    /** @var array<int, bool> */
+    protected static array $serviceDuplicateByLeadId = [];
+
+    /** @var array<int, LeadHistory|null> */
+    protected static array $assignmentHistoryByLeadId = [];
+
+    /** @var array<int, LeadHistory|null> */
+    protected static array $latestHistoryByLeadId = [];
+
+    /** @var bool */
+    protected static bool $collectionPrimed = false;
+
+    /**
+     * Batch-load per-lead duplicate / history / activity data for a collection.
+     * Preserves the same rules as the per-row queries previously used in toArray().
+     *
+     * @param  iterable<int, Lead>  $leads
+     */
+    public static function primeForCollection(iterable $leads): void
+    {
+        $collection = $leads instanceof Collection ? $leads : collect($leads);
+        if ($collection->isEmpty()) {
+            static::clearCollectionPrime();
+
+            return;
+        }
+
+        static::clearCollectionPrime();
+        static::$collectionPrimed = true;
+
+        $leadIds = $collection->pluck('id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        // Duplicate phone ids (same semantics as per-row pluck, limit 200).
+        $phones = $collection->pluck('work_phone')->filter()->unique()->values()->all();
+        $idsByPhone = [];
+        if ($phones !== []) {
+            $rows = Lead::query()
+                ->whereIn('work_phone', $phones)
+                ->whereNotNull('work_phone')
+                ->get(['id', 'work_phone']);
+
+            foreach ($rows as $row) {
+                $idsByPhone[$row->work_phone][] = (int) $row->id;
+            }
+        }
+        foreach ($collection as $lead) {
+            $phone = $lead->work_phone;
+            if (! $phone || empty($idsByPhone[$phone])) {
+                static::$duplicateIdsByLeadId[(int) $lead->id] = [];
+                continue;
+            }
+            $ids = [];
+            foreach ($idsByPhone[$phone] as $otherId) {
+                if ($otherId === (int) $lead->id) {
+                    continue;
+                }
+                $ids[] = $otherId;
+                if (count($ids) >= 200) {
+                    break;
+                }
+            }
+            static::$duplicateIdsByLeadId[(int) $lead->id] = $ids;
+        }
+
+        // Service (blacklist) duplicates — same OR phone/email rule as hasServiceDuplicate(),
+        // including exclusion of the lead itself (id != current).
+        $emails = $collection->pluck('email')->filter()->unique()->values()->all();
+        $blacklistIdsByPhone = [];
+        $blacklistIdsByEmail = [];
+        if ($phones !== [] || $emails !== []) {
+            $blacklistQuery = Lead::query()
+                ->where('status_lead', 'blacklist')
+                ->where(function ($q) use ($phones, $emails) {
+                    if ($phones !== []) {
+                        $q->whereIn('work_phone', $phones);
+                    }
+                    if ($emails !== []) {
+                        $method = $phones !== [] ? 'orWhereIn' : 'whereIn';
+                        $q->{$method}('email', $emails);
+                    }
+                });
+
+            foreach ($blacklistQuery->get(['id', 'work_phone', 'email']) as $row) {
+                if ($row->work_phone) {
+                    $blacklistIdsByPhone[$row->work_phone][] = (int) $row->id;
+                }
+                if ($row->email) {
+                    $blacklistIdsByEmail[$row->email][] = (int) $row->id;
+                }
+            }
+        }
+        foreach ($collection as $lead) {
+            $lid = (int) $lead->id;
+            $flag = false;
+            if ($lead->work_phone && ! empty($blacklistIdsByPhone[$lead->work_phone])) {
+                foreach ($blacklistIdsByPhone[$lead->work_phone] as $otherId) {
+                    if ($otherId !== $lid) {
+                        $flag = true;
+                        break;
+                    }
+                }
+            }
+            if (! $flag && $lead->email && ! empty($blacklistIdsByEmail[$lead->email])) {
+                foreach ($blacklistIdsByEmail[$lead->email] as $otherId) {
+                    if ($otherId !== $lid) {
+                        $flag = true;
+                        break;
+                    }
+                }
+            }
+            static::$serviceDuplicateByLeadId[$lid] = $flag;
+        }
+
+        // One latest "assigned" row + one latest user-backed history per lead (MAX(id)),
+        // not the full history set — avoids unbounded loads on large lead-reports payloads.
+        if ($leadIds !== []) {
+            $assignmentHistoryIds = LeadHistory::query()
+                ->selectRaw('MAX(id) as id')
+                ->whereIn('lead_id', $leadIds)
+                ->where('changes->action', 'assigned')
+                ->groupBy('lead_id')
+                ->pluck('id')
+                ->all();
+
+            $latestHistoryIds = LeadHistory::query()
+                ->selectRaw('MAX(id) as id')
+                ->whereIn('lead_id', $leadIds)
+                ->whereNotNull('user_id')
+                ->whereHas('user')
+                ->groupBy('lead_id')
+                ->pluck('id')
+                ->all();
+
+            $historyIds = array_values(array_unique(array_merge($assignmentHistoryIds, $latestHistoryIds)));
+            $historiesById = $historyIds === []
+                ? collect()
+                : LeadHistory::query()
+                    ->with('user:id,name,display_name,avatar,email,parent_id,status')
+                    ->whereIn('id', $historyIds)
+                    ->get()
+                    ->keyBy('id');
+
+            foreach ($leadIds as $lid) {
+                static::$assignmentHistoryByLeadId[$lid] = null;
+                static::$latestHistoryByLeadId[$lid] = null;
+            }
+
+            foreach ($assignmentHistoryIds as $hid) {
+                $history = $historiesById->get($hid);
+                if ($history) {
+                    static::$assignmentHistoryByLeadId[(int) $history->lead_id] = $history;
+                }
+            }
+            foreach ($latestHistoryIds as $hid) {
+                $history = $historiesById->get($hid);
+                if ($history) {
+                    static::$latestHistoryByLeadId[(int) $history->lead_id] = $history;
+                }
+            }
+        }
+
+        // Bitrix activity users (shared with ResolvesLeadLastActivity batch map).
+        $b24Ids = $collection
+            ->pluck('bitrix24_last_activity_by_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $activityMap = array_fill_keys($b24Ids, null);
+        if ($b24Ids !== []) {
+            $users = User::query()
+                ->whereIn('bitrix24_id', $b24Ids)
+                ->with([
+                    'parent:id,name,display_name,avatar',
+                    'roles:id,name',
+                    'employeeProfile.companyBranch:id,name',
+                    'employeeProfile.designation:id,name',
+                ])
+                ->get(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id', 'status']);
+
+            foreach ($users as $user) {
+                $activityMap[(int) $user->bitrix24_id] = $user;
+            }
+        }
+        static::setKanbanActivityUsersByBitrixId($activityMap);
+    }
+
+    public static function clearCollectionPrime(): void
+    {
+        static::$duplicateIdsByLeadId = [];
+        static::$serviceDuplicateByLeadId = [];
+        static::$assignmentHistoryByLeadId = [];
+        static::$latestHistoryByLeadId = [];
+        static::$collectionPrimed = false;
+        static::clearKanbanActivityUsers();
+        static::$hierarchyCache = [];
+    }
+
+    /**
+     * Primed latest history row for activity fallback (used by ResolvesLeadLastActivity).
+     */
+    public static function primedLatestHistoryFor(int $leadId): ?LeadHistory
+    {
+        if (! static::$collectionPrimed) {
+            return null;
+        }
+
+        return static::$latestHistoryByLeadId[$leadId] ?? null;
+    }
+
+    public static function isCollectionPrimed(): bool
+    {
+        return static::$collectionPrimed;
+    }
 
     public function toArray($request): array
     {
@@ -29,11 +251,7 @@ class LeadResource extends JsonResource
             }
         }
 
-        $assignmentHistory = $this->histories()
-            ->with('user:id,name,display_name,avatar,email,parent_id,status')
-            ->where('changes->action', 'assigned')
-            ->orderBy('created_at', 'desc')
-            ->first();
+        $assignmentHistory = $this->resolveAssignmentHistory();
 
         if ($assignmentHistory && $assignmentHistory->user) {
             $assignedBy = $assignmentHistory->user;
@@ -58,17 +276,7 @@ class LeadResource extends JsonResource
             $finalLastActivityAt = $this->created_at;
         }
 
-        // One query for duplicate phone ids (avoid loading full models twice).
-        $duplicateIds = [];
-        if (! empty($this->work_phone)) {
-            $duplicateIds = Lead::query()
-                ->where('id', '!=', $this->id)
-                ->whereNotNull('work_phone')
-                ->where('work_phone', $this->work_phone)
-                ->limit(200)
-                ->pluck('id')
-                ->all();
-        }
+        $duplicateIds = $this->resolveDuplicateIds();
 
         return [
             'id' => $this->id,
@@ -335,8 +543,50 @@ class LeadResource extends JsonResource
         return null;
     }
 
+    protected function resolveAssignmentHistory(): ?LeadHistory
+    {
+        $leadId = (int) $this->id;
+        if (static::$collectionPrimed && array_key_exists($leadId, static::$assignmentHistoryByLeadId)) {
+            return static::$assignmentHistoryByLeadId[$leadId];
+        }
+
+        return $this->histories()
+            ->with('user:id,name,display_name,avatar,email,parent_id,status')
+            ->where('changes->action', 'assigned')
+            ->orderBy('created_at', 'desc')
+            ->first();
+    }
+
+    /**
+     * @return array<int>
+     */
+    protected function resolveDuplicateIds(): array
+    {
+        $leadId = (int) $this->id;
+        if (static::$collectionPrimed && array_key_exists($leadId, static::$duplicateIdsByLeadId)) {
+            return static::$duplicateIdsByLeadId[$leadId];
+        }
+
+        if (empty($this->work_phone)) {
+            return [];
+        }
+
+        return Lead::query()
+            ->where('id', '!=', $this->id)
+            ->whereNotNull('work_phone')
+            ->where('work_phone', $this->work_phone)
+            ->limit(200)
+            ->pluck('id')
+            ->all();
+    }
+
     protected function hasServiceDuplicate(): bool
     {
+        $leadId = (int) $this->id;
+        if (static::$collectionPrimed && array_key_exists($leadId, static::$serviceDuplicateByLeadId)) {
+            return static::$serviceDuplicateByLeadId[$leadId];
+        }
+
         if (! $this->work_phone && ! $this->email) {
             return false;
         }
