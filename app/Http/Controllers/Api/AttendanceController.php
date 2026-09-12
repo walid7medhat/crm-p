@@ -454,8 +454,15 @@ class AttendanceController extends Controller
         // $this->info("Last month synced: {$count} records.");
 
     } catch (\Exception $e) {
-        dd($e->getMessage());
-        // $this->error($e->getMessage());
+        Log::error('Attendance syncLastMonth failed', [
+            'message' => $e->getMessage(),
+            'exception' => $e,
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to sync last month attendance',
+        ], 500);
     }
 }
 

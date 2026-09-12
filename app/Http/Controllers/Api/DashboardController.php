@@ -23,6 +23,7 @@ use App\Models\Lead;
 use App\Models\Deal;
 use App\Models\DealProperty;
 use Spatie\Activitylog\Models\Activity;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DashboardController extends Controller
@@ -1181,7 +1182,10 @@ public function getPropertyTypesWithListings(Request $request)
             ]);
 
         } catch (\Exception $e) {
-            dd($e->getMessage());
+            Log::error('Failed to fetch sidebar counts', [
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch sidebar counts'

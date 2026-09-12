@@ -101,7 +101,10 @@
                                         class="comment-icon-content"
                                     ></iconify-icon>
                                 </div>
-                                <div class="comment-text">{{ comment.comment }}</div>
+                                <div
+                                    class="comment-text bitrix-rich-text"
+                                    v-html="formatCommentHtml(comment.comment)"
+                                ></div>
                             </div>
 
                             <!-- Attachments Section -->
@@ -171,6 +174,7 @@
 import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
 import ProfilePopup from '../shared/ProfilePopup.vue'
+import { formatBitrixRichText } from '@/utils/bitrixRichText'
 
 const instance = getCurrentInstance()
 const $showNotification = (message, type = 'info') => {
@@ -182,6 +186,8 @@ const $showNotification = (message, type = 'info') => {
         console.log(`${type}: ${message}`)
     }
 }
+
+const formatCommentHtml = (text) => formatBitrixRichText(text)
 
 const props = defineProps({
     leadId: {
@@ -807,6 +813,22 @@ defineExpose({
     line-height: 1.5;
     flex: 1;
     font-family: var(--deal-font, 'Montserrat', sans-serif);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.comment-text.bitrix-rich-text :deep(.bitrix-rich-link),
+.comment-text.bitrix-rich-text .bitrix-rich-link {
+    color: #2563eb;
+    text-decoration: underline;
+    text-decoration-color: #2563eb;
+    word-break: break-all;
+}
+
+.comment-text.bitrix-rich-text :deep(.bitrix-rich-link:hover),
+.comment-text.bitrix-rich-text .bitrix-rich-link:hover {
+    color: #1d4ed8;
+    text-decoration: none;
 }
 
 .comment-attachments {

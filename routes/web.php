@@ -4,61 +4,11 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\LeadController;
-use Illuminate\Support\Facades\Http;
-use App\Models\User;
-use App\Models\Listing;
-use Illuminate\Support\Str;
 use App\Http\Controllers\Api\Listing\ListingController;
+
 Route::get('/leads/export', [LeadController::class, 'export'])->name('leads.export');
 Route::get('/image/watermark', [ListingController::class, 'watermark'])
     ->name('image.watermark');
-
-
-Route::get('/sync-biometric', function () {
-
-    $response = Http::withBasicAuth('admin', 'admin1234')
-        ->timeout(60)
-        ->get('http://oiahead.fortidyndns.com:8085/iclock/api/transactions/');
-
-    if (!$response->successful()) {
-        return 'API error';
-    }
-
-    $data = $response->json()['data'] ?? [];
-
-    // 🧠 نجيب اليوزر مرة واحدة بس (مهم جدًا)
-    $users = User::whereNull('biometric_code')->get();
-
-    foreach ($data as $item) {
-
-        if (empty($item['emp_code'])) continue;
-
-        $apiName = trim(($item['first_name'] ?? '') . ' ' . ($item['last_name'] ?? ''));
-
-        if (empty($apiName)) continue;
-
-        $apiName = Str::lower(preg_replace('/\s+/', '', $apiName));
-
-        foreach ($users as $user) {
-
-            $userName = Str::lower(preg_replace('/\s+/', '', $user->name));
-
-            // 🔥 matching بسيط وآمن
-            if (
-                str_contains($apiName, $userName) ||
-                str_contains($userName, $apiName)
-            ) {
-                $user->update([
-                    'biometric_code' => $item['emp_code']
-                ]);
-
-                break;
-            }
-        }
-    }
-
-    return 'Done';
-});
 
 // استخدم web middleware فقط
 Broadcast::routes(['middleware' => ['auth:api']]);
@@ -68,7 +18,7 @@ Route::get('/login', function () {
 })->name('login');
 Route::post('/broadcasting/auth', function () {
     return Broadcast::auth(request());
-})->middleware('auth:api'); 
+})->middleware('auth:api');
 // Handle OPTIONS preflight request for broadcasting/auth
 Route::options('/broadcasting/auth', function () {
     return response('', 200)
@@ -77,20 +27,9 @@ Route::options('/broadcasting/auth', function () {
         ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With');
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
-// In routes/channels.php - TEMPORARY FIX ONLY
+
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    // For debugging, allow all connections temporarily
-    \Log::info('Channel auth', [
-        'user_exists' => !is_null($user),
-        'user_id' => $user->id ?? 'null',
-        'requested_id' => $id
-    ]);
-    
-    // Temporarily return true for testing
-    return true;
-    
-    // Once working, change back to:
-    // return (int) $user->id === (int) $id;
+    return (int) $user->id === (int) $id;
 });
 
 Broadcast::channel('user.{id}', function ($user, $id) {
@@ -102,125 +41,24 @@ Broadcast::channel('leads', function ($user) {
 });
 
 Broadcast::channel('listing.{id}', function ($user, $id) {
-    return true; 
-});
-
-Broadcast::channel('lead.{id}', function ($user, $id) {
-    return true; 
-});
-Broadcast::channel('lead.updated', function ($user) {
+    // Authenticated CRM users may subscribe (matches leads / lead-assignment channels).
     return $user !== null;
 });
 
+Broadcast::channel('lead.{id}', function ($user, $id) {
+    return $user !== null;
+});
+
+Broadcast::channel('lead.updated', function ($user) {
+    return $user !== null;
+});
 
 Broadcast::channel('lead-assignment', function ($user) {
     // Kanban + Lead Assignment UI subscribe here; allow any authenticated user (JWT/session).
     return $user !== null;
 });
-Route::post('/test-broadcast-auth', function (\Illuminate\Http\Request $request) {
-    \Log::info('Test Broadcast Auth Called', [
-        'channel_name' => $request->input('channel_name'),
-        'socket_id' => $request->input('socket_id'),
-        'auth_header' => $request->header('Authorization'),
-        'all_headers' => $request->headers->all(),
-    ]);
-    
-    // Try to authenticate with JWT
-    try {
-        $user = auth()->user();
-        
-        if (!$user) {
-            \Log::error('No authenticated user found');
-            return response()->json(['error' => 'Unauthenticated'], 401);
-        }
-        
-        \Log::info('User authenticated successfully', [
-            'user_id' => $user->id,
-            'user_name' => $user->name
-        ]);
-        
-        return response()->json([
-            'success' => true,
-            'user_id' => $user->id,
-            'channel' => $request->input('channel_name')
-        ]);
-        
-    } catch (\Exception $e) {
-        \Log::error('Auth error: ' . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-})->middleware('auth:api');
 
-
-Route::get('/build-assets', function () {
-    if (request('key') !== 'secret_private_123') {
-        abort(403);
-    }
-
- $nodePath = '/home/oiapr/.nvm/versions/node/v18.20.8/bin';
-
-    $command = "export PATH=$nodePath:\$PATH && cd /home/oiapr/listings.oiaproperties.com && npm run build 2>&1";
-
-    exec($command, $output, $code);
-
-    return response()->json([
-        'success' => $code === 0,
-        'code' => $code,
-        'output' => $output
-    ]);
-  
-});
-
-
-Route::get('/test-event', function () {
-    try {
-        $user = \App\Models\User::find(1);
-        
-        \Log::info('=== TESTING EVENT DIRECTLY ===');
-        
-        // استخدم الـ event مباشرة بدل الـ notification
-        event(new \App\Events\NotificationCreated([
-            'id' => 'test-' . time(),
-            'type' => 'new_sales_agent',
-            'data' => [
-                'message' => 'Test event from Laravel2 - ' . now()->toTimeString(),
-                'sales_agent_name' => 'Test Agent',
-                'notification_type' => 'new_sales_agent'
-            ],
-            'user_id' => $user->id,
-            'read_at' => null,
-            'created_at' => now()->toISOString(),
-        ]));
-        
-        \Log::info('✅ Event fired directly');
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Event fired directly - check Pusher and console'
-        ]);
-        
-    } catch (\Exception $e) {
-        \Log::error('EVENT ERROR: ' . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-});
-Route::get('/test-request-cancelled', function () {
-    $user = \App\Models\User::find(1);
-    
-    $user->notify(new \App\Notifications\RequestCancelledNotification([
-        'request_id' => 123,
-        'property_id' => 456,
-        'property_title' => 'Test Property',
-        'request_type' => 'tour',
-        'request_type_text' => 'Property Tour', 
-        'cancelled_by_name' => 'Test User',
-        'cancelled_by_id' => 1,
-        'cancelled_at' => now(),
-    ]));
-    
-    return 'Test RequestCancelledNotification sent!';
-});
-Route::get('privacy-policy',function(){
+Route::get('privacy-policy', function () {
     return view('privacy-policy');
 });
 
@@ -231,38 +69,8 @@ Route::get('preview-email/account-activated', function () {
     ]);
 })->name('preview-email.account-activated');
 
-    Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads']);
-Route::get('listing/team', function () {
-
-    $userIds = User::
-         whereHas('listings')->
-        get()
-       
-        ->filter(function ($user) {
-            return !$user->is_listing_team;
-        })
-        ->pluck('id');
-    $updatedCount = Listing::where(function ($q) use ($userIds) {
-        $q->whereIn('added_by', $userIds)
-          ->orWhereIn('agent_id', $userIds);
-    })
-    ->where('is_hot_deal', 'Yes')
-    ->update([
-        'is_hot_deal' => 'No',
-        'hot_deal_approved_by' => null,
-        'hot_deal_approved_at' => null,
-    ]);
-
-dd("Updated: " . $updatedCount);
-    //      Listing::whereIn('user_id', $userIds)->update([
-    //     'is_hot_deal' => 'No',
-    //     'hot_deal_approved_by' => null,
-    //     'hot_deal_approved_at' => null,
-    // ]);
-
-    dd($users);
-});
+Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads']);
 
 Route::get('{any}', function () {
-    return view('welcome'); 
+    return view('welcome');
 })->where('any', '^(?!api).*$');

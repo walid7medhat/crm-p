@@ -24,7 +24,7 @@ use Carbon\Carbon;
 use App\Http\Resources\User\MentionAgentResource;
 use App\Helpers\ApiResponse;
 use App\Helpers\DealHistoryHelper;
-
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 class DealActivityController extends Controller
 {
@@ -301,7 +301,10 @@ class DealActivityController extends Controller
             
         } catch (\Exception $e) {
             DB::rollBack();
-            dd($e->getMessage());
+            Log::error('Failed to add deal comment', [
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to add comment',

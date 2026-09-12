@@ -120,6 +120,7 @@ const SETTINGS_PREFIXES = [
   '/lead-reports',
   '/lead-source-report',
   '/agent-performance',
+  '/ai-lead-intelligence',
   '/sales-intelligence',
   '/investment-analysis',
   '/settings',
@@ -319,6 +320,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
     const insightPaths = [
       '/lead-reports',
       '/lead-source-report',
+      '/ai-lead-intelligence',
       '/sales-intelligence',
       '/investment-analysis',
       '/settings/city-investments',
@@ -326,12 +328,17 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       '/settings/kanban',
       '/settings/stage-visibility',
     ];
-    if (isAdmin || isSuperAdmin) {
+    const canShowAli = typeof hasPermission === 'function'
+      ? hasPermission('show-leads')
+      : false;
+    if (isAdmin || isSuperAdmin || canShowAli) {
       tabs.push({
         id: 'insights',
         label: 'Insights',
         type: 'route',
-        path: isSuperAdmin ? '/lead-reports' : '/settings/lead-scoring',
+        path: canShowAli && !isAdmin && !isSuperAdmin
+          ? '/ai-lead-intelligence'
+          : (isSuperAdmin ? '/lead-reports' : '/settings/lead-scoring'),
         matchPaths: insightPaths,
       });
     }

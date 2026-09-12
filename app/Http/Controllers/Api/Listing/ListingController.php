@@ -1252,7 +1252,11 @@ public function getMatchingListings(Request $request)
                 $result['permissions']
             );
         } catch (\Exception $e) {
-            dd($e->getMessage());
+            Log::error('Listing show failed; attempting fallback', [
+                'listing_id' => $listing,
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
             return $this->fallbackShow($listing, $e);
         }
     }
