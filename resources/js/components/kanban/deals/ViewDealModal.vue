@@ -814,9 +814,20 @@ async function startEditDeal(sectionKey = null) {
   if (!deal.value?.id) return
   activeEditSection.value = sectionKey
   isEditingDeal.value = true
-  editLoading.value = true
   editShowErrors.value = false
   editFieldErrors.value = {}
+
+  // The modal already fetched this exact deal to render the view — reuse it instead
+  // of firing another /deals/{id} round trip. That redundant fetch was the reason
+  // clicking the edit pencil felt slow even though the data was already on screen.
+  if (hydratedDeal.value?.id === props.deal.id) {
+    editFormData.value = dealToFormData(hydratedDeal.value)
+    editLoading.value = false
+    ensureEditLookupsLoaded().catch((e) => console.error('Failed to load edit lookups', e))
+    return
+  }
+
+  editLoading.value = true
   try {
     const [raw] = await Promise.all([
       fetchDealDetailShared(props.deal.id),
