@@ -283,6 +283,22 @@ app.mixin({
     }
   }
 })
+// vue-select (v-select, used with append-to-body across ~20 forms/modals) computes
+// its dropdown menu's position once when it opens and never re-tracks the trigger
+// afterwards, so scrolling any ancestor container (a modal body, the page, a
+// scrollable panel, ...) leaves the options list visually detached from its select.
+// There's no cheap way to keep every independent instance repositioned live, so
+// close the open dropdown instead — but ignore scrolls that happen *inside* the
+// dropdown's own option list, since scrolling through a long list is normal.
+window.addEventListener('scroll', (event) => {
+  const openSelect = document.querySelector('.v-select.vs--open')
+  if (!openSelect) return
+  const menu = document.querySelector('.vs__dropdown-menu')
+  if (menu && (event.target === menu || menu.contains(event.target))) return
+  const searchInput = openSelect.querySelector('.vs__search')
+  if (searchInput) searchInput.blur()
+}, true)
+
 // in main.js, after app creation, before app.mount
 window.addEventListener('unhandledrejection', (event) => {
   if (String(event.reason?.message || event.reason).includes('Element not found')) {
