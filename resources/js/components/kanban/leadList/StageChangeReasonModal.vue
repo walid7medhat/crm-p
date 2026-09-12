@@ -1068,12 +1068,18 @@ const handleCustomDateCancel = () => {}
 
 const handleClickOutside = (event) => {
     const t = event.target
-    const trigger = reminderButtonRef.value?.$el || reminderButtonRef.value
+    const reminderTrigger = reminderButtonRef.value?.$el || reminderButtonRef.value
     const budgetTrigger = budgetTriggerRef.value?.$el || budgetTriggerRef.value
-    if (trigger?.contains(t) || reminderDropdownPanelRef.value?.contains(t)) return
-    if (budgetTrigger?.contains(t) || budgetDropdownPanelRef.value?.contains(t)) return
-    closeReminderDropdown()
-    closeBudgetDropdown()
+
+    const insideReminder = reminderTrigger?.contains(t) || reminderDropdownPanelRef.value?.contains(t)
+    const insideBudget = budgetTrigger?.contains(t) || budgetDropdownPanelRef.value?.contains(t)
+
+    // Each popup closes independently based on whether the click landed inside *it*
+    // — a shared early-return here used to mean clicking the reminder trigger (to
+    // open/toggle it) also skipped closing an already-open budget popup, leaving
+    // both open at once.
+    if (!insideReminder) closeReminderDropdown()
+    if (!insideBudget) closeBudgetDropdown()
 }
 
 const branchOptions = [
@@ -1202,6 +1208,18 @@ const closeModal = () => {
     resetForm()
     emit('closed')
 }
+
+// This modal instance is reused across openings (parent drives it via the exposed
+// show()/hide() rather than re-mounting), so leftover open state doesn't reset on
+// its own. Without this, a budget/reminder popup left stuck open (e.g. by the
+// click-outside bug above) would render already-open — at a stale, wrong-laptop
+// position — the instant the modal is shown again for the next lead.
+watch(visible, (isVisible) => {
+    if (!isVisible) {
+        closeReminderDropdown()
+        closeBudgetDropdown()
+    }
+})
 
 const resetForm = () => {
     formData.value = {
@@ -1586,12 +1604,16 @@ watch(visible, (newVal) => {
 })
 onMounted(() => {
     console.log(props.targetStageOrder);
-    document.addEventListener('click', handleClickOutside)
+    // Capture phase: several triggers in this form (reminder, date-time, the budget
+    // trigger itself) use @click.stop, which would otherwise stop the click before
+    // it ever reaches this document listener, leaving the budget/reminder popups
+    // stuck open no matter what else on the page gets clicked.
+    document.addEventListener('click', handleClickOutside, true)
 })
 
 onUnmounted(() => {
     document.body.classList.remove('stage-change-modal-open')
-    document.removeEventListener('click', handleClickOutside)
+    document.removeEventListener('click', handleClickOutside, true)
     removeReminderDropdownListeners()
     removeBudgetDropdownListeners()
 })

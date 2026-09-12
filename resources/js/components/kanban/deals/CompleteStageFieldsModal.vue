@@ -1889,22 +1889,28 @@ function hasPropertyMissing(propIndex) {
   if (!property) return false
   
   const missingKeys = effectiveMissingFields.value || []
-  
+
   // Check for required fields for this specific property
   const hasMissing = missingKeys.some(key => {
     // Pattern: property_0_unit_no, property_0_area_id, etc.
     const match = key.match(/property_(\d+)_(.+)/)
     if (match) {
       const idx = parseInt(match[1])
-      const field = match[2]
+      // Must normalize the same way unresolvedMissingKeys does (e.g. the backend's
+      // developer_sales_phone/_name -> developer_phone/_name), otherwise this looks
+      // up a property key that's never set and stays "missing" forever even after
+      // the user fills in the actual field.
+      const field = normalizePropertyFieldKey(match[2])
       if (idx === propIndex) {
-        const value = property[field]
+        const value = field === 'developer_phone'
+          ? (property.developer_phone ?? property.developer_sales_phone)
+          : property[field]
         return value === null || value === undefined || value === ''
       }
     }
     return false
   })
-  
+
   return hasMissing
 }
 
