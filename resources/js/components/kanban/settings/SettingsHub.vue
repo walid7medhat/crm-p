@@ -41,16 +41,17 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, defineAsyncComponent } from 'vue'
+import { computed, ref, watch } from 'vue'
 import KanbanSettings from '../KanbanSettings.vue'
 import LeadScoringSettings from '../LeadScoringSettings.vue'
 import StageVisibility from '../stage/StageVisibility.vue'
 import DealsSettings from './DealsSettings.vue'
 import LeadAssignmentEngine from './LeadAssignmentEngine.vue'
-
-const IntegrationPanel = defineAsyncComponent(() =>
-  import('../integration/Integration.vue')
-)
+// Static import (like every other panel here): defineAsyncComponent's runtime
+// CSS-preload injection for this chunk wasn't firing, so its <style scoped>
+// rules never made it into the page at all — bundling it upfront like its
+// siblings sidesteps that entirely.
+import IntegrationPanel from '../integration/Integration.vue'
 
 const props = defineProps({
   /** Open directly to a settings section (e.g. "integrations"). */

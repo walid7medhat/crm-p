@@ -596,9 +596,20 @@ const formatDateShort = (dateString) => {
 
 .integration-table {
     width: 100%;
+    min-width: 920px;
     border-collapse: collapse;
     margin: 0;
     table-layout: auto;
+}
+
+.integration-table th,
+.integration-table td {
+    white-space: nowrap;
+}
+
+.integration-table .form-name {
+    white-space: normal;
+    min-width: 160px;
 }
 
 .integration-table thead {
@@ -609,7 +620,10 @@ const formatDateShort = (dateString) => {
 }
 
 .integration-table th {
-    padding: 12px 16px;
+    /* !important: a global `td, th { padding: 0 }` reset (loaded app-wide from the
+       legacy style14.css theme sheet) otherwise wins over this scoped rule and
+       leaves header cells with no horizontal breathing room at all. */
+    padding: 12px 16px !important;
     text-align: left;
     font-family: 'Montserrat', sans-serif;
     font-size: 14px;
@@ -620,7 +634,7 @@ const formatDateShort = (dateString) => {
 }
 
 .integration-table td {
-    padding: 12px 16px;
+    padding: 12px 16px !important;
     border-bottom: 1px solid #E2E8F0;
     font-family: 'Montserrat', sans-serif;
     font-size: 14px;
@@ -719,6 +733,14 @@ const formatDateShort = (dateString) => {
 
 .active-column {
     min-width: 150px;
+}
+
+.conversation-count {
+    min-width: 110px;
+}
+
+.platform {
+    min-width: 110px;
 }
 
 .active-toggle-wrapper {
