@@ -15,8 +15,6 @@ import 'bootstrap'
 /* Intl phone: coords from library; CDN sprite survives CSP / quirks vs data-uri in vue-tel build */
 import 'vue-tel-input/vue-tel-input.css'
 import '../css/crm-phone-flags.css'
-import 'vue-slick-carousel/dist/vue-slick-carousel.css'
-import 'vue-slick-carousel/dist/vue-slick-carousel-theme.css'
 
 import 'vue-select/dist/vue-select.css'
 import '../css/vue-select-overrides.css'
@@ -26,6 +24,7 @@ import '../css/crm-background.css'
 import '../css/dashboard-home.css'
 import '../css/analytics-premium.css'
 import '../css/agent-performance.css'
+import '../css/ai-lead-intelligence.css'
 import '../css/dashboard-ai.css'
 import '../css/roi-calculator.css'
 import '../css/background-settings.css'
@@ -62,7 +61,7 @@ const initialToken = resolveAuthToken()
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js/dist/web/pusher'
 
-Pusher.logToConsole = true
+Pusher.logToConsole = import.meta.env.DEV
 
 window.Pusher = Pusher
 

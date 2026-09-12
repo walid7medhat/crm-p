@@ -771,7 +771,11 @@ public function getFloorPlans( $id)
             'data' => $floorPlans
         ]);
     } catch (\Exception $e) {
-        dd($e);
+        Log::error('Failed to fetch floor plans', [
+            'project_id' => $id ?? null,
+            'message' => $e->getMessage(),
+            'exception' => $e,
+        ]);
         return response()->json([
             'success' => false,
             'message' => 'Failed to fetch floor plans'

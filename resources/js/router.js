@@ -3,9 +3,7 @@ import { resetSidebarLayout } from './composables/useSidebar.js'
 import { clearAuthToken } from './plugins/axios.js'
 
 // DashBoard
-import Ai from './pages/dashboard/ai.vue'
 import HomeAnalytics from './pages/dashboard/home-analytics.vue'
-import Crm from './pages/dashboard/crm.vue'
 import AllLsting from './components/alllisting/AllLsting.vue'
 import PropertyShow from './components/alllisting/PropertyShow.vue'
 import PropertyForm from './pages/listings/property-form.vue'
@@ -25,7 +23,6 @@ import UsersList from './pages/users/UsersList.vue'
 import UserForm from './pages/users/UserForm.vue'
 import UserDetail from './pages/users/UserDetail.vue'
 import TeamTree from './components/Table/TeamTree.vue'
-import InvitedUsers from './pages/users/invitedUsers.vue'
 
 // Role and Permission
 import AssignRole from './pages/roleAccess/assign-role.vue'
@@ -104,6 +101,7 @@ import HrDashboard from './pages/hr/index.vue'
 import EmployeeProfilePage from './pages/hr/employees/EmployeeProfilePage.vue'
 import AssetDetailsPage from './pages/hr/assets/AssetDetailsPage.vue'
 import SalesIntelligence from './pages/sales-intelligence/index.vue'
+import AiLeadIntelligence from './pages/ai-lead-intelligence/index.vue'
 
 
 import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
@@ -163,6 +161,7 @@ const baseRoutes = [
   { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: LeadSourceReport, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/agent-performance', component: agentPerformance, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/ai-lead-intelligence', component: AiLeadIntelligence, meta: { requiresAuth: true, requiresPermission: 'show-leads' } },
   { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
   { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },

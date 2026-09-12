@@ -28,9 +28,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\ListingAccessRequestNotification;
 use App\Http\Controllers\Api\SourceController;
-use App\Models\UserInvitation;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use App\Http\Controllers\Api\LeadActivityController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\Deal\DealController;
@@ -57,6 +55,7 @@ use App\Http\Controllers\Api\Bitrix24SyncController;
 use App\Http\Controllers\Api\Bitrix24WebhookController;
 use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
 use App\Http\Controllers\Api\AiSalesIntelligence\AiSalesIntelligenceController;
+use App\Http\Controllers\Api\AiLeadIntelligence\AiLeadIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
 use App\Http\Controllers\Api\Mobile\MobileLeadMoveController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
@@ -77,46 +76,6 @@ use App\Http\Controllers\Api\Employee\EvaluationController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
 use App\Http\Controllers\Api\Listing\InternalUpdateController;
 use App\Http\Controllers\Api\Employee\EmployeeAttendanceController;
-Route::get('/test-email', function () {
-    try {
-        // Test basic email
-        Mail::raw('This is a test email', function ($message) {
-            $message->to('')
-                    ->subject('Test Email');
-        });
-        
-        return 'Email sent successfully! Check your email inbox.';
-    } catch (\Exception $e) {
-        return 'Email error: ' . $e->getMessage();
-    }
-});
-
-Route::get('/test-invitation-email', function () {
-    try {
-        // Create test invitation
-        $invitation = new UserInvitation([
-            'email' => 'test@example.com',
-            'token' => Str::random(60),
-            'expires_at' => now()->addDays(7),
-            'invited_by' => 1,
-        ]);
-
-        // Test invitation email
-        Mail::send(new App\Mail\UserInvitationMail($invitation));
-        
-        return 'Invitation email sent successfully!';
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage();
-    }
-});
-/* Preview account-activated email design in browser (no mail sent) */
-Route::get('/preview-account-activated-email', function () {
-    $userName = 'Walid';
-    $userEmail = 'walidmedhat.uae@gmail.com';
-    return response()->view('emails.account-activated', [
-        'userName' => $userName,
-    ])->header('Content-Type', 'text/html');
-});
 
 /* Test account-activated email – actually sends to walidmedhat.uae@gmail.com (requires SMTP in .env) */
 Route::get('/test-account-activated-email', function () {
@@ -150,15 +109,8 @@ Route::get('/save-account-activated-email-html', function () {
         'open_url' => 'file://' . $path,
     ]);
 });
-Route::get('/test-server', function() {
-    return response()->json([
-        'gd_installed' => extension_loaded('gd'),
-        'gd_info' => function_exists('gd_info') ? gd_info() : 'GD not available',
-        'intervention_loaded' => class_exists('Intervention\Image\ImageManagerStatic'),
-        'storage_working' => class_exists('Illuminate\Support\Facades\Storage'),
-    ]);
-});
-    Route::post('auth/register', [AuthController::class, 'register']);
+
+Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
@@ -503,6 +455,17 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/scoring-rules', [AiSalesIntelligenceController::class, 'updateScoringRules']);
         Route::post('/scoring-rules/reset', [AiSalesIntelligenceController::class, 'resetScoringRules']);
         Route::post('/recalculate', [AiSalesIntelligenceController::class, 'recalculate']);
+    });
+
+    // AI Lead Intelligence (Phase 2 contracts — Phase 3 fills real CRM aggregations)
+    Route::prefix('ai-lead-intelligence')->group(function () {
+        Route::get('/overview', [AiLeadIntelligenceController::class, 'overview']);
+        Route::get('/priority-leads', [AiLeadIntelligenceController::class, 'priorityLeads']);
+        Route::get('/at-risk', [AiLeadIntelligenceController::class, 'atRisk']);
+        Route::get('/property-opportunities', [AiLeadIntelligenceController::class, 'propertyOpportunities']);
+        Route::get('/neglected', [AiLeadIntelligenceController::class, 'neglected']);
+        Route::get('/actions-today', [AiLeadIntelligenceController::class, 'actionsToday']);
+        Route::post('/refresh', [AiLeadIntelligenceController::class, 'refresh']);
     });
 
     Route::get('/attendance/today', [AttendanceController::class, 'today']);

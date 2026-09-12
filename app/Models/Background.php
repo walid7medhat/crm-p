@@ -36,10 +36,19 @@ class Background extends Model
 
     /**
      * The system-wide default background (used when a user hasn't chosen one).
+     * Cached per request to avoid N× identical lookups from UserResource.
      */
     public static function default(): ?self
     {
-        return static::where('is_default', true)->first();
+        static $cached = false;
+        static $default = null;
+
+        if ($cached === false) {
+            $default = static::where('is_default', true)->first();
+            $cached = true;
+        }
+
+        return $default;
     }
 
     public function users()

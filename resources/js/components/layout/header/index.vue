@@ -105,6 +105,17 @@
               </a>
             </li>
             <li
+              v-if="canShowLeadsTab"
+              :class="['nav-link', { 'active-page': isSidebarSubItemActive('/ai-lead-intelligence') }]"
+            >
+              <router-link to="/ai-lead-intelligence" custom v-slot="{ navigate, href }">
+                <a :href="href" class="sidebar-nav-link" @click="navigate">
+                  <iconify-icon icon="lucide:sparkles" class="menu-icon submenu-icon" />
+                  <span>AI Lead Intelligence</span>
+                </a>
+              </router-link>
+            </li>
+            <li
               v-if="showCrmListingsDropdown"
               :class="{
                 dropdown: true,
@@ -825,6 +836,18 @@ const mainMenuItems = computed(() => {
 
   if (isSuperAdmin.value) {
     items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
+  }
+
+  // AI Lead Intelligence sits next to AI Sales Intelligence
+  if (canShowLeadsTab.value) {
+    items.push({
+      path: '/ai-lead-intelligence',
+      label: 'AI Lead Intelligence',
+      icon: 'lucide:sparkles',
+    });
+  }
+
+  if (isSuperAdmin.value) {
     items.push({ path: '/sales-intelligence', label: 'AI Sales Intelligence', icon: 'lucide:brain-circuit' });
     items.push({ path: '/investment-analysis', label: 'Investment Analysis', icon: 'lucide:line-chart' });
     items.push({ path: '/settings/city-investments', label: 'City Investments', icon: 'lucide:landmark' });

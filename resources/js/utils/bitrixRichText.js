@@ -87,3 +87,67 @@ export function formatBitrixRichText(raw) {
 
   return text.trim()
 }
+
+/**
+ * Extract Property Finder / Bayut (and similar portal) URLs from free text / BBCode.
+ * @param {string|null|undefined} raw
+ * @returns {{ url: string, label: string, portal: 'bayut'|'propertyfinder'|'other' }[]}
+ */
+export function extractPortalLinks(raw) {
+  if (raw == null || raw === '') return []
+
+  let text = String(raw)
+  const found = []
+  const seen = new Set()
+
+  const push = (url) => {
+    let safe = sanitizeHref(url)
+    if (!safe) return
+    // Drop accidental BBCode leftovers from partial matches
+    safe = safe.replace(/\[\/?url[^\]]*\]/gi, '').replace(/\[\/?[a-z0-9=]+\]/gi, '')
+    safe = sanitizeHref(safe)
+    if (!safe) return
+
+    const key = safe.toLowerCase().replace(/\/+$/, '')
+    if (seen.has(key)) return
+    seen.add(key)
+
+    const lower = safe.toLowerCase()
+    let portal = 'other'
+    let label = 'Portal link'
+    if (lower.includes('bayut.com')) {
+      portal = 'bayut'
+      label = 'Bayut'
+    } else if (lower.includes('propertyfinder') || lower.includes('property-finder')) {
+      portal = 'propertyfinder'
+      label = 'Property Finder'
+    }
+
+    found.push({ url: safe, label, portal })
+  }
+
+  // [url=href]label[/url] — extract then remove so bare-URL scan does not double-match
+  text = text.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, (_, href) => {
+    push(href)
+    return ' '
+  })
+
+  // [url]href[/url]
+  text = text.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, (_, href) => {
+    push(String(href).trim())
+    return ' '
+  })
+
+  // Strip remaining simple BBCode wrappers
+  text = text.replace(/\[(\/)?(p|b|i|u|s|code|quote|list|\*|size|color|font)(=[^\]]*)?\]/gi, ' ')
+
+  // Bare URLs (exclude '[' so BBCode fragments cannot attach)
+  text.replace(/(https?:\/\/[^\s<&\[\]]+)|(www\.[^\s<&\[\]]+)/gi, (match) => {
+    let url = match
+    while (/[.,);:!?]$/.test(url)) url = url.slice(0, -1)
+    push(url)
+    return ''
+  })
+
+  return found.filter((item) => item.portal === 'bayut' || item.portal === 'propertyfinder' || item.portal === 'other')
+}

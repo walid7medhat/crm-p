@@ -46,10 +46,16 @@ trait ResolvesLeadLastActivity
         // Non-Bitrix leads (or Bitrix users not yet provisioned) fall back to the
         // most recent local history row performed by a real user.
         if ($includeHistoryFallback && (! $lastActivityUser || ! $lastActivityAt)) {
-            $latest = $this->histories()
-                ->whereNotNull('user_id')
-                ->whereHas('user')
-                ->first();
+            $leadId = (int) $this->id;
+
+            if (\App\Http\Resources\Lead\LeadResource::isCollectionPrimed()) {
+                $latest = \App\Http\Resources\Lead\LeadResource::primedLatestHistoryFor($leadId);
+            } else {
+                $latest = $this->histories()
+                    ->whereNotNull('user_id')
+                    ->whereHas('user')
+                    ->first();
+            }
 
             if ($latest) {
                 $lastActivityAt = $lastActivityAt ?? $latest->created_at;
