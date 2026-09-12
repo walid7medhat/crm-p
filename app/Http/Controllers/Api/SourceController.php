@@ -31,7 +31,7 @@ class SourceController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'index_' . md5(serialize($request->all()));
+            $cacheKey = self::versionedKey('index_' . md5(serialize($request->all())));
             
             $Sources = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($request) {
                 $query = Source::orderBy('id', 'desc')->get();
@@ -73,7 +73,7 @@ class SourceController extends Controller
     public function show(Source $Source): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'show_' . $Source->id;
+            $cacheKey = self::versionedKey('show_' . $Source->id);
             
             $cachedSource = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($Source) {
                 return $Source;
@@ -137,43 +137,62 @@ class SourceController extends Controller
   
 
     /**
+     * Invalidate source caches without Cache::flush().
      */
     private function clearAllCache(): void
     {
         try {
-            if (config('cache.default') === 'redis') {
+            self::bumpCacheEpoch();
+
+            if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_PREFIX . 'tag'])->flush();
-            } else {
+            } elseif (config('cache.default') === 'redis') {
                 $this->clearCacheByPattern(self::CACHE_PREFIX . '*');
             }
-            
+
             \Log::info('sources cache cleared successfully');
         } catch (\Exception $e) {
             \Log::warning('sources cache clear error: ' . $e->getMessage());
+            self::bumpCacheEpoch();
         }
     }
 
+    private static function cacheEpoch(): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'epoch', '0');
+    }
+
+    private static function bumpCacheEpoch(): void
+    {
+        Cache::put(self::CACHE_PREFIX . 'epoch', (string) (microtime(true) * 1000), 86400 * 30);
+    }
+
+    private static function versionedKey(string $suffix): string
+    {
+        return self::CACHE_PREFIX . 'e' . self::cacheEpoch() . '_' . $suffix;
+    }
+
     /**
+     * Redis-only prefix delete. Never falls through to Cache::flush().
      */
     private function clearCacheByPattern(string $pattern): void
     {
         try {
-            if (config('cache.default') === 'redis') {
-                $redis = Cache::getRedis();
-                $cursor = 0;
-                
-                do {
-                    list($cursor, $keys) = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
-                    if (!empty($keys)) {
-                        $redis->del($keys);
-                    }
-                } while ($cursor != 0);
-            } else {
-                Cache::flush();
+            if (config('cache.default') !== 'redis') {
+                return;
             }
+
+            $redis = Cache::getRedis();
+            $cursor = 0;
+
+            do {
+                list($cursor, $keys) = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
+                if (! empty($keys)) {
+                    $redis->del($keys);
+                }
+            } while ($cursor != 0);
         } catch (\Exception $e) {
             \Log::warning('Pattern cache clear error: ' . $e->getMessage());
-            Cache::flush();
         }
     }
 

@@ -1233,7 +1233,8 @@ public function getMatchingListings(Request $request)
     public function show($listing): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'show_' . $listing;
+            // User-scoped: cached payload includes can_edit/can_delete for the warmer.
+            $cacheKey = self::listingShowCacheKey($listing, Auth::id());
             
             if (method_exists(Cache::getStore(), 'tags')) {
                 $result = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::CACHE_TTL, function () use ($listing) {
@@ -1998,7 +1999,7 @@ private function sendResubmissionNotification($listing, $user)
     public function getStatistics(Request $request): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'stats_' . md5(serialize($request->all()));
+            $cacheKey = self::listingStatsCacheKey($request);
             
             if (method_exists(Cache::getStore(), 'tags')) {
                 $stats = Cache::tags([self::CACHE_TAG])->remember($cacheKey, 900, function () use ($request) {
@@ -2055,6 +2056,13 @@ private function sendResubmissionNotification($listing, $user)
     private function clearCache(): void
     {
         try {
+            // Epoch/version bumps invalidate hashed file-driver keys without Cache::flush().
+            if (Auth::check()) {
+                self::bumpUserCacheVersion((int) Auth::id());
+            }
+            self::bumpShowCacheEpoch();
+            self::bumpStatsCacheEpoch();
+
             if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_TAG])->flush();
                 \Log::info('Listings cache cleared using tags');
@@ -2063,9 +2071,12 @@ private function sendResubmissionNotification($listing, $user)
             }
         } catch (\Exception $e) {
             \Log::warning('Listings cache clear error: ' . $e->getMessage());
-
-            Cache::flush();
-            \Log::info('Full cache flush as fallback for listings');
+            // Never fall through to Cache::flush() — protect Bitrix/SI/mobile keys.
+            if (Auth::check()) {
+                self::bumpUserCacheVersion((int) Auth::id());
+            }
+            self::bumpShowCacheEpoch();
+            self::bumpStatsCacheEpoch();
         }
     }
 
@@ -2084,6 +2095,55 @@ private function sendResubmissionNotification($listing, $user)
         );
     }
 
+    public static function getShowCacheEpoch(): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'show_epoch', '0');
+    }
+
+    public static function bumpShowCacheEpoch(): void
+    {
+        Cache::put(
+            self::CACHE_PREFIX . 'show_epoch',
+            (string) (microtime(true) * 1000),
+            86400 * 30
+        );
+    }
+
+    public static function getStatsCacheEpoch(): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'stats_epoch', '0');
+    }
+
+    public static function bumpStatsCacheEpoch(): void
+    {
+        Cache::put(
+            self::CACHE_PREFIX . 'stats_epoch',
+            (string) (microtime(true) * 1000),
+            86400 * 30
+        );
+    }
+
+    /**
+     * @param  int|string  $listingId
+     */
+    public static function listingShowCacheKey($listingId, $userId): string
+    {
+        $uid = $userId !== null && $userId !== '' ? (int) $userId : 0;
+
+        return self::CACHE_PREFIX . 'show_' . $listingId . '_u' . $uid . '_e' . self::getShowCacheEpoch();
+    }
+
+    public static function listingStatsCacheKey(Request $request): string
+    {
+        $user = Auth::user();
+        $myListings = $request->boolean('my_listings');
+        // Match getStatisticsData(): sales and my_listings queries are per-user.
+        $userScoped = $user && ($user->hasRole('sales') || $myListings);
+        $scope = $userScoped ? ('u' . (int) $user->id) : 'global';
+
+        return self::CACHE_PREFIX . 'stats_' . $scope . '_e' . self::getStatsCacheEpoch() . '_' . md5(serialize($request->all()));
+    }
+
     /**
      * Public, static cache invalidator usable from other controllers
      * (e.g. ListingAccessRequestController after a bulk agent reassignment).
@@ -2096,11 +2156,18 @@ private function sendResubmissionNotification($listing, $user)
             if ($userId) {
                 self::bumpUserCacheVersion($userId);
             }
+            self::bumpShowCacheEpoch();
+            self::bumpStatsCacheEpoch();
             if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_TAG])->flush();
             }
         } catch (\Exception $e) {
             \Log::warning('Listings cache clear (static) error: ' . $e->getMessage());
+            if ($userId) {
+                self::bumpUserCacheVersion($userId);
+            }
+            self::bumpShowCacheEpoch();
+            self::bumpStatsCacheEpoch();
         }
     }
 
@@ -2114,17 +2181,17 @@ private function sendResubmissionNotification($listing, $user)
                 $this->clearRedisCache();
             } 
             elseif ($cacheDriver === 'file') {
-                $this->clearFileCache();
+                // Hashed file keys cannot be prefix-scanned reliably; epochs already bumped.
+                \Log::info('Listings file cache invalidated via version/epoch bumps');
             }
             else {
-                Cache::flush();
-                \Log::info('All cache flushed for database driver in listings');
+                \Log::info('Listings cache invalidated via version/epoch bumps for driver: ' . $cacheDriver);
             }
             
             \Log::info('Listings cache cleared without tags for driver: ' . $cacheDriver);
         } catch (\Exception $e) {
             \Log::warning('Listings cache clear without tags error: ' . $e->getMessage());
-            throw $e;
+            // Do not rethrow into a global flush path.
         }
     }
 
@@ -2191,10 +2258,15 @@ private function sendResubmissionNotification($listing, $user)
     private function clearSpecificCache(int $listingId): void
     {
         try {
+            // Invalidate all user-scoped show entries for this listing (and others) via epoch.
+            self::bumpShowCacheEpoch();
+            // Legacy unscoped key (pre-6A) + current caller's key if still warm.
             Cache::forget(self::CACHE_PREFIX . 'show_' . $listingId);
+            Cache::forget(self::listingShowCacheKey($listingId, Auth::id()));
             \Log::info('Cleared specific cache for listing: ' . $listingId);
         } catch (\Exception $e) {
             \Log::warning('Listing cache clear error: ' . $e->getMessage());
+            self::bumpShowCacheEpoch();
         }
     }
 

@@ -558,20 +558,17 @@ public function getOwnerProperties(Owner $owner): JsonResponse
                 self::bumpUserCacheVersion((int) Auth::id());
             }
 
-            // استخدام cache tags إذا كان مدعوماً (أفضل حل)
             if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_TAG])->flush();
                 \Log::info('Owners cache cleared using tags');
             } else {
-                // Fallback لمسح الكاش بدون tags
                 $this->clearCacheWithoutTags();
             }
         } catch (\Exception $e) {
             \Log::warning('Owners cache clear error: ' . $e->getMessage());
-            
-            // Fallback نهائي - مسح الكاش كله
-            Cache::flush();
-            \Log::info('Full cache flush as fallback');
+            if (Auth::check()) {
+                self::bumpUserCacheVersion((int) Auth::id());
+            }
         }
     }
 
@@ -594,7 +591,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             \Log::info('Owners cache cleared without tags');
         } catch (\Exception $e) {
             \Log::warning('Cache clear without tags error: ' . $e->getMessage());
-            throw $e;
+            // Do not escalate to Cache::flush().
         }
     }
 
@@ -613,15 +610,13 @@ public function getOwnerProperties(Owner $owner): JsonResponse
                 $this->clearFileIndexCache();
             }
             else {
-                // لـ database وغيرها - نستخدم flush مع log
-                Cache::flush();
-                \Log::info('All cache flushed for database driver');
+                // Version bump already invalidates per-user index keys.
+                \Log::info('Owners index cache relies on version bump for driver: ' . $cacheDriver);
             }
             
             \Log::info('All owners index cache cleared for driver: ' . $cacheDriver);
         } catch (\Exception $e) {
             \Log::warning('Index cache clear error: ' . $e->getMessage());
-            throw $e;
         }
     }
 

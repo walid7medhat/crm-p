@@ -29,7 +29,9 @@ class AreaController extends Controller
     {
         $forListingSearch = $request->has('has_listings');
         // v2: listing search returns place name + full parent location path
-        $cacheKey = ($forListingSearch ? 'areas_listing_v2_' : 'areas_').md5(serialize($request->all()));
+        $cacheKey = self::areasVersionedKey(
+            ($forListingSearch ? 'areas_listing_v2_' : 'areas_').md5(serialize($request->all()))
+        );
 
         $resolver = function () use ($request, $forListingSearch) {
             $query = Area::query()->withCount('child');
@@ -189,11 +191,13 @@ class AreaController extends Controller
             $project = null;
             if ($request->boolean('create_project')) {
                 $project = $this->createProjectFromArea($area);
-                // dd($project);
-                 Cache::flush();
             }
 
             $this->clearAreasCache();
+            // Project index/show keys are epoch-versioned; bump when a project is created here.
+            if ($project) {
+                Cache::put('projects_epoch', (string) (microtime(true) * 1000), 86400 * 30);
+            }
 
             DB::commit();
 
@@ -225,7 +229,7 @@ class AreaController extends Controller
     public function show(Area $area): JsonResponse
     {
         try {
-            $cacheKey = 'area_' . $area->id;
+            $cacheKey = self::areasVersionedKey('area_' . $area->id);
             
             $cachedArea = Cache::tags(['areas'])->remember($cacheKey, 3600, function () use ($area) {
                 return $area->loadCount('child')->load('parent');
@@ -326,7 +330,7 @@ class AreaController extends Controller
     public function byType(string $type): JsonResponse
     {
         try {
-            $cacheKey = 'areas_type_' . $type;
+            $cacheKey = self::areasVersionedKey('areas_type_' . $type);
             
             $areas = Cache::remember($cacheKey, 3600, function () use ($type) {
                 return Area::withCount('child')
@@ -357,7 +361,7 @@ class AreaController extends Controller
     public function children(Area $area): JsonResponse
     {
         try {
-            $cacheKey = 'area_children_' . $area->id;
+            $cacheKey = self::areasVersionedKey('area_children_' . $area->id);
             
             $children = Cache::remember($cacheKey, 3600, function () use ($area) {
                 return $area->child()->withCount('child')->orderBy('name')->get();
@@ -383,16 +387,20 @@ class AreaController extends Controller
     private function clearAreasCache(): void
     {
         try {
-            Cache::tags(['areas'])->flush();
-            
-            // Also clear specific keys
-            Cache::forget('areas_list_all');
-            
-            if (config('cache.default') === 'file') {
-                Cache::forget('areas_list');
+            self::bumpAreasCacheEpoch();
+
+            if (Cache::supportsTags()) {
+                Cache::tags(['areas'])->flush();
             }
+
+            // Legacy / known keys (pre-epoch and voice-search helpers).
+            Cache::forget('areas_list_all');
+            Cache::forget('areas_list');
+            Cache::forget('voice_search_areas_v2');
+            Cache::forget('voice_search_area_names_v2');
         } catch (\Exception $e) {
             Log::warning('Cache clear error: ' . $e->getMessage());
+            self::bumpAreasCacheEpoch();
         }
     }
 
@@ -400,11 +408,30 @@ class AreaController extends Controller
     private function clearAreaCache(int $areaId): void
     {
         try {
+            self::bumpAreasCacheEpoch();
             Cache::forget('area_' . $areaId);
             Cache::forget('area_children_' . $areaId);
+            Cache::forget(self::areasVersionedKey('area_' . $areaId));
+            Cache::forget(self::areasVersionedKey('area_children_' . $areaId));
         } catch (\Exception $e) {
             Log::warning('Area cache clear error: ' . $e->getMessage());
+            self::bumpAreasCacheEpoch();
         }
+    }
+
+    private static function areasCacheEpoch(): string
+    {
+        return (string) Cache::get('areas_epoch', '0');
+    }
+
+    private static function bumpAreasCacheEpoch(): void
+    {
+        Cache::put('areas_epoch', (string) (microtime(true) * 1000), 86400 * 30);
+    }
+
+    private static function areasVersionedKey(string $suffix): string
+    {
+        return 'e' . self::areasCacheEpoch() . '_' . $suffix;
     }
 
    

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Cache;
 class PropertyTypeController extends Controller
 {
     // Cache constants
-    const CACHE_TTL = 3600; 
+    const CACHE_TTL = 3600;
     const CACHE_PREFIX = 'property_types_';
 
     public function __construct()
@@ -26,21 +26,21 @@ class PropertyTypeController extends Controller
     }
 
     /**
-     * Get all property types 
+     * Get all property types
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'index_' . md5(serialize($request->all()));
-            
+            $cacheKey = self::versionedKey('index_' . md5(serialize($request->all())));
+
             $propertyTypes = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($request) {
                 $query = PropertyType::withCount('children');
-                
+
                 // Filter by parent_id if provided (null for root types)
                 if ($request->has('parent_id')) {
                     $query->where('parent_id', $request->parent_id);
-                } 
-                
+                }
+
                 // Filter for root types only
                 if ($request->has('root_only') && $request->root_only == 1) {
                     $query->whereNull('parent_id');
@@ -49,7 +49,7 @@ class PropertyTypeController extends Controller
                 elseif ($request->has('non_root_only') && $request->non_root_only == 1) {
                     $query->whereNotNull('parent_id');
                 }
-                
+
                 // Load relationships based on query parameters
                 if ($request->has('with_children')) {
                     $query->with('children');
@@ -60,10 +60,10 @@ class PropertyTypeController extends Controller
                 if($request->has('resdintial')){
                      $query->where('parent_id',10)->orWhere('id',31);
                 }
-                
+
                 return $query->orderBy('parent_id', 'desc')->get();
             });
-            
+
             return ApiResponse::success(
                 PropertyTypeResource::collection($propertyTypes)->resolve(),
                 'Property types retrieved successfully'
@@ -88,7 +88,7 @@ class PropertyTypeController extends Controller
 
             return ApiResponse::success(
                 new PropertyTypeResource($propertyType->loadCount('children')),
-                'Property type created successfully', 
+                'Property type created successfully',
                 201
             );
         } catch (\Exception $e) {
@@ -101,12 +101,12 @@ class PropertyTypeController extends Controller
     public function show(PropertyType $propertyType): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'show_' . $propertyType->id;
-            
+            $cacheKey = self::versionedKey('show_' . $propertyType->id);
+
             $cachedPropertyType = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($propertyType) {
                 return $propertyType->loadCount('children');
             });
-            
+
             return ApiResponse::success(
                 new PropertyTypeResource($cachedPropertyType),
                 'Property type retrieved successfully'
@@ -152,7 +152,7 @@ class PropertyTypeController extends Controller
             if ($propertyType->children()->exists()) {
                 return ApiResponse::error('Cannot delete property type that has child types. Please delete or move the children first.');
             }
-            
+
             $propertyTypeId = $propertyType->id;
             $parentId = $propertyType->parent_id;
             $propertyType->delete();
@@ -170,19 +170,19 @@ class PropertyTypeController extends Controller
     public function children(PropertyType $propertyType): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'children_' . $propertyType->id;
-            
+            $cacheKey = self::versionedKey('children_' . $propertyType->id);
+
             $children = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($propertyType) {
                 return $propertyType->children()->withCount('children')->orderBy('name')->get();
             });
-            
+
             return ApiResponse::success(
                 PropertyTypeResource::collection($children),
                 'Child property types retrieved successfully'
             );
         } catch (\Exception $e) {
             $children = $propertyType->children()->withCount('children')->orderBy('name')->get();
-            
+
             return ApiResponse::success(
                 PropertyTypeResource::collection($children),
                 'Child property types retrieved successfully (cache fallback)'
@@ -195,15 +195,15 @@ class PropertyTypeController extends Controller
     public function roots(): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'roots';
-            
+            $cacheKey = self::versionedKey('roots');
+
             $roots = Cache::remember($cacheKey, self::CACHE_TTL, function () {
                 return PropertyType::withCount('children')
                     ->whereNull('parent_id')
                     ->orderBy('name')
                     ->get();
             });
-            
+
             return ApiResponse::success(
                 PropertyTypeResource::collection($roots),
                 'Root property types retrieved successfully'
@@ -213,7 +213,7 @@ class PropertyTypeController extends Controller
                 ->whereNull('parent_id')
                 ->orderBy('name')
                 ->get();
-                
+
             return ApiResponse::success(
                 PropertyTypeResource::collection($roots),
                 'Root property types retrieved successfully (cache fallback)'
@@ -222,43 +222,66 @@ class PropertyTypeController extends Controller
     }
 
     /**
+     * Invalidate property-type caches without Cache::flush().
+     * File driver uses hashed filenames — bump epoch so new keys miss old entries.
      */
     private function clearAllCache(): void
     {
         try {
-            if (config('cache.default') === 'redis') {
+            self::bumpCacheEpoch();
+
+            if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_PREFIX . 'tag'])->flush();
-            } else {
+            } elseif (config('cache.default') === 'redis') {
                 $this->clearCacheByPattern(self::CACHE_PREFIX . '*');
             }
-            
+
+            // Legacy unversioned keys (pre-6A).
+            Cache::forget(self::CACHE_PREFIX . 'roots');
+
             \Log::info('Property types cache cleared successfully');
         } catch (\Exception $e) {
             \Log::warning('Property types cache clear error: ' . $e->getMessage());
+            self::bumpCacheEpoch();
         }
     }
 
+    private static function cacheEpoch(): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'epoch', '0');
+    }
+
+    private static function bumpCacheEpoch(): void
+    {
+        Cache::put(self::CACHE_PREFIX . 'epoch', (string) (microtime(true) * 1000), 86400 * 30);
+    }
+
+    private static function versionedKey(string $suffix): string
+    {
+        return self::CACHE_PREFIX . 'e' . self::cacheEpoch() . '_' . $suffix;
+    }
+
     /**
+     * Redis-only prefix delete. Never falls through to Cache::flush().
      */
     private function clearCacheByPattern(string $pattern): void
     {
         try {
-            if (config('cache.default') === 'redis') {
-                $redis = Cache::getRedis();
-                $cursor = 0;
-                
-                do {
-                    list($cursor, $keys) = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
-                    if (!empty($keys)) {
-                        $redis->del($keys);
-                    }
-                } while ($cursor != 0);
-            } else {
-                Cache::flush();
+            if (config('cache.default') !== 'redis') {
+                return;
             }
+
+            $redis = Cache::getRedis();
+            $cursor = 0;
+
+            do {
+                list($cursor, $keys) = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
+                if (! empty($keys)) {
+                    $redis->del($keys);
+                }
+            } while ($cursor != 0);
         } catch (\Exception $e) {
             \Log::warning('Pattern cache clear error: ' . $e->getMessage());
-            Cache::flush();
         }
     }
 
@@ -267,24 +290,24 @@ class PropertyTypeController extends Controller
     private function fallbackIndex(Request $request, \Exception $e = null): JsonResponse
     {
         $query = PropertyType::withCount('children');
-        
+
         if ($request->has('parent_id')) {
             $query->where('parent_id', $request->parent_id);
-        } 
-        
+        }
+
         if ($request->has('root_only') && $request->root_only == 1) {
             $query->whereNull('parent_id');
         }
         elseif ($request->has('non_root_only') && $request->non_root_only == 1) {
             $query->whereNotNull('parent_id');
         }
-        
+
         if ($request->has('with_children')) {
             $query->with('children');
         }
-        
+
         $propertyTypes = $query->orderBy('parent_id', 'desc')->get();
-        
+
         return ApiResponse::success(
             PropertyTypeResource::collection($propertyTypes)->resolve(),
             'Property types retrieved successfully (cache fallback)'

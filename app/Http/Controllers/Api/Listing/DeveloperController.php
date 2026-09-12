@@ -34,8 +34,8 @@ class DeveloperController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'index_' . md5(serialize($request->all()));
-            
+            $cacheKey = self::versionedKey('index_' . md5(serialize($request->all())));
+
             // استخدام cache tags إذا كان مدعوماً
             if (method_exists(Cache::getStore(), 'tags')) {
                 $developers = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::CACHE_TTL, function () use ($request) {
@@ -46,7 +46,7 @@ class DeveloperController extends Controller
                     return $this->getDevelopersData($request);
                 });
             }
-            
+
             return ApiResponse::success(
                 DeveloperResource::collection($developers),
                 'Developers retrieved successfully'
@@ -64,7 +64,7 @@ class DeveloperController extends Controller
     {
         // Start the query - no user restrictions
         $query = Developer::with('addedBy');
-        
+
         // Search filter
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -90,22 +90,22 @@ class DeveloperController extends Controller
     {
         try {
             $data = $request->validated();
-            
+
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
                 $avatarPath = $avatar->store("developers/avatars", 'public');
                 $data['avatar_path'] = $avatarPath;
             }
-            
+
             // Remove avatar from data array as we're using avatar_path
             unset($data['avatar']);
-            
+
             // Create developer
             $developer = Developer::create(array_merge($data, [
                 'added_by' => auth()->id()
             ]));
-            
+
             $developer->load('addedBy');
 
             // مسح الكاش المتعلق بالـ developers
@@ -113,7 +113,7 @@ class DeveloperController extends Controller
 
             return ApiResponse::success(
                 new DeveloperResource($developer),
-                'Developer created successfully', 
+                'Developer created successfully',
                 201
             );
         } catch (\Exception $e) {
@@ -127,8 +127,8 @@ class DeveloperController extends Controller
     public function show(Developer $developer): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'show_' . $developer->id;
-            
+            $cacheKey = self::versionedKey('show_' . $developer->id);
+
             // استخدام cache tags إذا كان مدعوماً
             if (method_exists(Cache::getStore(), 'tags')) {
                 $cachedDeveloper = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::CACHE_TTL, function () use ($developer) {
@@ -139,7 +139,7 @@ class DeveloperController extends Controller
                     return $developer->load('addedBy');
                 });
             }
-            
+
             return ApiResponse::success(
                 new DeveloperResource($cachedDeveloper),
                 'Developer retrieved successfully'
@@ -160,23 +160,23 @@ class DeveloperController extends Controller
     {
         try {
             $data = $request->validated();
-            
+
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
                 if ($developer->avatar_path && Storage::disk('public')->exists($developer->avatar_path)) {
                     Storage::disk('public')->delete($developer->avatar_path);
                 }
-                
+
                 // Store new avatar
                 $avatar = $request->file('avatar');
                 $avatarPath = $avatar->store("developers/avatars", 'public');
                 $data['avatar_path'] = $avatarPath;
             }
-            
+
             // Remove avatar from data array
             unset($data['avatar']);
-            
+
             $developer->update($data);
             $developer->load('addedBy');
 
@@ -203,7 +203,7 @@ class DeveloperController extends Controller
             if ($developer->avatar_path && Storage::disk('public')->exists($developer->avatar_path)) {
                 Storage::disk('public')->delete($developer->avatar_path);
             }
-            
+
             $developerId = $developer->id;
             $developer->delete();
 
@@ -223,8 +223,8 @@ class DeveloperController extends Controller
     public function getStatistics(): JsonResponse
     {
         try {
-            $cacheKey = self::CACHE_PREFIX . 'stats';
-            
+            $cacheKey = self::versionedKey('stats');
+
             // استخدام cache tags إذا كان مدعوماً
             if (method_exists(Cache::getStore(), 'tags')) {
                 $stats = Cache::tags([self::CACHE_TAG])->remember($cacheKey, 900, function () { // 15 دقيقة للإحصائيات
@@ -235,7 +235,7 @@ class DeveloperController extends Controller
                     return $this->getStatisticsData();
                 });
             }
-            
+
             return ApiResponse::success(
                 $stats,
                 'Developers statistics retrieved successfully'
@@ -271,21 +271,33 @@ class DeveloperController extends Controller
     private function clearCache(): void
     {
         try {
-            // استخدام cache tags إذا كان مدعوماً (أفضل حل)
+            self::bumpCacheEpoch();
+
             if (method_exists(Cache::getStore(), 'tags')) {
                 Cache::tags([self::CACHE_TAG])->flush();
                 \Log::info('Developers cache cleared using tags');
             } else {
-                // Fallback لمسح الكاش بدون tags
                 $this->clearCacheWithoutTags();
             }
         } catch (\Exception $e) {
             \Log::warning('Developers cache clear error: ' . $e->getMessage());
-            
-            // Fallback نهائي - مسح الكاش كله
-            Cache::flush();
-            \Log::info('Full cache flush as fallback for developers');
+            self::bumpCacheEpoch();
         }
+    }
+
+    private static function cacheEpoch(): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'epoch', '0');
+    }
+
+    private static function bumpCacheEpoch(): void
+    {
+        Cache::put(self::CACHE_PREFIX . 'epoch', (string) (microtime(true) * 1000), 86400 * 30);
+    }
+
+    private static function versionedKey(string $suffix): string
+    {
+        return self::CACHE_PREFIX . 'e' . self::cacheEpoch() . '_' . $suffix;
     }
 
     /**
@@ -295,23 +307,17 @@ class DeveloperController extends Controller
     {
         try {
             $cacheDriver = config('cache.default');
-            
+
             if ($cacheDriver === 'redis') {
                 $this->clearRedisCache();
-            } 
-            elseif ($cacheDriver === 'file') {
-                $this->clearFileCache();
             }
             else {
-                // لـ database وغيرها - نستخدم flush
-                Cache::flush();
-                \Log::info('All cache flushed for database driver in developers');
+                \Log::info('Developers cache invalidated via epoch for driver: ' . $cacheDriver);
             }
-            
+
             \Log::info('Developers cache cleared without tags for driver: ' . $cacheDriver);
         } catch (\Exception $e) {
             \Log::warning('Developers cache clear without tags error: ' . $e->getMessage());
-            throw $e;
         }
     }
 
@@ -327,9 +333,9 @@ class DeveloperController extends Controller
             self::CACHE_PREFIX . 'show_*',
             self::CACHE_PREFIX . 'stats*'
         ];
-        
+
         $totalDeleted = 0;
-        
+
         foreach ($patterns as $pattern) {
             $iterator = null;
             do {
@@ -340,7 +346,7 @@ class DeveloperController extends Controller
                 }
             } while ($iterator > 0);
         }
-        
+
         \Log::info("Deleted {$totalDeleted} Redis cache keys for developers");
     }
 
@@ -352,13 +358,13 @@ class DeveloperController extends Controller
         $storage = Storage::disk('framework_cache');
         $files = $storage->files();
         $deletedCount = 0;
-        
+
         $patterns = [
             self::CACHE_PREFIX . 'index_',
             self::CACHE_PREFIX . 'show_',
             self::CACHE_PREFIX . 'stats'
         ];
-        
+
         foreach ($files as $file) {
             foreach ($patterns as $pattern) {
                 if (str_contains($file, $pattern)) {
@@ -368,7 +374,7 @@ class DeveloperController extends Controller
                 }
             }
         }
-        
+
         \Log::info("Deleted {$deletedCount} file cache keys for developers");
     }
 
@@ -428,7 +434,7 @@ class DeveloperController extends Controller
                 'cache_prefix' => self::CACHE_PREFIX,
                 'cache_tag' => self::CACHE_TAG,
             ];
-            
+
             return ApiResponse::success($status, 'Developers cache status retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to check cache status: ' . $e->getMessage());
