@@ -172,12 +172,32 @@ function cleanInput(value) {
   // Keep only digits
   return value.replace(/\D/g, '')
 }
+
+// Users often type/paste the dial code themselves on top of the flag they just
+// picked — e.g. select UAE then type "97151234567", or paste "00971551234567".
+// Left alone, onUpdate() below would prepend +971 again and produce a corrupted
+// number like +97197151234567. Strip the redundant "00<dial>" / "<dial>" prefix
+// (and any leftover trunk "0") before it gets re-prefixed.
+function stripRedundantDialCode(digits) {
+  if (!digits) return digits
+  const dial = currentDialCode.value
+  if (!dial) return digits
+  if (digits.startsWith(`00${dial}`)) {
+    return digits.slice(2 + dial.length).replace(/^0+/, '')
+  }
+  if (digits.startsWith(dial) && digits.length - dial.length >= 6) {
+    return digits.slice(dial.length).replace(/^0+/, '')
+  }
+  return digits
+}
+
 const isTyping = ref(false)
 function onUpdate(v) {
     isTyping.value = true
 
-  // Clean the input value (remove spaces and non-digits)
-  const cleaned = cleanInput(v ?? '')
+  // Clean the input value (remove spaces and non-digits), then drop a redundant
+  // dial code the user may have typed on top of the selected country.
+  const cleaned = stripRedundantDialCode(cleanInput(v ?? ''))
   localNumber.value = cleaned
   
   // Build the full international number to send to backend
