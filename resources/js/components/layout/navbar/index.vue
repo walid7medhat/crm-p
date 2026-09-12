@@ -945,6 +945,7 @@ const isSearchLoading = ref(false);
 const leadsRef = ref(null);
 const dealsRef = ref(null);
 const openSettingsHub = (section = null) => {
+    closeSearchModal()
     window.dispatchEvent(
         new CustomEvent('kanban-open-settings', {
             detail: section ? { section } : {},
@@ -1119,6 +1120,9 @@ const closeKanbanSearch = () => {
 }
 
 const handleKanbanCreateNew = () => {
+  // Don't leave the search popup floating (z-index 15000) on top of the create modal
+  // that's about to open — it would keep intercepting clicks/keystrokes meant for it.
+  closeSearchModal()
   window.dispatchEvent(new CustomEvent('kanban-create-new', { detail: activeKanbanTab.value }))
 }
 
@@ -1598,6 +1602,7 @@ function onSearchDropdownReposition() {
 let ignoreSearchOutsideClick = false;
 let ignoreSearchOutsideClickTimer = null;
 const searchModalMounted = ref(false);
+let modalOpenObserver = null;
 
 function armIgnoreOutsideClick(ms = 150) {
     ignoreSearchOutsideClick = true;
@@ -1618,6 +1623,16 @@ function isInsideSearchUi(target) {
         '.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal, .budget-dropdown'
     )) {
         return true;
+    }
+
+    // Any other Bootstrap modal (Create Lead/Deal, Add Stage, Settings, ...) that is
+    // currently open owns this click, even if it lands on a v-select/popper element
+    // that would otherwise match the generic checks below — those selectors aren't
+    // unique to the search popup's own fields, and without this guard the popup stayed
+    // open (and kept floating above the other modal, stealing its keystrokes) whenever
+    // the user picked a v-select field inside that modal.
+    if (target.closest('.modal') && document.querySelector('.modal.show')) {
+        return false;
     }
 
     // vue-select menus are appended to <body>, so they live outside the popup DOM.
@@ -2262,11 +2277,30 @@ onMounted(() => {
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   loadStoredDealType()
+
+  // If the search input already has focus the instant another modal (Create Lead/
+  // Deal, Add Stage, Settings, ...) opens, the CSS pointer-events guard above can't
+  // help — no new click happens, so nothing redirects the keystrokes. Blur it as
+  // soon as a modal shows so typing goes to the modal's own (now genuinely focused)
+  // field instead of silently reopening/filling the search popup.
+  modalOpenObserver = new MutationObserver(() => {
+    if (!document.querySelector('.modal.show')) return
+    const active = document.activeElement
+    if (active && active.classList?.contains('search-input')) {
+      active.blur()
+    }
+    closeSearchModal()
+  })
+  modalOpenObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
 });
 
 onUnmounted(() => {
   if (announcementPopupPollTimer) clearInterval(announcementPopupPollTimer);
   if (birthdayPopupPollTimer) clearInterval(birthdayPopupPollTimer);
+  if (modalOpenObserver) {
+    modalOpenObserver.disconnect();
+    modalOpenObserver = null;
+  }
   document.removeEventListener('click', handleClickOutside);
   document.removeEventListener('mousedown', onDocumentPointerDown, true);
   document.removeEventListener('click', onDocumentClick);
@@ -3715,6 +3749,17 @@ const showBackButton = computed(() => {
     align-items: flex-end;
     position: relative;
     z-index: 501;
+}
+
+/* Whenever a real app modal (Create Lead/Deal, Add Stage, Settings, ...) is open,
+   this search box must never win a click/keystroke meant for that modal's own
+   fields — it sits in the persistent navbar, so it can end up stacked above a
+   modal's content depending on where that modal renders in the page. Making it
+   non-interactive while any `.modal.show` exists lets clicks pass through to the
+   modal underneath instead of opening/filling the search popup and refiltering
+   the board behind it. */
+body:has(.modal.show) .search-area-column {
+    pointer-events: none;
 }
 
 .lead-search-dropdown-outer--teleport {
