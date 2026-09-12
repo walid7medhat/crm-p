@@ -1281,186 +1281,133 @@ watch(formData, () => {
 }, { deep: true })
 
 const handleSubmit = async () => {
+    // Collect every invalid field in one pass instead of stopping at the first —
+    // all of them get the red "is-invalid" style together, and we only focus/notify
+    // once, on the first one, so the user can see everything that still needs fixing.
+    const invalidFields = []
+    const flagInvalid = (field, message) => {
+        setFieldError(field)
+        invalidFields.push({ field, message })
+    }
+
     if (props.interactionMode) {
         if (!formData.value.interaction_result) {
-            $showNotification('Please select answer or no answer', 'warning')
-            setFieldError('interaction_result')
-            focusField('interaction_result')
-            return
+            flagInvalid('interaction_result', 'Please select answer or no answer')
         }
         if (!formData.value.interaction_note.trim()) {
-            $showNotification('Please provide a note', 'warning')
-            setFieldError('interaction_note')
-            focusField('interaction_note')
-            return
+            flagInvalid('interaction_note', 'Please provide a note')
         }
     } else {
         // Validate reason
         if (props.targetStageOrder !== 6 && !formData.value.reason.trim()) {
-            $showNotification('Please provide a reason', 'warning')
-            setFieldError('reason')
-            focusField('reason')
-            return
+            flagInvalid('reason', 'Please provide a reason')
         }
     }
-    
+
     const isNoAnswerMode = props.interactionMode && formData.value.interaction_result === 'no_answer'
-    const isPlotsOrLand = checkIsPlotsOrLand() 
+    const isPlotsOrLand = checkIsPlotsOrLand()
     const isRentOnly = formData.value.lead_type === 'rent'
-    
+
     // Validate based on stage and missing fields
     for (const field of props.missingFields) {
-        
+
         // 1. Salutation - يتم تجاهله في وضع no_answer
         if (field === 'salutation' && !formData.value.salutation && !isNoAnswerMode) {
-            $showNotification('Please select salutation', 'warning')
-            setFieldError('salutation')
-            focusField('salutation')
-            return
+            flagInvalid('salutation', 'Please select salutation')
         }
 
         // 2. Lead Type - يتم تجاهله في وضع no_answer
         if (field === 'lead_type' && !formData.value.lead_type && !isNoAnswerMode) {
-            $showNotification('Please select lead type (Sale/Rent)', 'warning')
-            setFieldError('lead_type')
-            focusField('lead_type')
-            return
+            flagInvalid('lead_type', 'Please select lead type (Sale/Rent)')
         }
 
         // 3. Property Status - يتم إخفاؤه إذا كان lead type = rent أو في وضع no_answer
         if (field === 'property_status' && !formData.value.property_status && !isNoAnswerMode && !isRentOnly) {
-            $showNotification('Please select property status', 'warning')
-            setFieldError('property_status')
-            focusField('property_status')
-            return
+            flagInvalid('property_status', 'Please select property status')
         }
 
         // 4. Budget From
         if (field === 'budget_from' && !formData.value.budget_from && !isNoAnswerMode) {
-            $showNotification('Please enter minimum budget', 'warning')
-            setFieldError('budget_from')
-            focusField('budget_from')
-            return
+            flagInvalid('budget_from', 'Please enter minimum budget')
         }
 
         // 5. Budget To
         if (field === 'budget_to' && !formData.value.budget_to && !isNoAnswerMode) {
-            $showNotification('Please enter maximum budget', 'warning')
-            setFieldError('budget_to')
-            focusField('budget_to')
-            return
+            flagInvalid('budget_to', 'Please enter maximum budget')
         }
 
         // 6. Validate budget range if both are present
         if ((field === 'budget_from' || field === 'budget_to') &&
             formData.value.budget_from && formData.value.budget_to && !isNoAnswerMode) {
             if (!validateBudgetRange()) {
-                $showNotification(budgetRangeError.value, 'warning')
                 setFieldError('budget_from')
                 setFieldError('budget_to')
-                focusField('budget_from')
-                return
+                invalidFields.push({ field: 'budget_from', message: budgetRangeError.value })
             }
         }
 
         // 7. Area ID
         if (field === 'area_id' && !formData.value.area_id && !isNoAnswerMode) {
-            $showNotification('Please select area', 'warning')
-            setFieldError('area_id')
-            focusField('area_id')
-            return
+            flagInvalid('area_id', 'Please select area')
         }
 
         // 8. Property Type ID
         if (field === 'property_type_id' && !formData.value.property_type_id && !isNoAnswerMode) {
-            $showNotification('Please select property type', 'warning')
-            setFieldError('property_type_id')
-            focusField('property_type_id')
-            return
+            flagInvalid('property_type_id', 'Please select property type')
         }
 
         // 9. Bedrooms - يتم إخفاؤه إذا كان property type = plots/land
         if (field === 'bedrooms' && !formData.value.bedrooms && !isNoAnswerMode && !isPlotsOrLand) {
-            $showNotification('Please select bedrooms', 'warning')
-            setFieldError('bedrooms')
-            focusField('bedrooms')
-            return
+            flagInvalid('bedrooms', 'Please select bedrooms')
         }
 
         // 10. Purpose Buying - يتم إخفاؤه إذا كان lead type = rent
         if (field === 'purpose_buying' && !formData.value.purpose_buying && !isNoAnswerMode && !isRentOnly) {
-            $showNotification('Please select purpose', 'warning')
-            setFieldError('purpose_buying')
-            focusField('purpose_buying')
-            return
+            flagInvalid('purpose_buying', 'Please select purpose')
         }
 
         // 11. Status Lead
-        if (field === 'status_lead' && !isNoAnswerMode) {
+        if (field === 'status_lead' && !isNoAnswerMode && !formData.value.lead_status) {
             const targetOrder = props.targetStageOrder
-
-            if (targetOrder === 4) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select lead status (cold/warm/hot)', 'warning')
-                    setFieldError('status_lead')
-                    focusField('status_lead')
-                    return
-                }
-            } else if (targetOrder === 6) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select conversion status', 'warning')
-                    setFieldError('status_lead')
-                    focusField('status_lead')
-                    return
-                }
-            } else if (targetOrder === 9) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select lead pool status', 'warning')
-                    setFieldError('status_lead')
-                    focusField('status_lead')
-                    return
-                }
-            } else if (targetOrder === 10) {
-                if (!formData.value.lead_status) {
-                    $showNotification('Please select unqualified status', 'warning')
-                    setFieldError('status_lead')
-                    focusField('status_lead')
-                    return
-                }
+            const messages = {
+                4: 'Please select lead status (cold/warm/hot)',
+                6: 'Please select conversion status',
+                9: 'Please select lead pool status',
+                10: 'Please select unqualified status',
+            }
+            if (messages[targetOrder]) {
+                flagInvalid('status_lead', messages[targetOrder])
             }
         }
 
         // 12. Available Date
         if (field === 'available_date' && !formData.value.available_date) {
-            $showNotification('Please select available date', 'warning')
-            setFieldError('available_date')
-            focusField('available_date')
-            return
+            flagInvalid('available_date', 'Please select available date')
         }
 
         // 13. Branch
         if (field === 'branch' && !formData.value.branch) {
-            $showNotification('Please select branch', 'warning')
-            setFieldError('branch')
-            focusField('branch')
-            return
+            flagInvalid('branch', 'Please select branch')
         }
 
         // 14. Lost Reason
         if ((field === 'why_lost_lead' || field === 'lost_reason') && !formData.value.lost_reason) {
-            $showNotification('Please select lost reason', 'warning')
-            setFieldError('lost_reason')
-            focusField('lost_reason')
-            return
+            flagInvalid('lost_reason', 'Please select lost reason')
         }
         if (field === 'deal_name'  && !formData.value.deal_name.trim()) {
-            $showNotification('Please enter deal name', 'warning')
-            setFieldError('deal_name')
-            focusField('deal_name')
-            return
+            flagInvalid('deal_name', 'Please enter deal name')
         }
     }
-    
+
+    if (invalidFields.length > 0) {
+        const message = invalidFields.length === 1
+            ? invalidFields[0].message
+            : `Please complete ${invalidFields.length} required fields`
+        $showNotification(message, 'warning')
+        focusField(invalidFields[0].field)
+        return
+    }
+
     isSubmitting.value = true
     let bedroomsValue = formData.value.bedrooms
     if (bedroomsValue === 'Studio' || bedroomsValue === 'studio') {
