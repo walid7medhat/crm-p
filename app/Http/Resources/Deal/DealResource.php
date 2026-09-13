@@ -7,9 +7,12 @@ use App\Models\Deal;
 use App\Models\LeadHistory;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
+use App\Http\Resources\Deal\Concerns\FormatsResponsiblePersonForDisplay;
 
 class DealResource extends JsonResource
 {
+        use FormatsResponsiblePersonForDisplay;
+
     /** @var array<int, LeadHistory|null> deal_id => latest assigned history */
     protected static array $assignmentHistoryByDealId = [];
 
@@ -239,7 +242,9 @@ class DealResource extends JsonResource
             ],
 
             'responsible_person_id' => $this->responsible_person_id,
-            'responsible_person' => new UserResource($this->responsiblePerson),
+            'responsible_person' => $this->formatLeadUser($this->responsiblePerson),
+            // ...
+            'parent' => $this->formatLeadUser($assignedBy),
 
             'buyer_name' => (function () {
                 $buyer = $this->parties
@@ -251,7 +256,6 @@ class DealResource extends JsonResource
 
             'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
-            'parent' => new UserResource($assignedBy),
             'assigned_at' => $assignmentHistory ? $assignmentHistory->created_at : $this->created_at,
             'lost_reason' => $this->lost_reason,
 
