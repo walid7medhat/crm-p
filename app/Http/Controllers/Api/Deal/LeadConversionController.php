@@ -1028,29 +1028,44 @@ private function createDealProperties(Deal $deal, $request)
     /**
      * Generate deal number
      */
-    private function generateDealNumber($lead = null)
-    {
-        if ($lead && $lead->lead_number) {
-            return $lead->lead_number;
+   private function generateDealNumber($lead = null): string
+        {
+            if ($lead && $lead->lead_number && ! Deal::where('deal_number', $lead->lead_number)->exists()) {
+                return $lead->lead_number;
+            }
+
+            return $this->generateSequentialDealNumber();
         }
 
-        $prefix = 'DL';
-        $year = date('Y');
-        $month = date('m');
-        
-        $lastDeal = Deal::whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->orderBy('id', 'desc')
-            ->first();
+        private function generateSequentialDealNumber(): string
+        {
+            $prefix = 'DL';
+            $year = date('Y');
+            $month = date('m');
 
-        if ($lastDeal && preg_match('/-(\d+)$/', $lastDeal->deal_number, $matches)) {
-            $sequence = intval($matches[1]) + 1;
-        } else {
+            // Lock the matching rows so concurrent conversions serialize on this counter
+            // instead of both reading the same "last" number before either commits.
+            $lastDeal = Deal::where('deal_number', 'like', "{$prefix}-{$year}{$month}-%")
+                ->orderByRaw("CAST(SUBSTRING_INDEX(deal_number, '-', -1) AS UNSIGNED) DESC")
+                ->lockForUpdate()
+                ->first();
+
             $sequence = 1;
-        }
+            if ($lastDeal && preg_match('/-(\d+)$/', $lastDeal->deal_number, $matches)) {
+                $sequence = intval($matches[1]) + 1;
+            }
 
-        return sprintf('%s-%s%s-%04d', $prefix, $year, $month, $sequence);
-    }
+            $candidate = sprintf('%s-%s%s-%04d', $prefix, $year, $month, $sequence);
+
+            // Belt-and-braces: keep incrementing past any stragglers (e.g. a lead_number
+            // that already claimed this exact slot) until we find a free one.
+            while (Deal::where('deal_number', $candidate)->exists()) {
+                $sequence++;
+                $candidate = sprintf('%s-%s%s-%04d', $prefix, $year, $month, $sequence);
+            }
+
+            return $candidate;
+        }
 
     /**
      * Check if lead can be converted
