@@ -516,7 +516,7 @@ class DealController extends Controller
             ->when($deal->lead_id, function($q) use($deal) {
                 $q->orWhere('lead_id', $deal->lead_id);
             })
-            ->with(['user:id,name,avatar', 'deal:id,deal_name,source,responsible_person_id', 'deal.responsiblePerson:id,name']);
+            ->with(['user:id,name,avatar', 'deal:id,deal_name,source,responsible_person_id', 'deal.responsiblePerson:id,name,parent_id']);
         
         if ($request->filled('search')) {
             $searchTerm = trim((string) $request->search);
