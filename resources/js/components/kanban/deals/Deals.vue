@@ -220,8 +220,9 @@
                                                                       <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
                                                                   </div>
                                                               </div>
-                                                              <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
-                                                              <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+                                                              <!-- Assigned By hover card -->
+                                                                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
+                                                                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
                                                           </div>
                                                       </transition>
                                                   </div>
@@ -684,74 +685,22 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
     const name = person?.name || person?.full_name || fallbackName
     const position = person?.position || person?.designation || person?.job_title || person?.role_name || person?.role || 'Team Member'
     const manager =
-          person?.parent_name ||
-          person?.admin_parent_name ||
-          person?.manager_name ||
-          person?.team_lead_name ||
-          person?.reports_to_name ||
-          person?.manager?.name ||
-          person?.team_lead?.name ||
-          person?.parent?.name ||
-          'Not specified'
+    person?.parent_name ||
+    person?.admin_parent_name ||
+    person?.manager_name ||
+    person?.team_lead_name ||
+    'Not specified'
     const branch =
+        person?.office_name ||
+        person?.admin_parent_name ||
         person?.branch_name ||
         person?.branch?.name ||
-        person?.office ||
-        person?.team ||
-        person?.department ||
-        person?.location ||
-        person?.team_name ||
         task?.lead_branch_source ||
-        task?.branch_name ||
-        task?.branch?.name ||
-        task?.office_branch_name ||
-        task?.office_branch ||
         'Not specified'
     const avatar = person?.avatar || person?.image || person?.photo || ''
     return { name, position, manager, branch, avatar }
 }
-// Add near activePersonHover/personHoverHideTimer declarations
-const personHoverDetailsCache = new Map()
 
-const enrichPersonHoverFromApi = async (userId, dealId, type, basePerson, task, fallbackName) => {
-    if (!userId) return
-    try {
-        let user = personHoverDetailsCache.get(userId)
-        if (!user) {
-            const response = await axios.get(`/users/${userId}`)
-            const payload = response.data?.data
-            user = payload?.data && typeof payload.data === 'object' ? payload.data : payload
-            if (user?.id) {
-                personHoverDetailsCache.set(userId, user)
-            }
-        }
-        if (!user?.id) return
-
-        // Ignore stale responses if the user moved to a different card/type meanwhile
-        if (activePersonHover.value?.leadId !== dealId || activePersonHover.value?.type !== type) return
-
-        activePersonHover.value = {
-            leadId: dealId,
-            type,
-            data: normalizePersonHoverData(
-                {
-                    ...basePerson,
-                    ...user,
-                    position: user.position || user.role_name || basePerson?.position,
-                    branch_name: user.branch || user.branch_name || basePerson?.branch_name,
-                    office_name: user.office_name || basePerson?.office_name,
-                    admin_parent_name: user.admin_parent_name || basePerson?.admin_parent_name,
-                    parent_name: user.parent_name || basePerson?.parent_name,
-                },
-                task,
-                type,
-                fallbackName,
-            ),
-        }
-    } catch {
-        // keep whatever data the deal payload already had
-    }
-}
 const showPersonHoverCard = (task, type) => {
     cancelPersonHoverHide()
     const person = type === 'assigned' ? task?.parent : task?.responsible_person
@@ -761,10 +710,7 @@ const showPersonHoverCard = (task, type) => {
         type,
         data: normalizePersonHoverData(person, task, type, fallbackName),
     }
-    // NEW: enrich with full profile (manager/branch) same as leads.vue's activity enrichment
-    if (person?.id) {
-        enrichPersonHoverFromApi(Number(person.id), task?.id, type, person, task, fallbackName)
-    }
+  
 }
 
 const hidePersonHoverCard = () => {

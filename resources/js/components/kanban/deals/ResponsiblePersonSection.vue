@@ -41,13 +41,14 @@
                                     <div class="person-hover-role">{{ deal?.responsible_person?.position || deal?.responsible_person?.role_name || 'Team Member' }}</div>
                                 </div>
                             </div>
+                            <!-- hover card -->
                             <div class="person-hover-line">
                                 <span>Reports To</span>
-                                <b>{{ deal?.responsible_person?.manager_name || deal?.responsible_person?.team_lead_name || 'Not specified' }}</b>
+                                <b>{{ deal?.responsible_person?.parent_name || deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.manager_name || deal?.responsible_person?.team_lead_name || 'Not specified' }}</b>
                             </div>
                             <div class="person-hover-line">
                                 <span>Branch</span>
-                                <b>{{ deal?.responsible_person?.branch_name || deal?.lead_branch_source || 'Not specified' }}</b>
+                                <b>{{ deal?.responsible_person?.office_name || deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.branch_name || deal?.lead_branch_source || 'Not specified' }}</b>
                             </div>
                         </div>
                     </transition>
@@ -56,13 +57,14 @@
                     <div class="info-value" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false"   >{{ deal?.responsible_person?.name || '—' }}
                              <span v-if="deal?.responsible_person?.role_name" class="user-position-badge">{{ deal?.responsible_person?.role_name }}</span>
                     </div>
+                    <!-- inline section, below the avatar -->
                     <div class="info-subline">
-                           <span class="sub-key">Reports To: </span>
-                           <span class="sub-value"> {{ deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.team_lead_name || 'Not specified' }}</span>
-                       </div>
+                        <span class="sub-key">Reports To: </span>
+                        <span class="sub-value"> {{ deal?.responsible_person?.parent_name || deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.team_lead_name || 'Not specified' }}</span>
+                    </div>
                     <div class="info-subline">
                         <span class="sub-key">Branch: </span>
-                        <span class="sub-value"> {{ deal?.responsible_person?.office_name || deal?.lead_branch_source || 'Not specified' }}</span>
+                        <span class="sub-value"> {{ deal?.responsible_person?.office_name || deal?.responsible_person?.admin_parent_name || deal?.responsible_person?.branch_name || deal?.lead_branch_source || 'Not specified' }}</span>
                     </div>
                 </div>
             </div>

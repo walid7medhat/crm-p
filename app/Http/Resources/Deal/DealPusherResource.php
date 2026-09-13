@@ -3,7 +3,7 @@
 namespace App\Http\Resources\Deal;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\Concerns\FormatsResponsiblePersonForDisplay;
+use App\Http\Resources\Deal\Concerns\FormatsResponsiblePersonForDisplay;
 
 class DealPusherResource extends JsonResource
 {
