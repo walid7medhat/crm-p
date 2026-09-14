@@ -1,0 +1,264 @@
+/**
+ * Glassmorphism toasts — CRM palette (#0B0736 / #733E87 / #00a7fa)
+ */
+
+/* SweetAlert2 pins toast containers at 360px and disables pointer-events —
+   expand width and re-enable clicks so the close button works. */
+body.swal2-toast-shown .swal2-container {
+  width: min(540px, calc(100vw - 1rem)) !important;
+  max-width: calc(100vw - 1rem) !important;
+  overflow: visible !important;
+  padding: 0.75rem !important;
+  box-sizing: border-box !important;
+  pointer-events: none !important;
+}
+
+body.swal2-toast-shown .swal2-container.swal2-top-end,
+body.swal2-toast-shown .swal2-container.swal2-top-right {
+  inset: 0 0 auto auto !important;
+}
+
+.crm-glass-toast-popup.swal2-popup.swal2-toast {
+  --toast-accent: #00a7fa;
+  --toast-glow: rgba(0, 167, 250, 0.35);
+  --toast-border: rgba(0, 167, 250, 0.35);
+  --toast-text: rgba(255, 255, 255, 0.92);
+  --toast-highlight: #7dd3fc;
+  --toast-icon-bg: linear-gradient(145deg, rgba(0, 167, 250, 0.35), rgba(115, 62, 135, 0.45));
+
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  font-size: 16px !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  pointer-events: all !important;
+  background:
+    linear-gradient(135deg, rgba(11, 7, 54, 0.88) 0%, rgba(115, 62, 135, 0.55) 100%),
+    rgba(11, 7, 54, 0.65) !important;
+  border: 1.5px solid var(--toast-border) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 48px -12px rgba(11, 7, 54, 0.85),
+    0 0 40px -8px var(--toast-glow) !important;
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  animation: crmGlassToastIn 0.42s cubic-bezier(0.18, 0.89, 0.32, 1.15) both;
+}
+
+.crm-glass-toast-popup .swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  max-width: none !important;
+}
+
+.crm-glass-toast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  padding: 20px 48px 22px 20px;
+  color: var(--toast-text);
+}
+
+.crm-glass-toast::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 80% at 0% 0%,
+    color-mix(in srgb, var(--toast-accent) 22%, transparent),
+    transparent 55%
+  );
+}
+
+.crm-glass-toast-popup:has(.crm-glass-toast--warning) {
+  --toast-accent: #ff9f29;
+  --toast-glow: rgba(255, 159, 41, 0.4);
+  --toast-border: rgba(255, 159, 41, 0.45);
+  --toast-text: #ffe8c7;
+  --toast-highlight: #ffb84d;
+  --toast-icon-bg: linear-gradient(145deg, #ffb84d, #e67e00);
+}
+
+.crm-glass-toast-popup:has(.crm-glass-toast--error) {
+  --toast-accent: #f87171;
+  --toast-glow: rgba(239, 68, 68, 0.42);
+  --toast-border: rgba(248, 113, 113, 0.45);
+  --toast-text: #fecaca;
+  --toast-highlight: #fda4a4;
+  --toast-icon-bg: linear-gradient(145deg, #f87171, #dc2626);
+}
+
+.crm-glass-toast-popup:has(.crm-glass-toast--success) {
+  --toast-accent: #34d399;
+  --toast-glow: rgba(16, 185, 129, 0.38);
+  --toast-border: rgba(52, 211, 153, 0.4);
+  --toast-text: rgba(255, 255, 255, 0.95);
+  --toast-highlight: #6ee7b7;
+  --toast-icon-bg: linear-gradient(145deg, #34d399, #059669);
+}
+
+.crm-glass-toast-popup:has(.crm-glass-toast--info) {
+  --toast-accent: #00a7fa;
+  --toast-glow: rgba(0, 167, 250, 0.38);
+  --toast-border: rgba(0, 167, 250, 0.4);
+  --toast-text: rgba(255, 255, 255, 0.94);
+  --toast-highlight: #7dd3fc;
+  --toast-icon-bg: linear-gradient(145deg, #00a7fa, #733e87);
+}
+
+.crm-glass-toast__icon {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--toast-icon-bg);
+  box-shadow:
+    0 8px 22px -4px var(--toast-glow),
+    0 0 0 1px rgba(255, 255, 255, 0.14) inset;
+  animation: crmGlassIconPop 0.55s cubic-bezier(0.18, 0.89, 0.32, 1.35) 0.05s both;
+}
+
+.crm-glass-toast__icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #fff;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+.crm-glass-toast__icon--filled svg {
+  fill: #fff;
+  stroke: none;
+}
+
+.crm-glass-toast__icon--filled .crm-glass-toast__mark {
+  stroke: #0b0736;
+  stroke-width: 2.6;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.crm-glass-toast__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.crm-glass-toast__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--toast-text);
+  word-break: break-word;
+}
+
+.crm-glass-toast__title b,
+.crm-glass-toast__highlight {
+  color: var(--toast-highlight);
+  font-weight: 800;
+  font-size: 1.05em;
+}
+
+.crm-glass-toast__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  pointer-events: all !important;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  z-index: 20;
+}
+
+.crm-glass-toast__close:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+.crm-glass-toast__close svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.crm-glass-toast-progress {
+  background: linear-gradient(90deg, var(--toast-accent, #00a7fa), #733e87) !important;
+  height: 3px !important;
+  opacity: 0.95;
+}
+
+.crm-glass-toast-popup .swal2-timer-progress-bar-container {
+  margin: 0 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  position: absolute !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px !important;
+  overflow: hidden;
+}
+
+@keyframes crmGlassToastIn {
+  0% {
+    opacity: 0;
+    transform: translateX(18px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes crmGlassIconPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-12deg);
+  }
+  70% {
+    transform: scale(1.12) rotate(4deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crm-glass-toast-popup.swal2-popup,
+  .crm-glass-toast__icon {
+    animation: none;
+  }
+}

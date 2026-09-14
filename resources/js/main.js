@@ -35,6 +35,7 @@ import '../css/mobile-header-select.css'
 import '../css/mobile-hr.css'
 import '../css/view-profile.css'
 import '../css/sweetalert-zindex.css'
+import '../css/crm-toast.css'
 import '../css/project-page.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
 import { initLeadViewModal } from '@/composables/useLeadViewModal.js'
@@ -181,7 +182,7 @@ app.use(VueApexCharts)
 app.config.globalProperties.$apiBaseUrl = getApiBaseUrl()
 app.config.globalProperties.$axios = api
 
-// SweetAlert configuration
+// SweetAlert configuration (legacy mixin kept for any direct Toast.fire callers)
 const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
@@ -196,21 +197,155 @@ const Toast = Swal.mixin({
   }
 })
 
+const CRM_TOAST_ICONS = {
+  warning: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line class="crm-glass-toast__mark" x1="12" y1="9" x2="12" y2="13"/><line class="crm-glass-toast__mark" x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  error: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle fill="currentColor" stroke="none" cx="12" cy="12" r="10"/><line class="crm-glass-toast__mark" x1="12" y1="8" x2="12" y2="12"/><line class="crm-glass-toast__mark" x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  success: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56"/><path d="M21 3v5h-5"/><path d="M16 8a9 9 0 0 0-9 9"/></svg>`,
+}
+
+function escapeToastHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Highlight times / key numbers inside toast copy (e.g. "4:44 PM"). */
+function formatGlassToastMessage(message) {
+  const escaped = escapeToastHtml(message)
+  return escaped
+    .replace(
+      /(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/g,
+      '<b class="crm-glass-toast__highlight">$1</b>',
+    )
+    .replace(
+      /(\(in\s+\d+\s+minutes?\))/gi,
+      '<span class="crm-glass-toast__highlight">$1</span>',
+    )
+}
+
+function closeGlassToast() {
+  try {
+    if (typeof Swal.close === 'function') {
+      Swal.close()
+    }
+  } catch (_) {
+    /* ignore */
+  }
+
+  document.querySelectorAll('.swal2-container').forEach((el) => {
+    if (el.querySelector('.crm-glass-toast-popup, .crm-glass-toast')) {
+      el.remove()
+    }
+  })
+
+  document.body.classList.remove(
+    'swal2-shown',
+    'swal2-toast-shown',
+    'swal2-height-auto',
+    'swal2-no-backdrop',
+  )
+}
+
+function fireGlassToast(message, type = 'info') {
+  const toastType = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'
+  const iconHtml = CRM_TOAST_ICONS[toastType] || CRM_TOAST_ICONS.info
+  const filledIcon = toastType === 'warning' || toastType === 'error'
+  const duration = toastType === 'error' || toastType === 'warning' ? 5500 : 3500
+
+  // Replace any existing toast so loading/new actions never leave a stuck one
+  closeGlassToast()
+
+  let fallbackTimer = null
+
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    showCloseButton: false,
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    timer: duration,
+    timerProgressBar: true,
+    background: 'transparent',
+    customClass: {
+      popup: 'crm-glass-toast-popup',
+      timerProgressBar: 'crm-glass-toast-progress',
+      htmlContainer: 'crm-glass-toast-html',
+    },
+    html: `
+      <div class="crm-glass-toast crm-glass-toast--${toastType}">
+        <div class="crm-glass-toast__icon${filledIcon ? ' crm-glass-toast__icon--filled' : ''}">${iconHtml}</div>
+        <div class="crm-glass-toast__body">
+          <p class="crm-glass-toast__title">${formatGlassToastMessage(message)}</p>
+        </div>
+        <button type="button" class="crm-glass-toast__close" aria-label="Dismiss" data-crm-toast-close>
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    `,
+    didOpen: (popup) => {
+      popup.style.pointerEvents = 'all'
+
+      const forceClose = (event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer)
+          fallbackTimer = null
+        }
+        closeGlassToast()
+      }
+
+      const closeBtn = popup.querySelector('[data-crm-toast-close]')
+      if (closeBtn) {
+        closeBtn.style.pointerEvents = 'all'
+        // mousedown is more reliable than click when toast opens under the cursor
+        closeBtn.addEventListener('mousedown', forceClose, true)
+        closeBtn.addEventListener('click', forceClose, true)
+      }
+
+      // Hard auto-dismiss fallback if SweetAlert's timer is paused/stuck
+      fallbackTimer = window.setTimeout(() => {
+        closeGlassToast()
+      }, duration + 250)
+    },
+    willClose: () => {
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer)
+        fallbackTimer = null
+      }
+    },
+  })
+}
+
 // Global notification – always defer so SweetAlert2 never runs in same turn as a closing Bootstrap modal (avoids focus-trap stack overflow)
 function showNotificationDeferred(message, type = 'info') {
   const msg = typeof message === 'string' ? message : String(message)
-  const icon = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'
-  const delay = Swal.isVisible() ? 500 : 150
+  const delay = 80
   setTimeout(() => {
     try {
-      Toast.fire({ icon, title: msg })
+      fireGlassToast(msg, type)
     } catch (e) {
       console.warn('Toast fire failed:', e)
+      try {
+        Toast.fire({
+          icon: ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info',
+          title: msg,
+        })
+      } catch (_) {
+        /* ignore */
+      }
     }
   }, delay)
 }
 app.config.globalProperties.$showNotification = showNotificationDeferred
 window.$showNotification = showNotificationDeferred
+app.config.globalProperties.$hideNotification = closeGlassToast
+window.$hideNotification = closeGlassToast
 
 // Global confirmation function
 import showConfirmation from './composables/useConfirmation'

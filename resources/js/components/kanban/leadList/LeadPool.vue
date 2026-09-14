@@ -396,6 +396,10 @@ async function handleBulkAssignToMe() {
         )
         return
     }
+
+  // Hide any open toast while assignment is in progress
+  window.$hideNotification?.()
+
   try {
     const { ok, failed } = await assignToMe(ids)
     if (ok.length) {
@@ -422,9 +426,19 @@ async function handleBulkAssignToMe() {
             ? 'The lead could not be assigned.'
             : `${failed.length} leads could not be assigned.`)
 
+        // Cooldown / rate-limit copy reads better as a warning glass toast
+        const isCooldown =
+            /assign more leads at/i.test(msg) ||
+            /maximum of \d+ leads/i.test(msg) ||
+            /daily limit/i.test(msg)
+
         window.$showNotification?.(
             msg,
-            failed.length === ids.length ? 'error' : 'warning'
+            isCooldown
+                ? 'warning'
+                : failed.length === ids.length
+                  ? 'error'
+                  : 'warning'
         )
 
         if (ok.length) {
