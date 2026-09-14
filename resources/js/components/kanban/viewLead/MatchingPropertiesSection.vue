@@ -328,6 +328,8 @@ const moreQuery = computed(() => {
     if (priorityReq) {
         if (priorityReq.area_id) q.area_id = String(priorityReq.area_id)
         if (priorityReq.property_type_id) q.type_id = String(priorityReq.property_type_id)
+        const saleRent = normalizeSaleRent(priorityReq.lead_type ?? l?.lead_type)
+        if (saleRent) q.sale_rent = saleRent
         if (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') {
             const b = String(priorityReq.bedrooms).toLowerCase() === 'studio' ? 'Studio' : String(priorityReq.bedrooms)
             q.beds = b
@@ -344,7 +346,14 @@ const moreRoute = computed(() => ({
     path: '/alllisting',
     query: moreQuery.value
 }))
-
+// helper: map lead_type -> listing sale_rent ('Sale' | 'Rent')
+function normalizeSaleRent(v) {
+    if (v == null || v === '') return null
+    const s = String(v).trim().toLowerCase()
+    if (s.includes('rent') || s.includes('lease') || s.includes('tenant')) return 'Rent'
+    if (s.includes('sale') || s.includes('sell') || s.includes('buy') || s.includes('purchase')) return 'Sale'
+    return null
+}
 function buildApiParams() {
     const priorityReq = getPriorityRequirement(props.lead)
     const l = priorityReq || props.lead
@@ -362,7 +371,8 @@ function buildApiParams() {
 
     if (l?.area_id) params.area_id = l.area_id
     if (l?.property_type_id) params.property_type_id = l.property_type_id
-
+       const saleRent = normalizeSaleRent(l?.lead_type ?? props.lead?.lead_type)
+    if (saleRent) params.sale_rent = saleRent
     if (l?.bedrooms != null && l.bedrooms !== '') {
         const raw = l.bedrooms
         if (String(raw).toLowerCase() === 'studio') {
@@ -430,6 +440,7 @@ watch(
         props.lead?.integration_project_id,
         props.lead?.project_id,
         props.lead?.integration?.project_id
+       
     ],
     () => {
         resolveIntegrationProject()
@@ -447,7 +458,8 @@ watch(
         props.lead?.budget_from,
         props.lead?.budget_to,
         props.lead?.budget,
-        props.lead?.integration_id
+        props.lead?.integration_id,
+         props.lead?.lead_type,
     ],
     () => fetchMatches(),
     { immediate: true, deep: true }
