@@ -239,6 +239,8 @@ const submitConversion = async () => {
                 ...(response.data.data || {}),
                 deal_type: response.data.data?.deal_type ?? dealType,
                 _lead: response.data.lead || null,
+                // Lead card snapshot so Deal modal can seed Buyer Details instantly.
+                _sourceLead: leadDataSnapshot,
             }
             emit('converted', createdDeal)
         }
@@ -254,6 +256,7 @@ const submitConversion = async () => {
                     id: resolvedLeadId,
                     converted_to_deal_id: alreadyConvertedId,
                 },
+                _sourceLead: leadDataSnapshot,
             })
             return
         }

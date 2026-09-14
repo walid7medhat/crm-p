@@ -584,22 +584,91 @@ async function hydrateDealForView() {
     hydratedDeal.value = null
   }
 }
-async function loadDealForEdit() {
+/**
+ * Seed buyer/tenant form fields from the lead card used during conversion so
+ * InlineSectionEditor can render immediately (no "Loading form..." wait).
+ */
+function seedEditFormFromOpenPayload(deal) {
+  if (!deal?.id) return null
+  if (Array.isArray(deal.parties) && deal.parties.length) {
+    return dealToFormData(deal)
+  }
+
+  const lead = deal._sourceLead
+  if (!lead || typeof lead !== 'object') {
+    return {
+      deal_id: deal.id,
+      deal_name: deal.deal_name ?? '',
+      source: deal.source ?? '',
+      responsible_person_id: deal.responsible_person_id ?? deal.responsible_person?.id ?? null,
+      buyer_first_name: '',
+      buyer_last_name: '',
+      buyer_phone: '',
+      buyer_email: '',
+      tenant_first_name: '',
+      tenant_last_name: '',
+      tenant_phone: '',
+      tenant_email: '',
+    }
+  }
+
+  const first = lead.first_name ?? ''
+  const last = lead.last_name ?? ''
+  const phone = lead.work_phone ?? lead.phone ?? lead.whatsapp_number ?? ''
+  const email = lead.email ?? ''
+  const base = {
+    deal_id: deal.id,
+    deal_name: deal.deal_name ?? lead.lead_name ?? '',
+    source: deal.source ?? lead.lead_source ?? '',
+    responsible_person_id: deal.responsible_person_id ?? lead.responsible_person_id ?? null,
+  }
+
+  if ((deal.deal_type || dealType.value) === 'rental') {
+    return {
+      ...base,
+      tenant_first_name: first,
+      tenant_last_name: last,
+      tenant_phone: phone,
+      tenant_email: email,
+    }
+  }
+
+  return {
+    ...base,
+    buyer_first_name: first,
+    buyer_last_name: last,
+    buyer_phone: phone,
+    buyer_email: email,
+  }
+}
+
+async function loadDealForEdit({ keepFormVisible = false } = {}) {
     if (!props.deal?.id) return
     const requestId = Date.now()
     editHydrationRequestId.value = requestId
-    editLoading.value = true
+    // Buyer Details does not need edit lookups — never block the form on them.
+    // Only show "Loading form..." when we have nothing to render yet.
+    if (!keepFormVisible && !Object.keys(editFormData.value || {}).length) {
+      editLoading.value = true
+    }
     try {
-        const dealData = await fetchDealDetailShared(props.deal.id)
-        hydratedDeal.value = dealData || hydratedDeal.value
+        let dealData = hydratedDeal.value?.id === props.deal.id ? hydratedDeal.value : null
+        if (!dealData) {
+          dealData = await fetchDealDetailShared(props.deal.id)
+          hydratedDeal.value = dealData || hydratedDeal.value
+        }
         // Ignore stale async responses when user switches deals quickly.
         if (editHydrationRequestId.value !== requestId) return
-        editFormData.value = dealToFormData(dealData)
-        await ensureEditLookupsLoaded()
+        if (dealData) {
+          editFormData.value = dealToFormData(dealData)
+        }
+        ensureEditLookupsLoaded().catch((e) => console.error('Failed to load edit lookups', e))
     } catch (error) {
         console.error('Error loading deal for edit:', error)
     } finally {
-        editLoading.value = false
+        if (editHydrationRequestId.value === requestId) {
+          editLoading.value = false
+        }
     }
 }
 // --- Edit deal ---
@@ -829,11 +898,10 @@ async function startEditDeal(sectionKey = null) {
 
   editLoading.value = true
   try {
-    const [raw] = await Promise.all([
-      fetchDealDetailShared(props.deal.id),
-      ensureEditLookupsLoaded()
-    ])
+    const raw = await fetchDealDetailShared(props.deal.id)
     editFormData.value = dealToFormData(raw)
+    hydratedDeal.value = raw || hydratedDeal.value
+    ensureEditLookupsLoaded().catch((e) => console.error('Failed to load edit lookups', e))
   } catch (e) {
     console.error('Failed to load deal for edit', e)
     isEditingDeal.value = false
@@ -866,8 +934,16 @@ if (section === 'add_new_property') {
   isEditingDeal.value = true
   editShowErrors.value = false
   editFieldErrors.value = {}
-  editFormData.value = {}
-  await loadDealForEdit()
+
+  // Show Buyer/Tenant Details immediately from conversion payload / hydrated deal,
+  // then refine with GET /deals/{id} in the background.
+  const instant =
+    (hydratedDeal.value?.id === props.deal.id ? dealToFormData(hydratedDeal.value) : null)
+    || seedEditFormFromOpenPayload(props.deal)
+  editFormData.value = instant || {}
+  editLoading.value = !instant || Object.keys(instant).length === 0
+
+  await loadDealForEdit({ keepFormVisible: !!instant && Object.keys(instant).length > 0 })
 }
 
 async function saveEditDeal() {
