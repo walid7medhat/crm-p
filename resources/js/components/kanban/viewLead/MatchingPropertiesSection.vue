@@ -1,5 +1,5 @@
 <template>
-    <div v-if="lead?.id && listings.length" class="matching-properties-section info-section">
+    <div v-if="lead?.id && canAttemptMatching" class="matching-properties-section info-section">
         <div class="info-section-title">Matching property</div>
 
         <div v-if="resolvingIntegration">Loading project from integration…</div>
@@ -224,26 +224,7 @@ function bindScrollResize() {
         updateScrollUi()
     })
 }
-// Anything that gives the section a reason to exist at all — either the lead is
-// tied to an integration (which may resolve to a project, or may show the
-// "missing project" hint), or it has at least one concrete requirement field.
-const canAttemptMatching = computed(() => {
-    const l = props.lead
-    if (!l) return false
-    if (l.integration_id) return true
-    if (effectiveProjectId.value != null) return true
 
-    const priorityReq = getPriorityRequirement(l)
-    if (!priorityReq) return false
-
-    return !!(
-        priorityReq.area_id ||
-        priorityReq.property_type_id ||
-        (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') ||
-        priorityReq.budget_from != null ||
-        priorityReq.budget_to != null
-    )
-})
 onMounted(() => {
     window.addEventListener('resize', updateScrollUi)
 })
@@ -288,23 +269,47 @@ const integrationMissingProject = computed(() => {
     return effectiveProjectId.value == null
 })
 
-// ✅ استخدام الـ priority requirement للتحقق من وجود معايير بحث
+// helper: true only for a real, positive budget value
+function isRealBudgetValue(v) {
+    if (v == null || v === '') return false
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0
+}
+
 const hasSearchCriteria = computed(() => {
     const l = props.lead
     if (!l) return false
     if (resolvingIntegration.value) return false
     if (effectiveProjectId.value != null) return true
     if (l.integration_id) return false
-    
+
     const priorityReq = getPriorityRequirement(l)
     if (!priorityReq) return false
-    
+
     return !!(
         priorityReq.area_id ||
         priorityReq.property_type_id ||
         (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') ||
-        priorityReq.budget_from != null ||
-        priorityReq.budget_to != null
+        isRealBudgetValue(priorityReq.budget_from) ||
+        isRealBudgetValue(priorityReq.budget_to)
+    )
+})
+
+const canAttemptMatching = computed(() => {
+    const l = props.lead
+    if (!l) return false
+    if (l.integration_id) return true
+    if (effectiveProjectId.value != null) return true
+
+    const priorityReq = getPriorityRequirement(l)
+    if (!priorityReq) return false
+
+    return !!(
+        priorityReq.area_id ||
+        priorityReq.property_type_id ||
+        (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') ||
+        isRealBudgetValue(priorityReq.budget_from) ||
+        isRealBudgetValue(priorityReq.budget_to)
     )
 })
 
@@ -340,25 +345,24 @@ const moreRoute = computed(() => ({
     query: moreQuery.value
 }))
 
-// ✅ بناء معاملات API باستخدام الـ priority requirement
 function buildApiParams() {
     const priorityReq = getPriorityRequirement(props.lead)
     const l = priorityReq || props.lead
-    
+
     const params = {
         per_page: 24,
         page: 1,
         sort: 'created_at_desc'
     }
-    
+
     const pid = effectiveProjectId.value
     if (pid) {
         params.project_id = pid
     }
-    
+
     if (l?.area_id) params.area_id = l.area_id
     if (l?.property_type_id) params.property_type_id = l.property_type_id
-    
+
     if (l?.bedrooms != null && l.bedrooms !== '') {
         const raw = l.bedrooms
         if (String(raw).toLowerCase() === 'studio') {
@@ -368,13 +372,13 @@ function buildApiParams() {
             if (!Number.isNaN(n)) params.number_of_bedrooms = n
         }
     }
-    
+
     const minP = l?.budget_from ?? l?.budget
     const maxP = l?.budget_to ?? l?.budget
-    
-    if (minP != null && minP !== '') params.min_price = minP
-    if (maxP != null && maxP !== '') params.max_price = maxP
-    
+
+    if (isRealBudgetValue(minP)) params.min_price = minP
+    if (isRealBudgetValue(maxP)) params.max_price = maxP
+
     return params
 }
 
