@@ -6,19 +6,44 @@
             class="convert-lead-overlay"
             role="dialog"
             aria-modal="true"
-            aria-label="Select converted lead type"
+            aria-label="Convert Lead to Deal"
             @click.self="hide"
         >
             <div class="convert-lead-dialog">
                 <div class="convert-lead-content">
                     <div class="convert-lead-header">
-                        <h6 class="convert-lead-title">Select Converted Lead Type</h6>
+                        <div class="convert-lead-heading">
+                            <div class="convert-lead-heading-icon" aria-hidden="true">
+                                <iconify-icon icon="lucide:handshake" />
+                            </div>
+                            <div class="convert-lead-heading-text">
+                                <h6 class="convert-lead-title">Convert Lead to Deal</h6>
+                                <p class="convert-lead-subtitle">
+                                    Choose the type of deal you want to create for this lead
+                                </p>
+                            </div>
+                        </div>
                         <button type="button" class="convert-lead-close" aria-label="Close" @click="hide">
                             <iconify-icon icon="lucide:x" />
                         </button>
                     </div>
+
                     <div class="convert-lead-body">
-                        <div class="options-container">
+                        <aside class="convert-lead-aside" aria-hidden="true">
+                            <div class="aside-skyline"></div>
+                            <div class="aside-content">
+                                <span class="aside-eyebrow">Turn opportunities into deals</span>
+                                <h3 class="aside-title">
+                                    Create a new deal and
+                                    <span class="aside-accent">move forward</span>.
+                                </h3>
+                                <p class="aside-copy">
+                                    Select the deal type that best matches this lead’s interest.
+                                </p>
+                            </div>
+                        </aside>
+
+                        <div class="options-row">
                             <button
                                 type="button"
                                 class="deal-type-option"
@@ -26,11 +51,23 @@
                                 @click.stop="selectDealType('primary')"
                             >
                                 <div class="option-icon">
-                                    <img :src="primaryIcon" alt="Primary / Off Plan" width="32" height="32">
+                                    <iconify-icon icon="lucide:home" />
                                 </div>
-                                <span class="deal-type-label">Primary</span>
-                                <span class="selected-mark" :class="{ show: form.deal_type === 'primary' }">
-                                    <img :src="checkIcon" alt="Selected">
+                                <div class="option-text">
+                                    <span class="deal-type-label">Primary</span>
+                                    <span class="deal-type-desc">
+                                        Standard property deal with direct ownership from the developer or owner.
+                                    </span>
+                                </div>
+                                <span
+                                    v-if="form.deal_type === 'primary'"
+                                    class="most-common-badge"
+                                >
+                                    <iconify-icon icon="lucide:star" />
+                                    Most common
+                                </span>
+                                <span class="option-arrow" aria-hidden="true">
+                                    <iconify-icon icon="lucide:arrow-right" />
                                 </span>
                             </button>
 
@@ -41,11 +78,16 @@
                                 @click.stop="selectDealType('secondary')"
                             >
                                 <div class="option-icon">
-                                    <img :src="secondaryIcon" alt="Secondary" width="32" height="32">
+                                    <iconify-icon icon="lucide:building-2" />
                                 </div>
-                                <span class="deal-type-label">Secondary</span>
-                                <span class="selected-mark" :class="{ show: form.deal_type === 'secondary' }">
-                                    <img :src="checkIcon" alt="Selected">
+                                <div class="option-text">
+                                    <span class="deal-type-label">Secondary</span>
+                                    <span class="deal-type-desc">
+                                        Resale property deal from an existing owner (not directly from developer).
+                                    </span>
+                                </div>
+                                <span class="option-arrow" aria-hidden="true">
+                                    <iconify-icon icon="lucide:arrow-right" />
                                 </span>
                             </button>
 
@@ -56,26 +98,39 @@
                                 @click.stop="selectDealType('rental')"
                             >
                                 <div class="option-icon">
-                                    <img :src="rentalIcon" alt="Rental" width="32" height="32">
+                                    <iconify-icon icon="lucide:key-round" />
                                 </div>
-                                <span class="deal-type-label">Rental</span>
-                                <span class="selected-mark" :class="{ show: form.deal_type === 'rental' }">
-                                    <img :src="checkIcon" alt="Selected">
+                                <div class="option-text">
+                                    <span class="deal-type-label">Rental</span>
+                                    <span class="deal-type-desc">
+                                        Rental property deal for long-term or short-term leasing.
+                                    </span>
+                                </div>
+                                <span class="option-arrow" aria-hidden="true">
+                                    <iconify-icon icon="lucide:arrow-right" />
                                 </span>
                             </button>
                         </div>
                     </div>
+
                     <div class="convert-lead-footer">
-                        <button type="button" class="btn-cancel" @click="hide">Cancel</button>
-                        <button
-                            type="button"
-                            class="btn-add-deal"
-                            @click.stop="submitConversion"
-                            :disabled="!form.deal_type || loading"
-                        >
-                            <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                            Add Deal
-                        </button>
+                        <p class="convert-lead-tip">
+                            <iconify-icon icon="lucide:info" />
+                            <span>You can always change the deal details later.</span>
+                        </p>
+                        <div class="convert-lead-actions">
+                            <button type="button" class="btn-cancel" @click="hide">Cancel</button>
+                            <button
+                                type="button"
+                                class="btn-add-deal"
+                                @click.stop="submitConversion"
+                                :disabled="!form.deal_type || loading"
+                            >
+                                <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Continue</span>
+                                <iconify-icon icon="lucide:arrow-right" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -87,11 +142,6 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
-
-const primaryIcon = '/assets/images/deal-types/primary.svg'
-const secondaryIcon = '/assets/images/deal-types/secondary.svg'
-const rentalIcon = '/assets/images/deal-types/rental.svg'
-const checkIcon = '/assets/images/deal-types/check.svg'
 
 const props = defineProps({
     leadId: {
@@ -158,7 +208,7 @@ function cleanupBootstrapBackdrops() {
 const show = (leadId = null, leadData = null) => {
     cleanupBootstrapBackdrops()
     form.value.lead_id = resolveLeadId(leadId, leadData)
-    form.value.deal_type = ''
+    form.value.deal_type = 'primary'
     visible.value = true
     document.body.style.overflow = 'hidden'
 }
@@ -239,7 +289,6 @@ const submitConversion = async () => {
                 ...(response.data.data || {}),
                 deal_type: response.data.data?.deal_type ?? dealType,
                 _lead: response.data.lead || null,
-                // Lead card snapshot so Deal modal can seed Buyer Details instantly.
                 _sourceLead: leadDataSnapshot,
             }
             emit('converted', createdDeal)
@@ -289,6 +338,7 @@ defineExpose({
 </script>
 
 <style scoped>
+/* Exact design proportions: ~1020 × ~540 */
 .convert-lead-overlay {
     position: fixed;
     inset: 0;
@@ -297,9 +347,12 @@ defineExpose({
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background:
+        radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.35), transparent 42%),
+        radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.2), transparent 40%),
+        rgba(6, 3, 16, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     pointer-events: auto;
     animation: convertLeadFadeIn 0.2s ease;
 }
@@ -310,7 +363,9 @@ defineExpose({
 }
 
 .convert-lead-dialog {
-    width: min(760px, 100%);
+    width: 1020px;
+    max-width: 100%;
+    height: 540px;
     max-height: calc(100vh - 40px);
     pointer-events: auto;
     animation: convertLeadSlideIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
@@ -328,191 +383,446 @@ defineExpose({
 }
 
 .convert-lead-content {
-    border-radius: 24px;
-    border: 1px solid #e5e7eb;
-    overflow: visible;
-    background: #fff;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 28px;
+    border: 1px solid rgba(196, 181, 253, 0.22);
+    overflow: hidden;
+    background: linear-gradient(160deg, #2a1748 0%, #1a0f30 45%, #140a28 100%);
+    box-shadow:
+        0 28px 70px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+        0 0 50px rgba(124, 58, 237, 0.16);
     pointer-events: auto;
+    color: #f5f3ff;
 }
 
 .convert-lead-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    padding: 28px 32px 20px;
-    border-bottom: 1px solid #f0f0f0;
-    background: white;
+    gap: 16px;
+    flex-shrink: 0;
+    padding: 24px 28px 12px;
+}
+
+.convert-lead-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+}
+
+.convert-lead-heading-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #fff;
+    background: linear-gradient(145deg, rgba(167, 139, 250, 0.4), rgba(124, 58, 237, 0.28));
+    border: 1px solid rgba(196, 181, 253, 0.4);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.28);
+}
+
+.convert-lead-heading-text {
+    min-width: 0;
+    padding-top: 1px;
 }
 
 .convert-lead-title {
     margin: 0;
     font-size: 22px !important;
-    font-weight: 600;
-    line-height: 1.3;
-    color: #111827;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+    letter-spacing: -0.02em;
+}
+
+.convert-lead-subtitle {
+    margin: 5px 0 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: rgba(196, 181, 253, 0.72);
 }
 
 .convert-lead-close {
-    width: 36px;
-    height: 36px;
-    border: 1px solid #e2e8f0;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 50%;
-    background: #fff;
-    color: #334155;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.85);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
     flex-shrink: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
+.convert-lead-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Sidebar ~32% | cards 68% — same height as design */
 .convert-lead-body {
-    padding: 24px 32px;
-    background: white;
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 16px;
+    padding: 8px 28px 16px;
     pointer-events: auto;
 }
 
-.options-container {
+.convert-lead-aside {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    height: 100%;
+    min-height: 0;
+    border: 1px solid rgba(196, 181, 253, 0.18);
+    background:
+        linear-gradient(180deg, rgba(76, 29, 149, 0.55) 0%, rgba(30, 10, 60, 0.35) 45%, rgba(12, 4, 28, 0.85) 100%),
+        radial-gradient(ellipse at 70% 20%, rgba(192, 132, 252, 0.35), transparent 50%),
+        #1a0b33;
+}
+
+.aside-skyline {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, rgba(26, 11, 51, 0.15) 0%, rgba(26, 11, 51, 0.2) 40%, rgba(10, 4, 24, 0.55) 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 360' fill='none'%3E%3Cpath d='M18 360V230h16v130H18zm22 0V200h12v160H40zm20 0V245h10v115H60zm18 0V175h9v185H78zm16 0V210h14v150H94zm22 0V120h11v240h-11zm20 0V190h16v170h-16zm24 0V145h9v215h-9zm17 0V220h12v140h-12zm20 0V165h10v195h-10zm18 0V110h8v250h-8zm16 0V200h13v160h-13zm22 0V150h11v210h-11zm19 0V230h14v130h-14z' fill='%23a78bfa' fill-opacity='0.32'/%3E%3Cpath d='M148 360V72l10-12 10 12v288h-20z' fill='%23c4b5fd' fill-opacity='0.5'/%3E%3Cpath d='M20 150c45-40 95-50 150-22s100 12 150-28' stroke='%23e9d5ff' stroke-opacity='0.55' stroke-width='1.6' fill='none'/%3E%3Cpath d='M8 200c48-30 100-22 150 4s110 6 160-32' stroke='%23c084fc' stroke-opacity='0.4' stroke-width='1.1' fill='none'/%3E%3Ccircle cx='250' cy='80' r='28' fill='%23e9d5ff' fill-opacity='0.12'/%3E%3C/svg%3E")
+        center bottom / cover no-repeat;
+    opacity: 0.95;
+}
+
+.aside-content {
+    position: relative;
+    z-index: 1;
     display: flex;
-    flex-direction: row;
-    gap: 16px;
-    justify-content: space-between;
-    pointer-events: auto;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+    padding: 22px 20px;
+}
+
+.aside-eyebrow {
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #d8b4fe;
+    margin-bottom: 12px;
+}
+
+.aside-title {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.18;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.03em;
+}
+
+.aside-accent {
+    background: linear-gradient(90deg, #f0abfc, #e879f9 40%, #c084fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.aside-copy {
+    margin: 14px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: rgba(216, 204, 242, 0.78);
+    max-width: 26ch;
+}
+
+.options-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    height: 100%;
+    min-height: 0;
 }
 
 .deal-type-option {
-    flex: 1;
-    border: 1.5px solid #e5e7eb;
-    border-radius: 16px;
-    padding: 20px 16px;
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-    background: #fff;
-    position: relative;
+    align-items: flex-start;
     gap: 12px;
+    height: 100%;
+    min-height: 0;
+    padding: 18px 16px 48px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
     appearance: none;
     -webkit-appearance: none;
     font: inherit;
-    text-align: center;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
     pointer-events: auto;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 
 .deal-type-option:not(.selected):hover {
-    border-color: #d1d5db;
-    background: #f9fafb;
+    border-color: rgba(196, 181, 253, 0.35);
+    background: rgba(255, 255, 255, 0.07);
 }
 
 .deal-type-option.selected {
-    background: #0B0736;
-    border-color: #0B0736;
+    border-color: #c084fc;
+    background: rgba(168, 85, 247, 0.14);
+    box-shadow:
+        0 0 0 1px rgba(192, 132, 252, 0.45),
+        0 0 26px rgba(168, 85, 247, 0.32);
 }
 
 .option-icon {
-    width: 64px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    pointer-events: none;
-}
-
-.option-icon img {
-    filter: brightness(0) saturate(100%) invert(67%) sepia(71%) saturate(1235%) hue-rotate(1deg) brightness(102%) contrast(103%);
-}
-
-.deal-type-label {
-    font-size: 15px;
-    font-weight: 500;
-    color: #000;
-    text-align: center;
-    pointer-events: none;
-}
-
-.deal-type-option.selected .deal-type-label {
-    color: #fff;
-}
-
-.selected-mark {
-    position: absolute;
-    top: -10px;
-    right: -2px;
-    width: 28px;
-    height: 28px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
+    font-size: 18px;
+    color: #e9d5ff;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     pointer-events: none;
-    transition: opacity 0.15s ease;
+    flex-shrink: 0;
 }
 
-.selected-mark.show {
-    opacity: 1;
+.deal-type-option.selected .option-icon {
+    color: #fff;
+    background: rgba(192, 132, 252, 0.28);
+    border-color: rgba(233, 213, 255, 0.4);
+}
+
+.option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    pointer-events: none;
+}
+
+.deal-type-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.deal-type-desc {
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(196, 181, 253, 0.72);
+}
+
+.most-common-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #f3e8ff;
+    background: rgba(168, 85, 247, 0.28);
+    border: 1px solid rgba(216, 180, 254, 0.35);
+    pointer-events: none;
+}
+
+.most-common-badge iconify-icon {
+    font-size: 11px;
+    color: #fbbf24;
+}
+
+.option-arrow {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    pointer-events: none;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.deal-type-option.selected .option-arrow {
+    color: #fff;
+    background: linear-gradient(135deg, #c026d3, #7c3aed);
+    border-color: transparent;
+    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.4);
 }
 
 .convert-lead-footer {
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    border-top: 1px solid #f0f0f0;
-    padding: 20px 32px 28px;
-    background: white;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+    padding: 14px 28px 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     pointer-events: auto;
+}
+
+.convert-lead-tip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 12.5px;
+    color: rgba(196, 181, 253, 0.7);
+}
+
+.convert-lead-tip iconify-icon {
+    font-size: 15px;
+    color: rgba(196, 181, 253, 0.85);
+    flex-shrink: 0;
+}
+
+.convert-lead-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .btn-cancel,
 .btn-add-deal {
-    min-width: 110px;
-    height: 44px;
+    min-width: 108px;
+    height: 42px;
     border-radius: 12px;
     border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    gap: 7px;
+    font-size: 13.5px;
     font-weight: 600;
-    padding: 0 24px;
+    padding: 0 18px;
     cursor: pointer;
     transition: all 0.2s ease;
     pointer-events: auto;
 }
 
 .btn-cancel {
-    background: #F4F4F4;
-    color: #000000;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .btn-cancel:hover {
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .btn-add-deal {
-    background: #000000;
+    background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
     color: #fff;
+    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.38);
 }
 
 .btn-add-deal:hover:not(:disabled) {
-    background: #733E87;
-    color: #fff;
+    filter: brightness(1.08);
 }
 
 .btn-add-deal:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
-@media (max-width: 768px) {
+.btn-add-deal iconify-icon {
+    font-size: 15px;
+}
+
+/* Large tablets / small laptops */
+@media (max-width: 1060px) {
+    .convert-lead-dialog {
+        width: 920px;
+        height: 500px;
+    }
+
+    .convert-lead-body {
+        grid-template-columns: 260px 1fr;
+        padding-left: 22px;
+        padding-right: 22px;
+    }
+
+    .aside-title {
+        font-size: 24px;
+    }
+}
+
+/* Tablet: stack sidebar above cards, keep 3 cards in a row */
+@media (max-width: 860px) {
+    .convert-lead-dialog {
+        width: min(680px, 100%);
+        height: auto;
+        max-height: calc(100vh - 32px);
+    }
+
+    .convert-lead-content {
+        height: auto;
+        max-height: calc(100vh - 32px);
+        overflow: auto;
+    }
+
+    .convert-lead-body {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .convert-lead-aside {
+        height: 150px;
+    }
+
+    .aside-title {
+        font-size: 20px;
+    }
+
+    .aside-copy {
+        display: none;
+    }
+
+    .options-row {
+        height: auto;
+        min-height: 200px;
+    }
+
+    .deal-type-option {
+        height: 200px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
     .convert-lead-overlay {
         align-items: flex-end;
         padding: 0;
@@ -520,65 +830,79 @@ defineExpose({
 
     .convert-lead-dialog {
         width: 100%;
-        max-height: 90vh;
+        height: auto;
+        max-height: 92vh;
     }
 
     .convert-lead-content {
-        border-radius: 20px 20px 0 0;
+        border-radius: 22px 22px 0 0;
+        max-height: 92vh;
     }
 
     .convert-lead-header,
     .convert-lead-body,
     .convert-lead-footer {
-        padding-left: 20px;
-        padding-right: 20px;
+        padding-left: 16px;
+        padding-right: 16px;
     }
 
     .convert-lead-header {
-        padding-top: 20px;
-        padding-bottom: 16px;
+        padding-top: 16px;
+        padding-bottom: 8px;
     }
 
     .convert-lead-title {
         font-size: 18px !important;
     }
 
-    .options-container {
-        gap: 10px;
+    .convert-lead-aside {
+        height: 130px;
+    }
+
+    .aside-title {
+        font-size: 18px;
+    }
+
+    .options-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        min-height: 0;
     }
 
     .deal-type-option {
-        padding: 14px 10px;
-        gap: 8px;
+        height: auto;
+        min-height: 0;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 48px 14px 14px;
     }
 
-    .option-icon {
-        width: 48px;
-        height: 48px;
+    .most-common-badge {
+        display: none;
     }
 
-    .option-icon img {
-        width: 28px;
-        height: 28px;
+    .option-arrow {
+        top: 50%;
+        bottom: auto;
+        transform: translateY(-50%);
     }
 
-    .deal-type-label {
-        font-size: 13px;
+    .convert-lead-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding-bottom: 18px;
     }
 
-    .selected-mark {
-        width: 24px;
-        height: 24px;
-        top: 8px;
-        right: 8px;
+    .convert-lead-actions {
+        width: 100%;
     }
 
     .btn-cancel,
     .btn-add-deal {
-        min-width: 90px;
-        height: 40px;
-        font-size: 13px;
-        padding: 0 18px;
+        flex: 1;
+        min-width: 0;
     }
 }
 </style>
