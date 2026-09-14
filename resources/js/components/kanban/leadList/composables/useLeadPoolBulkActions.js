@@ -79,6 +79,14 @@ export function useLeadPoolBulkActions() {
     }
   }
 
+  function generateBatchId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
   /**
    * Assign leads to current user and move from Lead Pool → Assigned stage (normal kanban).
    * @param {number[]} leadIds
@@ -96,7 +104,13 @@ export function useLeadPoolBulkActions() {
     if (!leadIds?.length) {
       return { ok: [], failed: [] }
     }
+    if (leadIds.length > 5) {
+        throw new Error(
+            'You can assign a maximum of 5 leads at a time.'
+        )
+    }
 
+    const batchId = generateBatchId()
     isAssigning.value = true
     const ok = []
     const failed = []
@@ -115,6 +129,7 @@ export function useLeadPoolBulkActions() {
             {
               stage_id: assignedStageId,
               responsible_person_id: userId,
+              lead_pool_batch_id: batchId,
             },
             { timeout: ASSIGN_REQUEST_TIMEOUT_MS },
           ),

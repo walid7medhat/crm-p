@@ -1,4 +1,6 @@
 <?php
+
+use App\Helpers\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuthController;
@@ -75,6 +77,7 @@ use App\Http\Controllers\Api\Employee\EvaluationController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
 use App\Http\Controllers\Api\Listing\InternalUpdateController;
 use App\Http\Controllers\Api\Employee\EmployeeAttendanceController;
+use App\Services\LeadPoolAssignmentService;
 
 /* Test account-activated email – actually sends to walidmedhat.uae@gmail.com (requires SMTP in .env) */
 Route::get('/test-account-activated-email', function () {
@@ -493,7 +496,15 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/leads/convert/to-deal', [LeadConversionController::class, 'convert']);
     Route::get('/leads/{lead}/can-convert', [LeadConversionController::class, 'canConvert']);
     Route::post('/leads/import', [LeadImportController::class, 'import']);
+        Route::get('/lead-pool/assignment-status', function () {
+            $user = auth()->user();
 
+            return ApiResponse::success(
+                app(LeadPoolAssignmentService::class)
+                    ->getStatus($user->id),
+                'Assignment status'
+            );
+        });
     // === Bitrix24 sync (admin-only, batched) ===
     Route::post('/leads/bitrix24/sync', [Bitrix24SyncController::class, 'syncBatch']);
     Route::post('/leads/bitrix24/fetch/{bitrixId}', [Bitrix24SyncController::class, 'fetchOne']);

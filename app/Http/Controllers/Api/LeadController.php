@@ -33,6 +33,7 @@ use App\Services\LeadTextSearch;
     use App\Exports\LeadsExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
+use App\Services\LeadPoolAssignmentService;
 class LeadController extends Controller
 {
     public function __construct()
@@ -999,7 +1000,6 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $changes = [];
         $fields = [];
         
-        // التحقق من تغيير المسؤول
         if (!empty($request->responsible_person_id) && $request->responsible_person_id != $lead->responsible_person_id) {
             $oldPerson = User::find($lead->responsible_person_id);
             $newPerson = User::find($request->responsible_person_id);
@@ -1019,6 +1019,24 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             && ! $this->isLeadPoolStage($newStage)
             && $request->filled('responsible_person_id')
             && (int) $request->responsible_person_id === (int) $user->id;
+            $leadPoolBatchId = $request->input('lead_pool_batch_id');
+
+                if ($assigningSelfFromLeadPool) {
+                    try {
+                        app(LeadPoolAssignmentService::class)->validateBatch(
+                            $user->id,
+                            1,
+                            $leadPoolBatchId
+                        );
+                    } catch (\RuntimeException $e) {
+                        return ApiResponse::error(
+                            $e->getMessage(),
+                            422
+                        );
+                    }
+
+                    $this->softDeleteLeadPriorEngagement($lead->id);
+                }
 
         if ($assigningSelfFromLeadPool) {
             $this->softDeleteLeadPriorEngagement($lead->id);
@@ -1222,6 +1240,13 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             $this->broadcastLeadUpdated($lead, 'assigned', array_merge($changes, $broadcastChanges));
         } else {
             $this->broadcastLeadUpdated($lead, 'stage_changed', $broadcastChanges);
+        }
+        if ($assigningSelfFromLeadPool) {
+            app(LeadPoolAssignmentService::class)->createAssignment(
+                $user->id,
+                $lead->id,
+                $leadPoolBatchId
+            );
         }
 
         // Lightweight kanban card payload (avoids LeadResource history/duplicate queries)

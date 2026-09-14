@@ -344,7 +344,15 @@ const selectMode = ref(false)
 const orderedLeadIds = computed(() => leads.value.map((l) => l.id))
 const selection = useLeadPoolSelection(() => orderedLeadIds.value)
 const { isAssigning, assignToMe } = useLeadPoolBulkActions()
-
+const assignmentStatus = ref({
+    today_count: 0,
+    daily_limit: 20,
+    remaining_today: 20,
+    batch_limit: 5,
+    cooldown_active: false,
+    next_available_at: null,
+    can_assign: true,
+})
 // Role gating — comments/activities/"More Information" on lead-pool cards are super_admin-only.
 const currentUserRoles = (() => {
     try {
@@ -381,7 +389,13 @@ async function handleBulkAssignToMe() {
   if (isAssigning.value) return
   const ids = selection.selectedIds.value.map(Number).filter(Boolean)
   if (!ids.length) return
-
+    if (ids.length > 5) {
+        window.$showNotification?.(
+            'You can assign a maximum of 5 leads at a time.',
+            'warning'
+        )
+        return
+    }
   try {
     const { ok, failed } = await assignToMe(ids)
     if (ok.length) {
@@ -393,15 +407,32 @@ async function handleBulkAssignToMe() {
       )
       exitSelectMode()
       await fetchLeadPool()
+      await fetchAssignmentStatus()
+
     }
-    if (failed.length) {
-      const msg =
-        failed.length === 1
-          ? failed[0].message
-          : `${failed.length} leads could not be assigned`
-      window.$showNotification?.(msg, failed.length === ids.length ? 'error' : 'warning')
-      if (ok.length) await fetchLeadPool()
-    }
+  if (failed.length) {
+        // If backend returned a clear reason, always show it.
+        const backendMessage = failed.find(
+            (item) => item?.message && item.message.trim()
+        )?.message
+
+        const msg =
+            backendMessage ||
+            (failed.length === 1
+            ? 'The lead could not be assigned.'
+            : `${failed.length} leads could not be assigned.`)
+
+        window.$showNotification?.(
+            msg,
+            failed.length === ids.length ? 'error' : 'warning'
+        )
+
+        if (ok.length) {
+            await fetchLeadPool()
+        }
+
+        await fetchAssignmentStatus()
+        }
   } catch (err) {
     window.$showNotification?.(err?.message || 'Assignment failed', 'error')
   }
@@ -788,10 +819,27 @@ const formatMaskedQuestion = (questionData) => {
     }
     return '—'
 }
+async function fetchAssignmentStatus() {
+    try {
+        const response = await api.get(
+            '/lead-pool/assignment-status'
+        )
+        
 
-onMounted(() => {
+        assignmentStatus.value =
+            response?.data?.data ?? assignmentStatus.value
+    } catch (error) {
+        console.error(
+            'Failed to load assignment status',
+            error
+        )
+    }
+}
+onMounted(async () => {
     window.addEventListener('keydown', onLeadPoolKeydown)
     scheduleFetchLeadPool()
+        await fetchAssignmentStatus()
+
 })
 
 onUnmounted(() => {
