@@ -114,7 +114,8 @@ Route::post('auth/register', [AuthController::class, 'register']);
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
-Route::middleware(['throttle:300,1','block.bots'])->group(function () {
+        // ,'block.bots'
+Route::middleware(['throttle:300,1'])->group(function () {
 Route::prefix('settings')->group(function () {
     Route::get('/deal-costs', [DealCostSettingController::class, 'index']);
     Route::get('/deal-costs/{key}', [DealCostSettingController::class, 'show']);
