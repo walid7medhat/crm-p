@@ -245,7 +245,8 @@ class LeadResource extends JsonResource
         if (! empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) {
             foreach ($rawMetaData['field_data'] as $field) {
                 if (isset($field['name']) && isset($field['values'][0])) {
-                    $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
+                    // $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
+                    $label = $field['name'];
                     $facebookFields[$label] = $field['values'][0];
                 }
             }
