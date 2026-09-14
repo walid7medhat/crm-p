@@ -91,7 +91,7 @@
                                         <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
                                     </span>
                                 </th>
-                                <th scope="col" v-if="hasAdminRole() || hasSuperAdminRole()">Location</th>
+                                <!-- <th scope="col" v-if="hasAdminRole() || hasSuperAdminRole()">Location</th> -->
 
                                 <th scope="col">Actions</th>
                                 <th scope="col" @click="sortBy('created_at')" class="sortable">
@@ -194,7 +194,7 @@
                                     </span>
                                     <span v-else class="text-muted text-sm">Never</span>
                                 </td>
-                                <td v-if="hasAdminRole() || hasSuperAdminRole()">
+                                <!-- <td v-if="hasAdminRole() || hasSuperAdminRole()">
                                     <a v-if="user.last_login_location && user.last_login_lat && user.last_login_lng"
                                        :href="mapsLink(user)"
                                        target="_blank"
@@ -207,7 +207,7 @@
                                         <iconify-icon icon="mdi:map-marker-outline" class="me-1"></iconify-icon>{{ user.last_login_location }}
                                     </span>
                                     <span v-else class="text-muted text-sm">-</span>
-                                </td>
+                                </td> -->
                                     <td>
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-outline-secondary dropdown-toggle"

@@ -82,10 +82,10 @@
                             v-if="lead.has_service_duplicate"
                             class="service-dup-badge"
                         >
-                            Provide
+                            Blacklisted
                         </span>
                         <div 
-                            v-if="lead.duplicate_no > 0"
+                            v-if="isAdminOrSuper &&  lead.duplicate_no > 0"
                             class="duplicate-badge position-relative cursor-pointer"
                             @click.stop="openDuplicateLeadsModal(lead.id, $event)"
                         >

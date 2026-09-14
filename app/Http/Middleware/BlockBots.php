@@ -12,19 +12,14 @@ class BlockBots
     {
         $user = auth()->user();
 
-        // Full bypass for super_admin and user 30
         if ($user && ($user->hasRole('super_admin') || $user->id == 30)) {
             return $next($request);
         }
 
-        // Power users get much higher limits instead of a full bypass — they
-        // still go through the account-status/bot-detection checks below,
-        // just with a far higher ceiling before hitting a 429.
         $powerUserIds = [33];
         $isPowerUser = $user && in_array($user->id, $powerUserIds, true);
         $rateMultiplier = $isPowerUser ? 10 : 1;
 
-        // Account status check
         if ($user && $user->status != 'active') {
             Auth::logout();
             $request->session()->invalidate();
@@ -32,100 +27,102 @@ class BlockBots
             abort(403, 'Account inactive');
         }
 
-        // User-Agent check
         $agent = strtolower($request->header('User-Agent') ?? '');
         $botKeywords = ['curl', 'python', 'scrapy', 'wget', 'perl', 'ruby', 'java/', 'http-client'];
-        
+
         if ($agent === '' || str_contains($agent, 'bot')) {
             abort(403, 'Bots not allowed');
         }
-        
         foreach ($botKeywords as $keyword) {
             if (str_contains($agent, $keyword)) {
                 abort(403, 'Bots not allowed');
             }
         }
 
-        // --------------------------------------
-        // 1. Global rate (for normal pages)
-        // --------------------------------------
-        $globalLimit = ($user ? 400 : 120) * $rateMultiplier;
-        $key = 'hits_' . ($user?->id ?? $request->ip());
-        $count = cache()->get($key, 0);
-        $count++;
-        cache()->put($key, $count, now()->addSeconds(60));
+        $identity = $user?->id ?? $request->ip();
 
-        if ($count > $globalLimit) {
-            if (!$user) Auth::logout();
-            abort(429, 'Too many requests');
+        // Cheap short-circuit — check the block BEFORE doing any counter work.
+        $tempBlockKey = "temp_block_{$identity}";
+        if (cache()->get($tempBlockKey)) {
+            return $this->tooMany('You are temporarily blocked. Please try again later.', 60);
         }
 
         // --------------------------------------
-        // 2. Per-endpoint abuse detection (limit varies by request type)
+        // 1. Global rate (atomic increment — avoids the get/put race where
+        //    concurrent requests can all read the same stale count)
+        // --------------------------------------
+        $globalLimit = ($user ? 400 : 120) * $rateMultiplier;
+        $key = "hits_{$identity}";
+        $count = $this->hit($key, 60);
+
+        if ($count > $globalLimit) {
+            if (!$user) Auth::logout();
+            return $this->tooMany('Too many requests', 60);
+        }
+
+        // --------------------------------------
+        // 2. Per-endpoint abuse detection
         // --------------------------------------
         $path = $request->path();
         $method = $request->method();
-        
-        // Different thresholds depending on the endpoint type
+
         $limits = [
             'write' => ($user ? 60 : 20) * $rateMultiplier,
             'read' => ($user ? 300 : 100) * $rateMultiplier,
             'auth' => 10,
         ];
-        
-        // Classify which type this endpoint belongs to
+
         $isWriteRequest = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE']);
         $isAuthRequest = str_contains($path, 'login') || str_contains($path, 'register');
-        
-        if ($isAuthRequest) {
-            $limit = $limits['auth'];
-        } elseif ($isWriteRequest) {
-            $limit = $limits['write'];
-        } else {
-            $limit = $limits['read'];
-        }
-        
-        $routeKey = 'route_hits_' . ($user?->id ?? $request->ip()) . ':' . $path . ':' . $method;
-        $routeCount = cache()->get($routeKey, 0);
-        $routeCount++;
-        
-        // Shorter window for repeated actions
-        $duration = $isAuthRequest ? 60 * 5 : 60; // Auth: 5 minutes, everything else: 1 minute
-        cache()->put($routeKey, $routeCount, now()->addSeconds($duration));
-        
+        $limit = $isAuthRequest ? $limits['auth'] : ($isWriteRequest ? $limits['write'] : $limits['read']);
+        $duration = $isAuthRequest ? 300 : 60;
+
+        $routeKey = "route_hits_{$identity}:{$path}:{$method}";
+        $routeCount = $this->hit($routeKey, $duration);
+
         if ($routeCount > $limit) {
-            abort(429, "Rate limit exceeded for this action. Please wait {$duration} seconds.");
-        }
-        
-        // Temporary block check
-        $tempBlockKey = 'temp_block_' . ($user?->id ?? $request->ip());
-        if (cache()->get($tempBlockKey)) {
-            abort(429, 'You are temporarily blocked. Please try again later.');
+            // Scoped penalty: only THIS endpoint backs off. A retry storm
+            // hitting one flaky route must never lock the user out of
+            // notifications/sidebar/etc — those are unrelated endpoints.
+            return $this->tooMany(
+                "Rate limit exceeded for this action. Please wait {$duration} seconds.",
+                $duration
+            );
         }
 
         // --------------------------------------
         // 3. Burst detection — DoS protection only
         // --------------------------------------
-        $burstKey = 'burst_' . ($user?->id ?? $request->ip());
-        $burstCount = cache()->get($burstKey, 0);
-        $burstCount++;
-        
-        if ($burstCount == 1) {
-            cache()->put($burstKey, $burstCount, now()->addSeconds(10));
-        } else {
-            cache()->put($burstKey, $burstCount, now()->addSeconds(10));
-        }
-        
-        // 200 requests in 10 seconds = 20 requests/second — real DoS, not a normal user
+        $burstKey = "burst_{$identity}";
+        $burstCount = $this->hit($burstKey, 10);
+
         if ($burstCount > 200 * $rateMultiplier) {
-            // Even here, don't ban the account permanently — just a temporary block
-            $tempBlockKey = 'temp_block_' . ($user?->id ?? $request->ip());
-            cache()->put($tempBlockKey, true, now()->addMinutes(15));
-            
-            if ($user) Auth::logout();
-            abort(429, 'Rate limit exceeded. Too many requests in a short time.');
+            cache()->put($tempBlockKey, true, now()->addMinutes(5)); // was 15 — see note below
+            // Don't force-logout an authenticated user for a burst that is very
+            // plausibly a client retry bug rather than actual abuse. Guests/IPs
+            // (no session to protect) still get logged out of any stray session.
+            if (!$user) Auth::logout();
+            return $this->tooMany('Rate limit exceeded. Too many requests in a short time.', 300);
         }
 
         return $next($request);
+    }
+
+    /**
+     * Atomically increment a counter, seeding its TTL only on first hit.
+     */
+    private function hit(string $key, int $ttlSeconds): int
+    {
+        $count = cache()->increment($key);
+        if ($count === 1) {
+            cache()->put($key, 1, now()->addSeconds($ttlSeconds));
+        }
+        return $count;
+    }
+
+    private function tooMany(string $message, int $retryAfterSeconds)
+    {
+        return response()->json(['message' => $message], 429)
+            ->header('Retry-After', $retryAfterSeconds);
     }
 }

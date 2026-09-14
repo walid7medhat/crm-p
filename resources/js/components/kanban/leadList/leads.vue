@@ -177,10 +177,10 @@
                                                             class="lead-blacklist-badge"
                                                             title="Blacklist"
                                                         >
-                                                            Black List
+                                                           Blacklisted
                                                         </span>
                                                         <div
-                                                            v-if="Number(task.duplicate_no) > 0"
+                                                            v-if="isAdminOrSuperAdmin && Number(task.duplicate_no) > 0"
                                                             class="duplicate-badge position-relative cursor-pointer"
                                                             @click.stop="openDuplicateLeadsModal(task.id, $event)"
                                                         >

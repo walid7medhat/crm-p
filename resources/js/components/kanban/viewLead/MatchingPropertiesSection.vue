@@ -2,21 +2,12 @@
     <div v-if="lead?.id && listings.length" class="matching-properties-section info-section">
         <div class="info-section-title">Matching property</div>
 
-        <div v-if="resolvingIntegration" class="matching-loading text-muted small py-2">
-            Loading project from integration…
-        </div>
-        <div v-else-if="integrationMissingProject" class="matching-empty-hint">
-            This lead is linked to an integration that has no project selected. Assign a project in Integrations so matching listings use that project only.
-        </div>
-        <div v-else-if="!hasSearchCriteria" class="matching-empty-hint">
-            Add a project via the lead’s integration, or set location, property type, bedrooms, or budget in Client Requirement to see matching listings.
-        </div>
-
-        <div v-else-if="loading" class="matching-loading text-muted small py-2">Loading matches…</div>
-
-        <div v-else-if="error" class="matching-error text-muted small py-2">{{ error }}</div>
-
-        <div v-else-if="!listings.length" class="matching-empty-hint">No matching listings found.</div>
+        <div v-if="resolvingIntegration">Loading project from integration…</div>
+        <div v-else-if="integrationMissingProject">...</div>
+        <div v-else-if="!hasSearchCriteria">Add a project via the lead's integration...</div>
+        <div v-else-if="loading">Loading matches…</div>
+        <div v-else-if="error">{{ error }}</div>
+        <div v-else-if="!listings.length">No matching listings found.</div>
 
         <template v-else>
             <!-- Native scroll-snap strip (avoids vue3-carousel + Bootstrap .carousel class conflicts that collapsed slides). -->
@@ -233,7 +224,26 @@ function bindScrollResize() {
         updateScrollUi()
     })
 }
+// Anything that gives the section a reason to exist at all — either the lead is
+// tied to an integration (which may resolve to a project, or may show the
+// "missing project" hint), or it has at least one concrete requirement field.
+const canAttemptMatching = computed(() => {
+    const l = props.lead
+    if (!l) return false
+    if (l.integration_id) return true
+    if (effectiveProjectId.value != null) return true
 
+    const priorityReq = getPriorityRequirement(l)
+    if (!priorityReq) return false
+
+    return !!(
+        priorityReq.area_id ||
+        priorityReq.property_type_id ||
+        (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') ||
+        priorityReq.budget_from != null ||
+        priorityReq.budget_to != null
+    )
+})
 onMounted(() => {
     window.addEventListener('resize', updateScrollUi)
 })
