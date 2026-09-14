@@ -328,8 +328,9 @@ const moreQuery = computed(() => {
     if (priorityReq) {
         if (priorityReq.area_id) q.area_id = String(priorityReq.area_id)
         if (priorityReq.property_type_id) q.type_id = String(priorityReq.property_type_id)
-        const saleRent = normalizeSaleRent(priorityReq.lead_type ?? l?.lead_type)
+        const saleRent = normalizeSaleRent(priorityReq.lead_type )
         if (saleRent) q.sale_rent = saleRent
+        if (priorityReq.lead_type) q.listing_status = priorityReq.lead_type
         if (priorityReq.bedrooms != null && priorityReq.bedrooms !== '') {
             const b = String(priorityReq.bedrooms).toLowerCase() === 'studio' ? 'Studio' : String(priorityReq.bedrooms)
             q.beds = b
@@ -371,8 +372,9 @@ function buildApiParams() {
 
     if (l?.area_id) params.area_id = l.area_id
     if (l?.property_type_id) params.property_type_id = l.property_type_id
-       const saleRent = normalizeSaleRent(l?.lead_type ?? props.lead?.lead_type)
+       const saleRent = normalizeSaleRent(l?.lead_type )
     if (saleRent) params.sale_rent = saleRent
+    if (l?.lead_type) params.listing_status = l?.lead_type
     if (l?.bedrooms != null && l.bedrooms !== '') {
         const raw = l.bedrooms
         if (String(raw).toLowerCase() === 'studio') {
