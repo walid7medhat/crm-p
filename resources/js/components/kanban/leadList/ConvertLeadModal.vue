@@ -33,10 +33,10 @@
                             <div class="aside-skyline"></div>
                             <div class="aside-content">
                                 <span class="aside-eyebrow">Turn opportunities into deals</span>
-                                <h3 class="aside-title">
+                                <h6 class="aside-title">
                                     Create a new deal and
                                     <span class="aside-accent">move forward</span>.
-                                </h3>
+                                </h6>
                                 <p class="aside-copy">
                                     Select the deal type that best matches this lead’s interest.
                                 </p>
