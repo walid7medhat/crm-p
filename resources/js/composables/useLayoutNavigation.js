@@ -188,11 +188,7 @@ export function getRememberedCrmSection() {
 export function getCrmSectionEntryPath(section, ctx = {}) {
   if (section === CRM_SECTIONS.DEAL) return '/kanban_deal';
   if (section === CRM_SECTIONS.LISTINGS) {
-    const fallback =
-      ctx.isAdmin || ctx.hasPermission?.('listings-list')
-        ? '/alllisting'
-        : '/my-listing';
-    return getListingsEntryPath(fallback);
+    return getListingsEntryPath('/alllisting');
   }
   return '/kanban';
 }
@@ -362,7 +358,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
 }
 
 export function buildCrmSectionHeaderTabs(section, ctx = {}) {
-  const { isAdmin, isShowOnlyListing, hasPermission, user } = ctx; // ← أضف user
+  const { isAdmin, isSuperAdmin, isShowOnlyListing, hasPermission, user } = ctx; 
 
   if (section === CRM_SECTIONS.LEAD) {
     return [
@@ -379,25 +375,40 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     ];
   }
 
-  if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
+   if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
     const canList = !hasPermission || hasPermission('listings-list');
-    const mainPath =
-      isAdmin || canList
-        ? '/alllisting'
-        : '/my-listing';
     const { listingTabCounts = {} } = ctx;
+
+    // Agents get their own My Listing tab; admins / super admins see All Listings only.
+    const showMyListings = !isAdmin && !isSuperAdmin;
+
+    // '/my-listing' must leave the Listings tab's match set when it has its own tab,
+    // otherwise isTabActive lights up both at once on that route.
+    const listingsMatchPaths = showMyListings
+      ? LISTINGS_INVENTORY_PATHS.filter((p) => p !== '/my-listing')
+      : LISTINGS_INVENTORY_PATHS;
 
     const tabs = [
       {
         id: 'listings',
         label: 'Listings',
         type: 'route',
-        path: mainPath,
-        matchPaths: LISTINGS_INVENTORY_PATHS,
+        path: '/alllisting',
+        matchPaths: listingsMatchPaths,
         count: listingTabCounts.listings || 0,
       },
     ];
 
+    if (showMyListings) {
+      tabs.push({
+        id: 'my-listing',
+        label: 'My Listing',
+        type: 'route',
+        path: '/my-listing',
+        matchPaths: ['/my-listing'],
+        count: listingTabCounts.myListings || 0,
+      });
+    }
     if (canList) {
       tabs.push({
         id: 'notify-me',

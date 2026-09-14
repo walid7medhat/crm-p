@@ -849,22 +849,20 @@ const isCustomAdmin = computed(() => {
 
 const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only show listings') ?? false);
 
-const listingTabCounts = ref({ listings: 0, requests: 0, viewings: 0 });
-
+const listingTabCounts = ref({ listings: 0, myListings: 0, requests: 0, viewings: 0 });
 async function fetchListingTabCounts() {
   try {
     const response = await api.get('/sidebar/counts');
     if (!response.data?.success) return;
     const counts = response.data.data || {};
-    listingTabCounts.value = {
-      listings: isAdmin.value
-        ? (counts.listings?.all || 0)
-        : (counts.listings?.my || 0),
-      requests: isAdmin.value
-        ? (counts.orders?.all || 0)
-        : ((counts.requests?.all || 0) + (counts.orders?.all || 0)),
-      viewings: 0,
-    };
+      listingTabCounts.value = {
+        listings: counts.listings?.all || 0,
+        myListings: counts.listings?.my || 0,
+        requests: isAdmin.value
+          ? (counts.orders?.all || 0)
+          : ((counts.requests?.all || 0) + (counts.orders?.all || 0)),
+        viewings: 0,
+      };
   } catch {
     /* ignore */
   }

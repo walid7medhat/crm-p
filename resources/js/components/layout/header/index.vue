@@ -815,11 +815,8 @@ const showCrmListingsFlat = computed(() =>
   !isShowOnlyListing.value,
 );
 
-const crmListingsFlatPath = computed(() => {
-  const fallback = user.value?.roles?.includes('admin') ? '/alllisting' : '/my-listing';
-  return getListingsEntryPath(fallback);
-});
 
+const crmListingsFlatPath = computed(() => getListingsEntryPath('/alllisting'));
 const mainMenuItems = computed(() => {
   const items = [];
 
