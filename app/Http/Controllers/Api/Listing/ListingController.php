@@ -779,7 +779,15 @@ public function getMatchingListings(Request $request)
     $bedrooms  = $request->number_of_bedrooms;
     $minPrice  = $request->min_price;
     $maxPrice  = $request->max_price;
+    $listingStatus = $request->input('listing_status');
 
+    // -----------------------------
+    // 🏷️ SALE / RENT (hard filter — never relaxed)
+    // -----------------------------
+    if (!empty($listingStatus)) {
+        $needle = str_contains(strtolower($listingStatus), 'rent') ? 'rent' : 'sale';
+        $baseQuery->where('listing_status', 'like', "%{$needle}%");
+    }
     // -----------------------------
     // 🗺️ LOCATION (Priority)
     // -----------------------------
