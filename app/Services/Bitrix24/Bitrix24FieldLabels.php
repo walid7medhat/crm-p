@@ -36,6 +36,8 @@ class Bitrix24FieldLabels
     private const KNOWN_LABELS = [
         'UF_CRM_1649761345243' => 'Purpose you are looking to purchase?',
         'UF_CRM_68D4F6FE4AEAA' => 'How can we contact you?',
+         'UF_CRM_LEAD_1643630501834' => 'Work Phone',
+
     ];
 
     /**
