@@ -4,7 +4,11 @@ namespace App\Http\Resources\Lead;
 
 use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use App\Models\Integration;
+use App\Models\Lead;
+use App\Models\LeadHistory;
+use App\Models\User;
+use App\Services\Bitrix24\Bitrix24FieldLabels;
 /**
  * Lightweight lead payload for Kanban board cards (avoids per-lead history/duplicate queries).
  */
