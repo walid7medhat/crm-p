@@ -1041,6 +1041,7 @@ const appliedSearchParams = ref(null)
 
 // Check if user is admin or super_admin (same pattern as header/index.vue)
 const isAdminOrSuperAdmin = computed(() => {
+    console.log("user.value"+user.value);
     if (!user.value) return false
     
     const isAdminUser = user.value.roles?.includes('super_admin') || 
