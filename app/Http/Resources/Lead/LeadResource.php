@@ -562,24 +562,29 @@ class LeadResource extends JsonResource
      * @return array<int>
      */
     protected function resolveDuplicateIds(): array
-    {
-        $leadId = (int) $this->id;
-        if (static::$collectionPrimed && array_key_exists($leadId, static::$duplicateIdsByLeadId)) {
-            return static::$duplicateIdsByLeadId[$leadId];
-        }
+        {
+            $leadId = (int) $this->id;
+            if (static::$collectionPrimed && array_key_exists($leadId, static::$duplicateIdsByLeadId)) {
+                return static::$duplicateIdsByLeadId[$leadId];
+            }
 
-        if (empty($this->work_phone)) {
-            return [];
-        }
+            if (empty($this->work_phone)) {
+                return [];
+            }
 
-        return Lead::query()
-            ->where('id', '!=', $this->id)
-            ->whereNotNull('work_phone')
-            ->where('work_phone', $this->work_phone)
-            ->limit(200)
-            ->pluck('id')
-            ->all();
-    }
+            $normalized = preg_replace('/\D+/', '', $this->work_phone);
+            if ($normalized === '') {
+                return [];
+            }
+
+            return Lead::query()
+                ->where('id', '!=', $this->id)
+                ->whereNotNull('work_phone')
+                ->whereRaw('REGEXP_REPLACE(work_phone, "[^0-9]", "") = ?', [$normalized])
+                ->limit(200)
+                ->pluck('id')
+                ->all();
+        }
 
     protected function hasServiceDuplicate(): bool
     {
