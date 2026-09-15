@@ -9,12 +9,14 @@ use App\Models\Lead;
 use App\Models\LeadHistory;
 use App\Models\User;
 use App\Services\Bitrix24\Bitrix24FieldLabels;
+
 /**
  * Lightweight lead payload for Kanban board cards (avoids per-lead history/duplicate queries).
  */
 class KanbanLeadCardResource extends JsonResource
 {
     use ResolvesLeadLastActivity;
+
     /** @var array<string, int> */
     protected static array $duplicateCountsByPhone = [];
 
@@ -22,29 +24,39 @@ class KanbanLeadCardResource extends JsonResource
     protected static array $serviceDuplicateByLeadId = [];
 
     /** @var array<int, array<int>> */
-        protected static array $duplicateIdsByLeadId = [];
+    protected static array $duplicateIdsByLeadId = [];
 
-        /** @var bool */
-        protected static bool $collectionPrimed = false;
-       
+    /** @var bool */
+    protected static bool $collectionPrimed = false;
 
-    public static function setKanbanMeta(array $duplicateCountsByPhone, array $serviceDuplicateByLeadId): void
-    {
+    /**
+     * @param array<string, int> $duplicateCountsByPhone
+     * @param array<int, bool> $serviceDuplicateByLeadId
+     * @param array<int, array<int>> $duplicateIdsByLeadId  leadId => [duplicate lead ids]
+     */
+    public static function setKanbanMeta(
+        array $duplicateCountsByPhone,
+        array $serviceDuplicateByLeadId,
+        array $duplicateIdsByLeadId = []
+    ): void {
         static::$duplicateCountsByPhone = $duplicateCountsByPhone;
         static::$serviceDuplicateByLeadId = $serviceDuplicateByLeadId;
-         static::$duplicateIdsByLeadId;
+        static::$duplicateIdsByLeadId = $duplicateIdsByLeadId;
+        static::$collectionPrimed = true;
     }
 
     public static function clearKanbanMeta(): void
     {
         static::$duplicateCountsByPhone = [];
         static::$serviceDuplicateByLeadId = [];
+        static::$duplicateIdsByLeadId = [];
+        static::$collectionPrimed = false;
     }
 
     public function toArray($request): array
     {
         $phone = $this->work_phone;
-          $duplicateIds = $this->resolveDuplicateIds();
+        $duplicateIds = $this->resolveDuplicateIds();
 
         [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity(includeHistoryFallback: false);
 
@@ -90,8 +102,6 @@ class KanbanLeadCardResource extends JsonResource
             'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,
             'last_activity_at' => $lastActivityAt,
-            // Richer payload (parent/admin_parent/office via UserResource) — this is what feeds
-            // the "Activity" person hover card's Reports To/Branch, unlike the other slim fields above.
             'last_activity_user' => $this->formatActivityUser($lastActivityUser),
             'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
@@ -104,13 +114,7 @@ class KanbanLeadCardResource extends JsonResource
         ];
     }
 
-    /**
-     * Per-request memoization of user_id => [admin_parent_id, admin_parent_name, office_name],
-     * so the same responsible person repeated across many kanban cards only walks their
-     * parent chain once (see admin_parent/office accessors on User, User.php:271-304).
-     *
-     * @var array<int, array{admin_parent_id: int|null, admin_parent_name: string|null, office_name: string|null}>
-     */
+    /** @var array<int, array{admin_parent_id: int|null, admin_parent_name: string|null, office_name: string|null}> */
     protected static array $hierarchyCache = [];
 
     protected function resolveHierarchy($user): array
@@ -129,11 +133,6 @@ class KanbanLeadCardResource extends JsonResource
         return static::$hierarchyCache[$user->id];
     }
 
-    /**
-     * Compact user payload for pool/kanban cards (avoids UserResource children/parent role queries).
-     *
-     * @return array<string, mixed>|null
-     */
     protected function formatLeadPoolUser($user, bool $withHierarchy = false): ?array
     {
         if (! $user) {
@@ -150,7 +149,6 @@ class KanbanLeadCardResource extends JsonResource
         ];
 
         if ($withHierarchy) {
-            // "Reports To" = direct parent; "Branch" = office (see leads.vue / ResponsiblePersonSection.vue).
             $payload['parent_id'] = $user->parent_id;
             $payload['parent_name'] = \App\Models\User::resolveDisplayName($user->parent);
 
@@ -163,39 +161,43 @@ class KanbanLeadCardResource extends JsonResource
         return $payload;
     }
 
-       /**
+    /**
      * @return array<int>
      */
     protected function resolveDuplicateIds(): array
-        {
-            $leadId = (int) $this->id;
-            if (static::$collectionPrimed && array_key_exists($leadId, static::$duplicateIdsByLeadId)) {
-                return static::$duplicateIdsByLeadId[$leadId];
-            }
+    {
+        $leadId = (int) $this->id;
 
-            if (empty($this->work_phone)) {
-                return [];
-            }
-
-            $normalized = preg_replace('/\D+/', '', $this->work_phone);
-            if ($normalized === '') {
-                return [];
-            }
-
-            return Lead::query()
-                ->where('id', '!=', $this->id)
-                ->whereNotNull('work_phone')
-                ->whereRaw('REGEXP_REPLACE(work_phone, "[^0-9]", "") = ?', [$normalized])
-                ->limit(200)
-                ->pluck('id')
-                ->all();
+        if (static::$collectionPrimed) {
+            return static::$duplicateIdsByLeadId[$leadId] ?? [];
         }
+
+        // Fallback: no bulk meta was set (e.g. resource used outside the kanban board),
+        // so fall back to a per-lead query as before.
+        if (empty($this->work_phone)) {
+            return [];
+        }
+
+        $normalized = preg_replace('/\D+/', '', $this->work_phone);
+        if ($normalized === '') {
+            return [];
+        }
+
+        return Lead::query()
+            ->where('id', '!=', $this->id)
+            ->whereNotNull('work_phone')
+            ->whereRaw('REGEXP_REPLACE(work_phone, "[^0-9]", "") = ?', [$normalized])
+            ->limit(200)
+            ->pluck('id')
+            ->all();
+    }
 
     protected function hasServiceDuplicate(): bool
     {
         $leadId = (int) $this->id;
-        if (static::$collectionPrimed && array_key_exists($leadId, static::$serviceDuplicateByLeadId)) {
-            return static::$serviceDuplicateByLeadId[$leadId];
+
+        if (static::$collectionPrimed) {
+            return static::$serviceDuplicateByLeadId[$leadId] ?? false;
         }
 
         if (! $this->work_phone && ! $this->email) {
