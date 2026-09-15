@@ -17,10 +17,18 @@ class KanbanLeadCardResource extends JsonResource
     /** @var array<int, bool> */
     protected static array $serviceDuplicateByLeadId = [];
 
+    /** @var array<int, array<int>> */
+        protected static array $duplicateIdsByLeadId = [];
+
+        /** @var bool */
+        protected static bool $collectionPrimed = false;
+       
+
     public static function setKanbanMeta(array $duplicateCountsByPhone, array $serviceDuplicateByLeadId): void
     {
         static::$duplicateCountsByPhone = $duplicateCountsByPhone;
         static::$serviceDuplicateByLeadId = $serviceDuplicateByLeadId;
+         static::$duplicateIdsByLeadId;
     }
 
     public static function clearKanbanMeta(): void
@@ -32,9 +40,7 @@ class KanbanLeadCardResource extends JsonResource
     public function toArray($request): array
     {
         $phone = $this->work_phone;
-        $duplicateNo = $phone
-            ? (static::$duplicateCountsByPhone[$phone] ?? 0)
-            : 0;
+          $duplicateIds = $this->resolveDuplicateIds();
 
         [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity(includeHistoryFallback: false);
 
@@ -72,8 +78,8 @@ class KanbanLeadCardResource extends JsonResource
             'area' => $this->area?->name ?? $this->area?->title,
             'created_at' => $this->created_at?->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
-            'duplicate_no' => $duplicateNo,
-            'duplicate_ids' => [],
+            'duplicate_no' => count($duplicateIds),
+            'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
             'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'responsible_person' => $this->whenLoaded('responsiblePerson', fn () => $this->formatLeadPoolUser($this->responsiblePerson, withHierarchy: true)),
@@ -86,7 +92,7 @@ class KanbanLeadCardResource extends JsonResource
             'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
             'api_first_question' => null,
-            'has_service_duplicate' => static::$serviceDuplicateByLeadId[$this->id] ?? false,
+            'has_service_duplicate' => $this->hasServiceDuplicate(),
             'score' => $this->score,
             'priority' => $this->priority,
             'intent' => $this->intent,
@@ -151,5 +157,58 @@ class KanbanLeadCardResource extends JsonResource
         }
 
         return $payload;
+    }
+
+       /**
+     * @return array<int>
+     */
+    protected function resolveDuplicateIds(): array
+        {
+            $leadId = (int) $this->id;
+            if (static::$collectionPrimed && array_key_exists($leadId, static::$duplicateIdsByLeadId)) {
+                return static::$duplicateIdsByLeadId[$leadId];
+            }
+
+            if (empty($this->work_phone)) {
+                return [];
+            }
+
+            $normalized = preg_replace('/\D+/', '', $this->work_phone);
+            if ($normalized === '') {
+                return [];
+            }
+
+            return Lead::query()
+                ->where('id', '!=', $this->id)
+                ->whereNotNull('work_phone')
+                ->whereRaw('REGEXP_REPLACE(work_phone, "[^0-9]", "") = ?', [$normalized])
+                ->limit(200)
+                ->pluck('id')
+                ->all();
+        }
+
+    protected function hasServiceDuplicate(): bool
+    {
+        $leadId = (int) $this->id;
+        if (static::$collectionPrimed && array_key_exists($leadId, static::$serviceDuplicateByLeadId)) {
+            return static::$serviceDuplicateByLeadId[$leadId];
+        }
+
+        if (! $this->work_phone && ! $this->email) {
+            return false;
+        }
+
+        return Lead::query()
+            ->where('id', '!=', $this->id)
+            ->where('status_lead', 'blacklist')
+            ->where(function ($q) {
+                if ($this->work_phone) {
+                    $q->orWhere('work_phone', $this->work_phone);
+                }
+                if ($this->email) {
+                    $q->orWhere('email', $this->email);
+                }
+            })
+            ->exists();
     }
 }
