@@ -180,7 +180,7 @@
                                                            Blacklisted
                                                         </span>
                                                         <div
-                                                            v-if="isAdminOrSuperAdmin && Number(task.duplicate_no) > 0"
+                                                            v-if="isAdminOrSuperAdmin && task.duplicate_no > 0"
                                                             class="duplicate-badge position-relative cursor-pointer"
                                                             @click.stop="openDuplicateLeadsModal(task.id, $event)"
                                                         >
@@ -1041,12 +1041,13 @@ const appliedSearchParams = ref(null)
 
 // Check if user is admin or super_admin (same pattern as header/index.vue)
 const isAdminOrSuperAdmin = computed(() => {
-    console.log("user.value"+user.value);
-    if (!user.value) return false
+ 
+
+
+       if (!user.value) return false
     
-    const isAdminUser = user.value.roles?.includes('super_admin') || 
-                       user.value.roles?.includes('admin')
-    
+    const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') 
+       console.log("user.value"+isAdminUser);
     return isAdminUser
 })
 
