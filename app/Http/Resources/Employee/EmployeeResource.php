@@ -14,6 +14,7 @@ class EmployeeResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
+            'birth_date'=>$this->birth_date,
             'personal_phone' => $this->personal_phone,  // NEW
             'home_country_phone_number' => $this->home_country_phone_number,  // NEW
             'nationality' => $this->nationality,  // NEW

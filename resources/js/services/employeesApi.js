@@ -57,6 +57,7 @@ export function normalizeEmployee(emp) {
     name: emp.name || profile.employee_name || '—',
     email: emp.email || '—',
     phone: emp.phone || emp.personal_phone || '—',
+    birth_date:emp.birth_date,
     personalPhone: emp.personal_phone || '—',
     avatar: emp.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || 'E')}&background=733e87&color=fff`,
     status: emp.status || 'active',

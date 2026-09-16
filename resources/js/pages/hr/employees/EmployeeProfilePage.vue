@@ -31,6 +31,7 @@
             <p><span>Personal phone</span><strong>{{ employee.personalPhone }}</strong></p>
             <p><span>Manager</span><strong>{{ employee.manager }}</strong></p>
             <p><span>Branch</span><strong>{{ employee.branch }}</strong></p>
+            <p><span>Birth date</span><strong>{{ formatDate(employee.birth_date) }}</strong></p>
             <p><span>Joining date</span><strong>{{ formatDate(employee.joiningDate) }}</strong></p>
           </div>
 
