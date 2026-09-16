@@ -112,6 +112,20 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return static::resolveDisplayName($this);
     }
 
+    /**
+     * Active staff whose birth_date month/day match the given date (defaults to today).
+     * Shared by birthday celebration emails/notifications and the in-app celebration layer.
+     */
+    public function scopeActiveBirthdayOn($query, $date = null)
+    {
+        $date = $date ? \Carbon\Carbon::parse($date) : now();
+
+        return $query->where('status', 'active')
+            ->whereNotNull('birth_date')
+            ->whereMonth('birth_date', $date->month)
+            ->whereDay('birth_date', $date->day);
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

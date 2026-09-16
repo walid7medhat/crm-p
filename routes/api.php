@@ -145,6 +145,7 @@ Route::prefix('auth')->group(function () {
         Route::post('notifications/read-all', [AuthController::class, 'markAllNotificationsAsRead']);
         Route::any('notifications/{id}/read', [AuthController::class, 'markNotificationAsRead']);
         Route::delete('notifications/{id}', [AuthController::class, 'deleteNotification']);
+        Route::get('birthdays/today', [AuthController::class, 'todaysBirthdays']);
      });
 });
 Route::prefix('recruitment')->group(function () {
