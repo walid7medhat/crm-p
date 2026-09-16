@@ -19,11 +19,7 @@ class SendBirthdayCelebrations extends Command
     {
         $today = now();
 
-        $birthdayUsers = User::where('status', 'active')
-            ->whereNotNull('birth_date')
-            ->whereMonth('birth_date', $today->month)
-            ->whereDay('birth_date', $today->day)
-            ->get();
+        $birthdayUsers = User::query()->activeBirthdayOn($today)->get();
 
         if ($birthdayUsers->isEmpty()) {
             $this->info('No birthdays today.');

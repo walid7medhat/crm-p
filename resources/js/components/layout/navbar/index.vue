@@ -331,6 +331,18 @@
         </div>
       </div>
 
+      <div
+        v-if="birthdayBannerVisible"
+        class="navbar-birthday-greeting"
+        aria-hidden="true"
+      >
+        <span class="navbar-birthday-greeting__emoji" aria-hidden="true">🎉</span>
+        <span class="navbar-birthday-greeting__text">
+          <span class="navbar-birthday-greeting__title">{{ birthdayBannerTitle }}</span>
+          <span class="navbar-birthday-greeting__sub">Warm wishes from OIA Properties</span>
+        </span>
+      </div>
+
       <div class="navbar-header-right">
         <!-- ========== KANBAN SEARCH & CREATE BUTTON (تظهر فقط في صفحة الكانبان) ========== -->
       <template v-if="isKanbanRoute">
@@ -753,6 +765,7 @@ import {
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import { useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue';
 import SystemOverviewLangToggle from '@/components/system-overview/SystemOverviewLangToggle.vue';
@@ -767,6 +780,7 @@ import Swal from 'sweetalert2';
 import { BFormInput } from 'bootstrap-vue-3';
 const userPlaceholder = userAvatarPlaceholder;
 const { theme, toggleTheme } = useTheme();
+const { birthdayBannerVisible, birthdayBannerTitle } = useBirthdayCelebrationBanner();
 const router = useRouter();
 const route = useRoute();
 
@@ -2624,6 +2638,94 @@ const showBackButton = computed(() => {
   min-height: 0;
   flex: 1 1 auto;
   padding: 10px 0;
+}
+
+.navbar-header-toolbar:has(.navbar-birthday-greeting) {
+  grid-template-columns: auto minmax(0, max-content) minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.navbar-birthday-greeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: min(280px, 34vw);
+  min-width: 0;
+  padding: 0.4rem 0.7rem 0.4rem 0.55rem;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 4px 14px rgba(11, 7, 54, 0.2),
+    0 0 0 1px rgba(11, 7, 54, 0.04);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.navbar-birthday-greeting__emoji {
+  flex: 0 0 auto;
+  font-size: 14px;
+  line-height: 1;
+  filter: saturate(1.1);
+}
+
+.navbar-birthday-greeting__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.navbar-birthday-greeting__title {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0b0736;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-birthday-greeting__sub {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #4b4568;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1200px) {
+  .navbar-birthday-greeting {
+    max-width: min(220px, 28vw);
+  }
+}
+
+@media (max-width: 992px) {
+  .navbar-birthday-greeting {
+    max-width: min(180px, 26vw);
+    padding: 0.35rem 0.55rem;
+  }
+
+  .navbar-birthday-greeting__title {
+    font-size: 11.5px;
+  }
+
+  .navbar-birthday-greeting__sub {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-birthday-greeting {
+    display: none;
+  }
 }
 
 .navbar-header-toolbar--home {

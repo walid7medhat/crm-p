@@ -15,6 +15,27 @@
           <span v-if="!loading" class="bg-topline-count">{{ backgrounds.length }}</span>
         </div>
 
+        <!--
+          TEMPORARY DEV/TEST ONLY — Birthday celebration overlay preview.
+          Super Admin only. Does not create DB birthdays or change birthday API.
+          Remove with: useBirthdayCelebrationDevTest.js + BirthdayCelebrationLayer forceShow wiring.
+        -->
+        <div v-if="isBirthdayDevTestAllowed" class="bg-birthday-devtest" data-dev-test="birthday-celebration">
+          <div class="bg-birthday-devtest__meta">
+            <span class="bg-birthday-devtest__badge">TEST / DEVELOPMENT</span>
+            <span class="text-xs text-primary-light">
+              Preview the global birthday celebration overlay (no birth_date changes).
+            </span>
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary radius-8 text-xs px-3"
+            @click="onTestBirthdayCelebration"
+          >
+            Test Birthday Celebration
+          </button>
+        </div>
+
         <transition name="bg-fade">
           <div v-if="message" class="bg-toast" :class="messageIsError ? 'bg-toast--err' : 'bg-toast--ok'">
             {{ message }}
@@ -155,6 +176,11 @@ import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
 import backgroundsApi from '@/services/backgroundsApi'
 import { useBackground } from '@/composables/useBackground'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
+// TEMPORARY DEV/TEST — remove with useBirthdayCelebrationDevTest.js
+import {
+  isBirthdayCelebrationDevTestAllowed,
+  triggerBirthdayCelebrationDevTest,
+} from '@/composables/useBirthdayCelebrationDevTest'
 
 const MAX_FILES = 50
 /** Keep under typical PHP post_max_size (8M) so single-file uploads don't 413 */
@@ -173,6 +199,12 @@ export default {
   components: { Breadcrumb },
   setup() {
     const { syncFromUser } = useBackground()
+
+    // TEMPORARY DEV/TEST — Super Admin birthday overlay preview
+    const isBirthdayDevTestAllowed = isBirthdayCelebrationDevTestAllowed()
+    function onTestBirthdayCelebration() {
+      triggerBirthdayCelebrationDevTest()
+    }
 
     const loading = ref(true)
     const backgrounds = ref([])
@@ -455,6 +487,8 @@ export default {
     onBeforeUnmount(revokeQueuePreviews)
 
     return {
+      isBirthdayDevTestAllowed,
+      onTestBirthdayCelebration,
       loading,
       backgrounds,
       selectedId,

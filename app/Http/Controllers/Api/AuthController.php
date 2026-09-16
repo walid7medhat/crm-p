@@ -294,4 +294,37 @@ public function deleteNotification($id): JsonResponse
         return ApiResponse::error('Failed to delete notification: ' . $e->getMessage());
     }
 }
+
+    /**
+     * Lightweight check for today's active staff birthdays (same query as birthdays:celebrate).
+     * Additive fields only — existing has_birthday / count behavior unchanged.
+     */
+    public function todaysBirthdays(): JsonResponse
+    {
+        try {
+            $users = User::query()
+                ->activeBirthdayOn()
+                ->orderBy('id')
+                ->get(['id', 'name']);
+
+            $count = $users->count();
+            $firstName = null;
+
+            if ($count > 0) {
+                $full = trim((string) ($users->first()->name ?? ''));
+                if ($full !== '') {
+                    $parts = preg_split('/\s+/u', $full, 2) ?: [];
+                    $firstName = ($parts[0] ?? '') !== '' ? $parts[0] : null;
+                }
+            }
+
+            return ApiResponse::success([
+                'has_birthday' => $count > 0,
+                'count' => $count,
+                'first_name' => $firstName,
+            ], 'Today\'s birthdays checked');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to check today\'s birthdays: ' . $e->getMessage());
+        }
+    }
 }
