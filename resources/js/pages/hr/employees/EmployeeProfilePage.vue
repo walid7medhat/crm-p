@@ -61,6 +61,7 @@
               <div class="emp-profile-page__fields">
                 <div class="emp-profile-page__field"><label>Full name</label><span>{{ employee.name }}</span></div>
                 <div class="emp-profile-page__field"><label>Nationality</label><span>{{ employee.nationality }}</span></div>
+                <div class="emp-profile-page__field"><label>Birth Date</label><span>{{ formatDate(employee.birth_date) }}</span></div>
                 <div class="emp-profile-page__field"><label>Employee ID</label><span>{{ employee.employeeCode }}</span></div>
                 <div class="emp-profile-page__field"><label>Role</label><span>{{ employee.role }}</span></div>
                 <div class="emp-profile-page__field"><label>Father name</label><span>{{ employee.raw?.employee_profile?.father_name || '—' }}</span></div>
