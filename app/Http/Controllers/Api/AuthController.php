@@ -296,22 +296,25 @@ public function deleteNotification($id): JsonResponse
 }
 
     /**
-     * Lightweight check for today's active staff birthdays (same query as birthdays:celebrate).
-     * Additive fields only — existing has_birthday / count behavior unchanged.
+     * Check whether the authenticated user has a birthday today.
+     * Celebration overlay/banner is only for that user — not all staff.
      */
     public function todaysBirthdays(): JsonResponse
     {
         try {
+            $authUser = auth()->user();
             $users = User::query()
                 ->activeBirthdayOn()
                 ->orderBy('id')
                 ->get(['id', 'name']);
 
             $count = $users->count();
-            $firstName = null;
+            $isMyBirthday = $authUser
+                && $users->contains(fn (User $u) => (int) $u->id === (int) $authUser->id);
 
-            if ($count > 0) {
-                $full = trim((string) ($users->first()->name ?? ''));
+            $firstName = null;
+            if ($isMyBirthday) {
+                $full = trim((string) ($authUser->name ?? ''));
                 if ($full !== '') {
                     $parts = preg_split('/\s+/u', $full, 2) ?: [];
                     $firstName = ($parts[0] ?? '') !== '' ? $parts[0] : null;
@@ -319,7 +322,7 @@ public function deleteNotification($id): JsonResponse
             }
 
             return ApiResponse::success([
-                'has_birthday' => $count > 0,
+                'has_birthday' => (bool) $isMyBirthday,
                 'count' => $count,
                 'first_name' => $firstName,
             ], 'Today\'s birthdays checked');
