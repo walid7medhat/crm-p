@@ -223,8 +223,8 @@ onUnmounted(() => {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-color: #0b0736;
-  background-image: url('/assets/images/crm-bg.png?v=2');
+  background-color: #f5eef8;
+  background-image: url('/assets/images/crm-bg-light.jpg?v=3');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -237,10 +237,10 @@ onUnmounted(() => {
   pointer-events: none;
   background: linear-gradient(
     125deg,
-    rgba(11, 7, 54, 0.82) 0%,
-    rgba(26, 10, 66, 0.78) 42%,
-    rgba(43, 20, 88, 0.72) 68%,
-    rgba(30, 13, 74, 0.8) 100%
+    rgba(247, 245, 251, 0.55) 0%,
+    rgba(243, 232, 255, 0.45) 42%,
+    rgba(255, 255, 255, 0.35) 68%,
+    rgba(247, 245, 251, 0.5) 100%
   );
 }
 

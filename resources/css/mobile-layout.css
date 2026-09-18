@@ -193,7 +193,14 @@
   }
 
   body.mobile-listing-sheet-open .mobile-core-dock,
-  body.mobile-nav-open .mobile-core-dock {
+  body.mobile-nav-open .mobile-core-dock,
+  body.stage-change-modal-open .mobile-core-dock,
+  body.convert-lead-modal-open .mobile-core-dock {
+    display: none !important;
+  }
+
+  body.stage-change-modal-open .chat-floating-btn,
+  body.convert-lead-modal-open .chat-floating-btn {
     display: none !important;
   }
 

@@ -23,12 +23,14 @@
     <!-- Properties Grid -->
     <div class="row gx-4 gy-4 p-4">
       <!-- Loading State -->
-      <div v-if="isLoading" class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          
-          <span class="visually-hidden">Loading...</span>
+      <div v-if="isLoading" class="col-12">
+        <div class="crm-page-loader" role="status" aria-live="polite" aria-busy="true">
+          <div class="crm-page-loader__ring" aria-hidden="true">
+            <span class="crm-page-loader__arc" />
+          </div>
+          <p class="crm-page-loader__title">Loading properties</p>
+          <p class="crm-page-loader__sub">Fetching the latest listings…</p>
         </div>
-        <p class="mt-2 text-muted">Loading properties...</p>
       </div>
 
       <!-- Empty State -->
@@ -254,7 +256,7 @@
         </nav>
 
         <!-- Pagination Info -->
-        <div class="text-center text-white small mt-2">
+        <div class="text-center text-muted small mt-2">
           Showing {{ showingFrom }}-{{ showingTo }} of {{ pagination.total }} properties
         </div>
       </div>

@@ -11,7 +11,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-        <link rel="preload" href="{{ asset('assets/images/crm-bg.png') }}?v=2" as="image" type="image/png">
+        <link rel="preload" href="{{ asset('assets/images/crm-bg-light.jpg') }}?v=3" as="image" type="image/jpeg">
         <script>
             window.__API_BASE_URL__ = "{{ url('/api') }}";
             window.__APP_ORIGIN__ = "{{ url('') }}";
@@ -39,11 +39,15 @@
                 inset: 0;
                 z-index: 0;
                 pointer-events: none;
-                background-color: #0b0736;
-                background-image: url("{{ asset('assets/images/crm-bg.png') }}?v=2");
+                background-color: #f5eef8;
+                background-image: url("{{ asset('assets/images/crm-bg-light.jpg') }}?v=3");
                 background-size: cover;
                 background-position: center center;
                 background-repeat: no-repeat;
+            }
+
+            .crm-bg-image::before {
+                display: none !important;
             }
 
             #app {

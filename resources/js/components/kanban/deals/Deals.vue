@@ -2522,7 +2522,28 @@ defineExpose({
 }
 
 .kanban-column:not(:first-child) {
-  border-left: 1px dashed rgba(255, 255, 255, 0.72);
+  border-left: none;
+  padding-left: 10px;
+  margin-left: 2px;
+}
+
+.kanban-column:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(107, 33, 168, 0.28) 12%,
+    rgba(107, 33, 168, 0.38) 50%,
+    rgba(107, 33, 168, 0.28) 88%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 
 .kanban-column > div {

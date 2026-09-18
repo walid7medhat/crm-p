@@ -88,10 +88,11 @@
                 @click.stop="openProfilePanel"
               >
                 <img
-                  v-if="user && user.avatar"
+                  v-if="user && user.avatar && !mobileAvatarFailed"
                   :src="user.avatar"
                   alt=""
                   class="kanban-mob-profile-img"
+                  @error="mobileAvatarFailed = true"
                 >
                 <img
                   v-else
@@ -246,7 +247,7 @@
           >
             <iconify-icon icon="heroicons:bars-3-solid" class="icon navbar-header-menu-icon" />
           </button>
-          <!-- <nav
+          <nav
             v-if="showTopModuleNav && topModuleNavItems.length"
             class="top-module-nav"
             aria-label="Main modules"
@@ -267,7 +268,7 @@
                 {{ item.label }}
               </a>
             </router-link>
-          </nav> -->
+          </nav>
           <select
             v-if="isMobileViewport && moduleHeaderTabs.length"
             class="module-tab-select"
@@ -489,8 +490,8 @@
           v-if="isDashboardHome && isSuperAdmin"
           type="button"
           class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border navbar-settings-btn"
-          aria-label="Settings"
-          @click="router.push('/system-overview')"
+          aria-label="Settings System"
+          @click="openSettingsHub"
         >
           <iconify-icon icon="lucide:settings" style="font-size: 18px;" />
         </button>
@@ -960,9 +961,23 @@ const leadsRef = ref(null);
 const dealsRef = ref(null);
 const openSettingsHub = (section = null) => {
     closeSearchModal()
+    const sectionId = typeof section === 'string' ? section : null
+    const onKanban = route.path === '/kanban' || route.path === '/kanban_deal'
+    if (!onKanban) {
+        try {
+            sessionStorage.setItem(
+                'open_settings_hub',
+                JSON.stringify({ section: sectionId })
+            )
+        } catch {
+            /* ignore */
+        }
+        router.push('/kanban')
+        return
+    }
     window.dispatchEvent(
         new CustomEvent('kanban-open-settings', {
-            detail: section ? { section } : {},
+            detail: sectionId ? { section: sectionId } : {},
         })
     )
 }
@@ -1753,6 +1768,7 @@ watch(showSearchModal, (open) => {
 // BIG Profile Details panel (slide-in from right)
 const isProfilePanelOpen = ref(false);
 const showThemeModal = ref(false);
+const mobileAvatarFailed = ref(false);
 const profilePanel = ref(null);
 
 function openThemeModal() {
@@ -2349,6 +2365,7 @@ function loadUserData() {
   if (userData) {
     user.value = JSON.parse(userData);
   }
+  mobileAvatarFailed.value = false;
 }
 
 function loadNotificationSettings() {
@@ -2591,7 +2608,7 @@ const showBackButton = computed(() => {
   cursor: not-allowed;
 }
 
-/* Glass bar: brand gradient (matches style14.css tokens) */
+/* Glass bar: light surface (system-wide light shell) */
 .navbar-header {
   position: relative;
   top: auto;
@@ -2609,24 +2626,17 @@ const showBackButton = computed(() => {
   display: flex;
   align-items: center;
   overflow: visible;
-  border-radius: 12px;
-  background: var(--gradient-crm-glass) !important;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 24px rgba(11, 7, 54, 0.08);
+  border-radius: 14px;
+  background: #ffffff !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid #e8eaef;
+  border-bottom: 1px solid #e8eaef;
+  box-shadow: 0 2px 10px rgba(30, 27, 46, 0.06);
 }
 
 .navbar-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--gradient-crm);
-  opacity: 0.1;
-  pointer-events: none;
+  display: none;
 }
 
 .navbar-header-toolbar {
@@ -2638,6 +2648,15 @@ const showBackButton = computed(() => {
   min-height: 0;
   flex: 1 1 auto;
   padding: 10px 0;
+}
+
+.navbar-header--dashboard-home .navbar-header-toolbar {
+  padding: 6px 0;
+  gap: 0.4rem;
+}
+
+.navbar-header--dashboard-home {
+  min-height: 0;
 }
 
 .navbar-header-toolbar:has(.navbar-birthday-greeting) {
@@ -2746,10 +2765,11 @@ const showBackButton = computed(() => {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px;
+  padding: 3px;
   border-radius: 999px;
-  background: rgba(8, 4, 40, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #f4f5f7;
+  border: 1px solid #e8eaef;
+  box-shadow: none;
   flex-shrink: 0;
   max-width: 100%;
   overflow-x: auto;
@@ -2764,41 +2784,46 @@ const showBackButton = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid transparent;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
+  color: #4b4568;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .top-module-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: #733E87;
+  background: #f3e8ff;
 }
 
 .top-module-btn.active {
-  background: #fff;
-  color: #1a1330;
-  border-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: #733E87;
+  color: #fff;
+  border-color: #733E87;
+  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.28);
 }
 
-/* On main dashboard: module shortcuts are links only — no pill highlight */
+/* Keep active CRM pill highlighted on dashboard */
 .navbar-header--dashboard-home .top-module-btn.active {
-  background: transparent;
-  color: rgba(255, 255, 255, 0.88);
-  border-color: transparent;
-  box-shadow: none;
+  background: #733E87;
+  color: #fff;
+  border-color: #733E87;
+  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.28);
 }
 
 .navbar-header--dashboard-home .top-module-btn:hover {
+  color: #733E87;
+  background: #f3e8ff;
+}
+
+.navbar-header--dashboard-home .top-module-btn.active:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: #5f3470;
 }
 
 .module-tabs-nav--sub {
@@ -2819,8 +2844,8 @@ const showBackButton = computed(() => {
   min-height: 40px;
   padding: 4px 6px 4px 16px;
   border-radius: 999px;
-  background: rgba(8, 4, 40, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #f3f4f6;
+  border: 1px solid #d8d0e4;
 }
 
 .navbar-global-search-input {
@@ -2828,14 +2853,15 @@ const showBackButton = computed(() => {
   min-width: 0;
   border: none;
   background: transparent;
-  color: #fff;
+  color: #1a1528;
   font-size: 13px;
   font-weight: 500;
   outline: none;
 }
 
 .navbar-global-search-input::placeholder {
-  color: rgba(255, 255, 255, 0.55);
+  color: #6b7280;
+  opacity: 1;
 }
 
 .navbar-global-search-btn {
@@ -2847,14 +2873,14 @@ const showBackButton = computed(() => {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  color: #6b7280;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .navbar-global-search-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: #6b21a8;
+  background: rgba(107, 33, 168, 0.1);
 }
 
 .navbar-settings-btn {
@@ -2980,6 +3006,23 @@ const showBackButton = computed(() => {
   color: #ef4444 !important;
 }
 
+.create-property-btn,
+.navbar-create-listing {
+  background: #733E87 !important;
+  border: 1px solid #733E87 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.create-property-btn:hover,
+.navbar-create-listing:hover {
+  background: #5f3470 !important;
+  border-color: #5f3470 !important;
+  color: #ffffff !important;
+  transform: none;
+  box-shadow: none !important;
+}
+
 .create-property-btn {
   padding: 8px 16px;
   font-size: 14px;
@@ -2987,11 +3030,6 @@ const showBackButton = computed(() => {
   border-radius: 6px;
   text-decoration: none;
   transition: all 0.3s ease;
-}
-
-.create-property-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Profile trigger */
@@ -3693,13 +3731,13 @@ const showBackButton = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 7px 14px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
-  font-weight: 700;
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #e8e6ee;
+  border-radius: 999px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   transition:
@@ -3713,20 +3751,18 @@ const showBackButton = computed(() => {
 
 .module-tab-btn:hover,
 .kanban-tab-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.12);
+  color: #733E87;
+  background: #faf5ff;
+  border-color: #e9d5ff;
 }
 
 /* Unified pill highlight — no underline (CRM, Listings, Settings, Agents) */
 .module-tab-btn.active,
 .kanban-tab-btn.active {
   color: #fff;
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: #733E87;
+  border-color: #733E87;
+  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.22);
 }
 
 .module-tab-count {
@@ -3796,7 +3832,7 @@ const showBackButton = computed(() => {
   margin-left: 4px;
 }
 
-/* Kanban Create Button */
+/* Kanban Create Button — match tab color #733E87 */
 .btn-create-new {
     padding: .35rem .6rem !important;
     min-height: 32px;
@@ -3806,11 +3842,17 @@ const showBackButton = computed(() => {
     border-radius: 6px;
     text-decoration: none;
     transition: all .3s ease;
+    background: #733E87 !important;
+    border: 1px solid #733E87 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
 }
 
 .btn-create-new:hover {
-  background: linear-gradient(90deg, #16a34a, #22c55e);
-  transform: translateY(-1px);
+  background: #5f3470 !important;
+  border-color: #5f3470 !important;
+  color: #ffffff !important;
+  transform: none;
 }
 
 .btn-create-new-text {
@@ -3881,8 +3923,8 @@ body:has(.modal.show) .search-area-column {
 }
 
 .search-wrapper {
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.32);
+    background: #f3f4f6;
+    border: 1px solid #d8d0e4;
     border-radius: 999px;
     height: 38px;
     min-height: 38px;
@@ -3894,17 +3936,17 @@ body:has(.modal.show) .search-area-column {
     width: max-content;
     max-width: 900px;
     min-width: 460px;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), border-color 0.2s ease;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: max-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), min-width 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), border-color 0.2s ease, background 0.2s ease;
     cursor: text;
 }
 
 .search-wrapper:hover,
 .search-wrapper:focus-within {
-    background: rgba(255, 255, 255, 0.26);
-    border-color: rgba(255, 255, 255, 0.45);
+    background: #eeeff3;
+    border-color: #c4b5d9;
 }
 
 .search-wrapper-expanded {
@@ -3974,7 +4016,7 @@ body:has(.modal.show) .search-area-column {
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: rgba(255, 255, 255, 0.85);
+    color: #6b7280;
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -3984,19 +4026,19 @@ body:has(.modal.show) .search-area-column {
 }
 
 .search-filter-btn {
-    background: rgba(255, 255, 255, 0.14);
-    color: #fff;
+    background: rgba(107, 33, 168, 0.08);
+    color: #6b21a8;
 }
 
 .search-icon-btn:hover,
 .search-filter-btn:hover,
 .search-clear-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    color: #6b21a8;
+    background: rgba(107, 33, 168, 0.12);
 }
 
 .search-input-container {
-    color: rgba(255, 255, 255, 0.92);
+    color: #4b4568;
     height: 28px;
     min-height: 28px;
     display: flex;
@@ -4015,8 +4057,8 @@ body:has(.modal.show) .search-area-column {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.25);
-    border-top-color: #fff;
+    border: 2px solid rgba(107, 33, 168, 0.2);
+    border-top-color: #6b21a8;
     animation: search-spin 0.7s linear infinite;
     pointer-events: none;
 }
@@ -4038,7 +4080,7 @@ body:has(.modal.show) .search-area-column {
     width: 100%;
     font-size: 13px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.95) !important;
+    color: #1a1528 !important;
     padding: 0 4px !important;
     height: 100% !important;
     min-height: 24px;
@@ -4051,22 +4093,22 @@ body:has(.modal.show) .search-area-column {
 .search-input-container :deep(input)::placeholder,
 .search-input-container :deep(.form-control)::placeholder,
 .search-input::placeholder {
-    color: rgba(255, 255, 255, 0.55) !important;
-    font-size: 11px !important;
+    color: #6b7280 !important;
+    font-size: 12px !important;
     font-weight: 400 !important;
     letter-spacing: -0.01em;
     line-height: 1.25;
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 .search-input--has-selection {
-    color: #fde68a !important;
+    color: #6b21a8 !important;
     font-weight: 600;
 }
 
 .search-wrapper-has-selection {
-    border-color: rgba(251, 191, 36, 0.55) !important;
-    background: rgba(11, 7, 54, 0.58) !important;
+    border-color: #c4b5d9 !important;
+    background: #efeaf7 !important;
 }
 
 /* Search Modal Styles */
@@ -4127,18 +4169,18 @@ body:has(.modal.show) .search-area-column {
     }
 }
 .action-icon-btn {
- background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+ background: #f4f5f7;
+    border: 1px solid #e8eaef !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transition: all 0.2s ease;
-    color: rgba(255, 255, 255, 0.95);
+    color: #4b4568;
 }
 
 .action-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(255, 255, 255, 0.7) !important;
-    color: #fff;
+    background: #f3e8ff;
+    border-color: #e9d5ff !important;
+    color: #6b21a8;
 }
 
 .action-icon-btn:focus {
@@ -4147,7 +4189,7 @@ body:has(.modal.show) .search-area-column {
 }
 
 :deep(.action-icon-btn-dropdown .action-icon-btn) {
-        color: rgba(255, 255, 255, 0.95) !important;
+        color: #4b4568 !important;
 }
 
 .radius-circle {

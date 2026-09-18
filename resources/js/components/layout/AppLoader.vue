@@ -103,20 +103,20 @@ function onAfterLeave() {
 
 <style scoped>
 .app-loader {
-  /* Alt CRM system tokens (style14.css --crm-primary / --crm-secondary) */
-  --loader-bg: #0b0736;
-  --loader-bg-mid: #1a0a42;
-  --loader-primary: #0b0736;
-  --loader-secondary: #733e87;
-  --loader-accent: #c026d3;
-  --loader-white: #ffffff;
-  --loader-gradient: linear-gradient(135deg, #0b0736 0%, #733e87 100%);
+  /* Light shell tokens — readable on white / lavender */
+  --loader-bg: #f3f2f6;
+  --loader-bg-mid: #ebe6f2;
+  --loader-primary: #6b21a8;
+  --loader-secondary: #7c3aed;
+  --loader-accent: #a855f7;
+  --loader-white: #1a1528;
+  --loader-gradient: linear-gradient(135deg, #6b21a8 0%, #a855f7 100%);
   --loader-glass: linear-gradient(
     135deg,
-    rgba(11, 7, 54, 0.72) 0%,
-    rgba(115, 62, 135, 0.45) 100%
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(250, 245, 255, 0.9) 100%
   );
-  --loader-border: rgba(255, 255, 255, 0.14);
+  --loader-border: rgba(107, 33, 168, 0.14);
 
   position: fixed;
   inset: 0;
@@ -124,7 +124,7 @@ function onAfterLeave() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: rgba(243, 242, 246, 0.72);
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -136,7 +136,8 @@ function onAfterLeave() {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.6;
+  background: #f3f2f6;
 }
 
 .app-loader__gradient {
@@ -152,7 +153,7 @@ function onAfterLeave() {
   height: min(55vw, 420px);
   top: -12%;
   left: -8%;
-  background: radial-gradient(circle, rgba(115, 62, 135, 0.5) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.4) 0%, transparent 70%);
   animation: loader-drift-a 14s ease-in-out infinite;
 }
 
@@ -161,7 +162,7 @@ function onAfterLeave() {
   height: min(50vw, 380px);
   bottom: -15%;
   right: -10%;
-  background: radial-gradient(circle, rgba(192, 38, 211, 0.35) 0%, transparent 72%);
+  background: radial-gradient(circle, rgba(196, 181, 253, 0.35) 0%, transparent 72%);
   animation: loader-drift-b 16s ease-in-out infinite;
 }
 
@@ -170,7 +171,7 @@ function onAfterLeave() {
   height: min(40vw, 300px);
   top: 42%;
   left: 38%;
-  background: radial-gradient(circle, rgba(26, 10, 66, 0.85) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, transparent 68%);
   animation: loader-drift-c 12s ease-in-out infinite;
 }
 
@@ -178,11 +179,11 @@ function onAfterLeave() {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(107, 33, 168, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(107, 33, 168, 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 20%, transparent 75%);
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .app-loader__particle {
@@ -208,9 +209,9 @@ function onAfterLeave() {
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   box-shadow:
-    0 0 0 1px rgba(115, 62, 135, 0.2) inset,
-    0 24px 80px rgba(0, 0, 0, 0.45),
-    0 0 60px rgba(115, 62, 135, 0.22);
+    0 0 0 1px rgba(107, 33, 168, 0.08) inset,
+    0 18px 48px rgba(30, 27, 46, 0.12),
+    0 0 40px rgba(167, 139, 250, 0.15);
   animation: loader-panel-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   max-width: calc(100vw - 2rem);
 }
@@ -280,7 +281,7 @@ function onAfterLeave() {
   margin: 0 0 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
+  color: #6b7280;
   letter-spacing: 0.02em;
   animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
 }
@@ -289,7 +290,7 @@ function onAfterLeave() {
   width: min(220px, 70vw);
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(107, 33, 168, 0.1);
   overflow: hidden;
   margin-bottom: 1rem;
   animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;

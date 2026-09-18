@@ -160,7 +160,7 @@
                                     <template #item="{ element: task, index }">
                                             <div
                                                 :key="task.id"
-                                                class="kanban-card bg-white p-12 radius-12 mb-10 shadow-sm border-0 cursor-pointer"
+                                                class="kanban-card bg-white p-12 radius-12 mb-10 cursor-pointer"
                                                 :class="{ 'kanban-card--mobile': kanbanIsMobile }"
                                                 v-show="leadMatchesShortcutFilter(task) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
@@ -4158,34 +4158,37 @@ const fetchRevertNotifications = async () => {
     right: 0;
 }
 
-/* Arrow style same as before: small semi-circular pill */
+/* Arrow style: large soft circular buttons like reference */
 .kanban-nav-arrow {
-    width: 36px;
-    height: 72px;
-    background: #ffffff5c;
-    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: none;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 16px rgba(30, 27, 46, 0.12);
+    border: 1px solid rgba(235, 230, 242, 0.9);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: box-shadow 0.2s ease, background 0.2s ease;
+    transition: box-shadow 0.2s ease, background 0.2s ease, transform 0.15s ease;
     pointer-events: none;
 }
 .kanban-nav-zone:hover .kanban-nav-arrow {
-    box-shadow: 3px 0 16px rgba(0, 0, 0, 0.1), 0 3px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 20px rgba(30, 27, 46, 0.16);
+    background: #ffffff;
+    transform: scale(1.04);
 }
 .kanban-nav-arrow-icon {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 600;
-    color: #0f172a;
+    color: #1a1528;
 }
 .kanban-nav-arrow-left {
-    border-radius: 0 36px 36px 0;
-    padding-left: 4px;
+    border-radius: 50%;
+    padding-left: 0;
 }
 .kanban-nav-arrow-right {
-    border-radius: 36px 0 0 36px;
-    padding-right: 4px;
+    border-radius: 50%;
+    padding-right: 0;
 }
 
 /* Empty / loading / error states */
@@ -4233,12 +4236,13 @@ const fetchRevertNotifications = async () => {
     color: #64748B;
 }
 .kanban-empty-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #3b82f6;
+    width: 44px;
+    height: 44px;
+    border: 3px solid #efeaf7;
+    border-top-color: #6b21a8;
+    border-right-color: #a855f7;
     border-radius: 50%;
-    animation: kanban-spin 0.8s linear infinite;
+    animation: kanban-spin 0.85s linear infinite;
 }
 @keyframes kanban-spin {
     to { transform: rotate(360deg); }
@@ -4335,30 +4339,47 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-wrapper-tight {
-    gap: 10px;
+    gap: 14px;
 }
 
-/* Equal-height stages; same full-height dashed border-left on each (not first) */
+/* Stage wells: highly translucent so system bg shows behind cards */
 .kanban-column {
     position: relative;
-    min-width: 247px;
-    width: 247px;
-    max-width: 247px;
+    min-width: 252px;
+    width: 252px;
+    max-width: 252px;
     display: flex;
     flex-direction: column;
-    background-color: transparent;
-    border-radius: 12px;
-    border: none;
+    background:
+      linear-gradient(
+        165deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0.05) 40%,
+        rgba(255, 255, 255, 0) 100%
+      );
+    border-radius: 18px;
+    border: 1px solid rgba(30, 27, 46, 0.1);
+    box-shadow: none;
     align-self: stretch;
     min-height: calc(100dvh - 200px);
     height: calc(100dvh - 200px);
     flex-shrink: 0;
-    overflow: visible;
+    overflow: hidden;
     box-sizing: border-box;
+    padding: 0 0 8px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .kanban-column:not(:first-child) {
-    border-left: 1px dashed rgba(255, 255, 255, 0.72);
+    border-left: 1px solid rgba(30, 27, 46, 0.12);
+    padding-left: 0;
+    margin-left: 0;
+}
+
+.kanban-column:not(:first-child)::before {
+    display: none;
+    content: none;
 }
 
 .kanban-column > div {
@@ -4379,14 +4400,17 @@ const fetchRevertNotifications = async () => {
 
 .column-header {
     min-height: 36px;
-    padding: 3px 8px 3px 10px;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
+    margin: 8px 8px 0;
+    padding: 7px 12px;
+    border-radius: 999px !important;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     z-index: 1;
-    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
+    clip-path: none !important;
+    border: 1px solid rgba(15, 23, 42, 0.22) !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 2px 6px rgba(15, 23, 42, 0.16);
 }
 
 
@@ -4423,27 +4447,38 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
     color: #1e293b;
-    border-width: 1px !important;
-    border-style: solid !important;
+    border: 1px solid rgba(30, 27, 46, 0.14) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 10px rgba(30, 27, 46, 0.08) !important;
+    background: #ffffff !important;
+    margin-left: 2px;
+    margin-right: 2px;
+    position: relative;
+    z-index: 1;
 }
 
 .kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+    transform: none;
+    border-color: rgba(30, 27, 46, 0.22) !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(30, 27, 46, 0.12) !important;
 }
 
 .lead-priority-hot-border {
     border-color: #ef4444 !important;
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.18) !important;
 }
 
 .lead-priority-warm-border {
     border-color: #f59e0b !important;
+    box-shadow: 0 2px 10px rgba(245, 158, 11, 0.18) !important;
 }
 
 .lead-priority-cold-border {
-    border-color: #9ca3af !important;
+    border-color: #64748b !important;
+    box-shadow: 0 2px 10px rgba(100, 116, 139, 0.14) !important;
 }
 
 .lead-intelligence-row {
@@ -4489,11 +4524,23 @@ const fetchRevertNotifications = async () => {
 .kanban-card .date-info span,
 .kanban-card .info-label,
 .kanban-card .info-value {
-    color: #1e293b !important;
+    color: #1a1528 !important;
+}
+
+.kanban-card .task-title {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px;
 }
 
 .kanban-card .info-label {
-    color: #64748b !important;
+    color: #8b8798 !important;
+    font-size: 10px !important;
+}
+
+.kanban-card .info-value {
+    color: #353535 !important;
+    font-size: 11px !important;
 }
 
 .cursor-pointer {
@@ -4779,10 +4826,10 @@ const fetchRevertNotifications = async () => {
 
 .header-title {
     font-weight: 600;
-    font-style: SemiBold;
-    font-size: 11px;
-    line-height: 1.1;
-    color: #0B0736;
+    font-style: normal;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #0f0f12 !important;
     margin: 0;
 }
 
@@ -4791,29 +4838,31 @@ const fetchRevertNotifications = async () => {
     flex: 1;
     display: flex;
     align-items: center;
+    gap: 6px;
+    min-width: 0;
 }
 
 .header-title-wrapper:hover .header-title {
-    text-decoration: underline;
+    text-decoration: none;
+    opacity: 0.85;
 }
 
 .header-title-input {
     font-weight: 600;
-    font-style: SemiBold;
-    font-size: 13px;
-    color: #0B0736;
-    /* background: rgba(255, 255, 255, 0.2); */
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 4px;
+    font-style: normal;
+    font-size: 12px;
+    color: #0f0f12;
+    border: 1px solid rgba(15, 15, 18, 0.25);
+    border-radius: 6px;
     padding: 2px 6px;
     outline: none;
     flex: 1;
     min-width: 0;
+    background: rgba(255, 255, 255, 0.75);
 }
 
 .header-title-input:focus {
-    /* background: rgba(255, 255, 255, 0.3); */
-    border-color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(15, 15, 18, 0.45);
 }
 
 .stage-modal-overlay {
@@ -4835,8 +4884,8 @@ const fetchRevertNotifications = async () => {
 .leads-count-badge {
     font-size: 11px;
     line-height: 1.1;
-    color: rgba(1, 6, 44, 0.45);
-    margin-left: 3px;
+    color: #0f0f12 !important;
+    margin-left: 2px;
     font-weight: 600 !important;
 }
 
@@ -4846,6 +4895,7 @@ const fetchRevertNotifications = async () => {
     min-height: 0;
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
+    overflow-y: visible;
     /* Avoid 100vw overflow/cropping on some mobile browsers that can visually shift the board */
     width: 100%;
     max-width: 100%;
@@ -4869,9 +4919,10 @@ const fetchRevertNotifications = async () => {
 
 .kanban-outer--mobile .kanban-container {
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: visible;
     height: auto;
     min-height: 0;
+    max-height: none;
     /* Keep lead board horizontal spacing perfectly balanced on mobile */
     padding: 8px 8px 16px;
     -webkit-overflow-scrolling: touch;
@@ -4927,9 +4978,10 @@ const fetchRevertNotifications = async () => {
 
 .kanban-outer--mobile .column-header--mobile {
     min-height: 34px;
-    padding: 4px 8px;
+    margin: 6px 6px 0;
+    padding: 5px 10px;
     clip-path: none;
-    border-radius: 14px 14px 0 0;
+    border-radius: 999px;
 }
 
 .kanban-outer--mobile .column-header__dot {
@@ -4942,13 +4994,13 @@ const fetchRevertNotifications = async () => {
 
 .kanban-outer--mobile .column-header--mobile .header-title,
 .kanban-outer--mobile .column-header--mobile .leads-count-badge {
-    color: #000 !important;
-    font-weight: 700 !important;
+    color: #0f0f12 !important;
+    font-weight: 600 !important;
 }
 
 .kanban-outer--mobile .column-header--mobile .header-title-input {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.5);
+    color: #0f0f12;
+    border-color: rgba(15, 15, 18, 0.3);
 }
 
 .kanban-outer--mobile .column-header__actions {

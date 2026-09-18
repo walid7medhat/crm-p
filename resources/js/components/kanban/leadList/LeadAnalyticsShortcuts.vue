@@ -11,10 +11,7 @@
 
         <span class="lfs-segment__label">{{ group.label }}</span>
 
-        <div
-          class="lfs-pills"
-          :class="{ 'lfs-pills--segmented': group.segmented }"
-        >
+        <div class="lfs-pills">
           <button
             v-for="chip in group.chips"
             :key="chip.key"
@@ -36,20 +33,12 @@
               v-if="chip.icon"
               :icon="chip.icon"
               class="lfs-pill__icon"
-              width="15"
-              height="15"
-              aria-hidden="true"
-            />
-            <span class="lfs-pill__label">{{ chip.label }}</span>
-            <span class="lfs-pill__count">{{ formatValue(metrics[chip.metricKey]) }}</span>
-            <iconify-icon
-              v-if="activeFilter === chip.key"
-              icon="lucide:check-circle-2"
-              class="lfs-pill__check"
               width="14"
               height="14"
               aria-hidden="true"
             />
+            <span class="lfs-pill__label">{{ chip.label }}</span>
+            <span class="lfs-pill__count">{{ formatValue(metrics[chip.metricKey]) }}</span>
           </button>
         </div>
       </div>
@@ -65,7 +54,7 @@
           aria-label="Clear active filter"
           @click="onChipClick(null)"
         >
-          <iconify-icon icon="lucide:x" width="14" height="14" aria-hidden="true" />
+          <iconify-icon icon="lucide:x" width="12" height="12" aria-hidden="true" />
           Clear
         </button>
       </div>
@@ -107,8 +96,7 @@ const activeFilterLabel = computed(() => {
 const filterGroups = [
   {
     id: 'temperature',
-    label: 'Temp',
-    segmented: true,
+    label: 'TEMP',
     chips: [
       { key: 'temp_cold', metricKey: 'tempCold', label: 'Cold', tone: 'cold', icon: 'lucide:snowflake', hint: 'Cold leads' },
       { key: 'temp_warm', metricKey: 'tempWarm', label: 'Warm', tone: 'warm', icon: 'lucide:thermometer', hint: 'Warm leads' },
@@ -117,11 +105,10 @@ const filterGroups = [
   },
   {
     id: 'calls',
-    label: 'Calls',
-    segmented: true,
+    label: 'CALLS',
     chips: [
-      { key: 'call_answered', metricKey: 'callAnswered', label: 'Answered', tone: 'answered', icon: 'lucide:phone-call', hint: 'Call answered' },
-      { key: 'call_no_answer', metricKey: 'callNoAnswer', label: 'No answer', tone: 'no-answer', icon: 'lucide:phone-off', hint: 'No answer' },
+      { key: 'call_answered', metricKey: 'callAnswered', label: 'Answered', tone: 'answered', icon: 'lucide:phone', hint: 'Call answered' },
+      { key: 'call_no_answer', metricKey: 'callNoAnswer', label: 'No Answer', tone: 'no-answer', icon: 'lucide:phone-off', hint: 'No answer' },
     ],
   },
 ]
@@ -145,8 +132,8 @@ function onChipClick(key) {
 .lfs {
   flex-shrink: 0;
   width: 100%;
-  margin-bottom: 12px;
-  padding: 0 6px;
+  margin-bottom: 10px;
+  padding: 0 2px;
   box-sizing: border-box;
   font-family: Montserrat, Inter, system-ui, sans-serif;
 }
@@ -155,14 +142,14 @@ function onChipClick(key) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: 10px 16px;
   width: 100%;
   min-width: 0;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(11, 7, 54, 0.42);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  padding: 4px 2px 4px;
+  border: none;
+  border-bottom: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .lfs-segment {
@@ -175,243 +162,180 @@ function onChipClick(key) {
 
 .lfs-divider {
   width: 1px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.22);
+  height: 24px;
+  background: rgba(30, 27, 46, 0.12);
   flex-shrink: 0;
-  margin: 0 6px;
+  margin: 0 4px;
 }
 
 .lfs-segment__label {
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75);
+  color: #9ca3af;
   white-space: nowrap;
   flex-shrink: 0;
-  min-width: 42px;
 }
 
 .lfs-pills {
   display: inline-flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
-.lfs-pills--segmented {
-  gap: 0;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.lfs-pills--segmented .lfs-pill {
-  border-radius: 0;
-  border: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.lfs-pills--segmented .lfs-pill:last-child {
-  border-right: none;
-}
-
 .lfs-pill {
-  --pill-accent: #a78bfa;
+  --pill-accent: #6b21a8;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   margin: 0;
-  padding: 9px 14px;
-  border-radius: 11px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition:
-    transform 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease,
     background 0.15s ease,
     box-shadow 0.15s ease;
   -webkit-appearance: none;
   appearance: none;
+  transform: none !important;
 }
 
 .lfs-pill__icon {
   flex-shrink: 0;
+  width: auto;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--pill-accent) !important;
   opacity: 1;
 }
 
 .lfs-pill__label {
-  color: #fff;
+  color: var(--pill-accent);
+  font-weight: 600;
 }
 
 .lfs-pill__count {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.28);
-  color: #fff;
-  min-width: 1.6em;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #4c1d95;
+  min-width: 0;
+  text-align: left;
 }
 
 .lfs-pill.is-zero .lfs-pill__count {
-  opacity: 0.65;
+  opacity: 0.7;
 }
 
-.lfs-pill__check {
-  flex-shrink: 0;
-  color: #fff;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
-}
-
-/* Default tinted states (visible before click) */
 .lfs-pill--cold {
-  --pill-accent: #94a3b8;
-  border-color: rgba(148, 163, 184, 0.45);
-  background: rgba(148, 163, 184, 0.18);
-}
-.lfs-pill--cold .lfs-pill__icon {
-  color: #cbd5e1;
+  --pill-accent: #0284c7;
 }
 
 .lfs-pill--warm {
-  --pill-accent: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.5);
-  background: rgba(251, 191, 36, 0.16);
-}
-.lfs-pill--warm .lfs-pill__icon {
-  color: #fde68a;
+  --pill-accent: #b45309;
 }
 
 .lfs-pill--hot {
-  --pill-accent: #f87171;
-  border-color: rgba(248, 113, 113, 0.5);
-  background: rgba(248, 113, 113, 0.16);
-}
-.lfs-pill--hot .lfs-pill__icon {
-  color: #fecaca;
+  --pill-accent: #ea580c;
 }
 
 .lfs-pill--answered {
-  --pill-accent: #4ade80;
-  border-color: rgba(74, 222, 128, 0.5);
-  background: rgba(74, 222, 128, 0.14);
-}
-.lfs-pill--answered .lfs-pill__icon {
-  color: #bbf7d0;
+  --pill-accent: #16a34a;
 }
 
 .lfs-pill--no-answer {
-  --pill-accent: #fb923c;
-  border-color: rgba(251, 146, 60, 0.5);
-  background: rgba(251, 146, 60, 0.16);
-}
-.lfs-pill--no-answer .lfs-pill__icon {
-  color: #fed7aa;
+  --pill-accent: #dc2626;
 }
 
 .lfs-pill:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: none !important;
+  border-color: color-mix(in srgb, var(--pill-accent) 35%, #e5e7eb);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  background: #ffffff;
 }
 
 .lfs-pill:focus-visible {
-  outline: 2px solid #fbbf24;
+  outline: 2px solid var(--pill-accent);
   outline-offset: 2px;
 }
 
-/* Selected — strong ring + fill */
 .lfs-pill.is-active {
-  transform: translateY(-1px);
-  border-width: 2px;
+  transform: none !important;
   border-color: var(--pill-accent) !important;
-  color: #fff !important;
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.25),
-    0 0 0 4px color-mix(in srgb, var(--pill-accent) 45%, transparent),
-    0 6px 16px rgba(0, 0, 0, 0.28);
+  background: color-mix(in srgb, var(--pill-accent) 10%, #ffffff) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pill-accent) 18%, transparent);
 }
 
-.lfs-pill--cold.is-active {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.55) 0%, rgba(71, 85, 105, 0.65) 100%) !important;
-}
-.lfs-pill--warm.is-active {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.5) 0%, rgba(180, 83, 9, 0.55) 100%) !important;
-}
-.lfs-pill--hot.is-active {
-  background: linear-gradient(135deg, rgba(248, 113, 113, 0.55) 0%, rgba(185, 28, 28, 0.6) 100%) !important;
-}
-.lfs-pill--answered.is-active {
-  background: linear-gradient(135deg, rgba(74, 222, 128, 0.45) 0%, rgba(21, 128, 61, 0.55) 100%) !important;
-}
-.lfs-pill--no-answer.is-active {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.5) 0%, rgba(194, 65, 12, 0.55) 100%) !important;
-}
-
+.lfs-pill.is-active .lfs-pill__icon,
 .lfs-pill.is-active .lfs-pill__label {
-  color: #fff;
-  font-weight: 800;
+  color: var(--pill-accent) !important;
 }
 
 .lfs-pill.is-active .lfs-pill__count {
-  background: rgba(0, 0, 0, 0.35);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #fff;
+  color: #4c1d95;
   opacity: 1;
 }
 
 .lfs-active-banner {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
-  padding: 6px 10px 6px 14px;
+  padding: 4px 8px 4px 12px;
   border-radius: 999px;
-  border: 1.5px solid rgba(251, 191, 36, 0.55);
-  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(107, 33, 168, 0.18);
+  background: #f3e8ff;
   flex-shrink: 0;
 }
 
 .lfs-active-banner__text {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: #5b21b6;
   white-space: nowrap;
 }
 
 .lfs-active-banner__text strong {
-  color: #fde68a;
-  font-weight: 800;
+  color: #6b21a8;
+  font-weight: 700;
 }
 
 .lfs-pill--clear {
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  gap: 5px;
-  padding: 7px 12px;
+  border-color: rgba(107, 33, 168, 0.2);
+  background: #fff;
+  color: #6b21a8;
+  --pill-accent: #6b21a8;
+  gap: 4px;
+  padding: 5px 10px;
   font-size: 12px;
 }
 
+.lfs-pill--clear .lfs-pill__icon,
+.lfs-pill--clear {
+  color: #6b21a8;
+}
+
 .lfs-pill--clear:hover {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  border-color: #6b21a8;
+  background: #f3e8ff;
+  color: #6b21a8;
 }
 
 @media (max-width: 1200px) {
@@ -420,7 +344,6 @@ function onChipClick(key) {
     flex-wrap: nowrap;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
   }
 
   .lfs-bar::-webkit-scrollbar {
@@ -439,7 +362,6 @@ function onChipClick(key) {
 
 @media (max-width: 768px) {
   .lfs {
-    /* Match the board/search mobile padding so left/right spacing is equal */
     padding: 0 4px;
     margin-bottom: 8px;
   }

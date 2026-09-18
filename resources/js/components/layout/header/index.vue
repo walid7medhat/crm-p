@@ -40,9 +40,8 @@
           type="button"
           class="sidebar-toggle"
           :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)) }"
-          :title="isMobileViewport ? 'Close menu' : (isSidebarActive ? 'Expand menu' : 'Oia Properties')"
           @click="isMobileViewport ? closeMobileMenu() : handleSidebarToggleClick()"
-          aria-label="Toggle menu"
+          :aria-label="isMobileViewport ? 'Close menu' : (isSidebarActive ? 'Expand menu' : 'Collapse menu')"
         >
           <iconify-icon
             :icon="isMobileViewport ? 'lucide:x' : 'material-symbols:menu-rounded'"
@@ -52,7 +51,7 @@
           <span
             v-show="!isMobileViewport && (!isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)))"
             class="sidebar-toggle-label"
-          >{{ !isSidebarActive ? 'Oia Properties' : 'Expand menu' }}</span>
+          >Oia Properties</span>
         </button>
       </div>
     </div>
@@ -87,7 +86,7 @@
           }"
         >
           <a  v-if="!isHr" href="javascript:void(0)" @click.stop.prevent="handleCrmClick" :class="{ active: isSidebarModuleActive('crm') }">
-            <iconify-icon icon="lucide:handshake" class="menu-icon" />
+            <img :src="crmIcon" class="imgicon" alt="" />
             <span>CRM</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
@@ -121,13 +120,22 @@
               </a>
               <ul v-if="crmListingsExpanded && !isMobileViewport" class="sidebar-submenu sidebar-submenu--grouped sidebar-submenu--nested">
                 <template v-for="section in listingsSidebarSections" :key="section.key">
-                  <li v-if="section.key !== 'listings'" class="sidebar-submenu__heading">{{ section.title }}</li>
+                  <li v-if="section.key !== 'listings'" class="sidebar-submenu__heading sidebar-submenu__heading--with-icon">
+                    <img v-if="section.iconSrc" :src="section.iconSrc" class="imgicon submenu-icon" alt="" />
+                    <span>{{ section.title }}</span>
+                  </li>
                   <li
                     v-for="item in section.items"
                     :key="`${section.key}-${item.path}`"
                     :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]"
                   >
                     <a href="#" class="sidebar-nav-link" @click.prevent="goToListingsItem(item.path)">
+                      <img
+                        v-if="section.key === 'listings' && section.iconSrc"
+                        :src="section.iconSrc"
+                        class="imgicon submenu-icon"
+                        alt=""
+                      />
                       <span class="menu-label">{{ item.label }}</span>
                       <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
                       <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
@@ -158,7 +166,7 @@
           }"
         >
           <a href="javascript:void(0)" @click.stop.prevent="toggleDropdown('calculator')" :class="{ active: isSidebarModuleActive('calculator') }">
-            <iconify-icon icon="lucide:calculator" class="menu-icon" />
+            <img :src="calculatorIcon" class="imgicon" alt="" />
             <span>Calculators</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'calculator' }" />
           </a>
@@ -189,7 +197,7 @@
               :class="{ active: isSidebarModuleActive('hr') }"
               @click="navigate"
             >
-              <iconify-icon icon="lucide:users-round" class="menu-icon" />
+              <img :src="hrIcon" class="imgicon" alt="" />
               <span>HR</span>
             </a>
           </router-link>
@@ -220,7 +228,7 @@
           :class="{ dropdown: true, open: activeDropdown === 'settings', 'active-parent': isSidebarModuleActive('settings') }"
         >
           <a href="javascript:void(0)" @click="toggleDropdown('settings')" :class="{ active: isSidebarModuleActive('settings') }">
-            <iconify-icon icon="lucide:settings" class="menu-icon" />
+            <img :src="roleIcon" class="imgicon" alt="" />
             <span>Settings</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'settings' }" />
           </a>
@@ -231,7 +239,8 @@
                 <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
                 <router-link :to="item.path" custom v-slot="{ navigate, href }">
                   <a :href="href" class="sidebar-nav-link" @click="navigate">
-                    <iconify-icon v-if="item.icon" :icon="item.icon" class="menu-icon submenu-icon" />
+                    <img v-if="item.iconSrc" :src="item.iconSrc" class="imgicon submenu-icon" alt="" />
+                    <iconify-icon v-else-if="item.icon" :icon="item.icon" class="menu-icon submenu-icon" />
                     <span>{{ item.label }}</span>
                   </a>
                 </router-link>
@@ -379,7 +388,8 @@
             :class="{ 'is-active': isDockActive(child.path) }"
             @click="closeMobileDockGroup"
           >
-            <iconify-icon v-if="child.icon" :icon="child.icon" class="mobile-dock-sheet__item-icon" />
+            <img v-if="child.iconSrc" :src="child.iconSrc" class="mobile-dock-sheet__item-icon mobile-dock-sheet__item-icon--img" alt="" />
+            <iconify-icon v-else-if="child.icon" :icon="child.icon" class="mobile-dock-sheet__item-icon" />
             <span>{{ child.label }}</span>
             <span v-if="child.count > 0" class="mobile-dock-sheet__count">{{ child.count }}</span>
           </router-link>
@@ -461,19 +471,28 @@ import {
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
-const dashboardIcon=ref('/assets/icons/dashboard-icon.svg');
-const leadsIcon=ref('/assets/icons/leads-icon.svg');
-const dealsIcon=ref('/assets/icons/deals-icon.svg');
-const listingsIcon=ref('/assets/icons/listings-icon.svg');
-const requestsIcon=ref('/assets/icons/request-icon.svg');
+const dashboardIcon = ref('/assets/icons/dashboard-icon.svg?v=2');
+const leadsIcon = ref('/assets/icons/leads-icon.svg?v=2');
+const dealsIcon = ref('/assets/icons/deals-icon.svg?v=2');
+const listingsIcon = ref('/assets/icons/listings-icon.svg?v=2');
+const requestsIcon = ref('/assets/icons/request-icon.svg?v=2');
 const isMobileOpen = ref(false);
-const ownersIcon=ref('/assets/icons/owners-icon.svg');
-const propertyIcon=ref('/assets/icons/property-icon-white.svg');
-const unitViewIcon=ref('/assets/icons/unit-view-icon.svg');
-const layoutTypeIcon=ref('/assets/icons/layout-icon.svg');
-const locationIcon=ref('/assets/icons/area-icon.svg');
-const agentsIcon=ref('/assets/icons/agents-icon.svg');
-const roleIcon=ref('/assets/icons/role-icon.svg');
+const crmIcon = ref('/assets/icons/kanban-icon.svg?v=2');
+const ownersIcon = ref('/assets/icons/owners-icon.svg?v=2');
+const propertyIcon = ref('/assets/icons/property-icon.svg?v=2');
+const unitViewIcon = ref('/assets/icons/unit-view-icon.svg?v=2');
+const layoutTypeIcon = ref('/assets/icons/layout-icon.svg?v=2');
+const locationIcon = ref('/assets/icons/area-icon.svg?v=2');
+const agentsIcon = ref('/assets/icons/agents-icon.svg?v=2');
+const roleIcon = ref('/assets/icons/role-icon.svg?v=2');
+const hrIcon = ref('/assets/icons/hr-icon.svg?v=2');
+const calculatorIcon = ref('/assets/icons/insights-icon.svg?v=2');
+const projectsIcon = ref('/assets/icons/projects-icon.svg?v=2');
+const featuresIcon = ref('/assets/icons/features-icon.svg?v=2');
+const developerIcon = ref('/assets/icons/developer-icon.svg?v=2');
+const allChatsIcon = ref('/assets/icons/all-chats-icon.svg?v=2');
+const suggestionIcon = ref('/assets/icons/suggestion-icon.svg?v=2');
+const insightsIcon = ref('/assets/icons/insights-icon.svg?v=2');
 
 const route = useRoute();
 const router = useRouter();
@@ -797,8 +816,27 @@ const listingsSidebarSections = computed(() =>
     unit_views: filteredUnitViewsItems.value,
     layout_types: filteredLayoutTypesItems.value,
     areas: filteredAreasItems.value,
-  }),
+  }).map((section) => ({
+    ...section,
+    iconSrc: listingsSectionIcon(section.iconKey || section.key),
+  })),
 );
+
+function listingsSectionIcon(key) {
+  const map = {
+    listings: listingsIcon.value,
+    projects: projectsIcon.value,
+    requests: requestsIcon.value,
+    developers: developerIcon.value,
+    owners: ownersIcon.value,
+    property_types: propertyIcon.value,
+    features: featuresIcon.value,
+    unit_views: unitViewIcon.value,
+    layout_types: layoutTypeIcon.value,
+    areas: locationIcon.value,
+  };
+  return map[key] || listingsIcon.value;
+}
 
 /** Listings nested submenu — all admins (inventory links under CRM → Listings) */
 const isListingsDropdownAdmin = computed(() => isAdmin.value && !isShowOnlyListing.value);
@@ -821,18 +859,18 @@ const mainMenuItems = computed(() => {
   const items = [];
 
   if (isSuperAdmin.value) {
-    items.push({ path: '/lead-reports', label: 'Lead Reports', icon: 'lucide:bar-chart-2' });
+    items.push({ path: '/lead-reports', label: 'Lead Reports', iconSrc: insightsIcon.value });
   }
 
   if (isSuperAdmin.value) {
-    items.push({ path: '/sales-intelligence', label: 'AI Sales Intelligence', icon: 'lucide:brain-circuit' });
-    items.push({ path: '/investment-analysis', label: 'Investment Analysis', icon: 'lucide:line-chart' });
-    items.push({ path: '/settings/city-investments', label: 'City Investments', icon: 'lucide:landmark' });
+    items.push({ path: '/sales-intelligence', label: 'AI Sales Intelligence', iconSrc: insightsIcon.value });
+    items.push({ path: '/investment-analysis', label: 'Investment Analysis', iconSrc: insightsIcon.value });
+    items.push({ path: '/settings/city-investments', label: 'City Investments', iconSrc: projectsIcon.value });
   }
 
   if (isAdmin.value) {
-    items.push({ path: '/lead-source-report', label: 'Leads by Source', icon: 'lucide:pie-chart' });
-    items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', icon: 'lucide:target' });
+    items.push({ path: '/lead-source-report', label: 'Leads by Source', iconSrc: insightsIcon.value });
+    items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', iconSrc: leadsIcon.value });
   }
 
   return items;
@@ -843,36 +881,37 @@ const filteredMainMenuItems = computed(() => mainMenuItems.value.filter((item) =
 const settingsSidebarSections = computed(() => {
   const system = [];
   if (isAdmin.value) {
-    system.push({ path: '/system-overview', label: 'System Map', icon: 'lucide:layout-dashboard' });
-  
-    
+    system.push({ path: '/system-overview', label: 'System Map', iconSrc: dashboardIcon.value });
   }
   if (isSuperAdmin.value) {
     system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });
-     system.push({ path: '/agent-performance', label: 'Agent Performance', icon: 'lucide:coins' });
-      system.push({ path: '/import-pitrix', label: 'Import Leads', icon: 'lucide:cloud-download' });
-    system.push({ path: '/sync-bitrix-leads', label: 'Sync Leads', icon: 'lucide:refresh-cw' });
-    system.push({ path: '/sync-responsible', label: 'Sync Responsible', icon: 'lucide:user-check' });
+    system.push({ path: '/agent-performance', label: 'Agent Performance', iconSrc: agentsIcon.value });
+    system.push({ path: '/import-pitrix', label: 'Import Leads', iconSrc: leadsIcon.value });
+    system.push({ path: '/sync-bitrix-leads', label: 'Sync Leads', iconSrc: leadsIcon.value });
+    system.push({ path: '/sync-responsible', label: 'Sync Responsible', iconSrc: agentsIcon.value });
     system.push({ path: '/settings/background', label: 'Background', icon: 'lucide:image' });
-    system.push({ path: '/settings/deal-costs', label: 'Deal Costs', icon: 'lucide:coins' });
-    system.push({ path: '/settings/user-duplicates-report', label: 'Non-OIA & Duplicate Users', icon: 'lucide:user-search' });
-
+    system.push({ path: '/settings/deal-costs', label: 'Deal Costs', iconSrc: dealsIcon.value });
+    system.push({ path: '/settings/user-duplicates-report', label: 'Non-OIA & Duplicate Users', iconSrc: agentsIcon.value });
   }
 
   const chat = isCustomAdmin.value
-    ? [{ path: '/admin/chat', label: 'All Chats', icon: 'ri-chat-3-line' }]
+    ? [{ path: '/admin/chat', label: 'All Chats', iconSrc: allChatsIcon.value }]
     : [];
 
   const other = !isShowOnlyListing.value
     ? [
-        { path: '/suggestion', label: 'Suggestions', icon: 'lucide:lightbulb' },
-       
+        { path: '/suggestion', label: 'Suggestions', iconSrc: suggestionIcon.value },
       ]
     : [];
 
+  const roles = (filteredRolesItems.value || []).map((item) => ({
+    ...item,
+    iconSrc: item.iconSrc || roleIcon.value,
+  }));
+
   return buildSettingsSidebarSections({
     system,
-    roles: filteredRolesItems.value,
+    roles,
     tools: [],
     insights: filteredMainMenuItems.value,
     chat,
@@ -929,7 +968,7 @@ const mobileDockItems = computed(() => {
   }
 
   if (isSuperAdmin.value || isHr.value || user.value?.id === 186) {
-    moreChildren.push({ path: '/hr', label: 'HR', icon: 'lucide:users-round' });
+    moreChildren.push({ path: '/hr', label: 'HR', iconSrc: hrIcon.value });
   }
 
   if (filteredUsersItems.value.length) {
@@ -965,7 +1004,7 @@ const mobileDockItems = computed(() => {
     {
       path: isShowOnlyListing.value ? '/alllisting' : '/',
       label: 'Home',
-      icon: 'lucide:house',
+      iconSrc: dashboardIcon.value,
     },
   ];
 
@@ -973,7 +1012,7 @@ const mobileDockItems = computed(() => {
     items.push({
       path: isShowOnlyListing.value ? '/alllisting' : getListingsEntryPath(),
       label: 'Listings',
-      icon: 'lucide:building-2',
+      iconSrc: listingsIcon.value,
     });
   }
 
@@ -989,7 +1028,7 @@ const mobileDockItems = computed(() => {
     items.push({
       key: 'group-more',
       label: 'More',
-      icon: 'lucide:layout-grid',
+      iconSrc: featuresIcon.value,
       children: moreChildren,
       sections: moreSections,
     });
@@ -1423,14 +1462,14 @@ onUnmounted(() => {
 
 </script>
 <style scoped>
-/* 1. Default / open sidebar: same as header bar (light transparent glass) */
+/* 1. Default / open sidebar: frosted so system background shows */
 .sidebar {
   display: flex;
   flex-direction: column;
-  background: var(--gradient-crm-glass) !important;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(232, 234, 239, 0.8) !important;
   z-index: 99 !important;
   position: fixed;
 }
@@ -1474,35 +1513,41 @@ onUnmounted(() => {
 }
 
 .sidebar-header {
-  padding: 0.65rem 0.75rem;
-  min-height: 4rem;
+  padding: 0.25rem 0;
+  min-height: 40px;
   box-sizing: border-box;
-  justify-content: flex-start;
+  justify-content: stretch;
+  align-items: center;
   background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #eef0f4;
 }
 .sidebar-menu li a {
-    padding: 0.45rem 0.5rem !important;
+    padding: 0.55rem 0.55rem !important;
+    min-height: 44px;
+    box-sizing: border-box;
+    align-items: center;
+    margin-bottom: 4px;
 }
 .sidebar-menu li a span,
 .sidebar-submenu li a span {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.3;
+  font-weight: 500;
 }
-/* 2. Darker only on hover when collapsed (.sidebar.active = collapsed) */
+/* 2. Keep light surface when collapsed + hover — compact readable width */
 .sidebar.active:hover {
-  width: auto;
-   background: var(--gradient-crm-glass) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  /*border-color: rgba(255, 255, 255, 0.12);*/
+  width: 13rem !important;
+  min-width: 13rem !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   z-index: 1300 !important;
 }
 @media (max-width: 991px) {
   .sidebar.sidebar-open:not(.sidebar--mobile-drawer) {
-    background: var(--gradient-crm-glass) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     z-index: 100 !important;
   }
 }
@@ -1674,17 +1719,20 @@ onUnmounted(() => {
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
-    width: 11.75rem;
+    width: 13rem !important;
+    min-width: 13rem !important;
   }
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 13rem;
+    width: 13.5rem !important;
+    min-width: 13.5rem !important;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 14rem;
+    width: 13.5rem !important;
+    min-width: 13.5rem !important;
   }
 }
 
@@ -1693,47 +1741,61 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .sidebar-toggle {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  width: 36px;
-  padding: 0;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  padding: 0.35rem 0.4rem;
+  box-sizing: border-box;
   background: transparent;
   border: none;
   cursor: pointer;
   flex-shrink: 0;
+  gap: 8px;
+  line-height: 1;
+  transform: none !important;
 }
 .sidebar-toggle-with-label {
-  width: auto;
-  gap: 0.375rem;
   justify-content: flex-start;
 }
 /* Same place, same style as menu items but smaller and not bold */
 .sidebar-toggle-label {
   font-family: inherit;
   font-size: 0.8125rem;
-  font-weight: 400;
-  color: #ffffff;
+  font-weight: 700;
+  color: #1a1528;
   white-space: nowrap;
+  line-height: 1.25;
 }
 .sidebar-menu-icon {
-  font-size: 1.5rem;
-  color: #ffffff !important;
-  width: 1.5rem;
-  height: 1.5rem;
+  font-size: 1.25rem;
+  color: #4b4568 !important;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .sidebar-toggle:hover .sidebar-menu-icon {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #6b21a8 !important;
 }
 [data-theme="dark"] .sidebar-menu-icon {
-  color: #ffffff !important;
+  color: #4b4568 !important;
 }
 [data-theme="dark"] .sidebar-toggle:hover .sidebar-menu-icon {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #6b21a8 !important;
 }
 /* Ensure Iconify icon inherits color (SVG fill) */
 .sidebar-menu-icon :deep(svg),
@@ -1742,27 +1804,29 @@ onUnmounted(() => {
 }
 
 .sidebar-menu .dropdown.active-parent > a {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
   border-radius: 10px;
+  color: #4b4568;
 }
 
 .sidebar-menu .nav-link.active-page a {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 8px;
+  box-shadow: none;
 }
 
 .sidebar-menu .dropdown.active-parent .menu-icon,
 .sidebar-menu .nav-link.active-page .menu-icon {
-  color: #fff;
+  color: #6b7280;
 }
 
 .sidebar-menu li a.active {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
   border-radius: 10px;
   padding: 8px 10px;
 }
@@ -1796,31 +1860,34 @@ onUnmounted(() => {
   padding: 1px 6px;
 }
 
-/* Menu links: visible on both transparent (open) and dark (collapsed hover) */
+/* Menu links: dark text on light sidebar */
 .sidebar-menu li a,
 .sidebar-submenu li a {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   width: 100%;
   padding: 8px 10px;
   margin-bottom: 2px;
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.95);
+  color: #4b4568;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .sidebar-menu li a:hover,
 .sidebar-submenu li a:hover {
-  color: #fff;
+  color: #4b4568;
+  background: rgba(15, 9, 57, 0.04);
 }
 .sidebar-menu li a.active,
 .sidebar-menu li a.sidebar-nav-link.active {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
   border-radius: 10px;
   padding: 8px 10px;
-  color: #fff;
+  color: #4b4568;
 }
 
 /* Main dashboard: only Dashboard may appear active in the sidebar */
@@ -1830,7 +1897,84 @@ onUnmounted(() => {
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
-  color: rgba(255, 255, 255, 0.95) !important;
+  color: #4b4568 !important;
+}
+
+.sidebar--dashboard-home {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(232, 234, 239, 0.8) !important;
+}
+
+.sidebar--dashboard-home.active:hover {
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+
+.sidebar--dashboard-home .sidebar-header {
+  padding: 0.25rem 0;
+  min-height: 40px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.sidebar--dashboard-home .sidebar-toggle,
+.sidebar--dashboard-home .sidebar-menu-icon,
+.sidebar--dashboard-home .sidebar-toggle-label,
+.sidebar--dashboard-home .sidebar-menu li a,
+.sidebar--dashboard-home .sidebar-submenu li a,
+.sidebar--dashboard-home .menu-icon {
+  color: #4b4568 !important;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a:hover {
+  background: #f4f5f7 !important;
+  color: #6b21a8 !important;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a {
+  padding: 0.35rem 0.4rem !important;
+  margin-bottom: 1px;
+  border-radius: 10px;
+  min-height: 40px;
+}
+
+.sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link--dashboard.active {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  color: #4b4568 !important;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a span,
+.sidebar--dashboard-home .sidebar-submenu li a span {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: inherit !important;
+}
+
+.sidebar--dashboard-home .menu-icon,
+.sidebar--dashboard-home .imgicon {
+  width: 18px;
+  height: 18px;
+}
+
+.sidebar--dashboard-home .imgicon {
+  filter: brightness(0) saturate(100%) invert(28%) sepia(8%) saturate(900%) hue-rotate(210deg) brightness(95%);
+  opacity: 0.9;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a.active .imgicon,
+.sidebar--dashboard-home .sidebar-menu li a:hover .imgicon {
+  filter: brightness(0) saturate(100%) invert(28%) sepia(8%) saturate(900%) hue-rotate(210deg) brightness(95%);
+  opacity: 1;
+}
+
+.sidebar--dashboard-home .sidebar-calc-label__acronym {
+  color: #4b4568 !important;
+}
+
+.sidebar--dashboard-home .sidebar-calc-label__name {
+  color: #9ca3af !important;
 }
 
 /* Keep CRM submenu visible when user opens it from dashboard */
@@ -1862,14 +2006,14 @@ onUnmounted(() => {
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #fff;
+  color: #4b4568;
 }
 
 .sidebar-calc-label__name {
   font-size: 0.625rem;
   font-weight: 500;
   letter-spacing: 0.01em;
-  color: rgba(255, 255, 255, 0.58);
+  color: #9ca3af;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1901,13 +2045,13 @@ onUnmounted(() => {
 }
 
 .sidebar-submenu__nested > a {
-  padding-left: 12px;
+  padding-left: 0.35rem !important;
 }
 
 .sidebar-submenu--nested {
-  margin-left: 8px;
-  padding-left: 4px;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  border-left: none !important;
 }
 
 .dropdown-arrow--nested {
@@ -1915,29 +2059,32 @@ onUnmounted(() => {
 }
 
 
-/* Icons and dropdown arrow visible on dark sidebar */
+/* Icons and dropdown arrow visible on light sidebar */
 .sidebar-menu .nav-link.active-page a,
 .sidebar-submenu .nav-link.active-page a {
-  background: rgba(255, 255, 255, 0.1);
-  filter: brightness(1.05);
+  background: transparent;
+  filter: none;
   border-radius: 10px;
-  color: #fff;
+  color: #4b4568;
+  box-shadow: none;
+  border: 1px solid transparent;
 }
 .sidebar .menu-icon {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #6b7280 !important;
   font-size: 1.125rem !important;
   width: 1.125rem;
   height: 1.125rem;
   flex-shrink: 0;
 }
 .sidebar .imgicon {
-  opacity: 0.95;
+  opacity: 0.9;
   width: 1.25rem;
   height: auto;
   flex-shrink: 0;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(8%) saturate(900%) hue-rotate(210deg) brightness(95%);
 }
 .sidebar .dropdown-arrow {
-  border-left-color: rgba(255, 255, 255, 0.9);
+  border-left-color: #9ca3af;
 }
 
 .nav-link a {
@@ -1976,8 +2123,25 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: #9ca3af;
   pointer-events: none;
+}
+
+.sidebar-submenu__heading--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.sidebar-submenu__heading--with-icon .imgicon {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
 }
 
 .sidebar-submenu__heading:first-child {
@@ -1993,7 +2157,7 @@ onUnmounted(() => {
 .sidebar-item-all-chats a,
 .sidebar-item-all-chats a span {
   font-size: 0.8rem !important;
-  color: #ffffff !important;
+  color: #4b4568 !important;
 }
 .sidebar-item-all-chats .menu-icon {
   font-size: 1rem !important;

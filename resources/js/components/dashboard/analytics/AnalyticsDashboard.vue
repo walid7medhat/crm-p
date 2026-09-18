@@ -12,24 +12,20 @@
           aria-label="Open navigation menu"
           @click="toggleMobileMenu"
         >
-          <iconify-icon icon="heroicons:bars-3-solid" width="22" height="22" />
+          <iconify-icon icon="heroicons:bars-3-solid" width="20" height="20" />
         </button>
-        <div class="adx-header__logo">
-          <iconify-icon icon="lucide:layout-dashboard" width="20" height="20" />
-        </div>
         <div>
           <h1 class="adx-header__title">Hello, {{ greetingName }} 👋</h1>
-          <p class="adx-header__sub">{{ scopeLabel }} — leads, deals, listings &amp; HR</p>
+          <p class="adx-header__sub">Company analytics — leads, deals, listings &amp; HR</p>
         </div>
       </div>
       <div class="adx-header__actions">
-        <span class="adx-header__period">{{ periodLabel }}</span>
         <DashboardDateRangePicker
           v-model:date-from="dateFrom"
           v-model:date-to="dateTo"
           :label="dateRangeLabel"
           :icon-only="isMobileViewport"
-          picker-class="dh-header-date"
+          picker-class="dh-header-date adx-date-pill"
           @apply="applyDateRange"
         />
       </div>
@@ -54,16 +50,16 @@
               <p>Pipeline, sources, agents &amp; activity</p>
             </div>
           </div>
-          <router-link to="/kanban" class="adx-uni-band__link">
-            Open Leads <iconify-icon icon="lucide:arrow-right" width="14" height="14" />
+          <router-link to="/kanban" class="adx-uni-band__link adx-uni-band__link--solid">
+            View Leads &gt;
           </router-link>
         </header>
 
         <div class="adx-uni-leads">
-          <!-- KPI strip -->
+          <!-- KPI strip — white cards, color on numbers only -->
           <div class="adx-uni-leads__kpis">
             <div class="adx-uni-kpi adx-uni-kpi--hero">
-              <span class="adx-uni-kpi__label">Total leads</span>
+              <span class="adx-uni-kpi__label">Total Leads</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.total_leads) }}</strong>
               <span class="adx-uni-kpi__sub">{{ crm.conversion_rate || 0 }}% conversion</span>
             </div>
@@ -85,21 +81,23 @@
               <span v-if="crm.follow_up_overdue" class="adx-uni-kpi__sub">{{ formatNumber(crm.follow_up_overdue) }} overdue</span>
             </div>
             <div class="adx-uni-kpi adx-uni-kpi--hot">
-              <span class="adx-uni-kpi__label">Hot</span>
+              <span class="adx-uni-kpi__label">HOT</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.hot) }}</strong>
-              <span class="adx-uni-kpi__sub">{{ formatNumber(crm.warm) }} warm · {{ formatNumber(crm.cold) }} cold</span>
+              <span class="adx-uni-kpi__sub adx-uni-kpi__sub--temp">
+                {{ formatNumber(crm.warm) }} warm · {{ formatNumber(crm.cold) }} cold
+              </span>
             </div>
             <div class="adx-uni-kpi adx-uni-kpi--success">
               <span class="adx-uni-kpi__label">Converted</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.converted) }}</strong>
-              <span class="adx-uni-kpi__sub">{{ formatNumber(crm.lost) }} lost</span>
+              <span class="adx-uni-kpi__sub">{{ formatNumber(crm.lost) }} Lost</span>
             </div>
           </div>
 
           <div class="adx-uni-leads__main">
-            <!-- Pipeline stages -->
+            <!-- Lead Pipeline -->
             <div class="adx-uni-leads__stages">
-              <p class="adx-uni-panel-title">Lead pipeline</p>
+              <p class="adx-uni-panel-title">Lead Pipeline</p>
               <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
               <div v-else class="adx-uni-stage-grid">
                 <div
@@ -114,113 +112,143 @@
               </div>
             </div>
 
-            <!-- Lead sources -->
+            <!-- Lead Source -->
             <div class="adx-uni-leads__sources">
-              <p class="adx-uni-panel-title">Lead sources</p>
+              <p class="adx-uni-panel-title">Lead Source</p>
               <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--round" />
               <template v-else>
-                <div ref="leadSourcesChartRef" class="adx-uni-chart adx-uni-chart--donut" />
-                <ul v-if="leadSourceRows.length" class="adx-uni-source-list">
-                  <li v-for="src in leadSourceRows.slice(0, 4)" :key="src.source">
-                    <span class="adx-uni-source-list__dot" :style="{ background: src.color }" />
-                    <span class="adx-uni-source-list__name">{{ src.source }}</span>
-                    <strong>{{ formatNumber(src.count) }}</strong>
-                  </li>
-                </ul>
-                <p v-else class="adx-uni-empty">No source data yet</p>
+                <div class="adx-uni-sources-body">
+                  <div class="adx-uni-sources-donut-wrap">
+                    <div class="adx-uni-sources-donut">
+                      <div ref="leadSourcesChartRef" class="adx-uni-chart adx-uni-chart--donut" />
+                      <div class="adx-uni-sources-center" aria-hidden="true">
+                        <iconify-icon icon="lucide:users" width="18" height="18" class="adx-uni-sources-center__icon" />
+                      </div>
+                    </div>
+                    <div class="adx-uni-sources-total">
+                      <strong>{{ formatNumber(crm.total_leads) }}</strong>
+                      <span>Total Leads</span>
+                    </div>
+                  </div>
+                  <ul v-if="leadSourceRows.length" class="adx-uni-source-list">
+                    <li v-for="src in leadSourceRows.slice(0, 5)" :key="src.source">
+                      <span class="adx-uni-source-list__sq" :style="{ background: src.color }" />
+                      <div class="adx-uni-source-list__meta">
+                        <strong>{{ formatNumber(src.count) }}</strong>
+                        <span class="adx-uni-source-list__name">{{ src.source }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                  <p v-else class="adx-uni-empty">No source data yet</p>
+                </div>
               </template>
             </div>
 
             <!-- Activity -->
             <div class="adx-uni-leads__activity">
               <p class="adx-uni-panel-title">Activity</p>
-              <div class="adx-uni-activity-cards">
+              <div class="adx-uni-activity-grid">
                 <div class="adx-uni-activity-card">
-                  <iconify-icon icon="lucide:phone-incoming" width="18" height="18" />
-                  <div>
-                    <strong>{{ formatNumber(crm.calls_answered) }}</strong>
-                    <span>Calls answered</span>
+                  <div class="adx-uni-activity-card__text">
+                    <strong class="adx-uni-activity-card__val">{{ formatNumber(crm.calls_answered) }}</strong>
+                    <span class="adx-uni-activity-card__label">Call answered</span>
                   </div>
+                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:phone" width="16" height="16" /></span>
                 </div>
                 <div class="adx-uni-activity-card">
-                  <iconify-icon icon="lucide:phone-missed" width="18" height="18" />
-                  <div>
-                    <strong>{{ formatNumber(crm.calls_no_answer) }}</strong>
-                    <span>No answer</span>
+                  <div class="adx-uni-activity-card__text">
+                    <strong class="adx-uni-activity-card__val">{{ formatNumber(crm.calls_no_answer) }}</strong>
+                    <span class="adx-uni-activity-card__label">No answer</span>
                   </div>
+                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:phone" width="16" height="16" /></span>
                 </div>
                 <div class="adx-uni-activity-card">
-                  <iconify-icon icon="lucide:timer" width="18" height="18" />
-                  <div>
-                    <strong>{{ crm.avg_response_time_min || 0 }}m</strong>
-                    <span>Avg response</span>
+                  <div class="adx-uni-activity-card__text">
+                    <strong class="adx-uni-activity-card__val">{{ crm.avg_response_time_min || 0 }}m</strong>
+                    <span class="adx-uni-activity-card__label">Avg response</span>
                   </div>
+                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:clock" width="16" height="16" /></span>
                 </div>
-                <div class="adx-uni-activity-card adx-uni-activity-card--health">
-                  <iconify-icon icon="lucide:activity" width="18" height="18" />
-                  <div>
-                    <strong>{{ pipelineHealth }}%</strong>
-                    <span>{{ pipelineHealthLabel }}</span>
+                <div class="adx-uni-activity-card adx-uni-activity-card--alert">
+                  <div class="adx-uni-activity-card__text">
+                    <strong class="adx-uni-activity-card__val">{{ pipelineHealth }}%</strong>
+                    <span class="adx-uni-activity-card__label">Need attention</span>
                   </div>
+                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:trending-up" width="16" height="16" /></span>
                 </div>
               </div>
               <div v-if="crm.best_closer" class="adx-uni-closer">
-                <iconify-icon icon="lucide:trophy" width="16" height="16" />
-                <div>
-                  <span>Best closer</span>
+                <span class="adx-uni-closer__avatar">
+                  <iconify-icon icon="lucide:trophy" width="16" height="16" />
+                </span>
+                <div class="adx-uni-closer__meta">
                   <strong>{{ crm.best_closer.name }}</strong>
+                  <span>Best closer</span>
                 </div>
-                <em>{{ crm.best_closer.rate }}%</em>
+                <strong class="adx-uni-closer__rate">{{ bestCloserRate }}%</strong>
               </div>
             </div>
           </div>
 
           <div class="adx-uni-leads__bottom">
-            <!-- Funnel -->
+            <!-- Agent ranking -->
+            <div class="adx-uni-leads__agents">
+              <p class="adx-uni-panel-title adx-uni-panel-title--agents">
+                <iconify-icon icon="lucide:user" width="14" height="14" aria-hidden="true" />
+                Top Agents
+              </p>
+              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
+              <ul v-else-if="leadAgents.length" class="adx-uni-agent-list">
+                <li v-for="(agent, idx) in leadAgents" :key="agent.id" class="adx-uni-agent">
+                  <div class="adx-uni-agent__media">
+                    <div class="adx-uni-agent__avatar" aria-hidden="true">{{ agentInitials(agent.name) }}</div>
+                    <span class="adx-uni-agent__rank" :class="`adx-uni-agent__rank--${idx + 1}`">{{ idx + 1 }}</span>
+                  </div>
+                  <div class="adx-uni-agent__info">
+                    <span class="adx-uni-agent__name">{{ agent.name }}</span>
+                    <span class="adx-uni-agent__meta">{{ formatNumber(agent.leads) }} Leads · {{ formatNumber(agent.converted) }} Won</span>
+                  </div>
+                  <strong class="adx-uni-agent__rate">{{ agent.rate }}%</strong>
+                </li>
+              </ul>
+              <p v-else class="adx-uni-empty">No agent data yet</p>
+            </div>
+
+            <!-- Funnel / Deal stages -->
             <div class="adx-uni-leads__funnel">
-              <p class="adx-uni-panel-title">Conversion funnel</p>
+              <p class="adx-uni-panel-title">Deal Stages</p>
               <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
               <div v-else class="adx-uni-funnel-scroll">
                 <div
                   v-for="(stage, i) in crmFunnelStages"
                   :key="i"
-                  class="adx-uni-funnel-row"
+                  class="adx-uni-funnel-row adx-uni-funnel-row--stacked"
                 >
-                  <span class="adx-uni-funnel-row__label">{{ stage.label }}</span>
+                  <div class="adx-uni-funnel-row__head">
+                    <span class="adx-uni-funnel-row__dot" :style="{ background: stage.color }" />
+                    <span class="adx-uni-funnel-row__label">{{ stage.label }}</span>
+                    <span class="adx-uni-funnel-row__val">{{ formatStageCount(stage.value) }}</span>
+                  </div>
                   <div class="adx-uni-funnel-row__track">
                     <div
                       class="adx-uni-funnel-row__fill"
                       :style="{ width: `${stage.pct}%`, background: stage.color }"
                     />
                   </div>
-                  <span class="adx-uni-funnel-row__val">{{ formatNumber(stage.value) }}</span>
                 </div>
                 <p v-if="!crmFunnelStages.length" class="adx-uni-empty">No pipeline data yet</p>
               </div>
+              <router-link to="/kanban_deal" class="adx-uni-stages-btn">
+                <iconify-icon icon="lucide:columns-2" width="14" height="14" aria-hidden="true" />
+                View Stages &gt;
+              </router-link>
             </div>
 
             <!-- Trend -->
             <div class="adx-uni-leads__trend">
               <p class="adx-uni-panel-title">Leads trend — last 7 days</p>
               <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
-              <div v-else ref="leadsChartRef" class="adx-uni-chart" />
-            </div>
-
-            <!-- Agent ranking -->
-            <div class="adx-uni-leads__agents">
-              <p class="adx-uni-panel-title">Top agents</p>
-              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
-              <ul v-else-if="leadAgents.length" class="adx-uni-agent-list">
-                <li v-for="(agent, idx) in leadAgents" :key="agent.id" class="adx-uni-agent" :class="{ 'adx-uni-agent--top': idx < 3 }">
-                  <span class="adx-uni-agent__rank">{{ idx + 1 }}</span>
-                  <div class="adx-uni-agent__info">
-                    <span class="adx-uni-agent__name">{{ agent.name }}</span>
-                    <span class="adx-uni-agent__meta">{{ formatNumber(agent.leads) }} leads · {{ formatNumber(agent.converted) }} won</span>
-                  </div>
-                  <strong class="adx-uni-agent__rate">{{ agent.rate }}%</strong>
-                </li>
-              </ul>
-              <p v-else class="adx-uni-empty">No agent data yet</p>
+              <div v-else ref="leadsChartRef" class="adx-uni-chart adx-uni-chart--trend" />
             </div>
           </div>
         </div>
@@ -239,7 +267,7 @@
             </div>
           </div>
           <router-link to="/kanban_deal" class="adx-uni-band__link">
-            Open Deals <iconify-icon icon="lucide:arrow-right" width="14" height="14" />
+            View Deals &gt;
           </router-link>
         </header>
 
@@ -267,6 +295,7 @@
                 :key="`deal-${i}`"
                 class="adx-uni-funnel-row"
               >
+                <span class="adx-uni-funnel-row__dot" :style="{ background: stage.color }" />
                 <span class="adx-uni-funnel-row__label">{{ stage.label }}</span>
                 <div class="adx-uni-funnel-row__track">
                   <div
@@ -301,7 +330,7 @@
             </div>
           </div>
           <router-link to="/alllisting" class="adx-uni-band__link">
-            View Listings <iconify-icon icon="lucide:arrow-right" width="14" height="14" />
+            View Listings &gt;
           </router-link>
         </header>
 
@@ -378,7 +407,7 @@
             </div>
           </div>
           <router-link to="/hr" class="adx-uni-band__link">
-            Open HR <iconify-icon icon="lucide:arrow-right" width="14" height="14" />
+            View HR &gt;
           </router-link>
         </header>
 
@@ -444,7 +473,7 @@
             </div>
           </div>
           <router-link to="/view-profile" class="adx-uni-band__link">
-            My Profile <iconify-icon icon="lucide:arrow-right" width="14" height="14" />
+            My Profile &gt;
           </router-link>
         </header>
 
@@ -552,19 +581,22 @@ import { useDashboardPermissions } from '@/composables/useDashboardPermissions.j
 import { parseToDate } from '@/composables/useAdvancedDateModel.js'
 import { fetchDashboardAttendanceSummary } from '@/services/attendancesApi.js'
 
-const PURPLE = '#7c5cbf'
-const PURPLE_DARK = '#5b3d8f'
-const GOLD = '#f59e0b'
+const PURPLE = '#6b21a8'
+const PURPLE_MID = '#7c3aed'
+const PURPLE_DARK = '#5b21b6'
+const GOLD = '#f5c518'
+const ORANGE = '#ff9f43'
+const GREEN = '#22c55e'
 const SLATE = '#94a3b8'
 
-const CHART_AXIS = '#64748b'
-const CHART_GRID = '#e2e8f0'
+const CHART_AXIS = '#94a3b8'
+const CHART_GRID = '#f1f5f9'
 
-const FUNNEL_COLORS = [PURPLE, '#8b6fd4', PURPLE_DARK, GOLD, '#a78bfa']
-const SOURCE_COLORS = [PURPLE, PURPLE_DARK, '#22c55e', GOLD, '#a78bfa', SLATE]
+const FUNNEL_COLORS = ['#60a5fa', '#eab308', '#f97316', '#86efac', '#16a34a', '#ea580c']
+const SOURCE_COLORS = [PURPLE_MID, GREEN, GOLD, ORANGE, '#a78bfa', SLATE]
 
 const { isMobileViewport, toggleMobileMenu } = useMobileNavigation()
-const { canViewModule, scopeLabel } = useDashboardPermissions()
+const { canViewModule } = useDashboardPermissions()
 
 const showLeads = computed(() => canViewModule('crm'))
 const showDeals = computed(() => canViewModule('deals'))
@@ -602,6 +634,19 @@ const dateRangeLabel = computed(() => {
 
 const formatNumber = (n) => new Intl.NumberFormat().format(Number(n) || 0)
 
+const formatStageCount = (n) => {
+  const num = Number(n) || 0
+  if (num < 10) return String(num).padStart(2, '0')
+  return new Intl.NumberFormat().format(num)
+}
+
+function agentInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+}
+
 const formatCurrency = (n) =>
   new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(Number(n) || 0)
 
@@ -609,12 +654,23 @@ const crmFunnelStages = computed(() => {
   const funnel = crm.value.funnel || {}
   const labels = funnel.labels || []
   const values = funnel.values || []
-  const max = Math.max(...values.map((v) => Number(v) || 0), 1)
-  return labels.slice(0, 6).map((label, i) => ({
-    label,
-    value: Number(values[i]) || 0,
-    pct: Math.round(((Number(values[i]) || 0) / max) * 100),
-    color: FUNNEL_COLORS[i % FUNNEL_COLORS.length],
+  const seen = new Set()
+  const rows = []
+  for (let i = 0; i < labels.length && rows.length < 6; i++) {
+    const label = String(labels[i] || '').trim() || `Stage ${i + 1}`
+    const key = label.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    rows.push({
+      label,
+      value: Number(values[i]) || 0,
+      color: FUNNEL_COLORS[rows.length % FUNNEL_COLORS.length],
+    })
+  }
+  const max = Math.max(...rows.map((r) => r.value), 1)
+  return rows.map((row) => ({
+    ...row,
+    pct: Math.round((row.value / max) * 100),
   }))
 })
 
@@ -639,18 +695,20 @@ const leadSourceRows = computed(() => {
 
 const leadAgents = computed(() => (crm.value.agent_ranking || []).slice(0, 5))
 
+const bestCloserRate = computed(() => {
+  const closer = crm.value.best_closer
+  if (!closer) return 0
+  if (closer.rate != null) return Number(closer.rate) || 0
+  if (closer.conversion_rate != null) return Number(closer.conversion_rate) || 0
+  const match = leadAgents.value.find((a) => a.id === closer.id || a.name === closer.name)
+  return match ? (Number(match.rate) || 0) : 0
+})
+
 const pipelineHealth = computed(() => {
   const total = Number(crm.value.total_leads) || 0
   if (!total) return 0
   const active = (Number(crm.value.qualified) || 0) + (Number(crm.value.hot) || 0) + (Number(crm.value.negotiation) || 0)
   return Math.min(100, Math.round((active / total) * 100))
-})
-
-const pipelineHealthLabel = computed(() => {
-  const h = pipelineHealth.value
-  if (h >= 70) return 'Excellent pipeline'
-  if (h >= 40) return 'Healthy pipeline'
-  return 'Needs attention'
 })
 
 const dealStageRows = computed(() => {
@@ -754,36 +812,40 @@ const listingChartRef = ref(null)
 const hrChartRef = ref(null)
 let leadsChart = null
 let leadSourcesChart = null
+let leadSourcesChartToken = 0
 let dealsChart = null
 let listingChart = null
 let hrChart = null
 
 function chartHeight() {
   const w = typeof window !== 'undefined' ? window.innerWidth : 1541
-  if (isMobileViewport.value || w < 641) return 140
-  if (w < 1280) return 120
-  return 105
+  if (isMobileViewport.value || w < 641) return 120
+  if (w < 1280) return 96
+  return 88
 }
 
 function lineChartOptions(categories, values, color, name) {
   return {
     series: [{ name, data: values }],
-    chart: { type: 'area', height: chartHeight(), toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'area', height: chartHeight(), toolbar: { show: false }, fontFamily: 'Inter, system-ui, sans-serif', sparkline: { enabled: false } },
     colors: [color],
     fill: {
       type: 'gradient',
-      gradient: { shade: 'light', type: 'vertical', opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 100] },
+      gradient: { shade: 'light', type: 'vertical', opacityFrom: 0.45, opacityTo: 0.02, stops: [0, 100], colorStops: [
+        { offset: 0, color, opacity: 0.45 },
+        { offset: 100, color, opacity: 0.02 },
+      ] },
     },
-    stroke: { curve: 'smooth', width: 2.5 },
+    stroke: { curve: 'smooth', width: 2 },
     dataLabels: { enabled: false },
     xaxis: {
       categories,
-      labels: { style: { fontSize: '11px', colors: CHART_AXIS, fontWeight: 600 } },
+      labels: { style: { fontSize: '10px', colors: CHART_AXIS, fontWeight: 500 } },
       axisBorder: { show: false },
       axisTicks: { show: false },
     },
-    yaxis: { labels: { style: { fontSize: '11px', colors: CHART_AXIS, fontWeight: 600 } } },
-    grid: { borderColor: CHART_GRID, strokeDashArray: 4 },
+    yaxis: { labels: { style: { fontSize: '10px', colors: CHART_AXIS, fontWeight: 500 }, maxWidth: 28 } },
+    grid: { borderColor: CHART_GRID, strokeDashArray: 3, padding: { left: 4, right: 4 } },
     tooltip: { theme: 'light' },
   }
 }
@@ -794,32 +856,132 @@ function renderLeadsChart() {
   const categories = trend.map((t) => t.label)
   const values = trend.map((t) => Number(t.value) || 0)
   if (leadsChart) leadsChart.destroy()
-  leadsChart = new ApexCharts(leadsChartRef.value, lineChartOptions(categories, values, PURPLE, 'Leads'))
+  const w = typeof window !== 'undefined' ? window.innerWidth : 1541
+  const height = isMobileViewport.value || w < 641 ? 150 : w < 1280 ? 170 : 190
+  leadsChart = new ApexCharts(leadsChartRef.value, {
+    series: [{ name: 'Leads', data: values }],
+    chart: {
+      type: 'area',
+      height,
+      toolbar: { show: false },
+      fontFamily: 'Inter, system-ui, sans-serif',
+      zoom: { enabled: false },
+    },
+    colors: [PURPLE_MID],
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shade: 'light',
+        type: 'vertical',
+        shadeIntensity: 0.35,
+        opacityFrom: 0.4,
+        opacityTo: 0.04,
+        stops: [0, 90, 100],
+      },
+    },
+    stroke: {
+      curve: 'smooth',
+      width: 2.5,
+      dashArray: 5,
+    },
+    markers: {
+      size: 0,
+      hover: { size: 7 },
+      colors: ['#f59e0b'],
+      strokeColors: '#ffffff',
+      strokeWidth: 3,
+    },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories,
+      labels: { style: { fontSize: '11px', colors: CHART_AXIS, fontWeight: 500 } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      min: 0,
+      tickAmount: 7,
+      labels: { style: { fontSize: '11px', colors: CHART_AXIS, fontWeight: 500 }, maxWidth: 28 },
+    },
+    grid: {
+      borderColor: CHART_GRID,
+      strokeDashArray: 3,
+      padding: { left: 6, right: 8, top: 8, bottom: 0 },
+    },
+    tooltip: {
+      theme: 'light',
+      style: { fontSize: '12px' },
+      x: { show: true },
+      y: {
+        formatter: (val) => `${Number(val) || 0} Leads`,
+        title: { formatter: () => '' },
+      },
+      marker: { show: true },
+    },
+  })
   leadsChart.render()
 }
 
-function renderLeadSourcesChart() {
-  if (!leadSourcesChartRef.value) return
+async function renderLeadSourcesChart() {
+  const el = leadSourcesChartRef.value
+  if (!el) return
+
+  const token = ++leadSourcesChartToken
   const rows = leadSourceRows.value
   const hasData = rows.some((r) => r.count > 0)
   const series = hasData ? rows.map((r) => r.count) : [1]
   const labels = hasData ? rows.map((r) => r.source) : ['No data']
   const colors = hasData ? rows.map((r) => r.color) : ['#e2e8f0']
-  if (leadSourcesChart) leadSourcesChart.destroy()
-  leadSourcesChartRef.value.innerHTML = ''
-  const size = isMobileViewport.value ? 100 : 88
-  leadSourcesChart = new ApexCharts(leadSourcesChartRef.value, {
+  const size = isMobileViewport.value ? 96 : 120
+
+  try {
+    if (leadSourcesChart) {
+      leadSourcesChart.destroy()
+      leadSourcesChart = null
+    }
+  } catch (_) {
+    leadSourcesChart = null
+  }
+
+  if (token !== leadSourcesChartToken || !leadSourcesChartRef.value) return
+  const mountEl = leadSourcesChartRef.value
+  mountEl.innerHTML = ''
+  mountEl.style.width = `${size}px`
+  mountEl.style.height = `${size}px`
+
+  const chart = new ApexCharts(mountEl, {
     series,
     labels,
     colors,
-    chart: { type: 'donut', height: size, width: size },
-    plotOptions: { pie: { donut: { size: '68%', labels: { show: false } } } },
+    chart: {
+      type: 'donut',
+      height: size,
+      width: size,
+      animations: { enabled: false },
+      toolbar: { show: false },
+      parentHeightOffset: 0,
+    },
+    plotOptions: {
+      pie: {
+        expandOnClick: false,
+        donut: { size: '72%', labels: { show: false } },
+      },
+    },
     legend: { show: false },
     dataLabels: { enabled: false },
     tooltip: { enabled: hasData, theme: 'light' },
     stroke: { width: 2, colors: ['#fff'] },
   })
-  leadSourcesChart.render()
+
+  leadSourcesChart = chart
+  try {
+    await chart.render()
+  } catch (_) {
+    // Ignore race when a newer render already replaced this instance
+  }
+  if (token !== leadSourcesChartToken && chart !== leadSourcesChart) {
+    try { chart.destroy() } catch (_) { /* noop */ }
+  }
 }
 
 function renderDealsChart() {
@@ -894,10 +1056,14 @@ function renderHrChart() {
 async function renderLeadsCharts() {
   if (crmLoading.value || !showLeads.value) return
   await nextTick()
-  requestAnimationFrame(() => {
-    renderLeadsChart()
-    renderLeadSourcesChart()
-  })
+  await nextTick()
+  if (!leadSourcesChartRef.value && !leadsChartRef.value) {
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+  }
+  await Promise.all([
+    Promise.resolve(renderLeadsChart()),
+    renderLeadSourcesChart(),
+  ])
 }
 
 async function renderDealsCharts() {

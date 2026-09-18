@@ -22,11 +22,21 @@ body.app-has-video-bg {
   height: 100%;
   z-index: 0;
   pointer-events: none;
-  background-color: #0b0736;
-  background-image: url('/assets/images/crm-bg.png?v=2');
+  background-color: #f4f6fa;
+  background-image: url('/assets/images/crm-bg-light.jpg?v=4');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
+}
+
+/* Soften wash so wave pattern stays visible behind cards */
+.crm-bg-image::before {
+  display: block !important;
+  content: '' !important;
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
 }
 
 html:has(#app main.auth-page-main) .crm-bg-image {
@@ -39,16 +49,46 @@ html:has(#app main.auth-page-main) .crm-bg-image {
 }
 
 body.app-has-video-bg #app main.dashboard-main {
-  /* height: 100dvh;
-  max-height: 100dvh;
-  overflow: hidden; */
   display: flex !important;
   flex-direction: column !important;
   flex-wrap: nowrap !important;
   background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* Never set margin-inline-start here — sidebar offset rules own that */
+  margin-top: 8px !important;
+  margin-bottom: 10px !important;
+  margin-inline-end: 10px !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  min-height: calc(100dvh - 18px) !important;
+  gap: 0 !important;
 }
 
-/* Compact navbar in document flow — override style14 (was 4.5rem + heavy padding) */
+/* Leads / Deals board: transparent outer so header + content cards stay separate */
+body.app-has-video-bg #app main.dashboard-main:has(.kanban-main-wrapper),
+body.app-has-video-bg #app main.dashboard-main:has(.kanban-outer) {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Kanban / HR: lock shell height so columns scroll internally */
+body.app-has-video-bg #app main.dashboard-main:has(.kanban-main-wrapper),
+body.app-has-video-bg #app main.dashboard-main:has(.kanban-outer),
+body.app-has-video-bg #app main.dashboard-main:has(.hr-screen) {
+  max-height: calc(100dvh - 18px) !important;
+  overflow: hidden !important;
+}
+
+/* Navbar: separate white rounded card */
 body.app-has-video-bg #app main.dashboard-main > .navbar-header {
   position: relative !important;
   top: auto !important;
@@ -57,34 +97,67 @@ body.app-has-video-bg #app main.dashboard-main > .navbar-header {
   flex: 0 0 auto !important;
   width: 100% !important;
   height: auto !important;
-  min-height: var(--app-topbar-height, 2.75rem) !important;
+  min-height: var(--app-topbar-height, 2.5rem) !important;
   max-height: none !important;
-  padding: 0.2rem 0.5rem !important;
-  margin-bottom: var(--app-header-below-gap, 0.5rem) !important;
-  border-radius: 12px !important;
+  padding: 0.45rem 0.75rem !important;
+  margin-bottom: 10px !important;
+  border: 1px solid rgba(30, 27, 46, 0.08) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 2px 12px rgba(30, 27, 46, 0.06) !important;
+  background: #ffffff !important;
   box-sizing: border-box !important;
+}
+
+@media (max-width: 991px) {
+  body.app-has-video-bg #app main.dashboard-main {
+    margin-top: 6px !important;
+    margin-bottom: 6px !important;
+    margin-inline-end: 6px !important;
+    margin-inline-start: 6px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    min-height: calc(100dvh - 12px) !important;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main:has(.kanban-main-wrapper),
+  body.app-has-video-bg #app main.dashboard-main:has(.kanban-outer),
+  body.app-has-video-bg #app main.dashboard-main:has(.hr-screen) {
+    max-height: calc(100dvh - 12px) !important;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .navbar-header {
+    border-radius: 14px !important;
+    margin-bottom: 8px !important;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
+    border-radius: 16px !important;
+    padding: 8px 10px 10px !important;
+  }
+}
+
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn {
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(30, 27, 46, 0.16) !important;
+  background: #ffffff !important;
+  color: #6b7280 !important;
+}
+
+body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn.active {
+  background: #733E87 !important;
+  color: #ffffff !important;
+  border-color: #733E87 !important;
+  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.22) !important;
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header.navbar-header--property-detail {
   margin-bottom: 0 !important;
   border-radius: 0 !important;
-  background: var(--gradient-crm-glass) !important;
-}
-
-body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn {
-  padding: 7px 14px !important;
-  font-size: 13px !important;
-  line-height: 1.2 !important;
-  border-radius: 10px !important;
-  border-bottom: none !important;
-}
-
-body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn.active {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  border-bottom: 1px solid #f0eef4 !important;
+  background: transparent !important;
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header .navbar-header-left-row .back-button {
@@ -103,12 +176,40 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
   min-height: 0;
   height: auto;
   overflow-x: hidden;
-  /* overflow-y: auto; */
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  padding-top: 0 !important;
-  background: transparent !important;
+  padding: 12px 14px 14px !important;
+  background:
+    linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.12) 45%,
+      rgba(255, 255, 255, 0.05) 100%
+    ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 4px 20px rgba(30, 27, 46, 0.04) !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-sizing: border-box !important;
+}
+
+/* Kanban / HR shells: internal scroll only — clear so system bg shows through */
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-main-wrapper),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-outer) {
+  overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.06) 40%,
+      rgba(255, 255, 255, 0) 100%
+    ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* Detail pages: main shell scrolls with full page height */
@@ -126,7 +227,6 @@ body.app-has-video-bg #app main.dashboard-main:has(.property-form-page) {
 
 body.app-has-video-bg .property-show-page {
   margin-top: 0 !important;
-  /* padding-top: 0 !important; */
   padding: 0 1rem 1rem 0 !important;
 }
 
@@ -135,29 +235,20 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
   padding: 0 1rem 1.5rem 0 !important;
 }
 
-/* Kanban / HR shells: internal scroll only */
-body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-main-wrapper),
-body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-outer) {
-  overflow: hidden;
-}
-
 body.app-has-video-bg .dashboard-main-body,
 body.app-has-video-bg .dashboard-main-body-inner {
   flex: 0 0 auto;
   min-height: auto !important;
   height: auto !important;
   margin: 0 !important;
-  padding: 0 0 1rem 0 !important;
+  padding: 0 !important;
   display: block;
   overflow: visible;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
-}
-body.app-has-video-bg .dashboard-main-body, body.app-has-video-bg .dashboard-main-body-inner{
-  padding: 0 1rem 1rem 0 !important;
-
+  border: none !important;
 }
 
 body.app-has-video-bg .dashboard-main-body:has(.kanban-main-wrapper),
@@ -168,6 +259,7 @@ body.app-has-video-bg .dashboard-main-body:has(.kanban-outer) {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden;
+  padding: 0 !important;
 }
 
 body.app-has-video-bg .hr-screen,
@@ -296,5 +388,47 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
 
   body.app-has-video-bg #app main.dashboard-main > .navbar-header {
     min-height: var(--app-topbar-height, 3.25rem) !important;
+  }
+
+  /* Mobile kanban: unlock vertical scroll so all stages are reachable */
+  body.app-has-video-bg #app main.dashboard-main:has(.kanban-outer--mobile) {
+    max-height: none !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.kanban-outer--mobile) {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+  }
+
+  body.app-has-video-bg .dashboard-main-body:has(.kanban-outer--mobile) {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.app-has-video-bg .kanban-main-wrapper:has(.kanban-outer--mobile),
+  body.app-has-video-bg .kanban-outer--mobile {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: 0 0 auto !important;
+  }
+
+  .kanban-outer--mobile .kanban-container {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
 }

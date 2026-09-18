@@ -398,6 +398,21 @@ onMounted(() => {
     window.addEventListener('kanban-leads-board-refresh', onKanbanLeadsBoardRefresh);
     window.addEventListener('kanban-open-converted-deal', onKanbanOpenConvertedDeal);
 
+    // Open Settings System when navigated from dashboard (or elsewhere) gear icon
+    try {
+        const raw = sessionStorage.getItem('open_settings_hub')
+        if (raw) {
+            sessionStorage.removeItem('open_settings_hub')
+            const parsed = JSON.parse(raw)
+            settingsHubInitialSection.value = parsed?.section ?? null
+            nextTick(() => {
+                showSettingsHub.value = true
+            })
+        }
+    } catch {
+        /* ignore */
+    }
+
 })
 
 async function onKanbanLeadsBoardRefresh() {

@@ -75,7 +75,7 @@
                 @toggle="(e) => selection.handleCardClick(lead.id, e)"
                 @open="viewLead(lead)"
             >
-                <div class="kanban-card bg-white p-12 radius-12 shadow-sm border-0 cursor-pointer lead-card">
+                <div class="kanban-card bg-white p-12 radius-12 cursor-pointer lead-card">
                     <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
                         <p class="task-title flex-grow-1 mb-0">{{ lead.lead_name || lead.name || 'Untitled Lead' }}</p>
                         <span 
@@ -1017,9 +1017,14 @@ defineExpose({
 .lead-pool-wrapper .kanban-card {
     padding: 10px !important;
     border-radius: 11px !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     color: #1e293b;
-    border: 1px solid #e5e7eb !important;
+    border: 1.5px solid rgba(107, 33, 168, 0.16) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 1px 2px rgba(30, 27, 46, 0.04),
+        0 4px 14px rgba(107, 33, 168, 0.07) !important;
+    background: linear-gradient(160deg, #ffffff 0%, #fbf7fc 52%, #f5eef8 100%) !important;
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -1031,8 +1036,13 @@ defineExpose({
 }
 
 .lead-pool-wrapper .kanban-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08) !important;
+    transform: translateY(-2px);
+    border-color: rgba(107, 33, 168, 0.32) !important;
+    background: linear-gradient(160deg, #ffffff 0%, #f8f2fb 50%, #f0e6f7 100%) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 4px 10px rgba(30, 27, 46, 0.08),
+        0 8px 22px rgba(107, 33, 168, 0.14) !important;
 }
 
 .lead-pool-wrapper .task-title {

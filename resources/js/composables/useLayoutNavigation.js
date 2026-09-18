@@ -571,23 +571,23 @@ export function isTopModuleNavActive(currentPath, activeModule, item) {
  */
 export function buildListingsSidebarSections(sections) {
   const order = [
-    { key: 'listings', title: 'Listings' },
-    { key: 'projects', title: 'Projects' },
-    { key: 'requests', title: 'Requests' },
-    { key: 'developers', title: 'Developers' },
-    { key: 'owners', title: 'Owners' },
-    { key: 'property_types', title: 'Property Types' },
-    { key: 'features', title: 'Features' },
-    { key: 'unit_views', title: 'Unit Views' },
-    { key: 'layout_types', title: 'Layout Types' },
-    { key: 'areas', title: 'Areas' },
+    { key: 'listings', title: 'Listings', iconKey: 'listings' },
+    { key: 'projects', title: 'Projects', iconKey: 'projects' },
+    { key: 'requests', title: 'Requests', iconKey: 'requests' },
+    { key: 'developers', title: 'Developers', iconKey: 'developers' },
+    { key: 'owners', title: 'Owners', iconKey: 'owners' },
+    { key: 'property_types', title: 'Property Types', iconKey: 'property_types' },
+    { key: 'features', title: 'Features', iconKey: 'features' },
+    { key: 'unit_views', title: 'Unit Views', iconKey: 'unit_views' },
+    { key: 'layout_types', title: 'Layout Types', iconKey: 'layout_types' },
+    { key: 'areas', title: 'Areas', iconKey: 'areas' },
   ];
 
   return order
-    .map(({ key, title }) => {
+    .map(({ key, title, iconKey }) => {
       const items = sections[key] || [];
       if (!items.length) return null;
-      return { key, title, items };
+      return { key, title, iconKey, items };
     })
     .filter(Boolean);
 }

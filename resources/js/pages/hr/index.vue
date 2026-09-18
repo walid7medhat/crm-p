@@ -2121,7 +2121,6 @@ import {
   updateJob,
   deleteJob,
   fetchApplicants,
-  getApplicant,
   updateApplicantStatus as updateApplicantStatusApi,
   scheduleInterview as scheduleInterviewApi,
   fetchRecruitmentStatistics,

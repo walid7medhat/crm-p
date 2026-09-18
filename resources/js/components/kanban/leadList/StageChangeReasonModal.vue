@@ -1573,8 +1573,27 @@ defineExpose({
 
 <style scoped>
 .client-req-order {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Two fields per line in dynamic form (desktop) */
+.dynamic-form .box-shadow:not(.client-req-order) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+}
+
+.dynamic-form .box-shadow.client-req-order {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px;
+}
+
+.dynamic-form .box-shadow.lead_qualification {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 10px;
 }
 
 /* نفس الـ styles الموجود مع إضافة الـ reason-textarea */
@@ -1588,7 +1607,7 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000  !important;
+    z-index: 12060 !important;
     pointer-events: auto !important;
 }
 
@@ -1605,7 +1624,7 @@ defineExpose({
     box-shadow: 0 18px 55px rgba(15, 23, 42, 0.18);
     pointer-events: auto !important;
     position: relative;
-    z-index: 2001 !important;
+    z-index: 12061 !important;
 }
 
 .stage-change-modal * {
@@ -1683,6 +1702,10 @@ defineExpose({
     justify-content: flex-end;
     gap: 0.5rem;
     background: #ffffff;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
 }
 
 .reason-textarea {
@@ -1871,19 +1894,6 @@ defineExpose({
     margin: 6px 0px;
     border-radius: 10px;
     box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
-}
-
-/* Two fields per line in dynamic form */
-.dynamic-form .box-shadow {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 10px;
-}
-
-.dynamic-form .box-shadow.lead_qualification {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px 10px;
 }
 
 .dynamic-form .box-shadow.lead_qualification.lead-qualification-card {
@@ -2285,24 +2295,98 @@ defineExpose({
         justify-content: center;
         padding: 0;
         background-color: rgba(15, 23, 42, 0.45);
+        z-index: 12060 !important;
     }
 
     .stage-change-modal,
     .stage-change-modal.modal-wide {
         width: 100%;
         max-width: none;
-        max-height: min(92dvh, 900px);
+        max-height: min(88dvh, calc(100dvh - env(safe-area-inset-bottom, 0px) - 12px));
         border-radius: 22px 22px 0 0;
         margin: 0;
         align-self: flex-end;
+        z-index: 12061 !important;
     }
 
     .stage-change-modal .modal-header {
         border-radius: 22px 22px 0 0;
+        flex-shrink: 0;
     }
 
-    .dynamic-form .box-shadow {
-        grid-template-columns: 1fr;
+    .stage-change-modal .modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.85rem 0.9rem 1.25rem;
+    }
+
+    .stage-change-modal .modal-footer {
+        flex-shrink: 0;
+        position: sticky;
+        bottom: 0;
+        padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.08);
+        background: #ffffff;
+    }
+
+    .stage-change-modal .modal-footer .btn {
+        min-height: 44px;
+        padding: 0.65rem 1.1rem;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    /* Force single column — section-title span:2 was creating an overflow column */
+    .dynamic-form .box-shadow,
+    .dynamic-form .box-shadow.lead_qualification,
+    .dynamic-form .box-shadow.client-req-order {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
+        gap: 10px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .dynamic-form .box-shadow .section-title,
+    .dynamic-form .box-shadow.lead_qualification .section-title,
+    .section-title {
+        grid-column: auto !important;
+        width: 100% !important;
+    }
+
+    .dynamic-form .box-shadow .form-group,
+    .dynamic-form .box-shadow .lead-qual-field,
+    .dynamic-form .box-shadow .lead-qualification-trio {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        grid-column: auto !important;
+        flex: none !important;
+    }
+
+    .lead-qualification-trio {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .budget-field-wrap,
+    .custom-date-trigger,
+    .form-group :deep(.v-select),
+    .form-group :deep(.vs__dropdown-toggle) {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .budget-from-to-row {
+        grid-template-columns: 1fr !important;
     }
 }
 :deep(.custom-v-select .vs__search::placeholder) {
@@ -2793,9 +2877,9 @@ defineExpose({
         font-size: 14px !important;
     }
 
-/* append-to-body menus must sit above the stage-change overlay (z-index 2000) */
+/* append-to-body menus must sit above the stage-change overlay */
 body.stage-change-modal-open .vs__dropdown-menu {
-    z-index: 12050 !important;
+    z-index: 12100 !important;
 }
 body.stage-change-modal-open .vs__dropdown-menu .location-option-name,
 body.stage-change-modal-open .vs__dropdown-menu .location-option-subtitle,
