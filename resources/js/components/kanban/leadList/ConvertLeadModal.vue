@@ -338,7 +338,7 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Exact design proportions: ~1020 × ~540 */
+/* Exact design proportions: ~1020 × ~540 — light shell, purple accents */
 .convert-lead-overlay {
     position: fixed;
     inset: 0;
@@ -348,9 +348,9 @@ defineExpose({
     justify-content: center;
     padding: 20px;
     background:
-        radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.35), transparent 42%),
-        radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.2), transparent 40%),
-        rgba(6, 3, 16, 0.78);
+        radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
+        radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+        rgba(15, 23, 42, 0.45);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     pointer-events: auto;
@@ -388,15 +388,14 @@ defineExpose({
     display: flex;
     flex-direction: column;
     border-radius: 28px;
-    border: 1px solid rgba(196, 181, 253, 0.22);
+    border: 1px solid #e9e5f5;
     overflow: hidden;
-    background: linear-gradient(160deg, #2a1748 0%, #1a0f30 45%, #140a28 100%);
+    background: #ffffff;
     box-shadow:
-        0 28px 70px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-        0 0 50px rgba(124, 58, 237, 0.16);
+        0 28px 70px rgba(15, 23, 42, 0.18),
+        0 0 0 1px rgba(124, 58, 237, 0.04);
     pointer-events: auto;
-    color: #f5f3ff;
+    color: #0f172a;
 }
 
 .convert-lead-header {
@@ -425,9 +424,9 @@ defineExpose({
     justify-content: center;
     font-size: 20px;
     color: #fff;
-    background: linear-gradient(145deg, rgba(167, 139, 250, 0.4), rgba(124, 58, 237, 0.28));
-    border: 1px solid rgba(196, 181, 253, 0.4);
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.28);
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    box-shadow: 0 8px 18px rgba(124, 58, 237, 0.28);
 }
 
 .convert-lead-heading-text {
@@ -440,7 +439,7 @@ defineExpose({
     font-size: 22px !important;
     font-weight: 700;
     line-height: 1.2;
-    color: #fff;
+    color: #0f172a;
     letter-spacing: -0.02em;
 }
 
@@ -448,28 +447,29 @@ defineExpose({
     margin: 5px 0 0;
     font-size: 13px;
     line-height: 1.4;
-    color: rgba(196, 181, 253, 0.72);
+    color: #64748b;
 }
 
 .convert-lead-close {
     width: 34px;
     height: 34px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid #e2e8f0;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.85);
+    background: #f8fafc;
+    color: #64748b;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 16px;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .convert-lead-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.28);
+    background: #f3e8ff;
+    border-color: #d8b4fe;
+    color: #7c3aed;
 }
 
 /* Sidebar ~32% | cards 68% — same height as design */
@@ -489,11 +489,10 @@ defineExpose({
     border-radius: 20px;
     height: 100%;
     min-height: 0;
-    border: 1px solid rgba(196, 181, 253, 0.18);
+    border: 1px solid rgba(167, 139, 250, 0.35);
     background:
-        linear-gradient(180deg, rgba(76, 29, 149, 0.55) 0%, rgba(30, 10, 60, 0.35) 45%, rgba(12, 4, 28, 0.85) 100%),
-        radial-gradient(ellipse at 70% 20%, rgba(192, 132, 252, 0.35), transparent 50%),
-        #1a0b33;
+        linear-gradient(180deg, #7c3aed 0%, #6d28d9 42%, #4c1d95 100%),
+        radial-gradient(ellipse at 70% 20%, rgba(244, 114, 182, 0.35), transparent 50%);
 }
 
 .aside-skyline {
@@ -501,8 +500,8 @@ defineExpose({
     inset: 0;
     pointer-events: none;
     background:
-        linear-gradient(180deg, rgba(26, 11, 51, 0.15) 0%, rgba(26, 11, 51, 0.2) 40%, rgba(10, 4, 24, 0.55) 100%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 360' fill='none'%3E%3Cpath d='M18 360V230h16v130H18zm22 0V200h12v160H40zm20 0V245h10v115H60zm18 0V175h9v185H78zm16 0V210h14v150H94zm22 0V120h11v240h-11zm20 0V190h16v170h-16zm24 0V145h9v215h-9zm17 0V220h12v140h-12zm20 0V165h10v195h-10zm18 0V110h8v250h-8zm16 0V200h13v160h-13zm22 0V150h11v210h-11zm19 0V230h14v130h-14z' fill='%23a78bfa' fill-opacity='0.32'/%3E%3Cpath d='M148 360V72l10-12 10 12v288h-20z' fill='%23c4b5fd' fill-opacity='0.5'/%3E%3Cpath d='M20 150c45-40 95-50 150-22s100 12 150-28' stroke='%23e9d5ff' stroke-opacity='0.55' stroke-width='1.6' fill='none'/%3E%3Cpath d='M8 200c48-30 100-22 150 4s110 6 160-32' stroke='%23c084fc' stroke-opacity='0.4' stroke-width='1.1' fill='none'/%3E%3Ccircle cx='250' cy='80' r='28' fill='%23e9d5ff' fill-opacity='0.12'/%3E%3C/svg%3E")
+        linear-gradient(180deg, rgba(76, 29, 149, 0.1) 0%, rgba(76, 29, 149, 0.15) 40%, rgba(49, 16, 100, 0.45) 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 360' fill='none'%3E%3Cpath d='M18 360V230h16v130H18zm22 0V200h12v160H40zm20 0V245h10v115H60zm18 0V175h9v185H78zm16 0V210h14v150H94zm22 0V120h11v240h-11zm20 0V190h16v170h-16zm24 0V145h9v215h-9zm17 0V220h12v140h-12zm20 0V165h10v195h-10zm18 0V110h8v250h-8zm16 0V200h13v160h-13zm22 0V150h11v210h-11zm19 0V230h14v130h-14z' fill='%23ffffff' fill-opacity='0.22'/%3E%3Cpath d='M148 360V72l10-12 10 12v288h-20z' fill='%23f5d0fe' fill-opacity='0.45'/%3E%3Cpath d='M20 150c45-40 95-50 150-22s100 12 150-28' stroke='%23fce7f3' stroke-opacity='0.65' stroke-width='1.6' fill='none'/%3E%3Cpath d='M8 200c48-30 100-22 150 4s110 6 160-32' stroke='%23e9d5ff' stroke-opacity='0.5' stroke-width='1.1' fill='none'/%3E%3Ccircle cx='250' cy='80' r='28' fill='%23ffffff' fill-opacity='0.14'/%3E%3C/svg%3E")
         center bottom / cover no-repeat;
     opacity: 0.95;
 }
@@ -522,7 +521,7 @@ defineExpose({
     font-weight: 650;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #d8b4fe;
+    color: #f5d0fe;
     margin-bottom: 12px;
 }
 
@@ -536,7 +535,7 @@ defineExpose({
 }
 
 .aside-accent {
-    background: linear-gradient(90deg, #f0abfc, #e879f9 40%, #c084fc);
+    background: linear-gradient(90deg, #fce7f3, #f0abfc 40%, #e9d5ff);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -546,7 +545,7 @@ defineExpose({
     margin: 14px 0 0;
     font-size: 12.5px;
     line-height: 1.45;
-    color: rgba(216, 204, 242, 0.78);
+    color: rgba(255, 255, 255, 0.82);
     max-width: 26ch;
 }
 
@@ -568,8 +567,8 @@ defineExpose({
     min-height: 0;
     padding: 18px 16px 48px;
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #e8e4f2;
+    background: #faf9fc;
     color: inherit;
     cursor: pointer;
     text-align: left;
@@ -583,16 +582,17 @@ defineExpose({
 }
 
 .deal-type-option:not(.selected):hover {
-    border-color: rgba(196, 181, 253, 0.35);
-    background: rgba(255, 255, 255, 0.07);
+    border-color: #d8b4fe;
+    background: #f8f5ff;
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
 }
 
 .deal-type-option.selected {
-    border-color: #c084fc;
-    background: rgba(168, 85, 247, 0.14);
+    border-color: #a855f7;
+    background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
     box-shadow:
-        0 0 0 1px rgba(192, 132, 252, 0.45),
-        0 0 26px rgba(168, 85, 247, 0.32);
+        0 0 0 1px rgba(168, 85, 247, 0.35),
+        0 12px 28px rgba(124, 58, 237, 0.18);
 }
 
 .option-icon {
@@ -603,17 +603,18 @@ defineExpose({
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    color: #e9d5ff;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #7c3aed;
+    background: #f3e8ff;
+    border: 1px solid #e9d5ff;
     pointer-events: none;
     flex-shrink: 0;
 }
 
 .deal-type-option.selected .option-icon {
     color: #fff;
-    background: rgba(192, 132, 252, 0.28);
-    border-color: rgba(233, 213, 255, 0.4);
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    border-color: transparent;
+    box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
 }
 
 .option-text {
@@ -627,13 +628,13 @@ defineExpose({
 .deal-type-label {
     font-size: 16px;
     font-weight: 700;
-    color: #fff;
+    color: #0f172a;
 }
 
 .deal-type-desc {
     font-size: 12px;
     line-height: 1.45;
-    color: rgba(196, 181, 253, 0.72);
+    color: #64748b;
 }
 
 .most-common-badge {
@@ -645,15 +646,15 @@ defineExpose({
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
-    color: #f3e8ff;
-    background: rgba(168, 85, 247, 0.28);
-    border: 1px solid rgba(216, 180, 254, 0.35);
+    color: #6b21a8;
+    background: #f3e8ff;
+    border: 1px solid #e9d5ff;
     pointer-events: none;
 }
 
 .most-common-badge iconify-icon {
     font-size: 11px;
-    color: #fbbf24;
+    color: #a855f7;
 }
 
 .option-arrow {
@@ -667,18 +668,18 @@ defineExpose({
     align-items: center;
     justify-content: center;
     font-size: 15px;
-    color: rgba(255, 255, 255, 0.75);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #94a3b8;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     pointer-events: none;
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .deal-type-option.selected .option-arrow {
     color: #fff;
     background: linear-gradient(135deg, #c026d3, #7c3aed);
     border-color: transparent;
-    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.35);
 }
 
 .convert-lead-footer {
@@ -688,7 +689,7 @@ defineExpose({
     gap: 16px;
     flex-shrink: 0;
     padding: 14px 28px 22px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid #f1f5f9;
     pointer-events: auto;
 }
 
@@ -698,12 +699,12 @@ defineExpose({
     gap: 8px;
     margin: 0;
     font-size: 12.5px;
-    color: rgba(196, 181, 253, 0.7);
+    color: #64748b;
 }
 
 .convert-lead-tip iconify-icon {
     font-size: 15px;
-    color: rgba(196, 181, 253, 0.85);
+    color: #a855f7;
     flex-shrink: 0;
 }
 
@@ -733,23 +734,24 @@ defineExpose({
 }
 
 .btn-cancel {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
 }
 
 .btn-cancel:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
 .btn-add-deal {
     background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
     color: #fff;
-    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.38);
+    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
 }
 
 .btn-add-deal:hover:not(:disabled) {
-    filter: brightness(1.08);
+    filter: brightness(1.06);
 }
 
 .btn-add-deal:disabled {

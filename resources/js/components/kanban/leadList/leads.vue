@@ -297,7 +297,7 @@
                                                                 <div class="d-flex align-items-center gap-2">
                                                                     <div
                                                                         class="person-hover-anchor"
-                                                                        @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
+                                                                        @mouseenter.stop="showPersonHoverCard(task, 'responsible', $event)"
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                         @click.stop="openPersonProfile(task, 'responsible', $event)"
                                                                     >
@@ -307,33 +307,14 @@
                                                                             alt=""
                                                                             class="avatar-sm rounded-circle"
                                                                         />
-                                                                        <transition name="person-hover-pop">
-                                                                            <div
-                                                                                v-if="isPersonHoverVisible(task, 'responsible') && activePersonHover?.data"
-                                                                                class="person-hover-card"
-                                                                                @mouseenter.stop="cancelPersonHoverHide"
-                                                                                @mouseleave.stop="hidePersonHoverCard"
-                                                                                  @click.stop="openPersonProfile(task, 'responsible', $event)"
-                                                                            >
-                                                                                <div class="person-hover-head">
-                                                                                    <img
-                                                                                        :src="hoverCardPersonAvatar(activePersonHover.data)"
-                                                                                        alt=""
-                                                                                        class="person-hover-avatar"
-                                                                                    />
-                                                                                    <div class="person-hover-head-text">
-                                                                                        <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
-                                                                                        <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
-                                                                                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
-                                                                            </div>
-                                                                        </transition>
                                                                     </div>
                                                                     <div>
-                                                                        <div class="info-value" @mouseenter.stop="showPersonHoverCard(task, 'responsible')"
-                                                                        @mouseleave.stop="hidePersonHoverCard"   @click.stop="openPersonProfile(task, 'responsible', $event)">{{ task.responsible_person?.name }}</div>
+                                                                        <div
+                                                                            class="info-value"
+                                                                            @mouseenter.stop="showPersonHoverCard(task, 'responsible', $event)"
+                                                                            @mouseleave.stop="hidePersonHoverCard"
+                                                                            @click.stop="openPersonProfile(task, 'responsible', $event)"
+                                                                        >{{ task.responsible_person?.name }}</div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -350,7 +331,7 @@
                                                                         v-if="activityPerson(task)"
                                                                         class="person-hover-anchor person-hover-clickable"
                                                                         :title="activityPerson(task)?.name || ''"
-                                                                        @mouseenter.stop="showPersonHoverCard(task, 'activity')"
+                                                                        @mouseenter.stop="showPersonHoverCard(task, 'activity', $event)"
                                                                         @mouseleave.stop="hidePersonHoverCard"
                                                                         @click.stop="openPersonProfile(task, 'activity', $event)"
                                                                     >
@@ -360,29 +341,6 @@
                                                                             class="avatar-sm rounded-circle"
                                                                             @click.stop="openPersonProfile(task, 'activity', $event)"
                                                                         />
-                                                                        <transition name="person-hover-pop">
-                                                                            <div
-                                                                                v-if="isPersonHoverVisible(task, 'activity') && activePersonHover?.data"
-                                                                                class="person-hover-card person-hover-card-right"
-                                                                                @mouseenter.stop="cancelPersonHoverHide"
-                                                                                @mouseleave.stop="hidePersonHoverCard"
-                                                                                 @click.stop="openPersonProfile(task, 'activity', $event)"
-                                                                            >
-                                                                                <div class="person-hover-head">
-                                                                                    <img
-                                                                                        :src="hoverCardPersonAvatar(activePersonHover.data)"
-                                                                                        alt=""
-                                                                                        class="person-hover-avatar"
-                                                                                    />
-                                                                                    <div class="person-hover-head-text">
-                                                                                        <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
-                                                                                        <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
-                                                                                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
-                                                                            </div>
-                                                                        </transition>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -650,6 +608,40 @@
         :user-id="profileUserId"
         @update:model-value="onProfilePopupUpdate"
     />
+    <Teleport to="body">
+        <transition name="person-hover-pop">
+            <div
+                v-if="activePersonHover?.data"
+                class="person-hover-card person-hover-card--portal"
+                :class="{ 'person-hover-card-right': activePersonHover.type === 'activity' }"
+                :style="personHoverCardStyle"
+                @mouseenter.stop="cancelPersonHoverHide"
+                @mouseleave.stop="hidePersonHoverCard"
+                @click.stop="openPersonProfileFromHover($event)"
+            >
+                <div class="person-hover-head">
+                    <img
+                        v-if="hoverCardPersonAvatar(activePersonHover.data)"
+                        :src="hoverCardPersonAvatar(activePersonHover.data)"
+                        alt=""
+                        class="person-hover-avatar"
+                    />
+                    <div
+                        v-else
+                        class="person-hover-avatar person-hover-avatar-fallback d-flex align-items-center justify-content-center"
+                    >
+                        <iconify-icon icon="solar:user-bold" />
+                    </div>
+                    <div class="person-hover-head-text">
+                        <div class="person-hover-name">{{ activePersonHover.data.name }}</div>
+                        <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
+                    </div>
+                </div>
+                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
+                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+            </div>
+        </transition>
+    </Teleport>
     <!-- Duplicate Leads Dropdown -->
     <DuplicateLeadsModal 
         v-model="showDuplicateModal" 
@@ -1973,6 +1965,34 @@ const isFieldEnabled = (fieldKey) => {
 const activePersonHover = ref(null)
 const personHoverHideTimer = ref(null)
 const personHoverDetailsCache = new Map()
+const personHoverCardStyle = ref({})
+const personHoverTaskById = ref(null)
+
+const positionPersonHoverCard = (event, type = 'responsible') => {
+    const el = event?.currentTarget
+    if (!el || typeof window === 'undefined') {
+        personHoverCardStyle.value = {}
+        return
+    }
+    const rect = el.getBoundingClientRect()
+    const width = 210
+    const estimatedHeight = 140
+    const gap = 8
+    const isRight = type === 'activity'
+    let left = isRight ? rect.right - width : rect.left - 10
+    let top = rect.bottom + gap
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
+    if (top + estimatedHeight > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - estimatedHeight - gap)
+    }
+    personHoverCardStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(top)}px`,
+        left: `${Math.round(left)}px`,
+        width: `${width}px`,
+        zIndex: 12080,
+    }
+}
 
 const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallbackName = 'Unknown') => {
     const name = person?.name || person?.full_name || fallbackName
@@ -2054,13 +2074,15 @@ const enrichPersonHoverFromApi = async (userId, leadId, type, basePerson, task, 
     }
 }
 
-const showPersonHoverCard = (task, type) => {
+const showPersonHoverCard = (task, type, event) => {
     cancelPersonHoverHide()
     const person = isActivityPersonType(type) ? activityPerson(task) : task?.responsible_person
     const fallbackName = isActivityPersonType(type)
         ? (activityPerson(task)?.name || 'Activity')
         : (task?.responsible_person?.name || 'Responsible Person')
     const hoverType = isActivityPersonType(type) ? 'activity' : type
+    personHoverTaskById.value = task || null
+    positionPersonHoverCard(event, hoverType)
     activePersonHover.value = {
         leadId: task?.id,
         type: hoverType,
@@ -2075,7 +2097,15 @@ const hidePersonHoverCard = () => {
     cancelPersonHoverHide()
     personHoverHideTimer.value = setTimeout(() => {
         activePersonHover.value = null
+        personHoverTaskById.value = null
     }, 90)
+}
+
+const openPersonProfileFromHover = (event) => {
+    const task = personHoverTaskById.value
+    const type = activePersonHover.value?.type || 'responsible'
+    if (!task) return
+    openPersonProfile(task, type, event)
 }
 
 const cancelPersonHoverHide = () => {
@@ -4588,11 +4618,25 @@ const fetchRevertNotifications = async () => {
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
     backdrop-filter: blur(8px);
     padding: 10px;
+    pointer-events: auto;
+}
+
+.person-hover-card--portal {
+    position: fixed !important;
+    top: auto;
+    left: auto;
+    right: auto;
+    z-index: 12080 !important;
+    width: 210px;
 }
 
 .person-hover-card-right {
     right: -10px;
     left: auto;
+}
+
+.person-hover-card--portal.person-hover-card-right {
+    right: auto;
 }
 
 .person-hover-head {

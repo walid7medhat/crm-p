@@ -1596,14 +1596,19 @@ defineExpose({
     gap: 8px 10px;
 }
 
-/* نفس الـ styles الموجود مع إضافة الـ reason-textarea */
+/* White shell + purple accents (matches Convert Lead modal) */
 .stage-change-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background:
+        radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
+        radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+        rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1613,18 +1618,21 @@ defineExpose({
 
 .stage-change-modal {
     background: #ffffff;
-    border-radius: 14px;
+    border-radius: 20px;
     width: min(92vw, 760px);
     max-width: 760px;
     max-height: 92vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid #e8edf3;
-    box-shadow: 0 18px 55px rgba(15, 23, 42, 0.18);
+    border: 1px solid #e9e5f5;
+    box-shadow:
+        0 28px 70px rgba(15, 23, 42, 0.18),
+        0 0 0 1px rgba(124, 58, 237, 0.04);
     pointer-events: auto !important;
     position: relative;
     z-index: 12061 !important;
+    color: #0f172a;
 }
 
 .stage-change-modal * {
@@ -1645,49 +1653,47 @@ defineExpose({
 }
 
 .modal-header {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #edf1f6;
+    padding: 1.1rem 1.35rem;
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(180deg, #fcfdff 0%, #ffffff 100%);
+    background: #ffffff;
 }
 
 .modal-title {
     margin: 0;
-    font-size: 0.92rem !important;
+    font-size: 1rem !important;
     font-weight: 700;
     color: #0f172a;
-    letter-spacing: 0.1px;
+    letter-spacing: -0.02em;
 }
 
-.btn-close {
-     position: absolute;
-    top: 8px;
-    right: -61px;
-    width: 83px;
-    height: 49px;
-    color: rgb(255, 255, 255);
-    font-size: 18px;
-    line-height: 1;
-    box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
-    z-index: -1;
-    display: flex;
-    justify-content: center;
+.close-btn-custom {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    background: #f8fafc;
+    color: #64748b;
+    display: inline-flex;
     align-items: center;
-    border-width: 1px;
-    border-style: solid;
-    border-color: rgba(115, 62, 135, 0.75);
-    border-image: initial;
-    border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
-    padding: 0px;
-    transition: filter 0.2s;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.close-btn-custom:hover {
+    background: #f3e8ff;
+    border-color: #d8b4fe;
+    color: #7c3aed;
 }
 
 .modal-body {
-    padding: 1rem 1.25rem;
-    background: #fbfcfe;
+    padding: 1.1rem 1.35rem;
+    background: #ffffff;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -1696,11 +1702,11 @@ defineExpose({
 }
 
 .modal-footer {
-    padding: 0.85rem 1.25rem;
-    border-top: 1px solid #edf1f6;
+    padding: 0.9rem 1.35rem;
+    border-top: 1px solid #f1f5f9;
     display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.6rem;
     background: #ffffff;
     flex-shrink: 0;
     position: sticky;
@@ -1726,8 +1732,8 @@ defineExpose({
 
 .reason-textarea:focus {
     outline: none;
-    border-color: #0ea5e9;
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
 }
 
 /* Validation error state — red border, cleared automatically once the field is filled */
@@ -1804,8 +1810,8 @@ defineExpose({
 .form-control:focus,
 .form-select:focus {
     outline: none;
-    border-color: #0ea5e9;
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
 }
 
 .input-group {
@@ -1827,48 +1833,50 @@ defineExpose({
 }
 
 .btn {
-    padding: 0.25rem 0.7rem;
-    border-radius: 50px;
-    height: 36px;
-    width: 84px;
-    font-weight: 500;
+    padding: 0 18px;
+    border-radius: 12px;
+    height: 42px;
+    min-width: 108px;
+    width: auto;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 12px;
+    font-size: 13.5px;
     border: 1px solid transparent;
-        text-align: center;
+    text-align: center;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 7px;
 }
-.modal-footer{
-        justify-content: center;
 
-}
 .btn-light {
-    background-color: #f3f5f8;
-    border-color: #e3e8ef;
-    color: #0f172a;
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    color: #475569;
 }
 
 .btn-light:hover {
-    background-color: #e7ebf1;
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
 .btn-primary {
-    background-color: #0b1220;
-    border-color: #0b1220;
-    color: #FFFFFF;
+    background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
 }
 
 .btn-primary:hover {
-    background-color: #111827;
-    border-color: #111827;
+    filter: brightness(1.06);
     color: #fff;
 }
 
 .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.45;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 .spinner-border {
@@ -1887,13 +1895,12 @@ defineExpose({
     }
 }
 .box-shadow {
-   
-    background-color: #ffffff;
-    border: 1px solid #edf1f6;
-    padding: 10px;
+    background-color: #faf9fc;
+    border: 1px solid #e8e4f2;
+    padding: 14px;
     margin: 6px 0px;
-    border-radius: 10px;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+    border-radius: 14px;
+    box-shadow: 0 3px 10px rgba(124, 58, 237, 0.04);
 }
 
 .dynamic-form .box-shadow.lead_qualification.lead-qualification-card {
@@ -1928,8 +1935,8 @@ defineExpose({
     width: 4px;
     height: 16px;
     border-radius: 4px;
-    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-    box-shadow: 0 0 12px rgb(245 158 11 / 0.45);
+    background: linear-gradient(180deg, #a855f7 0%, #7c3aed 100%);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
 }
 
 .lead-qualification-trio {
@@ -2020,13 +2027,13 @@ defineExpose({
 }
 
 :deep(.searchable-select .vs__dropdown-option--highlight) {
-    color: #111827 !important;
-    background: #f3f4f6 !important;
+    color: #0f172a !important;
+    background: #faf5ff !important;
 }
 
 :deep(.searchable-select .vs__dropdown-option--selected) {
-    color: #111827 !important;
-    background: #e5e7eb !important;
+    color: #0f172a !important;
+    background: #f3e8ff !important;
 }
 /* Custom v-select styles */
 :deep(.custom-v-select) {
@@ -2105,12 +2112,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
+    background: #7c3aed !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #733E87 !important;
+    background: #7c3aed !important;
     color: #fff !important;
 }
 
@@ -2285,7 +2292,7 @@ defineExpose({
 }
 
 .stage-change-modal::-webkit-scrollbar-thumb {
-    background: #cfd8e3;
+    background: #d8b4fe;
     border-radius: 999px;
 }
 
@@ -2294,7 +2301,9 @@ defineExpose({
         align-items: flex-end;
         justify-content: center;
         padding: 0;
-        background-color: rgba(15, 23, 42, 0.45);
+        background:
+            radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
+            rgba(15, 23, 42, 0.45);
         z-index: 12060 !important;
     }
 
@@ -2422,12 +2431,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
+    background: #7c3aed !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #733E87 !important;
+    background: #7c3aed !important;
     color: #fff !important;
 }
 
@@ -2459,8 +2468,8 @@ defineExpose({
 }
 
 .call-result-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    border: 1px solid #e8e4f2;
+    border-radius: 14px;
     background: #ffffff;
     min-height: 86px;
     display: flex;
@@ -2469,23 +2478,31 @@ defineExpose({
     justify-content: center;
     gap: 8px;
     color: #334155;
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .call-result-card:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
+    border-color: #d8b4fe;
+    background: #f8f5ff;
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
 }
 
 .call-result-card.is-active {
-    border-color: #f2b84b;
-    background: #fff8ea;
-    box-shadow: 0 0 0 2px rgba(242, 184, 75, 0.2);
+    border-color: #a855f7;
+    background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
+    box-shadow:
+        0 0 0 1px rgba(168, 85, 247, 0.3),
+        0 12px 28px rgba(124, 58, 237, 0.14);
 }
 
 .call-result-icon {
     font-size: 20px;
-    color: #f2b84b;
+    color: #7c3aed;
+}
+
+.call-result-card.is-active .call-result-icon {
+    color: #6d28d9;
 }
 
 .call-result-text {
@@ -2508,18 +2525,25 @@ defineExpose({
 }
 
 .activity-control-btn {
-    border: 1px solid #d6dee8;
+    border: 1px solid #e8e4f2;
     border-radius: 10px;
     background: #fff;
     color: #344054;
     padding: 8px 12px;
     font-size: 12px;
     font-weight: 500;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.activity-control-btn:hover {
+    border-color: #d8b4fe;
+    background: #f8f5ff;
+    color: #6d28d9;
 }
 
 .activity-control-icon {
     font-size: 16px;
-    color: #64748b;
+    color: #7c3aed;
 }
 
 .activity-control-btn-bell {
@@ -2824,13 +2848,13 @@ defineExpose({
 }
 
 :deep(.lead-qual-select--quality .vs__dropdown-option--highlight .qs-dd-row) {
-    background: #fffbeb !important;
-    box-shadow: inset 0 0 0 1px rgb(245 158 11 / 0.35);
+    background: #faf5ff !important;
+    box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.35);
 }
 
 :deep(.lead-qual-select--quality .vs__dropdown-option--selected .qs-dd-row) {
-    background: linear-gradient(90deg, rgb(255 251 235 / 0.95) 0%, #ffffff 100%) !important;
-    box-shadow: inset 3px 0 0 0 #f59e0b;
+    background: linear-gradient(90deg, rgba(243, 232, 255, 0.95) 0%, #ffffff 100%) !important;
+    box-shadow: inset 3px 0 0 0 #a855f7;
 }
 
 :deep(.lead-qual-select--quality .qs-dd-row) {
@@ -2854,19 +2878,15 @@ defineExpose({
     font-weight: 600;
 }
 
-:deep(.ead-qual-select--enhanced .vs__dropdown-option--highlight) {
-    background: #fffbeb !important;
+:deep(.lead-qual-select--enhanced .vs__dropdown-option--highlight) {
+    background: #faf5ff !important;
     color: #0f172a !important;
 }
 
 :deep(.lead-qual-select--enhanced .vs__dropdown-option--selected) {
-    background: linear-gradient(90deg, #fff7ed 0%, #ffffff 100%) !important;
+    background: linear-gradient(90deg, #f3e8ff 0%, #ffffff 100%) !important;
     color: #0f172a !important;
-    box-shadow: inset 3px 0 0 0 #f59e0b;
-}
-.close-btn-custom {
-    /*font-size: 20px;*/
-    color: #000;
+    box-shadow: inset 3px 0 0 0 #a855f7;
 }
 </style>
 <style>

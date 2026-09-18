@@ -5174,71 +5174,84 @@ onMounted(async () => {
 .complete-fields-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
+    radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+    rgba(15, 23, 42, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   /* Must sit above ViewDealModal and any bootstrap backdrops */
   z-index: 30000;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .complete-fields-modal {
-  background: white;
-  border-radius: 10px;
+  background: #ffffff;
+  border-radius: 20px;
   width: min(760px, 94vw);
   max-width: 94vw;
   max-height: 90vh;
   /*overflow-y: auto;*/
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9e5f5;
+  box-shadow:
+    0 28px 70px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(124, 58, 237, 0.04);
   position: relative;
   z-index: 30010;
+  color: #0f172a;
+  /* Override deal-figma-ui amber/navy tokens inside this stage popup */
+  --deal-accent: #a855f7;
+  --deal-accent-text: #7c3aed;
+  --deal-navy: #7c3aed;
+  --deal-navy-deep: #0f172a;
+  --deal-link: #7c3aed;
 }
 
 .modal-header-deal {
-  border-bottom: 1px solid #F4F4F4;
+  border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
   padding: 14px 18px !important;
-    position: relative;
-        background: #fff;
-    border-radius: 10px;
+  position: relative;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
 }
 
 .modal-title {
-  font-weight: 500;
-  font-size: 14px;
-  color: #0B0736;
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .close-btn {
-    position: absolute;
-    top: 8px;
-    right: -61px;
-    width: 83px;
-    height: 49px;
-    color: #fff;
-    font-size: 18px;
-    line-height: 1;
-    box-shadow: #0f172a33 0 8px 16px;
-    z-index: -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-width: 1px;
-    border-style: solid;
-    border-color: rgba(115, 62, 135, 0.75);
-    border-image: initial;
-    border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
-    padding: 0;
-    transition: filter .2s;
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #f8fafc;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .close-btn:hover {
-  background: #F1F5F9;
-  color: #1E293B;
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+  color: #7c3aed;
 }
 .deal-progress-hint , .modal-footer-custom .text-danger {
       display: flex;
@@ -5283,8 +5296,8 @@ onMounted(async () => {
 }
 
 .section-collapsible-header.has-required {
-  background: #fff8eb;
-  border-left: 3px solid #733E87;
+  background: #faf5ff;
+  border-left: 3px solid #a855f7;
 }
 
 .collapse-icon {
@@ -5296,7 +5309,7 @@ onMounted(async () => {
 .section-title {
   font-size: 13px !important;
   font-weight: 600;
-  color: #0B0736;
+  color: #0f172a;
   margin: 0;
 }
 
@@ -5305,7 +5318,7 @@ onMounted(async () => {
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 12px;
-  background: #733E87;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
   color: white;
   font-weight: 500;
 }
@@ -5338,6 +5351,12 @@ onMounted(async () => {
   font-size: 12px !important;
   width: 100%;
   padding: 0 12px;
+}
+
+.custom-input:focus {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16) !important;
+  outline: none;
 }
 
 .custom-input::placeholder {
@@ -5442,42 +5461,64 @@ textarea.is-invalid {
 }
 
 .modal-footer-custom {
-  border-top: 1px solid #F4F4F4;
-  background: white;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
   flex-shrink: 0;
   padding: 14px 20px !important;
 }
 
 .btn-clear {
-  background: #F4F4F4;
-  border: none;
-  width: 96px;
-  height: 40px;
-  border-radius: 100px;
-  font-size: 14px;
-  color: #0B0736;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  min-width: 108px;
+  width: auto;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
   cursor: pointer;
-    text-align: center;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  padding: 0 18px;
+  transition: all 0.2s ease;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .btn-next-step {
-  background: #0B0736;
+  background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
   border: none;
-  width: 96px;
-  height: 40px;
-  border-radius: 100px;
-  font-size: 14px;
+  min-width: 108px;
+  width: auto;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 13.5px;
   color: #fff;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  padding: 0 18px;
+  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
+  transition: all 0.2s ease;
+}
+
+.btn-next-step:hover:not(:disabled) {
+  filter: brightness(1.06);
 }
 
 .btn-next-step:disabled {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .property-card-in-modal {
@@ -5498,7 +5539,7 @@ textarea.is-invalid {
 .listing-summary-title-modal {
   font-size: 13px;
   font-weight: 600;
-  color: #0B0736;
+  color: #0f172a;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -5566,7 +5607,7 @@ textarea.is-invalid {
 .deals-type-tab-inline {
   padding: 6px 14px;
   border-radius: 100px;
-  background: #0F172A;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
   color: #fff;
   font-size: 12px;
 }
@@ -5599,8 +5640,8 @@ textarea.is-invalid {
 }
 
 .section-collapsible-header.has-required {
-  background: #fff8eb;
-  border-left: 3px solid #733E87;
+  background: #faf5ff;
+  border-left: 3px solid #a855f7;
 }
 </style>
 <style>
@@ -5617,8 +5658,8 @@ textarea.is-invalid {
 }
 .add-property-btn {
   background: transparent;
-  border: 1px solid #3b82f6;
-  color: #3b82f6;
+  border: 1px solid #a855f7;
+  color: #7c3aed;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -5632,7 +5673,7 @@ textarea.is-invalid {
 }
 
 .add-property-btn:hover:not(:disabled) {
-  background: #3b82f6;
+  background: #7c3aed;
   color: white;
 }
 
@@ -5686,13 +5727,13 @@ textarea.is-invalid {
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #0b0736;
+  color: #0f172a;
   margin-bottom: 12px;
 }
 
 .stage-dates-header-icon {
   font-size: 16px;
-  color: #1a2f5b;
+  color: #7c3aed;
 }
 
 .stage-dates-grid {

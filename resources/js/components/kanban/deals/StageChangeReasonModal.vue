@@ -122,72 +122,97 @@ async function submitReason() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
+    radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+    rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1060;
-  backdrop-filter: blur(2px);
 }
 
 .stage-reason-modal {
-  background: white;
-  border-radius: 10px;
+  background: #ffffff;
+  border-radius: 20px;
   width: 500px;
   max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e9e5f5;
+  box-shadow:
+    0 28px 70px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(124, 58, 237, 0.04);
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-size: 12px;
+  color: #0f172a;
+  --deal-accent: #a855f7;
+  --deal-accent-text: #7c3aed;
+  --deal-navy: #7c3aed;
+  --deal-navy-deep: #0f172a;
+  --deal-link: #7c3aed;
 }
 
 .modal-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #E2E8F0;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: #ffffff;
 }
 
 .modal-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--deal-navy-deep, #0B0736);
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.35;
 }
 
 .btn-close {
-  background: transparent;
-  border: none;
-  font-size: 20px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 16px;
   cursor: pointer;
-  padding: 4px;
-  color: #64748B;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .btn-close:hover {
-  color: #1E293B;
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+  color: #7c3aed;
 }
 
 .modal-body {
-  padding: 16px 20px;
+  padding: 18px 24px;
+  background: #ffffff;
 }
 
 .modal-footer {
-  padding: 12px 20px;
-  border-top: 1px solid #E2E8F0;
+  padding: 14px 24px;
+  border-top: 1px solid #f1f5f9;
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
+  background: #ffffff;
 }
 
 .form-label {
   font-size: 12px;
-  font-weight: 500;
-  color: var(--deal-text-muted, #64748b);
+  font-weight: 650;
+  color: #1f2937;
   margin-bottom: 8px;
   display: block;
 }
@@ -199,8 +224,8 @@ async function submitReason() {
   line-height: 1.5;
   color: #1E293B;
   background-color: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: var(--deal-input-r, 10px);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
@@ -210,9 +235,9 @@ async function submitReason() {
 }
 
 .form-control:focus {
-  border-color: var(--deal-navy, #0f172a);
+  border-color: #a855f7;
   outline: 0;
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
 }
 
 .form-control.is-invalid {
@@ -230,12 +255,12 @@ async function submitReason() {
 }
 
 .btn {
-  width: 96px;
-  height: 38px;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 999px;
+  min-width: 108px;
+  height: 42px;
+  padding: 0 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -244,30 +269,36 @@ async function submitReason() {
   align-items: center;
   justify-content: center;
   line-height: 1;
+  gap: 7px;
 }
 
 .btn-light {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  color: #334155;
+  color: #475569;
 }
 
 .btn-light:hover {
-  background-color: #E2E8F0;
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .btn-primary {
-  background-color: var(--deal-navy, #0f172a);
-  color: white;
+  background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
 }
 
 .btn-primary:hover {
-  background-color: #020617;
+  filter: brightness(1.06);
+  color: #fff;
 }
 
 .btn-primary:disabled {
-  opacity: 0.65;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .spinner-border {
