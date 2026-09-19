@@ -5472,6 +5472,21 @@ body {
   margin: -10px;
 }
 
+/* Section cards: keep clear vertical space (custom .row margin breaks Bootstrap gy-*) */
+.property-form-root.row {
+  margin: 0 !important;
+  row-gap: 1.5rem;
+}
+
+.property-form-root > [class*="col-"] {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.property-form-root > [class*="col-"] > .card {
+  margin-bottom: 0;
+}
+
 .col {
   flex: 1;
   padding: 10px;
