@@ -1946,14 +1946,6 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-.sidebar--dashboard-home .sidebar-calc-label__acronym {
-  color: #4b4568 !important;
-}
-
-.sidebar--dashboard-home .sidebar-calc-label__name {
-  color: #9ca3af !important;
-}
-
 /* Keep CRM submenu visible when user opens it from dashboard */
 .sidebar--dashboard-home .sidebar-menu li.dropdown.open > .sidebar-submenu--crm,
 .sidebar--dashboard-home .sidebar-menu li.dropdown.dropdown-open > .sidebar-submenu--crm {
@@ -1966,34 +1958,7 @@ onUnmounted(() => {
 }
 
 .sidebar-nav-link--calculator {
-  align-items: flex-start !important;
-  padding-top: 7px !important;
-  padding-bottom: 7px !important;
-}
-
-.sidebar-calc-label {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  line-height: 1.25;
-}
-
-.sidebar-calc-label__acronym {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #4b4568;
-}
-
-.sidebar-calc-label__name {
-  font-size: 0.625rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: #9ca3af;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  align-items: center !important;
 }
 
 /* Keep Calculator submenu visible when user opens it from dashboard */
