@@ -177,12 +177,14 @@
               :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]"
             >
               <router-link :to="item.path" custom v-slot="{ navigate, href }">
-                <a :href="href" class="sidebar-nav-link sidebar-nav-link--calculator" @click="navigate">
+                <a
+                  :href="href"
+                  class="sidebar-nav-link sidebar-nav-link--calculator"
+                  :title="item.name"
+                  @click="navigate"
+                >
                   <iconify-icon :icon="item.icon" class="menu-icon submenu-icon" />
-                  <span class="sidebar-calc-label">
-                    <span class="sidebar-calc-label__acronym">{{ item.label }}</span>
-                    <span class="sidebar-calc-label__name">{{ item.name }}</span>
-                  </span>
+                  <span>{{ item.label }}</span>
                 </a>
               </router-link>
             </li>
