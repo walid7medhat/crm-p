@@ -62,24 +62,26 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 
-const altcrmLogo = '/assets/images/auth/altcrm-logo.svg';
-const oiaLogo = '/assets/images/auth/oia-properties-logo.svg';
+// Use compact PNGs — the SVG exports embed multi‑MB bitmaps and can push the
+// login form off-screen (overflow:hidden) after deploy.
+const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
+const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
 
 const featureCards = [
   {
     id: 'pipeline',
     title: 'Your sales pipeline, simplified',
-    image: '/assets/images/auth/mockup-pipeline.svg',
+    image: '/assets/images/auth/mockup-pipeline.png',
   },
   {
     id: 'analytics',
     title: 'Analyze sales and team performance easily',
-    image: '/assets/images/auth/mockup-analytics.svg',
+    image: '/assets/images/auth/mockup-analytics.png',
   },
   {
     id: 'mobile',
     title: 'Mobile CRM built for faster teamwork',
-    image: '/assets/images/auth/mockup-mobile.svg',
+    image: '/assets/images/auth/mockup-mobile.png',
   },
 ];
 
@@ -282,7 +284,7 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) 529px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 529px);
   gap: clamp(28px, 5vw, 72px);
   align-items: center;
   width: 100%;
@@ -292,6 +294,7 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: clamp(12px, 2vh, 24px) clamp(40px, 6vw, 100px);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .auth-landing__marketing {
@@ -304,6 +307,8 @@ onUnmounted(() => {
   max-height: 100%;
   width: 100%;
   overflow: hidden;
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .auth-landing__brand-row {
@@ -321,13 +326,13 @@ onUnmounted(() => {
 }
 
 .auth-landing__brand-logo--altcrm {
-  width: clamp(72px, 7.5vw, 110px);
-  max-height: clamp(72px, 7.5vw, 110px);
+  width: clamp(140px, 14vw, 200px);
+  max-height: clamp(64px, 8vh, 96px);
 }
 
 .auth-landing__brand-logo--oia {
-  width: clamp(150px, 15vw, 210px);
-  max-height: clamp(56px, 7vh, 86px);
+  width: clamp(160px, 16vw, 220px);
+  max-height: clamp(60px, 7.5vh, 90px);
 }
 
 .auth-landing__brand-divider {
@@ -426,7 +431,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  max-height: 100%;
+  max-height: min(100%, 320px);
   object-fit: contain;
   object-position: center center;
 }
@@ -459,15 +464,18 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 529px;
-  min-width: 529px;
+  width: 100%;
+  min-width: 0;
   max-width: 529px;
   flex-shrink: 0;
   align-self: center;
+  grid-column: 2;
+  grid-row: 1;
+  z-index: 2;
 }
 
 .auth-landing__auth-panel > * {
-  width: 529px;
+  width: 100%;
   max-width: 529px;
   height: auto;
   flex: 0 0 auto;
@@ -542,7 +550,7 @@ onUnmounted(() => {
   }
 
   .auth-landing__brand-logo--altcrm {
-    width: 56px;
+    width: 120px;
     max-height: 56px;
   }
 
@@ -649,6 +657,8 @@ onUnmounted(() => {
     position: relative;
     z-index: 2;
     background: transparent;
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .auth-landing__auth-panel > * {
@@ -658,9 +668,9 @@ onUnmounted(() => {
   }
 }
 
-@media (min-width: 769px) and (max-width: 1023px) {
+@media (min-width: 769px) and (max-width: 1180px) {
   .auth-landing {
-    align-items: center;
+    align-items: stretch;
     height: 100%;
     max-height: 100dvh;
     overflow: hidden;
@@ -669,8 +679,9 @@ onUnmounted(() => {
 
   .auth-landing__grid {
     grid-template-columns: 1fr;
-    align-items: center;
-    height: auto;
+    grid-template-rows: auto auto;
+    align-items: start;
+    height: 100%;
     max-height: 100%;
     padding: 0 20px;
     max-width: 100%;
@@ -683,11 +694,20 @@ onUnmounted(() => {
     display: none;
   }
 
+  /* Keep the login form first so it is never clipped below the fold */
   .auth-landing__auth-panel {
+    grid-column: 1;
+    grid-row: 1;
     justify-content: center;
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    order: -1;
+  }
+
+  .auth-landing__marketing {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .auth-landing__auth-panel > * {
@@ -714,8 +734,8 @@ onUnmounted(() => {
 
 @media (max-width: 639px) {
   .auth-landing__brand-logo--altcrm {
-    width: 52px;
-    max-height: 52px;
+    width: 100px;
+    max-height: 48px;
   }
 
   .auth-landing__brand-logo--oia {
