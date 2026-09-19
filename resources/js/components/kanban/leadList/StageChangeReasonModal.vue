@@ -1609,8 +1609,8 @@ defineExpose({
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
-        radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+        radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
+        radial-gradient(ellipse at 90% 90%, rgba(115, 62, 135, 0.1), transparent 40%),
         rgba(15, 23, 42, 0.45);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -1633,7 +1633,7 @@ defineExpose({
     border: 1px solid #e9e5f5;
     box-shadow:
         0 28px 70px rgba(15, 23, 42, 0.18),
-        0 0 0 1px rgba(124, 58, 237, 0.04);
+        0 0 0 1px rgba(115, 62, 135, 0.04);
     pointer-events: auto !important;
     position: relative;
     z-index: 12061 !important;
@@ -1693,7 +1693,7 @@ defineExpose({
 .close-btn-custom:hover {
     background: #f3e8ff;
     border-color: #d8b4fe;
-    color: #7c3aed;
+    color: #733E87;
 }
 
 .modal-body {
@@ -1737,8 +1737,8 @@ defineExpose({
 
 .reason-textarea:focus {
     outline: none;
-    border-color: #a855f7;
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
+    border-color: #733E87;
+    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.16);
 }
 
 /* Validation error state — red border, cleared automatically once the field is filled */
@@ -1815,8 +1815,8 @@ defineExpose({
 .form-control:focus,
 .form-select:focus {
     outline: none;
-    border-color: #a855f7;
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
+    border-color: #733E87;
+    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.16);
 }
 
 .input-group {
@@ -1867,10 +1867,10 @@ defineExpose({
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+    background: #733E87;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
+    box-shadow: 0 10px 24px rgba(115, 62, 135, 0.32);
 }
 
 .btn-primary:hover {
@@ -1905,7 +1905,7 @@ defineExpose({
     padding: 14px;
     margin: 6px 0px;
     border-radius: 14px;
-    box-shadow: 0 3px 10px rgba(124, 58, 237, 0.04);
+    box-shadow: 0 3px 10px rgba(115, 62, 135, 0.04);
 }
 
 .dynamic-form .box-shadow.lead_qualification.lead-qualification-card {
@@ -1940,8 +1940,8 @@ defineExpose({
     width: 4px;
     height: 16px;
     border-radius: 4px;
-    background: linear-gradient(180deg, #a855f7 0%, #7c3aed 100%);
-    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+    background: #733E87;
+    box-shadow: 0 0 12px rgba(115, 62, 135, 0.4);
 }
 
 .lead-qualification-trio {
@@ -2117,12 +2117,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #7c3aed !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #7c3aed !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
@@ -2307,7 +2307,7 @@ defineExpose({
         justify-content: center;
         padding: 0;
         background:
-            radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
+            radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
             rgba(15, 23, 42, 0.45);
         z-index: 12060 !important;
     }
@@ -2436,12 +2436,12 @@ defineExpose({
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #7c3aed !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #7c3aed !important;
+    background: #733E87 !important;
     color: #fff !important;
 }
 
@@ -2490,24 +2490,24 @@ defineExpose({
 .call-result-card:hover {
     border-color: #d8b4fe;
     background: #f8f5ff;
-    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
+    box-shadow: 0 8px 20px rgba(115, 62, 135, 0.08);
 }
 
 .call-result-card.is-active {
-    border-color: #a855f7;
+    border-color: #733E87;
     background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
     box-shadow:
-        0 0 0 1px rgba(168, 85, 247, 0.3),
-        0 12px 28px rgba(124, 58, 237, 0.14);
+        0 0 0 1px rgba(115, 62, 135, 0.3),
+        0 12px 28px rgba(115, 62, 135, 0.14);
 }
 
 .call-result-icon {
     font-size: 20px;
-    color: #7c3aed;
+    color: #733E87;
 }
 
 .call-result-card.is-active .call-result-icon {
-    color: #6d28d9;
+    color: #733E87;
 }
 
 .call-result-text {
@@ -2543,12 +2543,12 @@ defineExpose({
 .activity-control-btn:hover {
     border-color: #d8b4fe;
     background: #f8f5ff;
-    color: #6d28d9;
+    color: #733E87;
 }
 
 .activity-control-icon {
     font-size: 16px;
-    color: #7c3aed;
+    color: #733E87;
 }
 
 .activity-control-btn-bell {
@@ -2854,12 +2854,12 @@ defineExpose({
 
 :deep(.lead-qual-select--quality .vs__dropdown-option--highlight .qs-dd-row) {
     background: #faf5ff !important;
-    box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(115, 62, 135, 0.35);
 }
 
 :deep(.lead-qual-select--quality .vs__dropdown-option--selected .qs-dd-row) {
     background: linear-gradient(90deg, rgba(243, 232, 255, 0.95) 0%, #ffffff 100%) !important;
-    box-shadow: inset 3px 0 0 0 #a855f7;
+    box-shadow: inset 3px 0 0 0 #733E87;
 }
 
 :deep(.lead-qual-select--quality .qs-dd-row) {
@@ -2891,7 +2891,7 @@ defineExpose({
 :deep(.lead-qual-select--enhanced .vs__dropdown-option--selected) {
     background: linear-gradient(90deg, #f3e8ff 0%, #ffffff 100%) !important;
     color: #0f172a !important;
-    box-shadow: inset 3px 0 0 0 #a855f7;
+    box-shadow: inset 3px 0 0 0 #733E87;
 }
 </style>
 <style>

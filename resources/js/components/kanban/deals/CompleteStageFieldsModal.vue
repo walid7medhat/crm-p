@@ -5175,8 +5175,8 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
-    radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+    radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
+    radial-gradient(ellipse at 90% 90%, rgba(115, 62, 135, 0.1), transparent 40%),
     rgba(15, 23, 42, 0.45);
   display: flex;
   align-items: center;
@@ -5199,16 +5199,16 @@ onMounted(async () => {
   border: 1px solid #e9e5f5;
   box-shadow:
     0 28px 70px rgba(15, 23, 42, 0.18),
-    0 0 0 1px rgba(124, 58, 237, 0.04);
+    0 0 0 1px rgba(115, 62, 135, 0.04);
   position: relative;
   z-index: 30010;
   color: #0f172a;
   /* Override deal-figma-ui amber/navy tokens inside this stage popup */
-  --deal-accent: #a855f7;
-  --deal-accent-text: #7c3aed;
-  --deal-navy: #7c3aed;
+  --deal-accent: #733E87;
+  --deal-accent-text: #733E87;
+  --deal-navy: #733E87;
   --deal-navy-deep: #0f172a;
-  --deal-link: #7c3aed;
+  --deal-link: #733E87;
 }
 
 .modal-header-deal {
@@ -5251,7 +5251,7 @@ onMounted(async () => {
 .close-btn:hover {
   background: #f3e8ff;
   border-color: #d8b4fe;
-  color: #7c3aed;
+  color: #733E87;
 }
 .deal-progress-hint , .modal-footer-custom .text-danger {
       display: flex;
@@ -5297,7 +5297,7 @@ onMounted(async () => {
 
 .section-collapsible-header.has-required {
   background: #faf5ff;
-  border-left: 3px solid #a855f7;
+  border-left: 3px solid #733E87;
 }
 
 .collapse-icon {
@@ -5318,7 +5318,7 @@ onMounted(async () => {
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  background: #733E87;
   color: white;
   font-weight: 500;
 }
@@ -5354,8 +5354,8 @@ onMounted(async () => {
 }
 
 .custom-input:focus {
-  border-color: #a855f7 !important;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16) !important;
+  border-color: #733E87 !important;
+  box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.16) !important;
   outline: none;
 }
 
@@ -5492,7 +5492,7 @@ textarea.is-invalid {
 }
 
 .btn-next-step {
-  background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+  background: #733E87;
   border: none;
   min-width: 108px;
   width: auto;
@@ -5507,7 +5507,7 @@ textarea.is-invalid {
   align-items: center;
   justify-content: center;
   padding: 0 18px;
-  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
+  box-shadow: 0 10px 24px rgba(115, 62, 135, 0.32);
   transition: all 0.2s ease;
 }
 
@@ -5607,7 +5607,7 @@ textarea.is-invalid {
 .deals-type-tab-inline {
   padding: 6px 14px;
   border-radius: 100px;
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  background: #733E87;
   color: #fff;
   font-size: 12px;
 }
@@ -5641,7 +5641,7 @@ textarea.is-invalid {
 
 .section-collapsible-header.has-required {
   background: #faf5ff;
-  border-left: 3px solid #a855f7;
+  border-left: 3px solid #733E87;
 }
 </style>
 <style>
@@ -5658,8 +5658,8 @@ textarea.is-invalid {
 }
 .add-property-btn {
   background: transparent;
-  border: 1px solid #a855f7;
-  color: #7c3aed;
+  border: 1px solid #733E87;
+  color: #733E87;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -5673,7 +5673,7 @@ textarea.is-invalid {
 }
 
 .add-property-btn:hover:not(:disabled) {
-  background: #7c3aed;
+  background: #733E87;
   color: white;
 }
 
@@ -5733,7 +5733,7 @@ textarea.is-invalid {
 
 .stage-dates-header-icon {
   font-size: 16px;
-  color: #7c3aed;
+  color: #733E87;
 }
 
 .stage-dates-grid {
@@ -5824,7 +5824,7 @@ textarea.is-invalid {
 .date-noc .stage-date-field-label { color: #4338ca; }
 .date-won .stage-date-field-label { color: #166534; }
 .date-application .stage-date-field-label { color: #0d9488; }
-.date-contract .stage-date-field-label { color: #7c3aed; }
+.date-contract .stage-date-field-label { color: #733E87; }
 .date-ejari .stage-date-field-label { color: #db2777; }
 
 /* Responsive */

@@ -348,8 +348,8 @@ defineExpose({
     justify-content: center;
     padding: 20px;
     background:
-        radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
-        radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+        radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
+        radial-gradient(ellipse at 90% 90%, rgba(115, 62, 135, 0.1), transparent 40%),
         rgba(15, 23, 42, 0.45);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -393,7 +393,7 @@ defineExpose({
     background: #ffffff;
     box-shadow:
         0 28px 70px rgba(15, 23, 42, 0.18),
-        0 0 0 1px rgba(124, 58, 237, 0.04);
+        0 0 0 1px rgba(115, 62, 135, 0.04);
     pointer-events: auto;
     color: #0f172a;
 }
@@ -424,9 +424,9 @@ defineExpose({
     justify-content: center;
     font-size: 20px;
     color: #fff;
-    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    box-shadow: 0 8px 18px rgba(124, 58, 237, 0.28);
+    background: #733E87;
+    border: 1px solid rgba(115, 62, 135, 0.25);
+    box-shadow: 0 8px 18px rgba(115, 62, 135, 0.28);
 }
 
 .convert-lead-heading-text {
@@ -469,7 +469,7 @@ defineExpose({
 .convert-lead-close:hover {
     background: #f3e8ff;
     border-color: #d8b4fe;
-    color: #7c3aed;
+    color: #733E87;
 }
 
 /* Sidebar ~32% | cards 68% — same height as design */
@@ -490,9 +490,7 @@ defineExpose({
     height: 100%;
     min-height: 0;
     border: 1px solid rgba(167, 139, 250, 0.35);
-    background:
-        linear-gradient(180deg, #7c3aed 0%, #6d28d9 42%, #4c1d95 100%),
-        radial-gradient(ellipse at 70% 20%, rgba(244, 114, 182, 0.35), transparent 50%);
+    background: #733E87;
 }
 
 .aside-skyline {
@@ -584,15 +582,15 @@ defineExpose({
 .deal-type-option:not(.selected):hover {
     border-color: #d8b4fe;
     background: #f8f5ff;
-    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
+    box-shadow: 0 8px 20px rgba(115, 62, 135, 0.08);
 }
 
 .deal-type-option.selected {
-    border-color: #a855f7;
+    border-color: #733E87;
     background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
     box-shadow:
-        0 0 0 1px rgba(168, 85, 247, 0.35),
-        0 12px 28px rgba(124, 58, 237, 0.18);
+        0 0 0 1px rgba(115, 62, 135, 0.35),
+        0 12px 28px rgba(115, 62, 135, 0.18);
 }
 
 .option-icon {
@@ -603,7 +601,7 @@ defineExpose({
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    color: #7c3aed;
+    color: #733E87;
     background: #f3e8ff;
     border: 1px solid #e9d5ff;
     pointer-events: none;
@@ -612,9 +610,9 @@ defineExpose({
 
 .deal-type-option.selected .option-icon {
     color: #fff;
-    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    background: #733E87;
     border-color: transparent;
-    box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 6px 14px rgba(115, 62, 135, 0.3);
 }
 
 .option-text {
@@ -654,7 +652,7 @@ defineExpose({
 
 .most-common-badge iconify-icon {
     font-size: 11px;
-    color: #a855f7;
+    color: #733E87;
 }
 
 .option-arrow {
@@ -677,9 +675,9 @@ defineExpose({
 
 .deal-type-option.selected .option-arrow {
     color: #fff;
-    background: linear-gradient(135deg, #c026d3, #7c3aed);
+    background: #733E87;
     border-color: transparent;
-    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.35);
+    box-shadow: 0 8px 16px rgba(115, 62, 135, 0.35);
 }
 
 .convert-lead-footer {
@@ -704,7 +702,7 @@ defineExpose({
 
 .convert-lead-tip iconify-icon {
     font-size: 15px;
-    color: #a855f7;
+    color: #733E87;
     flex-shrink: 0;
 }
 
@@ -745,9 +743,9 @@ defineExpose({
 }
 
 .btn-add-deal {
-    background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+    background: #733E87;
     color: #fff;
-    box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
+    box-shadow: 0 10px 24px rgba(115, 62, 135, 0.32);
 }
 
 .btn-add-deal:hover:not(:disabled) {

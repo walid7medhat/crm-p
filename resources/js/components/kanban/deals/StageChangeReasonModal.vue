@@ -123,8 +123,8 @@ async function submitReason() {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse at 15% 10%, rgba(124, 58, 237, 0.12), transparent 42%),
-    radial-gradient(ellipse at 90% 90%, rgba(168, 85, 247, 0.1), transparent 40%),
+    radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
+    radial-gradient(ellipse at 90% 90%, rgba(115, 62, 135, 0.1), transparent 40%),
     rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -144,15 +144,15 @@ async function submitReason() {
   border: 1px solid #e9e5f5;
   box-shadow:
     0 28px 70px rgba(15, 23, 42, 0.18),
-    0 0 0 1px rgba(124, 58, 237, 0.04);
+    0 0 0 1px rgba(115, 62, 135, 0.04);
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   font-size: 12px;
   color: #0f172a;
-  --deal-accent: #a855f7;
-  --deal-accent-text: #7c3aed;
-  --deal-navy: #7c3aed;
+  --deal-accent: #733E87;
+  --deal-accent-text: #733E87;
+  --deal-navy: #733E87;
   --deal-navy-deep: #0f172a;
-  --deal-link: #7c3aed;
+  --deal-link: #733E87;
 }
 
 .modal-header {
@@ -192,7 +192,7 @@ async function submitReason() {
 .btn-close:hover {
   background: #f3e8ff;
   border-color: #d8b4fe;
-  color: #7c3aed;
+  color: #733E87;
 }
 
 .modal-body {
@@ -235,9 +235,9 @@ async function submitReason() {
 }
 
 .form-control:focus {
-  border-color: #a855f7;
+  border-color: #733E87;
   outline: 0;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
+  box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.16);
 }
 
 .form-control.is-invalid {
@@ -284,10 +284,10 @@ async function submitReason() {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+  background: #733E87;
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.32);
+  box-shadow: 0 10px 24px rgba(115, 62, 135, 0.32);
 }
 
 .btn-primary:hover {

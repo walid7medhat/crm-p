@@ -8,6 +8,7 @@ import Swal from 'sweetalert2'
 import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken } from './plugins/axios.js'
 
 // CSS imports
+import '../css/app.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
 
