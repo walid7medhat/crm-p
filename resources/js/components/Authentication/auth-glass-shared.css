@@ -1,4 +1,4 @@
-/* Login / sign-up glass card — scaled for full-page layout */
+/* Login / sign-up glass card — light shell + purple accents (desktop) */
 .auth-glass-card {
   position: relative;
   width: 100%;
@@ -7,19 +7,21 @@
   margin: 0 auto;
   padding: clamp(24px, 3vh, 36px) clamp(28px, 3vw, 44px) clamp(20px, 2.5vh, 28px);
   border-radius: clamp(20px, 2vw, 28px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.28);
   background: linear-gradient(
     165deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.05) 45%,
-    rgba(255, 255, 255, 0.08) 100%
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(250, 245, 255, 0.92) 45%,
+    rgba(255, 255, 255, 0.96) 100%
   );
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   box-shadow:
-    0 28px 64px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    0 28px 64px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(124, 58, 237, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   box-sizing: border-box;
+  color: #0f172a;
 }
 
 .auth-glass-card h6 {
@@ -34,7 +36,7 @@
   font-size: clamp(0.8rem, 1.1vw, 0.95rem);
   font-weight: 400;
   text-align: center;
-  color: rgba(255, 255, 255, 0.55);
+  color: #64748b;
 }
 
 .auth-glass-card__title {
@@ -44,7 +46,7 @@
   letter-spacing: 0.07em;
   text-align: center;
   text-transform: uppercase;
-  color: #fff;
+  color: #0f172a;
   line-height: 1.05;
 }
 
@@ -56,8 +58,8 @@
   display: block;
   margin-bottom: 6px;
   font-size: clamp(0.78rem, 1vw, 0.88rem);
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+  color: #334155;
 }
 
 .auth-glass-input-wrap {
@@ -69,9 +71,9 @@
   height: clamp(42px, 5vh, 50px);
   padding: 0 44px 0 16px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.22);
-  color: #fff;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
   font-size: clamp(0.88rem, 1.1vw, 1rem);
   box-sizing: border-box;
   outline: none;
@@ -79,12 +81,13 @@
 }
 
 .auth-glass-input::placeholder {
-  color: rgba(255, 255, 255, 0.38);
+  color: #94a3b8;
 }
 
 .auth-glass-input:focus {
-  border-color: rgba(192, 38, 211, 0.5);
-  box-shadow: 0 0 0 2px rgba(192, 38, 211, 0.22);
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
+  background: #fff;
 }
 
 .auth-glass-input.is-invalid {
@@ -99,7 +102,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: #94a3b8;
   font-size: 1.2rem;
   pointer-events: none;
 }
@@ -111,18 +114,21 @@
   background: transparent;
   padding: 0;
   line-height: 1;
+  color: #7c3aed;
 }
 
 .auth-glass-link {
   display: inline-block;
   margin-top: 5px;
   font-size: clamp(0.72rem, 0.95vw, 0.82rem);
-  color: rgba(255, 255, 255, 0.45);
+  color: #7c3aed;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .auth-glass-link:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: #6d28d9;
+  text-decoration: underline;
 }
 
 .auth-glass-actions {
@@ -144,8 +150,8 @@
   line-height: 1;
   text-align: center;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  transition: background 0.2s ease, opacity 0.2s ease;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .auth-glass-btn:disabled {
@@ -154,23 +160,28 @@
 }
 
 .auth-glass-btn--ghost {
-  background: transparent;
-  color: #fff;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
 }
 
 .auth-glass-btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
 }
 
 .auth-glass-btn--primary {
-  background: #fff;
-  color: #0b0736;
-  border-color: #fff;
+  background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
+  color: #fff;
+  border-color: transparent;
   font-weight: 700;
+  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.28);
 }
 
 .auth-glass-btn--primary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.92);
+  filter: brightness(1.05);
+  color: #fff;
 }
 
 .auth-glass-btn--block {
@@ -183,7 +194,7 @@
   align-items: center;
   gap: 10px;
   margin: clamp(14px, 2vh, 18px) 0 clamp(12px, 1.5vh, 14px);
-  color: rgba(255, 255, 255, 0.4);
+  color: #94a3b8;
   font-size: clamp(0.72rem, 0.95vw, 0.82rem);
 }
 
@@ -192,7 +203,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.12);
+  background: #e2e8f0;
 }
 
 .auth-glass-pill-link {
@@ -203,9 +214,9 @@
   height: clamp(42px, 5vh, 50px);
   padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid #e9e5f5;
+  background: #faf9fc;
+  color: #475569;
   font-size: clamp(0.8rem, 1vw, 0.9rem);
   line-height: 1;
   text-decoration: none;
@@ -216,11 +227,13 @@
 .auth-glass-pill-link b {
   font-weight: 700;
   margin-left: 4px;
+  color: #7c3aed;
 }
 
 .auth-glass-pill-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+  color: #0f172a;
 }
 
 .auth-glass-footer-link {
@@ -228,12 +241,12 @@
   margin-top: clamp(12px, 1.5vh, 16px);
   text-align: center;
   font-size: clamp(0.68rem, 0.9vw, 0.78rem);
-  color: rgba(255, 255, 255, 0.4);
+  color: #64748b;
   text-decoration: none;
 }
 
 .auth-glass-footer-link:hover {
-  color: rgba(255, 255, 255, 0.7);
+  color: #7c3aed;
 }
 
 .auth-glass-error {
@@ -241,7 +254,7 @@
   padding: 8px 10px;
   border-radius: 8px;
   background: rgba(248, 113, 113, 0.1);
-  color: #fecaca;
+  color: #b91c1c;
   font-size: 0.8rem;
   text-align: center;
 }
@@ -250,24 +263,26 @@
   display: block;
   margin-top: 4px;
   font-size: 0.72rem;
-  color: #fca5a5;
+  color: #dc2626;
 }
 
 .auth-glass-success {
   text-align: center;
+  color: #0f172a;
 }
 
 .auth-glass-success h6 {
   margin-bottom: 8px;
   font-size: 1rem;
   font-weight: 700;
+  color: #0f172a;
 }
 
 .auth-glass-success__note {
   display: block;
   margin-bottom: 14px;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: #64748b;
 }
 
 .auth-glass-card--compact .auth-glass-field {
@@ -338,6 +353,7 @@
   margin-top: 20px;
 }
 
+/* Mobile keeps dark purple shell + light text */
 @media (max-width: 768px) {
   .auth-glass-card--signin {
     width: 100%;
@@ -352,11 +368,27 @@
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: none;
+    color: #fff;
+  }
+
+  .auth-glass-card:not(.auth-glass-card--signin) {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(61, 34, 104, 0.55);
+    color: #fff;
+    box-shadow: none;
   }
 
   .auth-glass-card__eyebrow--desktop,
   .auth-glass-card__title--desktop {
     display: none !important;
+  }
+
+  .auth-glass-card__eyebrow {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .auth-glass-card__title {
+    color: #fff;
   }
 
   .auth-glass-card--signin .auth-glass-form {
@@ -389,16 +421,30 @@
     color: rgba(255, 255, 255, 0.42);
   }
 
+  .auth-glass-input:focus {
+    border-color: rgba(192, 38, 211, 0.5);
+    box-shadow: 0 0 0 2px rgba(192, 38, 211, 0.22);
+    background: rgba(42, 21, 72, 0.55);
+  }
+
   .auth-glass-input__icon {
     right: 14px;
     font-size: 1.15rem;
     color: rgba(255, 255, 255, 0.72);
   }
 
+  .auth-glass-input__icon--clickable {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
   .auth-glass-link {
     margin-top: 8px;
     font-size: 0.82rem;
     color: rgba(255, 255, 255, 0.88);
+  }
+
+  .auth-glass-link:hover {
+    color: #fff;
   }
 
   .auth-glass-actions {
@@ -413,7 +459,13 @@
   }
 
   .auth-glass-btn--ghost {
+    background: transparent;
     border-color: rgba(255, 255, 255, 0.45);
+    color: #fff;
+  }
+
+  .auth-glass-btn--ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
   }
 
@@ -421,6 +473,13 @@
     background: #fff;
     color: #2a1548;
     font-weight: 700;
+    box-shadow: none;
+  }
+
+  .auth-glass-btn--primary:hover:not(:disabled) {
+    filter: none;
+    background: rgba(255, 255, 255, 0.92);
+    color: #2a1548;
   }
 
   .auth-glass-divider {
@@ -438,7 +497,25 @@
     height: 48px;
     font-size: 0.88rem;
     border-color: rgba(255, 255, 255, 0.35);
+    background: transparent;
     color: rgba(255, 255, 255, 0.92);
+  }
+
+  .auth-glass-pill-link b {
+    color: #fff;
+  }
+
+  .auth-glass-pill-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+  }
+
+  .auth-glass-footer-link {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .auth-glass-footer-link:hover {
+    color: #fff;
   }
 
   .auth-glass-footer-link--policy {
@@ -447,6 +524,19 @@
     color: rgba(255, 255, 255, 0.75);
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+
+  .auth-glass-success,
+  .auth-glass-success h6 {
+    color: #fff;
+  }
+
+  .auth-glass-success__note {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .auth-glass-error {
+    color: #fecaca;
   }
 }
 

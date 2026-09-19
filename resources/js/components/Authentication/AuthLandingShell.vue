@@ -62,24 +62,24 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 
-const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
-const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
+const altcrmLogo = '/assets/images/auth/altcrm-logo.svg';
+const oiaLogo = '/assets/images/auth/oia-properties-logo.svg';
 
 const featureCards = [
   {
     id: 'pipeline',
     title: 'Your sales pipeline, simplified',
-    image: '/assets/images/auth/mockup-pipeline.png',
+    image: '/assets/images/auth/mockup-pipeline.svg',
   },
   {
     id: 'analytics',
     title: 'Analyze sales and team performance easily',
-    image: '/assets/images/auth/mockup-analytics.png',
+    image: '/assets/images/auth/mockup-analytics.svg',
   },
   {
     id: 'mobile',
     title: 'Mobile CRM built for faster teamwork',
-    image: '/assets/images/auth/mockup-mobile.png',
+    image: '/assets/images/auth/mockup-mobile.svg',
   },
 ];
 
@@ -213,7 +213,7 @@ onUnmounted(() => {
   max-height: 100dvh;
   overflow: hidden;
   background: transparent;
-  color: #fff;
+  color: #0f172a;
   font-family: Montserrat, Inter, system-ui, sans-serif;
   box-sizing: border-box;
 }
@@ -321,19 +321,19 @@ onUnmounted(() => {
 }
 
 .auth-landing__brand-logo--altcrm {
-  width: clamp(140px, 14vw, 200px);
-  max-height: clamp(64px, 8vh, 96px);
+  width: clamp(72px, 7.5vw, 110px);
+  max-height: clamp(72px, 7.5vw, 110px);
 }
 
 .auth-landing__brand-logo--oia {
-  width: clamp(160px, 16vw, 220px);
-  max-height: clamp(60px, 7.5vh, 90px);
+  width: clamp(150px, 15vw, 210px);
+  max-height: clamp(56px, 7vh, 86px);
 }
 
 .auth-landing__brand-divider {
   width: 1px;
   height: clamp(40px, 6vh, 56px);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(124, 58, 237, 0.28);
   flex-shrink: 0;
 }
 
@@ -344,7 +344,7 @@ onUnmounted(() => {
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: #0f172a;
   flex-shrink: 0;
 }
 
@@ -386,11 +386,11 @@ onUnmounted(() => {
   min-height: 0;
   max-height: 100%;
   border-radius: clamp(14px, 1.2vw, 18px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
   flex: 0 0 calc((100% - 28px) / 3);
   min-width: calc((100% - 28px) / 3);
   scroll-snap-align: start;
@@ -400,10 +400,10 @@ onUnmounted(() => {
   margin: 0;
   flex: 0 0 auto;
   font-size: clamp(11px, 0.95vw, 13px) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   line-height: 1.25;
   letter-spacing: 0.01em;
-  color: rgba(255, 255, 255, 0.85);
+  color: #334155;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -445,14 +445,14 @@ onUnmounted(() => {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(124, 58, 237, 0.28);
   cursor: pointer;
   transition: width 0.25s ease, background 0.25s ease;
 }
 
 .auth-landing__dot.is-active {
   width: 20px;
-  background: #fff;
+  background: #7c3aed;
 }
 
 .auth-landing__auth-panel {
@@ -489,6 +489,7 @@ onUnmounted(() => {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0;
+    color: #fff;
     background: linear-gradient(
       180deg,
       var(--auth-mobile-purple) 0%,
@@ -541,13 +542,13 @@ onUnmounted(() => {
   }
 
   .auth-landing__brand-logo--altcrm {
-    width: 88px;
-    max-height: 52px;
+    width: 56px;
+    max-height: 56px;
   }
 
   .auth-landing__brand-logo--oia {
-    width: 100px;
-    max-height: 48px;
+    width: 110px;
+    max-height: 52px;
   }
 
   .auth-landing__headline--desktop {
@@ -565,6 +566,7 @@ onUnmounted(() => {
     max-width: 320px;
     margin: 0 auto;
     flex-shrink: 0;
+    color: #fff;
   }
 
   .auth-landing__cards-track {
@@ -712,7 +714,7 @@ onUnmounted(() => {
 
 @media (max-width: 639px) {
   .auth-landing__brand-logo--altcrm {
-    width: 88px;
+    width: 52px;
     max-height: 52px;
   }
 
