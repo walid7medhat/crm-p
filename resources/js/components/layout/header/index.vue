@@ -457,6 +457,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch, nextTick } from 'vue';
+import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import { useSidebar } from '@/composables/useSidebar.js';
@@ -497,7 +498,13 @@ const insightsIcon = ref('/assets/icons/insights-icon.svg?v=2');
 const route = useRoute();
 const router = useRouter();
 const activeDropdown = ref(null);
-const countsLoading = ref(false);
+const {
+  counts: sidebarCounts,
+  loading: countsLoading,
+  fetchCounts,
+  startPolling,
+  stopPolling,
+} = useSidebarCounts();
 const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop, expandSidebarDesktop } = useSidebar();
 const {
@@ -576,8 +583,9 @@ const isHr =computed(() => {
   return user.value?.roles?.includes('hr') ?? false;
 });
 const tableItems = computed(() => {
+  const c = sidebarCounts.value;
   const items = [
-    { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: 0,permission: 'listings-list' },
+    { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: c?.listings?.all || 0,permission: 'listings-list' },
     { path: '/property-form', label: 'Create Listing', colorClass: 'text-info-main w-auto', permission: 'listings-create', count: 0 },
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]
@@ -588,7 +596,7 @@ const tableItems = computed(() => {
       label: 'My Listing',
       colorClass: 'text-warning-main w-auto',
       permission: 'listings-list',
-      count: 0
+      count: c?.listings?.my || 0
     })
   }
 
@@ -596,66 +604,32 @@ const tableItems = computed(() => {
 })
 
 const requestsItems = computed(() => {
+  const c = sidebarCounts.value;
   if (isAdmin.value) {
     return [
-      { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: 0 },
+      { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: c?.orders?.all || 0 },
             { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
 
     ]
   } else {
     const items = [
-      { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: 0 ,permission: 'listings-list'},
-      { path: '/my-orders', label: 'Outbound Request', colorClass: 'text-white w-auto', count: 0,permission: 'listings-list' },
+      { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: c?.requests?.all || 0 ,permission: 'listings-list'},
+      { path: '/my-orders', label: 'Outbound Request', colorClass: 'text-white w-auto', count: c?.orders?.all || 0,permission: 'listings-list' },
       { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
     ];
     
     // Only show hot deal requests for listing team members
     if (user.value?.is_listing_team &&  (user.value.roles?.includes('super_admin') ||  user.value.roles?.includes('admin') ||  user.value.roles?.includes('team_lead') ||  user.value.roles?.includes('manager'))) {
-      items.push({ path: '/hotDeal-requests', label: 'Hot Deal Requests', colorClass: 'text-white w-auto', count: 0 });
+      items.push({ path: '/hotDeal-requests', label: 'Hot Deal Requests', colorClass: 'text-white w-auto', count: c?.hot_deals?.all || 0 });
     }
     
     if (user.value?.is_listing_team &&  (user.value.roles?.includes('super_admin') || user.value.roles?.includes('team_lead') ||  user.value.roles?.includes('manager'))) {
-      items.push({ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: 0 });
+      items.push({ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: c?.needapprove?.all || 0 });
     }
     
     return items;
   }
 });
-
-const fetchAllCounts = async () => {
-  try {
-    countsLoading.value = true;
-    const response = await api.get('/sidebar/counts');
-    
-    if (response.data.success) {
-      const counts = response.data.data;
-      
-      tableItems.value.forEach(item => {
-        if (item.path === '/alllisting') item.count = counts.listings.all || 0;
-        if (item.path === '/my-listing') item.count = counts.listings.my || 0;
-        if (item.path === '/archive') item.count = counts.listings.archive || 0;
-      });
-      
-      if (isAdmin.value) {
-        const totalRequests =  (counts.orders.all || 0);
-        requestsItems.value.forEach(item => {
-          if (item.path === '/all-requests') item.count = totalRequests;
-        });
-      } else {
-        requestsItems.value.forEach(item => {
-          if (item.path === '/my-requests') item.count = counts.requests.all || 0;
-          if (item.path === '/my-orders') item.count = counts.orders.all || 0;
-           if (item.path === '/hotDeal-requests') item.count = counts.hot_deals.all || 0;
-           if (item.path === '/need-approve-requests') item.count = counts.needapprove.all || 0;
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching sidebar counts:', error);
-  } finally {
-    countsLoading.value = false;
-  }
-};
 
 // Computed properties
 const filteredTableItems = computed(() => {
@@ -1449,12 +1423,13 @@ onMounted(() => {
     localStorage.setItem('activeDropdown', 'crm');
   }
   syncSidebarDropdownFromRoute();
-  fetchAllCounts();
-  setInterval(fetchAllCounts, 60000);
+  fetchCounts().catch(() => {});
+  startPolling();
   nextTick(attachDockObservers);
 });
 
 onUnmounted(() => {
+  stopPolling();
   window.removeEventListener('resize', syncViewport);
   window.removeEventListener('resize', updateDockCursor);
   detachDockObservers();

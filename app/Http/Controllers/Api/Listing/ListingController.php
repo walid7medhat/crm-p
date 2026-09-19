@@ -280,6 +280,76 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             }
         }
 
+        // Bbox: only when all four bounds are present and ordered.
+        // Matches ListingMapCoordinateResolver DB hierarchy steps 1–3
+        // (listing_area → parent → grandparent), requiring lat+lng on the same level.
+        // Rows with no hierarchy lat/lng pair are kept (mapping / project / geocode / default)
+        // so coordinate semantics stay unchanged; they are not approximated via listings.lat/lng.
+        $minLat = $validated['min_lat'] ?? null;
+        $maxLat = $validated['max_lat'] ?? null;
+        $minLng = $validated['min_lng'] ?? null;
+        $maxLng = $validated['max_lng'] ?? null;
+        $hasBbox = $minLat !== null && $maxLat !== null && $minLng !== null && $maxLng !== null
+            && (float) $minLat <= (float) $maxLat
+            && (float) $minLng <= (float) $maxLng;
+
+        if ($hasBbox) {
+            $minLat = (float) $minLat;
+            $maxLat = (float) $maxLat;
+            $minLng = (float) $minLng;
+            $maxLng = (float) $maxLng;
+
+            $hierarchyLatSql = <<<'SQL'
+(
+  CASE
+    WHEN listing_area.latitude IS NOT NULL AND listing_area.longitude IS NOT NULL
+      THEN listing_area.latitude
+    WHEN listing_parent_area.latitude IS NOT NULL AND listing_parent_area.longitude IS NOT NULL
+      THEN listing_parent_area.latitude
+    WHEN listing_grandparent_area.latitude IS NOT NULL AND listing_grandparent_area.longitude IS NOT NULL
+      THEN listing_grandparent_area.latitude
+    ELSE NULL
+  END
+)
+SQL;
+            $hierarchyLngSql = <<<'SQL'
+(
+  CASE
+    WHEN listing_area.latitude IS NOT NULL AND listing_area.longitude IS NOT NULL
+      THEN listing_area.longitude
+    WHEN listing_parent_area.latitude IS NOT NULL AND listing_parent_area.longitude IS NOT NULL
+      THEN listing_parent_area.longitude
+    WHEN listing_grandparent_area.latitude IS NOT NULL AND listing_grandparent_area.longitude IS NOT NULL
+      THEN listing_grandparent_area.longitude
+    ELSE NULL
+  END
+)
+SQL;
+
+            $query->where(function ($q) use ($hierarchyLatSql, $hierarchyLngSql, $minLat, $maxLat, $minLng, $maxLng) {
+                $q->where(function ($qIn) use ($hierarchyLatSql, $hierarchyLngSql, $minLat, $maxLat, $minLng, $maxLng) {
+                    $qIn->whereRaw("{$hierarchyLatSql} BETWEEN ? AND ?", [$minLat, $maxLat])
+                        ->whereRaw("{$hierarchyLngSql} BETWEEN ? AND ?", [$minLng, $maxLng]);
+                })->orWhere(function ($qFallthrough) {
+                    // No listing/parent/grandparent lat+lng pair → resolver continues to
+                    // area_mapping / project_area / geocode / default. Keep these rows.
+                    $qFallthrough
+                        ->where(function ($qLevel) {
+                            $qLevel->whereNull('listing_area.latitude')
+                                ->orWhereNull('listing_area.longitude');
+                        })
+                        ->where(function ($qLevel) {
+                            $qLevel->whereNull('listing_parent_area.latitude')
+                                ->orWhereNull('listing_parent_area.longitude');
+                        })
+                        ->where(function ($qLevel) {
+                            $qLevel->whereNull('listing_grandparent_area.latitude')
+                                ->orWhereNull('listing_grandparent_area.longitude');
+                        });
+                });
+            });
+        }
+
         $perPage = (int) ($validated['per_page'] ?? 2500);
         $paginator = $query->with([
             'propertyType:id,name',
@@ -329,6 +399,23 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
                 'hero_image' => $listing->hero_image_path ? asset('storage/' . $listing->hero_image_path) : null,
             ];
         });
+
+        // Fallthrough pins (no hierarchy DB coords) are loaded so resolver semantics stay intact;
+        // drop any whose resolved coordinates land outside the requested viewport.
+        if ($hasBbox) {
+            $payload = $payload->filter(static function (array $row) use ($minLat, $maxLat, $minLng, $maxLng) {
+                $lat = $row['latitude'] ?? null;
+                $lng = $row['longitude'] ?? null;
+                if ($lat === null || $lng === null) {
+                    return false;
+                }
+                $lat = (float) $lat;
+                $lng = (float) $lng;
+
+                return $lat >= $minLat && $lat <= $maxLat
+                    && $lng >= $minLng && $lng <= $maxLng;
+            })->values();
+        }
 
         return ApiResponse::success($payload, 'Property map data retrieved successfully', 200, [
             'current_page' => $paginator->currentPage(),

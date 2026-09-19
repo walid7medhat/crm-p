@@ -126,9 +126,13 @@
 
 <script>
 import attendancesApi from '@/services/attendancesApi';
+import apexchart from 'vue3-apexcharts';
 
 export default {
   name: 'UserAttendanceCarousel',
+  components: {
+    apexchart,
+  },
   props: {
     /** Max total months of history reachable via the "Older" arrow. */
     months: {

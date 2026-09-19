@@ -44,13 +44,103 @@ class Area extends Model
         return $this->hasMany(Area::class, 'parent_id');
     }
 
+    /**
+     * Self + all descendant area IDs (depth-first, children ordered by id).
+     *
+     * Optimized: one request-local load of (id, parent_id), then in-memory DFS.
+     * Preserves the historical accessor semantics used by lead/listing filters.
+     */
     public function getChildIdsAttribute()
     {
-        $ids = [$this->id];
+        return static::descendantIdsIncludingSelf((int) $this->id);
+    }
 
-        foreach ($this->child as $child) {
-            $ids = array_merge($ids, $child->child_ids);
+    /**
+     * Resolve self + descendant IDs without recursive Eloquent lazy-loads.
+     * Results are memoized for the current HTTP request / container lifecycle.
+     *
+     * @return list<int>
+     */
+    public static function descendantIdsIncludingSelf(int $areaId): array
+    {
+        $store = static::hierarchyStore();
+
+        if (isset($store['memo'][$areaId])) {
+            return $store['memo'][$areaId];
         }
+
+        static::ensureHierarchyIndexLoaded($store);
+
+        return static::collectDescendantIdsDfs($areaId, $store);
+    }
+
+    /**
+     * Request-scoped mutable store (ArrayObject) so PHP-FPM and Octane reset per request
+     * when the container is refreshed, without relying on static process memory.
+     */
+    protected static function hierarchyStore(): \ArrayObject
+    {
+        if (! app()->bound('areas.hierarchy.store')) {
+            app()->instance('areas.hierarchy.store', new \ArrayObject([
+                'index' => null,
+                'memo' => [],
+            ], \ArrayObject::ARRAY_AS_PROPS));
+        }
+
+        /** @var \ArrayObject $store */
+        $store = app('areas.hierarchy.store');
+
+        return $store;
+    }
+
+    protected static function ensureHierarchyIndexLoaded(\ArrayObject $store): void
+    {
+        if ($store['index'] !== null) {
+            return;
+        }
+
+        /** @var array<int, list<int>> $index */
+        $index = [];
+
+        // Only hierarchy columns; ordered so sibling traversal matches typical PK order.
+        $rows = static::query()
+            ->orderBy('id')
+            ->get(['id', 'parent_id']);
+
+        foreach ($rows as $row) {
+            $parentId = $row->parent_id === null ? null : (int) $row->parent_id;
+            // Skip indexing under null key for roots' children — children hang off numeric parent ids.
+            if ($parentId === null) {
+                continue;
+            }
+            if (! isset($index[$parentId])) {
+                $index[$parentId] = [];
+            }
+            $index[$parentId][] = (int) $row->id;
+        }
+
+        $store['index'] = $index;
+    }
+
+    /**
+     * @return list<int>
+     */
+    protected static function collectDescendantIdsDfs(int $areaId, \ArrayObject $store): array
+    {
+        if (isset($store['memo'][$areaId])) {
+            return $store['memo'][$areaId];
+        }
+
+        $ids = [$areaId];
+        $children = $store['index'][$areaId] ?? [];
+
+        foreach ($children as $childId) {
+            $ids = array_merge($ids, static::collectDescendantIdsDfs($childId, $store));
+        }
+
+        $memo = $store['memo'];
+        $memo[$areaId] = $ids;
+        $store['memo'] = $memo;
 
         return $ids;
     }

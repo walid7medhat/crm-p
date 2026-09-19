@@ -427,6 +427,105 @@ let map = null
 let clusterLayer = null
 const markerById = new Map()
 
+/** Debounced viewport refetch — avoid refetch-on-every-pixel while dragging. */
+const BBOX_FETCH_DEBOUNCE_MS = 450
+let boundsFetchTimer = null
+let suppressBoundsFetch = false
+let boundsFetchEnabled = false
+let mapFetchSeq = 0
+let mapFetchController = null
+
+const readMapBboxParams = () => {
+  if (!map) {
+    return null
+  }
+  const b = map.getBounds()
+  if (!b || typeof b.isValid !== 'function' || !b.isValid()) {
+    return null
+  }
+  const min_lat = b.getSouth()
+  const max_lat = b.getNorth()
+  const min_lng = b.getWest()
+  const max_lng = b.getEast()
+  if (![min_lat, max_lat, min_lng, max_lng].every((n) => Number.isFinite(n))) {
+    return null
+  }
+  if (min_lat > max_lat || min_lng > max_lng) {
+    return null
+  }
+  return { min_lat, max_lat, min_lng, max_lng }
+}
+
+const scheduleBoundsFetch = () => {
+  if (suppressBoundsFetch) {
+    return
+  }
+  if (boundsFetchTimer) {
+    clearTimeout(boundsFetchTimer)
+  }
+  boundsFetchTimer = setTimeout(() => {
+    boundsFetchTimer = null
+    if (suppressBoundsFetch) {
+      return
+    }
+    void refreshData({ useBbox: true, fitToMarkers: false })
+  }, BBOX_FETCH_DEBOUNCE_MS)
+}
+
+/** Suppress bbox refetch during programmatic flyTo / fitBounds / invalidateSize. */
+const armBoundsFetchAfterProgrammaticMove = () => {
+  suppressBoundsFetch = true
+  const release = () => {
+    suppressBoundsFetch = false
+  }
+  if (map) {
+    map.once('moveend', () => {
+      // Wait past fly duration (~0.65s) + invalidateSize settle.
+      window.setTimeout(release, 900)
+    })
+  }
+  window.setTimeout(release, 2000)
+}
+
+/** User pan finished → refetch with current bounds. */
+const onUserDragEnd = () => {
+  if (suppressBoundsFetch) {
+    return
+  }
+  boundsFetchEnabled = true
+  scheduleBoundsFetch()
+}
+
+/** User zoom (control or wheel) → one refetch after zoom settles. */
+const onUserZoomGesture = () => {
+  if (suppressBoundsFetch || !map) {
+    return
+  }
+  boundsFetchEnabled = true
+  map.once('zoomend', () => {
+    if (!suppressBoundsFetch) {
+      scheduleBoundsFetch()
+    }
+  })
+}
+
+const bindUserViewportFetchHandlers = () => {
+  if (!map) {
+    return
+  }
+  map.on('dragend', onUserDragEnd)
+  const root = map.getContainer()
+  root.querySelector('.leaflet-control-zoom-in')?.addEventListener('click', onUserZoomGesture)
+  root.querySelector('.leaflet-control-zoom-out')?.addEventListener('click', onUserZoomGesture)
+  root.addEventListener(
+    'wheel',
+    () => {
+      onUserZoomGesture()
+    },
+    { passive: true },
+  )
+}
+
 const markerIconState = (id) => {
   if (selectedListingId.value === id) {
     return 'selected'
@@ -521,9 +620,14 @@ const buildPropertyPopupHtml = (property) => {
     </div>`
 }
 
-const fetchMapData = async () => {
+const fetchMapData = async ({ useBbox = false } = {}) => {
   loading.value = true
   fetchError.value = ''
+  const seq = ++mapFetchSeq
+  if (mapFetchController) {
+    mapFetchController.abort()
+  }
+  mapFetchController = new AbortController()
   try {
     const params = { per_page: 3000 }
     if (listingStatus.value) {
@@ -532,8 +636,22 @@ const fetchMapData = async () => {
     if (areaIdFromQuery.value) {
       params.area_id = areaIdFromQuery.value
     }
+    // Initial load: no bbox (preserve current full-filter behavior).
+    // After the map has a valid viewport, pan/zoom may send bounds.
+    if (useBbox) {
+      const bbox = readMapBboxParams()
+      if (bbox) {
+        Object.assign(params, bbox)
+      }
+    }
 
-    const { data } = await api.get('/properties/map', { params })
+    const { data } = await api.get('/properties/map', {
+      params,
+      signal: mapFetchController.signal,
+    })
+    if (seq !== mapFetchSeq) {
+      return properties.value
+    }
     if (data && data.status === false) {
       fetchError.value = data.message || 'Map API returned an error'
       properties.value = []
@@ -543,6 +661,16 @@ const fetchMapData = async () => {
     properties.value = list
     return list
   } catch (error) {
+    if (
+      error?.code === 'ERR_CANCELED' ||
+      error?.name === 'CanceledError' ||
+      error?.name === 'AbortError'
+    ) {
+      return properties.value
+    }
+    if (seq !== mapFetchSeq) {
+      return properties.value
+    }
     console.error('Failed to load property map data', error)
     fetchError.value =
       error.response?.data?.message ||
@@ -551,7 +679,9 @@ const fetchMapData = async () => {
     properties.value = []
     return []
   } finally {
-    loading.value = false
+    if (seq === mapFetchSeq) {
+      loading.value = false
+    }
   }
 }
 
@@ -601,7 +731,7 @@ const fitMapToMarkers = async () => {
   }
 }
 
-const renderMarkers = (items) => {
+const renderMarkers = (items, { fitToMarkers = true } = {}) => {
   if (!map) {
     return
   }
@@ -674,7 +804,9 @@ const renderMarkers = (items) => {
   })
 
   map.addLayer(clusterLayer)
-  void fitMapToMarkers()
+  if (fitToMarkers) {
+    void fitMapToMarkers()
+  }
 }
 
 const focusListingOnMap = (p) => {
@@ -697,11 +829,14 @@ const onCardClick = (p) => {
   focusListingOnMap(p)
 }
 
-const refreshData = async () => {
-  const list = await fetchMapData()
+const refreshData = async ({ useBbox = false, fitToMarkers = true } = {}) => {
+  const list = await fetchMapData({ useBbox })
   sidebarPage.value = 1
   selectedListingId.value = null
-  renderMarkers(list)
+  if (fitToMarkers) {
+    armBoundsFetchAfterProgrammaticMove()
+  }
+  renderMarkers(list, { fitToMarkers })
   scrollSidebarListToTop()
   await nextTick()
   map?.invalidateSize()
@@ -739,7 +874,10 @@ const initMap = async () => {
     attribution: '',
   }).addTo(map)
 
-  await refreshData()
+  // User pan/zoom only — never auto-refetch after programmatic fitMapToMarkers.
+  bindUserViewportFetchHandlers()
+
+  await refreshData({ useBbox: false, fitToMarkers: true })
   nextTick(() => {
     map?.invalidateSize()
     requestAnimationFrame(() => map?.invalidateSize())
@@ -758,6 +896,15 @@ const onWindowResize = () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onWindowResize)
+  if (boundsFetchTimer) {
+    clearTimeout(boundsFetchTimer)
+    boundsFetchTimer = null
+  }
+  if (mapFetchController) {
+    mapFetchController.abort()
+    mapFetchController = null
+  }
+  boundsFetchEnabled = false
   markerById.clear()
   if (map) {
     map.off()
@@ -768,14 +915,15 @@ onBeforeUnmount(() => {
 })
 
 watch(listingStatus, () => {
-  refreshData()
+  // Filter changes: full filtered set (no bbox), then fit — same UX as before.
+  refreshData({ useBbox: false, fitToMarkers: true })
 })
 
 watch(areaIdFromQuery, async () => {
   if (!map) {
     return
   }
-  await refreshData()
+  await refreshData({ useBbox: false, fitToMarkers: true })
 })
 
 watch(selectedListingId, (next, prev) => {

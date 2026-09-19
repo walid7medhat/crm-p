@@ -526,12 +526,14 @@ import { API_ENDPOINTS } from '@/config/api';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
 import api from '@/plugins/axios';
+import apexchart from 'vue3-apexcharts';
 
 export default {
     name: 'ViewUser',
     components: {
         Breadcrumb,
         UserAttendanceCarousel,
+        apexchart,
     },
     data() {
         return {

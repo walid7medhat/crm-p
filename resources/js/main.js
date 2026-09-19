@@ -3,7 +3,6 @@ import App from './App.vue'
 import router from './router.js'
 import SearchableSelect from './components/ui/SearchableSelect.vue'
 import 'vue-select/dist/vue-select.css'
-import VueApexCharts from "vue3-apexcharts"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken } from './plugins/axios.js'
@@ -176,8 +175,10 @@ app.component('iconify-icon', {
 })
 
 // Plugins
+// ApexCharts is NOT registered globally — chart pages/components import
+// vue3-apexcharts (or apexcharts) locally so login and non-chart routes
+// do not pay the full chart library cost in the initial bundle.
 app.use(router)
-app.use(VueApexCharts)
 
 // Global properties
 app.config.globalProperties.$apiBaseUrl = getApiBaseUrl()

@@ -12,6 +12,7 @@
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
+import apexchart from 'vue3-apexcharts'
 import AdChartSkeleton from './AdChartSkeleton.vue'
 
 const props = defineProps({

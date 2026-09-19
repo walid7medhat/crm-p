@@ -767,6 +767,7 @@ import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
+import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue';
 import SystemOverviewLangToggle from '@/components/system-overview/SystemOverviewLangToggle.vue';
@@ -864,20 +865,23 @@ const isCustomAdmin = computed(() => {
 
 const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only show listings') ?? false);
 
-const listingTabCounts = ref({ listings: 0, myListings: 0, requests: 0, viewings: 0 });
+const { counts: sidebarCounts, fetchCounts } = useSidebarCounts();
+
+const listingTabCounts = computed(() => {
+  const counts = sidebarCounts.value || {};
+  return {
+    listings: counts.listings?.all || 0,
+    myListings: counts.listings?.my || 0,
+    requests: isAdmin.value
+      ? (counts.orders?.all || 0)
+      : ((counts.requests?.all || 0) + (counts.orders?.all || 0)),
+    viewings: 0,
+  };
+});
+
 async function fetchListingTabCounts() {
   try {
-    const response = await api.get('/sidebar/counts');
-    if (!response.data?.success) return;
-    const counts = response.data.data || {};
-      listingTabCounts.value = {
-        listings: counts.listings?.all || 0,
-        myListings: counts.listings?.my || 0,
-        requests: isAdmin.value
-          ? (counts.orders?.all || 0)
-          : ((counts.requests?.all || 0) + (counts.orders?.all || 0)),
-        viewings: 0,
-      };
+    await fetchCounts();
   } catch {
     /* ignore */
   }

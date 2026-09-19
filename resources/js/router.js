@@ -2,144 +2,32 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { clearAuthToken } from './plugins/axios.js'
 
-// DashBoard
-import HomeAnalytics from './pages/dashboard/home-analytics.vue'
-import AllLsting from './components/alllisting/AllLsting.vue'
-import PropertyShow from './components/alllisting/PropertyShow.vue'
-import PropertyForm from './pages/listings/property-form.vue'
-import EditPropertyForm from './pages/listings/edit-form.vue'
-import MyListing from './pages/listings/my-listing.vue'
-import Archive from './pages/listings/archive.vue'
-import NotifyMe from './pages/listings/notify-me.vue'
-import PropertyMapPage from './pages/listings/property-map.vue'
-
-// Table
-import BasicTable from './pages/table/table-basic.vue'
-import DataTable from './pages/table/table-data.vue'
-
-// Users
-import ViewProfile from './pages/users/view-profile.vue'
-import UsersList from './pages/users/UsersList.vue'
-import UserForm from './pages/users/UserForm.vue'
-import UserDetail from './pages/users/UserDetail.vue'
-import TeamTree from './components/Table/TeamTree.vue'
-
-// Role and Permission
-import AssignRole from './pages/roleAccess/assign-role.vue'
-import RoleAccess from './pages/roleAccess/role-access.vue'
-
-// authentication
-import SignIn from './pages/authentication/sign-in.vue'
-import SignUp from './pages/authentication/sign-up.vue'
-import ForgotPassword from './pages/authentication/forgot-password.vue'
-import ResetPassword from './pages/authentication/reset-password.vue'
-
-import DevelopersList from './pages/developers/developers-list.vue'
-import AddDeveloper from './pages/developers/add-developer.vue'
-import EditDeveloper from './pages/developers/edit-developer.vue'
-import ViewDeveloper from './pages/developers/view-developer.vue'
-
-import OwnersList from './pages/owners/owners-list.vue'
-import OwnerForm from './pages/owners/form.vue'
-import ViewOwner from './pages/owners/view-owner.vue'
-
-import PropertyTypesList from './pages/property_types/property_types-list.vue'
-import PropertyTypeForm from './pages/property_types/form.vue'
-
-import UnitViewsList from './pages/unit_views/unit_views-list.vue'
-import UnitViewForm from './pages/unit_views/form.vue'
-
-import LayoutTypesList from './pages/layout_types/layout_types-list.vue'
-import LayoutTypeForm from './pages/layout_types/form.vue'
-
-import AreasList from './pages/areas/areas-list.vue'
-import AreaForm from './pages/areas/form.vue'
-
-import RolesList from './pages/roles/roles-list.vue'
-import RoleForm from './pages/roles/form.vue'
-import RoleDetails from './pages/roles/details.vue'
-
-import MyRequests from './pages/listings/my_requests.vue'
-import MyOrders from './pages/listings/my_order.vue'
-import AllRequests from './pages/listings/AllRequests.vue'
-import HotDealRequests from './pages/listings/hot_deal_requests.vue'
-import NeedApprove from './pages/listings/PendingApprovalsTable.vue'
-import MyViewings from './pages/listings/my_viewings.vue'
-import allNotifications from './components/allNotifications.vue'
-
-// Kanban
-import Kanban from './pages/kanban.vue'
-import kanban_deal from './pages/kanban_deal.vue'
-
-// Suggestions
-import Suggestions from './pages/suggestions/index.vue'
-
-import FeaturesList from './pages/features/features-list.vue'
-import FeatureForm from './pages/features/form.vue'
-
-import ProjectsTable from './pages/projects/projects-list.vue'
-import ProjectForm from './pages/projects/form.vue'
-import ProjectDetails from './pages/projects/show.vue'
-import FloorPlans from './pages/projects/FloorPlans.vue'
-
-import LeadReports from './pages/lead-reports.vue'
-import LeadSourceReport from './pages/lead-source-report.vue'
-import AdminChatDashboard from './pages/chat/AdminChatDashboard.vue'
-
-import StageVisibility from './components/kanban/stage/StageVisibility.vue'
-
-import kanban_settings from './components/kanban/KanbanSettings.vue'
-import lead_scoring_settings from './components/kanban/LeadScoringSettings.vue'
-import InvestmentAnalysis from './pages/dashboard/investment.vue'
-import CitySettings from './pages/dashboard/city-settings.vue'
-import RoiCalculatorPage from './pages/settings/roi-calculator.vue'
-import RoeCalculatorPage from './pages/settings/roe-calculator.vue'
-import Email from './pages/email/email.vue'
-import StarredEmail from './pages/email/StarredEmail.vue'
-import EmailViewDetails from './pages/email/VeiwDetails.vue'
-import HrDashboard from './pages/hr/index.vue'
-import EmployeeProfilePage from './pages/hr/employees/EmployeeProfilePage.vue'
-import AssetDetailsPage from './pages/hr/assets/AssetDetailsPage.vue'
-import SalesIntelligence from './pages/sales-intelligence/index.vue'
-
-
-import ImportPitrix from './components/kanban/leadList/ImportPitrix.vue'
-import SyncBitrixLeads from './components/kanban/leadList/SyncBitrixLeads.vue'
-import SyncResponsible from './components/kanban/leadList/SyncResponsible.vue'
-
-
-import  BulkAreaCoordinates from './pages/areas/BulkAreaCoordinates.vue'
-import Logs from './pages/logs/index.vue'
-import SystemOverview from './pages/system-overview/SystemOverview.vue'
-import DealCostSettings from './pages/settings/DealCostSettings.vue';
-import EvaluationSettings from './pages/settings/EvaluationSettings.vue';
-import UserDuplicatesReport from './pages/settings/user-duplicates-report.vue';
-
-
-import AttendanceMonthlyReport   from './pages/hr/attendance-monthly-reports.vue'
-
-import agentPerformance from './components/lead-reports/AgentPerformanceReport.vue'
+/**
+ * Route components are lazy-loaded so the initial main bundle no longer pulls
+ * every page (HR, kanban, listings, maps, etc.). Auth guards / meta below are
+ * unchanged — they do not require synchronous component constructors.
+ */
 const baseRoutes = [
-    { path: '/settings/deal-costs', component: DealCostSettings, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/settings/evaluations', component: EvaluationSettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-    { path: '/settings/user-duplicates-report', component: UserDuplicatesReport, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/settings/deal-costs', component: () => import('./pages/settings/DealCostSettings.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/settings/evaluations', component: () => import('./pages/settings/EvaluationSettings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/settings/user-duplicates-report', component: () => import('./pages/settings/user-duplicates-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },
-    { path: '/import-pitrix', component: ImportPitrix, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/sync-bitrix-leads', component: SyncBitrixLeads, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/sync-responsible', component: SyncResponsible, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/area-coordinates', component: BulkAreaCoordinates, meta: { requiresAuth: true, requiresAdmin: true } },
-      { path: '/logs', component: Logs, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/import-pitrix', component: () => import('./components/kanban/leadList/ImportPitrix.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/sync-bitrix-leads', component: () => import('./components/kanban/leadList/SyncBitrixLeads.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/sync-responsible', component: () => import('./components/kanban/leadList/SyncResponsible.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/area-coordinates', component: () => import('./pages/areas/BulkAreaCoordinates.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+      { path: '/logs', component: () => import('./pages/logs/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       {
         path: '/system-overview',
         name: 'system-overview',
-        component: SystemOverview,
+        component: () => import('./pages/system-overview/SystemOverview.vue'),
         meta: { requiresAuth: true, requiresAdmin: true },
       },
 
-      { path: '/attendance-monthly-reports', component: AttendanceMonthlyReport, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+      { path: '/attendance-monthly-reports', component: () => import('./pages/hr/attendance-monthly-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Kanban Route — Leads tab requires the 'show-leads' permission (or admin)
-  { path: '/kanban', component: Kanban, meta: { requiresAuth: true, requiresPermission: 'show-leads' } },
-  { path: '/kanban_deal', component: kanban_deal, meta: { requiresAuth: true, requiresPermission: 'show-leads'} },
+  { path: '/kanban', component: () => import('./pages/kanban.vue'), meta: { requiresAuth: true, requiresPermission: 'show-leads' } },
+  { path: '/kanban_deal', component: () => import('./pages/kanban_deal.vue'), meta: { requiresAuth: true, requiresPermission: 'show-leads'} },
   {
     path: '/project-map',
     name: 'project-map',
@@ -150,134 +38,134 @@ const baseRoutes = [
       requiresSuperAdmin: true,
     },
   },
-    { path: '/settings/kanban', component: kanban_settings },
-    { path: '/settings/lead-scoring', component: lead_scoring_settings, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/settings/kanban', component: () => import('./components/kanban/KanbanSettings.vue') },
+    { path: '/settings/lead-scoring', component: () => import('./components/kanban/LeadScoringSettings.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-scoring', redirect: '/settings/lead-scoring' },
 
-  { path: '/settings/stage-visibility', component: StageVisibility, meta: { requiresAuth: true } },
+  { path: '/settings/stage-visibility', component: () => import('./components/kanban/stage/StageVisibility.vue'), meta: { requiresAuth: true } },
 
   // Background picker: any user can choose their own; superadmin manages the pool (handled in-page).
   { path: '/settings/background', component: () => import('./pages/settings/background.vue'), meta: { requiresAuth: true } },
 
-  { path: '/lead-reports', component: LeadReports, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/lead-source-report', component: LeadSourceReport, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/agent-performance', component: agentPerformance, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/sales-intelligence', component: SalesIntelligence, meta: { requiresAuth: true } },
-  // HR dashboard: `resources/js/pages/hr/index.vue` (import HrDashboard above)
-  { path: '/hr', component: HrDashboard, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
-  { path: '/hr/employees/:id', component: EmployeeProfilePage, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
-  { path: '/hr/assets/:id', component: AssetDetailsPage, meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
-  { path: '/suggestion', component: Suggestions, meta: { requiresAuth: true } },
-  { path: '/investment-analysis', component: InvestmentAnalysis, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/settings/city-investments', component: CitySettings, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/settings/roi-calculator', component: RoiCalculatorPage, meta: { requiresAuth: true } },
-  { path: '/settings/roe-calculator', component: RoeCalculatorPage, meta: { requiresAuth: true } },
-   { path: '/home', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
-   { path: '/', component: HomeAnalytics, meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
+  { path: '/lead-reports', component: () => import('./pages/lead-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
+  // HR dashboard: `resources/js/pages/hr/index.vue`
+  { path: '/hr', component: () => import('./pages/hr/index.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
+  { path: '/hr/employees/:id', component: () => import('./pages/hr/employees/EmployeeProfilePage.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
+  { path: '/hr/assets/:id', component: () => import('./pages/hr/assets/AssetDetailsPage.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
+  { path: '/suggestion', component: () => import('./pages/suggestions/index.vue'), meta: { requiresAuth: true } },
+  { path: '/investment-analysis', component: () => import('./pages/dashboard/investment.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/settings/city-investments', component: () => import('./pages/dashboard/city-settings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/settings/roi-calculator', component: () => import('./pages/settings/roi-calculator.vue'), meta: { requiresAuth: true } },
+  { path: '/settings/roe-calculator', component: () => import('./pages/settings/roe-calculator.vue'), meta: { requiresAuth: true } },
+   { path: '/home', component: () => import('./pages/dashboard/home-analytics.vue'), meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
+   { path: '/', component: () => import('./pages/dashboard/home-analytics.vue'), meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 
-  { path: '/table-basic', component: BasicTable, meta: { requiresAuth: true } },
-  { path: '/table-data', component: DataTable, meta: { requiresAuth: true } },
-  { path: '/property-form', component: PropertyForm, meta: { requiresAuth: true } },
+  { path: '/table-basic', component: () => import('./pages/table/table-basic.vue'), meta: { requiresAuth: true } },
+  { path: '/table-data', component: () => import('./pages/table/table-data.vue'), meta: { requiresAuth: true } },
+  { path: '/property-form', component: () => import('./pages/listings/property-form.vue'), meta: { requiresAuth: true } },
   { path: '/listings/overview', redirect: '/' },
-  { path: '/my-listing', component: MyListing, meta: { requiresAuth: true } },
-  { path: '/archive', component: Archive, meta: { requiresAuth: true } },
-  { path: '/alllisting', component: AllLsting, meta: { requiresAuth: true } },
-  { path: '/notify-me', component: NotifyMe, meta: { requiresAuth: true } },
-  { path: '/properties-map', component: PropertyMapPage, meta: { requiresAuth: true } },
-  { path: '/property-details/:id', name: 'property.show', component: PropertyShow, meta: { requiresAuth: true } },
-  { path: '/properties/:id/edit', name: 'property.edit', component: EditPropertyForm, meta: { requiresAuth: true } },
-  { path: '/need-approve-requests', name: 'property.approve', component: NeedApprove, meta: { requiresAuth: true } },
+  { path: '/my-listing', component: () => import('./pages/listings/my-listing.vue'), meta: { requiresAuth: true } },
+  { path: '/archive', component: () => import('./pages/listings/archive.vue'), meta: { requiresAuth: true } },
+  { path: '/alllisting', component: () => import('./components/alllisting/AllLsting.vue'), meta: { requiresAuth: true } },
+  { path: '/notify-me', component: () => import('./pages/listings/notify-me.vue'), meta: { requiresAuth: true } },
+  { path: '/properties-map', component: () => import('./pages/listings/property-map.vue'), meta: { requiresAuth: true } },
+  { path: '/property-details/:id', name: 'property.show', component: () => import('./components/alllisting/PropertyShow.vue'), meta: { requiresAuth: true } },
+  { path: '/properties/:id/edit', name: 'property.edit', component: () => import('./pages/listings/edit-form.vue'), meta: { requiresAuth: true } },
+  { path: '/need-approve-requests', name: 'property.approve', component: () => import('./pages/listings/PendingApprovalsTable.vue'), meta: { requiresAuth: true } },
 
-  { path: '/assign-role', component: AssignRole, meta: { requiresAuth: true } },
-  { path: '/role-access', component: RoleAccess, meta: { requiresAuth: true } },
+  { path: '/assign-role', component: () => import('./pages/roleAccess/assign-role.vue'), meta: { requiresAuth: true } },
+  { path: '/role-access', component: () => import('./pages/roleAccess/role-access.vue'), meta: { requiresAuth: true } },
 
-  { path: '/sign-in', component: SignIn, name: 'login', meta: { layout: false, requiresAuth: false } },
-  { path: '/sign-up', component: SignUp, meta: { layout: false, requiresAuth: false } },
-  { path: '/forgot-password', component: ForgotPassword, meta: { layout: false, requiresAuth: false } },
-  { path: '/reset-password', name: 'reset-password', component: ResetPassword, meta: { layout: false, requiresAuth: false } },
+  { path: '/sign-in', component: () => import('./pages/authentication/sign-in.vue'), name: 'login', meta: { layout: false, requiresAuth: false } },
+  { path: '/sign-up', component: () => import('./pages/authentication/sign-up.vue'), meta: { layout: false, requiresAuth: false } },
+  { path: '/forgot-password', component: () => import('./pages/authentication/forgot-password.vue'), meta: { layout: false, requiresAuth: false } },
+  { path: '/reset-password', name: 'reset-password', component: () => import('./pages/authentication/reset-password.vue'), meta: { layout: false, requiresAuth: false } },
 
-  { path: '/developers', component: DevelopersList, meta: { requiresAuth: true } },
-  { path: '/add-developer', component: AddDeveloper, meta: { requiresAuth: true } },
-  { path: '/developers/:id/edit', component: EditDeveloper, meta: { requiresAuth: true } },
-  { path: '/developers/:id', component: ViewDeveloper, meta: { requiresAuth: true } },
+  { path: '/developers', component: () => import('./pages/developers/developers-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-developer', component: () => import('./pages/developers/add-developer.vue'), meta: { requiresAuth: true } },
+  { path: '/developers/:id/edit', component: () => import('./pages/developers/edit-developer.vue'), meta: { requiresAuth: true } },
+  { path: '/developers/:id', component: () => import('./pages/developers/view-developer.vue'), meta: { requiresAuth: true } },
 
-  { path: '/owners', component: OwnersList, meta: { requiresAuth: true } },
-  { path: '/add-owner', component: OwnerForm, meta: { requiresAuth: true } },
-  { path: '/owners/:id/edit', component: OwnerForm, name: 'edit-owner', meta: { requiresAuth: true } },
-  { path: '/owners/:id', component: ViewOwner, meta: { requiresAuth: true } },
+  { path: '/owners', component: () => import('./pages/owners/owners-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-owner', component: () => import('./pages/owners/form.vue'), meta: { requiresAuth: true } },
+  { path: '/owners/:id/edit', component: () => import('./pages/owners/form.vue'), name: 'edit-owner', meta: { requiresAuth: true } },
+  { path: '/owners/:id', component: () => import('./pages/owners/view-owner.vue'), meta: { requiresAuth: true } },
 
-  { path: '/property_types', component: PropertyTypesList, meta: { requiresAuth: true } },
-  { path: '/add-property_type', component: PropertyTypeForm, meta: { requiresAuth: true } },
-  { path: '/property_types/:id/edit', component: PropertyTypeForm, name: 'edit-property_type', meta: { requiresAuth: true } },
+  { path: '/property_types', component: () => import('./pages/property_types/property_types-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-property_type', component: () => import('./pages/property_types/form.vue'), meta: { requiresAuth: true } },
+  { path: '/property_types/:id/edit', component: () => import('./pages/property_types/form.vue'), name: 'edit-property_type', meta: { requiresAuth: true } },
 
-  { path: '/unit_views', component: UnitViewsList, meta: { requiresAuth: true } },
-  { path: '/add-unit_view', component: UnitViewForm, meta: { requiresAuth: true } },
-  { path: '/unit_views/:id/edit', component: UnitViewForm, name: 'edit-unit_view', meta: { requiresAuth: true } },
+  { path: '/unit_views', component: () => import('./pages/unit_views/unit_views-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-unit_view', component: () => import('./pages/unit_views/form.vue'), meta: { requiresAuth: true } },
+  { path: '/unit_views/:id/edit', component: () => import('./pages/unit_views/form.vue'), name: 'edit-unit_view', meta: { requiresAuth: true } },
 
-  { path: '/layout_types', component: LayoutTypesList, meta: { requiresAuth: true } },
-  { path: '/add-layout_type', component: LayoutTypeForm, meta: { requiresAuth: true } },
-  { path: '/layout_types/:id/edit', component: LayoutTypeForm, name: 'edit-layout_type', meta: { requiresAuth: true } },
+  { path: '/layout_types', component: () => import('./pages/layout_types/layout_types-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-layout_type', component: () => import('./pages/layout_types/form.vue'), meta: { requiresAuth: true } },
+  { path: '/layout_types/:id/edit', component: () => import('./pages/layout_types/form.vue'), name: 'edit-layout_type', meta: { requiresAuth: true } },
   
 
 
-  { path: '/areas', component: AreasList, meta: { requiresAuth: true } },
-  { path: '/add-area', component: AreaForm, meta: { requiresAuth: true } },
-  { path: '/areas/:id/edit', component: AreaForm, name: 'edit-area', meta: { requiresAuth: true } },
+  { path: '/areas', component: () => import('./pages/areas/areas-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-area', component: () => import('./pages/areas/form.vue'), meta: { requiresAuth: true } },
+  { path: '/areas/:id/edit', component: () => import('./pages/areas/form.vue'), name: 'edit-area', meta: { requiresAuth: true } },
 
-  { path: '/roles', component: RolesList, meta: { requiresAuth: true } },
-  { path: '/add-role', component: RoleForm, meta: { requiresAuth: true } },
-  { path: '/roles/:id/edit', component: RoleForm, name: 'edit-role', meta: { requiresAuth: true } },
-  { path: '/roles/:id', component: RoleDetails, name: 'list-role', meta: { requiresAuth: true } },
+  { path: '/roles', component: () => import('./pages/roles/roles-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-role', component: () => import('./pages/roles/form.vue'), meta: { requiresAuth: true } },
+  { path: '/roles/:id/edit', component: () => import('./pages/roles/form.vue'), name: 'edit-role', meta: { requiresAuth: true } },
+  { path: '/roles/:id', component: () => import('./pages/roles/details.vue'), name: 'list-role', meta: { requiresAuth: true } },
 
-  { path: '/my-requests', component: MyRequests, meta: { requiresAuth: true } },
-  { path: '/my-orders', component: MyOrders, meta: { requiresAuth: true } },
-  { path: '/my-viewings', component: MyViewings, meta: { requiresAuth: true } },
-  { path: '/all-requests', name: 'all-requests', component: AllRequests, meta: { requiresAuth: true } },
-  { path: '/hotDeal-requests',name:'hotDeal-requests', component: HotDealRequests, meta: { requiresAuth: true } },
+  { path: '/my-requests', component: () => import('./pages/listings/my_requests.vue'), meta: { requiresAuth: true } },
+  { path: '/my-orders', component: () => import('./pages/listings/my_order.vue'), meta: { requiresAuth: true } },
+  { path: '/my-viewings', component: () => import('./pages/listings/my_viewings.vue'), meta: { requiresAuth: true } },
+  { path: '/all-requests', name: 'all-requests', component: () => import('./pages/listings/AllRequests.vue'), meta: { requiresAuth: true } },
+  { path: '/hotDeal-requests',name:'hotDeal-requests', component: () => import('./pages/listings/hot_deal_requests.vue'), meta: { requiresAuth: true } },
   
-  { path: '/users', component: UsersList, meta: { requiresAuth: true } },
-  { path: '/users/:id', component: UserDetail, meta: { requiresAuth: true } },
-  { path: '/add-user', component: UserForm, meta: { requiresAuth: true } },
-  { path: '/users/:id/edit', component: UserForm, name: 'edit-user', meta: { requiresAuth: true } },
-  { path: '/view-profile', component: ViewProfile, name: 'profile', meta: { requiresAuth: true } },
+  { path: '/users', component: () => import('./pages/users/UsersList.vue'), meta: { requiresAuth: true } },
+  { path: '/users/:id', component: () => import('./pages/users/UserDetail.vue'), meta: { requiresAuth: true } },
+  { path: '/add-user', component: () => import('./pages/users/UserForm.vue'), meta: { requiresAuth: true } },
+  { path: '/users/:id/edit', component: () => import('./pages/users/UserForm.vue'), name: 'edit-user', meta: { requiresAuth: true } },
+  { path: '/view-profile', component: () => import('./pages/users/view-profile.vue'), name: 'profile', meta: { requiresAuth: true } },
   
-  { path: '/team-tree', name: 'TeamTree', component: TeamTree, meta: { requiresAuth: true } },
-  { path: '/notifications', component: allNotifications, name: 'notifications', meta: { requiresAuth: true } },
-  { path: '/admin/chat', component: AdminChatDashboard, name: 'admin-chat', meta: { requiresAuth: true } },
+  { path: '/team-tree', name: 'TeamTree', component: () => import('./components/Table/TeamTree.vue'), meta: { requiresAuth: true } },
+  { path: '/notifications', component: () => import('./components/allNotifications.vue'), name: 'notifications', meta: { requiresAuth: true } },
+  { path: '/admin/chat', component: () => import('./pages/chat/AdminChatDashboard.vue'), name: 'admin-chat', meta: { requiresAuth: true } },
 
   // Email (SUPER_ADMIN only)
-  { path: '/email', component: Email, name: 'email', meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/email/starred', component: StarredEmail, name: 'email-starred', meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/email/view', component: EmailViewDetails, name: 'email-view', meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/email', component: () => import('./pages/email/email.vue'), name: 'email', meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/email/starred', component: () => import('./pages/email/StarredEmail.vue'), name: 'email-starred', meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/email/view', component: () => import('./pages/email/VeiwDetails.vue'), name: 'email-view', meta: { requiresAuth: true, requiresSuperAdmin: true } },
   
-     { path: '/features', component: FeaturesList, meta: { requiresAuth: true } },
-  { path: '/add-features', component: FeatureForm, meta: { requiresAuth: true } },
-  { path: '/features/:id/edit', component: FeatureForm, name: 'edit-layout_type', meta: { requiresAuth: true } },
+     { path: '/features', component: () => import('./pages/features/features-list.vue'), meta: { requiresAuth: true } },
+  { path: '/add-features', component: () => import('./pages/features/form.vue'), meta: { requiresAuth: true } },
+  { path: '/features/:id/edit', component: () => import('./pages/features/form.vue'), name: 'edit-layout_type', meta: { requiresAuth: true } },
   {
   path: '/projects',
-  component: ProjectsTable,
+  component: () => import('./pages/projects/projects-list.vue'),
   meta: { requiresAuth: true }
 },
 {
   path: '/add-projects',
-  component: ProjectForm,
+  component: () => import('./pages/projects/form.vue'),
   meta: { requiresAuth: true }
 },
 {
   path: '/projects/:id/edit',
-  component: ProjectForm,
+  component: () => import('./pages/projects/form.vue'),
   name: 'edit-project',
   meta: { requiresAuth: true }
 },
 {
   path: '/projects/:id',
-  component: ProjectDetails,
+  component: () => import('./pages/projects/show.vue'),
   name: 'show-project',
   meta: { requiresAuth: true }
 },
 {
     path:'/projects/:id/floor-plans',
-    component:FloorPlans,
+    component: () => import('./pages/projects/FloorPlans.vue'),
     name:'project-floorplan',
     meta:{ requiresAuth: true }
 }

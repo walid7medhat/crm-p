@@ -11,7 +11,9 @@ export default defineConfig(({ command }) => ({
         laravel({
             input: [
                 'resources/css/app.css',
-                'resources/js/app.js',
+                // SPA entry used by welcome.blade.php (@vite main.js).
+                // Do not also enter resources/js/app.js — a second App mount entry
+                // forces shared App/vendor chunks into the initial graph incorrectly.
                 'resources/js/main.js'
             ],
             refresh: false,
@@ -39,6 +41,24 @@ export default defineConfig(({ command }) => ({
                         return 'assets/[name].[hash][extname]';
                     }
                     return 'assets/[name].[hash][extname]';
+                },
+                /**
+                 * Only split the Vue runtime. Extra vendor manualChunks previously
+                 * absorbed shared modules and forced heavy libs (docs/apex/leaflet)
+                 * into the initial graph. Heavy libs stay in their lazy route chunks.
+                 */
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) {
+                        return;
+                    }
+                    const n = id.split('\\').join('/');
+                    if (
+                        n.includes('/node_modules/vue/') ||
+                        n.includes('/node_modules/@vue/') ||
+                        n.includes('/node_modules/vue-router/')
+                    ) {
+                        return 'vendor-vue';
+                    }
                 },
             },
         },

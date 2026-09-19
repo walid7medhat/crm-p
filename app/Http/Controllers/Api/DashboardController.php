@@ -24,6 +24,7 @@ use App\Models\Deal;
 use App\Models\DealProperty;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class DashboardController extends Controller
@@ -1116,69 +1117,75 @@ public function getPropertyTypesWithListings(Request $request)
     {
         try {
             $user = Auth::user();
-            $currentUser=$user;
-              $user_hierarchy = User::where(function($q) use ($currentUser) {
-                $q->where('id', $currentUser->id)
-                ->orWhere('parent_id', $currentUser->id)
-                ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
-                    $parentQuery->where('parent_id', $currentUser->id);
-                });
-            })->pluck('id')->toArray();
 
-            $requests = ListingAccessRequest::when(!($currentUser->hasRole('super_admin')|| $currentUser->hasRole('admin')) ,function($q)use ($user_hierarchy,$user){
-             $q->whereHas('listing', function ($query) use ($user_hierarchy) {
-                $query->where(function($q) use ($user_hierarchy) {
-                $q->orWhereIn('agent_id', $user_hierarchy);
-            });
-        })->orWhere('handled_by', $user->id);
-        })
-                ->count();
+            // Per-user short TTL: badges are user/role/hierarchy scoped. 45s is safe for nav counts.
+            $cacheKey = 'sidebar_counts:u'.$user->id;
+            $counts = Cache::remember($cacheKey, 45, function () use ($user) {
+                $currentUser = $user;
+                $user_hierarchy = User::where(function ($q) use ($currentUser) {
+                    $q->where('id', $currentUser->id)
+                        ->orWhere('parent_id', $currentUser->id)
+                        ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
+                            $parentQuery->where('parent_id', $currentUser->id);
+                        });
+                })->pluck('id')->toArray();
 
-            $orders = ListingAccessRequest::with(['listing', 'requestedBy','convertedBy'])
-            
-                ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function($q) use ($user_hierarchy) {
+                $requests = ListingAccessRequest::when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function ($q) use ($user_hierarchy, $user) {
+                    $q->whereHas('listing', function ($query) use ($user_hierarchy) {
+                        $query->where(function ($q) use ($user_hierarchy) {
+                            $q->orWhereIn('agent_id', $user_hierarchy);
+                        });
+                    })->orWhere('handled_by', $user->id);
+                })
+                    ->count();
+
+                // count() does not hydrate relations — drop unused with() that only wasted intent/clarity.
+                $orders = ListingAccessRequest::when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function ($q) use ($user_hierarchy) {
                     $q->whereIn('requested_by', $user_hierarchy);
                 })
-                ->orderBy('created_at', 'desc')
-                ->count();
-            $hot_deals = HotDealRequest::with(['listing', 'requester'])
-              ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function($q) use ($user_hierarchy) {
+                    ->orderBy('created_at', 'desc')
+                    ->count();
+
+                $hot_deals = HotDealRequest::when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function ($q) use ($user_hierarchy) {
                     $q->whereIn('requested_by', $user_hierarchy);
-                })  ->where('status', 'pending')->orderBy('created_at', 'desc')
-                ->count();
-           $query = Listing::where('approved', false)
-                ->where('status', 'published')
-                ->where('is_archived', false);
-            
-            if ($user->hasRole('team_lead')) {
-                $query->whereIn('agent_id', $user_hierarchy);
-            }
-            
-            $needApprove = $query->count();
-            $counts = [
-                'listings' => [
-                    'all' => Listing::where('is_active',true)->where('is_archived',false)->whereNotIn('status',['converted','draft','rented']) 
-                ->where('approved', true)->count(),
-                    'my' => Listing::whereIn('agent_id', $user_hierarchy)->count(),
-                    'archive' => Listing::where('status', 'archived')->count()
-                ],
-                'requests' => [
-                    'all' =>$requests,
-                ],
-                'orders' => [
-                    'all' => $orders,
-                ],
-                'hot_deals' => [
-                    'all' => $hot_deals,
-                ],
-                'needapprove' => [
-                    'all' => $needApprove,
-                ]
-            ];
+                })->where('status', 'pending')->orderBy('created_at', 'desc')
+                    ->count();
+
+                $query = Listing::where('approved', false)
+                    ->where('status', 'published')
+                    ->where('is_archived', false);
+
+                if ($user->hasRole('team_lead')) {
+                    $query->whereIn('agent_id', $user_hierarchy);
+                }
+
+                $needApprove = $query->count();
+
+                return [
+                    'listings' => [
+                        'all' => Listing::where('is_active', true)->where('is_archived', false)->whereNotIn('status', ['converted', 'draft', 'rented'])
+                            ->where('approved', true)->count(),
+                        'my' => Listing::whereIn('agent_id', $user_hierarchy)->count(),
+                        'archive' => Listing::where('status', 'archived')->count(),
+                    ],
+                    'requests' => [
+                        'all' => $requests,
+                    ],
+                    'orders' => [
+                        'all' => $orders,
+                    ],
+                    'hot_deals' => [
+                        'all' => $hot_deals,
+                    ],
+                    'needapprove' => [
+                        'all' => $needApprove,
+                    ],
+                ];
+            });
 
             return response()->json([
                 'success' => true,
-                'data' => $counts
+                'data' => $counts,
             ]);
 
         } catch (\Exception $e) {

@@ -215,6 +215,7 @@
 
 <script>
 import axios from 'axios'
+import apexchart from 'vue3-apexcharts'
 
 const START_10 = 9 * 60 + 16      // 9:16 AM
 const END_10 = 10 * 60            // 10:00 AM (inclusive)
@@ -224,6 +225,9 @@ const START_100 = 12 * 60 + 1     // 12:01 PM
 
 export default {
   name: 'AttendanceMonthlyReports',
+  components: {
+    apexchart,
+  },
   data() {
     return {
       startDate: '',
