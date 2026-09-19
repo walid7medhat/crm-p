@@ -65,7 +65,8 @@ function attachBundledCssToMainEntry() {
 }
 
 export default defineConfig(({ command }) => ({
-    base: '/',
+    // Do NOT set base: '/' — laravel-vite-plugin must use /build/ in production
+    // so dynamic imports resolve to /build/assets/*.js (not /assets/*.js → HTML 404).
     plugins: [
         laravel({
             input: [
