@@ -233,7 +233,7 @@ export default {
   }
 }
 
-/* Auth pages: fill viewport and center content vertically */
+/* Auth pages: fill viewport; allow scroll so the form is never trapped */
 #app main.auth-page-main {
   display: flex;
   flex-direction: column;
@@ -243,7 +243,8 @@ export default {
   height: 100dvh;
   padding: 0;
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #app main.auth-page-main > * {
@@ -257,7 +258,8 @@ export default {
 
 html:has(#app main.auth-page-main),
 html:has(#app main.auth-page-main) body {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   height: 100%;
   max-height: 100dvh;
 }

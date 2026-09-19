@@ -37,6 +37,8 @@ import '../css/view-profile.css'
 import '../css/sweetalert-zindex.css'
 import '../css/crm-toast.css'
 import '../css/project-page.css'
+import '../css/auth-landing.css'
+import './components/Authentication/auth-glass-shared.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
 import { initLeadViewModal } from '@/composables/useLeadViewModal.js'
 
