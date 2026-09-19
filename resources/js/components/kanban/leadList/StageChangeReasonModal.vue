@@ -1573,21 +1573,26 @@ defineExpose({
 
 <style scoped>
 .client-req-order {
-    display: flex !important;
-    flex-direction: column !important;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
 }
 
 /* Two fields per line in dynamic form (desktop) */
-.dynamic-form .box-shadow:not(.client-req-order) {
+.dynamic-form .box-shadow {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px 10px;
 }
 
 .dynamic-form .box-shadow.client-req-order {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+}
+
+.dynamic-form .box-shadow.client-req-order .section-title {
+    grid-column: 1 / -1;
 }
 
 .dynamic-form .box-shadow.lead_qualification {
