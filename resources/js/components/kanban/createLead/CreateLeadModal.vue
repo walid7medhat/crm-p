@@ -296,127 +296,103 @@
                                                 </div>
                                             </div>
                                             
-                                            <!-- حقول العميل المحيل (تظهر فقط عند اختيار Referral لموظف المبيعات) -->
+                                          
+                                             <!-- Referral (sales only) -->
                                             <div v-if="isReferralSelected" class="col-md-12" style="order: 21;">
                                                 <div class="referral-client-card p-3">
                                                     <div class="d-flex align-items-center justify-content-between mb-3">
-                                                        <span class="section-title d-block">Source Client Information (Referral)</span>
+                                                        <span class="section-title d-block">Referral Information</span>
                                                         <span class="text-muted small">Who referred this lead?</span>
                                                     </div>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-3">
-                                                            <label class="form-label-custom">Source Client Name <span class="text-danger">*</span></label>
-                                                            <b-form-input 
-                                                                v-model="form.source_client_name" 
-                                                                placeholder="Enter name of person who referred"
-                                                                class="custom-input"
-                                                                :class="{ 'is-invalid': validationErrors.source_client_name }"
-                                                            />
-                                                            <div v-if="validationErrors.source_client_name" class="invalid-feedback d-block">
-                                                                {{ validationErrors.source_client_name[0] }}
+
+                                                    <div class="row g-3 referral-grid">
+                                                        <!-- Referral type -->
+                                                        <div class="col-lg-4">
+                                                            <label class="form-label-custom">Referral Type <span class="text-danger">*</span></label>
+                                                            <v-select
+                                                                v-model="form.referral_type"
+                                                                :options="referralTypeOptions"
+                                                                :reduce="option => option.value"
+                                                                label="text"
+                                                                placeholder="Select Referral Type"
+                                                                class="custom-v-select"
+                                                                :class="{ 'is-invalid-select': validationErrors.referral_type }"
+                                                            >
+                                                                <template #open-indicator="{ attributes }">
+                                                                    <span v-bind="attributes">
+                                                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                                                    </span>
+                                                                </template>
+                                                            </v-select>
+                                                            <div v-if="validationErrors.referral_type" class="invalid-feedback d-block">
+                                                                {{ validationErrors.referral_type[0] }}
                                                             </div>
                                                         </div>
-                                                        <div class="col-md-3">
-                                                            <label class="form-label-custom">Source Client Phone <span class="text-danger">*</span></label>
-                                                            <CrmPhoneInput 
-                                                                v-model="form.source_client_phone" 
-                                                                placeholder="Enter phone number"
-                                                                :invalid="!!validationErrors.source_client_phone"
-                                                                :show-errors="showPhoneFieldErrors"
-                                                            />
-                                                            <div v-if="validationErrors.source_client_phone" class="invalid-feedback d-block">
-                                                                {{ validationErrors.source_client_phone[0] }}
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <label class="form-label-custom">Source Client Email</label>
-                                                            <b-form-input 
-                                                                v-model="form.source_client_email" 
-                                                                placeholder="Enter email (optional)"
-                                                                class="custom-input"
-                                                                :class="{ 'is-invalid': validationErrors.source_client_email }"
-                                                            />
-                                                            <div v-if="validationErrors.source_client_email" class="invalid-feedback d-block">
-                                                                {{ validationErrors.source_client_email[0] }}
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <label class="form-label-custom">Relation with Client</label>
-                                                            <b-form-input 
-                                                                v-model="form.source_relation" 
-                                                                placeholder="e.g., Friend, Family, Colleague"
-                                                                class="custom-input"
-                                                                :class="{ 'is-invalid': validationErrors.source_relation }"
-                                                            />
-                                                            <div v-if="validationErrors.source_relation" class="invalid-feedback d-block">
-                                                                {{ validationErrors.source_relation[0] }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mt-2 text-muted small">
-                                                        <iconify-icon icon="lucide:info"></iconify-icon>
-                                                        This information helps track who referred this lead
-                                                    </div>
-                                                </div>
-                                            </div>
-                                                <!-- حقل اختيار العميل الموجود (يظهر فقط عند اختيار Self Lead لموظف المبيعات) -->
-                                            <div v-if="isSelfLeadSelected" class="col-md-12" style="order: 21;">
-                                                <div class="self-lead-client-card p-3">
-                                                    <div class="d-flex align-items-center justify-content-between mb-3">
-                                                        <span class="section-title d-block">Select Existing Client</span>
-                                                        <span class="text-muted small">Choose a client from your list</span>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-12">
-                                                            <label class="form-label-custom">Search/Select Client <span class="text-danger">*</span></label>
+
+                                                        <!-- Existing client: search by phone only, show name & phone only -->
+                                                        <div v-if="form.referral_type === 'existing'" class="col-lg-8">
+                                                            <label class="form-label-custom">Search Client by Phone <span class="text-danger">*</span></label>
                                                             <v-select
                                                                 v-model="selectedExistingClient"
                                                                 :options="clientsList"
-                                                                :reduce="client => client"
-                                                                :label="clientLabel"
+                                                                :filter="filterClientsByPhone"
+                                                                :get-option-label="clientName"
                                                                 :loading="isLoadingClients"
-                                                                placeholder="Type to search or select a client..."
+                                                                placeholder="Type phone number to search..."
                                                                 class="custom-v-select"
-                                                                @option:selected="handleClientSelected"
+                                                                :class="{ 'is-invalid-select': validationErrors.source_client_id }"
                                                             >
                                                                 <template #option="option">
                                                                     <div class="client-option">
-                                                                        <div class="client-option-name">
-                                                                            <strong>{{ option.name || option.lead_name || `${option.first_name} ${option.last_name}` }}</strong>
-                                                                        </div>
+                                                                        <div class="client-option-name"><strong>{{ clientName(option) }}</strong></div>
                                                                         <div class="client-option-details">
-                                                                            <span v-if="option.email" class="me-2">
-                                                                                <iconify-icon icon="lucide:mail" width="12"></iconify-icon>
-                                                                                {{ option.email }}
-                                                                            </span>
-                                                                            <span v-if="option.work_phone || option.phone">
-                                                                                <iconify-icon icon="lucide:phone" width="12"></iconify-icon>
-                                                                                {{ option.work_phone || option.phone }}
-                                                                            </span>
+                                                                            <iconify-icon icon="lucide:phone" width="12"></iconify-icon>
+                                                                            {{ clientPhone(option) }}
                                                                         </div>
                                                                     </div>
                                                                 </template>
                                                                 <template #selected-option="option">
-                                                                    <div v-if="option">
-                                                                        <div class="selected-client-info">
-                                                                            <strong>{{ option.name || option.lead_name || `${option.first_name} ${option.last_name}` }}</strong>
-                                                                            <div class="small text-muted">
-                                                                                {{ option.email }} | {{ option.work_phone || option.phone }}
-                                                                            </div>
-                                                                        </div>
+                                                                    <div class="selected-client-info">
+                                                                        <strong>{{ clientName(option) }}</strong>
+                                                                        <span class="text-muted small ms-2">{{ clientPhone(option) }}</span>
                                                                     </div>
                                                                 </template>
                                                                 <template #no-options>
-                                                                    <div class="text-center p-3">
-                                                                        No clients found. Create a new client first.
-                                                                    </div>
+                                                                    <div class="text-center p-3">No clients found with this phone.</div>
                                                                 </template>
                                                             </v-select>
-                                                            <div class="text-muted small mt-2">
-                                                                <iconify-icon icon="lucide:info"></iconify-icon>
-                                                                Selecting a client will auto-fill their information
+                                                            <div v-if="validationErrors.source_client_id" class="invalid-feedback d-block">
+                                                                {{ validationErrors.source_client_id[0] }}
                                                             </div>
                                                         </div>
+
+                                                        <!-- Other: only name + phone -->
+                                                        <template v-if="form.referral_type === 'other'">
+                                                            <div class="col-lg-4">
+                                                                <label class="form-label-custom">Name <span class="text-danger">*</span></label>
+                                                                <b-form-input
+                                                                    v-model="form.source_client_name"
+                                                                    placeholder="Enter name"
+                                                                    class="custom-input"
+                                                                    :class="{ 'is-invalid': validationErrors.source_client_name }"
+                                                                />
+                                                                <div v-if="validationErrors.source_client_name" class="invalid-feedback d-block">
+                                                                    {{ validationErrors.source_client_name[0] }}
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-lg-4">
+                                                                <label class="form-label-custom">Phone <span class="text-danger">*</span></label>
+                                                                <CrmPhoneInput
+                                                                    v-model="form.source_client_phone"
+                                                                    placeholder="Enter phone number"
+                                                                    :invalid="!!validationErrors.source_client_phone"
+                                                                    :show-errors="showPhoneFieldErrors"
+                                                                />
+                                                                <div v-if="validationErrors.source_client_phone" class="invalid-feedback d-block">
+                                                                    {{ validationErrors.source_client_phone[0] }}
+                                                                </div>
+                                                            </div>
+                                                        </template>
                                                     </div>
                                                 </div>
                                             </div>
@@ -731,12 +707,16 @@
     
     const isSalesUser = ref(false)
     
-    // خيارات الـ Source لحالة sales
-    const salesSourceOptions = [
-        { value: 'self_lead', text: 'Self Lead' },
-        { value: 'referral', text: 'Referral' }
+   const salesSourceOptions = [
+            { value: 'my_self_network',   text: 'My Self Network' },
+            { value: 'my_social_account', text: 'My Social Account' },
+            { value: 'referral',          text: 'Referral' }
+        ]
+
+    const referralTypeOptions = [
+        { value: 'existing', text: 'Existing Client' },
+        { value: 'other',    text: 'Other' }
     ]
-    
     
     // تحميل المراحل
     const stages = ref([])
@@ -840,9 +820,9 @@
         
         if (order === 4) {
             return [
-                { value: 'cold', text: 'Cold Lead' },
-                { value: 'warm', text: 'Warm Lead' },
-                { value: 'hot', text: 'Hot Lead' }
+                { value: 'cold', text: 'Within 1 Month' },
+                { value: 'warm', text: '1–3 Months' },
+                { value: 'hot', text: 'More than 3 Months' }
             ]
         } else if (order === 9) {
             return [
@@ -854,6 +834,7 @@
             return [
                 // { value: 'not_interested', text: 'Not Interested' },
                 { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+                { value: 'service_provider', text: 'Service Provider' },
                 { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
                 { value: 'job_seeker', text: 'Job Seeker' },
                 { value: 'broker', text: 'Broker' },
@@ -925,39 +906,32 @@ const fetchClientsList = async () => {
     }
 }
 
-// عند اختيار عميل موجود
-const handleClientSelected = (client) => {
-    if (client) {
-        // تعبئة بيانات العميل في النموذج
-        form.value.lead_name = client.name || client.lead_name || `${client.first_name || ''} ${client.last_name || ''}`
-        form.value.first_name = client.first_name || ''
-        form.value.last_name = client.last_name || ''
-        form.value.email = client.email || ''
-        form.value.work_phone = client.work_phone || client.phone || ''
-        form.value.salutation = client.salutation || null
-        form.value.secondary_email = client.secondary_email || ''
-        form.value.work_phone_2 = client.work_phone_2 || ''
-        
-        // أي حقول أخرى تريد تعبئتها
-        form.value.area_id = client.area_id || null
-        form.value.property_type_id = client.property_type_id || null
-        
-        selectedExistingClient.value = client
-    }
+const clientName = (c) =>
+    c?.name || c?.lead_name || `${c?.first_name || ''} ${c?.last_name || ''}`.trim()
+const clientPhone = (c) => c?.work_phone || c?.phone || ''
+const onlyDigits = (v) => String(v ?? '').replace(/\D/g, '')
+
+// البحث بالتليفون بس (بيتجاهل المسافات و + و -)
+const filterClientsByPhone = (options, search) => {
+    if (!search) return options
+    const q = onlyDigits(search)
+    if (!q) return []
+    return options.filter((c) => onlyDigits(clientPhone(c)).includes(q))
 }
 
-// مسح بيانات العميل
-const clearClientData = () => {
-    form.value.lead_name = ''
-    form.value.first_name = ''
-    form.value.last_name = ''
-    form.value.email = ''
-    form.value.work_phone = ''
-    form.value.salutation = null
-    form.value.secondary_email = ''
-    form.value.work_phone_2 = ''
+const resetReferralData = () => {
     selectedExistingClient.value = null
+    form.value.source_client_name = ''
+    form.value.source_client_phone = ''
 }
+
+// اختيار عميل موجود بيملّي بيانات المُحيل بس، ومبيلمسش أي حاجة تانية في الفورم
+watch(selectedExistingClient, (client) => {
+    form.value.source_client_name = client ? clientName(client) : ''
+    form.value.source_client_phone = client ? clientPhone(client) : ''
+    delete validationErrors.value.source_client_id
+})
+
     const form = ref({
         lead_name: '',
         stage_id: null,
@@ -987,8 +961,9 @@ const clearClientData = () => {
         lost_reason: null,
           source_client_name: '',
         source_client_phone: '',
-        source_client_email: '',
-        source_relation: ''
+        // source_client_email: '',
+        // source_relation: '',
+           referral_type: null,
     })
     const fetchCurrentUserRole = () => {
         try {
@@ -1006,17 +981,12 @@ const clearClientData = () => {
     }
     
     
-   // هل تم اختيار referral
         const isReferralSelected = computed(() => {
             return isSalesUser.value && form.value.lead_source === 'referral'
         })
         
-        // هل تم اختيار self_lead
-        const isSelfLeadSelected = computed(() => {
-            return isSalesUser.value && form.value.lead_source === 'self_lead'
-        })
+       
             
-    // خيارات الـ Source حسب دور المستخدم
     const dynamicSourceOptions = computed(() => {
         if (isSalesUser.value) {
             return salesSourceOptions
@@ -1112,6 +1082,18 @@ const clearClientData = () => {
     watch(() => form.value.stage_id, (newVal) => {
         console.log('Form stage_id changed to:', newVal)
     })
+    watch(() => form.value.lead_source, () => {
+            form.value.referral_type = null
+            resetReferralData()
+        })
+
+        watch(() => form.value.referral_type, async (type) => {
+            resetReferralData()
+            delete validationErrors.value.referral_type
+            if (type === 'existing' && clientsList.value.length === 0) {
+                await fetchClientsList()
+            }
+        })
     
     const fetchSources = async () => {
         try {
@@ -1180,25 +1162,7 @@ const clearClientData = () => {
         if (!shouldShowField('branch')) form.value.branch = null
         if (!shouldShowField('lost_reason')) form.value.lost_reason = null
     })
-    watch(() => form.value.lead_source, async (newVal) => {
-        if (newVal === 'referral') {
-            // Referral: امسح بيانات العميل المحيل القديمة
-            form.value.source_client_name = ''
-            form.value.source_client_phone = ''
-            form.value.source_client_email = ''
-            form.value.source_relation = ''
-            clearClientData() // مسح بيانات العميل المختار
-        } else if (newVal === 'self_lead') {
-            // Self Lead: جلب قائمة العملاء
-            if (clientsList.value.length === 0) {
-                await fetchClientsList()
-            }
-            clearClientData() // مسح بيانات العميل القديمة
-        } else {
-            // للمستخدمين العاديين
-            // clearClientData()
-        }
-    })
+   
     onMounted(() => {
         syncMobileModal()
         window.addEventListener('resize', syncMobileModal, { passive: true })
@@ -1567,8 +1531,10 @@ const clearClientData = () => {
             lost_reason: null,
              source_client_name: '',
             source_client_phone: '',
-            source_client_email: '',
-            source_relation: ''
+            // source_client_email: '',
+            // source_relation: '',
+               referral_type: null,
+
         }
           selectedExistingClient.value = null 
         validationErrors.value = {}
@@ -1602,11 +1568,33 @@ const clearClientData = () => {
                 $showNotification('Secondary phone is not valid', 'warning')
                 return
             }
-            if (isSalesUser.value && form.value.lead_source === 'referral' && form.value.source_client_phone
-                && !isNonEmptyPhoneValid(form.value.source_client_phone)) {
-                validationErrors.value.source_client_phone = ['Enter a valid phone number']
-                $showNotification('Source client phone is not valid', 'warning')
-                return
+           if (isSalesUser.value && form.value.lead_source === 'referral') {
+                if (!form.value.referral_type) {
+                    validationErrors.value.referral_type = ['Please select referral type']
+                    $showNotification('Please select referral type', 'warning')
+                    return
+                }
+                if (form.value.referral_type === 'existing' && !selectedExistingClient.value) {
+                    validationErrors.value.source_client_id = ['Please select a client']
+                    $showNotification('Please select the referring client', 'warning')
+                    return
+                }
+                if (form.value.referral_type === 'other') {
+                    const errs = {}
+                    if (!form.value.source_client_name?.trim()) {
+                        errs.source_client_name = ['Name is required']
+                    }
+                    if (!form.value.source_client_phone) {
+                        errs.source_client_phone = ['Phone is required']
+                    } else if (!isNonEmptyPhoneValid(form.value.source_client_phone)) {
+                        errs.source_client_phone = ['Enter a valid phone number']
+                    }
+                    if (Object.keys(errs).length) {
+                        validationErrors.value = errs
+                        $showNotification('Please fix the referral fields', 'warning')
+                        return
+                    }
+                }
             }
             
             const payload = {
@@ -1614,21 +1602,19 @@ const clearClientData = () => {
                 responsible_person_id: form.value.responsible_person_id,
                 stage_id: form.value.stage_id
             }
-             if (isSalesUser.value && form.value.lead_source === 'referral') {
-                payload.source_client_name = form.value.source_client_name
-                payload.source_client_phone = form.value.source_client_phone
-                payload.source_client_email = form.value.source_client_email
-                payload.source_relation = form.value.source_relation
-            }
-            if (isSalesUser.value && form.value.lead_source === 'self_lead' && selectedExistingClient.value) {
-                // إرسال client_id بدلاً من البيانات
-                payload.existing_client_id = selectedExistingClient.value.id
-                // يمكنك أيضاً إرسال البيانات المأخوذة من العميل
-                payload.first_name = form.value.first_name
-                payload.last_name = form.value.last_name
-                payload.email = form.value.email
-                payload.work_phone = form.value.work_phone
-            }
+            if (isSalesUser.value && form.value.lead_source === 'referral') {
+                    payload.referral_type = form.value.referral_type
+                    payload.source_client_name = form.value.source_client_name
+                    payload.source_client_phone = form.value.source_client_phone
+                    if (form.value.referral_type === 'existing') {
+                        payload.source_client_id = selectedExistingClient.value.id
+                    }
+                } else {
+                    delete payload.referral_type
+                    delete payload.source_client_name
+                    delete payload.source_client_phone
+                }
+          
             const response = await api.post('/leads', payload)
             
             console.log('✅ Lead created successfully:', response.data)
@@ -2863,6 +2849,9 @@ const clearClientData = () => {
         flex-direction: column;
         gap: 4px;
     }
+}
+.step-content .row.referral-grid {
+    padding: 0 !important;
 }
     </style>
     

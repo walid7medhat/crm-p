@@ -622,7 +622,7 @@
 
         <MatchingPropertiesSection v-if="lead?.id && showMatchingProperties" :lead="lead" />
 
-        <div v-if="showResponsibleSection" class="info-section">
+        <div v-if="showResponsibleSection && !lead?.hide_responsible_person" class="info-section">
             <div class="info-section-title">Responsible Person</div>
             <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">
@@ -1134,6 +1134,8 @@ const formatLeadStatus = (status, stageOrder = null) => {
         const unqualifiedMapping = {
             // 'not_interested': 'Not Interested',
             'wrong_contact_details': 'Wrong Contact Details',
+             'service_provider': 'Service Provider' ,
+
             'job_seeker': 'Job Seeker',
             'broker': 'Broker',
             'registered_by_mistake': 'Registered by Mistake',

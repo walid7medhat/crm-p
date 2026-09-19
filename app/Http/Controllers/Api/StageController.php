@@ -496,26 +496,23 @@ class StageController extends Controller
                 'callNoAnswer' => 0,
             ];
         } else {
-            $analyticsCacheKey = 'kanban_lead_analytics_u'.$user->id;
-            $leadAnalytics = \Illuminate\Support\Facades\Cache::remember($analyticsCacheKey, 60, function () use ($baseLeadsQuery) {
-                $heatCounts = (clone $baseLeadsQuery)
-                    ->selectRaw(
-                        "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                         SUM(CASE WHEN status_lead = 'warm'  THEN 1 ELSE 0 END) AS temp_warm,
-                         SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
-                         SUM(CASE WHEN interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
-                         SUM(CASE WHEN interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
-                    )
-                    ->first();
+            $heatCounts = (clone $baseLeadsQuery)
+                ->selectRaw(
+                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                    SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
+                    SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                    SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                    SUM(CASE WHEN stage_id = 5 AND interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                )
+                ->first();
 
-                return [
-                    'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
-                    'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
-                    'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
-                    'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
-                    'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
-                ];
-            });
+            $leadAnalytics = [
+                'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
+                'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
+                'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
+                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
+                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
+            ];
         }
 
         // ================= apply heat chip filter (affects stage counts + lists only) =================

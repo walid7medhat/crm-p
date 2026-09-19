@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\TouchesLeadEngagement;
 
 class LeadActivity extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes; use TouchesLeadEngagement;
     //
        use HasFactory;
     protected $guarded=[];

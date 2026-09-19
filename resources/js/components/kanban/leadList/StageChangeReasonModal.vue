@@ -693,9 +693,9 @@ const propertyStatusOptions = [
 ]
 
 const hotWarmLeadOptions = [
-    { value: 'cold', text: 'Cold Lead' },
-    { value: 'warm', text: 'Warm Lead' },
-    { value: 'hot', text: 'Hot Lead' }
+    { value: 'cold', text: 'Within 1 Month' },
+    { value: 'warm', text: '1–3 Months' },
+    { value: 'hot', text: 'More than 3 Months' }
 ]
 const convertedStatusOptions = [
     { value: 'converted', text: 'Converted' }
@@ -725,7 +725,28 @@ const qualityTemperatureRadios = [
         tooltip: 'Hot leads are very active and ready for follow-up.',
     },
 ]
+const statusOptionsForStage = computed(() => {
+    switch (props.targetStageOrder) {
+        case 6: return convertedStatusOptions
+        case 4: return hotWarmLeadOptions
+        case 9: return leadPoolStatusOptions
+        case 10: return unqualifiedStatusOptions
+        default: return defaultLeadStatusOptions
+    }
+})
 
+// الليد بيرجع status_lead (و status_lead_pool / unqualified_status حسب المرحلة)
+const resolveInitialLeadStatus = (leadData) => {
+    if (props.targetStageOrder === 6) return 'converted'
+    const raw = props.targetStageOrder === 9
+        ? (leadData?.status_lead_pool ?? leadData?.status_lead)
+        : props.targetStageOrder === 10
+            ? (leadData?.unqualified_status ?? leadData?.status_lead)
+            : (leadData?.status_lead ?? leadData?.lead_status)
+    if (!raw) return ''
+    // لو القيمة المخزنة مش ضمن أوبشنز المرحلة الحالية، سيبها فاضية بدل ما تظهر قيمة غريبة
+    return statusOptionsForStage.value.some(o => o.value === raw) ? raw : ''
+}
 function qualityMetaForValue(value) {
     const q = qualityTemperatureRadios.find((o) => o.value === value)
     return (
@@ -747,6 +768,7 @@ const leadPoolStatusOptions = [
 const unqualifiedStatusOptions = [
 
       { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+     { value: 'service_provider', text: 'Service Provider' },
         { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
         { value: 'job_seeker', text: 'Job Seeker' },
         { value: 'broker', text: 'Broker' },
@@ -757,9 +779,9 @@ const unqualifiedStatusOptions = [
 ]
 
 const defaultLeadStatusOptions = [
-    { value: 'cold', text: 'Cold' },
-    { value: 'warm', text: 'Warm' },
-    { value: 'hot', text: 'Hot' }
+    { value: 'cold', text: 'Within 1 Month' },
+    { value: 'warm', text: '1–3 Months' },
+    { value: 'hot', text: 'More than 3 Months' }
 ]
 const reminderOptions = [
     { label: 'When event starts', value: '0' },
@@ -1536,11 +1558,11 @@ watch(visible, (newVal) => {
             formData.value.purpose_buying = props.leadData.purpose_buying || ''
             formData.value.lead_source = props.leadData.lead_source || ''
             // للمرحلة 6، اجعل القيمة 'converted' إذا لم تكن موجودة
-            if (props.targetStageOrder === 6) {
-                formData.value.lead_status = props.leadData.lead_status || 'converted'
-            } else {
-                formData.value.lead_status = props.leadData.lead_status || ''
-            }
+            formData.value.lead_status = resolveInitialLeadStatus(props.leadData)
+            formData.value.lost_reason = props.leadData.why_lost_lead || props.leadData.lost_reason || ''
+            formData.value.branch = props.leadData.branch || ''
+            formData.value.available_date = props.leadData.available_date || ''
+         
             formData.value.deal_name = props.leadData.deal_name || ''
             syncBudgetDisplayFields()
         } else if (props.targetStageOrder === 6) {

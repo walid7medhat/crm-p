@@ -3382,7 +3382,7 @@ function mapApiStatusToFormValue(apiValue, stageId) {
 
         options = [
 
-            'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls',
+            'not_interested', 'wrong_contact_details','service_provider', 'no_answer_multiple_calls',
 
             'job_seeker', 'broker', 'registered_by_mistake', 'blacklist'
 
@@ -3461,6 +3461,7 @@ const qualityStatusOptions = computed(() => {
         return [
 
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'service_provider', text: 'Service Provider' },
 
             { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
 
@@ -6369,7 +6370,7 @@ watch(() => form.value.stageId, (newVal) => {
 
             isValidForStage = [
 
-                'wrong_contact_details', 'no_answer_multiple_calls',
+                'wrong_contact_details', 'no_answer_multiple_calls','service_provider',
 
             'job_seeker', 'broker', 'registered_by_mistake','spam_leads', 'blacklist'
 
@@ -6860,6 +6861,7 @@ onBeforeUnmount(() => {
     margin-bottom: 10px;
     padding-bottom: 0;
     border-bottom: none;
+    margin-bottom: 20px;
 }
 
 @media (max-width: 1199px) {

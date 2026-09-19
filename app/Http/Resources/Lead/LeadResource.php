@@ -278,8 +278,10 @@ class LeadResource extends JsonResource
         }
 
         $duplicateIds = $this->resolveDuplicateIds();
-
-        return [
+$branchName =
+    $this->lead_branch_source
+    ?: $this->addedBy?->admin_parent?->name;
+        $data= [
             'id' => $this->id,
             'added_by' => $this->added_by,
             'bitrix24_id ' => $this->bitrix24_id,
@@ -330,9 +332,13 @@ class LeadResource extends JsonResource
             /** Project for matching listings: integration project, then DB lookup, then lead.project_id. */
             'integration_project_id' => $this->resolveIntegrationProjectId(),
             'source_information' => $this->source_information,
-            'office_branch' => $this->lead_branch_source
-                ?: $this->responsiblePerson?->admin_parent?->name,
-            'lead_branch_source' => $this->lead_branch_source,
+           'office_branch' =>
+            $this->lead_branch_source
+            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name,
+
+        'lead_branch_source' =>
+            $this->lead_branch_source
+            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name,
             'ad_id' => $this->ad_id,
             'available_to_everyone' => $this->available_to_everyone,
 
@@ -401,7 +407,7 @@ class LeadResource extends JsonResource
                 : '',
             'original_name' => data_get($this->createdHistory, 'changes.name', $this->name),
 
-            'original_branch' => data_get($this->createdHistory, 'changes.lead_branch_source'),
+            'original_branch' => $this->resolveOriginalBranch(),
             'api_first_question' => $this->getFirstApiQuestion(),
             'has_service_duplicate' => $this->hasServiceDuplicate(),
             'whatsapp_qualification' => $this->when(
@@ -410,8 +416,89 @@ class LeadResource extends JsonResource
             ),
 
         ];
+        return $this->applyVisibilityRules($data, $assignmentHistory);
     }
 
+protected function resolveOriginalBranch(): ?string
+{
+    $historyBranch = data_get(
+        $this->createdHistory,
+        'changes.lead_branch_source'
+    );
+
+    if (! empty($historyBranch)) {
+        return $historyBranch;
+    }
+
+    if ($this->addedBy) {
+        $branch = $this->addedBy->admin_parent?->name;
+
+        if (! empty($branch)) {
+            return $branch;
+        }
+    }
+
+    return $this->responsiblePerson?->admin_parent?->name;
+}
+    protected function applyVisibilityRules(array $data, ?LeadHistory $assignmentHistory): array
+{
+    $user = auth()->user();
+    if (! $user) {
+        return $data;
+    }
+
+    // الأدمن والسوبر أدمن: كل حاجة زي ما هي (تاريخ الـ Created الأصلي)
+    if ($user->hasAnyRole(['admin', 'super_admin'])) {
+        $data['can_view_history'] = true;
+        return $data;
+    }
+
+    $isResponsible = (int) $this->responsible_person_id === (int) $user->id;
+    $isManager = $this->resource->isManagedBy($user);
+    $data['can_view_history'] = $isResponsible || $isManager;
+
+    // Lead Pool (stage id = 10): الكروت مخفية عن أي حد غير الأدمن
+    if ((int) $this->stage_id === 10) {
+        $data['responsible_person'] = null;
+        $data['parent'] = null;
+        $data['added_by_user'] = null;
+        $data['last_activity_user'] = null;
+        $data['created_at'] = null;
+        $data['assigned_at'] = null;
+        $data['last_activity_at'] = null;
+        $data['hide_responsible_person'] = true;
+        $data['hide_created_info'] = true;
+        return $data;
+    }
+
+    // أي حد غير الأدمن: تاريخ الـ Created = تاريخ الـ Assign
+    // (لو الليد ماعملوش assign history نرجع لتاريخ الـ Created الأصلي)
+    $assignedAt = $assignmentHistory?->created_at ?? $this->created_at;
+    $data['created_at'] = \Carbon\Carbon::parse($assignedAt)->setTimezone(config('app.timezone'));
+    $data['hide_created_info'] = false;
+    $data['created_info_is_assign_date'] = (bool) $assignmentHistory;
+
+    // Reassign: السيلز مايشوفش الـ Responsible ولا اللي عمل الليد
+    // (المانجر يشوفهم عادي)
+    $changes = $assignmentHistory?->changes;
+    if (is_string($changes)) {
+        $changes = json_decode($changes, true);
+    }
+    $reassigned = $assignmentHistory && ! empty($changes['old_person_id'] ?? null);
+
+    if ($reassigned && ! $isManager && ! $isResponsible) {
+        $data['responsible_person'] = null;
+        $data['parent'] = null;
+        $data['added_by_user'] = null;
+        $data['last_activity_user'] = null;
+        $data['hide_responsible_person'] = true;
+    }
+     if ($isResponsible) {
+                $data['hide_responsible_person'] = false;
+            }
+
+    return $data;
+}
     /**
      * Per-request memoization of user_id => [admin_parent_id, admin_parent_name, office_name].
      * admin_parent/office (User.php: getAdminParentAttribute/getOfficeAttribute) walk the parent

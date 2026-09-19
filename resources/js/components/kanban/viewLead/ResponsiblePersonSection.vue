@@ -1,5 +1,5 @@
 <template>
-    <div class="responsible-card bg-white p-3 radius-12 shadow-sm mt-3">
+    <div v-if="!lead?.hide_responsible_person" class="responsible-card bg-white p-3 radius-12 shadow-sm mt-3">
         
         <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">

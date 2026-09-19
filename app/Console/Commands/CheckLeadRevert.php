@@ -78,19 +78,15 @@ class CheckLeadRevert extends Command
             $this->line("   └─ revert_after_hours: {$stage->revert_after_hours}");
             
             // ✅ حساب وقت الرجوع
-            if ($lead->last_stage_change_at && $stage->revert_after_hours) {
-                $revertTime = $lead->last_stage_change_at->copy()->addHours($stage->revert_after_hours);
-                $this->line("   └─ Revert time: {$revertTime->toDateTimeString()}");
-                $this->line("   └─ Time remaining: " . now()->diffForHumans($revertTime));
+           $due = $lead->revertDueAt();
+            $this->line("   └─ Anchor: " . ($lead->revertAnchorAt()?->toDateTimeString() ?? 'null'));
+            $this->line("   └─ Hours: " . ($lead->revertHours() ?? 'null'));
+            $this->line("   └─ Revert time: " . ($due?->toDateTimeString() ?? 'no revert'));
+            if ($due) {
+                $this->line("   └─ Time remaining: " . now()->diffForHumans($due));
             }
 
-            // الحصول على أوقات الإشعارات من المرحلة
-            $notificationTimes = $stage->notification_times ?? [30];
-            
-            // ✅ تأكد من أن $notificationTimes مصفوفة
-            if (!is_array($notificationTimes)) {
-                $notificationTimes = [30];
-            }
+            $notificationTimes = $lead->revertNotifyMinutes();
             
             // ✅ Log notification times
             $this->line("   └─ Notification times: " . implode(', ', $notificationTimes));
@@ -105,15 +101,9 @@ class CheckLeadRevert extends Command
                 $this->line("      └─ Checking {$minutesBefore} minutes before revert...");
                 
                 // ✅ حساب وقت الإشعار
-                if ($lead->last_stage_change_at && $stage->revert_after_hours) {
-                    $revertTime = $lead->last_stage_change_at->copy()->addHours($stage->revert_after_hours);
-                    $notifyTime = $revertTime->copy()->subMinutes($minutesBefore);
-                    $this->line("         └─ Notify at: {$notifyTime->toDateTimeString()}");
+               if ($due) {
+                    $this->line("         └─ Notify at: " . $due->copy()->subMinutes($minutesBefore)->toDateTimeString());
                     $this->line("         └─ Current time: " . now()->toDateTimeString());
-                    
-                    // ✅ التحقق من الوقت
-                    $diffInSeconds = now()->diffInSeconds($notifyTime);
-                    $this->line("         └─ Difference: {$diffInSeconds} seconds");
                 }
                 
                 if ($lead->shouldSendRevertNotificationAt($minutesBefore)) {

@@ -503,7 +503,7 @@ const transformHistoryEntry = (entry) => {
             dateTime = `${dateStr} / ${timeStr}`
         }
     }
-    
+   
     // Get created by user info
     const user = entry.user || {}
     let avatar = user.avatar || ''
@@ -529,6 +529,8 @@ const transformHistoryEntry = (entry) => {
         work_phone_2: 'Secondary Phone',
         email: 'Primary Email',
         secondary_email: 'Secondary Email',
+        bitrix24_last_activity_at: 'Last Activity',
+         bitrix24_last_activity_by_id: 'Last Activity By',
     }
     eventType = eventTypeMap[eventType] || eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/_/g, ' ')
     

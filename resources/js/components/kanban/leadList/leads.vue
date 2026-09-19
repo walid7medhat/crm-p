@@ -3621,7 +3621,7 @@ async function onLeadDragChange(evt, column) {
                 const value = lead[field]
                 return !value || value === '' || value === null || value === undefined
             })
-            
+            if (!missingFields.includes('status_lead')) missingFields.push('status_lead')
             console.log('Conversion - Missing fields:', missingFields)
             
             if (missingFields.length > 0) {
@@ -3690,6 +3690,8 @@ async function onLeadDragChange(evt, column) {
         }
         
         const alwaysRequiredFieldsMap = {
+             4: ['status_lead'],
+            8: ['why_lost_lead'],
             9: ['status_lead'],
             10: ['status_lead']
         }
@@ -3697,10 +3699,10 @@ async function onLeadDragChange(evt, column) {
         const requiredFields = requiredFieldsMap[newStageOrder] || []
         const alwaysFields = alwaysRequiredFieldsMap[newStageOrder] || []
         
-        const leadMissingFields = requiredFields.filter(f => !lead[f])
+        const leadMissingFields = requiredFields.filter(f => !lead.value?.[f])
         
         const fieldsToShow = [...new Set([...leadMissingFields, ...alwaysFields])]
-        if (newStageOrder === 9 || newStageOrder === 10) {
+        if (newStageOrder === 9 || newStageOrder === 10 || newStageOrder === 4) {
                 if (!fieldsToShow.includes('status_lead')) {
                     fieldsToShow.push('status_lead')
                 }

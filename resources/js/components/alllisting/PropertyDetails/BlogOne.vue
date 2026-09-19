@@ -5416,6 +5416,12 @@ const generatePDF = async () => {
       `,
       confirmButtonColor: '#0B0736'
     });
+    await document.fonts.ready;
+    await Promise.all([
+      document.fonts.load('400 16px Montserrat'),
+      document.fonts.load('600 16px Montserrat'),
+      document.fonts.load('700 16px Montserrat'),
+    ]);
 
   } catch (error) {
     console.error('PDF generation error:', error);
@@ -5631,8 +5637,7 @@ const createSlide2 = () => {
       <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
           ${features.map((feature) => `
-            <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
-          `).join('')}
+<span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; line-height:normal !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important; font-family:'Montserrat', sans-serif !important;">${feature}</span>          `).join('')}
         </div>
     </div>
   ` : '';
@@ -5757,8 +5762,8 @@ const createSlide4 = () => {
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
         <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
         
-        <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
-        <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
+        <p style="font-size:5mm !important; font-weight:bold !important; line-height:normal !important; color:#01062C !important; margin:0 0 3mm 0 !important; font-family:'Montserrat', sans-serif !important;">${projectTitle}</p>
+        <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:left !important; font-family:'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
       <div style="width:50% !important;position:relative !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
@@ -6039,13 +6044,14 @@ const createPaymentDetailsSlide = () => {
     `<div style="width:100%;text-align:center;line-height:1.25;position:relative;top:-0.18mm;">${content}</div>`;
 
   // Asymmetric padding (slightly more bottom) keeps text optically centered in PDF
-  const thPill = (label) =>
-    `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;padding:0.95mm 1.2mm 1.55mm;position:relative;top:-0.14mm;">${label}</div>`;
+
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
-  const makeBadge = (text, status) =>
-    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;text-align:center;padding:0.7mm ${d.badgePadX} 1.3mm;position:relative;top:-0.14mm;${badgeStyle(status)}">${text}</span>`;
+const thPill = (label) =>
+  `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:normal;text-align:center;white-space:nowrap;padding:1mm 1.2mm;">${label}</div>`;
 
+const makeBadge = (text, status) =>
+  `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:normal;white-space:nowrap;text-align:center;padding:0.5mm ${d.badgePadX};${badgeStyle(status)}">${text}</span>`;
   let cumulative = 0;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
@@ -6265,8 +6271,8 @@ const noteBlock = `
     </div>
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin-bottom:${d.headerMb};">
-        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:1mm;background:#FAA300;border-radius:1mm;margin-top:${d.accentMb};"></div>
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:normal;padding-bottom:${d.accentMb};font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="width:14mm;height:1mm;background:#FAA300;border-radius:1mm;"></div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">

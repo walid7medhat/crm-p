@@ -21,7 +21,7 @@
 
         <!-- Right Column: Activity & Comments -->
         <div class="col-md-7">
-            <div class="activity-card bg-white p-3 radius-12 shadow-sm">
+            <div class="activity-card bg-white p-3 radius-12 shadow-sm" v-if="!lead?.hide_created_info">
               <div v-if="qualityStatusBadge || callResultBadge || leadTypeBadge" class="info-section compact-status-section mb-3">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div class="info-section-title lead-section-title-match mb-0">Lead Qualification</div>

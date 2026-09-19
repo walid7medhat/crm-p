@@ -15,6 +15,7 @@ class Stage extends Model
         'revert_after_hours' => 'integer',
         'notify_before_minutes' => 'integer',
           'notification_times' => 'array', 
+          'status_revert_rules' => 'array',
     ];
     public function getActivitylogOptions(): LogOptions
     {

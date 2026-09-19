@@ -200,7 +200,7 @@ class SourceController extends Controller
      */
     private function fallbackIndex(Request $request, \Exception $e = null): JsonResponse
     {
-        $query = Source::withCount('children');
+        $query = Source::query();
         
         if ($request->has('parent_id')) {
             $query->where('parent_id', $request->parent_id);

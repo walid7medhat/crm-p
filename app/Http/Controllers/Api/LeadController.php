@@ -250,9 +250,56 @@ class LeadController extends Controller
         
                 // Apply permission scope to the query (without consuming it with ->get()) so
                 // we can either paginate or fetch all leads depending on the request.
-                if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33 || $request->stage_id==10) {
+                if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33 ) {
                     // super admin sees everything
-                } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+                } elseif ((int) $request->stage_id === 10) {
+
+                        // Lead Pool:
+                        // User can only see leads belonging to his branch.
+
+                        $userBranch = $user->admin_parent?->name;
+
+                        if ($userBranch) {
+
+                            // Get all users that belong to the same branch.
+                            // admin_parent is an accessor, so we cannot use whereHas().
+                            $branchUserIds = User::query()
+                                ->get()
+                                ->filter(function ($branchUser) use ($userBranch) {
+                                    return $branchUser->admin_parent?->name === $userBranch;
+                                })
+                                ->pluck('id')
+                                ->values()
+                                ->all();
+
+                            $leadsQuery->where(function ($query) use ($userBranch, $branchUserIds) {
+
+                                // 1. Lead already has its branch saved
+                                $query->where('lead_branch_source', $userBranch)
+
+                                    // 2. No lead_branch_source:
+                                    // use responsible person's branch
+                                    ->orWhere(function ($q) use ($branchUserIds) {
+                                        $q->whereNull('lead_branch_source')
+                                            ->whereIn('responsible_person_id', $branchUserIds);
+                                    })
+
+                                    // 3. No lead_branch_source AND no responsible:
+                                    // use addedBy's branch
+                                    ->orWhere(function ($q) use ($branchUserIds) {
+                                        $q->whereNull('lead_branch_source')
+                                            ->whereNull('responsible_person_id')
+                                            ->whereIn('added_by', $branchUserIds);
+                                    });
+                            });
+
+                        } else {
+
+                            // User has no branch
+                            $leadsQuery->whereRaw('1 = 0');
+                        }
+
+                    }  elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
                     $subordinatesIds = $user->getAllSubordinatesIds();
                     // Current responsible person only — a lead reassigned outside the
                     // team must stop showing up here just because someone on the team added it.
@@ -1013,6 +1060,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
        
             
         }
+
         // Lead Pool → assign to me: hide prior comments/activities/history from sales (soft delete).
         // Admin and super_admin still see them via withTrashed on Lead relations and history().
         $assigningSelfFromLeadPool = $this->isLeadPoolStage($oldStage)
@@ -1035,12 +1083,13 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                         );
                     }
 
-                    $this->softDeleteLeadPriorEngagement($lead->id);
                 }
-
+            $assigningNewPerson = !empty($request->responsible_person_id)
+                && (int) $request->responsible_person_id !== (int) $lead->responsible_person_id;
         if ($assigningSelfFromLeadPool) {
             $this->softDeleteLeadPriorEngagement($lead->id);
         }
+        $poolMarker = $assigningSelfFromLeadPool ? ['from_lead_pool' => true] : [];
         if($newStage->order == 2 && !is_null($lead->revert)){
             $lead->update([
                 'revert' => null,
@@ -1061,8 +1110,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'action' => 'revert',
                     'old_person_id' => $responsiblePerson?->id,
                     'old_person' => $responsiblePerson?->name,
-                    'new_person' => $responsiblePerson?->name
-                ]
+                    'new_person' => $responsiblePerson?->name,
+                    'from_lead_pool' => $assigningSelfFromLeadPool,
+                ], 
             );
         }
         // تجهيز بيانات التحديث
@@ -1122,6 +1172,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 $updateData['interaction_result'] = 'answered';
             }
         }
+        if ($assigningNewPerson) {
+            $updateData['status_lead'] = null;
+            $updateData['interaction_result'] = null;
+        }
+
         // dd($updateData);
         // تحديث الـ Lead
         $lead->update($updateData);
@@ -1146,8 +1201,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'action' => 'activity_created',
                     'id' => $activity->id,
                     'title' => $activity->title,
+                    'from_lead_pool' => $assigningSelfFromLeadPool,
                 ]
-            );
+            , );
         } elseif ($request->reason) {
             // Answered / normal stage reason comment (including Contacted order 3)
             LeadComment::create([
@@ -1196,8 +1252,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'action' => 'assigned',
                     'old_person_id' => $oldPerson?->id,
                     'old_person' => $oldPerson?->name,
-                    'new_person' => $newPerson?->name
-                ]
+                    'new_person' => $newPerson?->name,
+                    'from_lead_pool' => $assigningSelfFromLeadPool,
+                ], 
             );
         }
 
@@ -1209,7 +1266,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 'old_stage' => $oldStage->name,
                 'new_stage' => $newStage->name,
                 'old_stage_id' => $oldStage->id,
-                'new_stage_id' => $newStage->id
+                'new_stage_id' => $newStage->id,
+                'from_lead_pool' => $assigningSelfFromLeadPool,
             ]
         );
 
@@ -1219,7 +1277,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 $lead->id,
                 [
                     'action' => 'updated',
-                    'fields' => $fields
+                    'fields' => $fields,
+                    'from_lead_pool' => $assigningSelfFromLeadPool,
                 ]
             );
         }
@@ -1369,9 +1428,37 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         // ======================history =======================
         public function history(Request $request, $leadId)
 {
+    $lead=Lead::find($leadId);
     $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
         ->with('user:id,name,avatar');
+            $user = auth()->user();
+            $isAdmin = $user->hasAnyRole(['admin', 'super_admin']);
+            $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
+            $isManager = $lead->isManagedBy($user);
 
+            if (! $isAdmin && ! $isResponsible && ! $isManager) {
+                abort(403);
+            }
+
+            if (! $isAdmin) {
+                // أحداث Pool ← ليا مخفية عن غير الأدمن
+                $query->whereNull('changes->from_lead_pool');
+            }
+
+            if (! $isAdmin && ! $isManager) {
+                // السيلز: Updated و Stage Changed بس (ده بيشيل View و Created أوتوماتيك)
+                $query->whereIn('changes->action', ['updated', 'stage_changed']);
+
+                // لو الليد اتعمله Reassign: بعد الـ Assign الأخير بس
+                $assignment = LeadHistory::where('lead_id', $lead->id)
+                    ->where('changes->action', 'assigned')
+                    ->latest('id')
+                    ->first();
+
+                if ($assignment && ! empty(data_get($assignment, 'changes.old_person_id'))) {
+                    $query->where('id', '>', $assignment->id);
+                }
+            }
     // Lead Pool assign-to-me soft-deletes the prior history rows. Super_admin/admin should
     // still see them; everyone else only gets live history.
     if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
@@ -1419,7 +1506,16 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     $perPage = $request->input('per_page', 10);
     
     $histories = $query->latest()->paginate($perPage);
-
+    if (! $isAdmin && ! $isManager) {
+        $histories->getCollection()->transform(function ($h) {
+            $changes = $h->changes;
+            if (is_array($changes) && isset($changes['fields']['responsible_person_id'])) {
+                unset($changes['fields']['responsible_person_id']);
+                $h->changes = $changes; // in-memory بس، مش بيتحفظ
+            }
+            return $h;
+        });
+    }
     return ApiResponse::success([
         'items' => LeadHistoryResource::collection($histories),
         'pagination' => [

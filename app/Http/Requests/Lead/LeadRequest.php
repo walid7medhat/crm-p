@@ -82,7 +82,7 @@ class LeadRequest extends FormRequest
             'additional_services' => 'nullable|string',
             
             // Sales & Management
-            'responsible_person_id' => 'required|exists:users,id',
+            'responsible_person_id' => 'nullable|exists:users,id',
             
             // Relationships
             'participants' => 'nullable|array',

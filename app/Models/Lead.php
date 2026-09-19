@@ -12,10 +12,13 @@ use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
 use App\Models\LeadScoringSetting;
 use App\Traits\AltCRMLeadTrait;
+use DB;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Lead extends Model
 {
     // 
-    use HasFactory; use AltCRMLeadTrait;
+    use HasFactory; use AltCRMLeadTrait; use SoftDeletes;
     protected $guarded=[];
     public const INTELLIGENCE_FIELDS = [
         'score',
@@ -39,10 +42,34 @@ class Lead extends Model
         'extra_client_requirements' => 'array',
          'whatsapp_qualification' => 'array', 
            'notification_times_sent' => 'array', 
+         'archived_at' => 'datetime',
+        'no_answer_count' => 'integer',
+        'lead_pool_visits' => 'integer',
 
     ];
+    /** أعمدة تغييرها لا يُعتبر "تفاعل" من اليوزر */
+protected const NON_ENGAGEMENT_FIELDS = [
+    'last_engagement_at',
+    'notification_times_sent',
+    'notified_revert',
+    'revert',
+    'updated_at',
+    'stage_id',
+    'last_stage_change_at',
+    'score',
+    'priority',
+    'intent',
+    'next_action',
+    'last_scored_at',
+    'score_breakdown',
+    'bitrix24_last_activity_at',
+    'bitrix24_data',
+    'field_mappings_data',
+    'raw_meta_data',
+];
     protected static function booted()
     {
+        
             static::creating(function ($lead) {
                 if ($lead->responsible_person_id && !$lead->initial_responsible_person_id) {
                     $lead->initial_responsible_person_id = $lead->responsible_person_id;
@@ -71,7 +98,36 @@ class Lead extends Model
                 if (!empty($nonIntelligenceChanges) && (($automation['on_update'] ?? true) === true)) {
                     ProcessLeadIntelligenceJob::dispatch($lead->id);
                 }
+                $touched = array_diff(array_keys($lead->getChanges()), self::NON_ENGAGEMENT_FIELDS);
+
+                if (!empty($touched)) {
+                    // كتابة مباشرة على الـ DB — بعيد تماماً عن دورة الحفظ الحالية
+                    static::withoutEvents(function () use ($lead) {
+                        DB::table('leads')
+                            ->where('id', $lead->id)
+                            ->update([
+                                'last_engagement_at'      => now(),
+                                'notification_times_sent' => json_encode([]),
+                                'notified_revert'         => 0,
+                            ]);
+                    });
+
+                    $lead->setAttribute('last_engagement_at', now());
+                }
+                    \Log::info('HOOK_FIRED', ['id' => $lead->id, 'changes' => array_keys($lead->getChanges())]);
+
             });
+            static::updating(function ($lead) {
+                    if (! $lead->isDirty('interaction_result')) {
+                        return;
+                    }
+
+                    if ($lead->interaction_result === 'no_answer') {
+                        $lead->no_answer_count = (int) $lead->getOriginal('no_answer_count') + 1;
+                    } elseif ($lead->interaction_result === 'answered') {
+                        $lead->no_answer_count = 0;
+                    }
+                });
         // static::updating(function ($lead) {
         //     if (
         //         $lead->isDirty('responsible_person_id') &&
@@ -143,20 +199,110 @@ class Lead extends Model
         return $this->belongsToMany(User::class, 'lead_observers')
                     ->withTimestamps();
     }
-  public function comments()
-    {
-        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
-            return $this->hasMany(LeadComment::class)->withTrashed();
-        }
-            return $this->hasMany(LeadComment::class)->latest();
+ public function comments()
+{
+    return $this->visibleEngagement(LeadComment::class);
+}
+
+public function activities()
+{
+    return $this->visibleEngagement(LeadActivity::class);
+}
+
+protected static array $subordinateIdsCache = [];
+
+/** id اليوزر + كل اللي تحته في الـ parent_id chain */
+public static function subordinateIds(User $user): array
+{
+    if (isset(static::$subordinateIdsCache[$user->id])) {
+        return static::$subordinateIdsCache[$user->id];
     }
-       public function activities()
-    {
-        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
-            return $this->hasMany(LeadActivity::class)->withTrashed();
-        }
-            return $this->hasMany(LeadActivity::class)->latest();
+
+    $ids = [$user->id];
+    $frontier = [$user->id];
+
+    while (! empty($frontier)) {
+        $frontier = User::whereIn('parent_id', $frontier)
+            ->pluck('id')
+            ->diff($ids)
+            ->values()
+            ->all();
+        $ids = array_merge($ids, $frontier);
     }
+
+    return static::$subordinateIdsCache[$user->id] = $ids;
+}
+
+/** هل اليوزر ده مانجر للمسؤول الحالي (ومش هو المسؤول نفسه)؟ */
+public function isManagedBy(User $user): bool
+{
+    return $this->responsible_person_id
+        && (int) $this->responsible_person_id !== (int) $user->id
+        && in_array((int) $this->responsible_person_id, static::subordinateIds($user), true);
+}
+
+public function visibleEngagement(string $model, string $ownerColumn = 'user_id')
+{
+    $relation = $this->hasMany($model);
+    $user     = auth()->user();
+
+    if (!$user) {
+        return $relation->whereRaw('1 = 0');
+    }
+
+    if ($user->hasAnyRole(['admin', 'super_admin'])) {
+        return $relation->withTrashed()->latest();
+    }
+
+    $allowed = array_values(array_unique(array_map(
+        'intval',
+        static::subordinateIds($user)
+    )));
+
+    if (empty($allowed)) {
+        return $relation->whereRaw('1 = 0');
+    }
+
+    $table   = $relation->getRelated()->getTable();       // lead_comments
+    $leadKey = $relation->getQualifiedForeignKeyName();   // lead_comments.lead_id
+    $ids     = implode(',', $allowed);
+
+    // صاحب الليد لحظة كتابة الكومنت:
+    //  - old_person_id بتاع أول "assigned" حصل بعد الكومنت
+    //  - أو responsible_person_id الحالي لو مفيش إسناد بعده
+    $ownerAtCommentTime = sprintf(
+        "coalesce(
+            nullif(
+                json_unquote(json_extract((
+                    select h.changes
+                      from lead_histories h
+                     where h.lead_id = %s
+                       and json_unquote(json_extract(h.changes, '$.action')) = 'assigned'
+                       and h.created_at > %s.created_at
+                     order by h.created_at asc, h.id asc
+                     limit 1
+                ), '$.old_person_id')),
+                'null'
+            ),
+            (select l.responsible_person_id from leads l where l.id = %s)
+        )",
+        $leadKey,
+        $table,
+        $leadKey
+    );
+
+    return $relation
+        ->where(function ($q) use ($table, $allowed, $ownerColumn, $ownerAtCommentTime, $ids) {
+            // 1) اللي كتبه هو أو حد من تحته — يفضل معاه حتى لو الليد اتاخد منه
+            $q->whereIn("{$table}.{$ownerColumn}", $allowed);
+
+            // 2) أي حد كتبه (أدمن / بارنت) والليد كان في إيده وقتها
+            $q->orWhereRaw("{$ownerAtCommentTime} in ({$ids})");
+        })
+        ->latest();
+}
+
+
     public function commentsWithTrashed()
 {
     return $this->hasMany(LeadComment::class)->withTrashed();
@@ -299,33 +445,56 @@ public function activitiesWithTrashed()
             return $this->belongsTo(PropertyType::class);
         }
 
-          public function getRevertTargetStage()
-    {
-        if ($this->stage && $this->stage->revert_to_stage_id) {
-            return $this->stage->revertToStage;
-        }
+         /** الليد وصلت للحد الأقصى من زيارات Lead Pool → أرشيف */
+public function shouldArchive(): bool
+{
+    return (int) $this->lead_pool_visits >= 3 && $this->hitNoAnswerLimit();
+}
 
-        // إذا لم يتم تحديد مرحلة، نرجع المرحلة السابقة (للتوافق القديم)
-        return $this->getPreviousStage();
+/** 3 محاولات no_answer في Contacted */
+public function hitNoAnswerLimit(): bool
+{
+    return (int) ($this->stage?->order ?? 0) === 3
+        && $this->interaction_result === 'no_answer'
+        && (int) $this->no_answer_count >= 3;
+}
+
+public function getRevertTargetStage()
+{
+    // Contacted + 3 محاولات no_answer → Lead Pool
+    if ($this->hitNoAnswerLimit()) {
+        // إلا لو راح Lead Pool 3 مرات قبل كده → أرشيف (بيتعامل في revertToPreviousStage)
+        return Stage::where('stage_type', 'lead')->where('order', 9)->first();
     }
 
-    /**
-     * التحقق من الحاجة للرجوع التلقائي
-     */
-    public function shouldAutoRevert(): bool
-    {
-        if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
-            return false;
-        }
-
-        $hours = $this->stage->revert_after_hours ?? 0;
-
-        if ($hours <= 0) return false;
-
-        return $this->last_stage_change_at
-            ->addHours($hours)
-            ->lessThanOrEqualTo(now());
+    if ($this->stage?->revert_to_stage_id) {
+        return $this->stage->revertToStage;
     }
+
+    if ($this->revertHours()) {
+        return Stage::where('stage_type', 'lead')->where('order', 1)->first();
+    }
+
+    return $this->getPreviousStage();
+}
+
+   public function shouldAutoRevert(): bool
+{
+    $due = $this->revertDueAt();
+    return $due !== null && $due->lessThanOrEqualTo(now());
+}
+
+public function shouldSendRevertNotificationAt($minutesBefore): bool
+{
+    $due = $this->revertDueAt();
+    if (!$due) return false;
+
+    if (in_array($minutesBefore, $this->notification_times_sent ?? [], false)) {
+        return false;
+    }
+
+    return now()->greaterThanOrEqualTo($due->copy()->subMinutes($minutesBefore));
+}
 
     /**
      * الحصول على المرحلة السابقة
@@ -342,27 +511,34 @@ public function activitiesWithTrashed()
      */
     public function revertToPreviousStage(): void
     {
-        $targetStage = $this->getRevertTargetStage();
+       if ($this->shouldArchive()) {
+                $this->archiveLead();
+                return;
+            }
 
-        if (!$targetStage) return;
+            $targetStage = $this->getRevertTargetStage();
+            if (!$targetStage) return;
 
-        // ✅ إذا كانت المرحلة المستهدفة هي المرحلة الأولى، استخدم المنطق القديم
-        if ($targetStage->order == 1) {
-            $this->revertToStageOne();
-            return;
-        }
+            if ($targetStage->order == 1) {
+                $this->revertToStageOne();
+                return;
+            }
 
-        // 🔹 باقي الحالات (revert عادي)
-        $oldStage = $this->stage;
-        $oldPerson = $this->responsiblePerson;
+            $oldStage   = $this->stage;
+            $oldPerson  = $this->responsiblePerson;
+            $isLeadPool = (int) $targetStage->order === 9;
 
-        $this->updateQuietly([
-            'stage_id' => $targetStage->id,
-            'last_stage_change_at' => now(),
-            'revert' => now(),
-            'notified_revert' => false,
-            'notification_times_sent' => [], // إعادة تعيين الإشعارات المرسلة
-        ]);
+            $this->updateQuietly([
+                'stage_id'                => $targetStage->id,
+                'last_stage_change_at'    => now(),
+                'last_engagement_at'      => null,
+                'revert'                  => now(),
+                'notified_revert'         => false,
+                'notification_times_sent' => [],
+                'lead_pool_visits'        => $isLeadPool
+                    ? ((int) $this->lead_pool_visits + 1)
+                    : (int) $this->lead_pool_visits,
+            ]);
 
         $this->refresh();
 
@@ -386,42 +562,23 @@ public function activitiesWithTrashed()
         broadcast(new LeadUpdated($this, 'revert', null, $changes));
     }
 
-    /**
-     * التحقق من الحاجة لإرسال إشعار في وقت محدد
-     */
-    public function shouldSendRevertNotificationAt($minutesBefore): bool
+    public function archiveLead(): void
     {
-        if (!$this->stage || !$this->stage->auto_revert || !$this->last_stage_change_at) {
-            return false;
-        }
+        $oldStage = $this->stage;
 
-        $hours = $this->stage->revert_after_hours ?? 0;
+        $this->updateQuietly(['archived_at' => now()]);
 
-        if ($hours <= 0) return false;
+        LeadHistoryHelper::log($this->id, [
+            'action'           => 'archived',
+            'old_stage'        => $oldStage?->name,
+            'lead_pool_visits' => (int) $this->lead_pool_visits,
+            'no_answer_count'  => (int) $this->no_answer_count,
+        ]);
 
-        $revertTime = $this->last_stage_change_at->copy()->addHours($hours);
-        $notifyTime = $revertTime->copy()->subMinutes($minutesBefore);
+        broadcast(new LeadUpdated($this, 'deleted', null, ['reason' => 'archived']));
 
-        // التحقق من أن الوقت الحالي هو وقت الإشعار (مع مراعاة التسامح)
-        $now = now();
-        $isNotificationTime = $now->between(
-            $notifyTime->copy()->subMinutes(1),
-            $notifyTime->copy()->addMinutes(15)
-        );
-
-        if (!$isNotificationTime) {
-            return false;
-        }
-
-        // التحقق من عدم إرسال هذا الإشعار مسبقاً
-        $sentTimes = $this->notification_times_sent ?? [];
-        if (in_array($minutesBefore, $sentTimes)) {
-            return false;
-        }
-
-        return true;
+        $this->delete();
     }
-
     /**
      * تسجيل إرسال إشعار
      */
@@ -474,4 +631,82 @@ public function activitiesWithTrashed()
 
         return null;
     }
+
+    /** ساعات الريفرت للّيد ده، أو null لو مفيش ريفرت */
+public function revertHours(): ?int
+{
+    if ($this->added_by && (int) $this->added_by === (int) $this->responsible_person_id) {
+        return null;
+    }
+
+    $stage = $this->stage;
+    if (!$stage || !$stage->auto_revert) {
+        return null;
+    }
+
+    $rules = $stage->status_revert_rules;
+    if (is_array($rules) && $rules) {
+        $rule = $rules[strtolower(trim((string) $this->status_lead))] ?? null;
+        return $rule ? (int) $rule['hours'] : null;
+    }
+
+    return (int) $stage->revert_after_hours ?: null;
+}
+
+public function revertAnchorAt(): ?Carbon
+{
+    $dates = collect([$this->last_stage_change_at, $this->last_engagement_at])
+        ->filter()
+        ->map(fn ($d) => $d instanceof Carbon ? $d : Carbon::parse($d));
+
+    return $dates->isEmpty() ? null : $dates->max();
+}
+public function revertDueAt(): ?Carbon
+{
+    $hours  = $this->revertHours();
+    $anchor = $this->revertAnchorAt();
+
+    return ($hours && $anchor) ? $anchor->copy()->addHours($hours) : null;
+}
+
+public function revertNotifyMinutes(): array
+{
+    $stage = $this->stage;
+
+    // Qualified: مواعيد محسوبة من every_hours
+    $rules = $stage?->status_revert_rules;
+    if (is_array($rules) && $rules) {
+        $rule = $rules[strtolower(trim((string) $this->status_lead))] ?? null;
+        if (!$rule) return [];
+
+        $total = (int) $rule['hours'];
+        $step  = (int) ($rule['every_hours'] ?: $total);
+        $out   = [];
+
+        for ($h = $step; $h < $total; $h += $step) {
+            $out[] = ($total - $h) * 60;
+        }
+        return $out;
+    }
+
+    // باقي المراحل: من notification_times زي ما هي
+    $times = $stage?->notification_times;
+    return is_array($times) && $times ? $times : [30];
+}
+
+public function revertCountdownLabel(int $minutes): string
+{
+    if ($minutes >= 1440) return (int) floor($minutes / 1440) . ' day(s)';
+    if ($minutes >= 60)   return (int) floor($minutes / 60) . ' hour(s)';
+    return $minutes . ' minute(s)';
+}
+
+public function touchEngagement(): void
+{
+    $this->updateQuietly([
+        'last_engagement_at'      => now(),
+        'notification_times_sent' => [],
+        'notified_revert'         => false,
+    ]);
+}
 }

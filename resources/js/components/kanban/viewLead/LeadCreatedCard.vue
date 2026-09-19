@@ -15,16 +15,19 @@
                 </div>
                 <div class="lead-created-card">
                     <div class="lead-created-card-header">
-                        <span class="lead-created-title">Lead Created :</span>
+                        <span class="lead-created-title">
+                            {{ lead?.created_info_is_assign_date ? 'Lead Assigned :' : 'Lead Created :' }}
+                        </span>
                         <span class="lead-created-time">{{ dateLabel }} {{ timeLabel }}</span>
                     </div>
-                    <div class="lead-created-card-body">
+                    <div class="lead-created-card-body" >
                         <div class="lead-created-row lead-created-row-main">
                             <div class="d-flex align-items-center gap-1">
                                 <span class="lead-created-label">Lead Name :</span>
                                 <span class="lead-created-value">{{ leadName }}</span>
                             </div>
                             <div
+                            v-if="!lead?.hide_created_info"
                                 class="lead-created-avatar person-hover-anchor"
                                 :title="creatorTooltip"
                                 @mouseenter="showCreatorCard = true"
@@ -121,9 +124,13 @@ const openPersonProfile = (task, type, event) => {
     showProfilePopup.value = true
 }
 
-
+const cardDate = computed(() => {
+    const raw = props.lead?.created_info_date || props.lead?.created_at
+    const d = raw ? new Date(raw) : null
+    return d && !isNaN(d.getTime()) ? d : null
+})
 const dateLabel = computed(() => {
-    const d = props.lead?.created_at ? new Date(props.lead.created_at) : null
+      const d = cardDate.value
     if (!d || isNaN(d.getTime())) return '—'
     const day = d.getDate()
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -133,7 +140,7 @@ const dateLabel = computed(() => {
 })
 
 const timeLabel = computed(() => {
-    const d = props.lead?.created_at ? new Date(props.lead.created_at) : null
+      const d = cardDate.value
     if (!d || isNaN(d.getTime())) return '—'
     const hours = d.getHours()
     const mins = d.getMinutes()
@@ -156,7 +163,7 @@ const creatorRole = computed(() => {
     return String(role).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 })
 const creatorManager = computed(() => props.lead?.added_by_user?.parent_name || null)
-const creatorBranch = computed(() => props.lead?.added_by_user?.branch_name || null)
+const creatorBranch = computed(() => props.lead?.added_by_user?.office_name || null)
 const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by ${creatorName.value}` : 'Created by')
 const showCreatorCard = ref(false)
 </script>

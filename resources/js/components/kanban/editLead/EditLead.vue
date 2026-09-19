@@ -684,9 +684,9 @@ const leadStatusOptions = computed(() => {
     // Stage 4: Qualified - Hot/Warm/Cold فقط
     if (stageOrder === 4) {
         return [
-            { value: 'cold', text: 'Cold Lead' },
-            { value: 'warm', text: 'Warm Lead' },
-            { value: 'hot', text: 'Hot Lead' }
+            { value: 'cold', text: 'Within 1 Month' },
+            { value: 'warm', text: '1–3 Months' },
+            { value: 'hot', text: 'More than 3 Months' }
         ]
     }
     
@@ -704,6 +704,7 @@ const leadStatusOptions = computed(() => {
         return [
             // { value: 'not_interested', text: 'Not Interested' },
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
+            { value: 'service_provider', text: 'Service Provider' },
             { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },
             { value: 'job_seeker', text: 'Job Seeker' },
             { value: 'broker', text: 'Broker' },
@@ -715,9 +716,9 @@ const leadStatusOptions = computed(() => {
     }
     
     return [
-        { value: 'cold', text: 'Cold' },
-        { value: 'warm', text: 'Warm' },
-        { value: 'hot', text: 'Hot' }
+        { value: 'cold', text: 'Within 1 Month' },
+        { value: 'warm', text: '1–3 Months' },
+        { value: 'hot', text: 'More than 3 Months' }
     ]
 })
 const leadTypeOptions = [
