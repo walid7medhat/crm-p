@@ -151,6 +151,12 @@ function extractLabelCategory(doc) {
 
 function formatCategoryLabel(category) {
   if (!category) return 'Document'
+  // Matches the "Proof of Payment" naming used elsewhere for this doc type (property,
+  // buyer, seller) instead of a generic Title Case of the raw key ("Payment Proof").
+  // Compares with separators stripped so it catches the raw key ('payment_proof') as
+  // well as an already-humanized upstream label ('Payment Proof').
+  const normalized = String(category).trim().toLowerCase().replace(/[_\s-]+/g, '')
+  if (normalized === 'paymentproof' || normalized === 'payment') return 'Proof of Payment'
   return category
     .replace(/[_-]+/g, ' ')
     .split(' ')

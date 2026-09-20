@@ -107,6 +107,7 @@ class DealStageRequirementEngine
 
             if ($targetOrder >= 5) {
                 $required[] = 'deal_total_amount';
+                $required[] = 'deal_commission';
                 $required[] = 'buyer_document_kyc';
             }
 
@@ -162,7 +163,7 @@ class DealStageRequirementEngine
                 if (!$stage) {
                     continue;
                 }
-                $stageMissing = $this->validatePrimaryStageByOrder($deal, $order);
+                $stageMissing = $this->validatePrimaryStageByOrder($deal, $order, $targetOrder);
                 if (!empty($stageMissing)) {
                     $evaluationByStage[] = $this->buildStageEvaluation($stage, $stageMissing);
                     $missingFields = array_merge($missingFields, $stageMissing);
@@ -200,7 +201,13 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         ];
     }
 
-    private function validatePrimaryStageByOrder(Deal $deal, int $order): array
+    /** EOI (2) and Booking (3) dates/documents are required only at their own stage, not carried forward. */
+    private function isOwnStageOnlyOrder(int $order): bool
+    {
+        return in_array($order, [2, 3], true);
+    }
+
+    private function validatePrimaryStageByOrder(Deal $deal, int $order, int $targetOrder = 0): array
     {
         $missing = [];
 
@@ -218,21 +225,14 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 $missing = array_merge($missing, $this->validateBuyerDocument($deal, 'national_id'));
             }
              $dateField = $this->getStageDateField($order, 'primary');
-            if ($dateField && empty($deal->$dateField)) {
+            $isOwnStageOnly = $this->isOwnStageOnlyOrder($order);
+            if ($dateField && empty($deal->$dateField) && (!$isOwnStageOnly || $order === $targetOrder)) {
                 $missing[] = "stage_date_{$dateField}";
-            }
-        }
-          if ($order >= 3) {
-            for ($prevOrder = 2; $prevOrder < $order; $prevOrder++) {
-                $dateField = $this->getStageDateField($prevOrder, 'primary');
-                if ($dateField && empty($deal->$dateField)) {
-                    $missing[] = "stage_date_{$dateField}";
-                }
             }
         }
 
         // ✅ التحقق من مستندات المرحلة (يتم لجميع المراحل من 2 إلى 5)
-        $stageDocMissing = $this->validateStageDocumentsForProperties($deal, $order);
+        $stageDocMissing = $this->validateStageDocumentsForProperties($deal, $order, $targetOrder);
         $missing = array_merge($missing, $stageDocMissing);
 
         if ($order === 2) {
@@ -277,6 +277,7 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 self::PRIMARY_ALL_PROPERTY_FIELDS, ['purchase_price']
             )));
             if ($this->isEmptyValue($deal->deal_total_amount)) $missing[] = 'deal_total_amount';
+            if ($this->isEmptyValue($deal->deal_commission)) $missing[] = 'deal_commission';
             if ($this->countPropertyDocuments($deal, 'payment_proof') < 1) {
                 $missing[] = 'property_document_payment_proof';
             }
@@ -376,7 +377,15 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
 
                 foreach ($fieldsToValidate as $field) {
 
-                    if ($this->isEmptyValue($property->{$field} ?? null)) {
+                    $value = $property->{$field} ?? null;
+                    $isMissing = $this->isEmptyValue($value);
+
+                    // A purchase price of exactly 0 isn't a real price — require an actual value.
+                    if (!$isMissing && $field === 'purchase_price' && is_numeric($value) && (float) $value === 0.0) {
+                        $isMissing = true;
+                    }
+
+                    if ($isMissing) {
 
                         $missing[] = "property_{$index}_{$field}";
                     }
@@ -495,8 +504,8 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         $documentsMap = [
             2 => ['eoi'],
             3 => ['booking'],
-            4 => ['eoi', 'booking', 'spa'],
-            5 => ['eoi', 'booking', 'spa', 'payment_proof'],
+            4 => ['spa'],
+            5 => ['spa', 'payment_proof'],
         ];
         
         return $documentsMap[$order] ?? [];
@@ -528,14 +537,19 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
     /**
      * التحقق من مستندات المرحلة لكل Property
      */
-    private function validateStageDocumentsForProperties(Deal $deal, int $targetOrder): array
+    private function validateStageDocumentsForProperties(Deal $deal, int $order, int $targetOrder = 0): array
     {
+        // EOI/Booking documents are required only when actually transitioning into their own stage.
+        if ($this->isOwnStageOnlyOrder($order) && $order !== $targetOrder) {
+            return [];
+        }
+
         $missing = [];
 
-        $allDocs = array_values(array_unique($this->getStageDocumentsForOrder($targetOrder)));
-        
+        $allDocs = array_values(array_unique($this->getStageDocumentsForOrder($order)));
+
         if (empty($allDocs)) return [];
-        
+
         if ($deal->properties->isEmpty()) {
             foreach ($allDocs as $doc) {
                 if (!$this->checkPropertyDocumentExists($deal, null, $doc)) {
@@ -551,7 +565,7 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
                 }
             }
         }
-        
+
         return $missing;
     }
 
@@ -639,6 +653,10 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
         $dealType = $deal->deal_type;
 
         for ($order = 2; $order <= $targetOrder; $order++) {
+            // EOI/Booking dates are required only when the target stage IS that stage.
+            if ($this->isOwnStageOnlyOrder($order) && $order !== $targetOrder) {
+                continue;
+            }
             $field = $this->getStageDateField($order, $dealType);
             if ($field && empty($deal->$field)) {
                 $required[] = "stage_date_{$field}";

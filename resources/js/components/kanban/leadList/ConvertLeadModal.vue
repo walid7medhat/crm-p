@@ -295,12 +295,23 @@ const submitConversion = async () => {
         }
     } catch (error) {
         const alreadyConvertedId = error.response?.data?.deal_id
-        // Treat "already converted" as success and open the existing deal.
+        // Lead already has a deal — tell the user clearly instead of silently reusing it,
+        // then open the existing deal for them.
         if (error.response?.status === 400 && alreadyConvertedId) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Already has a deal',
+                text: `This lead already has Deal #${alreadyConvertedId} — opening it now.`,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3500
+            })
             emit('converted', {
                 id: alreadyConvertedId,
                 deal_id: alreadyConvertedId,
                 deal_type: dealType,
+                _alreadyExisted: true,
                 _lead: {
                     id: resolvedLeadId,
                     converted_to_deal_id: alreadyConvertedId,

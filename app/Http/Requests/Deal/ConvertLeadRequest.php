@@ -169,11 +169,11 @@ class ConvertLeadRequest extends FormRequest
                 
                 'buyer_documents' => 'sometimes|array',
                 'buyer_documents.*.file' => 'sometimes|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:51200',
-                'buyer_documents.*.document_type' => 'required_with:buyer_documents.*.file|in:noc,national_id,passport,kyc,payment_proof,title_deed',
-                
+                'buyer_documents.*.document_type' => 'required_with:buyer_documents.*.file|in:noc,national_id,passport,kyc,payment_proof',
+
                 'seller_documents' => 'sometimes|array',
                 'seller_documents.*.file' => 'sometimes|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:51200',
-                'seller_documents.*.document_type' => 'required_with:seller_documents.*.file|in:national_id,passport,title_deed',
+                'seller_documents.*.document_type' => 'required_with:seller_documents.*.file|in:national_id,passport',
             ]);
         }
 
@@ -210,7 +210,7 @@ class ConvertLeadRequest extends FormRequest
                 
                 'landlord_documents' => 'sometimes|array',
                 'landlord_documents.*.file' => 'sometimes|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:51200',
-                'landlord_documents.*.document_type' => 'required_with:landlord_documents.*.file|in:title_deed,passport,national_id,visa',
+                'landlord_documents.*.document_type' => 'required_with:landlord_documents.*.file|in:passport,national_id,visa',
             ]);
         }
 

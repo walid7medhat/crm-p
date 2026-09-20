@@ -150,11 +150,9 @@ return [
                     'bedrooms' => true,
                     'unit_size' => true,
                     'purchase_price' => true,
-                    'developer_name'=>true,
-                    'developer_phone'=>true,
                 ],
-                // MOU is REQUIRED at MOU stage.
-                'property_documents' => ['mou'],
+                // MOU + title deed are REQUIRED starting at MOU stage.
+                'property_documents' => ['mou', 'title_deed'],
             ],
             // ===================== NOC STAGE (order 4) =====================
             4 => [
@@ -165,7 +163,7 @@ return [
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport','security_deposit'],
-                    'seller' => ['national_id', 'passport', 'title_deed','security_deposit'],
+                    'seller' => ['national_id', 'passport','security_deposit'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -175,11 +173,9 @@ return [
                     'bedrooms' => true,
                     'unit_size' => true,
                     'purchase_price' => true,
-                       'developer_name'=>true,
-                    'developer_phone'=>true,
                 ],
-                // MOU + NOC are REQUIRED at NOC stage (cumulative).
-                'property_documents' => ['mou', 'noc'],
+                // MOU + NOC + title deed are REQUIRED at NOC stage (cumulative).
+                'property_documents' => ['mou', 'noc', 'title_deed'],
             ],
             5 => [
                 'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
@@ -189,7 +185,7 @@ return [
                 ],
                 'documents' => [
                     'buyer' => ['national_id', 'passport', 'payment_proof','security_deposit'],
-                    'seller' => ['national_id', 'passport', 'title_deed','security_deposit'],
+                    'seller' => ['national_id', 'passport','security_deposit'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -199,11 +195,9 @@ return [
                     'bedrooms' => true,
                     'unit_size' => true,
                     'purchase_price' => true,
-                    'developer_name'=>true,
-                    'developer_phone'=>true,
                 ],
-                // MOU + NOC are REQUIRED at Won stage (cumulative).
-                'property_documents' => ['mou', 'noc'],
+                // MOU + NOC + title deed are REQUIRED at Won stage (cumulative).
+                'property_documents' => ['mou', 'noc', 'title_deed'],
             ],
             8 => [
                 'fields' => ['lost_reason'],
@@ -241,7 +235,7 @@ return [
                 ],
                 'documents' => [
                     'tenant' => ['passport', 'kyc'],
-                    'landlord' => ['passport', 'national_id', 'title_deed'],
+                    'landlord' => ['passport', 'national_id'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -251,6 +245,8 @@ return [
                     'bedrooms' => true,
                     'purchase_price' => true,
                 ],
+                // Title deed REQUIRED starting at MOU-equivalent stage.
+                'property_documents' => ['title_deed'],
             ],
             4 => [
                 'fields' => ['source', 'deal_name'],
@@ -260,7 +256,7 @@ return [
                 ],
                 'documents' => [
                     'tenant' => ['passport', 'kyc', 'ejari'],
-                    'landlord' => ['passport', 'national_id', 'title_deed'],
+                    'landlord' => ['passport', 'national_id'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -270,7 +266,7 @@ return [
                     'bedrooms' => true,
                     'purchase_price' => true,
                 ],
-                'property_documents' => ['contract', 'ejari'],
+                'property_documents' => ['contract', 'ejari', 'title_deed'],
             ],
             5 => [
                 'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
@@ -280,7 +276,7 @@ return [
                 ],
                 'documents' => [
                     'tenant' => ['passport', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form', 'payment_proof'],
-                    'landlord' => ['passport', 'national_id', 'title_deed'],
+                    'landlord' => ['passport', 'national_id'],
                 ],
                 'requires_properties' => true,
                 'properties' => [
@@ -291,7 +287,7 @@ return [
                     'unit_size' => false,
                     'purchase_price' => true,
                 ],
-                'property_documents' => ['contract', 'ejari'],
+                'property_documents' => ['contract', 'ejari', 'title_deed'],
             ],
             8 => [
                 'fields' => ['lost_reason'],

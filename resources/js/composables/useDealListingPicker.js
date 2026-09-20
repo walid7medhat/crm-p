@@ -25,13 +25,17 @@ function hasRole(user, role) {
   return list.includes(role)
 }
 
-export function buildListingFilterParams({ dealType, areaId, user = null }) {
+export function buildListingFilterParams({ dealType, areaId, user = null, currentListingId = null }) {
   const u = user || readCurrentUser()
   const params = {
     area_id: areaId,
     per_page: 100,
     not_in_deals: true,
   }
+
+  // Keep the property's own already-assigned unit selectable — it's attached to this
+  // deal, so without this it would be excluded by not_in_deals as "already used".
+  if (currentListingId) params.keep_listing_id = currentListingId
 
   if (dealType === 'secondary') params.status = 'converted'
   else if (dealType === 'rental') params.status = 'rented'

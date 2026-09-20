@@ -54,6 +54,29 @@ class DealController extends Controller
     }
 
     /**
+     * When a deal's stage moves to that deal type's "Lost" stage, sync the linked lead
+     * to the "Lost Lead" stage (id 2) as well.
+     */
+    private function syncLeadStageOnDealLost(Deal $deal, int $newStageId): void
+    {
+        if (!$deal->lead_id) {
+            return;
+        }
+
+        $targetStage = Stage::find($newStageId);
+        if (!$targetStage) {
+            return;
+        }
+
+        $isLost = ($deal->deal_type === 'primary' && (int) $targetStage->order === 6)
+            || (in_array($deal->deal_type, ['secondary', 'rental'], true) && (int) $targetStage->order === 8);
+
+        if ($isLost) {
+            \App\Models\Lead::where('id', $deal->lead_id)->update(['stage_id' => 2]);
+        }
+    }
+
+    /**
      * 1. جلب كل الصفقات مع فلترة متقدمة
      */
     public function index(Request $request)
@@ -938,6 +961,7 @@ class DealController extends Controller
                 }
 
                 $deal->stage_id = $request->stage_id;
+                $this->syncLeadStageOnDealLost($deal, (int) $request->stage_id);
                 $changes['stage'] = [
                     'old' => $oldStageId,
                     'new' => $request->stage_id
@@ -1067,6 +1091,7 @@ class DealController extends Controller
             $deal->stage_id = $newStageId;
             $deal->save();
         $this->updateStageDate($deal, $newStageId);
+        $this->syncLeadStageOnDealLost($deal, $newStageId);
 
             DealHistoryHelper::log($deal->id, [
                 'action' => 'stage_changed',
@@ -1169,10 +1194,24 @@ class DealController extends Controller
                             ->where('party_role', 'primary')
                             ->first();
                     }
-                    
+
+                    // Safety net against duplicate rows from a retried/re-submitted request
+                    // (e.g. the user re-clicking Save after a slow response that looked stuck) —
+                    // skip if the identical file was already recorded moments ago.
+                    $isDuplicateRetry = DealDocument::where('deal_id', $deal->id)
+                        ->where('deal_party_id', $party?->id)
+                        ->where('document_type', $docType)
+                        ->where('file_name', $file->getClientOriginalName())
+                        ->where('file_size', $file->getSize())
+                        ->where('created_at', '>=', now()->subMinutes(3))
+                        ->exists();
+                    if ($isDuplicateRetry) {
+                        continue;
+                    }
+
                     $storagePath = "deals/{$deal->id}/{$category}";
                     $path = $file->store($storagePath, 'public');
-                    
+
                     DealDocument::create([
                         'deal_id' => $deal->id,
                         'deal_party_id' => $party?->id,
@@ -1217,6 +1256,7 @@ class DealController extends Controller
                 $deal->stage_id = $request->stage_id;
                 $deal->save();
                   $this->updateStageDate($deal, (int) $request->stage_id);
+                  $this->syncLeadStageOnDealLost($deal, (int) $request->stage_id);
             }
 
             // 6. تسجيل التاريخ
@@ -1493,6 +1533,7 @@ class DealController extends Controller
         $bookingFiles = $this->extractPropertyFiles($request, 'booking_documents', $index);
         $mouFiles = $this->extractPropertyFiles($request, 'mou_documents', $index);
         $nocFiles = $this->extractPropertyFiles($request, 'noc_documents', $index);
+        $titleDeedFiles = $this->extractPropertyFiles($request, 'title_deed_documents', $index);
 
         $changed = false;
 
@@ -1636,6 +1677,27 @@ class DealController extends Controller
             $changed = true;
         }
 
+        // =========================
+        // Title Deed documents (per property index)
+        // =========================
+        if (!empty($titleDeedFiles)) {
+            $existing = is_array($property->title_deed_documents) ? $property->title_deed_documents : [];
+            foreach ($titleDeedFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/title_deed_documents",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->title_deed_documents = array_values($existing);
+            $changed = true;
+        }
+
         if ($changed) {
             $property->save();
         }
@@ -1713,6 +1775,7 @@ class DealController extends Controller
             'booking_documents' => $propertyData['booking_documents'] ?? null,
             'mou_documents' => $propertyData['mou_documents'] ?? null,
             'noc_documents' => $propertyData['noc_documents'] ?? null,
+            'title_deed_documents' => $propertyData['title_deed_documents'] ?? null,
         ]);
     }
 }
@@ -1841,6 +1904,22 @@ class DealController extends Controller
             $property->noc_documents = array_values(array_merge($existing, $newNoc));
         }
 
+        // ✅ Handle Title Deed Documents (append)
+        if ($request->hasFile('title_deed_documents')) {
+            $existing = is_array($property->title_deed_documents) ? $property->title_deed_documents : [];
+            $newTitleDeed = [];
+            foreach ($request->file('title_deed_documents') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                $newTitleDeed[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->title_deed_documents = array_values(array_merge($existing, $newTitleDeed));
+        }
+
         $property->save();
 
         DB::commit();
@@ -1913,7 +1992,7 @@ public function deletePropertyDocument(Request $request)
         }
         
         // ✅ دعم جميع أنواع المستندات
-        $validDocumentTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents'];
+        $validDocumentTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents'];
         $documentType = $request->document_type;
         
         if (!in_array($documentType, $validDocumentTypes, true)) {

@@ -22,6 +22,7 @@
               <span v-if="type.required && !isOptionalDocType(type.id)" class="text-danger">*</span>
             </div>
             <button
+              v-if="!hasBoxLabelOverrides(type.id)"
               type="button"
               class="add-box-btn"
               @click="addNewBox(type.id)"
@@ -34,19 +35,26 @@
 
         <div class="document-boxes-container">
           <div
-            v-for="box in getBoxesForType(type.id)"
+            v-for="(box, boxIndex) in getBoxesForType(type.id)"
             :key="box.id"
             class="document-box-wrapper"
           >
+            <div v-if="boxLabelForIndex(type.id, boxIndex)" class="document-box-per-label">
+              {{ boxLabelForIndex(type.id, boxIndex) }}
+              <span
+                v-if="type.required && !isOptionalDocType(type.id) && box.files.length === 0"
+                class="text-danger"
+              >*</span>
+            </div>
             <div
               class="document-box"
               :class="{
-                required: type.required && !isOptionalDocType(type.id) && box.files.length === 0 && !typeHasUploadedFile(type.id),
+                required: type.required && !isOptionalDocType(type.id) && box.files.length === 0 && (hasBoxLabelOverrides(type.id) || !typeHasUploadedFile(type.id)),
                 uploaded: box.files.length > 0
               }"
             >
               <button
-                v-if="getBoxesForType(type.id).length > 1"
+                v-if="getBoxesForType(type.id).length > 1 && !hasBoxLabelOverrides(type.id)"
                 type="button"
                 class="remove-box-btn"
                 @click.stop="removeBox(type.id, box.id)"
@@ -153,6 +161,12 @@ const props = defineProps({
     default: 'either',
     validator: (v) => !v || ['either', 'all'].includes(v),
   },
+  /**
+   * Per-type, per-box-index label overrides, e.g. { title_deed: ['Old Title Deed', 'New Title Deed'] }.
+   * When set for a type, that type renders fixed labeled slots instead of the generic
+   * "add another box" / "remove box" multi-upload UI.
+   */
+  boxLabelOverrides: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -178,7 +192,9 @@ const boxesByType = ref({})
 
 // Document types that are always OPTIONAL regardless of what parent passes —
 // box still renders so users can upload, but no red border, no asterisk, never blocks submission.
-const OPTIONAL_DOC_TYPES = new Set(['security_deposit'])
+// security_deposit's required-ness now varies by party/stage (buyer required from MOU stage
+// onward, seller always optional) and is decided upstream via each type's `required` flag.
+const OPTIONAL_DOC_TYPES = new Set([])
 
 function isOptionalDocType(typeId) {
   return OPTIONAL_DOC_TYPES.has(typeId)
@@ -263,6 +279,15 @@ function ensureTrailingEmptySlotsAllTypes(nextBoxes) {
   })
 }
 
+function hasBoxLabelOverrides(typeId) {
+  return Array.isArray(props.boxLabelOverrides?.[typeId]) && props.boxLabelOverrides[typeId].length > 0
+}
+
+function boxLabelForIndex(typeId, index) {
+  const labels = props.boxLabelOverrides?.[typeId]
+  return Array.isArray(labels) ? (labels[index] || null) : null
+}
+
 function getDisplayName(type) {
   if (type.id === 'national_id') {
     return 'Emirates ID'
@@ -326,6 +351,7 @@ async function deleteExistingServerFile(typeId, file) {
       booking: 'booking_documents',
       mou: 'mou_documents',
       noc: 'noc_documents',
+      title_deed: 'title_deed_documents',
     }
     const documentType = PROPERTY_DOC_TYPE_MAP[typeId] || 'payment_proof'
     await axios.delete('/deals/property-document', {
@@ -542,10 +568,30 @@ function hydrateFilesFromModelValue(model) {
   })
 
   ensureTrailingEmptySlotsAllTypes(next)
-  
+  enforceFixedBoxSlots(next)
+
   boxesByType.value = next
   nextTick(() => {
     isHydratingFromModel.value = false
+  })
+}
+
+/** Types with boxLabelOverrides (e.g. title_deed's Old/New) always show exactly that many
+ *  boxes, open and ready for input — never fewer (padded with empty slots) and never more
+ *  (extra empty trailing slots trimmed; filled ones are always kept). */
+function enforceFixedBoxSlots(nextBoxes) {
+  Object.keys(props.boxLabelOverrides || {}).forEach((typeId) => {
+    const labels = props.boxLabelOverrides[typeId]
+    if (!Array.isArray(labels) || !labels.length) return
+    const desired = labels.length
+    let boxes = nextBoxes[typeId] || []
+    while (boxes.length > desired && !boxHasContent(boxes[boxes.length - 1])) {
+      boxes.pop()
+    }
+    while (boxes.length < desired) {
+      boxes.push({ id: generateId(), files: [] })
+    }
+    nextBoxes[typeId] = boxes
   })
 }
 
@@ -553,8 +599,7 @@ const missingRequiredDocs = computed(() => {
   const missing = []
   props.documentTypes.forEach(type => {
     if (isDocumentTypeRequired(type.id)) {
-      const hasFile = hasFilesForType(type.id)
-      if (!hasFile) {
+      if (!isTypeSatisfied(type.id)) {
         missing.push(getDisplayName(type))
       }
     }
@@ -601,6 +646,16 @@ const missingRequiredDocs = computed(() => {
 function hasFilesForType(typeId) {
   const boxes = boxesByType.value[typeId] || []
   return boxes.some((box) => boxHasContent(box))
+}
+
+/** Whether a type's requirement is fully met: for fixed-slot types (e.g. title_deed's
+ *  Old/New at Won stage) every slot must be filled, not just one. */
+function isTypeSatisfied(typeId) {
+  if (hasBoxLabelOverrides(typeId)) {
+    const boxes = getBoxesForType(typeId)
+    return boxes.length > 0 && boxes.every((box) => boxHasContent(box))
+  }
+  return hasFilesForType(typeId)
 }
 
 function isImageFile(file) {
@@ -691,6 +746,18 @@ watch(
   { deep: true }
 )
 
+// Independent safety net: box counts/labels (e.g. title_deed's Old/New slots appearing at
+// Won stage) must re-apply even if documentTypes/modelValue don't happen to change reference
+// at the same moment the target stage flips.
+watch(
+  () => props.boxLabelOverrides,
+  () => {
+    if (!props.documentTypes?.length) return
+    enforceFixedBoxSlots(boxesByType.value)
+  },
+  { deep: true }
+)
+
 function isDocumentTypeRequired(typeId) {
   // Forced-optional types are never required, regardless of upstream config.
   if (isOptionalDocType(typeId)) return false
@@ -699,7 +766,11 @@ function isDocumentTypeRequired(typeId) {
   const originalRequired = docType?.required || false
 
   if (!originalRequired) return false
-  if (hasFilesForType(typeId)) return false
+
+  // Fixed-slot types (e.g. title_deed's Old/New boxes at Won stage) need EVERY slot
+  // filled — a single filled box (the "Old" one) must not silence the requirement
+  // for the still-empty "New" one.
+  if (isTypeSatisfied(typeId)) return false
 
   if (props.identificationRequirementMode !== 'all') {
     for (const pair of alternativePairs.value) {
@@ -822,6 +893,13 @@ const $showNotification = (message, type = 'success') => {
 
 .document-box-wrapper {
   position: relative;
+}
+
+.document-box-per-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
 }
 
 .document-box {

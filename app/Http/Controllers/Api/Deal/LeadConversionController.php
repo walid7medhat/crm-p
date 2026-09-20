@@ -513,6 +513,22 @@ private function createDealProperties(Deal $deal, $request)
                 }
             }
 
+            // ✅ Handle Title Deed Documents (property-level)
+            $titleDeedDocumentPaths = [];
+            if (isset($propertyData['title_deed_documents']) && is_array($propertyData['title_deed_documents'])) {
+                foreach ($propertyData['title_deed_documents'] as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                        $titleDeedDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            }
+
             $property = $deal->properties()->create([
                 'sort_order' => $index,
                 'unit_no' => $propertyData['unit_no'] ?? null,
@@ -538,6 +554,7 @@ private function createDealProperties(Deal $deal, $request)
                 'booking_documents' => !empty($bookingDocumentPaths) ? json_encode($bookingDocumentPaths) : null,
                 'mou_documents' => !empty($mouDocumentPaths) ? json_encode($mouDocumentPaths) : null,
                 'noc_documents' => !empty($nocDocumentPaths) ? json_encode($nocDocumentPaths) : null,
+                'title_deed_documents' => !empty($titleDeedDocumentPaths) ? json_encode($titleDeedDocumentPaths) : null,
                 'contract_document' => $propertyData['contract_document'] ?? null,
                 'ejari_document' => $propertyData['ejari_document'] ?? null,
                 'commission' => $propertyData['commission'] ?? null,
@@ -729,6 +746,33 @@ private function createDealProperties(Deal $deal, $request)
             }
         }
 
+        // Handle title_deed_documents files from direct request
+        $titleDeedDocumentPaths = [];
+        if ($request->hasFile('title_deed_documents')) {
+            $files = $request->file('title_deed_documents');
+            if (is_array($files)) {
+                foreach ($files as $file) {
+                    if ($file instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                        $titleDeedDocumentPaths[] = [
+                            'original_name' => $file->getClientOriginalName(),
+                            'path' => $path,
+                            'mime_type' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                        ];
+                    }
+                }
+            } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
+                $path = $files->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                $titleDeedDocumentPaths[] = [
+                    'original_name' => $files->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $files->getMimeType(),
+                    'size' => $files->getSize(),
+                ];
+            }
+        }
+
         // Add files to property data
         if (!empty($eoiDocumentPaths)) {
             $propertyData['eoi_documents'] = json_encode($eoiDocumentPaths);
@@ -741,6 +785,9 @@ private function createDealProperties(Deal $deal, $request)
         }
         if (!empty($nocDocumentPaths)) {
             $propertyData['noc_documents'] = json_encode($nocDocumentPaths);
+        }
+        if (!empty($titleDeedDocumentPaths)) {
+            $propertyData['title_deed_documents'] = json_encode($titleDeedDocumentPaths);
         }
         if (!empty($paymentProofPaths)) {
             $propertyData['payment_proof'] = json_encode($paymentProofPaths);

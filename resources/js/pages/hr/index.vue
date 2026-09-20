@@ -9471,12 +9471,12 @@ onBeforeUnmount(() => {
   border-radius: 8px;
 }
 .request-doc-modal .add-field :deep(.vs__dropdown-option--highlight) {
-  background: #F4F0F8;
-  color: #111827;
+  background: #733E87;
+  color: #fff;
 }
 .request-doc-modal .add-field :deep(.vs__dropdown-option--selected) {
-  background: #f3f4f6;
-  color: #111827;
+  background: #733E87;
+  color: #fff;
   font-weight: 500;
 }
 .request-doc-grid .add-field textarea,
@@ -9652,12 +9652,12 @@ onBeforeUnmount(() => {
   color: #4b5563;
 }
 .employee-filter-field :deep(.vs__dropdown-option--highlight) {
-  background: #f3f4f6;
-  color: #111827;
+  background: #733E87;
+  color: #fff;
 }
 .employee-filter-field :deep(.vs__dropdown-option--selected) {
-  background: #ffffff;
-  color: #111827;
+  background: #733E87;
+  color: #fff;
   font-weight: 600;
 }
 .employee-filter-field :deep(.vs__clear),

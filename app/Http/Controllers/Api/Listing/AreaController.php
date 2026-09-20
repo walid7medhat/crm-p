@@ -81,6 +81,27 @@ class AreaController extends Controller
                 $query->whereIn('id', $allowedIds);
             }
 
+            // Free-text name filter for type-ahead pickers (e.g. deal property address).
+            // Previously sent by callers but silently ignored, forcing them to render the
+            // entire areas table (thousands of rows) client-side on every keystroke.
+            $searchTerm = trim((string) $request->input('search', ''));
+            if ($searchTerm !== '') {
+                $query->where('name', 'like', '%'.$searchTerm.'%');
+            }
+
+            // Cap results for type-ahead pickers so the dropdown never has to render the
+            // whole table. `limit` is opt-in (explicit request), so unfiltered "give me
+            // everything" callers (area management pages, etc.) keep today's behavior
+            // unless they ask for a capped page. Ignored alongside `ids`, which needs every
+            // requested id back regardless of count.
+            $explicitLimit = ($request->filled('limit') && ! $request->filled('ids'))
+                ? max(1, min((int) $request->input('limit'), 200))
+                : null;
+            $effectiveLimit = $searchTerm !== '' ? 50 : $explicitLimit;
+            if ($effectiveLimit) {
+                $query->limit($effectiveLimit);
+            }
+
             $areas = $query->get();
 
             if ($forListingSearch) {

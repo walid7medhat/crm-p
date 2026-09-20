@@ -2054,13 +2054,13 @@ defineExpose({
 }
 
 :deep(.searchable-select .vs__dropdown-option--highlight) {
-    color: #0f172a !important;
-    background: #faf5ff !important;
+    color: #fff !important;
+    background: #733E87 !important;
 }
 
 :deep(.searchable-select .vs__dropdown-option--selected) {
-    color: #0f172a !important;
-    background: #f3e8ff !important;
+    color: #fff !important;
+    background: #733E87 !important;
 }
 /* Custom v-select styles */
 :deep(.custom-v-select) {
@@ -2875,13 +2875,20 @@ defineExpose({
 }
 
 :deep(.lead-qual-select--quality .vs__dropdown-option--highlight .qs-dd-row) {
-    background: #faf5ff !important;
+    background: #733E87 !important;
+    color: #fff !important;
     box-shadow: inset 0 0 0 1px rgba(115, 62, 135, 0.35);
 }
 
 :deep(.lead-qual-select--quality .vs__dropdown-option--selected .qs-dd-row) {
-    background: linear-gradient(90deg, rgba(243, 232, 255, 0.95) 0%, #ffffff 100%) !important;
+    background: #733E87 !important;
+    color: #fff !important;
     box-shadow: inset 3px 0 0 0 #733E87;
+}
+
+:deep(.lead-qual-select--quality .vs__dropdown-option--highlight .qs-dd-title),
+:deep(.lead-qual-select--quality .vs__dropdown-option--selected .qs-dd-title) {
+    color: #fff !important;
 }
 
 :deep(.lead-qual-select--quality .qs-dd-row) {
@@ -2906,13 +2913,13 @@ defineExpose({
 }
 
 :deep(.lead-qual-select--enhanced .vs__dropdown-option--highlight) {
-    background: #faf5ff !important;
-    color: #0f172a !important;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 :deep(.lead-qual-select--enhanced .vs__dropdown-option--selected) {
-    background: linear-gradient(90deg, #f3e8ff 0%, #ffffff 100%) !important;
-    color: #0f172a !important;
+    background: #733E87 !important;
+    color: #fff !important;
     box-shadow: inset 3px 0 0 0 #733E87;
 }
 </style>

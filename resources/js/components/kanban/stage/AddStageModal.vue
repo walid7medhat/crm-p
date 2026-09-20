@@ -414,8 +414,8 @@ const $showNotification = (message, type = 'info') => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #733E87;
-    color: #fff;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 .alert {

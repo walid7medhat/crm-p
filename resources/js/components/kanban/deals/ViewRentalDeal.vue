@@ -399,6 +399,12 @@
           </div>
           <div class="col-md-6">
             <div class="info-group">
+              <label class="info-label">Unit Size</label>
+              <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
               <label class="info-label">Property Type</label>
               <p class="info-value mb-0">{{ val(deal.property_type?.name) }}</p>
             </div>
@@ -419,30 +425,6 @@
             <div class="info-group">
               <label class="info-label">Agent</label>
               <p class="info-value mb-0">{{ deal.listing?.agent }}</p>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="info-group">
-              <label class="info-label">Developer Name</label>
-              <p class="info-value mb-0">{{ getDeveloperName() }}</p>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="info-group">
-              <label class="info-label">Developer sales person name</label>
-              <p class="info-value mb-0">{{ val(deal.developer_name) }}</p>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="info-group">
-              <label class="info-label">Developer sales person phone</label>
-              <p class="info-value mb-0">{{ val(deal.developer_phone) }}</p>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="info-group">
-              <label class="info-label">Unit Size</label>
-              <p class="info-value mb-0">{{ val(deal.unit_size) }}</p>
             </div>
           </div>
         </div>
@@ -525,7 +507,7 @@
           </div>
            <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Deal Total amount %</label>
+              <label class="info-label">Deal Total Amount</label>
               <p class="info-value mb-0">{{ val(deal.deal_total_amount) }}</p>
             </div> 
           </div>

@@ -48,6 +48,7 @@ class DealProperty extends Model
         'booking_documents',
         'mou_documents',
         'noc_documents',
+        'title_deed_documents',
     ];
 
        protected $casts = [
@@ -61,6 +62,7 @@ class DealProperty extends Model
         'booking_documents' => 'array',
         'mou_documents' => 'array',
         'noc_documents' => 'array',
+        'title_deed_documents' => 'array',
     ];
     
     // ========== Relationships ==========

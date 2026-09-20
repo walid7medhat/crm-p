@@ -74,12 +74,27 @@
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
           <template #option="option">
-            <div>
-              <strong>{{ option.unit_number || 'No Unit' }}</strong>
-              <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
-              <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
-              <div class="small text-success">{{ option.status === 'converted' ? 'Sold' : 'Rented' }}</div>
+            <div class="unit-select-option">
+              <div class="unit-select-option-top">
+                <span class="unit-select-option-number">{{ option.unit_number || 'No Unit' }}</span>
+                <span class="unit-select-option-status" :class="option.status === 'converted' ? 'is-sold' : 'is-rented'">
+                  {{ option.status === 'converted' ? 'Sold' : 'Rented' }}
+                </span>
+              </div>
+              <div class="unit-select-option-bottom">
+                <span>{{ option.property_type?.name || 'N/A' }}</span>
+                <span class="unit-select-option-dot">&middot;</span>
+                <span>{{ option.bedrooms_text || '—' }}</span>
+                <span class="unit-select-option-dot">&middot;</span>
+                <span>{{ option.size_sqft ? `${option.size_sqft} sqft` : 'N/A' }}</span>
+              </div>
             </div>
+          </template>
+          <template #selected-option="option">
+            <span class="unit-select-selected">
+              <strong>{{ option.unit_number || 'No Unit' }}</strong>
+              <span v-if="option.property_type?.name"> — {{ option.property_type.name }}</span>
+            </span>
           </template>
         </v-select>
         <div class="small text-muted mt-1" v-if="isLoadingListings">
@@ -282,8 +297,8 @@
         </div>
         </div>
 
-      <!-- ========== DEVELOPER FIELDS (hidden for secondary — listing supplies developer) ========== -->
-      <div class="col-md-4" v-if="!hidePropertyDetailFields">
+      <!-- ========== DEVELOPER FIELDS (primary/off-plan only — secondary and rental never show them) ========== -->
+      <div class="col-md-4" v-if="props.dealType === 'primary'">
         <label class="form-label-custom">Developer</label>
         <v-select
           v-model="localProperty.developer_id"
@@ -299,8 +314,8 @@
         </v-select>
       </div>
 
-      <!-- Developer sales person details — deal-specific, not on the listing, so always shown. -->
-      <div class="col-md-4">
+      <!-- Developer sales person details — primary-only, same as Developer above. -->
+      <div class="col-md-4" v-if="props.dealType === 'primary'">
         <label class="form-label-custom">Developer Sales Person Name</label>
         <b-form-input
           v-model="localProperty.developer_name"
@@ -309,7 +324,7 @@
         />
       </div>
 
-      <div class="col-md-4">
+      <div class="col-md-4" v-if="props.dealType === 'primary'">
         <label class="form-label-custom">Developer Sales Person Phone</label>
         <CrmPhoneInput
           v-model="localProperty.developer_phone"
@@ -634,8 +649,10 @@ function onDocumentClick(event) {
     showBudgetDropdown.value = false
     removeBudgetDropdownListeners()
 }
-// Fetch available listings when area changes
-const fetchAvailableListings = async (areaId) => {
+// Fetch available listings when area changes. `keepListingId` (the property's own
+// already-assigned unit) is kept selectable even though it's attached to this deal —
+// otherwise the backend's not_in_deals filter would exclude it as "already used".
+const fetchAvailableListings = async (areaId, keepListingId = null) => {
   if (!areaId) {
     availableListings.value = []
     return
@@ -653,6 +670,7 @@ const fetchAvailableListings = async (areaId) => {
       dealType: props.dealType,
       areaId,
       user: currentUser.value,
+      currentListingId: keepListingId,
     })
 
     const response = await api.get('/listings/properties', { params })
@@ -755,7 +773,7 @@ watch(() => props.property.area_id, async (newAreaId) => {
   if (newAreaId !== localProperty.value.area_id && !isUpdatingFromListing) {
     localProperty.value.area_id = newAreaId
     if (newAreaId) {
-      await fetchAvailableListings(newAreaId)
+      await fetchAvailableListings(newAreaId, localProperty.value.listing_id)
     }
   }
 })
@@ -893,6 +911,24 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) {
   border-color: #dc3545 !important;
 }
+
+/* Highlighted (hover/keyboard-focused) option — matches the purple used across the app's
+   other v-selects. Without this the row's own dark/muted text (.text-muted,
+   .unit-select-option-*) stayed gray-on-purple and was unreadable, since those classes
+   set their own color and win over an inherited one. */
+:deep(.custom-v-select .vs__dropdown-option--highlight) {
+  background: #733E87 !important;
+  color: #fff !important;
+}
+:deep(.custom-v-select .vs__dropdown-option--highlight .text-muted),
+:deep(.custom-v-select .vs__dropdown-option--highlight .small),
+:deep(.custom-v-select .vs__dropdown-option--highlight iconify-icon),
+:deep(.custom-v-select .vs__dropdown-option--highlight .unit-select-option-number),
+:deep(.custom-v-select .vs__dropdown-option--highlight .unit-select-option-bottom),
+:deep(.custom-v-select .vs__dropdown-option--highlight .unit-select-option-dot) {
+  color: #fff !important;
+}
+
 .form-label-custom {
   font-size: 12px !important;
   font-weight: 500;
@@ -954,13 +990,22 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
 :deep(.custom-v-select) { font-size: 12px !important; }
 :deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 12px !important; padding: 2px 8px; overflow: hidden; display: flex !important; align-items: stretch !important; }
+.unit-select-option { display: flex; flex-direction: column; gap: 3px; padding: 4px 2px; }
+.unit-select-option-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.unit-select-option-number { font-weight: 600; font-size: 13px; color: #0f172a; }
+.unit-select-option-status { flex-shrink: 0; font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; }
+.unit-select-option-status.is-sold { background: #fee2e2; color: #b91c1c; }
+.unit-select-option-status.is-rented { background: #dbeafe; color: #1d4ed8; }
+.unit-select-option-bottom { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; }
+.unit-select-option-dot { color: #cbd5e1; }
+.unit-select-selected { font-size: 12px; color: #0f172a; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 12px !important; }
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 12px !important; color: #9ca3af; text-align: left; }
 :deep(.custom-v-select .vs__placeholder) { font-size: 12px !important; color: #9ca3af; text-align: left; }
 :deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
-:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
-:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #733E87; color: #fff; font-weight: 600; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }

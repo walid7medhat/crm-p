@@ -708,9 +708,10 @@
     const isSalesUser = ref(false)
     
    const salesSourceOptions = [
-            { value: 'my_self_network',   text: 'My Self Network' },
-            { value: 'my_social_account', text: 'My Social Account' },
-            { value: 'referral',          text: 'Referral' }
+            { value: 'My Self Network',    text: 'My Self Network' },
+            { value: 'My Social Account',  text: 'My Social Account' },
+            { value: 'My Social Media App', text: 'My Social Media App' },
+            { value: 'referral',           text: 'Referral' }
         ]
 
     const referralTypeOptions = [
@@ -1840,12 +1841,12 @@ watch(selectedExistingClient, (client) => {
         background: #733E87 !important;
         color: #fff !important;
     }
-    
+
     :deep(.custom-v-select .vs__dropdown-option--selected) {
-        background: #733E87;
-        color: #fff;
+        background: #733E87 !important;
+        color: #fff !important;
     }
-    
+
     /* Inline v-select for input groups */
     :deep(.custom-v-select-inline) {
         width: 100px;
@@ -1940,10 +1941,10 @@ watch(selectedExistingClient, (client) => {
         background: #733E87 !important;
         color: #fff !important;
     }
-    
+
     :deep(.custom-v-select-inline .vs__dropdown-option--selected) {
-        background: #733E87;
-        color: #fff;
+        background: #733E87 !important;
+        color: #fff !important;
     }
     
     :deep(.custom-v-select-inline .vs__open-indicator) {
@@ -2808,15 +2809,14 @@ watch(selectedExistingClient, (client) => {
 
 .client-option-name {
     font-size: 14px;
+    font-weight: 600;
+    color: #0B0736;
     margin-bottom: 4px;
 }
 
 .client-option-details {
     font-size: 12px;
     color: #64748B;
-}
-
-.client-option-details span {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -2824,6 +2824,13 @@ watch(selectedExistingClient, (client) => {
 
 .selected-client-info {
     font-size: 14px;
+}
+
+:deep(.custom-v-select .vs__dropdown-option--highlight .client-option-name),
+:deep(.custom-v-select .vs__dropdown-option--selected .client-option-name),
+:deep(.custom-v-select .vs__dropdown-option--highlight .client-option-details),
+:deep(.custom-v-select .vs__dropdown-option--selected .client-option-details) {
+    color: #fff !important;
 }
 
 /* Referral Client Card Styles */

@@ -64,7 +64,7 @@ class DealDocument extends Model
             'spa' => 'SPA',
             'title_deed' => 'Title Deed',
             'tenancy_contract' => 'Tenancy Contract',
-            'payment_proof' => 'Payment Proof',
+            'payment_proof' => 'Proof of Payment',
             'noc' => 'NOC Letter',
             'tawtheeq' => 'Tawtheeq/Ejari',
             'move_in' => 'Move In Form'

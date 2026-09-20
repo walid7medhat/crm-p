@@ -71,7 +71,7 @@ export function useStageTransition() {
   /** New property files from CompleteStageFieldsModal (payment / SPA / EOI / booking / MOU / NOC) — indexed by property row. */
   function appendPropertyIndexedDocumentUploads(properties, formData) {
     if (!Array.isArray(properties)) return
-    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents']
+    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents']
     properties.forEach((property, propIndex) => {
       if (!property || typeof property !== 'object') return
       docFields.forEach((field) => {
@@ -125,6 +125,7 @@ export function useStageTransition() {
             'booking_documents',
             'mou_documents',
             'noc_documents',
+            'title_deed_documents',
           ]
 
           const sanitized = value.map((property) => {
@@ -142,6 +143,7 @@ export function useStageTransition() {
             lightweight.booking_documents = normalizeExistingPropertyDocs(property.booking_documents, 'booking')
             lightweight.mou_documents = normalizeExistingPropertyDocs(property.mou_documents, 'mou')
             lightweight.noc_documents = normalizeExistingPropertyDocs(property.noc_documents, 'noc')
+            lightweight.title_deed_documents = normalizeExistingPropertyDocs(property.title_deed_documents, 'title_deed')
             return lightweight
           })
           formData.append('properties', JSON.stringify(sanitized))
@@ -161,6 +163,7 @@ export function useStageTransition() {
     let bookingDocUploadIndex = 0
     let mouDocUploadIndex = 0
     let nocDocUploadIndex = 0
+    let titleDeedDocUploadIndex = 0
     documents.forEach((doc) => {
       if (!isUploadFile(doc?.file)) return
 
@@ -196,6 +199,11 @@ export function useStageTransition() {
         if (docType === 'noc' || docType === 'noc_document' || docType.includes('noc')) {
           formData.append(`noc_documents[${nocDocUploadIndex}]`, doc.file)
           nocDocUploadIndex += 1
+          return
+        }
+        if (docType === 'title_deed' || docType === 'title_deed_document' || docType.includes('title_deed')) {
+          formData.append(`title_deed_documents[${titleDeedDocUploadIndex}]`, doc.file)
+          titleDeedDocUploadIndex += 1
           return
         }
       }

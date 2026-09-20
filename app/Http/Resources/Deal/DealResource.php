@@ -230,6 +230,10 @@ class DealResource extends JsonResource
                         // ✅ NOC Documents (secondary order 4+)
                         'noc_documents_raw' => $property->noc_documents,
                         'noc_documents' => (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request),
+
+                        // ✅ Title Deed Documents (property-level, secondary MOU+ / rental MOU-equivalent+)
+                        'title_deed_documents_raw' => $property->title_deed_documents,
+                        'title_deed_documents' => (new PropertyDocumentResource($property->title_deed_documents, 'title_deed'))->resolve($request),
                     ];
                 });
             }),

@@ -791,9 +791,14 @@ SQL;
             }
 
             // Used by the deal Select-Unit picker to hide listings that are already attached
-            // to a deal so the same sold unit can't be picked twice.
+            // to a deal so the same sold unit can't be picked twice. `keep_listing_id` lets the
+            // property being edited keep its own already-assigned unit in the list — otherwise,
+            // since that unit is attached to this very deal, it would filter itself out.
             if ($request->boolean('not_in_deals')) {
                 $usedListingIds = DealProperty::whereNotNull('listing_id')->pluck('listing_id');
+                if ($request->filled('keep_listing_id')) {
+                    $usedListingIds = $usedListingIds->reject(fn ($id) => (string) $id === (string) $request->keep_listing_id);
+                }
                 if ($usedListingIds->count() > 0) {
                     $query->whereNotIn('id', $usedListingIds);
                 }

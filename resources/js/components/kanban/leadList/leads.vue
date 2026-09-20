@@ -1872,7 +1872,11 @@ function handleLeadConverted(deal) {
         id: deal?.id ?? deal?.deal_id ?? null,
     }
 
-    $showNotification('Lead converted to deal successfully', 'success')
+    // The "already has a deal" case already showed its own message in ConvertLeadModal —
+    // don't pile a generic "converted successfully" toast on top of it.
+    if (!deal?._alreadyExisted) {
+        $showNotification('Lead converted to deal successfully', 'success')
+    }
     // Move/remove the card locally from the fresh post-conversion lead instead of
     // refetching the whole board — much faster and avoids a visible reload.
     const updatedLead = deal?._lead

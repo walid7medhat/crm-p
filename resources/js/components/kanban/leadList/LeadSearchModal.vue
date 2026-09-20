@@ -7543,18 +7543,18 @@ onBeforeUnmount(() => {
 
 :deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-item-meta-line),
 :deep(.lead-search-rp-select .vs__dropdown-option--selected .user-item-meta-line) {
-    color: rgba(255, 255, 255, 0.92) !important;
+    color: #f1f5f9 !important;
 }
 
 :deep(.lead-search-rp-select .vs__dropdown-option--highlight .meta-value),
 :deep(.lead-search-rp-select .vs__dropdown-option--selected .meta-value) {
-    color: rgba(255, 255, 255, 0.95) !important;
+    color: #fff !important;
 }
 
 :deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-position-badge),
 :deep(.lead-search-rp-select .vs__dropdown-option--selected .user-position-badge) {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: rgba(255, 255, 255, 0.45) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
     color: #fff !important;
 }
 

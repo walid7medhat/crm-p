@@ -550,7 +550,27 @@
             <label class="form-label-custom">Select Unit <span v-if="isSingleListingRequired" class="text-danger">*</span></label>
             <v-select v-model="selectedListing" :options="availableListings" :reduce="item => item" label="display_name" placeholder="Select a unit..." class="custom-v-select" :class="{ 'is-invalid': showErrors && isSingleListingRequired && !form.listing_id }" @update:modelValue="onListingSelected" :disabled="isLoadingListings" clearable>
               <template #option="option">
-                <div><strong>{{ option.unit_number || 'No Unit' }}</strong><span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span><div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div><div class="small text-success">{{ option.status === 'converted' ? 'Sold' : 'Rented' }}</div></div>
+                <div class="unit-select-option">
+                  <div class="unit-select-option-top">
+                    <span class="unit-select-option-number">{{ option.unit_number || 'No Unit' }}</span>
+                    <span class="unit-select-option-status" :class="option.status === 'converted' ? 'is-sold' : 'is-rented'">
+                      {{ option.status === 'converted' ? 'Sold' : 'Rented' }}
+                    </span>
+                  </div>
+                  <div class="unit-select-option-bottom">
+                    <span>{{ option.property_type?.name || 'N/A' }}</span>
+                    <span class="unit-select-option-dot">&middot;</span>
+                    <span>{{ option.bedrooms_text || '—' }}</span>
+                    <span class="unit-select-option-dot">&middot;</span>
+                    <span>{{ option.size_sqft ? `${option.size_sqft} sqft` : 'N/A' }}</span>
+                  </div>
+                </div>
+              </template>
+              <template #selected-option="option">
+                <span class="unit-select-selected">
+                  <strong>{{ option.unit_number || 'No Unit' }}</strong>
+                  <span v-if="option.property_type?.name"> — {{ option.property_type.name }}</span>
+                </span>
               </template>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
@@ -630,7 +650,8 @@
             <span v-if="isPurchasePriceRequired" class="text-danger">*</span>
           </label>
         <div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" @keypress="onMoneyKeypress" /></div></div>
-          <div class="col-md-4">
+          <!-- Developer / sales-person fields are primary-only (off-plan); secondary and rental never show them. -->
+          <div class="col-md-4" v-if="props.dealType === 'primary'">
             <label class="form-label-custom">Developer</label>
             <v-select v-model="form.developer_id" :options="developers" :reduce="item => item.id" label="name" placeholder="Select Developer" class="custom-v-select" clearable :disabled="lockPropertyFieldsUntilListing">
               <template #open-indicator="{ attributes }">
@@ -638,9 +659,9 @@
               </template>
             </v-select>
           </div>
-          <!-- Developer sales person — deal-specific, not on the listing, so always shown. -->
-          <div class="col-md-4"><label class="form-label-custom">Developer sales person name</label><b-form-input v-model="form.developer_name" placeholder="Enter Developer Name" class="custom-input" /></div>
-          <div class="col-md-4">
+          <!-- Developer sales person — deal-specific, not on the listing, so always shown for primary. -->
+          <div class="col-md-4" v-if="props.dealType === 'primary'"><label class="form-label-custom">Developer sales person name</label><b-form-input v-model="form.developer_name" placeholder="Enter Developer Name" class="custom-input" /></div>
+          <div class="col-md-4" v-if="props.dealType === 'primary'">
             <label class="form-label-custom">Developer sales person phone</label>
             <CrmPhoneInput
               :key="`developer-phone-${props.selectedStageId || 'default'}`"
@@ -976,7 +997,7 @@ const propertyDocTypes = computed(() => {
       return [
         { id: 'mou', name: 'MOU Document', required: true },
         { id: 'noc', name: 'NOC Document', required: true },
-        { id: 'payment_proof', name: 'Payment Proof', required: false },
+        { id: 'payment_proof', name: 'Proof of Payment', required: false },
         { id: 'spa', name: 'SPA Document', required: false },
       ]
     }
@@ -984,18 +1005,18 @@ const propertyDocTypes = computed(() => {
       return [
         { id: 'mou', name: 'MOU Document', required: true },
         { id: 'noc', name: 'NOC Document', required: true },
-        { id: 'payment_proof', name: 'Payment Proof', required: false },
+        { id: 'payment_proof', name: 'Proof of Payment', required: false },
       ]
     }
     if (order >= 3 || stageName.includes('mou')) {
       return [
         { id: 'mou', name: 'MOU Document', required: true },
-        { id: 'payment_proof', name: 'Payment Proof', required: false },
+        { id: 'payment_proof', name: 'Proof of Payment', required: false },
       ]
     }
     if (order >= 2) {
       return [
-        { id: 'payment_proof', name: 'Payment Proof', required: false },
+        { id: 'payment_proof', name: 'Proof of Payment', required: false },
       ]
     }
     return []
@@ -1009,24 +1030,21 @@ const propertyDocTypes = computed(() => {
   }
   if (stageName.includes('booking')) {
     return [
-      { id: 'eoi', name: 'EOI Document', required: true },
       { id: 'booking', name: 'Booking Form', required: true },
-      { id: 'payment_proof', name: 'Payment Proof', required: false },
+      { id: 'payment_proof', name: 'Proof of Payment', required: false },
     ]
   }
   if (stageName.includes('spa')) {
     return [
-      { id: 'eoi', name: 'EOI Document', required: true },
-      { id: 'booking', name: 'Booking Form', required: true },
-      { id: 'payment_proof', name: 'Payment Proof', required: false },
+      { id: 'booking', name: 'Booking Form', required: false },
+      { id: 'payment_proof', name: 'Proof of Payment', required: false },
       { id: 'spa', name: 'SPA Document', required: true },
     ]
   }
   if (stageName.includes('won') || stageName.includes('deal won')) {
     return [
-      { id: 'eoi', name: 'EOI Document', required: true },
-      { id: 'booking', name: 'Booking Form', required: true },
-      { id: 'payment_proof', name: 'Payment Proof', required: true },
+      { id: 'booking', name: 'Booking Form', required: false },
+      { id: 'payment_proof', name: 'Proof of Payment', required: true },
       { id: 'spa', name: 'SPA Document', required: true },
     ]
   }
@@ -2033,7 +2051,9 @@ function shouldShowStageDate(dateKey) {
     return true
   }
 
-  return order >= config.minOrder
+  // Own-stage-only: a date field is shown for its own stage (or once already filled, per the
+  // check above) — not proactively for every later stage too.
+  return order === config.minOrder
 }
 const stageDateConfig = {
   primary: [
@@ -2119,15 +2139,27 @@ removeBudgetDropdownListeners()
 .custom-input.is-invalid { border-color: #dc3545 !important; }
 .input-group-custom { display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .input-group-custom .custom-input { border: none !important; flex: 1; border-radius: 8px 0 0 8px !important; }
+.input-group { display: flex; flex-wrap: nowrap; align-items: stretch; width: 100%; }
+.input-group .custom-input { width: auto; min-width: 0; flex: 1 1 auto; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; }
+.input-group-text { background: #f8fafc; border: 1px solid #e5e7eb; border-left: none; font-size: 13px; flex: 0 0 auto; white-space: nowrap; display: flex; align-items: center; padding: 0 12px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 :deep(.custom-v-select) { font-size: 13px; }
+.unit-select-option { display: flex; flex-direction: column; gap: 3px; padding: 4px 2px; }
+.unit-select-option-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.unit-select-option-number { font-weight: 600; font-size: 13px; color: #0f172a; }
+.unit-select-option-status { flex-shrink: 0; font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; }
+.unit-select-option-status.is-sold { background: #fee2e2; color: #b91c1c; }
+.unit-select-option-status.is-rented { background: #dbeafe; color: #1d4ed8; }
+.unit-select-option-bottom { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; }
+.unit-select-option-dot { color: #cbd5e1; }
+.unit-select-selected { font-size: 13px; color: #0f172a; }
 :deep(.custom-v-select .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; padding: 0 8px; overflow: hidden; display: flex !important; align-items: stretch !important; }
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) { border-color: #dc3545 !important; }
 :deep(.custom-v-select .vs__selected), :deep(.custom-v-select .vs__search) { font-size: 13px; }
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
-:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #eff6ff; color: #1e3a8a; }
-:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #733E87; color: #fff; font-weight: 600; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }

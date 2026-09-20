@@ -47,13 +47,6 @@ class DealStageValidatorService
     // ✅ تصفية property document fields (إذا كانت المستندات موجودة مسبقاً)
     $missingFields = $this->filterPropertyDocumentFields($missingFields, $deal);
     $missingByStage = $this->filterMissingByStagePropertyDocuments($missingByStage, $deal);
-      $stageDateRequirements = $this->getRequiredStageDates($deal, $targetStageId, $resolvedType);
-        
-        foreach ($stageDateRequirements as $dateField) {
-            if (!in_array($dateField, $missingFields)) {
-                $missingFields[] = $dateField;
-            }
-        }
     // ✅ تصفية budget fields حسب المرحلة (قبل أي تصفية أخرى)
     // $missingFields = $this->filterBudgetFieldsByStage($missingFields, $targetStageId);
     // $missingByStage = $this->filterMissingByStageBudgetFields($missingByStage, $targetStageId);
@@ -80,9 +73,16 @@ $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal
     // ✅ Property details (area, type, unit_no, etc.) must be required for SECONDARY at every stage.
     $this->ensurePropertyDetailsRequiredForSecondary($missingFields, $missingByStage, $deal, $targetStageId, $resolvedType);
 
-    // ✅ security_deposit is OPTIONAL — strip from missing fields so it never blocks the stage transition.
-    $missingFields = $this->filterOptionalSecurityDeposit($missingFields);
-    $missingByStage = $this->filterMissingByStageSecurityDeposit($missingByStage);
+    // ✅ Stage's own date (security_deposit_date / mou_date / noc_date) required exactly at its own stage.
+    // Merged directly into missingByStage (not the flat list, which gets rebuilt from missingByStage) so it
+    // actually survives — a prior version pushed this into $missingFields only, which was silently discarded.
+    $this->ensureStageDateRequired($missingFields, $missingByStage, $deal, $targetStageId, $resolvedType);
+
+    // ✅ security_deposit is OPTIONAL for seller, always. For buyer it's optional before MOU and REQUIRED
+    // from MOU stage (order 3) onward.
+    $targetOrderForSecurityDeposit = (int) (\App\Models\Stage::find($targetStageId)?->order ?? 0);
+    $missingFields = $this->filterOptionalSecurityDeposit($missingFields, $targetOrderForSecurityDeposit);
+    $missingByStage = $this->filterMissingByStageSecurityDeposit($missingByStage, $targetOrderForSecurityDeposit);
 
     // ✅ تمرير effectiveListingId و resolvedType للتصفية
     $filteredMissingFields = $this->filterFieldsByListingAndType($missingFields, $effectiveListingId, $resolvedType);
@@ -313,6 +313,8 @@ private function hasPropertyDocuments(Deal $deal, string $documentType): bool
         'eoi_documents' => 'eoi_documents',
         'booking' => 'booking_documents',
         'booking_documents' => 'booking_documents',
+        'title_deed' => 'title_deed_documents',
+        'title_deed_documents' => 'title_deed_documents',
     ];
     $column = $columnMap[$documentType] ?? 'spa_document';
 
@@ -526,11 +528,9 @@ private function ensurePurchasePriceRequiredForStage(array &$missingFields, arra
     } else {
         foreach ($properties as $index => $property) {
             $raw = $property->purchase_price ?? null;
+            // A purchase price of exactly 0 isn't a real price — require an actual value,
+            // same as blank/null.
             $hasValue = !is_null($raw) && $raw !== '' && $raw !== 0 && $raw !== '0';
-            // Treat numeric 0 as "filled" intentionally — only blank/null counts as missing.
-            if (is_null($raw) || $raw === '' || $raw === '0') {
-                $hasValue = false;
-            }
             if (!$hasValue) {
                 $newKeys[] = "property_{$index}_purchase_price";
             }
@@ -595,9 +595,10 @@ private function ensurePropertyDetailsRequiredForSecondary(
     }
 
     // Stage 2 (Security Deposit) basics; stage 3+ adds the deeper property fields.
+    // Developer/sales-person fields are NOT part of secondary deals (primary-only).
     $required = ['area_id', 'property_type_id', 'unit_no'];
     if ($order >= 3) {
-        $required = array_merge($required, ['bedrooms', 'unit_size', 'developer_name', 'developer_phone']);
+        $required = array_merge($required, ['bedrooms', 'unit_size']);
     }
 
     $properties = $deal->properties ?? collect();
@@ -652,16 +653,24 @@ private function ensurePropertyDetailsRequiredForSecondary(
 
 /**
  * Strip *_document_security_deposit keys from the flat missing list.
- * security_deposit is shown in the UI for secondary stage 2+ but is OPTIONAL.
+ * Seller's security_deposit is always OPTIONAL. Buyer's is optional before the MOU stage
+ * (order 3) and REQUIRED from MOU stage onward — so it's only stripped for buyer when
+ * $targetOrder is below 3 (or unknown).
  */
-private function filterOptionalSecurityDeposit(array $fields): array
+private function filterOptionalSecurityDeposit(array $fields, int $targetOrder = 0): array
 {
     if (empty($fields)) {
         return [];
     }
 
-    return array_values(array_filter($fields, function ($field) {
-        return !preg_match('/^(buyer|seller|tenant|landlord)_document_security_deposit$/', (string) $field);
+    $buyerRequired = $targetOrder >= 3;
+
+    return array_values(array_filter($fields, function ($field) use ($buyerRequired) {
+        $field = (string) $field;
+        if ($buyerRequired && preg_match('/^buyer_document_security_deposit$/', $field)) {
+            return true;
+        }
+        return !preg_match('/^(buyer|seller|tenant|landlord)_document_security_deposit$/', $field);
     }));
 }
 
@@ -669,7 +678,7 @@ private function filterOptionalSecurityDeposit(array $fields): array
  * Strip *_document_security_deposit keys from each missing_by_stage bucket
  * and drop buckets that become empty after filtering.
  */
-private function filterMissingByStageSecurityDeposit(array $missingByStage): array
+private function filterMissingByStageSecurityDeposit(array $missingByStage, int $targetOrder = 0): array
 {
     if (empty($missingByStage)) {
         return [];
@@ -678,7 +687,7 @@ private function filterMissingByStageSecurityDeposit(array $missingByStage): arr
     $filteredStages = [];
 
     foreach ($missingByStage as $stage) {
-        $stageFields = $this->filterOptionalSecurityDeposit($stage['missing_fields'] ?? []);
+        $stageFields = $this->filterOptionalSecurityDeposit($stage['missing_fields'] ?? [], $targetOrder);
 
         if (!empty($stageFields)) {
             $filteredStages[] = [
@@ -762,6 +771,8 @@ private function filterMissingByStageBedroomsFields(array $missingByStage, Deal 
 
     /**
      * الحصول على تواريخ المراحل المطلوبة
+     * Own-stage-only: a stage's date is required exactly when transitioning into that stage,
+     * not carried forward as a blocking requirement for every later stage.
      */
     private function getRequiredStageDates(Deal $deal, int $targetStageId, string $dealType): array
     {
@@ -771,23 +782,54 @@ private function filterMissingByStageBedroomsFields(array $missingByStage, Deal 
         }
 
         $targetOrder = (int) $stage->order;
-        $requiredDates = [];
-
-        // التحقق من تاريخ المرحلة الحالية
         $currentDateField = $this->getStageDateField($targetOrder, $dealType);
         if ($currentDateField && empty($deal->$currentDateField)) {
-            $requiredDates[] = "stage_date_{$currentDateField}";
+            return ["stage_date_{$currentDateField}"];
         }
 
-        // التحقق من تواريخ المراحل السابقة
-        for ($order = 2; $order < $targetOrder; $order++) {
-            $dateField = $this->getStageDateField($order, $dealType);
-            if ($dateField && empty($deal->$dateField)) {
-                $requiredDates[] = "stage_date_{$dateField}";
+        return [];
+    }
+
+    /**
+     * Merge the target stage's own required date (if missing) into both the flat missing-fields
+     * list and the correct missing_by_stage bucket, so the UI groups it under the right stage.
+     */
+    private function ensureStageDateRequired(array &$missingFields, array &$missingByStage, Deal $deal, int $targetStageId, string $dealType): void
+    {
+        $stage = \App\Models\Stage::find($targetStageId);
+        if (!$stage) {
+            return;
+        }
+
+        $requiredDates = $this->getRequiredStageDates($deal, $targetStageId, $dealType);
+        if (empty($requiredDates)) {
+            return;
+        }
+
+        foreach ($requiredDates as $key) {
+            if (!in_array($key, $missingFields, true)) {
+                $missingFields[] = $key;
             }
         }
 
-        return $requiredDates;
+        $foundStageBucket = false;
+        foreach ($missingByStage as &$bucket) {
+            if ((int) ($bucket['stage_id'] ?? 0) === (int) $stage->id) {
+                $bucket['missing_fields'] = array_values(array_unique(array_merge($bucket['missing_fields'] ?? [], $requiredDates)));
+                $foundStageBucket = true;
+                break;
+            }
+        }
+        unset($bucket);
+
+        if (!$foundStageBucket) {
+            $missingByStage[] = [
+                'stage_order' => (int) $stage->order,
+                'stage_id' => $stage->id,
+                'stage_name' => $stage->name,
+                'missing_fields' => $requiredDates,
+            ];
+        }
     }
 
 }

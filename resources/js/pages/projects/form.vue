@@ -1971,12 +1971,13 @@ export default {
 }
 
 :deep(.vs__dropdown-option:hover) {
-    background-color: #f8f9fa !important;
+    background-color: #733E87 !important;
+    color: #fff !important;
 }
 
 :deep(.vs__dropdown-option--highlight) {
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
-    color: white !important;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 :deep(.vs__clear) {

@@ -12,7 +12,7 @@
         <!-- Header -->
         <div class="modal-header-deal p-3">
           <div class="d-flex justify-content-between align-items-start gap-3 w-100">
-            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 gap-md-3 min-w-0 flex-grow-1">
+            <div class="d-flex flex-md-row align-items-start align-items-md-center gap-2 gap-md-3 min-w-0 flex-grow-1">
               <div class="complete-fields-title-wrap min-w-0 flex-grow-1">
                 <span class="modal-title complete-fields-main-title">
                   Complete All The Required Fields To Change Deal Stage
@@ -86,7 +86,7 @@
                       date-only
                       dob-layout
                       :block-future-dates="false"
-                      :placeholder="isStageDateRequired(field.key) ? 'Select date' : 'Optional'"
+                      :placeholder="isStageDateRequired(field.key) ? 'Select date' : 'Choose date'"
                       :invalid="isStageDateRequired(field.key) && !formData[field.key]"
                       class="stage-date-picker"
                       :disabled="!isStageDateEditable(field.key)"
@@ -110,7 +110,7 @@
             </section>
 
             <!-- Buyer Section with Collapsible -->
-            <section v-if="!shouldHideBuyer && (showPartyDetailFields('buyer') || documentTypesByParty.buyer.length > 0)" class="form-section">
+            <section v-if="!isLostReasonOnly && !shouldHideBuyer && (showPartyDetailFields('buyer') || documentTypesByParty.buyer.length > 0)" class="form-section">
            
               <div 
                 class="section-collapsible-header" 
@@ -329,7 +329,7 @@
             </section>
 
             <!-- Seller Section -->
-            <section v-if="!shouldHideSeller && (showPartyDetailFields('seller') || documentTypesByParty.seller.length > 0)" class="form-section">
+            <section v-if="!isLostReasonOnly && !shouldHideSeller && (showPartyDetailFields('seller') || documentTypesByParty.seller.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="getSectionHeaderClass('seller')"
@@ -542,7 +542,7 @@
             </section>
 
             <!-- Tenant Section -->
-            <section v-if="!shouldHideTenant && (showPartyDetailFields('tenant') || documentTypesByParty.tenant.length > 0)" class="form-section">
+            <section v-if="!isLostReasonOnly && !shouldHideTenant && (showPartyDetailFields('tenant') || documentTypesByParty.tenant.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="getSectionHeaderClass('tenant')"
@@ -743,7 +743,7 @@
             </section>
 
             <!-- Landlord Section -->
-            <section v-if="!shouldHideLandlord && (showPartyDetailFields('landlord') || documentTypesByParty.landlord.length > 0)" class="form-section">
+            <section v-if="!isLostReasonOnly && !shouldHideLandlord && (showPartyDetailFields('landlord') || documentTypesByParty.landlord.length > 0)" class="form-section">
               <div 
                 class="section-collapsible-header"
                 :class="getSectionHeaderClass('landlord')"
@@ -956,7 +956,7 @@
             </section>
 
             <!-- Multi Properties Section -->
-            <section v-if="dealProperties.length > 0" class="form-section">
+            <section v-if="!isLostReasonOnly && dealProperties.length > 0" class="form-section">
                 <div 
                     class="section-collapsible-header properties-section"
                     :class="getSectionHeaderClass('properties')"
@@ -1074,12 +1074,27 @@
                                             <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
                                         </template>
                                         <template #option="option">
-                                            <div>
-                                                <strong>{{ option.unit_number || 'No Unit' }}</strong>
-                                                <span class="text-muted ms-2">- {{ option.property_type?.name || 'N/A' }}</span>
-                                                <div class="small text-muted">{{ option.bedrooms_text }} | {{ option.size_sqft || 'N/A' }} sqft</div>
-                                                <div class="small text-success">{{ option.status === 'converted' ? 'Sold' : 'Rented' }}</div>
+                                            <div class="unit-select-option">
+                                                <div class="unit-select-option-top">
+                                                    <span class="unit-select-option-number">{{ option.unit_number || 'No Unit' }}</span>
+                                                    <span class="unit-select-option-status" :class="option.status === 'converted' ? 'is-sold' : 'is-rented'">
+                                                        {{ option.status === 'converted' ? 'Sold' : 'Rented' }}
+                                                    </span>
+                                                </div>
+                                                <div class="unit-select-option-bottom">
+                                                    <span>{{ option.property_type || 'N/A' }}</span>
+                                                    <span class="unit-select-option-dot">&middot;</span>
+                                                    <span>{{ option.bedrooms_text || '—' }}</span>
+                                                    <span class="unit-select-option-dot">&middot;</span>
+                                                    <span>{{ option.size_sqft ? `${option.size_sqft} sqft` : 'N/A' }}</span>
+                                                </div>
                                             </div>
+                                        </template>
+                                        <template #selected-option="option">
+                                            <span class="unit-select-selected">
+                                                <strong>{{ option.unit_number || 'No Unit' }}</strong>
+                                                <span v-if="option.property_type"> — {{ option.property_type.name }}</span>
+                                            </span>
                                         </template>
                                     </v-select>
                                     <div class="small text-muted mt-1" v-if="loadingListingsByProp[propIndex]">
@@ -1195,8 +1210,33 @@
                                     </div>
                                 </div>
                                 
-                             
-                                
+
+                                <!-- Unit Size -->
+                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
+                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size', propIndex)" class="text-danger">*</span></label>
+                                    <b-form-input
+                                        v-model="property.unit_size"
+                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
+                                        type="number"
+                                        placeholder="Size in sq.ft"
+                                        class="custom-input"
+                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_size') }"
+                                        :disabled="isPropertyFieldLocked(property)"
+                                    />
+                                </div>
+                                 <!-- Unit No -->
+                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
+                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no', propIndex)" class="text-danger">*</span></label>
+                                    <b-form-input
+                                    v-model="property.unit_no"
+                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
+                                        placeholder="Enter Unit No"
+                                        class="custom-input"
+                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_no') }"
+                                        :disabled="isPropertyFieldLocked(property)"
+                                    />
+                                </div>
+
                                 <!-- Developer -->
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_id', property)">
                                     <label class="form-label-custom">Developer <span v-if="isPropertyFieldRequired('developer_id', propIndex)" class="text-danger">*</span></label>
@@ -1304,33 +1344,7 @@
                                       </div>
                                     </div>
                                 </div>
-                                          
-                                <!-- Unit Size -->
-                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_size', property)">
-                                    <label class="form-label-custom">Unit Size (sq.ft) <span v-if="isPropertyFieldRequired('unit_size', propIndex)" class="text-danger">*</span></label>
-                                    <b-form-input
-                                        v-model="property.unit_size"
-                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_size', val)"
-                                        type="number"
-                                        placeholder="Size in sq.ft"
-                                        class="custom-input"
-                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_size') }"
-                                        :disabled="isPropertyFieldLocked(property)"
-                                    />
-                                </div>
-                                 <!-- Unit No -->
-                                <div class="col-md-6" v-if="shouldShowPropertyField('unit_no', property)">
-                                    <label class="form-label-custom">Unit No <span v-if="isPropertyFieldRequired('unit_no', propIndex)" class="text-danger">*</span></label>
-                                    <b-form-input
-                                    v-model="property.unit_no"
-                                        @update:modelValue="(val) => updateProperty(propIndex, 'unit_no', val)"
-                                        placeholder="Enter Unit No"
-                                        class="custom-input"
-                                        :class="{ 'is-invalid': isPropertyFieldInvalid(property, 'unit_no') }"
-                                        :disabled="isPropertyFieldLocked(property)"
-                                    />
-                                </div>
-                                
+
                                 <!-- Property Documents (Payment Proof + SPA — same idea as Create Deal / PropertyCard) -->
                                 <!-- Property Documents (Payment Proof + SPA) -->
                                 <div class="col-12 mt-3 property-documents-block">
@@ -1352,7 +1366,7 @@
                                       v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'payment_proof' || t === 'payment')"
                                       class="small text-danger mb-2"
                                     >
-                                      Payment Proof is required for this property. Please add Payment Proof Document.
+                                      Proof of Payment is required for this property. Please add Proof of Payment Document.
                                     </div>
                                     <div
                                       v-if="validationAttempted && getMissingPropertyDocTypesForProperty(propIndex).some(t => t === 'spa' || t === 'spa_document')"
@@ -1368,6 +1382,7 @@
                                         :deal-id="props.deal?.id || props.dealId"
                                         :property-id="property?.id || null"
                                         :document-types="propertyDocTypesForModal"
+                                        :box-label-overrides="titleDeedBoxLabelOverrides"
                                         compact
                                         :show-errors="validationAttempted"
                                         :missing-document-types="getMissingPropertyDocTypesForProperty(propIndex)"
@@ -1648,7 +1663,7 @@ const removeProperty = (propIndex) => {
     loadingListingsByProp.value = {}
     if (showListingPickerForProperty()) {
         localProperties.value.forEach((prop, idx) => {
-            if (prop?.area_id) fetchPropertyListings(idx, prop.area_id)
+            if (prop?.area_id) fetchPropertyListings(idx, prop.area_id, prop.listing_id)
         })
     }
 
@@ -1856,7 +1871,7 @@ const propertyDocumentTypes = computed(() => {
       const docType = key.replace(/property_document_/g, '')
       docTypes.push({
         id: docType,
-        name: docType === 'payment_proof' ? 'Payment Proof' : 'SPA Document',
+        name: docType === 'payment_proof' ? 'Proof of Payment' : 'SPA Document',
         required: true
       })
     }
@@ -2191,7 +2206,11 @@ function getCurrentUserForListings() {
   return currentUser.value
 }
 
-async function fetchPropertyListings(propIndex, areaId) {
+// `keepListingId` (the property's own already-assigned unit) is kept selectable even
+// though it's attached to this deal — otherwise the backend's not_in_deals filter would
+// exclude it as "already used", leaving the Select Unit dropdown showing "No Unit" even
+// though the property's own summary card (fed from stored fields, not this list) is fine.
+async function fetchPropertyListings(propIndex, areaId, keepListingId = null) {
   const dt = normalizedDealType.value
   if (dt !== 'secondary' && dt !== 'rental') return
   if (!areaId) {
@@ -2203,7 +2222,7 @@ async function fetchPropertyListings(propIndex, areaId) {
 
   loadingListingsByProp.value = { ...loadingListingsByProp.value, [propIndex]: true }
   try {
-    const params = buildListingFilterParams({ dealType: dt, areaId, user })
+    const params = buildListingFilterParams({ dealType: dt, areaId, user, currentListingId: keepListingId })
     const response = await api.get('/listings/properties', { params })
     const listings = response.data?.data || []
     const mapped = listings.map((listing) => ({
@@ -2219,7 +2238,7 @@ async function fetchPropertyListings(propIndex, areaId) {
       size_sqft: listing.size_sqft,
       developer_id: listing.developer_id,
       status: listing.status,
-      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'}`,
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type || 'Property'}`,
     }))
     availableListingsByProp.value = { ...availableListingsByProp.value, [propIndex]: mapped }
   } catch (error) {
@@ -2551,22 +2570,21 @@ async function fetchDevelopers() {
   }
 }
 
+function extractAreasList(responseData) {
+  if (responseData?.data?.data) return responseData.data.data
+  if (responseData?.data && Array.isArray(responseData.data)) return responseData.data
+  if (Array.isArray(responseData)) return responseData
+  return []
+}
+
+// The areas table has thousands of rows — fetching them all made this dropdown render
+// (and scroll) thousands of DOM nodes at once. Load a small default page instead; typing
+// hits the (now server-filtered) search below, and ensureAreasIncludeSelected() below
+// guarantees each property's already-picked address is still present even off this page.
 async function fetchAllAreas() {
   try {
-    const response = await api.get('/listings/areas')
-    const responseData = response.data
-    let areasData = []
-    
-    if (responseData?.data?.data) {
-      areasData = responseData.data.data
-    } else if (responseData?.data && Array.isArray(responseData.data)) {
-      areasData = responseData.data
-    } else if (Array.isArray(responseData)) {
-      areasData = responseData
-    } else {
-      areasData = []
-    }
-    areas.value = areasData
+    const response = await api.get('/listings/areas', { params: { limit: 50 } })
+    areas.value = extractAreasList(response.data)
     areasLoaded.value = true
   } catch (error) {
     console.error('Error loading areas:', error)
@@ -2575,16 +2593,43 @@ async function fetchAllAreas() {
 }
 async function fetchAreas(search = '') {
   try {
-    const response = await api.get('/listings/areas', { params: { search } })
-    const responseData = response.data
-    areas.value = responseData?.data || responseData || []
+    // `limit` as a fallback cap for when search is cleared back to '' (backend only
+    // applies its own 50-cap while a search term is present).
+    const response = await api.get('/listings/areas', { params: { search, limit: 50 } })
+    areas.value = extractAreasList(response.data)
   } catch (error) {
     console.error('Error fetching areas:', error)
   }
 }
 
+// Guarantees the Property Address dropdown can render a label for each property's already
+// -selected area even though the default list is now capped — otherwise, exactly like the
+// old Select-Unit bug, a pre-picked value not present in :options renders blank/"No Unit"-style.
+async function ensureAreasIncludeSelected(propertiesList) {
+  const knownIds = new Set((areas.value || []).map((a) => a.id))
+  const missingIds = Array.from(
+    new Set(
+      (propertiesList || [])
+        .map((p) => p?.area_id)
+        .filter((id) => id != null && !knownIds.has(id))
+    )
+  )
+  if (!missingIds.length) return
+  try {
+    const response = await api.get('/listings/areas', { params: { ids: missingIds.join(',') } })
+    const fetched = extractAreasList(response.data)
+    if (fetched.length) {
+      areas.value = [...areas.value, ...fetched]
+    }
+  } catch (error) {
+    console.error('Error hydrating selected areas:', error)
+  }
+}
+
+let areasSearchTimer = null
 function onSearchAreas(search) {
-  fetchAreas(search)
+  if (areasSearchTimer) clearTimeout(areasSearchTimer)
+  areasSearchTimer = setTimeout(() => fetchAreas(search), 300)
 }
 // Update property documents - دالة محدثة
 const missingPropertyDocumentTypesPerProperty = ref({})
@@ -2619,6 +2664,10 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
     if (key === `property_${propIndex}_document_noc` || (propIndex === 0 && key === 'property_0_document_noc')) {
       missing.add('noc')
     }
+    // Title Deed
+    if (key === `property_${propIndex}_document_title_deed` || (propIndex === 0 && key === 'property_0_document_title_deed')) {
+      missing.add('title_deed')
+    }
   })
 
   const prop = localProperties.value[propIndex]
@@ -2629,6 +2678,7 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
     if (propertyStoredDocArrayHasContent(prop.payment_proof)) missing.delete('payment_proof')
     if (propertyStoredDocArrayHasContent(prop.mou_documents)) missing.delete('mou')
     if (propertyStoredDocArrayHasContent(prop.noc_documents)) missing.delete('noc')
+    if (propertyStoredDocArrayHasContent(prop.title_deed_documents)) missing.delete('title_deed')
   }
   
   return Array.from(missing)
@@ -2681,6 +2731,12 @@ const updatePropertyDocuments = async  (propIndex, newDocuments) => {
             (doc.original_name && doc.original_name.toLowerCase().includes('noc'))
         )
 
+        const titleDeedDocs = newDocuments.filter(doc =>
+            doc.document_type === 'title_deed' ||
+            doc.document_type === 'title_deed_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('title_deed'))
+        )
+
         // تحديث المصفوفات
         localProperties.value[propIndex].eoi_documents = eoiDocs
         localProperties.value[propIndex].booking_documents = bookingDocs
@@ -2688,6 +2744,7 @@ const updatePropertyDocuments = async  (propIndex, newDocuments) => {
         localProperties.value[propIndex].spa_document = spaDocs
         localProperties.value[propIndex].mou_documents = mouDocs
         localProperties.value[propIndex].noc_documents = nocDocs
+        localProperties.value[propIndex].title_deed_documents = titleDeedDocs
         
         console.log('Updated localProperties:', {
             eoi_documents: localProperties.value[propIndex].eoi_documents?.length,
@@ -2740,7 +2797,7 @@ const onPropertyAreaSelected = (areaId, propIndex) => {
     // Secondary / rental: fetch the sold (or rented) units for this area so the user
     // can pick one in the Select Unit dropdown below.
     if (showListingPickerForProperty()) {
-        fetchPropertyListings(propIndex, areaId)
+        fetchPropertyListings(propIndex, areaId, property.listing_id)
     }
 }
 
@@ -2778,6 +2835,10 @@ function reinitializePropertyDocuments() {
         const nocFromPropertyDocs = propertyDocs.filter((d) => {
           const t = String(d?.document_type || d?.type || '').toLowerCase()
           return t === 'noc' || t.includes('noc')
+        })
+        const titleDeedFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t === 'title_deed' || t.includes('title_deed')
         })
 
         const paymentProof = normalizeStoredDocs(
@@ -2820,7 +2881,14 @@ function reinitializePropertyDocuments() {
           property.noc_documents_raw ||
           nocFromPropertyDocs
         )
-        
+        const titleDeedDocument = normalizeStoredDocs(
+          property.title_deed_documents ||
+          property.title_deed_document ||
+          property.title_deed ||
+          property.title_deed_documents_raw ||
+          titleDeedFromPropertyDocs
+        )
+
         let docs = []
         
         // معالجة payment_proof
@@ -2831,7 +2899,7 @@ function reinitializePropertyDocuments() {
                     document_type: 'payment_proof',
                     url: doc.url || doc.path || null,
                     file: doc.file || null,
-                    name: doc.original_name || doc.name || 'Payment Proof',
+                    name: doc.original_name || doc.name || 'Proof of Payment',
                     uploaded: true,
                     existing: true
                 })
@@ -2909,6 +2977,20 @@ function reinitializePropertyDocuments() {
             })
         }
 
+        if (Array.isArray(titleDeedDocument)) {
+            titleDeedDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'title_deed',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'Title Deed',
+                    uploaded: true,
+                    existing: true,
+                })
+            })
+        }
+
         newPropertyDocumentsCombined[idx] = docs
     })
     
@@ -2965,9 +3047,17 @@ const stageDateFields = computed(() => {
       // { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
     ];
     
-    // ✅ فقط التواريخ التي تم الوصول إلى مراحلها (order <= currentOrder)
-    allFields.push(...fields.filter(f => f.order <= currentOrder));
-    
+    // EOI is own-stage-only (hidden once past the EOI stage). Booking/SPA dates stay visible
+    // from their own stage through later stages (Won can still show/edit them) — they're just
+    // only REQUIRED at their own stage (enforced separately via isStageDateRequired below).
+    // Nothing shows on the Lost stage (order 6) regardless.
+    const isLostOrBeyond = currentOrder >= 6
+    allFields.push(...fields.filter(f => {
+      if (isLostOrBeyond) return false
+      if (f.key === 'eoi_date') return f.order === currentOrder
+      return f.order <= currentOrder
+    }));
+
   } else if (dealType === 'secondary') {
     const fields = [
       { key: 'security_deposit_date', label: 'Security Deposit Date', stage: 'security', order: 2 },
@@ -2975,9 +3065,9 @@ const stageDateFields = computed(() => {
       { key: 'noc_date', label: 'NOC Date', stage: 'noc', order: 4 },
       // { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
     ];
-    
-    allFields.push(...fields.filter(f => f.order <= currentOrder));
-    
+
+    allFields.push(...fields.filter(f => f.order === currentOrder));
+
   } else if (dealType === 'rental') {
     const fields = [
       { key: 'application_date', label: 'Application Date', stage: 'application', order: 2 },
@@ -2985,8 +3075,8 @@ const stageDateFields = computed(() => {
       { key: 'ejari_date', label: 'Ejari Date', stage: 'ejari', order: 4 },
       // { key: 'won_date', label: 'Won Date', stage: 'won', order: 5 }
     ];
-    
-    allFields.push(...fields.filter(f => f.order <= currentOrder));
+
+    allFields.push(...fields.filter(f => f.order === currentOrder));
   }
   
   return allFields;
@@ -3213,6 +3303,7 @@ async function initializeForm() {
 
     if (localProperties.value.length > 0) {
       formData.value.properties = [...localProperties.value]
+      await ensureAreasIncludeSelected(localProperties.value)
     }
 
     // Initialize property documents
@@ -3225,7 +3316,7 @@ if (localProperties.value.length > 0) {
     if (showListingPickerForProperty()) {
         localProperties.value.forEach((prop, idx) => {
             if (prop?.area_id) {
-                fetchPropertyListings(idx, prop.area_id)
+                fetchPropertyListings(idx, prop.area_id, prop.listing_id)
             }
         })
     }
@@ -3316,6 +3407,14 @@ watch(
   { deep: true }
 )
 // Computed for document types
+// Party (buyer/seller/tenant/landlord) document display name — matches the naming already
+// used for property documents (DocumentUpload.vue) instead of a generic Title Case of the
+// raw key, which turned payment_proof into "Payment Proof" rather than "Proof of Payment".
+function humanizePartyDocName(docType) {
+  if (docType === 'payment_proof' || docType === 'payment') return 'Proof of Payment'
+  return docType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+}
+
 // Document types by party with deal type filtering
 const documentTypesByParty = computed(() => {
   const result = { buyer: [], seller: [], tenant: [], landlord: [] }
@@ -3326,7 +3425,7 @@ const documentTypesByParty = computed(() => {
       if (result[partyType] && !result[partyType].some((d) => d.id === docType)) {
         result[partyType].push({
           id: docType,
-          name: docType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+          name: humanizePartyDocName(docType),
           required: true,
         })
       }
@@ -3338,7 +3437,7 @@ const documentTypesByParty = computed(() => {
 
   // ✅ Security Deposit appears for buyer + seller in SECONDARY deals from stage 2 (Security Deposit) onwards,
   // even if the backend hasn't surfaced it via missing_fields and even if `targetStageOrder` is missing.
-  // OPTIONAL — shown in UI but not required (does not block submission).
+  // Seller's is always OPTIONAL. Buyer's becomes REQUIRED starting at the MOU stage (order 3).
   if (normalizedDealType.value === 'secondary') {
     const targetOrder = Number(props.targetStageOrder) || 0
     const targetStageName = String(props.targetStageName || '').toLowerCase()
@@ -3350,18 +3449,18 @@ const documentTypesByParty = computed(() => {
       targetStageName.includes('noc') ||
       targetStageName.includes('won') ||
       targetStageName.includes('spa')
+    const isMouOrLater = targetOrder >= 3 || targetStageName.includes('mou') || targetStageName.includes('noc') || targetStageName.includes('won')
 
     if (shouldShowSecurityDeposit) {
-      ['buyer', 'seller'].forEach((party) => {
+      [{ party: 'buyer', required: isMouOrLater }, { party: 'seller', required: false }].forEach(({ party, required }) => {
         const existing = result[party].find((d) => d.id === 'security_deposit')
         if (existing) {
-          // Force-optional even if a residency/missing-key path inserted it as required earlier.
-          existing.required = false
+          existing.required = required
         } else {
           result[party].push({
             id: 'security_deposit',
             name: 'Security Deposit',
-            required: false,
+            required,
           })
         }
       })
@@ -3381,7 +3480,7 @@ const documentTypesByParty = computed(() => {
       if (!result[party].some(doc => doc.id === docType)) {
         result[party].push({
           id: docType,
-          name: docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          name: humanizePartyDocName(docType),
           required: residencyProofDocumentRequired(party, docType),
         })
       }
@@ -3403,7 +3502,7 @@ const documentTypesByParty = computed(() => {
       if (!hasFile) return
       result[party].push({
         id,
-        name: id.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        name: humanizePartyDocName(id),
         required: false,
       })
       seen.add(id)
@@ -3569,14 +3668,13 @@ function shouldShowPropertyField(fieldName, property) {
 
   // Secondary deals: the listing supplies the unit's attributes (unit no, type, size,
   // bedrooms, developer). Those are hidden and shown read-only via the listing summary
-  // card. Purchase price and the developer-sales-person contact stay editable since they
-  // are deal-specific and not carried by the listing.
+  // card. Purchase price stays editable since it's deal-specific and not carried by the
+  // listing. Developer/sales-person fields are not part of secondary deals at all.
   if (dt === 'secondary') {
     if (fieldName === 'area_id') return true
     if (fieldName === 'purchase_price') return true
-    if (fieldName === 'developer_name' || fieldName === 'developer_phone') return true
     if ([
-      'unit_no', 'property_type_id', 'bedrooms', 'unit_size', 'developer_id',
+      'unit_no', 'property_type_id', 'bedrooms', 'unit_size', 'developer_id', 'developer_name', 'developer_phone',
     ].includes(fieldName)) return false
   }
 
@@ -3599,7 +3697,10 @@ function shouldShowPropertyField(fieldName, property) {
     case 'developer_id':
     case 'developer_name':
     case 'developer_phone':
-      if (isNewProperty && (dt === 'primary' || dt === 'secondary')) return true
+      // Developer / sales-person fields are primary-only (off-plan). Secondary and rental
+      // deals never show them, regardless of any previously saved value.
+      if (dt === 'secondary' || dt === 'rental') return false
+      if (isNewProperty && dt === 'primary') return true
       return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || !!property?.developer_name || !!property?.developer_phone || !!property?.developer_id
 
     case 'rental_price':
@@ -3609,6 +3710,15 @@ function shouldShowPropertyField(fieldName, property) {
       if (dt !== 'primary' && dt !== 'secondary') return false
       if (targetOrder >= 3) return true
       return showPurchasePrice.value
+
+    case 'budget_from':
+    case 'budget_to':
+      // Budget only makes sense while still shopping for the unit — shown only at the
+      // EOI stage (primary) so it doesn't linger once purchase price takes over.
+      if (dt === 'primary') {
+        return targetOrder === 2 || String(props.targetStageName || '').toLowerCase().includes('eoi')
+      }
+      return isPropertyFieldRequired(fieldName) || !!property?.[fieldName]
 
     default:
       return isPropertyFieldRequired(fieldName)
@@ -3638,8 +3748,9 @@ const PROPERTY_MODAL_DOC_SPECS = [
   { id: 'booking', name: 'Booking Form', missingFragments: ['document_booking', 'booking_document'], localKey: 'booking_documents' },
   { id: 'noc', name: 'NOC Document', missingFragments: ['document_noc', 'noc_document'], localKey: 'noc_documents' },
   { id: 'mou', name: 'MOU Document', missingFragments: ['document_mou', 'mou_document'], localKey: 'mou_documents' },
+  { id: 'title_deed', name: 'Title Deed', missingFragments: ['document_title_deed', 'title_deed_document'], localKey: 'title_deed_documents' },
   { id: 'spa', name: 'SPA Document', missingFragments: ['document_spa', 'spa_document'], localKey: 'spa_document' },
-  { id: 'payment_proof', name: 'Payment Proof', missingFragments: ['document_payment', 'payment_proof'], localKey: 'payment_proof' },
+  { id: 'payment_proof', name: 'Proof of Payment', missingFragments: ['document_payment', 'payment_proof'], localKey: 'payment_proof' },
 ]
 
 /**
@@ -3650,9 +3761,22 @@ const PROPERTY_MODAL_DOC_SPECS = [
  */
 function alwaysVisibleDocIdsForSecondary() {
   const dt = normalizedDealType.value
-  if (dt !== 'secondary') return new Set()
   const targetOrder = Number(props.targetStageOrder) || 0
   const targetStageName = String(props.targetStageName || '').toLowerCase()
+
+  if (dt === 'primary') {
+    // Booking Form is required only at the Booking stage itself, but stays visible (optional)
+    // at SPA/Won too so an already-uploaded form is still viewable/editable. EOI intentionally
+    // stays hidden past its own stage (not included here).
+    const isAtOrAfterBooking =
+      targetOrder >= 3 ||
+      targetStageName.includes('booking') ||
+      targetStageName.includes('spa') ||
+      targetStageName.includes('won')
+    return isAtOrAfterBooking ? new Set(['booking']) : new Set()
+  }
+
+  if (dt !== 'secondary') return new Set()
 
   // Stages where MOU should still appear (MOU + all later stages).
   const isAtOrAfterMou =
@@ -3676,6 +3800,7 @@ function alwaysVisibleDocIdsForSecondary() {
 
   const ids = new Set(['payment_proof'])
   if (isAtOrAfterMou) ids.add('mou')
+  if (isAtOrAfterMou) ids.add('title_deed')
   if (isAtOrAfterNoc) ids.add('noc')
   if (isAtOrAfterSpa) ids.add('spa')
   return ids
@@ -3707,6 +3832,19 @@ const propertyDocTypesForModal = computed(() => {
 const isPropertyDocumentsSectionRequired = computed(() =>
   propertyDocTypesForModal.value.some((d) => d.required)
 )
+
+// At the Won stage, Title Deed shows as two fixed boxes over the same title_deed_documents
+// array: box 1 = whatever was uploaded at MOU stage ("Old Title Deed"), box 2 = the new one
+// required to reach Won ("New Title Deed"). Before Won it's just a plain single "Title Deed" box.
+const titleDeedBoxLabelOverrides = computed(() => {
+  const dt = normalizedDealType.value
+  if (dt !== 'secondary' && dt !== 'rental') return {}
+  const targetOrder = Number(props.targetStageOrder) || 0
+  const targetStageName = String(props.targetStageName || '').toLowerCase()
+  const isWonStage = targetOrder === 5 || targetStageName.includes('won')
+  if (!isWonStage) return {}
+  return { title_deed: ['Old Title Deed', 'New Title Deed'] }
+})
 
 function hasPartyFields(partyType) {
   const missingKeys = effectiveMissingFields.value || []
@@ -3984,7 +4122,7 @@ const unresolvedMissingKeys = computed(() => {
     }
 if (key.startsWith('property_document_')) {
   const rawDocType = key.replace('property_document_', '')
-  
+
   let normalizedDocType = rawDocType
   if (rawDocType === 'spa') {
     normalizedDocType = 'spa_document'
@@ -4000,31 +4138,37 @@ if (key.startsWith('property_document_')) {
     normalizedDocType = 'noc_document'
   }
 
-  // ✅ التحقق من المستندات في localProperties
-  let hasPropertyDoc = false
+  // Title Deed at Won stage (secondary/rental) needs BOTH the Old and New slots filled —
+  // mirrors DealStageValidator.php's requiredTitleDeedCount (2 docs at Won, else 1). This
+  // is the key format the backend actually sends for title_deed (property_document_title_deed,
+  // no property index), so this is the branch that must apply the 2-doc rule.
+  const requiredDocCount =
+    rawDocType === 'title_deed' && titleDeedBoxLabelOverrides.value.title_deed
+      ? titleDeedBoxLabelOverrides.value.title_deed.length
+      : 1
 
+  const matchesDocType = (docType) =>
+    docType === normalizedDocType ||
+    docType === rawDocType ||
+    docType === normalizedDocType.replace('_document', '') ||
+    (rawDocType === 'booking' && (docType === 'booking' || docType === 'booking_document')) ||
+    (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')) ||
+    (rawDocType === 'mou' && (docType === 'mou' || docType === 'mou_document')) ||
+    (rawDocType === 'noc' && (docType === 'noc' || docType === 'noc_document'))
+
+  // ✅ التحقق من المستندات في localProperties
   // التحقق من propertyDocumentsCombined (المستندات الجديدة)
-  hasPropertyDoc = localProperties.value.some((property, propIndex) => {
+  let hasPropertyDoc = localProperties.value.some((property, propIndex) => {
     const docs = propertyDocumentsCombined.value?.[propIndex] || []
-    if (Array.isArray(docs) && docs.some(doc => {
+    if (!Array.isArray(docs)) return false
+    const matchingCount = docs.filter((doc) => {
       const docType = doc?.document_type || ''
-      // ✅ مقارنة مع normalizedDocType و rawDocType
       const hasFileOrUrl = !!(doc?.file || doc?.url)
-      return hasFileOrUrl && (
-        docType === normalizedDocType ||
-        docType === rawDocType ||
-        docType === normalizedDocType.replace('_document', '') ||
-        (rawDocType === 'booking' && (docType === 'booking' || docType === 'booking_document')) ||
-        (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')) ||
-        (rawDocType === 'mou' && (docType === 'mou' || docType === 'mou_document')) ||
-        (rawDocType === 'noc' && (docType === 'noc' || docType === 'noc_document'))
-      )
-    })) {
-      return true
-    }
-    return false
+      return hasFileOrUrl && matchesDocType(docType)
+    }).length
+    return matchingCount >= requiredDocCount
   })
-  
+
   // ✅ التحقق من المستندات الموجودة في property نفسها
   if (!hasPropertyDoc) {
     hasPropertyDoc = localProperties.value.some((property) => {
@@ -4042,31 +4186,34 @@ if (key.startsWith('property_document_')) {
         existingDocs = property.spa_document
       } else if (normalizedDocType === 'payment_proof' || rawDocType === 'payment') {
         existingDocs = property.payment_proof
+      } else if (rawDocType === 'title_deed') {
+        existingDocs = property.title_deed_documents
       }
-      
-      if (existingDocs) {
-        let existingDocsArray = existingDocs
-        if (typeof existingDocsArray === 'string') {
-          try {
-            existingDocsArray = JSON.parse(existingDocsArray)
-          } catch(e) {
-            existingDocsArray = []
-          }
+
+      if (!existingDocs) return false
+
+      let existingDocsArray = existingDocs
+      if (typeof existingDocsArray === 'string') {
+        try {
+          existingDocsArray = JSON.parse(existingDocsArray)
+        } catch(e) {
+          existingDocsArray = []
         }
-        if (Array.isArray(existingDocsArray) && existingDocsArray.some(doc => 
+      }
+      if (Array.isArray(existingDocsArray)) {
+        const existingCount = existingDocsArray.filter((doc) =>
           !!(doc?.file || doc?.url || doc?.path || doc?.original_name)
-        )) {
-          return true
-        }
-        if (existingDocsArray && typeof existingDocsArray === 'object' && 
-            !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path)) {
-          return true
-        }
+        ).length
+        return existingCount >= requiredDocCount
+      }
+      if (existingDocsArray && typeof existingDocsArray === 'object' &&
+          !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path)) {
+        return requiredDocCount <= 1
       }
       return false
     })
   }
-  
+
   if (!hasPropertyDoc && !unresolved.includes(key)) {
     unresolved.push(key)
   }
@@ -4090,28 +4237,34 @@ if (key.startsWith('property_document_')) {
         normalizedDocType = 'eoi_document'
       }
 
-      let hasPropertyDoc = false
+      // Title Deed at Won stage (secondary/rental) shows two fixed slots — Old + New —
+      // and BOTH must be filled. A single uploaded file (just "Old") must not resolve
+      // this key, so require as many matching docs as there are fixed slots.
+      const requiredDocCount =
+        rawDocType === 'title_deed' && titleDeedBoxLabelOverrides.value.title_deed
+          ? titleDeedBoxLabelOverrides.value.title_deed.length
+          : 1
+
+      const matchesDocType = (docType) =>
+        docType === normalizedDocType ||
+        docType === rawDocType ||
+        docType === normalizedDocType.replace('_document', '') ||
+        (rawDocType === 'booking' && (docType === 'booking' || docType === 'booking_document')) ||
+        (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')) ||
+        (rawDocType === 'mou' && (docType === 'mou' || docType === 'mou_document')) ||
+        (rawDocType === 'noc' && (docType === 'noc' || docType === 'noc_document'))
+
+      let matchingDocCount = 0
       const combinedDocs = propertyDocumentsCombined.value?.[propIndex] || []
-      if (
-        Array.isArray(combinedDocs) &&
-        combinedDocs.some((doc) => {
+      if (Array.isArray(combinedDocs)) {
+        matchingDocCount = combinedDocs.filter((doc) => {
           const docType = doc?.document_type || ''
           const hasFileOrUrl = !!(doc?.file || doc?.url)
-          return (
-            hasFileOrUrl &&
-            (docType === normalizedDocType ||
-              docType === rawDocType ||
-              docType === normalizedDocType.replace('_document', '') ||
-              (rawDocType === 'booking' &&
-                (docType === 'booking' || docType === 'booking_document')) ||
-              (rawDocType === 'eoi' && (docType === 'eoi' || docType === 'eoi_document')) ||
-              (rawDocType === 'mou' && (docType === 'mou' || docType === 'mou_document')) ||
-              (rawDocType === 'noc' && (docType === 'noc' || docType === 'noc_document')))
-          )
-        })
-      ) {
-        hasPropertyDoc = true
+          return hasFileOrUrl && matchesDocType(docType)
+        }).length
       }
+
+      let hasPropertyDoc = matchingDocCount >= requiredDocCount
 
       if (!hasPropertyDoc && localProperties.value[propIndex]) {
         const property = localProperties.value[propIndex]
@@ -4128,6 +4281,8 @@ if (key.startsWith('property_document_')) {
           rawDocType === 'payment_proof'
         ) {
           existingDocs = property.payment_proof
+        } else if (rawDocType === 'title_deed') {
+          existingDocs = property.title_deed_documents
         }
 
         if (existingDocs) {
@@ -4139,19 +4294,18 @@ if (key.startsWith('property_document_')) {
               existingDocsArray = []
             }
           }
-          if (
-            Array.isArray(existingDocsArray) &&
-            existingDocsArray.some(
+          if (Array.isArray(existingDocsArray)) {
+            const existingCount = existingDocsArray.filter(
               (doc) => !!(doc?.file || doc?.url || doc?.path || doc?.original_name),
-            )
-          ) {
-            hasPropertyDoc = true
-          }
-          if (
+            ).length
+            if (Math.max(matchingDocCount, existingCount) >= requiredDocCount) {
+              hasPropertyDoc = true
+            }
+          } else if (
             existingDocsArray &&
             typeof existingDocsArray === 'object' &&
-            !Array.isArray(existingDocsArray) &&
-            !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path)
+            !!(existingDocsArray.file || existingDocsArray.url || existingDocsArray.path) &&
+            requiredDocCount <= 1
           ) {
             hasPropertyDoc = true
           }
@@ -4529,6 +4683,16 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         })
       }
 
+      // جمع الملفات الجديدة من title_deed_documents
+      const titleDeedFiles = []
+      if (prop.title_deed_documents && Array.isArray(prop.title_deed_documents)) {
+        prop.title_deed_documents.forEach(doc => {
+          if (isPendingUploadFile(doc.file)) {
+            titleDeedFiles.push(doc.file)
+          }
+        })
+      }
+
       return {
         sort_order: index,
         unit_no: prop.unit_no || '',
@@ -4558,6 +4722,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         noc_documents: [...persistedPropertyDocMetadataList(prop.noc_documents), ...nocFiles.map((f) => ({ file: f }))],
         payment_proof: [...persistedPropertyDocMetadataList(prop.payment_proof), ...paymentFiles.map((f) => ({ file: f }))],
         spa_document: [...persistedPropertyDocMetadataList(prop.spa_document), ...spaFiles.map((f) => ({ file: f }))],
+        title_deed_documents: [...persistedPropertyDocMetadataList(prop.title_deed_documents), ...titleDeedFiles.map((f) => ({ file: f }))],
       }
     })
   }
@@ -4570,7 +4735,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
   }, 0)
   if (payload.properties && Array.isArray(payload.properties)) {
     payload.properties.forEach((prop) => {
-      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents'].forEach((k) => {
+      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents'].forEach((k) => {
         const arr = prop[k]
         if (!Array.isArray(arr)) return
         arr.forEach((item) => {
@@ -5124,7 +5289,12 @@ watch(shouldHideLandlord, (hide) => {
 // Compact modal
 const isCompactStageModal = computed(() => false)
 const isDealWonStage = computed(() => false)
-const isLostReasonOnly = computed(() => false)
+// Deal Lost only ever needs the lost-reason textarea — buyer/seller/tenant/landlord and
+// property sections have nothing to do with why a deal was lost and shouldn't render at all.
+const isLostReasonOnly = computed(() => {
+  const name = String(props.targetStageName || '').toLowerCase()
+  return name.includes('lost')
+})
 
 watch([propertyTypesLoaded, developersLoaded, areasLoaded], () => {
   if (propertyTypesLoaded.value && developersLoaded.value && areasLoaded.value) {
@@ -5190,8 +5360,8 @@ onMounted(async () => {
 .complete-fields-modal {
   background: #ffffff;
   border-radius: 20px;
-  width: min(760px, 94vw);
-  max-width: 94vw;
+  width: min(760px, 96vw);
+  max-width: 96vw;
   max-height: 90vh;
   /*overflow-y: auto;*/
   display: flex;
@@ -5230,7 +5400,7 @@ onMounted(async () => {
 .close-btn {
   position: absolute;
   top: 12px;
-  right: 14px;
+  right: -20px;
   width: 34px;
   height: 34px;
   color: #64748b;
@@ -5364,6 +5534,33 @@ onMounted(async () => {
   color: #9ca3af;
 }
 
+.lost-reason-textarea {
+  width: 100%;
+  min-height: 96px;
+  border-radius: 8px !important;
+  border: 1px solid #E2E8F0 !important;
+  font-size: 12px !important;
+  font-family: inherit;
+  color: #0f172a;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.lost-reason-textarea::placeholder {
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.lost-reason-textarea:focus {
+  border-color: #733E87 !important;
+  box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.16) !important;
+  outline: none;
+}
+
+.lost-reason-textarea.is-invalid {
+  border-color: #dc3545 !important;
+}
+
 /* Smaller placeholders across this modal (inputs + selects + phone input) */
 .complete-fields-modal ::placeholder {
   font-size: 9px !important;
@@ -5454,6 +5651,80 @@ textarea.is-invalid {
   min-height: 40px !important;
   height: 40px !important;
   font-size: 12px;
+}
+
+/* Highlighted (hover/keyboard-focused) option — matches the purple used across the app's
+   other v-selects. Without this the row still highlighted (inherited from elsewhere) but
+   its own dark/muted text (.text-muted, .unit-select-option-*) stayed gray-on-purple and
+   was unreadable, since those classes set their own color and win over an inherited one. */
+:deep(.custom-v-select .vs__dropdown-option--highlight) {
+  background: #733E87 !important;
+  color: #fff !important;
+}
+:deep(.custom-v-select .vs__dropdown-option--highlight .text-muted),
+:deep(.custom-v-select .vs__dropdown-option--highlight .small),
+:deep(.custom-v-select .vs__dropdown-option--highlight iconify-icon),
+:deep(.custom-v-select .vs__dropdown-option--highlight .unit-select-option-number),
+:deep(.custom-v-select .vs__dropdown-option--highlight .unit-select-option-bottom),
+:deep(.custom-v-select .vs__dropdown-option--highlight .unit-select-option-dot) {
+  color: #fff !important;
+}
+
+.unit-select-option {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 2px;
+}
+
+.unit-select-option-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.unit-select-option-number {
+  font-weight: 600;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.unit-select-option-status {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.unit-select-option-status.is-sold {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.unit-select-option-status.is-rented {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.unit-select-option-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.unit-select-option-dot {
+  color: #cbd5e1;
+}
+
+.unit-select-selected {
+  font-size: 12px;
+  color: #0f172a;
 }
 
 :deep(.custom-v-select.is-invalid .vs__dropdown-toggle) {
@@ -5583,10 +5854,36 @@ textarea.is-invalid {
   font-size: 11px;
 }
 
+.input-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+}
+
+.input-group .custom-input,
+.input-group input.form-control {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
 .input-group-text {
   background: #f8fafc;
   border: 1px solid #E2E8F0;
+  border-left: none;
   font-size: 12px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 .alert-warning {
@@ -5838,5 +6135,10 @@ textarea.is-invalid {
     grid-template-columns: 1fr;
     gap: 10px;
   }
+}
+.text-muted{
+      flex-direction: row;
+    display: flex;
+    align-items: center;
 }
 </style>

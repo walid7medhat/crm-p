@@ -472,13 +472,13 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-    color: #000000 !important;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: transparent;
-    color: #000000;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 /* Meta Ads Select Specific Styling */
@@ -515,14 +515,14 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 :deep(.meta-ads-select .vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-    color: #000000 !important;
+    background: #733E87 !important;
+    color: #fff !important;
     font-weight: 400;
 }
 
 :deep(.meta-ads-select .vs__dropdown-option--selected) {
-    background: transparent !important;
-    color: #000000;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 /* Remove border and special styles from last option in Meta Ads select */

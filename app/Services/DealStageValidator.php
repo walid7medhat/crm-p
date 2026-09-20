@@ -211,6 +211,16 @@ class DealStageValidator
                             $hasDoc = true;
                             break;
                         }
+                        if ($docType === 'title_deed') {
+                            // At Won stage two title deeds are required (the old one from MOU
+                            // stage plus a new one); before Won, just one is enough.
+                            $titleDeedDocs = is_array($property->title_deed_documents) ? $property->title_deed_documents : [];
+                            $requiredTitleDeedCount = ((int) $order === 5) ? 2 : 1;
+                            if (count($titleDeedDocs) >= $requiredTitleDeedCount) {
+                                $hasDoc = true;
+                                break;
+                            }
+                        }
                     }
                     if (!$hasDoc) {
                         $key = "property_document_{$docType}";
@@ -277,7 +287,7 @@ class DealStageValidator
                 $section = 'Upload Property Documents';
                 $bySection[$section][] = [
                     'key' => $key,
-                    'label' => 'Property ' . ucfirst(str_replace('_', ' ', $docType)),
+                    'label' => $this->propertyDocumentLabel($docType),
                     'type' => 'file'
                 ];
             }
@@ -346,6 +356,28 @@ class DealStageValidator
     protected function humanizeFieldKey(string $key): string
     {
         return ucwords(str_replace('_', ' ', $key));
+    }
+
+    /** Matches the doc-type names already used across the deal UI (DocumentUpload.vue,
+     *  PROPERTY_MODAL_DOC_SPECS) instead of a generic "Property " + ucfirst(type), which
+     *  read as e.g. "Property Payment proof" for secondary/rental missing-field labels. */
+    protected function propertyDocumentLabel(string $docType): string
+    {
+        $labels = [
+            'payment_proof' => 'Proof of Payment',
+            'payment' => 'Proof of Payment',
+            'spa' => 'SPA Document',
+            'spa_document' => 'SPA Document',
+            'mou' => 'MOU Document',
+            'noc' => 'NOC Document',
+            'eoi' => 'EOI Document',
+            'booking' => 'Booking Form',
+            'title_deed' => 'Title Deed',
+            'contract' => 'Contract',
+            'ejari' => 'Ejari',
+        ];
+
+        return $labels[$docType] ?? 'Property ' . ucfirst(str_replace('_', ' ', $docType));
     }
 
     protected function getFieldMeta(): array

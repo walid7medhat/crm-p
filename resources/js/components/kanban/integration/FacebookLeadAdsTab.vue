@@ -549,8 +549,8 @@ watch(localMappings, (newVal) => {
 }
 
 :deep(.custom-select .vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-    color: #1E293B !important;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 :deep(.custom-select .vs__open-indicator) {
@@ -962,13 +962,13 @@ watch(localMappings, (newVal) => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #F8FAFC !important;
-    color: #000000 !important;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: transparent;
-    color: #000000;
+    background: #733E87 !important;
+    color: #fff !important;
 }
 
 </style>

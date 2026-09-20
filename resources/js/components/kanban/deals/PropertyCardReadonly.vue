@@ -89,19 +89,19 @@
             </p>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="props.dealType === 'primary'">
           <div class="info-group">
             <label class="info-label">Developer Name</label>
             <p class="info-value mb-0">{{ getDeveloperName(property.developer_id) || property.developer_name || '----' }}</p>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="props.dealType === 'primary'">
           <div class="info-group">
             <label class="info-label">Developer Sales Person Name</label>
             <p class="info-value mb-0">{{ property.developer_name || '----' }}</p>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="props.dealType === 'primary'">
           <div class="info-group">
             <label class="info-label">Developer Sales Person Phone</label>
             <p class="info-value mb-0">{{ property.developer_phone || '----' }}</p>
@@ -261,10 +261,45 @@
             </div>
           </div>
         </div>
+        <div v-if="shouldShowDocSection('title_deed', 'title_deed_documents')" class="row mt-3">
+          <div class="col-12">
+            <div class="info-group">
+              <label class="info-label">Title Deed</label>
+              <div v-if="hasPropertyDocs(property, 'title_deed_documents')" class="documents-grid">
+                <div
+                  v-for="(doc, idx) in getPropertyDocsList(property, 'title_deed_documents')"
+                  :key="idx"
+                  class="document-card"
+                >
+                  <div class="document-preview" @click="previewDocument(doc)">
+                    <img
+                      v-if="isImageDocument(doc)"
+                      :src="getDocumentUrl(doc)"
+                      :alt="doc.original_name || doc.name"
+                      class="document-thumbnail"
+                      @error="handleImageError"
+                    />
+                    <div v-else class="document-icon-placeholder">
+                      <iconify-icon :icon="getFileIcon(doc)" class="document-icon-large" />
+                    </div>
+                    <div class="document-name">
+                      {{ idx === 0 ? 'Old Title Deed' : 'New Title Deed' }} — {{ truncateName(doc.original_name || doc.name) }}
+                    </div>
+                  </div>
+                  <div class="document-actions">
+                    <button class="doc-action-btn view" @click.stop="previewDocument(doc)">View</button>
+                    <button class="doc-action-btn delete" @click.stop="deleteDocument(doc, 'title_deed_documents')">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-muted small mb-0">No documents uploaded.</p>
+            </div>
+          </div>
+        </div>
         <div v-if="shouldShowDocSection('payment_proof', 'payment_proof')" class="row mt-3">
           <div class="col-12">
             <div class="info-group">
-              <label class="info-label">Payment Proof</label>
+              <label class="info-label">Proof of Payment</label>
               <div v-if="hasPropertyDocs(property, 'payment_proof')" class="documents-grid">
                 <div
                   v-for="(doc, idx) in getPropertyDocsList(property, 'payment_proof')"
@@ -461,7 +496,7 @@
           </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="props.dealType === 'primary'">
           <label class="form-label-custom">Developer</label>
           <v-select
             v-model="editData.developer_id"
@@ -477,12 +512,12 @@
           </v-select>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="props.dealType === 'primary'">
           <label class="form-label-custom">Developer Sales Person Name</label>
           <b-form-input v-model="editData.developer_name" placeholder="Contact Person" class="custom-input" />
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="props.dealType === 'primary'">
           <label class="form-label-custom">Developer Sales Person Phone</label>
           <CrmPhoneInput v-model="editData.developer_phone" placeholder="Phone Number" />
         </div>
@@ -510,6 +545,7 @@
             v-model="propertyEditDocs"
             category="property"
             :document-types="propertyEditDocTypes"
+            :box-label-overrides="titleDeedBoxLabelOverrides"
             :deal-id="dealId"
             :property-id="property.id"
           />
@@ -654,9 +690,12 @@ const propertyEditDocTypes = computed(() => {
   const dt = props.dealType
   const order = Number(props.selectedStageOrder) || 0
 
-  // SECONDARY: all property documents are OPTIONAL. Surface MOU from stage 3, NOC from stage 4.
+  // SECONDARY: most property documents are OPTIONAL here. Surface MOU from stage 3, NOC from
+  // stage 4. Title Deed is required from Won stage onward (the "New Title Deed" slot).
   if (dt === 'secondary') {
-    const docs = [{ id: 'payment_proof', name: 'Payment Proof', required: false }]
+    const isWon = order >= 5 || s.includes('won')
+    const docs = [{ id: 'payment_proof', name: 'Proof of Payment', required: false }]
+    if (order >= 3 || s.includes('mou')) docs.unshift({ id: 'title_deed', name: 'Title Deed', required: isWon })
     if (order >= 3 || s.includes('mou')) docs.unshift({ id: 'mou', name: 'MOU Document', required: false })
     if (order >= 4 || s.includes('noc')) docs.splice(1, 0, { id: 'noc', name: 'NOC Document', required: false })
     if (order >= 5 || s.includes('won') || s.includes('spa')) docs.push({ id: 'spa', name: 'SPA Document', required: false })
@@ -672,9 +711,22 @@ const propertyEditDocTypes = computed(() => {
   return [
     { id: 'eoi', name: 'EOI Document', required: showEoi },
     { id: 'booking', name: 'Booking Form', required: showBooking },
-    { id: 'payment_proof', name: 'Payment Proof', required: showPayment },
+    { id: 'payment_proof', name: 'Proof of Payment', required: showPayment },
     { id: 'spa', name: 'SPA Document', required: showSpa },
   ]
+})
+
+// At Won stage, Title Deed shows as two fixed boxes over the same title_deed_documents
+// array: box 1 = whatever was uploaded at MOU stage ("Old Title Deed"), box 2 = the new one
+// required to reach Won ("New Title Deed"). Before Won it's just a plain single box.
+const titleDeedBoxLabelOverrides = computed(() => {
+  const dt = props.dealType
+  if (dt !== 'secondary' && dt !== 'rental') return {}
+  const s = (props.selectedStageName || '').toLowerCase()
+  const order = Number(props.selectedStageOrder) || 0
+  const isWon = order >= 5 || s.includes('won')
+  if (!isWon) return {}
+  return { title_deed: ['Old Title Deed', 'New Title Deed'] }
 })
 
 /**
@@ -691,6 +743,7 @@ const visibleDocTypeIds = computed(() => {
     // payment_proof is always relevant for secondary uploads
     ids.add('payment_proof')
     if (order >= 3 || s.includes('mou')) ids.add('mou')
+    if (order >= 3 || s.includes('mou')) ids.add('title_deed')
     if (order >= 4 || s.includes('noc')) ids.add('noc')
     if (order >= 5 || s.includes('won') || s.includes('spa')) ids.add('spa')
   } else if (dt === 'primary') {
@@ -702,6 +755,7 @@ const visibleDocTypeIds = computed(() => {
     // rental / other — show all by default (no specific filter)
     ids.add('payment_proof')
     ids.add('spa')
+    ids.add('title_deed')
   }
 
   return ids
@@ -752,7 +806,7 @@ function getPropertyDocsList(property, field) {
   if (!property) return []
 
   // ✅ دعم الحقول الجديدة
-  const allowedFields = ['eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'payment_proof', 'spa_document']
+  const allowedFields = ['eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents', 'payment_proof', 'spa_document']
   if (!allowedFields.includes(field)) return []
 
   const primary = getDocumentsArray(property[field])
@@ -858,9 +912,9 @@ async function deleteDocument(doc, type) {
 
   try {
     // ✅ دعم جميع أنواع المستندات
-    const validPropertyDocTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents']
+    const validPropertyDocTypes = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents']
     const isPropertyDocType = validPropertyDocTypes.includes(type)
-    
+
     if (isPropertyDocType) {
       const filePath =
         doc.path ||
@@ -878,6 +932,7 @@ async function deleteDocument(doc, type) {
       if (type === 'booking_documents') documentTypeForApi = 'booking_documents'
       if (type === 'mou_documents') documentTypeForApi = 'mou_documents'
       if (type === 'noc_documents') documentTypeForApi = 'noc_documents'
+      if (type === 'title_deed_documents') documentTypeForApi = 'title_deed_documents'
       if (type === 'payment_proof') documentTypeForApi = 'payment_proof'
       if (type === 'spa_document') documentTypeForApi = 'spa_document'
 
@@ -982,6 +1037,7 @@ function startEdit() {
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'noc_documents'), 'noc'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'payment_proof'), 'payment_proof'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'spa_document'), 'spa'),
+    ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'title_deed_documents'), 'title_deed'),
   ]
   isEditing.value = true
 }
@@ -1042,6 +1098,7 @@ async function saveEdit() {
     
     let mouIdx = 0
     let nocIdx = 0
+    let titleDeedIdx = 0
     propertyEditDocs.value.forEach((doc) => {
       const docType = doc.document_type || ''
       // ✅ فقط الملفات الجديدة (وليس الموجودة)
@@ -1063,6 +1120,9 @@ async function saveEdit() {
         }
         if (docType === 'spa') {
           formData.append(`spa_document[${spaIdx++}]`, doc.file)
+        }
+        if (docType === 'title_deed') {
+          formData.append(`title_deed_documents[${titleDeedIdx++}]`, doc.file)
         }
       }
     })
@@ -1467,11 +1527,34 @@ onBeforeUnmount(() => {
   background: #fef3c7;
   border-color: #733E87;
 }
+.input-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+}
+.input-group .custom-input {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
 .input-group-text {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+  border-left: none;
   font-size: 12px;
   color: #64748b;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 .btn-sm {
   padding: 4px 12px;
