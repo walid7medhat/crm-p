@@ -5328,6 +5328,42 @@ const preloadFeatureImages = async () => {
   await Promise.all(conversionPromises);
   console.log('✅ All feature images preloaded and converted');
 };
+const renderOfferPdfInIsolation = async (pdfContent, options) => {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute(
+    'style',
+    'position:fixed;left:-10000px;top:0;width:794px;height:2000px;border:0;opacity:0;pointer-events:none;'
+  );
+  document.body.appendChild(iframe);
+
+  const idoc = iframe.contentDocument || iframe.contentWindow.document;
+  idoc.open();
+  idoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    html, body { margin: 0; padding: 0; background: #ffffff; }
+    * { box-sizing: border-box !important; }
+    table { border-collapse: collapse !important; border-spacing: 0 !important; }
+    table.offer-features {
+      border-collapse: separate !important;
+      border-spacing: 8px 10px !important;
+    }
+    td, th {
+      vertical-align: middle !important;
+      text-align: center !important;
+      margin: 0 !important;
+    }
+  </style></head><body></body></html>`);
+  idoc.close();
+  idoc.body.appendChild(pdfContent);
+
+  try {
+    // Let the isolated document settle before capture
+    await new Promise((r) => setTimeout(r, 50));
+    return await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
+  } finally {
+    iframe.remove();
+  }
+};
+
 const generatePDF = async () => {
   try {
     // Show loading
@@ -5392,7 +5428,7 @@ const generatePDF = async () => {
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    const pdf = await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
+    const pdf = await renderOfferPdfInIsolation(pdfContent, options);
     const pageCount = pdf.internal.getNumberOfPages();
     pdf.deletePage(pageCount);
 
@@ -5491,6 +5527,7 @@ const showOfferHistory = async () => {
 
 const createNewDesignContent = (currentUser) => {
   const container = document.createElement('div');
+  container.className = 'oia-offer-pdf';
   container.style.cssText = 'margin:0 !important; font-family:Arial, sans-serif !important; background:#ffffff !important; width:100% !important; height:100% !important;';
 
   const hasFloorPlans = property.value?.floor_plans && Array.isArray(property.value.floor_plans) && property.value.floor_plans.length > 0;
@@ -5500,6 +5537,17 @@ const createNewDesignContent = (currentUser) => {
   const paymentDetailsSlide = createPaymentDetailsSlide();
 
   container.innerHTML = `
+<style>
+  .oia-offer-pdf table { border-collapse: collapse !important; border-spacing: 0 !important; }
+  .oia-offer-pdf table.offer-features {
+    border-collapse: separate !important;
+    border-spacing: 8px 10px !important;
+  }
+  .oia-offer-pdf td, .oia-offer-pdf th {
+    vertical-align: middle !important;
+    text-align: center !important;
+  }
+</style>
  <!-- Slide 1 - Cover -->
     ${createSlide1(currentUser)}
 <!-- Slide 2 - Property Details -->
@@ -5639,31 +5687,25 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // html2canvas-safe: nested shrink-wrap tables + px (mm/border-radius misalign text & stretch chips).
+  // html2canvas + global CRM CSS break nested chips. Flat cells + line-height==height centers text.
   const featuresPerRow = 6;
   const featureRows = [];
   for (let i = 0; i < features.length; i += featuresPerRow) {
     featureRows.push(features.slice(i, i + featuresPerRow));
   }
-  const featureChip = (text) =>
-    `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;"><tr>` +
-    `<td style="background:rgba(255,255,255,0.20) !important;border:1px solid rgba(255,255,255,0.65) !important;` +
-    `color:#ffffff !important;font-size:9px !important;line-height:12px !important;padding:6px 12px !important;` +
-    `font-family:Arial,sans-serif !important;white-space:nowrap !important;font-weight:500 !important;` +
-    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>` +
-    `</tr></table>`;
+  const featureTd = (text) =>
+    `<td align="center" valign="middle" height="26" ` +
+    `style="height:26px !important;width:auto !important;vertical-align:middle !important;text-align:center !important;` +
+    `background:rgba(255,255,255,0.22) !important;border:1px solid rgba(255,255,255,0.7) !important;` +
+    `color:#ffffff !important;font-size:9px !important;line-height:26px !important;padding:0 12px !important;` +
+    `margin:0 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;font-weight:500 !important;` +
+    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`;
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
       <div style="width:100% !important; height:1px !important; background:rgba(255,255,255,0.28) !important; margin:0 0 14px 0 !important; font-size:1px !important; line-height:1px !important;">&nbsp;</div>
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:9px !important; margin:0 0 10px 0 !important; font-family:Arial,sans-serif !important; line-height:12px !important;">Features</p>
-      <table cellpadding="0" cellspacing="0" style="border-collapse:separate !important; border-spacing:8px 10px !important;">
-        ${featureRows.map((row) => `
-          <tr>
-            ${row.map((feature) =>
-              `<td style="padding:0 !important; margin:0 !important; background:transparent !important; border:none !important; vertical-align:middle !important;">${featureChip(feature)}</td>`
-            ).join('')}
-          </tr>
-        `).join('')}
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:9px !important; margin:0 0 10px 0 !important; font-family:Arial,sans-serif !important; line-height:12px !important; text-align:left !important;">Features</p>
+      <table class="offer-features" cellpadding="0" cellspacing="8" style="border-collapse:separate !important; border-spacing:8px 10px !important; table-layout:auto !important;">
+        ${featureRows.map((row) => `<tr>${row.map((feature) => featureTd(feature)).join('')}</tr>`).join('')}
       </table>
     </div>
   ` : '';
@@ -6053,41 +6095,56 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  // --- html2canvas-safe: nested tables + px only (no mm, no border-radius, no nested spans) ---
-  const thPx = densityTier === 'tight' ? { pad: '6px 4px', fs: '7px', lh: '10px' }
-    : densityTier === 'compact' ? { pad: '7px 4px', fs: '8px', lh: '11px' }
-    : { pad: '8px 5px', fs: '8px', lh: '11px' };
-  const tdPx = densityTier === 'tight' ? { pad: '5px 3px', fs: '8px', lh: '11px' }
-    : densityTier === 'compact' ? { pad: '6px 3px', fs: '8px', lh: '11px' }
-    : { pad: '7px 4px', fs: '9px', lh: '12px' };
-  const badgePx = densityTier === 'tight' ? { pad: '4px 8px', fs: '7px', lh: '10px' }
-    : densityTier === 'compact' ? { pad: '5px 9px', fs: '7px', lh: '10px' }
-    : { pad: '5px 10px', fs: '8px', lh: '11px' };
+  // Flat cells + !important + line-height==height. Avoid nested tables (global CSS breaks them).
+  const thH = densityTier === 'tight' ? 22 : densityTier === 'compact' ? 24 : 26;
+  const tdH = densityTier === 'tight' ? 20 : densityTier === 'compact' ? 22 : 24;
+  const thFs = densityTier === 'tight' ? 7 : 8;
+  const tdFs = densityTier === 'tight' ? 8 : 9;
+  const badgeFs = densityTier === 'tight' ? 7 : 8;
 
-  const thHtml = (label, width) =>
-    `<th style="width:${width};padding:2px;background:transparent;border:none;vertical-align:middle;">` +
-    `<table width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">` +
-    `<tr><td align="center" style="background:#0f1f3a;color:#ffffff;font-size:${thPx.fs};line-height:${thPx.lh};` +
-    `font-weight:700;padding:${thPx.pad};font-family:Arial,sans-serif;` +
-    `-webkit-print-color-adjust:exact;print-color-adjust:exact;">${label}</td></tr></table></th>`;
+  const thCell =
+    `height:${thH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `background:#0f1f3a !important;color:#ffffff !important;font-size:${thFs}px !important;` +
+    `line-height:${thH}px !important;padding:0 4px !important;margin:0 !important;font-weight:700 !important;` +
+    `font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
+    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
-  const tdCell = `padding:${tdPx.pad};font-size:${tdPx.fs};line-height:${tdPx.lh};vertical-align:middle;text-align:center;color:#1e293b;background:#ffffff;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
-  const tdMuted = `padding:${tdPx.pad};font-size:${tdPx.fs};line-height:${tdPx.lh};vertical-align:middle;text-align:center;color:#64748b;background:#ffffff;font-family:Arial,sans-serif;`;
-  const tdTotal = `padding:${tdPx.pad};font-size:${tdPx.fs};line-height:${tdPx.lh};vertical-align:middle;text-align:center;color:#0f1f3a;background:#f1f5f9;font-weight:700;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  const tdCell =
+    `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `background:#ffffff !important;color:#1e293b !important;font-size:${tdFs}px !important;` +
+    `line-height:${tdH}px !important;padding:0 4px !important;margin:0 !important;` +
+    `font-family:Arial,sans-serif !important;` +
+    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
-  const tableStyle = `width:100%;border-collapse:separate;border-spacing:4px 6px;table-layout:fixed;font-family:Arial,sans-serif;`;
+  const tdMuted =
+    `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `background:#ffffff !important;color:#64748b !important;font-size:${tdFs}px !important;` +
+    `line-height:${tdH}px !important;padding:0 4px !important;margin:0 !important;` +
+    `font-family:Arial,sans-serif !important;`;
 
-  const statusColors = (status) => {
-    if (status === 'Paid') return 'background:#22c55e;color:#ffffff;';
-    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
-    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
-    return 'background:#fecdd3;color:#9f1239;';
+  const tdTotal =
+    `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `background:#f1f5f9 !important;color:#0f1f3a !important;font-size:${tdFs}px !important;` +
+    `line-height:${tdH}px !important;padding:0 4px !important;margin:0 !important;font-weight:700 !important;` +
+    `font-family:Arial,sans-serif !important;` +
+    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
+
+  const tableStyle =
+    `width:100% !important;border-collapse:collapse !important;border-spacing:0 !important;` +
+    `table-layout:fixed !important;font-family:Arial,sans-serif !important;`;
+
+  const statusCellStyle = (status) => {
+    let bg = '#fecdd3';
+    let fg = '#9f1239';
+    if (status === 'Paid') { bg = '#22c55e'; fg = '#ffffff'; }
+    else if (status === 'Due on transfer') { bg = '#bae6fd'; fg = '#075985'; }
+    else if (status === 'Selling below original price') { bg = '#fecaca'; fg = '#b91c1c'; }
+    return `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+      `background:${bg} !important;color:${fg} !important;font-size:${badgeFs}px !important;` +
+      `line-height:${tdH}px !important;padding:0 6px !important;margin:0 !important;font-weight:700 !important;` +
+      `font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
+      `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
   };
-  const statusChip = (status) =>
-    `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 auto;">` +
-    `<tr><td align="center" style="${statusColors(status)}font-size:${badgePx.fs};line-height:${badgePx.lh};` +
-    `font-weight:700;padding:${badgePx.pad};font-family:Arial,sans-serif;white-space:nowrap;` +
-    `-webkit-print-color-adjust:exact;print-color-adjust:exact;">${status}</td></tr></table>`;
 
   let cumulative = 0;
   const installmentRowsPaidArr = [];
@@ -6105,11 +6162,11 @@ const createPaymentDetailsSlide = () => {
 
     const rowHtml = `
       <tr>
-        <td align="center" valign="middle" style="${tdCell}">Installment</td>
-        <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
-        <td align="center" valign="middle" style="${tdCell}">${statusChip(status)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">Installment</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${pct}%</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(amount)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${dateCell}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${statusCellStyle(status)}">${status}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6122,22 +6179,22 @@ const createPaymentDetailsSlide = () => {
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumRow = hasPremiumRow
     ? `<tr>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">Premium</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">${statusChip(premiumStatus)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;">Premium</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;">—</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;">—</td>
+        <td align="center" valign="middle" height="${tdH}" style="${statusCellStyle(premiumStatus)}">${premiumStatus}</td>
       </tr>`
     : '';
 
   const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
   const handoverRow = hasHandoverRow
     ? `<tr>
-        <td align="center" valign="middle" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
-        <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${statusChip(handoverStatus)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(handoverAmount)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtDate(p.handover_date)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${statusCellStyle(handoverStatus)}">${handoverStatus}</td>
       </tr>`
     : '';
 
@@ -6165,11 +6222,11 @@ const createPaymentDetailsSlide = () => {
 
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" style="${tdCell}font-weight:500;">NOC Fees</td>
-        <td align="center" valign="middle" style="${tdMuted}">${fmtAed(nocAmount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(nocAmount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">—</td>
-        <td align="center" valign="middle" style="${tdCell}font-weight:600;">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}font-weight:500 !important;">NOC Fees</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdMuted}">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">—</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}font-weight:600 !important;">${fmtAed(nocAmount)}</td>
       </tr>
     `);
 
@@ -6192,11 +6249,11 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" style="${tdCell}">${l?.label || '—'}</td>
-        <td align="center" valign="middle" style="${tdMuted}">${detail}</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amt)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
-        <td align="center" valign="middle" style="${tdCell}font-weight:600;">${fmtAed(total)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${l?.label || '—'}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdMuted}">${detail}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(amt)}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
+        <td align="center" valign="middle" height="${tdH}" style="${tdCell}font-weight:600 !important;">${fmtAed(total)}</td>
       </tr>
     `);
   });
@@ -6205,25 +6262,25 @@ const createPaymentDetailsSlide = () => {
 
   const expensesBlock = (expenseRows.length > 0) ? `
     <div style="margin-top:${d.blockMt};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">other costs</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
-        <table style="${tableStyle}">
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">other costs</div>
+      <div style="background:#ffffff !important;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
+        <table cellpadding="0" cellspacing="0" style="${tableStyle}">
           <thead>
             <tr>
-              ${thHtml('Label', '18%')}
-              ${thHtml('Detail', '24%')}
-              ${thHtml('Amount', '20%')}
-              ${thHtml('VAT', '16%')}
-              ${thHtml('Total', '22%')}
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:18%;">Label</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:24%;">Detail</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:20%;">Amount</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:16%;">VAT</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:22%;">Total</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRowsHtml}
             <tr>
-              <td align="center" valign="middle" colspan="2" style="${tdTotal}">Total</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expSubtotal)}</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expVatTotal)}</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expGrand)}</td>
+              <td align="center" valign="middle" colspan="2" height="${tdH}" style="${tdTotal}">Total</td>
+              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(expSubtotal)}</td>
+              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(expVatTotal)}</td>
+              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(expGrand)}</td>
             </tr>
           </tbody>
         </table>
@@ -6233,16 +6290,16 @@ const createPaymentDetailsSlide = () => {
 
   const installmentTable = (installmentRowsPaid || installmentRowsNotPaid || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
-        <table style="${tableStyle}">
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">Installment breakdown</div>
+      <div style="background:#ffffff !important;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
+        <table cellpadding="0" cellspacing="0" style="${tableStyle}">
           <thead>
             <tr>
-              ${thHtml('Payment type', '22%')}
-              ${thHtml('Percentage', '13%')}
-              ${thHtml('Amount', '24%')}
-              ${thHtml('Date', '18%')}
-              ${thHtml('Status', '15%')}
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:22%;">Payment type</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:13%;">Percentage</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:24%;">Amount</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:18%;">Date</th>
+              <th align="center" valign="middle" height="${thH}" style="${thCell}width:15%;">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -6251,9 +6308,9 @@ const createPaymentDetailsSlide = () => {
             ${installmentRowsNotPaid}
             ${handoverRow}
             <tr>
-              <td align="center" valign="middle" style="${tdTotal}" colspan="2">Total</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(totalAmount)}</td>
-              <td colspan="2" style="${tdTotal}"></td>
+              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}" colspan="2">Total</td>
+              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(totalAmount)}</td>
+              <td colspan="2" height="${tdH}" style="${tdTotal}"></td>
             </tr>
           </tbody>
         </table>
@@ -6298,10 +6355,10 @@ const noteBlock = `
 `;
 
   const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
-    <div style="position:relative;overflow:hidden;background:${dark ? 'linear-gradient(160deg,#132043 0%,#0f1f3a 100%)' : '#e8ecf2'};color:${dark ? '#ffffff' : '#0f1f3a'};border-radius:3mm;padding:${accent ? '2.2mm 2mm 3.4mm' : d.cardPad};box-sizing:border-box;text-align:center;min-height:14mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-      <div style="display:block;font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 0.8mm 0;line-height:1.2;width:100%;text-align:center;">${label}</div>
-      <div style="display:block;font-size:${d.cardVal};font-weight:700;line-height:1.2;width:100%;text-align:center;">${valueHtml}</div>
-      ${accent ? '<div style="display:block;position:absolute;left:0;right:0;bottom:0;height:0.9mm;background:#FAA300;line-height:0;font-size:0;">&nbsp;</div>' : ''}
+    <div style="position:relative;overflow:hidden;background:${dark ? '#0f1f3a' : '#e8ecf2'};color:${dark ? '#ffffff' : '#0f1f3a'};border-radius:3mm;padding:${accent ? '10px 8px 14px' : '10px 8px'};box-sizing:border-box;text-align:center !important;min-height:48px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <div style="display:block;font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 4px 0;line-height:1.2;width:100%;text-align:center !important;">${label}</div>
+      <div style="display:block;font-size:${d.cardVal};font-weight:700;line-height:1.2;width:100%;text-align:center !important;">${valueHtml}</div>
+      ${accent ? '<div style="display:block;position:absolute;left:0;right:0;bottom:0;height:3px;background:#FAA300;line-height:0;font-size:0;">&nbsp;</div>' : ''}
     </div>
   `;
 
