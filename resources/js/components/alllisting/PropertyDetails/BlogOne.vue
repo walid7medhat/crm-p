@@ -5713,7 +5713,6 @@ const createSlide2 = () => {
   }
   const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
   const pillH = 24;
-  const pillH = 24;
 
 const featureTd = (text) => {
   if (text == null) {
