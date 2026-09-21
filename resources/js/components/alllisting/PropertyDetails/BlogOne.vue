@@ -5639,14 +5639,15 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // Separate divider div (not border-top) — html2canvas often paints borders through pill text.
+  // html2canvas: avoid flex+gap (pills overlap) and border-top (line through text).
+  // Use inline-block + margin for wrap spacing; line-height padding for vertical centering.
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
-      <div style="width:100% !important; height:0.35mm !important; background:rgba(255,255,255,0.28) !important; margin:0 0 3.5mm 0 !important;"></div>
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 2.2mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important;">Features</p>
-      <div style="display:flex !important; flex-wrap:wrap !important; gap:2.2mm 3.5mm !important; align-items:center !important;">
+      <div style="width:100% !important; height:0.35mm !important; background:rgba(255,255,255,0.28) !important; margin:0 0 4mm 0 !important; line-height:0 !important; font-size:0 !important;">&nbsp;</div>
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 3mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important;">Features</p>
+      <div style="display:block !important; width:100% !important; box-sizing:border-box !important; line-height:0 !important; font-size:0 !important;">
           ${features.map((feature) => `
-<span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.95) !important; font-size:2.5mm !important; line-height:1 !important; padding:1.5mm 3.4mm !important; border-radius:5mm !important; background:rgba(255,255,255,0.10) !important; box-shadow:inset 0 0 0 0.25mm rgba(255,255,255,0.45) !important; font-family:'Montserrat', sans-serif !important; box-sizing:border-box !important; white-space:nowrap !important;">${feature}</span>`).join('')}
+<span style="display:inline-block !important; vertical-align:top !important; color:#ffffff !important; font-size:2.5mm !important; line-height:1.25 !important; padding:1.8mm 3.6mm !important; margin:0 2.8mm 2.8mm 0 !important; border-radius:5mm !important; background:rgba(255,255,255,0.16) !important; box-shadow:inset 0 0 0 0.25mm rgba(255,255,255,0.55) !important; font-family:'Montserrat', sans-serif !important; box-sizing:border-box !important; white-space:nowrap !important;">${feature}</span>`).join('')}
         </div>
     </div>
   ` : '';
@@ -5995,10 +5996,10 @@ const createPaymentDetailsSlide = () => {
   };
 
   const badgeStyle = (status) => {
-    if (status === 'Paid') return 'background:#22c55e;color:#fff;';
-    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
-    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
-    return 'background:#fecdd3;color:#9f1239;';
+    if (status === 'Paid') return 'background:#22c55e !important;color:#ffffff !important;';
+    if (status === 'Due on transfer') return 'background:#bae6fd !important;color:#075985 !important;';
+    if (status === 'Selling below original price') return 'background:#fecaca !important;color:#b91c1c !important;';
+    return 'background:#fecdd3 !important;color:#9f1239 !important;';
   };
 
   const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
@@ -6016,49 +6017,49 @@ const createPaymentDetailsSlide = () => {
   const d = {
     normal: {
       fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
-      pad: '1.05mm 0.8mm', padHead: '0.25mm', badgePadX: '1.8mm',
+      pad: '1.4mm 0.8mm', padHead: '0.6mm', badgePadX: '1.8mm',
       sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
       titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
       cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
-      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1mm 0 0.8mm 0', pagePad: '7mm 7mm 14mm 7mm',
-      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '0.2mm',
+      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1.4mm 0.8mm 1.2mm 0.8mm', pagePad: '7mm 7mm 14mm 7mm',
+      pillH: '5.2mm', badgeH: '4mm', rowGap: '1.3mm',
     },
     compact: {
       fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '1.8mm',
-      pad: '0.85mm 0.7mm', padHead: '0.2mm', badgePadX: '1.5mm',
+      pad: '1.15mm 0.7mm', padHead: '0.5mm', badgePadX: '1.5mm',
       sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
       titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
       cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
-      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.8mm 0 0.6mm 0', pagePad: '6mm 6mm 13mm 6mm',
-      pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.15mm',
+      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '1.1mm 0.6mm 0.9mm 0.6mm', pagePad: '6mm 6mm 13mm 6mm',
+      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '1.1mm',
     },
     tight: {
       fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.6mm',
-      pad: '0.7mm 0.6mm', padHead: '0.15mm', badgePadX: '1.3mm',
+      pad: '0.95mm 0.6mm', padHead: '0.4mm', badgePadX: '1.3mm',
       sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
       titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
       cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
-      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.7mm 0 0.5mm 0', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
-      pillH: '3.8mm', badgeH: '2.9mm', rowGap: '0.1mm',
+      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.9mm 0.5mm 0.7mm 0.5mm', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
+      pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.9mm',
     },
   }[densityTier];
 
   // --- CENTERING CORE (html2canvas-safe) ---
-  // Avoid CSS borders on rounded pills/cards — they smear as thick orange/white bars.
-  // Prefer inset box-shadow outlines + line-height:1 + balanced padding.
+  // Avoid flex align-items/gap — html2canvas often offsets text out of pills and collapses rows.
+  // Prefer fixed line-height = height, block/inline-block, and explicit text colors.
   const thCell = `padding:${d.padHead};vertical-align:middle;text-align:center;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1;vertical-align:middle;text-align:center;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.25;vertical-align:middle;text-align:center;color:#1e293b !important;`;
 
   const cellInner = (content) =>
-    `<div style="width:100%;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;box-sizing:border-box;">${content}</div>`;
+    `<div style="width:100%;display:block;text-align:center;line-height:1.25;box-sizing:border-box;color:inherit;">${content}</div>`;
 
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
   const thPill = (label) =>
-    `<div style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;padding:1.45mm 1.4mm;">${label}</div>`;
+    `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#ffffff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:${d.pillH};height:${d.pillH};text-align:center;white-space:nowrap;overflow:hidden;">${label}</div>`;
 
   const makeBadge = (text, status) =>
-    `<span style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;text-align:center;padding:0.9mm ${d.badgePadX};vertical-align:middle;${badgeStyle(status)}">${text}</span>`;
+    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:${d.badgeH};height:${d.badgeH};white-space:nowrap;text-align:center;padding:0 ${d.badgePadX};vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;${badgeStyle(status)}">${text}</span>`;
   let cumulative = 0;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
@@ -6274,10 +6275,10 @@ const noteBlock = `
 `;
 
   const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
-    <div style="position:relative;overflow:hidden;background:${dark ? 'linear-gradient(160deg,#132043 0%,#0f1f3a 100%)' : '#e8ecf2'};color:${dark ? '#fff' : '#0f1f3a'};border-radius:3mm;padding:${accent ? '2mm 2mm 3.2mm' : d.cardPad};box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:14mm;">
-      <div style="font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 0.8mm 0;line-height:1;width:100%;text-align:center;">${label}</div>
-      <div style="font-size:${d.cardVal};font-weight:700;line-height:1.15;width:100%;text-align:center;">${valueHtml}</div>
-      ${accent ? '<div style="position:absolute;left:0;right:0;bottom:0;height:0.9mm;background:#FAA300;"></div>' : ''}
+    <div style="position:relative;overflow:hidden;background:${dark ? 'linear-gradient(160deg,#132043 0%,#0f1f3a 100%)' : '#e8ecf2'};color:${dark ? '#ffffff' : '#0f1f3a'};border-radius:3mm;padding:${accent ? '2.2mm 2mm 3.4mm' : d.cardPad};box-sizing:border-box;text-align:center;min-height:14mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <div style="display:block;font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 0.8mm 0;line-height:1.2;width:100%;text-align:center;">${label}</div>
+      <div style="display:block;font-size:${d.cardVal};font-weight:700;line-height:1.2;width:100%;text-align:center;">${valueHtml}</div>
+      ${accent ? '<div style="display:block;position:absolute;left:0;right:0;bottom:0;height:0.9mm;background:#FAA300;line-height:0;font-size:0;">&nbsp;</div>' : ''}
     </div>
   `;
 
@@ -6287,9 +6288,9 @@ const noteBlock = `
       <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
     </div>
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <div style="margin-bottom:${d.headerMb};">
-        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;margin:0 0 1.6mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:0.85mm;background:#FAA300;border-radius:1mm;margin:0;"></div>
+      <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;margin:0;padding:0 0 2.4mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="display:block;width:14mm;height:0.85mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
