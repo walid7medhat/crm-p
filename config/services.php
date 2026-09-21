@@ -56,4 +56,19 @@ return [
         'map_allow_sync_geocode' => filter_var(env('MAP_ALLOW_SYNC_GEOCODE', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
+    /*
+    | Shared secrets for the public /website-lead(/wordpress) intake endpoints —
+    | those routes have no auth (external sites post leads directly), so each
+    | request must carry the matching secret or it's rejected. Generate with
+    | `php artisan tinker --execute="echo Str::random(40);"` and put the same
+    | value in the sending site's request (see IntegrationController for the
+    | accepted header/field names).
+    */
+    'website_lead' => [
+        'secret' => env('WEBSITE_LEAD_SECRET'),
+    ],
+    'wordpress_lead' => [
+        'secret' => env('WORDPRESS_LEAD_SECRET'),
+    ],
+
 ];

@@ -676,8 +676,50 @@ private function applyFieldMappings(array $fields, array $mappings): array
 
     return $result;
 }
+/**
+ * /website-lead and /website-lead/wordpress are unauthenticated (external sites post
+ * leads directly, with no CRM session), so each request must carry the matching shared
+ * secret for its site or it's rejected outright — otherwise anyone who finds the URL
+ * could flood the pipeline with fake leads or assign leads to an arbitrary agent via
+ * responsible_person_id. Configured per-site via WEBSITE_LEAD_SECRET / WORDPRESS_LEAD_SECRET
+ * so leaking one site's key doesn't expose the other. Accepts the secret as a header
+ * (preferred) or a request field, for compatibility with form builders that can't send
+ * custom headers.
+ */
+private function verifyWebsiteLeadSecret(Request $request, string $configKey): bool
+{
+    $expected = (string) config("services.{$configKey}.secret");
+
+    // Fail closed: an unconfigured secret must never silently mean "open to anyone".
+    if ($expected === '') {
+        Log::warning("Website lead webhook rejected — {$configKey} secret is not configured");
+        return false;
+    }
+
+    $provided = (string) (
+        $request->header('X-Website-Lead-Secret')
+        ?? $request->input('secret')
+        ?? $request->input('api_key')
+        ?? ''
+    );
+
+    if ($provided === '' || !hash_equals($expected, $provided)) {
+        Log::warning("Website lead webhook rejected — invalid or missing secret", [
+            'config_key' => $configKey,
+            'ip' => $request->ip(),
+        ]);
+        return false;
+    }
+
+    return true;
+}
+
 public function store_website(Request $request)
 {
+    if (!$this->verifyWebsiteLeadSecret($request, 'website_lead')) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    }
+
     $data = $request->all();
 $fieldData = [];
 
@@ -730,6 +772,10 @@ $fieldMappings = [
 
 public function store_wordpress(Request $request)
 {
+    if (!$this->verifyWebsiteLeadSecret($request, 'wordpress_lead')) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    }
+
     $data = $request->all();
     \Log::info($data);
 $fieldData = [];
