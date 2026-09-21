@@ -5687,7 +5687,7 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // Equal-width feature grid; pad last row so borders match. No fixed height (clips text in html2canvas).
+  // Equal-width pill chips: same border size, fully rounded, equal top/bottom padding, centered text.
   const featuresPerRow = 6;
   const featureRows = [];
   for (let i = 0; i < features.length; i += featuresPerRow) {
@@ -5702,11 +5702,11 @@ const createSlide2 = () => {
     }
     return (
       `<td align="center" valign="middle" style="width:${colW};vertical-align:middle !important;text-align:center !important;` +
-      `background:rgba(255,255,255,0.20) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
-      `color:#ffffff !important;font-size:10px !important;line-height:14px !important;` +
-      `padding:8px 6px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
+      `background:rgba(255,255,255,0.18) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
+      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:1.3 !important;` +
+      `padding:8px 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
       `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
-      `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
+      `box-sizing:border-box !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
     );
   };
   const featuresBlock = features.length > 0 ? `
@@ -6142,17 +6142,22 @@ const createPaymentDetailsSlide = () => {
     `width:100% !important;border-collapse:collapse !important;border-spacing:0 !important;` +
     `table-layout:fixed !important;font-family:Arial,sans-serif !important;`;
 
-  const statusCellStyle = (status) => {
-    let bg = '#fecdd3';
-    let fg = '#9f1239';
-    if (status === 'Paid') { bg = '#22c55e'; fg = '#ffffff'; }
-    else if (status === 'Due on transfer') { bg = '#bae6fd'; fg = '#075985'; }
-    else if (status === 'Selling below original price') { bg = '#fecaca'; fg = '#b91c1c'; }
-    return `vertical-align:middle !important;text-align:center !important;` +
-      `background:${bg} !important;color:${fg} !important;font-size:${badgeFs}px !important;` +
-      `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+  // Navy / slate pills only (no green/red) — shrink-wrap + round + equal pad, centered in cell.
+  const statusPill = (status) => {
+    let bg = '#e8ecf2';
+    let fg = '#0f1f3a';
+    if (status === 'Paid') { bg = '#0f1f3a'; fg = '#ffffff'; }
+    else if (status === 'Due on transfer') { bg = '#d5dde8'; fg = '#0f1f3a'; }
+    else if (status === 'Selling below original price') { bg = '#e8ecf2'; fg = '#0f1f3a'; }
+    // Upcoming and others stay light slate
+    return (
+      `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;margin:0 auto !important;">` +
+      `<tr><td align="center" valign="middle" style="background:${bg} !important;color:${fg} !important;` +
+      `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:1.3 !important;` +
       `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
-      `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
+      `padding:6px 12px !important;text-align:center !important;vertical-align:middle !important;` +
+      `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${status}</td></tr></table>`
+    );
   };
 
   let cumulative = 0;
@@ -6175,7 +6180,7 @@ const createPaymentDetailsSlide = () => {
         <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
         <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
-        <td align="center" valign="middle" style="${statusCellStyle(status)}">${status}</td>
+        <td align="center" valign="middle" style="${tdCell}">${statusPill(status)}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6190,9 +6195,9 @@ const createPaymentDetailsSlide = () => {
     ? `<tr>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">Premium</td>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">${fmtAed(premium)}</td>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${statusCellStyle(premiumStatus)}">${premiumStatus}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">${statusPill(premiumStatus)}</td>
       </tr>`
     : '';
 
@@ -6203,7 +6208,7 @@ const createPaymentDetailsSlide = () => {
         <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td align="center" valign="middle" style="${statusCellStyle(handoverStatus)}">${handoverStatus}</td>
+        <td align="center" valign="middle" style="${tdCell}">${statusPill(handoverStatus)}</td>
       </tr>`
     : '';
 
