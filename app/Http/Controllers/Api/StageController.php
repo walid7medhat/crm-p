@@ -551,7 +551,7 @@ class StageController extends Controller
                     ->select('leads.id', 'leads.stage_id')
                     ->selectRaw('ROW_NUMBER() OVER (PARTITION BY stage_id ORDER BY id ASC) as rn');
 
-                $rankedRows = Lead::query()->fromSub($rankedQuery, 'ranked_leads')
+                $rankedRows = DB::query()->fromSub($rankedQuery, 'ranked_leads')
                     ->where('rn', '<=', $perPage + 1)
                     ->get(['id', 'stage_id', 'rn']);
 
@@ -614,7 +614,7 @@ class StageController extends Controller
                         ->select('leads.id', 'leads.stage_id')
                         ->selectRaw($rankedSql);
 
-                    $rankedRows = Lead::query()->fromSub($rankedQuery, 'ranked_leads')
+                    $rankedRows = DB::query()->fromSub($rankedQuery, 'ranked_leads')
                         ->where('rn', '<=', $perPage + 1)
                         ->get(['id', 'stage_id', 'rn']);
 
