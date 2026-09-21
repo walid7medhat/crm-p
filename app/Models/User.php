@@ -453,10 +453,15 @@ function getOfficeAttribute()
      */
     public function canRespondToAccessRequest(ListingAccessRequest $request): bool
     {
+            // A user can never approve/reject their own request.
+            if ($this->id === $request->requested_by) {
+                return false;
+            }
+
             $subordinatesIds = $this->getAllSubordinatesIds();
 
     $canAccessHierarchy =
-        in_array($request->listing->user_id, $subordinatesIds) ||
+        in_array($request->listing->agent_id, $subordinatesIds) ||
         in_array($request->handled_by, $subordinatesIds);
         
         if($request->request_type=='viewing' && ($request->status == 'pending' || $request->status == 'in_progress')){

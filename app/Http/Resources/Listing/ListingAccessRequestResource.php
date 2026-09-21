@@ -91,8 +91,8 @@ class ListingAccessRequestResource extends JsonResource
                         $this->request_type === 'viewing' &&
                         $isManagerOrTeamLead
                     );
-// Calculate permissions based on user role and hierarchy
-        $canManageAccessRequests = $this->canManageAccessRequestsFor($user);
+// Calculate permissions based on role and hierarchy — a user can never respond to their own request
+        $canManageAccessRequests = $this->requested_by !== $user->id && $this->canManageAccessRequestsFor($user);
         if($this->request_type=='viewing'){
             // \Log::info('viewing', [
             //     'listing_id' => $this->listing->id,
@@ -101,12 +101,13 @@ class ListingAccessRequestResource extends JsonResource
             //     'is_owner' => $this->listing->isOwner($user),
             //     'is_handler' => $user->id == $this->handled_by,
             // ]);
-            $canRespond =$canManageAccessRequests || $this->listing->isOwner($user) || $user->id==$this->handled_by;
+            $canRespond = $this->requested_by !== $user->id
+                && ($canManageAccessRequests || $this->listing->isOwner($user) || $user->id==$this->handled_by);
         }else{
           $subordinatesIds = $this->subordinatesIdsFor($user);
 
             $canRespond = $canManageAccessRequests && (
-                in_array($this->listing->user_id, $subordinatesIds) ||
+                in_array($this->listing->agent_id, $subordinatesIds) ||
                 in_array($this->handled_by, $subordinatesIds) ||
                 $this->listing->isOwnedBy($user) ||
                 $user->id == $this->handled_by
