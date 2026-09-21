@@ -3666,9 +3666,27 @@ public function watermark(Request $request)
         abort(404);
     }
 
-    $fullPath = storage_path('app/public/' . $path);
+    // Prevent path traversal outside storage/app/public
+    $path = ltrim(str_replace('\\', '/', $path), '/');
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
 
-    if (!file_exists($fullPath)) {
+    $fullPath = storage_path('app/public/' . $path);
+    $placeholderCandidates = [
+        public_path('assets/images/a.jpeg'),
+        public_path('assets/images/a.jpg'),
+        public_path('assets/images/placeholder.jpg'),
+    ];
+
+    if (!is_file($fullPath)) {
+        foreach ($placeholderCandidates as $placeholder) {
+            if (is_file($placeholder)) {
+                return response()->file($placeholder, [
+                    'Cache-Control' => 'public, max-age=3600',
+                ]);
+            }
+        }
         abort(404);
     }
 
