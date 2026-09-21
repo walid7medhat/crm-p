@@ -705,21 +705,21 @@ const convertedStatusOptions = [
 const qualityTemperatureRadios = [
     {
         value: 'cold',
-        label: 'Cold',
+        label: 'Within 1 Month',
         ringColor: '#38bdf8',
         fillColor: '#0ea5e9',
         tooltip: "Cold leads are fresh or haven't been contacted recently.",
     },
     {
         value: 'warm',
-        label: 'Warm',
+        label: '1–3 Months',
         ringColor: '#f59e0b',
         fillColor: '#d97706',
         tooltip: 'Warm leads are engaged recently, likely 1-3 months ago.',
     },
     {
         value: 'hot',
-        label: 'Hot',
+        label: 'More than 3 Months',
         ringColor: '#f43f5e',
         fillColor: '#e11d48',
         tooltip: 'Hot leads are very active and ready for follow-up.',
