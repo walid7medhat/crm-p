@@ -6361,14 +6361,16 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 const noteBlock = `
-  <div style="position:absolute !important; left:${(d.pagePad.split(' ')[3] || d.pagePad.split(' ')[1] || '7mm')} !important; right:${(d.pagePad.split(' ')[1] || '7mm')} !important; bottom:2mm !important; z-index:30 !important; width:auto !important; box-sizing:border-box !important;">
-    <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:${d.notePad} !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:block !important; box-sizing:border-box !important;">
-      <div style="position:absolute !important; left:0 !important; top:0 !important; bottom:0 !important; width:1mm !important; background:#FAA300 !important;"></div>
-      <p style="margin:0 !important; color:rgba(255,255,255,0.92) !important; font-size:${d.fsXs} !important; line-height:1.35 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
-        Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
-      </p>
-    </div>
-  </div>
+  <table cellpadding="0" cellspacing="0" style="width:100% !important;border-collapse:collapse !important;margin:0 !important;">
+    <tr>
+      <td style="background:#0f1f3a !important;border-radius:2mm !important;padding:8px 12px 8px 14px !important;
+        font-size:8px !important;line-height:11px !important;color:#ffffff !important;
+        font-family:Arial,sans-serif !important;vertical-align:middle !important;text-align:left !important;
+        -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">
+        <span style="display:inline-block !important;width:3px !important;height:11px !important;background:#FAA300 !important;margin-right:8px !important;vertical-align:middle !important;"></span>Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
+      </td>
+    </tr>
+  </table>
 `;
 
   const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
@@ -6379,32 +6381,36 @@ const noteBlock = `
     </div>
   `;
 
-  // Reserve space at bottom of flow content so tables never sit under the pinned disclaimer.
-  const noteReserve = densityTier === 'tight' ? '11mm' : densityTier === 'compact' ? '12mm' : '13mm';
-
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
     <div style="position:absolute !important; top:3.5mm !important; right:6mm !important; z-index:10 !important;">
       <img src="${pnglogo}" style="width:15mm !important; display:block !important;" />
     </div>
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:90% !important; overflow:hidden !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <div style="width:100% !important; box-sizing:border-box !important; padding-bottom:${noteReserve} !important;">
-        <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
-          <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#0f1f3a;line-height:1.1;margin:0;padding:0 0 1mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-          <div style="display:block;width:12mm;height:0.7mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
-          ${summaryCard('Selling price', fmtAed(sellingPrice), { dark: true, accent: true })}
-          ${isUnderConstruction ? summaryCard('Original price', fmtAed(originalPrice)) : ''}
-          ${planLabel ? summaryCard('Payment plan', planLabel || '—') : ''}
-          ${summaryCard('Premium', `<span style="${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</span>`)}
-        </div>
-        ${nocPercentageStrip}
-        ${installmentTable}
-        ${expensesBlock}
-      </div>
-      ${noteBlock}
+      <table cellpadding="0" cellspacing="0" style="width:100% !important;height:100% !important;border-collapse:collapse !important;table-layout:fixed !important;">
+        <tr>
+          <td valign="top" style="vertical-align:top !important;padding:0 !important;">
+            <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
+              <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#0f1f3a;line-height:1.1;margin:0;padding:0 0 1mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+              <div style="display:block;width:12mm;height:0.7mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
+              ${summaryCard('Selling price', fmtAed(sellingPrice), { dark: true, accent: true })}
+              ${isUnderConstruction ? summaryCard('Original price', fmtAed(originalPrice)) : ''}
+              ${planLabel ? summaryCard('Payment plan', planLabel || '—') : ''}
+              ${summaryCard('Premium', `<span style="${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</span>`)}
+            </div>
+            ${nocPercentageStrip}
+            ${installmentTable}
+            ${expensesBlock}
+          </td>
+        </tr>
+        <tr>
+          <td valign="bottom" style="vertical-align:bottom !important;height:1% !important;padding:3mm 0 0 0 !important;">
+            ${noteBlock}
+          </td>
+        </tr>
+      </table>
     </div>
     ${createFooter()}
   </div>
