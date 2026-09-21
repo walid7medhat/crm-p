@@ -945,6 +945,7 @@
     </div>
 
 <!-- Owner Details Modal -->
+<Teleport to="body">
 <div v-if="showOwnerDetailsModal" class="modal-overlay" @click="showOwnerDetailsModal = false">
   <div class="modal-content owner-details-modal" @click.stop>
     <div class="modal-header">
@@ -1129,6 +1130,7 @@
     </div>
   </div>
 </div>
+</Teleport>
 
 <!-- Mark as Sold Out Modal -->
 <div v-if="showSoldOutModal" class="modal-overlay" @click="closeSoldOutModal">
@@ -5711,21 +5713,84 @@ const createSlide2 = () => {
   }
   const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
   const pillH = 24;
+  const pillH = 24;
+
   const featureTd = (text) => {
     if (text == null) {
-      return `<td style="width:${colW};height:${pillH}px;padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
+      return `
+        <td
+          style="
+            width:${colW} !important;
+            height:${pillH}px !important;
+            padding:0 !important;
+            border:none !important;
+            background:transparent !important;
+          "
+        >&nbsp;</td>
+      `;
     }
-    // Asymmetric padding was a hand-tuned guess to compensate for html2canvas painting text
-    // low — fragile and still off-center. A fixed height with line-height equal to it (and
-    // only horizontal padding) is what reliably centers a single line under html2canvas.
-    return (
-      `<td align="center" valign="middle" height="${pillH}" style="width:${colW};height:${pillH}px !important;vertical-align:middle !important;text-align:center !important;` +
-      `background:rgba(255,255,255,0.18) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
-      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:${pillH}px !important;` +
-      `padding:0 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
-      `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
-      `box-sizing:border-box !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
-    );
+
+    return `
+      <td
+        width="${colW}"
+        height="${pillH}"
+        align="center"
+        valign="middle"
+        style="
+          width:${colW} !important;
+          height:${pillH}px !important;
+
+          padding:0 !important;
+          margin:0 !important;
+
+          background:rgba(255,255,255,0.18) !important;
+          border:1px solid rgba(255,255,255,0.75) !important;
+          border-radius:999px !important;
+
+          color:#ffffff !important;
+          text-align:center !important;
+          vertical-align:middle !important;
+
+          font-family:Arial,sans-serif !important;
+          font-size:10px !important;
+          font-weight:400 !important;
+
+          line-height:12px !important;
+
+          white-space:nowrap !important;
+          overflow:hidden !important;
+          text-overflow:ellipsis !important;
+
+          box-sizing:border-box !important;
+
+          -webkit-print-color-adjust:exact !important;
+          print-color-adjust:exact !important;
+        "
+      >
+        <div
+          style="
+            width:100% !important;
+            height:12px !important;
+            line-height:12px !important;
+            margin:0 !important;
+            padding:0 !important;
+
+            text-align:center !important;
+            vertical-align:middle !important;
+
+            color:#ffffff !important;
+            font-family:Arial,sans-serif !important;
+            font-size:10px !important;
+
+            white-space:nowrap !important;
+            overflow:hidden !important;
+            text-overflow:ellipsis !important;
+          "
+        >
+          ${text}
+        </div>
+      </td>
+    `;
   };
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
