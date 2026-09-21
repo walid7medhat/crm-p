@@ -945,7 +945,6 @@
     </div>
 
 <!-- Owner Details Modal -->
-<Teleport to="body">
 <div v-if="showOwnerDetailsModal" class="modal-overlay" @click="showOwnerDetailsModal = false">
   <div class="modal-content owner-details-modal" @click.stop>
     <div class="modal-header">
@@ -1130,7 +1129,6 @@
     </div>
   </div>
 </div>
-</Teleport>
 
 <!-- Mark as Sold Out Modal -->
 <div v-if="showSoldOutModal" class="modal-overlay" @click="closeSoldOutModal">
@@ -5340,9 +5338,7 @@ const renderOfferPdfInIsolation = async (pdfContent, options) => {
 
   const idoc = iframe.contentDocument || iframe.contentWindow.document;
   idoc.open();
-  idoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
-    <style>
+  idoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     html, body { margin: 0; padding: 0; background: #ffffff; }
     * { box-sizing: border-box !important; }
     table { border-collapse: collapse !important; border-spacing: 0 !important; }
@@ -5360,21 +5356,7 @@ const renderOfferPdfInIsolation = async (pdfContent, options) => {
   idoc.body.appendChild(pdfContent);
 
   try {
-    // This isolated document has its own font-loading context — Montserrat being loaded on
-    // the main page does NOT carry over to it. Without actually loading it here (and waiting
-    // for it), every element using font-family:'Montserrat' silently fell back to the browser
-    // default font at capture time, whose glyph metrics don't match what this file's
-    // line-heights/paddings were tuned for — the real cause of text rendering low/clipped
-    // ("cut with a line") across the whole export, not just the badges.
-    if (idoc.fonts && idoc.fonts.ready) {
-      await Promise.race([
-        idoc.fonts.ready,
-        new Promise((resolve) => setTimeout(resolve, 2000)),
-      ]).catch(() => {});
-    } else {
-      await new Promise((r) => setTimeout(r, 300));
-    }
-    // Let the isolated document settle (layout/reflow after the font swap) before capture.
+    // Let the isolated document settle before capture
     await new Promise((r) => setTimeout(r, 50));
     return await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
   } finally {
@@ -5439,11 +5421,7 @@ const generatePDF = async () => {
         useCORS: true,
         logging: false,
         allowTaint: true,
-        // false renders whole words as one unit instead of glyph-by-glyph, which is faster
-        // but noticeably less accurate at positioning text vertically — a strong candidate
-        // for the systemic "text sits low / cut" look across headers, badges and icon rows
-        // in this export, on top of the font-loading fix in renderOfferPdfInIsolation.
-        letterRendering: true,
+        letterRendering: false,
         backgroundColor: '#ffffff',
       },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
@@ -5481,6 +5459,12 @@ const generatePDF = async () => {
       `,
       confirmButtonColor: '#0B0736'
     });
+    await document.fonts.ready;
+    await Promise.all([
+      document.fonts.load('400 16px Montserrat'),
+      document.fonts.load('600 16px Montserrat'),
+      document.fonts.load('700 16px Montserrat'),
+    ]);
 
   } catch (error) {
     console.error('PDF generation error:', error);
@@ -5682,8 +5666,8 @@ const createSlide1 = (currentUser) => {
       <p style="font-size:16px; line-height: 25px; font-weight:normal; background:#01062D; display:inline-block; padding:0px 20px 10px 20px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0px 0 18px 0; position:absolute !important; top:-10px !important;  font-family: 'Montserrat', sans-serif; ">For ${listingStatus}</p>
       <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:bold; margin:0 0 12px 0; line-height:1.1; text-transform:uppercase;font-family: 'Montserrat', sans-serif;">${projectTitle}</h1>
       <p  style="font-size:20px; color:#01062D; font-weight:600; margin:0 0 18px 0;font-family: 'Montserrat', sans-serif;">${bedroomsText} ${propertyTypeName}</p>
-      <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:center !important; gap:2mm !important;">
-       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; display:block !important;" fill="#733E87"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
+      <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;">
+       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; margin-top:2px !important;" fill="#733E87"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
         <span  style="font-size: 14px; color: #818181;font-family: 'Montserrat', sans-serif;" >${location}</span>
       </p>
       <div style="border-top:0.3mm solid #ddd !important; margin-bottom:5mm !important; margin-top:15mm !important;"></div>
@@ -5712,85 +5696,20 @@ const createSlide2 = () => {
     featureRows.push(row);
   }
   const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
-  const pillH = 24;
-
-const featureTd = (text) => {
-  if (text == null) {
-    return `
-      <td
-        style="
-          width:${colW} !important;
-          height:${pillH}px !important;
-          padding:0 !important;
-          border:none !important;
-          background:transparent !important;
-        "
-      >&nbsp;</td>
-    `;
-  }
-
-  return `
-    <td
-      width="${colW}"
-      height="${pillH}"
-      align="center"
-      valign="middle"
-      style="
-        width:${colW} !important;
-        height:${pillH}px !important;
-
-        padding:0 !important;
-        margin:0 !important;
-
-        background:rgba(255,255,255,0.18) !important;
-        border:1px solid rgba(255,255,255,0.75) !important;
-        border-radius:999px !important;
-
-        color:#ffffff !important;
-        text-align:center !important;
-        vertical-align:middle !important;
-
-        font-family:Arial,sans-serif !important;
-        font-size:10px !important;
-        font-weight:400 !important;
-
-        line-height:12px !important;
-
-        white-space:nowrap !important;
-        overflow:hidden !important;
-        text-overflow:ellipsis !important;
-
-        box-sizing:border-box !important;
-
-        -webkit-print-color-adjust:exact !important;
-        print-color-adjust:exact !important;
-      "
-    >
-      <div
-        style="
-          width:100% !important;
-          height:12px !important;
-          line-height:12px !important;
-          margin:0 !important;
-          padding:0 !important;
-
-          text-align:center !important;
-          vertical-align:middle !important;
-
-          color:#ffffff !important;
-          font-family:Arial,sans-serif !important;
-          font-size:10px !important;
-
-          white-space:nowrap !important;
-          overflow:hidden !important;
-          text-overflow:ellipsis !important;
-        "
-      >
-        ${text}
-      </div>
-    </td>
-  `;
-};
+  const featureTd = (text) => {
+    if (text == null) {
+      return `<td style="width:${colW};padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
+    }
+    // html2canvas paints text slightly low — asymmetric pad (less top / more bottom) optically centers.
+    return (
+      `<td align="center" valign="middle" style="width:${colW};vertical-align:middle !important;text-align:center !important;` +
+      `background:rgba(255,255,255,0.18) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
+      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:1.15 !important;` +
+      `padding:5px 10px 11px 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
+      `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
+      `box-sizing:border-box !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
+    );
+  };
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
       <div style="width:100% !important; height:1px !important; background:rgba(255,255,255,0.28) !important; margin:0 0 14px 0 !important; font-size:1px !important; line-height:1px !important;">&nbsp;</div>
@@ -5861,17 +5780,18 @@ const createSlide3 = () => {
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
   const projectImage = getProjectImageBySlot(3);
   const renderItem = (feature) => {
+      console.log(feature);
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
 
     return `
-      <div style="display:flex !important; align-items:center !important; gap:2mm !important; margin:0 0 3mm 0 !important;">
-
+      <div style="display:flex !important; align-items:flex-start !important; gap:2mm !important; margin:0 0 3mm 0 !important;">
+        
         ${
           imageUrl
-            ? `<img src="${imageUrl}"
-                  style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; display:block !important;" />`
+            ? `<img src="${imageUrl}" 
+                  style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; margin-top:0.5mm !important;" />`
             : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D"
-                  style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; display:block !important;">
+                  style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>`
         }
