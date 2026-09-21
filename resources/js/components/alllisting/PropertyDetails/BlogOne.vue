@@ -5328,42 +5328,6 @@ const preloadFeatureImages = async () => {
   await Promise.all(conversionPromises);
   console.log('✅ All feature images preloaded and converted');
 };
-const renderOfferPdfInIsolation = async (pdfContent, options) => {
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute(
-    'style',
-    'position:fixed;left:-10000px;top:0;width:794px;height:2000px;border:0;opacity:0;pointer-events:none;'
-  );
-  document.body.appendChild(iframe);
-
-  const idoc = iframe.contentDocument || iframe.contentWindow.document;
-  idoc.open();
-  idoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    html, body { margin: 0; padding: 0; background: #ffffff; }
-    * { box-sizing: border-box !important; }
-    table { border-collapse: collapse !important; border-spacing: 0 !important; }
-    table.offer-features {
-      border-collapse: separate !important;
-      border-spacing: 8px 10px !important;
-    }
-    td, th {
-      vertical-align: middle !important;
-      text-align: center !important;
-      margin: 0 !important;
-    }
-  </style></head><body></body></html>`);
-  idoc.close();
-  idoc.body.appendChild(pdfContent);
-
-  try {
-    // Let the isolated document settle before capture
-    await new Promise((r) => setTimeout(r, 50));
-    return await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
-  } finally {
-    iframe.remove();
-  }
-};
-
 const generatePDF = async () => {
   try {
     // Show loading
@@ -5416,19 +5380,12 @@ const generatePDF = async () => {
     const options = {
       margin: [0,0],
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        letterRendering: false,
-        backgroundColor: '#ffffff',
-      },
+      html2canvas: { scale: 3, useCORS: true, logging: false, allowTaint: true },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    const pdf = await renderOfferPdfInIsolation(pdfContent, options);
+    const pdf = await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
     const pageCount = pdf.internal.getNumberOfPages();
     pdf.deletePage(pageCount);
 
@@ -5459,19 +5416,12 @@ const generatePDF = async () => {
       `,
       confirmButtonColor: '#0B0736'
     });
-    await document.fonts.ready;
-    await Promise.all([
-      document.fonts.load('400 16px Montserrat'),
-      document.fonts.load('600 16px Montserrat'),
-      document.fonts.load('700 16px Montserrat'),
-    ]);
 
   } catch (error) {
     console.error('PDF generation error:', error);
     proxy.$showNotification('Failed to generate PDF. Please try again.', 'error');
   }
 };
-
 const showOfferHistory = async () => {
   try {
     const response = await api.get(`/listings/properties/${property.value.id}/offers`);
@@ -5527,7 +5477,6 @@ const showOfferHistory = async () => {
 
 const createNewDesignContent = (currentUser) => {
   const container = document.createElement('div');
-  container.className = 'oia-offer-pdf';
   container.style.cssText = 'margin:0 !important; font-family:Arial, sans-serif !important; background:#ffffff !important; width:100% !important; height:100% !important;';
 
   const hasFloorPlans = property.value?.floor_plans && Array.isArray(property.value.floor_plans) && property.value.floor_plans.length > 0;
@@ -5537,17 +5486,6 @@ const createNewDesignContent = (currentUser) => {
   const paymentDetailsSlide = createPaymentDetailsSlide();
 
   container.innerHTML = `
-<style>
-  .oia-offer-pdf table { border-collapse: collapse !important; border-spacing: 0 !important; }
-  .oia-offer-pdf table.offer-features {
-    border-collapse: separate !important;
-    border-spacing: 8px 10px !important;
-  }
-  .oia-offer-pdf td, .oia-offer-pdf th {
-    vertical-align: middle !important;
-    text-align: center !important;
-  }
-</style>
  <!-- Slide 1 - Cover -->
     ${createSlide1(currentUser)}
 <!-- Slide 2 - Property Details -->
@@ -5687,36 +5625,14 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // Equal-width pill chips: same border size, fully rounded, equal top/bottom padding, centered text.
-  const featuresPerRow = 6;
-  const featureRows = [];
-  for (let i = 0; i < features.length; i += featuresPerRow) {
-    const row = features.slice(i, i + featuresPerRow);
-    while (row.length < featuresPerRow) row.push(null);
-    featureRows.push(row);
-  }
-  const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
-  const featureTd = (text) => {
-    if (text == null) {
-      return `<td style="width:${colW};padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
-    }
-    // html2canvas paints text slightly low — asymmetric pad (less top / more bottom) optically centers.
-    return (
-      `<td align="center" valign="middle" style="width:${colW};vertical-align:middle !important;text-align:center !important;` +
-      `background:rgba(255,255,255,0.18) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
-      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:1.15 !important;` +
-      `padding:5px 10px 11px 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
-      `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
-      `box-sizing:border-box !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
-    );
-  };
   const featuresBlock = features.length > 0 ? `
-    <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
-      <div style="width:100% !important; height:1px !important; background:rgba(255,255,255,0.28) !important; margin:0 0 14px 0 !important; font-size:1px !important; line-height:1px !important;">&nbsp;</div>
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:10px !important; margin:0 0 10px 0 !important; font-family:Arial,sans-serif !important; line-height:14px !important; text-align:left !important;">Features</p>
-      <table class="offer-features" cellpadding="0" cellspacing="0" style="width:100% !important; border-collapse:separate !important; border-spacing:6px 8px !important; table-layout:fixed !important;">
-        ${featureRows.map((row) => `<tr>${row.map((feature) => featureTd(feature)).join('')}</tr>`).join('')}
-      </table>
+    <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
+      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
+          ${features.map((feature) => `
+            <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
+          `).join('')}
+        </div>
     </div>
   ` : '';
 
@@ -5840,8 +5756,8 @@ const createSlide4 = () => {
       <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
         <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
         
-        <p style="font-size:5mm !important; font-weight:bold !important; line-height:normal !important; color:#01062C !important; margin:0 0 3mm 0 !important; font-family:'Montserrat', sans-serif !important;">${projectTitle}</p>
-        <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:left !important; font-family:'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
+        <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
+        <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
       <div style="width:50% !important;position:relative !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
@@ -6063,6 +5979,13 @@ const createPaymentDetailsSlide = () => {
     return dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  const badgeStyle = (status) => {
+    if (status === 'Paid') return 'background:#22c55e;color:#fff;';
+    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
+    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
+    return 'background:#fecdd3;color:#9f1239;';
+  };
+
   const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
   const hasPremiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction;
   const hasHandoverRow = Math.abs(handoverAmount) > 0.01;
@@ -6073,92 +5996,54 @@ const createPaymentDetailsSlide = () => {
 
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
   const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
-  const densityTier = contentPressure >= 14 ? 'tight' : contentPressure >= 10 ? 'compact' : 'normal';
+  const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
 
   const d = {
     normal: {
-      sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.2mm', headerMb: '2.5mm',
-      titleFs: '4.5mm', cardGap: '2mm', cardMb: '2mm',
-      cardPad: '10px 12px 12px', cardLbl: '11px', cardVal: '16px',
-      nocMb: '1.5mm', nocPad: '1.2mm 1.5mm', wrapPad: '0', pagePad: '5mm 7mm 4mm 7mm',
-      fs: '2.3mm', fsSm: '2.1mm', fsXs: '1.9mm', badgeFs: '1.8mm',
+      fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
+      pad: '1.05mm 0.8mm', padHead: '0.25mm', badgePadX: '1.8mm',
+      sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
+      titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
+      cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
+      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1mm 0 0.8mm 0', pagePad: '7mm 7mm 14mm 7mm',
+      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '0.2mm',
     },
     compact: {
-      sectionMb: '1.5mm', titleMb: '1mm', blockMt: '1.6mm', headerMb: '2mm',
-      titleFs: '4mm', cardGap: '1.5mm', cardMb: '1.5mm',
-      cardPad: '8px 10px 10px', cardLbl: '10px', cardVal: '14px',
-      nocMb: '1.2mm', nocPad: '1mm 1.3mm', wrapPad: '0', pagePad: '4.5mm 6mm 3.5mm 6mm',
-      fs: '2.1mm', fsSm: '1.95mm', fsXs: '1.8mm', badgeFs: '1.65mm',
+      fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '1.8mm',
+      pad: '0.85mm 0.7mm', padHead: '0.2mm', badgePadX: '1.5mm',
+      sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
+      titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
+      cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
+      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.8mm 0 0.6mm 0', pagePad: '6mm 6mm 13mm 6mm',
+      pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.15mm',
     },
     tight: {
-      sectionMb: '1.2mm', titleMb: '0.8mm', blockMt: '1.3mm', headerMb: '1.6mm',
-      titleFs: '3.6mm', cardGap: '1.2mm', cardMb: '1.2mm',
-      cardPad: '7px 9px 9px', cardLbl: '9px', cardVal: '13px',
-      nocMb: '1mm', nocPad: '0.8mm 1.1mm', wrapPad: '0', pagePad: '4mm 5.5mm 3mm 5.5mm',
-      fs: '1.95mm', fsSm: '1.8mm', fsXs: '1.65mm', badgeFs: '1.5mm',
+      fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.6mm',
+      pad: '0.7mm 0.6mm', padHead: '0.15mm', badgePadX: '1.3mm',
+      sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
+      titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
+      cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
+      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.7mm 0 0.5mm 0', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
+      pillH: '3.8mm', badgeH: '2.9mm', rowGap: '0.1mm',
     },
   }[densityTier];
 
-  // Generous px padding + line-height >= font so html2canvas does not clip glyph bottoms.
-  const thFs = densityTier === 'tight' ? 8 : 9;
-  const tdFs = densityTier === 'tight' ? 9 : 10;
-  const badgeFs = densityTier === 'tight' ? 8 : 9;
-  const cellPadY = densityTier === 'tight' ? 6 : densityTier === 'compact' ? 7 : 8;
-  const cellPadX = 6;
-  const cellPad = `${cellPadY}px ${cellPadX}px`;
-  const cellLh = `${tdFs + 4}px`;
-  const thLh = `${thFs + 4}px`;
+  // --- CENTERING CORE ---
+  // html2canvas places glyphs at the BOTTOM of a tall line-height box, so
+  // never use height === line-height for pills. Use line-height:1 + padding.
+  const thCell = `padding:${d.padHead};vertical-align:middle;text-align:center;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.25;vertical-align:middle;text-align:center;`;
 
-  const thCell =
-    `vertical-align:middle !important;text-align:center !important;` +
-    `background:#0f1f3a !important;color:#ffffff !important;font-size:${thFs}px !important;` +
-    `line-height:${thLh} !important;padding:${cellPad} !important;margin:0 !important;` +
-    `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
-    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
+  const cellInner = (content) =>
+    `<div style="width:100%;text-align:center;line-height:1.25;position:relative;top:-0.18mm;">${content}</div>`;
 
-  const tdCell =
-    `vertical-align:middle !important;text-align:center !important;` +
-    `background:#ffffff !important;color:#1e293b !important;font-size:${tdFs}px !important;` +
-    `line-height:${cellLh} !important;padding:${cellPad} !important;margin:0 !important;` +
-    `font-family:Arial,sans-serif !important;` +
-    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
+  // Asymmetric padding (slightly more bottom) keeps text optically centered in PDF
+  const thPill = (label) =>
+    `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;padding:0.95mm 1.2mm 1.55mm;position:relative;top:-0.14mm;">${label}</div>`;
+  const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
-  const tdMuted =
-    `vertical-align:middle !important;text-align:center !important;` +
-    `background:#ffffff !important;color:#64748b !important;font-size:${tdFs}px !important;` +
-    `line-height:${cellLh} !important;padding:${cellPad} !important;margin:0 !important;` +
-    `font-family:Arial,sans-serif !important;`;
-
-  const tdTotal =
-    `vertical-align:middle !important;text-align:center !important;` +
-    `background:#f1f5f9 !important;color:#0f1f3a !important;font-size:${tdFs}px !important;` +
-    `line-height:${cellLh} !important;padding:${cellPad} !important;margin:0 !important;` +
-    `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
-    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
-  const tableStyle =
-    `width:100% !important;border-collapse:collapse !important;border-spacing:0 !important;` +
-    `table-layout:fixed !important;font-family:Arial,sans-serif !important;`;
-
-  const statusPill = (status) => {
-    let bg = '#e8ecf2';
-    let fg = '#0f1f3a';
-    if (status === 'Paid') { bg = '#0f1f3a'; fg = '#ffffff'; }
-    else if (status === 'Due on transfer') { bg = '#d5dde8'; fg = '#0f1f3a'; }
-    else if (status === 'Selling below original price') { bg = '#e8ecf2'; fg = '#0f1f3a'; }
-    // Vertical padding + a tight line-height fight each other under html2canvas (it doesn't
-    // reliably honor vertical-align on table cells), which pushed the glyph to the bottom of
-    // the pill and let the cell's own bottom edge cut through it. A single, generous
-    // line-height with only horizontal padding is what actually centers reliably here.
-    const pillH = badgeFs + 12;
-    return (
-      `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;margin:0 auto !important;">` +
-      `<tr><td align="center" valign="middle" height="${pillH}" style="background:${bg} !important;color:${fg} !important;` +
-      `border-radius:999px !important;font-size:${badgeFs}px !important;height:${pillH}px !important;line-height:${pillH}px !important;` +
-      `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
-      `padding:0 11px !important;text-align:center !important;vertical-align:middle !important;` +
-      `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${status}</td></tr></table>`
-    );
-  };
+  const makeBadge = (text, status) =>
+    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;text-align:center;padding:0.7mm ${d.badgePadX} 1.3mm;position:relative;top:-0.14mm;${badgeStyle(status)}">${text}</span>`;
 
   let cumulative = 0;
   const installmentRowsPaidArr = [];
@@ -6172,15 +6057,16 @@ const createPaymentDetailsSlide = () => {
     if (paid) status = 'Paid';
     else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
-    const dateCell = paid ? '—' : fmtDate(entry?.date);
+    const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
+    const badge = makeBadge(status, status);
 
     const rowHtml = `
       <tr>
-        <td align="center" valign="middle" style="${tdCell}">Installment</td>
-        <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
-        <td align="center" valign="middle" style="${tdCell}">${statusPill(status)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('Installment')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(pct + '%')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(amount))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(dateCell)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(badge)}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6191,24 +6077,26 @@ const createPaymentDetailsSlide = () => {
   const installmentRowsNotPaid = installmentRowsNotPaidArr.join('');
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
+  const premiumBadge = makeBadge(premiumStatus, premiumStatus);
   const premiumRow = hasPremiumRow
-    ? `<tr>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">Premium</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">${fmtAed(premium)}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">${statusPill(premiumStatus)}</td>
+    ? `<tr style="background:#f8fafc;">
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('Premium')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${cellInner(fmtAed(premium))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(premiumBadge)}</td>
       </tr>`
     : '';
 
   const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
+  const handoverBadge = makeBadge(handoverStatus, handoverStatus);
   const handoverRow = hasHandoverRow
     ? `<tr>
-        <td align="center" valign="middle" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
-        <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${statusPill(handoverStatus)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverPct.toFixed(2) + '%')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(handoverAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtDate(p.handover_date))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverBadge)}</td>
       </tr>`
     : '';
 
@@ -6233,14 +6121,17 @@ const createPaymentDetailsSlide = () => {
 
   if (hasNoc) {
     const nocAmount = nocFixedAmount;
+    const isFullyPaid = scheduledAed >= nocRequired - 0.01;
+    const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
+    const nocValueBadge = `<span >${fmtAed(nocAmount)}</span>`;
 
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" style="${tdCell}font-weight:500 !important;">NOC Fees</td>
-        <td align="center" valign="middle" style="${tdMuted}">${fmtAed(nocAmount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(nocAmount)}</td>
-        <td align="center" valign="middle" style="${tdCell}">—</td>
-        <td align="center" valign="middle" style="${tdCell}font-weight:600 !important;">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:500;background:#ffffff !important;">${cellInner('NOC Fees')}</td>
+        <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(nocValueBadge)}</td>
       </tr>
     `);
 
@@ -6263,11 +6154,11 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" style="${tdCell}">${l?.label || '—'}</td>
-        <td align="center" valign="middle" style="${tdMuted}">${detail}</td>
-        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amt)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
-        <td align="center" valign="middle" style="${tdCell}font-weight:600 !important;">${fmtAed(total)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(l?.label || '—')}</td>
+        <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(detail)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(amt))}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(vat > 0 ? fmtAed(vat) : '—')}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(fmtAed(total))}</td>
       </tr>
     `);
   });
@@ -6276,25 +6167,25 @@ const createPaymentDetailsSlide = () => {
 
   const expensesBlock = (expenseRows.length > 0) ? `
     <div style="margin-top:${d.blockMt};width:100%;">
-      <div style="font-size:${d.fs};line-height:1.4;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">other costs</div>
-      <div style="background:#ffffff !important;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
-        <table cellpadding="0" cellspacing="0" style="${tableStyle}">
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">other costs</div>
+      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
+        <table style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" style="${thCell}width:18%;">Label</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">Detail</th>
-              <th align="center" valign="middle" style="${thCell}width:20%;">Amount</th>
-              <th align="center" valign="middle" style="${thCell}width:16%;">VAT</th>
-              <th align="center" valign="middle" style="${thCell}width:22%;">Total</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Label')}</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Detail')}</th>
+              <th align="center" valign="middle" style="${thCell}width:20%;">${thPill('Amount')}</th>
+              <th align="center" valign="middle" style="${thCell}width:16%;">${thPill('VAT')}</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Total')}</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRowsHtml}
-            <tr>
-              <td align="center" valign="middle" colspan="2" style="${tdTotal}">Total</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expSubtotal)}</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expVatTotal)}</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expGrand)}</td>
+            <tr style="background:#f1f5f9;">
+              <td align="center" valign="middle" colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
             </tr>
           </tbody>
         </table>
@@ -6304,16 +6195,16 @@ const createPaymentDetailsSlide = () => {
 
   const installmentTable = (installmentRowsPaid || installmentRowsNotPaid || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
-      <div style="font-size:${d.fs};line-height:1.4;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">Installment breakdown</div>
-      <div style="background:#ffffff !important;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
-        <table cellpadding="0" cellspacing="0" style="${tableStyle}">
+      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
+      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm #ffffff;width:100%;box-sizing:border-box;">
+        <table style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" style="${thCell}width:22%;">Payment type</th>
-              <th align="center" valign="middle" style="${thCell}width:13%;">Percentage</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">Amount</th>
-              <th align="center" valign="middle" style="${thCell}width:18%;">Date</th>
-              <th align="center" valign="middle" style="${thCell}width:15%;">Status</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Payment type')}</th>
+              <th align="center" valign="middle" style="${thCell}width:13%;">${thPill('Percentage')}</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Amount')}</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Date')}</th>
+              <th align="center" valign="middle" style="${thCell}width:15%;">${thPill('Status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -6321,10 +6212,10 @@ const createPaymentDetailsSlide = () => {
             ${premiumRow}
             ${installmentRowsNotPaid}
             ${handoverRow}
-            <tr>
-              <td align="center" valign="middle" style="${tdTotal}" colspan="2">Total</td>
-              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(totalAmount)}</td>
-              <td colspan="2" style="${tdTotal}"></td>
+            <tr style="background:#f1f5f9;">
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;" colspan="2">${cellInner('Total')}</td>
+              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
+              <td colspan="2"></td>
             </tr>
           </tbody>
         </table>
@@ -6336,7 +6227,7 @@ const createPaymentDetailsSlide = () => {
   const nocPercentageStrip = (hasNocPercentage) ? `
     <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
       <span style="display:inline-flex;align-items:center;gap:0.8mm;">
-        <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0 2mm;font-weight:700;font-size:${d.fsSm};display:inline-block;line-height:16px;height:16px;vertical-align:middle;white-space:nowrap;">
+        <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0.3mm 2mm;font-weight:700;font-size:${d.fsSm};display:inline-flex;align-items:center;gap:0.5mm;">
           <span style="font-size:${d.fsXs};">%</span> NOC
         </span>
         <span style="font-weight:500;">Required:</span>
@@ -6352,57 +6243,53 @@ const createPaymentDetailsSlide = () => {
         <span style="color:#f59e0b;">⏳</span>
         Remaining: <strong>${fmtAed(nocRemainingFromPercentage)}</strong>
       </span>
-      <span style="display:inline-block;padding:0 1.6mm;border-radius:4mm;font-weight:700;font-size:${d.badgeFs};line-height:16px;height:16px;vertical-align:middle;white-space:nowrap;${nocMetFromPercentage ? 'background:#22c55e;color:#fff;' : 'background:#f59e0b;color:#fff;'}">
+      <span style="display:inline-flex;align-items:center;padding:0.3mm 1.6mm;border-radius:4mm;font-weight:700;font-size:${d.badgeFs};${nocMetFromPercentage ? 'background:#22c55e;color:#fff;' : 'background:#f59e0b;color:#fff;'}">
         ${nocMetFromPercentage ? '✅ NOC met' : '⚠️ Below NOC'}
       </span>
     </div>
   ` : '';
 const noteBlock = `
-  <div style="margin-top:${d.blockMt} !important;width:100% !important;box-sizing:border-box !important;">
-    <table cellpadding="0" cellspacing="0" style="width:100% !important;border-collapse:collapse !important;margin:0 !important;">
-      <tr>
-        <td style="background:#0f1f3a !important;border-radius:2mm !important;padding:9px 12px 9px 14px !important;
-          font-size:8px !important;line-height:12px !important;color:#ffffff !important;
-          font-family:Arial,sans-serif !important;vertical-align:middle !important;text-align:left !important;
-          -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">
-          <span style="display:inline-block !important;width:3px !important;height:12px !important;background:#FAA300 !important;margin-right:8px !important;vertical-align:middle !important;"></span>Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
-        </td>
-      </tr>
-    </table>
+  <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:11.5% !important; z-index:20 !important; box-sizing:border-box !important;">
+    <div style="background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-left:1mm solid #FAA300 !important; border-radius:2mm !important; padding:2mm 3.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important;">
+      <p style="margin:0 !important; color:rgba(255,255,255,0.85) !important; font-size:${d.fsXs} !important; line-height:1.5 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
+        Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
+      </p>
+    </div>
   </div>
 `;
-
-  const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
-    <table cellpadding="0" cellspacing="0" style="width:100% !important;border-collapse:collapse !important;border-radius:2.5mm !important;overflow:hidden !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-      <tr>
-        <td align="center" style="background:${dark ? '#0f1f3a' : '#e8ecf2'} !important;color:${dark ? '#ffffff' : '#0f1f3a'} !important;
-          padding:${d.cardPad} !important;text-align:center !important;vertical-align:middle !important;
-          font-family:Arial,sans-serif !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-          <div style="font-size:${d.cardLbl} !important;line-height:${parseInt(d.cardLbl, 10) + 3}px !important;margin:0 0 4px 0 !important;opacity:${dark ? '0.9' : '1'};">${label}</div>
-          <div style="font-size:${d.cardVal} !important;line-height:${parseInt(d.cardVal, 10) + 4}px !important;font-weight:700 !important;margin:0 !important;">${valueHtml}</div>
-        </td>
-      </tr>
-      ${accent ? `<tr><td style="background:#FAA300 !important;height:3px !important;font-size:0 !important;line-height:0 !important;padding:0 !important;">&nbsp;</td></tr>` : ''}
-    </table>
-  `;
-
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
-    <div style="position:absolute !important; top:4mm !important; right:7mm !important; z-index:10 !important;">
-      <img src="${pnglogo}" style="width:16mm !important; display:block !important;" />
+    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
+      <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:90% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
-        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#0f1f3a;line-height:1.25;margin:0;padding:0 0 1.5mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="display:block;width:12mm;height:0.7mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
+    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
+      <div style="margin-bottom:${d.headerMb};">
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="width:14mm;height:1mm;background:#FAA300;border-radius:1mm;margin-top:${d.accentMb};"></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
-        ${summaryCard('Selling price', fmtAed(sellingPrice), { dark: true, accent: true })}
-        ${isUnderConstruction ? summaryCard('Original price', fmtAed(originalPrice)) : ''}
-        ${planLabel ? summaryCard('Payment plan', planLabel || '—') : ''}
-        ${summaryCard('Premium', `<span style="${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</span>`)}
+
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
+        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #FAA300;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
+        </div>
+        ${isUnderConstruction ?  `
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price </div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(originalPrice)}</div>
+        </div> ` : ''}
+
+           ${planLabel ? `
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Payment plan</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${planLabel || '—'}</div>
+        </div>    ` : ''}
+        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
+          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Premium</div>
+          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
+        </div>
       </div>
-      ${nocPercentageStrip}
+    ${nocPercentageStrip}
       ${installmentTable}
       ${expensesBlock}
       ${noteBlock}
@@ -6414,8 +6301,8 @@ const noteBlock = `
 
 const createFooter = () => {
   return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; justify-content:flex-start !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; line-height:1 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
   </div>
   `;
 };
