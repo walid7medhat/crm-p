@@ -5792,24 +5792,27 @@ const createSlide3 = () => {
   const col2 = features.slice(half);
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
   const projectImage = getProjectImageBySlot(3);
-  // A flex row (icon + text as siblings) is not reliable under html2canvas — it has
-  // wrapped the icon onto its own line above the text in exports. A table row can't do
-  // that: the icon cell and text cell are locked onto the same row no matter what.
   const renderItem = (feature) => {
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
-    const iconCell = imageUrl
-      ? `<img src="${imageUrl}" style="width:4mm !important; height:4mm !important; object-fit:contain !important; display:block !important;" />`
-      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D" style="width:3mm !important; height:3mm !important; display:block !important;">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>`;
 
-    return (
-      `<table cellpadding="0" cellspacing="0" style="width:100% !important; border-collapse:collapse !important; margin:0 0 3mm 0 !important;">` +
-      `<tr>` +
-      `<td align="center" valign="middle" style="width:6mm !important; padding:0 2mm 0 0 !important; vertical-align:middle !important; text-align:center !important;">${iconCell}</td>` +
-      `<td valign="middle" style="padding:0 !important; margin:0 !important; vertical-align:middle !important; text-align:left !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important; font-family:Arial,sans-serif !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important;">${feature.name}</td>` +
-      `</tr></table>`
-    );
+    return `
+      <div style="display:flex !important; align-items:center !important; gap:2mm !important; margin:0 0 3mm 0 !important;">
+
+        ${
+          imageUrl
+            ? `<img src="${imageUrl}"
+                  style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; display:block !important;" />`
+            : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D"
+                  style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; display:block !important;">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>`
+        }
+
+        <p style="margin:0 !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important;">
+          ${feature.name}
+        </p>
+      </div>
+    `;
   };
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
