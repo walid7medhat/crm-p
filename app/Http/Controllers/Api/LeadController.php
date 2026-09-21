@@ -893,6 +893,13 @@ class LeadController extends Controller
             }
         }
         
+        $responsiblePersonRelations = [
+            'roles:id,name',
+            'parent:id,name,display_name,parent_id',
+            'parent.parent:id,name,display_name,parent_id',
+            'parent.parent.parent:id,name,display_name,parent_id',
+        ];
+
         if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
             $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
                 ->whereNotNull('parent_id')
@@ -900,6 +907,7 @@ class LeadController extends Controller
                     // Filter by multiple office IDs
                     $qq->whereIn('id', $officeAndDescendants); 
                 })
+                ->with($responsiblePersonRelations)
                 ->get(['id', 'name', 'display_name', 'email', 'avatar','parent_id'])
                 ->map(function($user) {
                     return [
@@ -907,7 +915,7 @@ class LeadController extends Controller
                        'name' => User::resolveDisplayName($user),
                         'email'  => $user->email,
                         'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                        'role_name' => $user->roles()->first()->name,
+                        'role_name' => $user->roles->first()?->name,
                         'team_id'=>$user->parent?->id,
                        'parent_name' => User::resolveDisplayName($user->parent),
                        'branch_id' => $user->office?->id,
@@ -923,6 +931,7 @@ class LeadController extends Controller
                     // Filter by multiple office IDs
                     $qq->whereIn('id', $officeAndDescendants); 
                 })
+                ->with($responsiblePersonRelations)
                 ->get(['id', 'name', 'display_name', 'email','avatar','parent_id'])
                 ->map(function($user) {
                     return [

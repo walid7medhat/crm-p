@@ -566,51 +566,85 @@ const clearPendingStageChange = () => {
     missingFieldsForLead.value = []
 }
 
+let fetchLeadInFlight = null
+let fetchLeadInFlightId = null
+let fetchLeadGeneration = 0
+
 const fetchLead = async ({ silent = false } = {}) => {
     if (!props.leadId) return
     const leadIdNum = Number(props.leadId)
-    const seed = props.initialLead
-    const seedMatches = seed && Number(seed.id) === leadIdNum
 
-    // Paint from local card data immediately so submitted stage-change fields show now.
-    if (seedMatches) {
-        if (!lead.value || Number(lead.value.id) !== leadIdNum) {
-            lead.value = { ...seed }
-        } else {
-            lead.value = { ...lead.value, ...seed }
+    if (fetchLeadInFlight && fetchLeadInFlightId === leadIdNum) {
+        return fetchLeadInFlight
+    }
+
+    const requestGeneration = ++fetchLeadGeneration
+    fetchLeadInFlightId = leadIdNum
+    fetchLeadInFlight = (async () => {
+        if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
+            return
         }
-        if (seed.stage_id) leadStageId.value = seed.stage_id
-    } else if (!lead.value || Number(lead.value.id) !== leadIdNum) {
-        lead.value = null
-    }
 
-    if (!silent) {
-        isLoadingLead.value = !lead.value
-    }
+        const seed = props.initialLead
+        const seedMatches = seed && Number(seed.id) === leadIdNum
+
+        // Paint from local card data immediately so submitted stage-change fields show now.
+        if (seedMatches) {
+            if (!lead.value || Number(lead.value.id) !== leadIdNum) {
+                lead.value = { ...seed }
+            } else {
+                lead.value = { ...lead.value, ...seed }
+            }
+            if (seed.stage_id) leadStageId.value = seed.stage_id
+        } else if (!lead.value || Number(lead.value.id) !== leadIdNum) {
+            lead.value = null
+        }
+
+        if (!silent) {
+            isLoadingLead.value = !lead.value
+        }
+
+        try {
+            const response = await api.get(`/leads/${leadIdNum}`)
+            if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
+                return
+            }
+            const fresh = response.data.data
+            if (fresh) {
+                lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
+                if (fresh.stage_id) leadStageId.value = fresh.stage_id
+            }
+        } catch (error) {
+            if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
+                return
+            }
+            console.error('❌ Error fetching lead:', error)
+            if (error?.response?.status === 403) {
+                // Never leave a half-populated modal showing (e.g. seeded from a kanban
+                // card thumbnail) for a lead this user isn't actually authorized to view.
+                lead.value = null
+                $showNotification(
+                    error.response?.data?.message || 'You do not have permission to view this lead',
+                    'error'
+                )
+                show.value = false
+            } else if (!lead.value) {
+                $showNotification('Failed to load lead details', 'error')
+            }
+        } finally {
+            if (requestGeneration === fetchLeadGeneration && Number(props.leadId) === leadIdNum) {
+                isLoadingLead.value = false
+            }
+        }
+    })()
 
     try {
-        const response = await api.get(`/leads/${props.leadId}`)
-        const fresh = response.data.data
-        if (fresh) {
-            lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
-            if (fresh.stage_id) leadStageId.value = fresh.stage_id
-        }
-    } catch (error) {
-        console.error('❌ Error fetching lead:', error)
-        if (error?.response?.status === 403) {
-            // Never leave a half-populated modal showing (e.g. seeded from a kanban
-            // card thumbnail) for a lead this user isn't actually authorized to view.
-            lead.value = null
-            $showNotification(
-                error.response?.data?.message || 'You do not have permission to view this lead',
-                'error'
-            )
-            show.value = false
-        } else if (!lead.value) {
-            $showNotification('Failed to load lead details', 'error')
-        }
+        await fetchLeadInFlight
     } finally {
-        isLoadingLead.value = false
+        if (fetchLeadInFlightId === leadIdNum) {
+            fetchLeadInFlight = null
+            fetchLeadInFlightId = null
+        }
     }
 }
 
@@ -722,12 +756,6 @@ const checkUrlForLead = () => {
 onMounted(() => {
     fetchStageOrders()
     checkUrlForLead()
-    // Async remount can start with modelValue already true — watch(show) is not
-    // immediate, so fetch here or General stays blank until a later toggle.
-    if (props.modelValue && props.leadId) {
-        fetchLead()
-        initializeLeadListener()
-    }
 })
 
 onUnmounted(() => {
@@ -798,13 +826,14 @@ watch(() => route.path, (newPath) => {
 })
 
 
-watch(show, (val) => {
+watch(show, (val, oldVal) => {
   if (val) {
     if (props.leadId) {
       fetchLead()
       initializeLeadListener()
     }
-  } else {
+  } else if (oldVal) {
+    fetchLeadGeneration++
     cleanup()
     activeTab.value = 'general'
     if (route.query.lead) {
@@ -815,7 +844,7 @@ watch(show, (val) => {
     }
   }
   emit('update:modelValue', val)
-})
+}, { immediate: true })
 
 
 watch(() => props.leadId, (newLeadId, oldLeadId) => {
