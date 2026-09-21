@@ -42,7 +42,7 @@
       @close="closeChat"
     />
     <ViewLeadModal
-      v-if="showLayout && (showLeadViewModal || leadViewModalId)"
+      v-if="showLayout"
       v-model="showLeadViewModal"
       :leadId="leadViewModalId"
       :initialLead="leadViewModalSeed"
@@ -148,6 +148,9 @@ export default {
       syncVideoBgClass()
       if (!showLayout.value) {
         resetSidebarLayout()
+      } else {
+        // Warm ViewLeadModal chunk so first card open after reload isn't blank.
+        import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
       }
     })
     onUnmounted(() => {

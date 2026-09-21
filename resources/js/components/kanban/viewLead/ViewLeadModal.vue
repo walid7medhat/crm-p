@@ -722,6 +722,12 @@ const checkUrlForLead = () => {
 onMounted(() => {
     fetchStageOrders()
     checkUrlForLead()
+    // Async remount can start with modelValue already true — watch(show) is not
+    // immediate, so fetch here or General stays blank until a later toggle.
+    if (props.modelValue && props.leadId) {
+        fetchLead()
+        initializeLeadListener()
+    }
 })
 
 onUnmounted(() => {
