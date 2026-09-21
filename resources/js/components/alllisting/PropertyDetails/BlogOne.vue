@@ -6073,92 +6073,84 @@ const createPaymentDetailsSlide = () => {
 
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
   const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
-  // Fit tables + disclaimer above the 10% footer — tighten earlier.
-  const densityTier = contentPressure >= 7 ? 'tight' : contentPressure >= 4 ? 'compact' : 'normal';
+  const densityTier = contentPressure >= 14 ? 'tight' : contentPressure >= 10 ? 'compact' : 'normal';
 
   const d = {
     normal: {
+      sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.2mm', headerMb: '2.5mm',
+      titleFs: '4.5mm', cardGap: '2mm', cardMb: '2mm',
+      cardPad: '10px 12px 12px', cardLbl: '11px', cardVal: '16px',
+      nocMb: '1.5mm', nocPad: '1.2mm 1.5mm', wrapPad: '0', pagePad: '5mm 7mm 4mm 7mm',
       fs: '2.3mm', fsSm: '2.1mm', fsXs: '1.9mm', badgeFs: '1.8mm',
-      pad: '1mm 0.7mm', padHead: '0.5mm', badgePadX: '1.5mm',
-      sectionMb: '1.4mm', titleMb: '0.8mm', blockMt: '1.6mm', headerMb: '2mm',
-      titleFs: '4.2mm', accentMb: '0.8mm', cardGap: '1.4mm', cardMb: '1mm',
-      cardPad: '1.2mm 1.6mm 1.8mm', cardLbl: '2mm', cardVal: '3mm',
-      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.6mm 0.4mm 0.5mm 0.4mm', pagePad: '4mm 7mm 2mm 7mm',
-      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '1mm', notePad: '1.8mm 3mm 1.8mm 4mm',
     },
     compact: {
-      fs: '2.05mm', fsSm: '1.9mm', fsXs: '1.7mm', badgeFs: '1.6mm',
-      pad: '0.85mm 0.6mm', padHead: '0.4mm', badgePadX: '1.3mm',
-      sectionMb: '1.1mm', titleMb: '0.6mm', blockMt: '1.2mm', headerMb: '1.5mm',
-      titleFs: '3.8mm', accentMb: '0.6mm', cardGap: '1.1mm', cardMb: '0.8mm',
-      cardPad: '0.9mm 1.3mm 1.3mm', cardLbl: '1.85mm', cardVal: '2.7mm',
-      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.45mm 0.35mm 0.4mm 0.35mm', pagePad: '3.5mm 6mm 1.5mm 6mm',
-      pillH: '4mm', badgeH: '3.2mm', rowGap: '0.8mm', notePad: '1.5mm 2.8mm 1.5mm 3.6mm',
+      sectionMb: '1.5mm', titleMb: '1mm', blockMt: '1.6mm', headerMb: '2mm',
+      titleFs: '4mm', cardGap: '1.5mm', cardMb: '1.5mm',
+      cardPad: '8px 10px 10px', cardLbl: '10px', cardVal: '14px',
+      nocMb: '1.2mm', nocPad: '1mm 1.3mm', wrapPad: '0', pagePad: '4.5mm 6mm 3.5mm 6mm',
+      fs: '2.1mm', fsSm: '1.95mm', fsXs: '1.8mm', badgeFs: '1.65mm',
     },
     tight: {
-      fs: '1.85mm', fsSm: '1.7mm', fsXs: '1.55mm', badgeFs: '1.45mm',
-      pad: '0.65mm 0.5mm', padHead: '0.3mm', badgePadX: '1.1mm',
-      sectionMb: '0.8mm', titleMb: '0.45mm', blockMt: '0.9mm', headerMb: '1.2mm',
-      titleFs: '3.4mm', accentMb: '0.5mm', cardGap: '0.9mm', cardMb: '0.6mm',
-      cardPad: '0.7mm 1.1mm 1mm', cardLbl: '1.7mm', cardVal: '2.4mm',
-      nocMb: '0.7mm', nocPad: '0.6mm 1mm', wrapPad: '0.3mm 0.25mm 0.3mm 0.25mm', pagePad: '3mm 5.5mm 1mm 5.5mm',
-      pillH: '3.6mm', badgeH: '2.8mm', rowGap: '0.6mm', notePad: '1.2mm 2.4mm 1.2mm 3.2mm',
+      sectionMb: '1.2mm', titleMb: '0.8mm', blockMt: '1.3mm', headerMb: '1.6mm',
+      titleFs: '3.6mm', cardGap: '1.2mm', cardMb: '1.2mm',
+      cardPad: '7px 9px 9px', cardLbl: '9px', cardVal: '13px',
+      nocMb: '1mm', nocPad: '0.8mm 1.1mm', wrapPad: '0', pagePad: '4mm 5.5mm 3mm 5.5mm',
+      fs: '1.95mm', fsSm: '1.8mm', fsXs: '1.65mm', badgeFs: '1.5mm',
     },
   }[densityTier];
 
-  // Compact asymmetric pad (html2canvas paints text slightly low).
-  const thFs = densityTier === 'tight' ? 7 : densityTier === 'compact' ? 8 : 9;
-  const tdFs = densityTier === 'tight' ? 8 : densityTier === 'compact' ? 9 : 10;
-  const badgeFs = densityTier === 'tight' ? 7 : densityTier === 'compact' ? 8 : 9;
-  const cellPadTop = densityTier === 'tight' ? 3 : densityTier === 'compact' ? 4 : 5;
-  const cellPadBottom = densityTier === 'tight' ? 5 : densityTier === 'compact' ? 6 : 7;
-  const cellPadX = densityTier === 'tight' ? 4 : 5;
-  const cellPad = `${cellPadTop}px ${cellPadX}px ${cellPadBottom}px ${cellPadX}px`;
+  // Generous px padding + line-height >= font so html2canvas does not clip glyph bottoms.
+  const thFs = densityTier === 'tight' ? 8 : 9;
+  const tdFs = densityTier === 'tight' ? 9 : 10;
+  const badgeFs = densityTier === 'tight' ? 8 : 9;
+  const cellPadY = densityTier === 'tight' ? 6 : densityTier === 'compact' ? 7 : 8;
+  const cellPadX = 6;
+  const cellPad = `${cellPadY}px ${cellPadX}px`;
+  const cellLh = `${tdFs + 4}px`;
+  const thLh = `${thFs + 4}px`;
 
   const thCell =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#0f1f3a !important;color:#ffffff !important;font-size:${thFs}px !important;` +
-    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
+    `line-height:${thLh} !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tdCell =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#ffffff !important;color:#1e293b !important;font-size:${tdFs}px !important;` +
-    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
+    `line-height:${cellLh} !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tdMuted =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#ffffff !important;color:#64748b !important;font-size:${tdFs}px !important;` +
-    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
+    `line-height:${cellLh} !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-family:Arial,sans-serif !important;`;
 
   const tdTotal =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#f1f5f9 !important;color:#0f1f3a !important;font-size:${tdFs}px !important;` +
-    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
+    `line-height:${cellLh} !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
   const tableStyle =
     `width:100% !important;border-collapse:collapse !important;border-spacing:0 !important;` +
     `table-layout:fixed !important;font-family:Arial,sans-serif !important;`;
 
-  // Navy / slate pills only (no green/red) — shrink-wrap + round + equal pad, centered in cell.
   const statusPill = (status) => {
     let bg = '#e8ecf2';
     let fg = '#0f1f3a';
     if (status === 'Paid') { bg = '#0f1f3a'; fg = '#ffffff'; }
     else if (status === 'Due on transfer') { bg = '#d5dde8'; fg = '#0f1f3a'; }
     else if (status === 'Selling below original price') { bg = '#e8ecf2'; fg = '#0f1f3a'; }
-    // Upcoming and others stay light slate
     return (
       `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;margin:0 auto !important;">` +
       `<tr><td align="center" valign="middle" style="background:${bg} !important;color:${fg} !important;` +
-      `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:1.15 !important;` +
+      `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:${badgeFs + 4}px !important;` +
       `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
-      `padding:3px 10px 6px 10px !important;text-align:center !important;vertical-align:middle !important;` +
+      `padding:5px 11px !important;text-align:center !important;vertical-align:middle !important;` +
       `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${status}</td></tr></table>`
     );
   };
@@ -6279,7 +6271,7 @@ const createPaymentDetailsSlide = () => {
 
   const expensesBlock = (expenseRows.length > 0) ? `
     <div style="margin-top:${d.blockMt};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">other costs</div>
+      <div style="font-size:${d.fs};line-height:1.4;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">other costs</div>
       <div style="background:#ffffff !important;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
         <table cellpadding="0" cellspacing="0" style="${tableStyle}">
           <thead>
@@ -6307,7 +6299,7 @@ const createPaymentDetailsSlide = () => {
 
   const installmentTable = (installmentRowsPaid || installmentRowsNotPaid || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">Installment breakdown</div>
+      <div style="font-size:${d.fs};line-height:1.4;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};text-align:left;">Installment breakdown</div>
       <div style="background:#ffffff !important;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
         <table cellpadding="0" cellspacing="0" style="${tableStyle}">
           <thead>
@@ -6361,56 +6353,54 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 const noteBlock = `
-  <table cellpadding="0" cellspacing="0" style="width:100% !important;border-collapse:collapse !important;margin:0 !important;">
-    <tr>
-      <td style="background:#0f1f3a !important;border-radius:2mm !important;padding:8px 12px 8px 14px !important;
-        font-size:8px !important;line-height:11px !important;color:#ffffff !important;
-        font-family:Arial,sans-serif !important;vertical-align:middle !important;text-align:left !important;
-        -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">
-        <span style="display:inline-block !important;width:3px !important;height:11px !important;background:#FAA300 !important;margin-right:8px !important;vertical-align:middle !important;"></span>Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
-      </td>
-    </tr>
-  </table>
+  <div style="margin-top:${d.blockMt} !important;width:100% !important;box-sizing:border-box !important;">
+    <table cellpadding="0" cellspacing="0" style="width:100% !important;border-collapse:collapse !important;margin:0 !important;">
+      <tr>
+        <td style="background:#0f1f3a !important;border-radius:2mm !important;padding:9px 12px 9px 14px !important;
+          font-size:8px !important;line-height:12px !important;color:#ffffff !important;
+          font-family:Arial,sans-serif !important;vertical-align:middle !important;text-align:left !important;
+          -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">
+          <span style="display:inline-block !important;width:3px !important;height:12px !important;background:#FAA300 !important;margin-right:8px !important;vertical-align:middle !important;"></span>Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
+        </td>
+      </tr>
+    </table>
+  </div>
 `;
 
   const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
-    <div style="position:relative;overflow:hidden;background:${dark ? '#0f1f3a' : '#e8ecf2'};color:${dark ? '#ffffff' : '#0f1f3a'};border-radius:2.5mm;padding:${d.cardPad};box-sizing:border-box;text-align:center !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-      <div style="display:block;font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 2px 0;line-height:1.15;width:100%;text-align:center !important;">${label}</div>
-      <div style="display:block;font-size:${d.cardVal};font-weight:700;line-height:1.15;width:100%;text-align:center !important;">${valueHtml}</div>
-      ${accent ? '<div style="display:block;position:absolute;left:0;right:0;bottom:0;height:2.5px;background:#FAA300;line-height:0;font-size:0;">&nbsp;</div>' : ''}
-    </div>
+    <table cellpadding="0" cellspacing="0" style="width:100% !important;border-collapse:collapse !important;border-radius:2.5mm !important;overflow:hidden !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <tr>
+        <td align="center" style="background:${dark ? '#0f1f3a' : '#e8ecf2'} !important;color:${dark ? '#ffffff' : '#0f1f3a'} !important;
+          padding:${d.cardPad} !important;text-align:center !important;vertical-align:middle !important;
+          font-family:Arial,sans-serif !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+          <div style="font-size:${d.cardLbl} !important;line-height:${parseInt(d.cardLbl, 10) + 3}px !important;margin:0 0 4px 0 !important;opacity:${dark ? '0.9' : '1'};">${label}</div>
+          <div style="font-size:${d.cardVal} !important;line-height:${parseInt(d.cardVal, 10) + 4}px !important;font-weight:700 !important;margin:0 !important;">${valueHtml}</div>
+        </td>
+      </tr>
+      ${accent ? `<tr><td style="background:#FAA300 !important;height:3px !important;font-size:0 !important;line-height:0 !important;padding:0 !important;">&nbsp;</td></tr>` : ''}
+    </table>
   `;
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
-    <div style="position:absolute !important; top:3.5mm !important; right:6mm !important; z-index:10 !important;">
-      <img src="${pnglogo}" style="width:15mm !important; display:block !important;" />
+    <div style="position:absolute !important; top:4mm !important; right:7mm !important; z-index:10 !important;">
+      <img src="${pnglogo}" style="width:16mm !important; display:block !important;" />
     </div>
-    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:90% !important; overflow:hidden !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <table cellpadding="0" cellspacing="0" style="width:100% !important;height:100% !important;border-collapse:collapse !important;table-layout:fixed !important;">
-        <tr>
-          <td valign="top" style="vertical-align:top !important;padding:0 !important;">
-            <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
-              <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#0f1f3a;line-height:1.1;margin:0;padding:0 0 1mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-              <div style="display:block;width:12mm;height:0.7mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
-              ${summaryCard('Selling price', fmtAed(sellingPrice), { dark: true, accent: true })}
-              ${isUnderConstruction ? summaryCard('Original price', fmtAed(originalPrice)) : ''}
-              ${planLabel ? summaryCard('Payment plan', planLabel || '—') : ''}
-              ${summaryCard('Premium', `<span style="${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</span>`)}
-            </div>
-            ${nocPercentageStrip}
-            ${installmentTable}
-            ${expensesBlock}
-          </td>
-        </tr>
-        <tr>
-          <td valign="bottom" style="vertical-align:bottom !important;height:1% !important;padding:3mm 0 0 0 !important;">
-            ${noteBlock}
-          </td>
-        </tr>
-      </table>
+    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:90% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
+      <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#0f1f3a;line-height:1.25;margin:0;padding:0 0 1.5mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="display:block;width:12mm;height:0.7mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
+        ${summaryCard('Selling price', fmtAed(sellingPrice), { dark: true, accent: true })}
+        ${isUnderConstruction ? summaryCard('Original price', fmtAed(originalPrice)) : ''}
+        ${planLabel ? summaryCard('Payment plan', planLabel || '—') : ''}
+        ${summaryCard('Premium', `<span style="${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</span>`)}
+      </div>
+      ${nocPercentageStrip}
+      ${installmentTable}
+      ${expensesBlock}
+      ${noteBlock}
     </div>
     ${createFooter()}
   </div>
