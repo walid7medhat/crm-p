@@ -14,23 +14,37 @@ use Illuminate\Http\Request;
 
 class LeadAssignmentController extends Controller
 {
+    /** This whole controller is admin configuration/analytics — not for regular sales agents. */
+    private function ensureAdmin(): ?JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super_admin'))) {
+            return ApiResponse::error('Forbidden', 403);
+        }
+        return null;
+    }
+
     public function show(): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
         return ApiResponse::success(LeadAssignmentSetting::current()->loadMissing('fallbackUser:id,name'), 'Lead assignment settings loaded');
     }
 
     public function stats(LeadAssignmentService $service): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
         return ApiResponse::success($service->dashboardStats(), 'Lead assignment stats');
     }
 
     public function eligibleSales(LeadAssignmentService $service): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
         return ApiResponse::success($service->eligibleSalesUsers(), 'Eligible sales users loaded');
     }
 
     public function insights(LeadAssignmentInsightsService $insights): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
         return ApiResponse::success($insights->build(), 'Lead assignment insights');
     }
 
@@ -106,6 +120,8 @@ class LeadAssignmentController extends Controller
 
     public function queue(LeadAssignmentService $service): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
+
         $newStageId = $service->resolveNewStageId();
         if (!$newStageId) {
             return ApiResponse::error('New stage not found', 422);
@@ -140,6 +156,8 @@ class LeadAssignmentController extends Controller
 
     public function logs(Request $request): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
+
         $logs = LeadAssignmentLog::query()
             ->with(['assignee:id,name', 'lead:id,lead_number,lead_name'])
             ->orderByDesc('id')
@@ -193,6 +211,8 @@ class LeadAssignmentController extends Controller
 
     public function simulate(Request $request, LeadAssignmentService $service): JsonResponse
     {
+        if ($resp = $this->ensureAdmin()) return $resp;
+
         $data = $request->validate([
             'lead_id' => 'required|integer|exists:leads,id',
         ]);

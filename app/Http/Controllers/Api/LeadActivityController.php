@@ -36,7 +36,11 @@ class LeadActivityController extends Controller
     public function getLeadActivities($leadId)
     {
         $lead = Lead::findOrFail($leadId);
-        
+
+        if (!auth()->user()->canViewLead($lead)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $activities = $lead->activities()
             ->with('user')
             ->orderBy('reminder_date', 'desc')
@@ -50,6 +54,11 @@ class LeadActivityController extends Controller
      */
     public function storeActivity(StoreActivityRequest $request)
     {
+        $lead = Lead::findOrFail($request->lead_id);
+        if (!auth()->user()->canViewLead($lead)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
              $activity = LeadActivity::create([
                 'lead_id' => $request->lead_id,
@@ -231,7 +240,11 @@ class LeadActivityController extends Controller
     public function getLeadComments($leadId)
     {
         $lead = Lead::findOrFail($leadId);
-        
+
+        if (!auth()->user()->canViewLead($lead)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $comments = $lead->comments()
             ->with(['user', 'attachments', 'mentionedUsers'])
             ->orderBy('created_at', 'desc')
@@ -245,8 +258,13 @@ class LeadActivityController extends Controller
      */
     public function storeComment(StoreCommentRequest $request)
     {
+        $lead = Lead::findOrFail($request->lead_id);
+        if (!auth()->user()->canViewLead($lead)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         DB::beginTransaction();
-        
+
         try {
             // Create comment
             $comment = LeadComment::create([

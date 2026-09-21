@@ -13,14 +13,14 @@ Route::get('/image/watermark', [ListingController::class, 'watermark'])
     ->name('image.watermark');
 
 // استخدم web middleware فقط
-Broadcast::routes(['middleware' => ['auth:api']]);
+Broadcast::routes(['middleware' => ['jwt.auth']]);
 
 Route::get('/login', function () {
     return response()->json(['message' => 'Unauthorized'], 401);
 })->name('login');
 Route::post('/broadcasting/auth', function () {
     return Broadcast::auth(request());
-})->middleware('auth:api');
+})->middleware('jwt.auth');
 // Handle OPTIONS preflight request for broadcasting/auth
 Route::options('/broadcasting/auth', function () {
     return response('', 200)

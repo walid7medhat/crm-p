@@ -36,7 +36,11 @@ class DealActivityController extends Controller
     public function getDealActivities($dealId)
     {
         $deal = Deal::findOrFail($dealId);
-        
+
+        if (!auth()->user()->canViewDeal($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $activities = $deal->activities()
             ->with('user')
             ->orderBy('reminder_date', 'desc')
@@ -50,6 +54,11 @@ class DealActivityController extends Controller
      */
     public function storeActivity(StoreActivityRequest $request)
     {
+        $deal = Deal::findOrFail($request->deal_id);
+        if (!auth()->user()->canViewDeal($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
              $activity = DealActivity::create([
                 'deal_id' => $request->deal_id,
@@ -231,7 +240,11 @@ class DealActivityController extends Controller
     public function getDealComments($dealId)
     {
         $deal = Deal::findOrFail($dealId);
-        
+
+        if (!auth()->user()->canViewDeal($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $comments = $deal->comments()
             ->with(['user', 'attachments', 'mentionedUsers'])
             ->orderBy('created_at', 'desc')
@@ -245,8 +258,13 @@ class DealActivityController extends Controller
      */
     public function storeComment(StoreCommentRequest $request)
     {
+        $deal = Deal::findOrFail($request->deal_id);
+        if (!auth()->user()->canViewDeal($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         DB::beginTransaction();
-        
+
         try {
             // Create comment
             $comment = DealComment::create([

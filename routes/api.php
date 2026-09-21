@@ -194,7 +194,7 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/{investment}/pdf', [InvestmentController::class, 'pdf']);
     });
 });
-Route::prefix('stages')->middleware(['auth:api'])->group(function () {
+Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::get('/', [StageController::class, 'index']);
     Route::post('/', [StageController::class, 'store']);
     Route::get('/{stage}', [StageController::class, 'show']);
@@ -222,14 +222,14 @@ Route::prefix('company-branches')->middleware(['jwt.auth'])->group(function () {
     Route::get('/statistics/summary', [CompanyBranchController::class, 'getStatistics']);
 });
 // Document Types CRUD
-Route::middleware(['auth:api'])->prefix('document-types')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('document-types')->group(function () {
     Route::get('/', [DocumentRequestController::class, 'getDocumentTypes']);
     Route::post('/', [DocumentRequestController::class, 'storeDocumentType']);
     Route::put('/{id}', [DocumentRequestController::class, 'updateDocumentType']);
     Route::delete('/{id}', [DocumentRequestController::class, 'destroyDocumentType']);
 });
 // Asset Types CRUD
-Route::prefix('asset-types')->middleware(['auth:api'])->group(function () {
+Route::prefix('asset-types')->middleware(['jwt.auth'])->group(function () {
     Route::get('/', [AssetController::class, 'getAssetTypes']);
     Route::post('/', [AssetController::class, 'storeAssetType']);
     Route::put('/{id}', [AssetController::class, 'updateAssetType']);
@@ -237,7 +237,7 @@ Route::prefix('asset-types')->middleware(['auth:api'])->group(function () {
 });
 
 // Assets Management
-Route::prefix('assets')->middleware(['auth:api'])->group(function () {
+Route::prefix('assets')->middleware(['jwt.auth'])->group(function () {
     Route::get('/get/statistics', [AssetController::class, 'statistics']);
     Route::get('/assignable-users', [AssetController::class, 'assignableUsers']);
     Route::get('/', [AssetController::class, 'index']);
@@ -258,7 +258,7 @@ Route::prefix('assets')->middleware(['auth:api'])->group(function () {
     Route::get('/employee/{userId}/assets', [AssetController::class, 'getEmployeeAssets']);
 });
 
-Route::prefix('asset-requests')->middleware(['auth:api'])->group(function () {
+Route::prefix('asset-requests')->middleware(['jwt.auth'])->group(function () {
     Route::get('/', [AssetRequestController::class, 'index']);
     Route::post('/', [AssetRequestController::class, 'store']);
     Route::get('/{id}', [AssetRequestController::class, 'show']);
@@ -269,7 +269,7 @@ Route::prefix('asset-requests')->middleware(['auth:api'])->group(function () {
 });
 
 // ==================== Leave Management Routes ====================
-Route::middleware(['auth:api'])->prefix('leaves')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('leaves')->group(function () {
 
     // Leave Types CRUD (Admin/HR only)
     Route::prefix('types')->group(function () {
@@ -301,7 +301,7 @@ Route::middleware(['auth:api'])->prefix('leaves')->group(function () {
     Route::post('/{id}/approve-hr', [LeaveController::class, 'approveByHr']);
     Route::post('/{id}/reject-hr', [LeaveController::class, 'rejectByHr']);
 });
-Route::middleware(['auth:api'])->prefix('announcements')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('announcements')->group(function () {
     
     // Statistics & Reports (HR/Admin only)
     Route::get('/statistics', [AnnouncementController::class, 'statistics'])
@@ -322,7 +322,7 @@ Route::middleware(['auth:api'])->prefix('announcements')->group(function () {
     Route::delete('/{id}', [AnnouncementController::class, 'destroy'])
         ->middleware('permission:announcements-delete');
 });
-Route::middleware(['auth:api'])->prefix('evaluations')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('evaluations')->group(function () {
     Route::get('/', [EvaluationController::class, 'index']);
     Route::get('/settings', [EvaluationSettingController::class, 'show']);
     Route::put('/settings', [EvaluationSettingController::class, 'update']);
@@ -339,7 +339,7 @@ Route::middleware(['auth:api'])->prefix('evaluations')->group(function () {
     Route::post('/{id}/submit', [EvaluationController::class, 'submit']);
 });
 // Document Requests
-Route::middleware(['auth:api'])->prefix('document-requests')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('document-requests')->group(function () {
     Route::get('/statistics', [DocumentRequestController::class, 'statistics']);
     Route::get('/', [DocumentRequestController::class, 'index']);
     Route::get('/{id}', [DocumentRequestController::class, 'show']);
@@ -377,7 +377,7 @@ Route::middleware(['auth:api'])->prefix('document-requests')->group(function () 
     // ==================== Recruitment Routes ====================
 
 
-Route::middleware(['auth:api'])->prefix('recruitment/admin')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('recruitment/admin')->group(function () {
     // Jobs
     Route::get('/jobs', [RecruitmentController::class, 'getJobs']);
     Route::get('/jobs/{id}', [RecruitmentController::class, 'getJob']);
@@ -893,7 +893,7 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
             Route::put('projects/floor-plan-images/{id}/name', [ProjectController::class, 'updateFloorPlanName']);
 });    
 });
-Route::middleware('auth:api')->group(function () {
+Route::middleware('jwt.auth')->group(function () {
     Route::post('/user-invitations', [UserInvitationController::class, 'store']);
     Route::post('/user-invitations/{id}/resend', [UserInvitationController::class, 'resend']);
     Route::get('/user-invitations', [UserInvitationController::class, 'index']);

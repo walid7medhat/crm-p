@@ -3380,7 +3380,8 @@ public function approve(Listing $listing): JsonResponse
     try {
         $user = auth()->user();
         
-        if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+        if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
+            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
         
@@ -3435,7 +3436,8 @@ public function reject(Listing $listing, Request $request): JsonResponse
     try {
         $user = auth()->user();
         
-         if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+         if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
+            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
         
@@ -3485,7 +3487,8 @@ public function getPendingApprovals(Request $request): JsonResponse
     try {
         $user = auth()->user();
         
-         if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+         if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
+            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
         
@@ -3574,7 +3577,8 @@ public function batchApprove(Request $request): JsonResponse
     try {
         $user = auth()->user();
         
-         if ((!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+         if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
+            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
         

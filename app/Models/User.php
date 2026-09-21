@@ -230,6 +230,21 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return in_array($lead->responsible_person_id, $subordinatesIds);
     }
 
+    /** Deal equivalent of canViewLead() — matches DealController::authorizeAccess(). */
+    public function canViewDeal(Deal $deal): bool
+    {
+        if ($this->hasRole('super_admin') || $this->id == 30) {
+            return true;
+        }
+
+        if ($this->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+            $subordinatesIds = $this->getAllSubordinatesIds();
+            return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$this->id]));
+        }
+
+        return $deal->responsible_person_id == $this->id;
+    }
+
     public function isManagerOrTeamLead(): bool
     {
         return $this->hasRole(['manager', 'team_lead']);

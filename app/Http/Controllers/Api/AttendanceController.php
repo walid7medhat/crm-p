@@ -13,13 +13,25 @@ use App\Helpers\ApiResponse;
 
 class AttendanceController extends Controller
 {
+    /** Company-wide attendance views/reports are HR data — not for every logged-in agent. */
+    private function ensureHrOrAdmin(): ?\Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || (!$user->hasRole('super_admin') && !$user->hasRole('hr'))) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        return null;
+    }
+
     public function today(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
         return $this->respondFromDatabase($request, true);
     }
 
     public function index(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
         return $this->respondFromDatabase($request, false);
     }
 
@@ -374,7 +386,8 @@ class AttendanceController extends Controller
     }
      public function syncLastMonth()
 {
- 
+    if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
     // $this->info('Syncing last month attendance...');
 
     try {
@@ -468,6 +481,8 @@ class AttendanceController extends Controller
 
 public function generatePeriodReport(Request $request)
 {
+    if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
     $request->validate([
         'start_date' => 'nullable|date',
         'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -622,6 +637,22 @@ public function myAttendanceHistory(Request $request)
  */
 public function userAttendanceHistory(Request $request, User $user)
 {
+    $viewer = auth()->user();
+    if (!$viewer) {
+        return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+    }
+
+    $isSelf = (int) $viewer->id === (int) $user->id;
+    $isHrOrAdmin = $viewer->hasRole('super_admin') || $viewer->hasRole('hr');
+    // Manager/team_lead may view their own subordinates (getAllSubordinatesIds()
+    // already includes $viewer->id, which the isSelf check above already covers).
+    $isOwnSubordinate = $viewer->isManagerOrTeamLead()
+        && in_array((int) $user->id, $viewer->getAllSubordinatesIds(), true);
+
+    if (!$isSelf && !$isHrOrAdmin && !$isOwnSubordinate) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
+
     $monthsBack = min(24, max(1, (int) $request->query('months', 12)));
     $now = Carbon::now('Asia/Dubai');
 

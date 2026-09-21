@@ -498,6 +498,13 @@ class DealController extends Controller
                 return ApiResponse::error('You are not authorized to assign responsible person', 403);
             }
 
+            // The deal being reassigned must already be in the caller's own hierarchy —
+            // otherwise a team_lead could "steal" another team's deal by reassigning it
+            // to one of their own subordinates.
+            if (!$this->authorizeAccess($deal)) {
+                return ApiResponse::error('You are not authorized to reassign this deal', 403);
+            }
+
             $responsiblePerson = User::find($request->responsible_person_id);
 
             if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
@@ -506,7 +513,7 @@ class DealController extends Controller
                     return ApiResponse::error('You can only assign responsible person from your team', 403);
                 }
             }
-            
+
             $oldPerson = User::find($deal->responsible_person_id);
 
             $deal->update([
@@ -551,7 +558,11 @@ class DealController extends Controller
                 'message' => 'Deal not found'
             ], 404);
         }
-        
+
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $query = LeadHistory::where('deal_id', $dealId)
             ->when($deal->lead_id, function($q) use($deal) {
                 $q->orWhere('lead_id', $deal->lead_id);
@@ -654,6 +665,12 @@ class DealController extends Controller
     {
         try {
             $deal = Deal::find($id);
+            if (!$deal) {
+                return ApiResponse::error('Deal not found', 404);
+            }
+            if (!$this->authorizeAccess($deal)) {
+                return ApiResponse::error('Unauthorized', 403);
+            }
             DealHistoryHelper::log($deal->id, ['action' => 'view']);
 
             return ApiResponse::success(
@@ -671,7 +688,7 @@ class DealController extends Controller
     public function checkStageRequirements(CheckStageRequirementsRequest $request, DealStageValidator $validator)
     {
         $deal = Deal::find($request->deal_id);
-        
+
         if (!$deal) {
             return response()->json([
                 'success' => false,
@@ -679,8 +696,12 @@ class DealController extends Controller
             ], 404);
         }
 
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $deal->load(['parties', 'documents', 'properties']);
-        
+
         $guard = app(DealStageValidatorService::class);
         
         $result = $guard->validateStageChange(
@@ -1386,13 +1407,18 @@ class DealController extends Controller
     {
         try {
             $document = DealDocument::find($id);
-            $deal = $document->deal;
-            
+
             if (!$document) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Document not found'
                 ], 404);
+            }
+
+            $deal = $document->deal;
+
+            if (!$deal || !$this->authorizeAccess($deal)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
             if (\Storage::disk('public')->exists($document->file_path)) {
@@ -1998,21 +2024,11 @@ class DealController extends Controller
 
     private function authorizeAccess($deal)
     {
-        $user = auth()->user();
-        if ($user->hasAnyRole(['super_admin']) || $user->id==30) {
-            return true;
-        }
-
-        // Current responsible person only — matches Deal::scopeVisibleFor()
-        // and DealController::show(), which already dropped the added_by
-        // fallback (a deal reassigned outside the team shouldn't stay
-        // accessible just because someone on the team added it).
-        if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-            $subordinatesIds = $user->getAllSubordinatesIds();
-            return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$user->id]));
-        }
-
-        return $deal->responsible_person_id == $user->id;
+        // Matches Deal::scopeVisibleFor() and User::canViewDeal() — current responsible
+        // person (+ their manager/team_lead/admin hierarchy) or super_admin only. A deal
+        // reassigned outside the team shouldn't stay accessible just because someone on
+        // the team originally added it.
+        return auth()->user()->canViewDeal($deal);
     }
 
 

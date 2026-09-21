@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\Validator;
 
 class EmployeeAttendanceController extends Controller
 {
+    /** Company-wide attendance CRUD/reports are HR data — not for every logged-in agent. */
+    private function ensureHrOrAdmin(): ?\Illuminate\Http\JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user || (!$user->hasRole('super_admin') && !$user->hasRole('hr'))) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        return null;
+    }
+
     /**
      * Display a listing of attendance records.
      *
@@ -21,6 +31,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function index(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $query = Attendance::with(['user' => function($q) {
                 $q->select('id', 'name', 'email', 'avatar', 'status');
@@ -87,6 +99,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function store(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $validator = Validator::make($request->all(), [
                 'user_id' => 'required|exists:users,id',
@@ -151,6 +165,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function show($id)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $attendance = Attendance::with(['user' => function($q) {
                 $q->select('id', 'name', 'email', 'avatar', 'status');
@@ -177,6 +193,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $attendance = Attendance::findOrFail($id);
 
@@ -234,6 +252,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function destroy($id)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $attendance = Attendance::findOrFail($id);
 
@@ -294,6 +314,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function summary(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $date = $request->input('date', Carbon::now('Asia/Dubai')->toDateString());
 
@@ -375,6 +397,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function dailyStats(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $date = $request->input('date', Carbon::now('Asia/Dubai')->toDateString());
 
@@ -551,6 +575,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function statistics(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $date = $request->input('date', Carbon::now()->toDateString());
             $month = $request->input('month', Carbon::now()->format('Y-m'));
@@ -602,6 +628,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function export(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $query = Attendance::with('user');
 
@@ -672,6 +700,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function generateMonthlyReport(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $month = $request->input('month', Carbon::now()->format('Y-m'));
             $startDate = Carbon::parse($month)->startOfMonth();
@@ -737,6 +767,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function syncLastMonth(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $lastMonth = Carbon::now('Asia/Dubai')->subMonth();
             $startDate = $lastMonth->startOfMonth();
@@ -798,6 +830,8 @@ class EmployeeAttendanceController extends Controller
      */
     public function generatePeriodReport(Request $request)
     {
+        if ($resp = $this->ensureHrOrAdmin()) return $resp;
+
         try {
             $validator = Validator::make($request->all(), [
                 'start_date' => 'required|date',

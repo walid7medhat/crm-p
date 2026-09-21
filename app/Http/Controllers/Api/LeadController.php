@@ -752,6 +752,13 @@ class LeadController extends Controller
             return ApiResponse::error('You are not authorized to assign responsible person', 403);
         }
 
+        // The lead being reassigned must already be in the caller's own hierarchy —
+        // otherwise a team_lead could "steal" another team's lead by reassigning it
+        // to one of their own subordinates.
+        if (!$user->canViewLead($lead)) {
+            return ApiResponse::error('You are not authorized to reassign this lead', 403);
+        }
+
         $responsiblePerson = User::find($request->responsible_person_id);
 
         // if (!$responsiblePerson->hasRole(['admin', 'manager', 'team_lead'])) {
@@ -1412,6 +1419,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     return ApiResponse::error('Lead not found', 404);
                 }
 
+                if (! auth()->user()->canViewLead($lead)) {
+                    return ApiResponse::error('You are not authorized to view this lead', 403);
+                }
+
                 return ApiResponse::success(
                     DuplicateLeadResource::collection($lead->duplicate_leads)->resolve(),
                     'Duplicated Leads retrieved successfully'
@@ -1529,6 +1540,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             $lead = Lead::find($id);
             if (! $lead) {
                 return ApiResponse::error('Lead not found', 404);
+            }
+
+            if (! auth()->user()->canViewLead($lead)) {
+                return ApiResponse::error('You are not authorized to view this lead', 403);
             }
 
             LeadHistoryHelper::log(
