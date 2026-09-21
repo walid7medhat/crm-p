@@ -5639,26 +5639,29 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // html2canvas: flex/gap and extreme border-radius mis-paint text. Use a real table + soft radius.
+  // html2canvas-safe: nested shrink-wrap tables + px (mm/border-radius misalign text & stretch chips).
   const featuresPerRow = 6;
   const featureRows = [];
   for (let i = 0; i < features.length; i += featuresPerRow) {
     featureRows.push(features.slice(i, i + featuresPerRow));
   }
-  const featureCell =
-    'padding:1.6mm 2.8mm !important; color:#ffffff !important; font-size:2.4mm !important; line-height:1.35 !important; ' +
-    'text-align:center !important; vertical-align:middle !important; white-space:nowrap !important; ' +
-    'background:rgba(255,255,255,0.18) !important; border:0.25mm solid rgba(255,255,255,0.55) !important; ' +
-    'border-radius:1.5mm !important; font-family:Arial,sans-serif !important; ' +
-    '-webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;';
+  const featureChip = (text) =>
+    `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;"><tr>` +
+    `<td style="background:rgba(255,255,255,0.20) !important;border:1px solid rgba(255,255,255,0.65) !important;` +
+    `color:#ffffff !important;font-size:9px !important;line-height:12px !important;padding:6px 12px !important;` +
+    `font-family:Arial,sans-serif !important;white-space:nowrap !important;font-weight:500 !important;` +
+    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>` +
+    `</tr></table>`;
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
-      <div style="width:100% !important; height:0.35mm !important; background:rgba(255,255,255,0.28) !important; margin:0 0 4mm 0 !important;">&nbsp;</div>
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 3mm 0 !important; font-family:Arial,sans-serif !important; line-height:1.2 !important;">Features</p>
-      <table style="width:100% !important; border-collapse:separate !important; border-spacing:2.2mm 2.6mm !important; table-layout:auto !important;">
+      <div style="width:100% !important; height:1px !important; background:rgba(255,255,255,0.28) !important; margin:0 0 14px 0 !important; font-size:1px !important; line-height:1px !important;">&nbsp;</div>
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:9px !important; margin:0 0 10px 0 !important; font-family:Arial,sans-serif !important; line-height:12px !important;">Features</p>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:separate !important; border-spacing:8px 10px !important;">
         ${featureRows.map((row) => `
           <tr>
-            ${row.map((feature) => `<td style="${featureCell}">${feature}</td>`).join('')}
+            ${row.map((feature) =>
+              `<td style="padding:0 !important; margin:0 !important; background:transparent !important; border:none !important; vertical-align:middle !important;">${featureChip(feature)}</td>`
+            ).join('')}
           </tr>
         `).join('')}
       </table>
@@ -6050,21 +6053,41 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  // --- html2canvas-safe cells ---
-  // Avoid border-radius:999px and nested badge spans — they paint text outside the fill.
-  const thCell = `padding:1.6mm 1.2mm;vertical-align:middle;text-align:center;background:#0f1f3a;color:#ffffff !important;font-weight:700;font-size:${d.fsSm};line-height:1.35;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#1e293b !important;background:#ffffff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
-  const tdMuted = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#64748b !important;background:#ffffff !important;`;
-  const tdTotal = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#0f1f3a !important;background:#f1f5f9 !important;font-weight:700;`;
+  // --- html2canvas-safe: nested tables + px only (no mm, no border-radius, no nested spans) ---
+  const thPx = densityTier === 'tight' ? { pad: '6px 4px', fs: '7px', lh: '10px' }
+    : densityTier === 'compact' ? { pad: '7px 4px', fs: '8px', lh: '11px' }
+    : { pad: '8px 5px', fs: '8px', lh: '11px' };
+  const tdPx = densityTier === 'tight' ? { pad: '5px 3px', fs: '8px', lh: '11px' }
+    : densityTier === 'compact' ? { pad: '6px 3px', fs: '8px', lh: '11px' }
+    : { pad: '7px 4px', fs: '9px', lh: '12px' };
+  const badgePx = densityTier === 'tight' ? { pad: '4px 8px', fs: '7px', lh: '10px' }
+    : densityTier === 'compact' ? { pad: '5px 9px', fs: '7px', lh: '10px' }
+    : { pad: '5px 10px', fs: '8px', lh: '11px' };
 
-  const tableStyle = `width:100%;border-collapse:separate;border-spacing:1.2mm ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
+  const thHtml = (label, width) =>
+    `<th style="width:${width};padding:2px;background:transparent;border:none;vertical-align:middle;">` +
+    `<table width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">` +
+    `<tr><td align="center" style="background:#0f1f3a;color:#ffffff;font-size:${thPx.fs};line-height:${thPx.lh};` +
+    `font-weight:700;padding:${thPx.pad};font-family:Arial,sans-serif;` +
+    `-webkit-print-color-adjust:exact;print-color-adjust:exact;">${label}</td></tr></table></th>`;
 
-  const statusTdStyle = (status) => {
-    if (status === 'Paid') return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#22c55e !important;color:#ffffff !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
-    if (status === 'Due on transfer') return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#bae6fd !important;color:#075985 !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
-    if (status === 'Selling below original price') return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#fecaca !important;color:#b91c1c !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
-    return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#fecdd3 !important;color:#9f1239 !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  const tdCell = `padding:${tdPx.pad};font-size:${tdPx.fs};line-height:${tdPx.lh};vertical-align:middle;text-align:center;color:#1e293b;background:#ffffff;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  const tdMuted = `padding:${tdPx.pad};font-size:${tdPx.fs};line-height:${tdPx.lh};vertical-align:middle;text-align:center;color:#64748b;background:#ffffff;font-family:Arial,sans-serif;`;
+  const tdTotal = `padding:${tdPx.pad};font-size:${tdPx.fs};line-height:${tdPx.lh};vertical-align:middle;text-align:center;color:#0f1f3a;background:#f1f5f9;font-weight:700;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+
+  const tableStyle = `width:100%;border-collapse:separate;border-spacing:4px 6px;table-layout:fixed;font-family:Arial,sans-serif;`;
+
+  const statusColors = (status) => {
+    if (status === 'Paid') return 'background:#22c55e;color:#ffffff;';
+    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
+    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
+    return 'background:#fecdd3;color:#9f1239;';
   };
+  const statusChip = (status) =>
+    `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 auto;">` +
+    `<tr><td align="center" style="${statusColors(status)}font-size:${badgePx.fs};line-height:${badgePx.lh};` +
+    `font-weight:700;padding:${badgePx.pad};font-family:Arial,sans-serif;white-space:nowrap;` +
+    `-webkit-print-color-adjust:exact;print-color-adjust:exact;">${status}</td></tr></table>`;
 
   let cumulative = 0;
   const installmentRowsPaidArr = [];
@@ -6078,7 +6101,7 @@ const createPaymentDetailsSlide = () => {
     if (paid) status = 'Paid';
     else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
-    const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
+    const dateCell = paid ? '—' : fmtDate(entry?.date);
 
     const rowHtml = `
       <tr>
@@ -6086,7 +6109,7 @@ const createPaymentDetailsSlide = () => {
         <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
         <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
-        <td align="center" valign="middle" style="${statusTdStyle(status)}">${status}</td>
+        <td align="center" valign="middle" style="${tdCell}">${statusChip(status)}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6099,11 +6122,11 @@ const createPaymentDetailsSlide = () => {
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumRow = hasPremiumRow
     ? `<tr>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">Premium</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${statusTdStyle(premiumStatus)}">${premiumStatus}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">Premium</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">—</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">—</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc;">${statusChip(premiumStatus)}</td>
       </tr>`
     : '';
 
@@ -6114,7 +6137,7 @@ const createPaymentDetailsSlide = () => {
         <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td align="center" valign="middle" style="${statusTdStyle(handoverStatus)}">${handoverStatus}</td>
+        <td align="center" valign="middle" style="${tdCell}">${statusChip(handoverStatus)}</td>
       </tr>`
     : '';
 
@@ -6187,11 +6210,11 @@ const createPaymentDetailsSlide = () => {
         <table style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" style="${thCell}width:18%;">Label</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">Detail</th>
-              <th align="center" valign="middle" style="${thCell}width:20%;">Amount</th>
-              <th align="center" valign="middle" style="${thCell}width:16%;">VAT</th>
-              <th align="center" valign="middle" style="${thCell}width:22%;">Total</th>
+              ${thHtml('Label', '18%')}
+              ${thHtml('Detail', '24%')}
+              ${thHtml('Amount', '20%')}
+              ${thHtml('VAT', '16%')}
+              ${thHtml('Total', '22%')}
             </tr>
           </thead>
           <tbody>
@@ -6215,11 +6238,11 @@ const createPaymentDetailsSlide = () => {
         <table style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" style="${thCell}width:22%;">Payment type</th>
-              <th align="center" valign="middle" style="${thCell}width:13%;">Percentage</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">Amount</th>
-              <th align="center" valign="middle" style="${thCell}width:18%;">Date</th>
-              <th align="center" valign="middle" style="${thCell}width:15%;">Status</th>
+              ${thHtml('Payment type', '22%')}
+              ${thHtml('Percentage', '13%')}
+              ${thHtml('Amount', '24%')}
+              ${thHtml('Date', '18%')}
+              ${thHtml('Status', '15%')}
             </tr>
           </thead>
           <tbody>
