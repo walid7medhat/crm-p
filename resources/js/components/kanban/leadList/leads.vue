@@ -1,19 +1,7 @@
 <template>
     <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': isSearching }">
         <div
-            v-if="isSearching"
-            class="kanban-search-overlay"
-            role="status"
-            aria-live="polite"
-            aria-label="Searching leads"
-        >
-            <div class="kanban-search-overlay__card">
-                <div class="kanban-empty-spinner" />
-                <span class="kanban-search-overlay__text">Loading…</span>
-            </div>
-        </div>
-        <div
-            v-else-if="showNoSearchResults"
+            v-if="showNoSearchResults"
             class="kanban-no-results-overlay"
             role="status"
             aria-live="polite"
@@ -1454,9 +1442,7 @@ const fetchLeads = async (immediate = false, queryOverride = undefined, options 
         appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
     }
     const silent = !!options.silent
-    // Show searching feedback immediately when a search/filter is applied.
     if (!silent && appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
-        isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     }
     // Clear any pending debounce
@@ -1533,9 +1519,8 @@ const executeFetchLeads = async (options = {}) => {
         loading.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     } else if (!silent && appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
-        isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
-    }    
+    }
     try {
         const q = effectiveSearchParams.value
 
@@ -3227,6 +3212,16 @@ function onMobileCardTouchEnd(column, event) {
     }
 }
 
+function findLeadInColumns(leadId) {
+    const id = Number(leadId)
+    if (!id) return null
+    for (const col of columns.value) {
+        const hit = (col.leads || []).find((lead) => Number(lead.id) === id)
+        if (hit) return hit
+    }
+    return null
+}
+
 const viewLead = (task) => {
     const dealId = task?.converted_to_deal_id
     if (dealId) {
@@ -3246,12 +3241,10 @@ const viewLead = (task) => {
 }
 
 watch(() => route.query.lead, (leadId) => {
-    if (leadId && viewLeadModalRef.value) {
-        const numericId = Number(leadId)
-        if (!isNaN(numericId) && numericId > 0) {
-            console.log('📌 Opening lead from URL:', numericId)
-            viewLeadModalRef.value.show(numericId)
-        }
+    if (!leadId) return
+    const numericId = Number(leadId)
+    if (!isNaN(numericId) && numericId > 0) {
+        openLeadView(numericId, findLeadInColumns(numericId))
     }
 }, { immediate: true })
 

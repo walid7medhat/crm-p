@@ -50,10 +50,12 @@ export function openLeadView(leadId, leadData = null) {
   api.get(`/leads/${id}/history/view`).catch(() => {})
   
   if (router) {
-    router.push({
-      path: '/kanban',
-      query: { lead: id }
-    }).catch(() => {})
+    const target = { path: '/kanban', query: { lead: id } }
+    if (route?.path === '/kanban') {
+      router.replace(target).catch(() => {})
+    } else {
+      router.push(target).catch(() => {})
+    }
   }
 }
 export function openLeadViewWithUrl(leadId, leadData = null) {

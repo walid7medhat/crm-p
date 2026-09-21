@@ -958,7 +958,7 @@ const searchDropdownAnchorRef = ref(null);
 const searchDropdownPanelRef = ref(null);
 const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 150;
 const suppressSearchWatcher = ref(false);
 const isSearchLoading = ref(false);
 const leadsRef = ref(null);
@@ -998,8 +998,14 @@ function applySearchToApi() {
         if (isPhoneLike) {
             // phone path — already gated at ≥4 digits
         } else if (isEmailLike) {
-            if (term.length < 3) return
+            if (term.length < 3) {
+                isSearchLoading.value = false
+                window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
+                return
+            }
         } else if (term.length < 2) {
+            isSearchLoading.value = false
+            window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
             return
         }
     }
@@ -1370,11 +1376,7 @@ function onSearchInputUpdate(val) {
     }
     // Keep the advanced popup open while typing in the navbar input.
     // Free-text search still applies via the debounced watch(search).
-    const next = val == null ? '' : String(val);
-    search.value = next;
-    if (String(next).trim()) {
-        isSearchLoading.value = true;
-    }
+    search.value = val == null ? '' : String(val);
 }
 
 // Search functions (same as Kanban)

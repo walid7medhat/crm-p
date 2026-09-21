@@ -580,28 +580,28 @@ const fetchLead = async ({ silent = false } = {}) => {
 
     const requestGeneration = ++fetchLeadGeneration
     fetchLeadInFlightId = leadIdNum
+
+    const seed = props.initialLead
+    const seedMatches = seed && Number(seed.id) === leadIdNum
+    // Paint from local card data synchronously so the modal body appears on the same frame as open.
+    if (seedMatches) {
+        if (!lead.value || Number(lead.value.id) !== leadIdNum) {
+            lead.value = { ...seed }
+        } else {
+            lead.value = { ...lead.value, ...seed }
+        }
+        if (seed.stage_id) leadStageId.value = seed.stage_id
+    } else if (!lead.value || Number(lead.value.id) !== leadIdNum) {
+        lead.value = null
+    }
+
+    if (!silent) {
+        isLoadingLead.value = !lead.value
+    }
+
     fetchLeadInFlight = (async () => {
         if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
             return
-        }
-
-        const seed = props.initialLead
-        const seedMatches = seed && Number(seed.id) === leadIdNum
-
-        // Paint from local card data immediately so submitted stage-change fields show now.
-        if (seedMatches) {
-            if (!lead.value || Number(lead.value.id) !== leadIdNum) {
-                lead.value = { ...seed }
-            } else {
-                lead.value = { ...lead.value, ...seed }
-            }
-            if (seed.stage_id) leadStageId.value = seed.stage_id
-        } else if (!lead.value || Number(lead.value.id) !== leadIdNum) {
-            lead.value = null
-        }
-
-        if (!silent) {
-            isLoadingLead.value = !lead.value
         }
 
         try {

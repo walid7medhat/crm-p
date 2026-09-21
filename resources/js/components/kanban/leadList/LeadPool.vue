@@ -286,12 +286,6 @@
     </div>
 
     <!-- Modals -->
-    <ViewLeadModal
-        v-model="showViewModal"
-        :leadId="selectedLeadId"
-        @lead-updated="handleLeadUpdated"
-    />
-    
     <DuplicateLeadsModal 
         v-model="showDuplicateModal" 
         :leadId="selectedLeadForDuplicates"
@@ -311,8 +305,8 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
-import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
+import { openLeadView } from '@/composables/useLeadViewModal.js'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadPoolCard from './LeadPoolCard.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
@@ -330,8 +324,6 @@ const hasActivePoolSearch = computed(() => {
     const q = currentQuery.value
     return !!(q && typeof q === 'object' && Object.keys(q).length > 0)
 })
-const showViewModal = ref(false)
-const selectedLeadId = ref(null)
 const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
@@ -772,11 +764,8 @@ const closeProfilePopup = () => {
 
 // View lead details
 const viewLead = (lead) => {
-    selectedLeadId.value = lead.id
-    showViewModal.value = true
     if (lead?.id) {
-        // Fire-and-forget: log a "view" history entry so admins see who opened the lead.
-        api.get(`/leads/${lead.id}/history/view`).catch(() => {})
+        openLeadView(lead.id, lead)
     }
 }
 
@@ -796,11 +785,9 @@ const openDuplicateLeadsModal = (leadId, event) => {
 
 // Handle view duplicate lead
 const handleViewDuplicateLead = (leadId) => {
-    selectedLeadId.value = leadId
-    showViewModal.value = true
-    if (leadId) {
-        api.get(`/leads/${leadId}/history/view`).catch(() => {})
-    }
+    if (!leadId) return
+    const seed = leads.value.find((lead) => Number(lead.id) === Number(leadId)) || null
+    openLeadView(leadId, seed)
 }
 
 // Helper functions
