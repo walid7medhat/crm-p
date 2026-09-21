@@ -5380,7 +5380,14 @@ const generatePDF = async () => {
     const options = {
       margin: [0,0],
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 3, useCORS: true, logging: false, allowTaint: true },
+      html2canvas: {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+        letterRendering: true,
+        backgroundColor: '#ffffff',
+      },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
@@ -5632,12 +5639,14 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
+  // Separate divider div (not border-top) — html2canvas often paints borders through pill text.
   const featuresBlock = features.length > 0 ? `
-    <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
-      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
+    <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
+      <div style="width:100% !important; height:0.35mm !important; background:rgba(255,255,255,0.28) !important; margin:0 0 3.5mm 0 !important;"></div>
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 2.2mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important;">Features</p>
+      <div style="display:flex !important; flex-wrap:wrap !important; gap:2.2mm 3.5mm !important; align-items:center !important;">
           ${features.map((feature) => `
-<span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; line-height:normal !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important; font-family:'Montserrat', sans-serif !important;">${feature}</span>          `).join('')}
+<span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.95) !important; font-size:2.5mm !important; line-height:1 !important; padding:1.5mm 3.4mm !important; border-radius:5mm !important; background:rgba(255,255,255,0.10) !important; box-shadow:inset 0 0 0 0.25mm rgba(255,255,255,0.45) !important; font-family:'Montserrat', sans-serif !important; box-sizing:border-box !important; white-space:nowrap !important;">${feature}</span>`).join('')}
         </div>
     </div>
   ` : '';
@@ -6034,24 +6043,22 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  // --- CENTERING CORE ---
-  // html2canvas places glyphs at the BOTTOM of a tall line-height box, so
-  // never use height === line-height for pills. Use line-height:1 + padding.
+  // --- CENTERING CORE (html2canvas-safe) ---
+  // Avoid CSS borders on rounded pills/cards — they smear as thick orange/white bars.
+  // Prefer inset box-shadow outlines + line-height:1 + balanced padding.
   const thCell = `padding:${d.padHead};vertical-align:middle;text-align:center;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.25;vertical-align:middle;text-align:center;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1;vertical-align:middle;text-align:center;`;
 
   const cellInner = (content) =>
-    `<div style="width:100%;text-align:center;line-height:1.25;position:relative;top:-0.18mm;">${content}</div>`;
-
-  // Asymmetric padding (slightly more bottom) keeps text optically centered in PDF
+    `<div style="width:100%;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;box-sizing:border-box;">${content}</div>`;
 
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
-const thPill = (label) =>
-  `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:normal;text-align:center;white-space:nowrap;padding:1mm 1.2mm;">${label}</div>`;
+  const thPill = (label) =>
+    `<div style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;padding:1.45mm 1.4mm;">${label}</div>`;
 
-const makeBadge = (text, status) =>
-  `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:normal;white-space:nowrap;text-align:center;padding:0.5mm ${d.badgePadX};${badgeStyle(status)}">${text}</span>`;
+  const makeBadge = (text, status) =>
+    `<span style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;text-align:center;padding:0.9mm ${d.badgePadX};vertical-align:middle;${badgeStyle(status)}">${text}</span>`;
   let cumulative = 0;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
@@ -6257,13 +6264,23 @@ const makeBadge = (text, status) =>
   ` : '';
 const noteBlock = `
   <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:11.5% !important; z-index:20 !important; box-sizing:border-box !important;">
-    <div style="background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-left:1mm solid #FAA300 !important; border-radius:2mm !important; padding:2mm 3.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important;">
-      <p style="margin:0 !important; color:rgba(255,255,255,0.85) !important; font-size:${d.fsXs} !important; line-height:1.5 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
+    <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:2.4mm 3.5mm 2.4mm 4.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:flex !important; align-items:center !important; min-height:8mm !important;">
+      <div style="position:absolute !important; left:0 !important; top:0 !important; bottom:0 !important; width:1mm !important; background:#FAA300 !important;"></div>
+      <p style="margin:0 !important; color:rgba(255,255,255,0.92) !important; font-size:${d.fsXs} !important; line-height:1.45 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
         Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
       </p>
     </div>
   </div>
 `;
+
+  const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
+    <div style="position:relative;overflow:hidden;background:${dark ? 'linear-gradient(160deg,#132043 0%,#0f1f3a 100%)' : '#e8ecf2'};color:${dark ? '#fff' : '#0f1f3a'};border-radius:3mm;padding:${accent ? '2mm 2mm 3.2mm' : d.cardPad};box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:14mm;">
+      <div style="font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 0.8mm 0;line-height:1;width:100%;text-align:center;">${label}</div>
+      <div style="font-size:${d.cardVal};font-weight:700;line-height:1.15;width:100%;text-align:center;">${valueHtml}</div>
+      ${accent ? '<div style="position:absolute;left:0;right:0;bottom:0;height:0.9mm;background:#FAA300;"></div>' : ''}
+    </div>
+  `;
+
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
@@ -6271,30 +6288,15 @@ const noteBlock = `
     </div>
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin-bottom:${d.headerMb};">
-        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:normal;padding-bottom:${d.accentMb};font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:1mm;background:#FAA300;border-radius:1mm;"></div>
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;margin:0 0 1.6mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="width:14mm;height:0.85mm;background:#FAA300;border-radius:1mm;margin:0;"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
-        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #FAA300;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
-        </div>
-        ${isUnderConstruction ?  `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price </div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(originalPrice)}</div>
-        </div> ` : ''}
-
-           ${planLabel ? `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Payment plan</div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${planLabel || '—'}</div>
-        </div>    ` : ''}
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Premium</div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
-        </div>
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
+        ${summaryCard('Selling price', fmtAed(sellingPrice), { dark: true, accent: true })}
+        ${isUnderConstruction ? summaryCard('Original price', fmtAed(originalPrice)) : ''}
+        ${planLabel ? summaryCard('Payment plan', planLabel || '—') : ''}
+        ${summaryCard('Premium', `<span style="${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</span>`)}
       </div>
     ${nocPercentageStrip}
       ${installmentTable}
@@ -6308,8 +6310,8 @@ const noteBlock = `
 
 const createFooter = () => {
   return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; justify-content:flex-start !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; line-height:1 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
   </div>
   `;
 };

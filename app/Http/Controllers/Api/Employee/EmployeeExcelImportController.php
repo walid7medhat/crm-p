@@ -16,6 +16,11 @@ use Carbon\Carbon;
 
 class EmployeeExcelImportController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:employees-create');
+    }
+
     /**
      * Import employees from Excel file
      * POST /admin/employees/import-excel

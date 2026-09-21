@@ -398,80 +398,48 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
 }
 
 /**
- * Get my access requests 
- */
-    public function myOrders(): JsonResponse
+     * Outbound access requests (my orders).
+     *
+     * When `page` is present: server-side pagination + status/search/sort filters.
+     * When `page` is omitted: legacy full collection (e.g. my_viewings calendar).
+     */
+    public function myOrders(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            $currentUser = $user;
-            
-            $user_hierarchy = User::where(function($q) use ($currentUser) {
-                $q->where('id', $currentUser->id)
-                ->orWhere('parent_id', $currentUser->id)
-                ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
-                    $parentQuery->where('parent_id', $currentUser->id);
-                });
-            })->pluck('id')->toArray();
+            $baseQuery = $this->buildMyOrdersQuery($user);
 
-            $requests = ListingAccessRequest::with(['listing', 'requestedBy','convertedBy'])
-            
-                ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function($q) use ($user_hierarchy) {
-                    $q->whereIn('requested_by', $user_hierarchy);
-                })
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            return ApiResponse::success(
-                ListingAccessRequestResource::collection($requests),
-                'My access requests retrieved successfully'
+            return $this->respondAccessRequestList(
+                $request,
+                $baseQuery,
+                $user,
+                'My access requests retrieved successfully',
+                includePendingReviews: true
             );
-
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve my access requests: ' . $e->getMessage());
         }
     }
 
     /**
-     * Get requests for my listings 
+     * Inbound access requests (my requests / requests on my listings).
+     *
+     * When `page` is present: server-side pagination + status/search/sort filters.
+     * When `page` is omitted: legacy full collection (e.g. my_viewings calendar).
      */
-    public function myRequests(): JsonResponse
+    public function myRequests(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            $currentUser = $user;
-            
-            $user_hierarchy = User::where(function($q) use ($currentUser) {
-                $q->where('id', $currentUser->id)
-                ->orWhere('parent_id', $currentUser->id)
-                ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
-                    $parentQuery->where('parent_id', $currentUser->id);
-                });
-            })->pluck('id')->toArray();
+            $baseQuery = $this->buildMyRequestsQuery($user);
 
-            $requests = ListingAccessRequest::with(['listing', 'requestedBy','convertedBy','handledBy'])
-                        ->where(function ($mainQuery) use ($user, $user_hierarchy) {
-                    
-                            $mainQuery->whereHas('listing', function ($query) use ($user, $user_hierarchy) {
-                    
-                                if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
-                                    return;
-                                }
-                    
-                                $query->whereIn('agent_id', $user_hierarchy);
-                            })
-                    
-                            ->orWhere('handled_by', $user->id);
-                    
-                        })
-                        ->orderBy('created_at', 'desc')
-                        ->get();
-
-            return ApiResponse::success(
-                ListingAccessRequestResource::collection($requests),
-                'My access orders retrieved successfully'
+            return $this->respondAccessRequestList(
+                $request,
+                $baseQuery,
+                $user,
+                'My access orders retrieved successfully',
+                includePendingReviews: false
             );
-
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve my access orders: ' . $e->getMessage());
         }
@@ -1057,5 +1025,290 @@ public function setUserVacationMode(Request $request, User $user)
     );
 }
 
+    /**
+     * Visibility-scoped query for outbound requests (my-orders / AllRequests).
+     * Preserves existing hierarchy rules for non-admin users.
+     */
+    private function buildMyOrdersQuery(User $user)
+    {
+        $currentUser = $user;
+        $userHierarchy = User::where(function ($q) use ($currentUser) {
+            $q->where('id', $currentUser->id)
+                ->orWhere('parent_id', $currentUser->id)
+                ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
+                    $parentQuery->where('parent_id', $currentUser->id);
+                });
+        })->pluck('id')->toArray();
+
+        return ListingAccessRequest::query()
+            ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function ($q) use ($userHierarchy) {
+                $q->whereIn('requested_by', $userHierarchy);
+            });
+    }
+
+    /**
+     * Visibility-scoped query for inbound requests (my-requests).
+     * Preserves existing listing-agent hierarchy + handled_by rules.
+     */
+    private function buildMyRequestsQuery(User $user)
+    {
+        $currentUser = $user;
+        $userHierarchy = User::where(function ($q) use ($currentUser) {
+            $q->where('id', $currentUser->id)
+                ->orWhere('parent_id', $currentUser->id)
+                ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
+                    $parentQuery->where('parent_id', $currentUser->id);
+                });
+        })->pluck('id')->toArray();
+
+        return ListingAccessRequest::query()
+            ->where(function ($mainQuery) use ($user, $userHierarchy) {
+                $mainQuery->whereHas('listing', function ($query) use ($user, $userHierarchy) {
+                    if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+                        return;
+                    }
+                    $query->whereIn('agent_id', $userHierarchy);
+                })->orWhere('handled_by', $user->id);
+            });
+    }
+
+    /**
+     * Shared list response: paginate when `page` is present, otherwise full dump.
+     */
+    private function respondAccessRequestList(
+        Request $request,
+        $baseQuery,
+        User $user,
+        string $message,
+        bool $includePendingReviews
+    ): JsonResponse {
+        $eager = $this->accessRequestListEagerLoads();
+
+        // Status tab counts (full visible set, before search/status filters) — matches prior UI.
+        $statusCounts = $this->accessRequestStatusCounts(clone $baseQuery);
+
+        $showAllColumn = $user->hasRole('super_admin')
+            || $user->hasRole('admin')
+            || $user->hasRole('team_lead')
+            || $user->hasRole('manager');
+
+        $pendingReviewsPayload = null;
+        if ($includePendingReviews) {
+            $pendingReviewsPayload = $this->resolvePendingReviewsPayload(clone $baseQuery, $user, $eager);
+        }
+
+        // Legacy: no `page` → return entire visible set (my_viewings etc.).
+        if (!$request->has('page')) {
+            $requests = (clone $baseQuery)
+                ->with($eager)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            ListingAccessRequestResource::primeForCollection($user);
+            try {
+                $data = ListingAccessRequestResource::collection($requests)->resolve();
+            } finally {
+                ListingAccessRequestResource::clearCollectionPrime();
+            }
+
+            $meta = [
+                'status_counts' => $statusCounts,
+                'show_all_column' => $showAllColumn,
+                'paginated' => false,
+            ];
+            if ($includePendingReviews) {
+                $meta['pending_reviews'] = $pendingReviewsPayload;
+                $meta['pending_reviews_count'] = count($pendingReviewsPayload);
+            }
+
+            return ApiResponse::success($data, $message, 200, $meta);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(1, min($perPage, 100));
+        $page = max(1, (int) $request->input('page', 1));
+
+        $buildListQuery = function () use ($baseQuery, $request) {
+            $listQuery = clone $baseQuery;
+            $this->applyAccessRequestSearch($listQuery, $request->input('search'));
+            $this->applyAccessRequestStatusFilter($listQuery, $request->input('status'));
+            $this->applyAccessRequestSort(
+                $listQuery,
+                $request->input('sort_by'),
+                $request->input('sort_dir', 'desc')
+            );
+
+            return $listQuery;
+        };
+
+        $paginator = $buildListQuery()->with($eager)->paginate($perPage, ['listing_access_requests.*'], 'page', $page);
+
+        // Empty / past last page: clamp to last page when possible.
+        if ($paginator->total() > 0 && $page > $paginator->lastPage()) {
+            $page = $paginator->lastPage();
+            $paginator = $buildListQuery()->with($eager)->paginate($perPage, ['listing_access_requests.*'], 'page', $page);
+        }
+
+        ListingAccessRequestResource::primeForCollection($user);
+        try {
+            $data = ListingAccessRequestResource::collection($paginator->getCollection())->resolve();
+        } finally {
+            ListingAccessRequestResource::clearCollectionPrime();
+        }
+
+        $meta = [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+            'status_counts' => $statusCounts,
+            'show_all_column' => $showAllColumn,
+            'paginated' => true,
+        ];
+        if ($includePendingReviews) {
+            $meta['pending_reviews'] = $pendingReviewsPayload;
+            $meta['pending_reviews_count'] = count($pendingReviewsPayload);
+        }
+
+        return ApiResponse::success($data, $message, 200, $meta);
+    }
+
+    private function accessRequestListEagerLoads(): array
+    {
+        return [
+            'listing.area',
+            'listing.agent',
+            'requestedBy',
+            'convertedBy',
+            'handledBy',
+            'reviewer',
+        ];
+    }
+
+    private function accessRequestStatusCounts($query): array
+    {
+        $rows = (clone $query)
+            ->reorder()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $counts = [
+            'all' => (int) $rows->sum(),
+            'pending' => (int) ($rows['pending'] ?? 0),
+            'approved' => (int) ($rows['approved'] ?? 0),
+            'converted' => (int) ($rows['converted'] ?? 0),
+            'rejected' => (int) ($rows['rejected'] ?? 0),
+            'cancelled' => (int) ($rows['cancelled'] ?? 0),
+            'in_progress' => (int) ($rows['in_progress'] ?? 0),
+        ];
+
+        return $counts;
+    }
+
+    private function applyAccessRequestStatusFilter($query, $status): void
+    {
+        if ($status === null || $status === '' || $status === 'all') {
+            return;
+        }
+
+        $allowed = ['pending', 'approved', 'converted', 'rejected', 'cancelled', 'in_progress'];
+        if (in_array($status, $allowed, true)) {
+            $query->where('listing_access_requests.status', $status);
+        }
+    }
+
+    private function applyAccessRequestSearch($query, $search): void
+    {
+        $keyword = is_string($search) ? trim($search) : '';
+        if ($keyword === '') {
+            return;
+        }
+
+        $like = '%' . $keyword . '%';
+
+        $query->where(function ($q) use ($like) {
+            $q->where('listing_access_requests.reference_number', 'like', $like)
+                ->orWhere('listing_access_requests.request_type', 'like', $like)
+                ->orWhere('listing_access_requests.status', 'like', $like)
+                ->orWhere('listing_access_requests.reason', 'like', $like)
+                ->orWhereHas('requestedBy', function ($userQuery) use ($like) {
+                    $userQuery->where('name', 'like', $like)
+                        ->orWhere('display_name', 'like', $like)
+                        ->orWhere('email', 'like', $like);
+                })
+                ->orWhereHas('listing.area', function ($areaQuery) use ($like) {
+                    $areaQuery->where('name', 'like', $like);
+                })
+                ->orWhereHas('listing.agent', function ($agentQuery) use ($like) {
+                    $agentQuery->where('name', 'like', $like)
+                        ->orWhere('display_name', 'like', $like);
+                });
+        });
+    }
+
+    private function applyAccessRequestSort($query, $sortBy, $sortDir): void
+    {
+        $dir = strtolower((string) $sortDir) === 'asc' ? 'asc' : 'desc';
+        $table = 'listing_access_requests';
+
+        switch ($sortBy) {
+            case 'reference_number':
+                $query->orderBy("{$table}.reference_number", $dir);
+                break;
+            case 'request_type':
+                $query->orderBy("{$table}.request_type", $dir);
+                break;
+            case 'status':
+                $query->orderBy("{$table}.status", $dir);
+                break;
+            case 'created_at':
+                $query->orderBy("{$table}.created_at", $dir);
+                break;
+            case 'responded_at':
+                $query->orderBy("{$table}.responded_at", $dir);
+                break;
+            case 'converted_at':
+                $query->orderBy("{$table}.converted_at", $dir);
+                break;
+            case 'property_title':
+                $query->leftJoin('listings as lar_listings', 'lar_listings.id', '=', "{$table}.listing_id")
+                    ->leftJoin('areas as lar_areas', 'lar_areas.id', '=', 'lar_listings.area_id')
+                    ->orderBy('lar_areas.name', $dir)
+                    ->select("{$table}.*");
+                break;
+            case 'requester_name':
+                $query->leftJoin('users as lar_requesters', 'lar_requesters.id', '=', "{$table}.requested_by")
+                    ->orderByRaw('COALESCE(lar_requesters.display_name, lar_requesters.name) ' . $dir)
+                    ->select("{$table}.*");
+                break;
+            default:
+                $query->orderBy("{$table}.created_at", 'desc');
+                break;
+        }
+    }
+
+    private function resolvePendingReviewsPayload($baseQuery, User $user, array $eager): array
+    {
+        $pending = (clone $baseQuery)
+            ->with($eager)
+            ->where('request_type', 'viewing')
+            ->where('status', 'approved')
+            ->where('requested_by', $user->id)
+            ->where(function ($q) {
+                $q->whereNull('review')->orWhere('review', '');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        ListingAccessRequestResource::primeForCollection($user);
+        try {
+            return ListingAccessRequestResource::collection($pending)->resolve();
+        } finally {
+            ListingAccessRequestResource::clearCollectionPrime();
+        }
+    }
 
 }

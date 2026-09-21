@@ -36,6 +36,11 @@ class LeadAssignmentController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super_admin'))) {
+            return ApiResponse::error('Forbidden', 403);
+        }
+
         $data = $request->validate([
             'auto_assign' => 'sometimes|boolean',
             'system_disabled' => 'sometimes|boolean',
@@ -145,6 +150,11 @@ class LeadAssignmentController extends Controller
 
     public function runNow(LeadAssignmentService $service): JsonResponse
     {
+        $user = auth()->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super_admin'))) {
+            return ApiResponse::error('Forbidden', 403);
+        }
+
         $settings = LeadAssignmentSetting::current();
         if ($settings->simple_mode_enabled && !$settings->system_disabled) {
             $stats = $service->assignLeadsByAttendanceSimple();
@@ -157,6 +167,11 @@ class LeadAssignmentController extends Controller
 
     public function reassign(Request $request, LeadAssignmentService $service): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super_admin'))) {
+            return ApiResponse::error('Forbidden', 403);
+        }
+
         $data = $request->validate([
             'lead_id' => 'required|integer|exists:leads,id',
         ]);
@@ -212,6 +227,11 @@ class LeadAssignmentController extends Controller
 
     public function revertStageAssignments(Request $request, LeadAssignmentService $service): JsonResponse
     {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super_admin'))) {
+            return ApiResponse::error('Forbidden', 403);
+        }
+
         $data = $request->validate([
             'stage_id' => 'required|integer|exists:stages,id',
         ]);

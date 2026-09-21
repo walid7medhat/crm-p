@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\Listing\ListingController;
 
-Route::get('/leads/export', [LeadController::class, 'export'])->name('leads.export');
+Route::get('/leads/export', [LeadController::class, 'export'])
+    ->middleware(['jwt.auth', 'permission:leads-list'])
+    ->name('leads.export');
 Route::get('/image/watermark', [ListingController::class, 'watermark'])
     ->name('image.watermark');
 
@@ -69,7 +71,8 @@ Route::get('preview-email/account-activated', function () {
     ]);
 })->name('preview-email.account-activated');
 
-Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads']);
+Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads'])
+    ->middleware(['jwt.auth', 'role:super_admin|admin']);
 
 Route::get('{any}', function () {
     return view('welcome');

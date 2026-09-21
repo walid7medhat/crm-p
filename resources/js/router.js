@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { clearAuthToken } from './plugins/axios.js'
+import { installNavProgress } from './composables/useNavProgress.js'
 
 /**
  * Route components are lazy-loaded so the initial main bundle no longer pulls
@@ -363,5 +364,7 @@ router.beforeEach((to, from, next) => {
     next()
   }
 })
+
+installNavProgress(router)
 
 export default router

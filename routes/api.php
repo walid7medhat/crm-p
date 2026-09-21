@@ -207,7 +207,7 @@ Route::prefix('stages')->middleware(['auth:api'])->group(function () {
     Route::get('/visibility/settings', [StageController::class, 'getStageVisibilitySettings']);
     Route::post('/visibility/settings', [StageController::class, 'updateStageVisibility']);
 });
-Route::prefix('company-branches')->group(function () {
+Route::prefix('company-branches')->middleware(['jwt.auth'])->group(function () {
     Route::get('/', [CompanyBranchController::class, 'index']);
     Route::post('/', [CompanyBranchController::class, 'store']);
     Route::get('/{id}', [CompanyBranchController::class, 'show']);
@@ -349,7 +349,7 @@ Route::middleware(['auth:api'])->prefix('document-requests')->group(function () 
     Route::post('/{id}/approve', [DocumentRequestController::class, 'approve']);
     Route::post('/{id}/reject', [DocumentRequestController::class, 'reject']);
 });
-  Route::prefix('designations')->group(function () {
+  Route::prefix('designations')->middleware(['jwt.auth'])->group(function () {
         Route::get('/', [DesignationController::class, 'index']);           
         Route::post('/', [DesignationController::class, 'store']);          
         Route::get('/{id}', [DesignationController::class, 'show']);        
@@ -362,7 +362,7 @@ Route::middleware(['auth:api'])->prefix('document-requests')->group(function () 
         Route::post('/bulk-delete', [DesignationController::class, 'bulkDelete']);  
     });
 
-      Route::prefix('departments')->group(function () {
+      Route::prefix('departments')->middleware(['jwt.auth'])->group(function () {
         Route::get('/', [DepartmentController::class, 'index']);           
         Route::post('/', [DepartmentController::class, 'store']);          
         Route::get('/{id}', [DepartmentController::class, 'show']);        
@@ -412,7 +412,8 @@ Route::middleware(['auth:api'])->prefix('recruitment/admin')->group(function () 
         Route::get('/{id}/documents', [EmployeeController::class, 'getDocuments']);           
         Route::delete('/documents/{documentId}', [EmployeeController::class, 'deleteDocument']); 
     });
-    Route::post('/admin/employees/import-excel', [EmployeeExcelImportController::class, 'import']);
+    Route::post('/admin/employees/import-excel', [EmployeeExcelImportController::class, 'import'])
+        ->middleware(['jwt.auth']);
 
 Route::get('/teams-with-leads', [StageController::class, 'getTeamsWithLeads'])->middleware('jwt.auth');
 

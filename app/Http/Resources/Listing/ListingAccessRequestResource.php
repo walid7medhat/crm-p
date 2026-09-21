@@ -8,6 +8,66 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ListingAccessRequestResource extends JsonResource
 {
+    /** @var array<int>|null */
+    protected static ?array $cachedSubordinateIds = null;
+
+    protected static ?int $cachedSubordinateUserId = null;
+
+    protected static ?bool $cachedCanManage = null;
+
+    protected static ?int $cachedCanManageUserId = null;
+
+    /**
+     * Resolve expensive per-user lookups once for a collection transform.
+     */
+    public static function primeForCollection(?User $user = null): void
+    {
+        $user = $user ?? auth()->user();
+        if (!$user) {
+            return;
+        }
+
+        self::$cachedSubordinateIds = $user->getAllSubordinatesIds();
+        self::$cachedSubordinateUserId = $user->id;
+        self::$cachedCanManage = $user->canManageAccessRequests();
+        self::$cachedCanManageUserId = $user->id;
+    }
+
+    public static function clearCollectionPrime(): void
+    {
+        self::$cachedSubordinateIds = null;
+        self::$cachedSubordinateUserId = null;
+        self::$cachedCanManage = null;
+        self::$cachedCanManageUserId = null;
+    }
+
+    /**
+     * @return array<int>
+     */
+    protected function subordinatesIdsFor(User $user): array
+    {
+        if (
+            self::$cachedSubordinateIds !== null
+            && self::$cachedSubordinateUserId === $user->id
+        ) {
+            return self::$cachedSubordinateIds;
+        }
+
+        return $user->getAllSubordinatesIds();
+    }
+
+    protected function canManageAccessRequestsFor(User $user): bool
+    {
+        if (
+            self::$cachedCanManage !== null
+            && self::$cachedCanManageUserId === $user->id
+        ) {
+            return self::$cachedCanManage;
+        }
+
+        return $user->canManageAccessRequests();
+    }
+
     /**
      * Transform the resource into an array.
      *
@@ -32,7 +92,7 @@ class ListingAccessRequestResource extends JsonResource
                         $isManagerOrTeamLead
                     );
 // Calculate permissions based on user role and hierarchy
-        $canManageAccessRequests = $user->canManageAccessRequests();
+        $canManageAccessRequests = $this->canManageAccessRequestsFor($user);
         if($this->request_type=='viewing'){
             // \Log::info('viewing', [
             //     'listing_id' => $this->listing->id,
@@ -43,7 +103,7 @@ class ListingAccessRequestResource extends JsonResource
             // ]);
             $canRespond =$canManageAccessRequests || $this->listing->isOwner($user) || $user->id==$this->handled_by;
         }else{
-          $subordinatesIds = $user->getAllSubordinatesIds();
+          $subordinatesIds = $this->subordinatesIdsFor($user);
 
             $canRespond = $canManageAccessRequests && (
                 in_array($this->listing->user_id, $subordinatesIds) ||

@@ -309,7 +309,7 @@
                     <!-- Pagination -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-24" v-if="!loading && filteredRequests.length > 0">
                         <span>
-                            Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredRequests.length }} entries
+                            Showing {{ paginationMeta.total ? startIndex + 1 : 0 }} to {{ endIndex }} of {{ paginationMeta.total }} entries
                         </span>
                         <ul class="pagination d-flex flex-wrap align-items-center gap-2 justify-content-center">
                             <li class="page-item">
@@ -530,6 +530,25 @@ const showConvertModal = ref(false)
 const conversionNotes = ref('')
 const currentConvertingRequest = ref(null)
 const showVacationModal = ref(false)
+const paginationMeta = ref({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: null,
+    to: null,
+})
+const statusCounts = ref({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    converted: 0,
+    rejected: 0,
+    cancelled: 0,
+    in_progress: 0,
+})
+const showAllColumnMeta = ref(false)
+let searchDebounceTimer = null
 
 // Vacation Mode Data
 const vacationData = ref({
@@ -538,6 +557,7 @@ const vacationData = ref({
 })
 const agentsList = ref([]) // Load from API
 const hasShowAllColumn = computed(() => {
+    if (showAllColumnMeta.value) return true
     return requests.value.some(request => request.show_all_column === true)
 })
 const hasAvailableActions = (request) => {
@@ -652,100 +672,25 @@ const filterTabs = [
     { label: 'Cancelled', value: 'cancelled' }
 ]
 
-const filteredRequests = computed(() => {
-    let filtered = requests.value
-    
-    if (activeFilter.value !== 'all') {
-        filtered = filtered.filter(request => request.status === activeFilter.value)
-    }
-    
-    if (searchText.value.trim()) {
-        const searchTerm = searchText.value.toLowerCase().trim()
-        
-        filtered = filtered.filter(request => {
-            const searchFields = [
-                request.requester_name || '',
-                request.requester_email || '',
-                request.property_title || '',
-                request.listing?.agent || '',
-                request.request_type || '',
-                request.status || '',
-                request.reference_number ||'',
-                formatDate(request.created_at) || '',
-                formatDate(request.responded_at) || '',
-                formatDate(request.converted_at) || ''
-            ]
-            
-            return searchFields.some(field => 
-                field.toLowerCase().includes(searchTerm)
-            )
-        })
-    }
-    
-    return filtered
-})
-
-const sortedRequests = computed(() => {
-    if (!sortedBy.value) return filteredRequests.value
-    
-    return [...filteredRequests.value].sort((a, b) => {
-        let valA, valB
-        
-        switch (sortedBy.value) {
-            case 'requester_name':
-                valA = a.requester_name?.toLowerCase?.() || ''
-                valB = b.requester_name?.toLowerCase?.() || ''
-                break
-            case 'property_title':
-                valA = a.property_title?.toLowerCase?.() || ''
-                valB = b.property_title?.toLowerCase?.() || ''
-                break
-            case 'request_type':
-                valA = a.request_type?.toLowerCase?.() || ''
-                valB = b.request_type?.toLowerCase?.() || ''
-                break
-            case 'status':
-                valA = a.status?.toLowerCase?.() || ''
-                valB = b.status?.toLowerCase?.() || ''
-                break
-            case 'created_at':
-                valA = new Date(a.created_at).getTime()
-                valB = new Date(b.created_at).getTime()
-                break
-            case 'responded_at':
-                valA = a.responded_at ? new Date(a.responded_at).getTime() : 0
-                valB = b.responded_at ? new Date(b.responded_at).getTime() : 0
-                break
-            case 'converted_at':
-                valA = a.converted_at ? new Date(a.converted_at).getTime() : 0
-                valB = b.converted_at ? new Date(b.converted_at).getTime() : 0
-                break
-            default:
-                valA = ''
-                valB = ''
-        }
-        
-        return (valA > valB ? 1 : -1) * (sortAsc.value ? 1 : -1)
-    })
-})
+// Server already applies status/search/sort/page — rows are the current page.
+const filteredRequests = computed(() => requests.value)
+const paginatedRequests = computed(() => requests.value)
 
 const totalPages = computed(() =>
-    Math.ceil(sortedRequests.value.length / selectedShow.value)
+    Math.max(1, paginationMeta.value.last_page || 1)
 )
 
-const paginatedRequests = computed(() => {
-    const start = (currentPage.value - 1) * selectedShow.value
-    return sortedRequests.value.slice(start, start + selectedShow.value)
+const startIndex = computed(() => {
+    if (!paginationMeta.value.total) return 0
+    return (paginationMeta.value.from ? paginationMeta.value.from - 1 : 0)
 })
-
-const startIndex = computed(() => (currentPage.value - 1) * selectedShow.value)
 const endIndex = computed(() =>
-    Math.min(startIndex.value + selectedShow.value, filteredRequests.value.length)
+    paginationMeta.value.to || 0
 )
 
 const getTabCount = (status) => {
-    if (status === 'all') return requests.value.length
-    return requests.value.filter(request => request.status === status).length
+    if (status === 'all') return statusCounts.value.all || 0
+    return statusCounts.value[status] || 0
 }
 
 // Methods
@@ -756,11 +701,15 @@ function sortBy(key) {
         sortedBy.value = key
         sortAsc.value = true
     }
+    currentPage.value = 1
+    fetchMyRequests()
 }
 
 function goToPage(page) {
     if (page < 1 || page > totalPages.value) return
+    if (page === currentPage.value) return
     currentPage.value = page
+    fetchMyRequests()
 }
 
 function statusClass(status) {
@@ -821,28 +770,62 @@ function  goToUser(userId) {
         }
     }
 watch(searchText, () => {
-    currentPage.value = 1
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = setTimeout(() => {
+        currentPage.value = 1
+        fetchMyRequests()
+    }, 300)
 })
 
 watch(activeFilter, () => {
     currentPage.value = 1
+    fetchMyRequests()
+})
+
+watch(selectedShow, () => {
+    currentPage.value = 1
+    fetchMyRequests()
 })
 
 async function fetchMyRequests() {
     try {
         loading.value = true
-        const response = await api.get('/listings/access-requests/my-requests')
+        const params = {
+            page: currentPage.value,
+            per_page: Number(selectedShow.value) || 10,
+            status: activeFilter.value || 'all',
+            search: searchText.value?.trim() || '',
+        }
+        if (sortedBy.value) {
+            params.sort_by = sortedBy.value
+            params.sort_dir = sortAsc.value ? 'asc' : 'desc'
+        }
+
+        const response = await api.get('/listings/access-requests/my-requests', { params })
         
         if (response.data.status) {
-            requests.value = response.data.data.map(request => ({
+            const meta = response.data.meta || {}
+            requests.value = (response.data.data || []).map(request => ({
                 ...request,
                 requester_name: request.requested_by?.name || 'Unknown',
                 requester_email: request.requested_by?.email || 'Unknown',
                 property_title: request.listing?.title || 'Unknown Property',
                 converted_by_name: request.converted_by?.name || null
             }))
-            console.log('✅ MyRequests loaded:', requests.value.length, 'requests')
-            console.log('🔍 Approved requests:', requests.value.filter(r => r.status === 'approved'))
+            paginationMeta.value = {
+                current_page: meta.current_page || currentPage.value,
+                last_page: meta.last_page || 1,
+                per_page: meta.per_page || Number(selectedShow.value) || 10,
+                total: meta.total ?? requests.value.length,
+                from: meta.from ?? null,
+                to: meta.to ?? null,
+            }
+            currentPage.value = paginationMeta.value.current_page
+            if (meta.status_counts) {
+                statusCounts.value = { ...statusCounts.value, ...meta.status_counts }
+            }
+            showAllColumnMeta.value = !!meta.show_all_column
+            console.log('✅ MyRequests loaded:', requests.value.length, 'requests (page)', 'total=', paginationMeta.value.total)
         } else {
             throw new Error(response.data.message || 'Failed to fetch requests')
         }
@@ -1135,12 +1118,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     cleanup()
 })
-
-function viewProperty(propertyId) {
-    window.open(`/property-details/${propertyId}`, '_blank')
-}
 </script>
 
 <style scoped>

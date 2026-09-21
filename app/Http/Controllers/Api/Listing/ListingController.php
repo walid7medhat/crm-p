@@ -2049,6 +2049,11 @@ private function sendResubmissionNotification($listing, $user)
             if (!$listing) {
                 return ApiResponse::error('Listing Not found', 404);
             }
+
+            // Same ownership/hierarchy rules as update()
+            if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin') && !$user->canEditListings($listing->agent_id)) {
+                return ApiResponse::error('You are Not authorized to delete this listing', 403);
+            }
             
             // Delete documents
             $documentPaths = [

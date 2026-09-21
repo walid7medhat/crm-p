@@ -38,7 +38,7 @@ class LeadController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:leads-list', ['only' => ['index', 'show']]);
+        $this->middleware('permission:leads-list', ['only' => ['index', 'show', 'export']]);
         $this->middleware('permission:leads-create', ['only' => ['store']]);
         $this->middleware('permission:leads-edit', ['only' => ['update', 'changeStage', 'assignResponsiblePerson', 'updateExtraClientRequirements']]);
         $this->middleware('permission:leads-delete', ['only' => ['destroy']]);
@@ -257,20 +257,15 @@ class LeadController extends Controller
                         // Lead Pool:
                         // User can only see leads belonging to his branch.
 
-                        $userBranch = $user->admin_parent?->name;
+                        // admin_parent is an accessor (walks parent + hasRole); resolve once,
+                        // then use that branch admin's subordinate tree (includes self).
+                        // Equivalent to scanning all users' admin_parent names, without N+1.
+                        $branchAdmin = $user->admin_parent;
+                        $userBranch = $branchAdmin?->name;
 
                         if ($userBranch) {
 
-                            // Get all users that belong to the same branch.
-                            // admin_parent is an accessor, so we cannot use whereHas().
-                            $branchUserIds = User::query()
-                                ->get()
-                                ->filter(function ($branchUser) use ($userBranch) {
-                                    return $branchUser->admin_parent?->name === $userBranch;
-                                })
-                                ->pluck('id')
-                                ->values()
-                                ->all();
+                            $branchUserIds = $branchAdmin->getAllSubordinatesIds();
 
                             $leadsQuery->where(function ($query) use ($userBranch, $branchUserIds) {
 

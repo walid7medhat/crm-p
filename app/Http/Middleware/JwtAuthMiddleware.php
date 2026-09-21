@@ -20,6 +20,10 @@ class JwtAuthMiddleware
             if (!$user) {
                 return ApiResponse::error('Unauthorized', 401);
             }
+            // Inactive accounts must not use protected APIs (even with a previously issued JWT).
+            if (($user->status ?? null) !== 'active') {
+                return ApiResponse::error('Account inactive', 403);
+            }
             Auth::setUser($user);
         } catch (TokenExpiredException $e) {
             return ApiResponse::error('Token expired', 401);

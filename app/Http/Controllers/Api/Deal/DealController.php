@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Deal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Deal\UpdateDealRequest;
 use App\Http\Resources\Deal\DealResource;
+use App\Http\Resources\Deal\DealKanbanCardResource;
 use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\Stage;
@@ -152,6 +153,13 @@ class DealController extends Controller
      */
     public function update(UpdateDealRequest $request, Deal $deal)
     {
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         DB::beginTransaction();
         try {
             $changes = [];
@@ -184,14 +192,20 @@ class DealController extends Controller
                 $changes['properties'] = 'updated';
             }
 
-            // تحديث الـ Parties
+            // تحديث الـ Parties — only parties that belong to this deal
             if ($request->filled('parties')) {
                 foreach ($request->parties as $partyData) {
-                    $party = DealParty::find($partyData['id']);
-                    if (!$party) continue;
+                    if (empty($partyData['id'])) {
+                        continue;
+                    }
+                    $party = $deal->parties()->whereKey($partyData['id'])->first();
+                    if (!$party) {
+                        continue;
+                    }
 
                     $oldParty = $party->getOriginal();
-                    $party->update($partyData);
+                    $partyPayload = collect($partyData)->except(['id', 'deal_id'])->all();
+                    $party->update($partyPayload);
 
                     if ($party->getChanges()) {
                         $changes['parties'][] = [
@@ -348,24 +362,15 @@ class DealController extends Controller
         }
         $pageIds = array_values(array_unique($pageIds));
 
+        // Kanban cards only — hover/formatLeadUser needs light user graph (not parent×3 + docs/properties).
         $userEager = [
             'background',
             'roles:id,name',
             'employeeProfile.companyBranch:id,name',
             'employeeProfile.designation:id,name',
-            'employeeProfile.department:id,name',
+            'parent:id,name,display_name,avatar,parent_id,status,background_id',
             'parent.background',
             'parent.roles:id,name',
-            'parent.employeeProfile.companyBranch:id,name',
-            'parent.employeeProfile.designation:id,name',
-            'parent.parent.background',
-            'parent.parent.roles:id,name',
-            'parent.parent.employeeProfile.companyBranch:id,name',
-            'parent.parent.employeeProfile.designation:id,name',
-            'parent.parent.parent.background',
-            'parent.parent.parent.roles:id,name',
-            'parent.parent.parent.employeeProfile.companyBranch:id,name',
-            'parent.parent.parent.employeeProfile.designation:id,name',
         ];
 
         $dealsById = $pageIds === []
@@ -377,19 +382,14 @@ class DealController extends Controller
                     'stage:id,name,color,order,deal_type,stage_type',
                     'responsiblePerson' => fn ($q) => $q->with($userEager),
                     'addedBy' => fn ($q) => $q->with($userEager),
-                    'parties.documents',
-                    'documents',
-                    'properties.propertyType:id,name',
-                    'properties.area.parent.parent.parent.parent',
-                    'listing.agent:id,name,display_name,avatar,background_id',
-                    'listing.agent.background',
-                    'listing.area.parent.parent.parent.parent',
+                    // buyer_name only — documents belong on GET /deals/{id}
+                    'parties:id,deal_id,party_type,party_role,first_name,last_name',
                 ])
                 ->get()
                 ->keyBy('id');
 
         try {
-            DealResource::primeForCollection($dealsById->values());
+            DealKanbanCardResource::primeForCollection($dealsById->values());
 
             $result = $stages->map(function ($stage) use ($idsByStage, $dealsById, $countsByStage, $perPage) {
                 $stageIdList = $idsByStage[$stage->id] ?? [];
@@ -413,13 +413,13 @@ class DealController extends Controller
                     'total_count' => $totalCount,
                     'current_page' => 1,
                     'per_page' => $perPage,
-                    'deals' => DealResource::collection($stageDeals)->resolve(),
+                    'deals' => DealKanbanCardResource::collection($stageDeals)->resolve(),
                     // Match LengthAwarePaginator::hasMorePages() for page 1.
                     'has_more_pages' => $hasMoreFromIds || $totalCount > $perPage,
                 ];
             })->values();
         } finally {
-            DealResource::clearCollectionPrime();
+            DealKanbanCardResource::clearCollectionPrime();
         }
 
         return response()->json([
@@ -444,23 +444,40 @@ class DealController extends Controller
         $stageId = $request->stage_id;
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 10);
+
+        $userEager = [
+            'background',
+            'roles:id,name',
+            'employeeProfile.companyBranch:id,name',
+            'employeeProfile.designation:id,name',
+            'parent:id,name,display_name,avatar,parent_id,status,background_id',
+            'parent.background',
+            'parent.roles:id,name',
+        ];
         
         $dealsQuery = Deal::with([
-            'lead',
-            'responsiblePerson',
-            'parties',
-            'documents',
-            'properties'
+            'lead:id,lead_name,email,work_phone,converted_at',
+            'stage:id,name,color,order,deal_type,stage_type',
+            'responsiblePerson' => fn ($q) => $q->with($userEager),
+            'addedBy' => fn ($q) => $q->with($userEager),
+            'parties:id,deal_id,party_type,party_role,first_name,last_name',
         ])
         ->visibleFor($user)
         ->filter($request)
         ->where('stage_id', $stageId)->orderBy('updated_at','desc');
         
         $deals = $dealsQuery->paginate($perPage, ['*'], 'page', $page);
+
+        try {
+            DealKanbanCardResource::primeForCollection($deals->getCollection());
+            $cardData = DealKanbanCardResource::collection($deals->getCollection())->resolve();
+        } finally {
+            DealKanbanCardResource::clearCollectionPrime();
+        }
         
         return response()->json([
             'success' => true,
-            'data' => DealResource::collection($deals),
+            'data' => $cardData,
             'current_page' => $deals->currentPage(),
             'last_page' => $deals->lastPage(),
             'per_page' => $deals->perPage(),
@@ -708,6 +725,13 @@ class DealController extends Controller
             ], 404);
         }
 
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -927,6 +951,13 @@ class DealController extends Controller
             ], 404);
         }
 
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -1060,6 +1091,13 @@ class DealController extends Controller
             ], 404);
         }
 
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         $dealType = $deal->deal_type;
         $newStageId = (int) $request->stage_id;
 
@@ -1136,6 +1174,13 @@ class DealController extends Controller
         
         if (!$deal) {
             return response()->json(['success' => false, 'message' => 'Deal not found'], 404);
+        }
+
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
         }
 
         try {

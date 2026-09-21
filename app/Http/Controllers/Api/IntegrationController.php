@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use App\Helpers\LeadHistoryHelper;
 use App\Models\LeadHistory;
 use App\Events\LeadUpdated;
+use App\Services\LeadAssignmentService;
 
 class IntegrationController extends Controller
 {
@@ -721,11 +722,14 @@ public function store_website(Request $request)
     }
 
     $data = $request->all();
+    // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
+    unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
+
 $fieldData = [];
 
 foreach ($data as $key => $value) {
 
-    if (in_array($key, ['responsible_person_id','lead_name','source'])) {
+    if (in_array($key, ['responsible_person_id','responsible_person','lead_name','source','secret','api_key'])) {
         continue;
     }
 
@@ -739,23 +743,23 @@ foreach ($data as $key => $value) {
 $fieldMappings = [
     'field_data' => $fieldData
 ];
-    $stage = Stage::where('stage_type', 'lead')
-        ->orderBy('order')
-        ->first();
-\Log::info($data['responsible_person_id']);
+    $newStageId = app(LeadAssignmentService::class)->resolveNewStageId()
+        ?? Stage::where('stage_type', 'lead')->orderBy('order')->value('id');
+
     $lead = Lead::create([
         'integration_id' => null,
         'meta_lead_id' => null,
-        'lead_name' => $data['lead_name'] ?html_entity_decode($data['lead_name'], ENT_QUOTES, 'UTF-8') : 'Website Lead',
+        'lead_name' => !empty($data['lead_name']) ? html_entity_decode($data['lead_name'], ENT_QUOTES, 'UTF-8') : 'Website Lead',
         'first_name' => $data['name'] ?? null,
         'last_name' => $data['last_name'] ?? null,
         'email' => $data['email'] ?? null,
         'work_phone' => $data['phone'] ?? null,
-        'stage_id' => $stage?->id,
+        'stage_id' => $newStageId,
         'lead_source' => 'Oiaproperties.com',
         'ad_id' => null,
         'added_by' => 1,
-        'responsible_person_id' =>(int) $data['responsible_person_id'] ?? 1,
+        // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
+        'responsible_person_id' => 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
@@ -777,18 +781,13 @@ public function store_wordpress(Request $request)
     }
 
     $data = $request->all();
-    \Log::info($data);
+    // Ignore client assignee fields — Lead Assignment (ProcessLeadAutoAssignmentJob on create) assigns.
+    unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
+
 $fieldData = [];
-    if($data['responsible_person']==2911){
-                    $data['responsible_person_id']=59;
-                }elseif($data['responsible_person']==2909){
-                    $data['responsible_person_id']=25;
-                }else{
-                     $data['responsible_person_id']=25;
-                }
 foreach ($data as $key => $value) {
 
-    if (in_array($key, ['responsible_person_id','responsible_person','lead_name','source'])) {
+    if (in_array($key, ['responsible_person_id','responsible_person','lead_name','source','secret','api_key'])) {
         continue;
     }
 
@@ -802,23 +801,23 @@ foreach ($data as $key => $value) {
 $fieldMappings = [
     'field_data' => $fieldData
 ];
-    $stage = Stage::where('stage_type', 'lead')
-        ->orderBy('order')
-        ->first();
-\Log::info($data['responsible_person_id']);
+    $newStageId = app(LeadAssignmentService::class)->resolveNewStageId()
+        ?? Stage::where('stage_type', 'lead')->orderBy('order')->value('id');
+
     $lead = Lead::create([
         'integration_id' => null,
         'meta_lead_id' => null,
-        'lead_name' => $data['Page_Name'] ?html_entity_decode($data['Page_Name'], ENT_QUOTES, 'UTF-8') :'Wordpress Lead',
+        'lead_name' => !empty($data['Page_Name']) ? html_entity_decode($data['Page_Name'], ENT_QUOTES, 'UTF-8') : 'Wordpress Lead',
         'first_name' => $data['No_Label_name'] ?? 'wordpress',
         'last_name' => $data['last_name'] ?? null,
         'email' => $data['No_Label_email'] ?? null,
         'work_phone' => $data['No_Label_phone'] ?? null,
-        'stage_id' => $stage?->id,
-        'lead_source' =>$data['source']?? 'Allproperties.ae',
+        'stage_id' => $newStageId,
+        'lead_source' => $data['source'] ?? 'Allproperties.ae',
         'ad_id' => null,
         'added_by' => 1,
-        'responsible_person_id' =>(int) $data['responsible_person_id'] ?? 1,
+        // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
+        'responsible_person_id' => 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
@@ -831,6 +830,7 @@ $fieldMappings = [
         'status' => 'success'
     ]);
 }
+
 public function getFormFields($formId)
 {
     $token = env('META_ACCESS_TOKEN');

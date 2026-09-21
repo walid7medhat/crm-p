@@ -14,10 +14,10 @@ class DesignationController extends Controller
     {
         $hrRead = 'role_or_permission:super_admin|admin|hr|hr-view|designations-list';
 
-        $this->middleware($hrRead, ['only' => ['index', 'show']]);
+        $this->middleware($hrRead, ['only' => ['index', 'show', 'getEmployees']]);
         $this->middleware('permission:designations-create', ['only' => ['store']]);
-        $this->middleware('permission:designations-edit', ['only' => ['update']]);
-        $this->middleware('permission:designations-delete', ['only' => ['destroy']]);
+        $this->middleware('permission:designations-edit', ['only' => ['update', 'toggleStatus']]);
+        $this->middleware('permission:designations-delete', ['only' => ['destroy', 'bulkDelete']]);
     }
 
     /**

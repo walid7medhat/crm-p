@@ -213,7 +213,7 @@
                     <!-- Pagination -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-24" v-if="!loading && filteredOrders.length > 0">
                         <span>
-                            Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredOrders.length }} entries
+                            Showing {{ paginationMeta.total ? startIndex + 1 : 0 }} to {{ endIndex }} of {{ paginationMeta.total }} entries
                         </span>
                         <ul class="pagination d-flex flex-wrap align-items-center gap-2 justify-content-center">
                             
@@ -537,7 +537,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
@@ -597,6 +597,25 @@ const selectedOrder = ref(null)
 const showConvertModal = ref(false)
 const conversionNotes = ref('')
 const currentOrderId = ref(null)
+const paginationMeta = ref({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: null,
+    to: null,
+})
+const statusCounts = ref({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    converted: 0,
+    rejected: 0,
+    cancelled: 0,
+    in_progress: 0,
+})
+const showAllColumnMeta = ref(false)
+let searchDebounceTimer = null
 
 // Review variables
 const showReviewModal = ref(false)
@@ -627,14 +646,7 @@ const filterTabs = computed(() => {
     ]
     
     // إذا كان هناك طلبات تحتاج تقييم، أضف خاصية hasPending
-    const pendingReviews = orders.value.filter(order => 
-        order.request_type === 'viewing' && 
-        order.status === 'approved' && 
-        order.can_review && 
-        !order.review
-    ).length
-    
-    if (pendingReviews > 0) {
+    if (pendingReviewOrders.value.length > 0) {
         tabs.forEach(tab => {
             if (tab.value === 'all' || tab.value === 'approved') {
                 tab.hasPending = true
@@ -647,80 +659,24 @@ const filterTabs = computed(() => {
 
 // Computed
 const hasShowAllColumn = computed(() => {
+    if (showAllColumnMeta.value) return true
     return orders.value.some(order => order.show_all_column === true)
 })
 
-const filteredOrders = computed(() => {
-    let filtered = orders.value
-    
-    // Apply status filter
-    if (activeFilter.value !== 'all') {
-        filtered = filtered.filter(order => order.status === activeFilter.value)
-    }
-    
-    // Apply search filter
-    const keyword = searchText.value.toLowerCase()
-    if (keyword) {
-        filtered = filtered.filter(order =>
-            order.property_title?.toLowerCase().includes(keyword) ||
-            order.request_type?.toLowerCase().includes(keyword) ||
-            order.status?.toLowerCase().includes(keyword) ||
-            getRequesterName(order).toLowerCase().includes(keyword) || 
-            order.reference_number?.toLowerCase().includes(keyword)
-        )
-    }
-    
-    return filtered
-})
-
-const sortedOrders = computed(() => {
-    if (!sortedBy.value) return filteredOrders.value
-    
-    return [...filteredOrders.value].sort((a, b) => {
-        let valA, valB
-        
-        switch (sortedBy.value) {
-            case 'property_title':
-                valA = a.property_title?.toLowerCase?.() || ''
-                valB = b.property_title?.toLowerCase?.() || ''
-                break
-            case 'request_type':
-                valA = a.request_type?.toLowerCase?.() || ''
-                valB = b.request_type?.toLowerCase?.() || ''
-                break
-            case 'status':
-                valA = a.status?.toLowerCase?.() || ''
-                valB = b.status?.toLowerCase?.() || ''
-                break
-            case 'created_at':
-                valA = new Date(a.created_at).getTime()
-                valB = new Date(b.created_at).getTime()
-                break
-            case 'responded_at':
-                valA = a.responded_at ? new Date(a.responded_at).getTime() : 0
-                valB = b.responded_at ? new Date(b.responded_at).getTime() : 0
-                break
-            default:
-                valA = ''
-                valB = ''
-        }
-        
-        return (valA > valB ? 1 : -1) * (sortAsc.value ? 1 : -1)
-    })
-})
+// Server already applies status/search/sort/page — rows are the current page.
+const filteredOrders = computed(() => orders.value)
+const paginatedOrders = computed(() => orders.value)
 
 const totalPages = computed(() =>
-    Math.ceil(sortedOrders.value.length / selectedShow.value)
+    Math.max(1, paginationMeta.value.last_page || 1)
 )
 
-const paginatedOrders = computed(() => {
-    const start = (currentPage.value - 1) * selectedShow.value
-    return sortedOrders.value.slice(start, start + selectedShow.value)
+const startIndex = computed(() => {
+    if (!paginationMeta.value.total) return 0
+    return (paginationMeta.value.from ? paginationMeta.value.from - 1 : 0)
 })
-
-const startIndex = computed(() => (currentPage.value - 1) * selectedShow.value)
 const endIndex = computed(() =>
-    Math.min(startIndex.value + selectedShow.value, filteredOrders.value.length)
+    paginationMeta.value.to || 0
 )
 
 // Methods
@@ -731,11 +687,15 @@ function sortBy(key) {
         sortedBy.value = key
         sortAsc.value = true
     }
+    currentPage.value = 1
+    fetchMyOrders()
 }
 
 function goToPage(page) {
     if (page < 1 || page > totalPages.value) return
+    if (page === currentPage.value) return
     currentPage.value = page
+    fetchMyOrders()
 }
 
 function statusClass(status) {
@@ -786,8 +746,8 @@ function formatDate(dateString) {
 }
 
 function getTabCount(status) {
-    if (status === 'all') return orders.value.length
-    return orders.value.filter(order => order.status === status).length
+    if (status === 'all') return statusCounts.value.all || 0
+    return statusCounts.value[status] || 0
 }
 
 function getRequesterName(order) {
@@ -999,17 +959,48 @@ function viewPropertyFromModal(propertyId) {
 async function fetchMyOrders() {
     try {
         loading.value = true
-        const response = await api.get('/listings/access-requests/my-orders')
+        const params = {
+            page: currentPage.value,
+            per_page: Number(selectedShow.value) || 10,
+            status: activeFilter.value || 'all',
+            search: searchText.value?.trim() || '',
+        }
+        if (sortedBy.value) {
+            params.sort_by = sortedBy.value
+            params.sort_dir = sortAsc.value ? 'asc' : 'desc'
+        }
+
+        const response = await api.get('/listings/access-requests/my-orders', { params })
         
         console.log('📊 API Response:', response.data)
         
         if (response.data.status) {
-            orders.value = response.data.data.map(order => ({
+            const meta = response.data.meta || {}
+            orders.value = (response.data.data || []).map(order => ({
                 ...order,
                 property_title: order.listing?.title || 'Unknown Property'
             }))
-            console.log('✅ MyOrders loaded:', orders.value.length, 'orders')
-               checkPendingReviews()
+            paginationMeta.value = {
+                current_page: meta.current_page || currentPage.value,
+                last_page: meta.last_page || 1,
+                per_page: meta.per_page || Number(selectedShow.value) || 10,
+                total: meta.total ?? orders.value.length,
+                from: meta.from ?? null,
+                to: meta.to ?? null,
+            }
+            currentPage.value = paginationMeta.value.current_page
+            if (meta.status_counts) {
+                statusCounts.value = { ...statusCounts.value, ...meta.status_counts }
+            }
+            showAllColumnMeta.value = !!meta.show_all_column
+
+            const pendingFromMeta = Array.isArray(meta.pending_reviews) ? meta.pending_reviews : []
+            pendingReviewOrders.value = pendingFromMeta.map(order => ({
+                ...order,
+                property_title: order.listing?.title || order.property_title || 'Unknown Property'
+            }))
+            console.log('✅ MyOrders loaded:', orders.value.length, 'orders (page)', 'total=', paginationMeta.value.total)
+            checkPendingReviews()
         } else {
             throw new Error(response.data.message || 'Failed to fetch orders')
         }
@@ -1382,19 +1373,30 @@ const cleanup = () => {
     }
 }
 function checkPendingReviews() {
-    const pending = orders.value.filter(order => 
-        order.request_type === 'viewing' && 
-        order.status === 'approved' && 
-        order.can_review && 
-        !order.review
-    )
-    
-    pendingReviewOrders.value = pending
-    
-    if (pending.length > 0 && !notificationReminded.value) {
+    // Pending reviews come from API meta (full visible set), not the current page slice.
+    if (pendingReviewOrders.value.length > 0 && !notificationReminded.value) {
         showReviewNotification.value = true
     }
 }
+
+watch(activeFilter, () => {
+    currentPage.value = 1
+    fetchMyOrders()
+})
+
+watch(selectedShow, () => {
+    currentPage.value = 1
+    fetchMyOrders()
+})
+
+watch(searchText, () => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = setTimeout(() => {
+        currentPage.value = 1
+        fetchMyOrders()
+    }, 300)
+})
+
 // Lifecycle
 onMounted(() => {
     // Get current user ID
@@ -1414,6 +1416,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     cleanup()
 })
 </script>

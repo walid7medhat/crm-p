@@ -68,6 +68,7 @@
               :href="href"
               class="sidebar-nav-link sidebar-nav-link--dashboard"
               :class="{ active: isSidebarModuleActive('dashboard') }"
+              @mouseenter="prefetchRoute(isShowOnlyListing ? '/alllisting' : '/')"
               @click="navigate"
             >
               <img :src="dashboardIcon" class="imgicon" alt="" />
@@ -92,13 +93,13 @@
           </a>
           <ul v-if="!isHr" v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
             <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
-              <a href="/kanban" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
+              <a href="/kanban" class="sidebar-nav-link" @mouseenter="prefetchRoute('/kanban')" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
                 <img :src="leadsIcon" class="imgicon submenu-icon" alt="" />
                 <span>Leads</span>
               </a>
             </li>
             <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
-              <a href="/kanban_deal" class="sidebar-nav-link" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
+              <a href="/kanban_deal" class="sidebar-nav-link" @mouseenter="prefetchRoute('/kanban_deal')" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
                 <img :src="dealsIcon" class="imgicon submenu-icon" alt="" />
                 <span>Deals</span>
               </a>
@@ -129,7 +130,12 @@
                     :key="`${section.key}-${item.path}`"
                     :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]"
                   >
-                    <a href="#" class="sidebar-nav-link" @click.prevent="goToListingsItem(item.path)">
+                    <a
+                      href="#"
+                      class="sidebar-nav-link"
+                      @mouseenter="prefetchRoute(item.path)"
+                      @click.prevent="goToListingsItem(item.path)"
+                    >
                       <img
                         v-if="section.key === 'listings' && section.iconSrc"
                         :src="section.iconSrc"
@@ -148,7 +154,7 @@
               v-else-if="showCrmListingsFlat"
               :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LISTINGS) }]"
             >
-              <a href="#" class="sidebar-nav-link" @click.prevent="goToCrmListingsFlat">
+              <a href="#" class="sidebar-nav-link" @mouseenter="prefetchRoute(crmListingsFlatPath)" @click.prevent="goToCrmListingsFlat">
                 <img :src="listingsIcon" class="imgicon submenu-icon" alt="" />
                 <span>Listings</span>
               </a>
@@ -181,6 +187,7 @@
                   :href="href"
                   class="sidebar-nav-link sidebar-nav-link--calculator"
                   :title="item.name"
+                  @mouseenter="prefetchRoute(item.path)"
                   @click="navigate"
                 >
                   <iconify-icon :icon="item.icon" class="menu-icon submenu-icon" />
@@ -197,6 +204,7 @@
               :href="href"
               class="sidebar-nav-link sidebar-nav-link--hr"
               :class="{ active: isSidebarModuleActive('hr') }"
+              @mouseenter="prefetchRoute('/hr')"
               @click="navigate"
             >
               <img :src="hrIcon" class="imgicon" alt="" />
@@ -218,7 +226,12 @@
             <ul v-show="activeDropdown === 'users'" class="sidebar-submenu">
               <li v-for="item in filteredUsersItems" :key="item.path" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
                 <router-link :to="item.path" custom v-slot="{ navigate, href }">
-                  <a :href="href" class="sidebar-nav-link" @click="navigate">{{ item.label }}</a>
+                  <a
+                    :href="href"
+                    class="sidebar-nav-link"
+                    @mouseenter="prefetchRoute(item.path)"
+                    @click="navigate"
+                  >{{ item.label }}</a>
                 </router-link>
               </li>
             </ul>
@@ -240,7 +253,12 @@
                 <li class="sidebar-submenu__heading">{{ section.title }}</li>
                 <li v-for="item in section.items" :key="`${section.key}-${item.path}`" :class="['nav-link', { 'active-page': isSidebarSubItemActive(item.path) }]">
                 <router-link :to="item.path" custom v-slot="{ navigate, href }">
-                  <a :href="href" class="sidebar-nav-link" @click="navigate">
+                  <a
+                    :href="href"
+                    class="sidebar-nav-link"
+                    @mouseenter="prefetchRoute(item.path)"
+                    @click="navigate"
+                  >
                     <img v-if="item.iconSrc" :src="item.iconSrc" class="imgicon submenu-icon" alt="" />
                     <iconify-icon v-else-if="item.icon" :icon="item.icon" class="menu-icon submenu-icon" />
                     <span>{{ item.label }}</span>
@@ -472,6 +490,8 @@ import {
   resolveCrmSection,
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
+import { useRoutePrefetch } from '@/composables/useRoutePrefetch.js';
+import { startNavProgress } from '@/composables/useNavProgress.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
 const dashboardIcon = ref('/assets/icons/dashboard-icon.svg?v=2');
@@ -499,6 +519,7 @@ const insightsIcon = ref('/assets/icons/insights-icon.svg?v=2');
 
 const route = useRoute();
 const router = useRouter();
+const { prefetchRoute, prefetchRoutes } = useRoutePrefetch(router);
 const activeDropdown = ref(null);
 const {
   counts: sidebarCounts,
@@ -1192,11 +1213,20 @@ function toggleMobileDockSection(sectionKey) {
 const toggleDropdown = (name) => {
   activeDropdown.value = activeDropdown.value === name ? null : name;
   localStorage.setItem('activeDropdown', activeDropdown.value || '');
+  if (activeDropdown.value === 'calculator') {
+    prefetchRoutes(allCalculatorMenuPaths.value);
+  } else if (activeDropdown.value === 'users') {
+    prefetchRoutes(filteredUsersItems.value.map((i) => i.path));
+  } else if (activeDropdown.value === 'settings') {
+    prefetchRoutes(allSettingsMenuPaths.value);
+  }
 };
 
 const openCrmDropdown = () => {
   activeDropdown.value = 'crm';
   localStorage.setItem('activeDropdown', 'crm');
+  // Warm CRM + listings chunks while the menu is open (before click).
+  prefetchRoutes(['/kanban', '/kanban_deal', ...allListingsMenuPaths.value]);
 };
 
 const closeCrmDropdown = () => {
@@ -1214,7 +1244,9 @@ async function goToCrmSection(section) {
   if (section === CRM_SECTIONS.LEAD) {
     localStorage.setItem('kanban_active_tab', 'leads');
     if (route.path !== '/kanban') {
-      await router.push('/kanban');
+      startNavProgress();
+      prefetchRoute('/kanban');
+      router.push('/kanban');
     }
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }));
     return;
@@ -1223,7 +1255,9 @@ async function goToCrmSection(section) {
   if (section === CRM_SECTIONS.DEAL) {
     localStorage.setItem('kanban_active_tab', 'deals');
     if (route.path !== '/kanban_deal') {
-      await router.push('/kanban_deal');
+      startNavProgress();
+      prefetchRoute('/kanban_deal');
+      router.push('/kanban_deal');
     }
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }));
     const dealType = localStorage.getItem('kanban_deal_type') || 'primary';
@@ -1237,7 +1271,9 @@ async function goToListingsItem(path) {
   openCrmDropdown();
   if (isMobileViewport.value) closeMobileMenu();
   if (route.path !== path) {
-    await router.push(path);
+    startNavProgress();
+    prefetchRoute(path);
+    router.push(path);
   }
 }
 
@@ -1247,7 +1283,9 @@ async function goToCrmListingsFlat() {
   openCrmDropdown();
   crmListingsExpanded.value = false;
   if (route.path !== crmListingsFlatPath.value) {
-    await router.push(crmListingsFlatPath.value);
+    startNavProgress();
+    prefetchRoute(crmListingsFlatPath.value);
+    router.push(crmListingsFlatPath.value);
   }
 }
 
@@ -1310,9 +1348,15 @@ const handleCrmClick = () => {
 const handleCrmListingsClick = () => {
   if (isMobileViewport.value) {
     crmListingsExpanded.value = !crmListingsExpanded.value;
+    if (crmListingsExpanded.value) {
+      prefetchRoutes(allListingsMenuPaths.value);
+    }
     return;
   }
   crmListingsExpanded.value = !crmListingsExpanded.value;
+  if (crmListingsExpanded.value) {
+    prefetchRoutes(allListingsMenuPaths.value);
+  }
 };
 
 const handleMobileDrawerClose = () => {
@@ -1331,7 +1375,7 @@ function beforeEnter(el) {
 }
 
 function enter(el) {
-  el.style.transition = 'height 0.7s ease';
+  el.style.transition = 'height 0.18s ease';
   el.style.height = el.scrollHeight + 'px';
   el.style.opacity = '1';
 }
@@ -1349,7 +1393,7 @@ function beforeLeave(el) {
 }
 
 function leave(el) {
-  el.style.transition = 'height 0.7s ease';
+  el.style.transition = 'height 0.15s ease';
   requestAnimationFrame(() => {
     el.style.height = '0px';
     el.style.opacity = '0';
@@ -1428,6 +1472,14 @@ onMounted(() => {
   fetchCounts().catch(() => {});
   startPolling();
   nextTick(attachDockObservers);
+
+  // Warm the most-used CRM chunks after first paint (idle), so first click is faster.
+  const warm = () => prefetchRoutes(['/kanban', '/kanban_deal', '/alllisting', '/my-listing']);
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(warm, { timeout: 2500 });
+  } else {
+    window.setTimeout(warm, 1200);
+  }
 });
 
 onUnmounted(() => {

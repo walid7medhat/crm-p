@@ -14,7 +14,7 @@ class UserRoleController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:assign-role', ['only' => ['assignRole', 'removeRole']]);
+        $this->middleware('permission:assign-role', ['only' => ['assignRole', 'removeRole', 'syncRoles']]);
     }
 
     /**

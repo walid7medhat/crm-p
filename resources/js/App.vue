@@ -10,6 +10,7 @@
       <iconify-icon icon="lucide:user-round-cog" width="16" height="16" />
       <span>Return to Super Admin</span>
     </button>
+    <NavProgressBar :show="isNavigating" />
     <AppLoader :show="isAppLoading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
     <Header v-if="showLayout && !isAppLoading" />
@@ -59,9 +60,11 @@ import Footer from './components/layout/footer/index.vue'
 import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
+import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
 import ViewLeadModal from './components/kanban/viewLead/ViewLeadModal.vue'
 import { useAppLoader } from './composables/useAppLoader.js'
+import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
 import { useLeadViewModal } from './composables/useLeadViewModal.js'
@@ -71,6 +74,7 @@ export default {
   name: 'App',
   components: {
     AppLoader,
+    NavProgressBar,
     BirthdayCelebrationLayer,
     Header,
     Navbar,
@@ -82,6 +86,7 @@ export default {
   setup() {
     const route = useRoute()
     const { isAppLoading, onLoaderHidden } = useAppLoader()
+    const { isNavigating } = useNavProgress()
     const { loadFromCache: loadBackgroundFromCache } = useBackground()
     const {
       showLeadViewModal,
@@ -160,6 +165,7 @@ export default {
 
     return {
       isAppLoading,
+      isNavigating,
       onLoaderHidden,
       showLayout,
       isDashboardHome,
