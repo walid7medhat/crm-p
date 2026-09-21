@@ -5713,84 +5713,85 @@ const createSlide2 = () => {
   }
   const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
   const pillH = 24;
+  const pillH = 24;
 
-  const featureTd = (text) => {
-    if (text == null) {
-      return `
-        <td
-          style="
-            width:${colW} !important;
-            height:${pillH}px !important;
-            padding:0 !important;
-            border:none !important;
-            background:transparent !important;
-          "
-        >&nbsp;</td>
-      `;
-    }
-
+const featureTd = (text) => {
+  if (text == null) {
     return `
       <td
-        width="${colW}"
-        height="${pillH}"
-        align="center"
-        valign="middle"
         style="
           width:${colW} !important;
           height:${pillH}px !important;
-
           padding:0 !important;
+          border:none !important;
+          background:transparent !important;
+        "
+      >&nbsp;</td>
+    `;
+  }
+
+  return `
+    <td
+      width="${colW}"
+      height="${pillH}"
+      align="center"
+      valign="middle"
+      style="
+        width:${colW} !important;
+        height:${pillH}px !important;
+
+        padding:0 !important;
+        margin:0 !important;
+
+        background:rgba(255,255,255,0.18) !important;
+        border:1px solid rgba(255,255,255,0.75) !important;
+        border-radius:999px !important;
+
+        color:#ffffff !important;
+        text-align:center !important;
+        vertical-align:middle !important;
+
+        font-family:Arial,sans-serif !important;
+        font-size:10px !important;
+        font-weight:400 !important;
+
+        line-height:12px !important;
+
+        white-space:nowrap !important;
+        overflow:hidden !important;
+        text-overflow:ellipsis !important;
+
+        box-sizing:border-box !important;
+
+        -webkit-print-color-adjust:exact !important;
+        print-color-adjust:exact !important;
+      "
+    >
+      <div
+        style="
+          width:100% !important;
+          height:12px !important;
+          line-height:12px !important;
           margin:0 !important;
+          padding:0 !important;
 
-          background:rgba(255,255,255,0.18) !important;
-          border:1px solid rgba(255,255,255,0.75) !important;
-          border-radius:999px !important;
-
-          color:#ffffff !important;
           text-align:center !important;
           vertical-align:middle !important;
 
+          color:#ffffff !important;
           font-family:Arial,sans-serif !important;
           font-size:10px !important;
-          font-weight:400 !important;
-
-          line-height:12px !important;
 
           white-space:nowrap !important;
           overflow:hidden !important;
           text-overflow:ellipsis !important;
-
-          box-sizing:border-box !important;
-
-          -webkit-print-color-adjust:exact !important;
-          print-color-adjust:exact !important;
         "
       >
-        <div
-          style="
-            width:100% !important;
-            height:12px !important;
-            line-height:12px !important;
-            margin:0 !important;
-            padding:0 !important;
-
-            text-align:center !important;
-            vertical-align:middle !important;
-
-            color:#ffffff !important;
-            font-family:Arial,sans-serif !important;
-            font-size:10px !important;
-
-            white-space:nowrap !important;
-            overflow:hidden !important;
-            text-overflow:ellipsis !important;
-          "
-        >
-          ${text}
-        </div>
-      </td>
-    `;
-  };
+        ${text}
+      </div>
+    </td>
+  `;
+};
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
       <div style="width:100% !important; height:1px !important; background:rgba(255,255,255,0.28) !important; margin:0 0 14px 0 !important; font-size:1px !important; line-height:1px !important;">&nbsp;</div>
