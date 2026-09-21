@@ -5385,7 +5385,7 @@ const generatePDF = async () => {
         useCORS: true,
         logging: false,
         allowTaint: true,
-        letterRendering: true,
+        letterRendering: false,
         backgroundColor: '#ffffff',
       },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
@@ -5639,16 +5639,29 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // html2canvas: avoid flex+gap (pills overlap) and border-top (line through text).
-  // Use inline-block + margin for wrap spacing; line-height padding for vertical centering.
+  // html2canvas: flex/gap and extreme border-radius mis-paint text. Use a real table + soft radius.
+  const featuresPerRow = 6;
+  const featureRows = [];
+  for (let i = 0; i < features.length; i += featuresPerRow) {
+    featureRows.push(features.slice(i, i + featuresPerRow));
+  }
+  const featureCell =
+    'padding:1.6mm 2.8mm !important; color:#ffffff !important; font-size:2.4mm !important; line-height:1.35 !important; ' +
+    'text-align:center !important; vertical-align:middle !important; white-space:nowrap !important; ' +
+    'background:rgba(255,255,255,0.18) !important; border:0.25mm solid rgba(255,255,255,0.55) !important; ' +
+    'border-radius:1.5mm !important; font-family:Arial,sans-serif !important; ' +
+    '-webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;';
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
-      <div style="width:100% !important; height:0.35mm !important; background:rgba(255,255,255,0.28) !important; margin:0 0 4mm 0 !important; line-height:0 !important; font-size:0 !important;">&nbsp;</div>
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 3mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1.2 !important;">Features</p>
-      <div style="display:block !important; width:100% !important; box-sizing:border-box !important; line-height:0 !important; font-size:0 !important;">
-          ${features.map((feature) => `
-<span style="display:inline-block !important; vertical-align:top !important; color:#ffffff !important; font-size:2.5mm !important; line-height:1.25 !important; padding:1.8mm 3.6mm !important; margin:0 2.8mm 2.8mm 0 !important; border-radius:5mm !important; background:rgba(255,255,255,0.16) !important; box-shadow:inset 0 0 0 0.25mm rgba(255,255,255,0.55) !important; font-family:'Montserrat', sans-serif !important; box-sizing:border-box !important; white-space:nowrap !important;">${feature}</span>`).join('')}
-        </div>
+      <div style="width:100% !important; height:0.35mm !important; background:rgba(255,255,255,0.28) !important; margin:0 0 4mm 0 !important;">&nbsp;</div>
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 3mm 0 !important; font-family:Arial,sans-serif !important; line-height:1.2 !important;">Features</p>
+      <table style="width:100% !important; border-collapse:separate !important; border-spacing:2.2mm 2.6mm !important; table-layout:auto !important;">
+        ${featureRows.map((row) => `
+          <tr>
+            ${row.map((feature) => `<td style="${featureCell}">${feature}</td>`).join('')}
+          </tr>
+        `).join('')}
+      </table>
     </div>
   ` : '';
 
@@ -5995,13 +6008,6 @@ const createPaymentDetailsSlide = () => {
     return dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const badgeStyle = (status) => {
-    if (status === 'Paid') return 'background:#22c55e !important;color:#ffffff !important;';
-    if (status === 'Due on transfer') return 'background:#bae6fd !important;color:#075985 !important;';
-    if (status === 'Selling below original price') return 'background:#fecaca !important;color:#b91c1c !important;';
-    return 'background:#fecdd3 !important;color:#9f1239 !important;';
-  };
-
   const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
   const hasPremiumRow = (installments.length > 0 || originalPrice > 0 || sellingPrice > 0) && isUnderConstruction;
   const hasHandoverRow = Math.abs(handoverAmount) > 0.01;
@@ -6044,17 +6050,22 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  // --- html2canvas-safe table cells (no nested flex / no pill wrappers) ---
-  // Style <th>/<td> directly — nested chip divs often paint text outside the background.
-  const thCell = `padding:1.4mm 1mm;vertical-align:middle;text-align:center;background:#0f1f3a;color:#ffffff !important;font-weight:700;font-size:${d.fsSm};line-height:1.2;border-radius:999px;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  // --- html2canvas-safe cells ---
+  // Avoid border-radius:999px and nested badge spans — they paint text outside the fill.
+  const thCell = `padding:1.6mm 1.2mm;vertical-align:middle;text-align:center;background:#0f1f3a;color:#ffffff !important;font-weight:700;font-size:${d.fsSm};line-height:1.35;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
   const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#1e293b !important;background:#ffffff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
   const tdMuted = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#64748b !important;background:#ffffff !important;`;
   const tdTotal = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#0f1f3a !important;background:#f1f5f9 !important;font-weight:700;`;
 
   const tableStyle = `width:100%;border-collapse:separate;border-spacing:1.2mm ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
-  const makeBadge = (text, status) =>
-    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1.3;white-space:nowrap;text-align:center;padding:0.85mm ${d.badgePadX};vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;${badgeStyle(status)}">${text}</span>`;
+  const statusTdStyle = (status) => {
+    if (status === 'Paid') return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#22c55e !important;color:#ffffff !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+    if (status === 'Due on transfer') return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#bae6fd !important;color:#075985 !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+    if (status === 'Selling below original price') return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#fecaca !important;color:#b91c1c !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+    return `padding:${d.pad};font-size:${d.badgeFs};line-height:1.35;vertical-align:middle;text-align:center;font-weight:700;white-space:nowrap;background:#fecdd3 !important;color:#9f1239 !important;border-radius:1.2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  };
+
   let cumulative = 0;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
@@ -6068,7 +6079,6 @@ const createPaymentDetailsSlide = () => {
     else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
     const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
-    const badge = makeBadge(status, status);
 
     const rowHtml = `
       <tr>
@@ -6076,7 +6086,7 @@ const createPaymentDetailsSlide = () => {
         <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
         <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
-        <td align="center" valign="middle" style="${tdCell}">${badge}</td>
+        <td align="center" valign="middle" style="${statusTdStyle(status)}">${status}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6087,26 +6097,24 @@ const createPaymentDetailsSlide = () => {
   const installmentRowsNotPaid = installmentRowsNotPaidArr.join('');
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
-  const premiumBadge = makeBadge(premiumStatus, premiumStatus);
   const premiumRow = hasPremiumRow
     ? `<tr>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">Premium</td>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
         <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">${premiumBadge}</td>
+        <td align="center" valign="middle" style="${statusTdStyle(premiumStatus)}">${premiumStatus}</td>
       </tr>`
     : '';
 
   const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
-  const handoverBadge = makeBadge(handoverStatus, handoverStatus);
   const handoverRow = hasHandoverRow
     ? `<tr>
         <td align="center" valign="middle" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
         <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
         <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${handoverBadge}</td>
+        <td align="center" valign="middle" style="${statusTdStyle(handoverStatus)}">${handoverStatus}</td>
       </tr>`
     : '';
 
