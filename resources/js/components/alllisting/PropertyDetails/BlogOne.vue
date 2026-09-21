@@ -6073,45 +6073,46 @@ const createPaymentDetailsSlide = () => {
 
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
   const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
-  const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
+  // Fit tables + disclaimer above the 10% footer — tighten earlier.
+  const densityTier = contentPressure >= 7 ? 'tight' : contentPressure >= 4 ? 'compact' : 'normal';
 
   const d = {
     normal: {
-      fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
-      pad: '1.4mm 0.8mm', padHead: '0.6mm', badgePadX: '1.8mm',
-      sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
-      titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
-      cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
-      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1.4mm 0.8mm 1.2mm 0.8mm', pagePad: '7mm 7mm 16mm 7mm',
-      pillH: '5.2mm', badgeH: '4mm', rowGap: '1.3mm',
+      fs: '2.3mm', fsSm: '2.1mm', fsXs: '1.9mm', badgeFs: '1.8mm',
+      pad: '1mm 0.7mm', padHead: '0.5mm', badgePadX: '1.5mm',
+      sectionMb: '1.4mm', titleMb: '0.8mm', blockMt: '1.6mm', headerMb: '2mm',
+      titleFs: '4.2mm', accentMb: '0.8mm', cardGap: '1.4mm', cardMb: '1mm',
+      cardPad: '1.2mm 1.6mm 1.8mm', cardLbl: '2mm', cardVal: '3mm',
+      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.6mm 0.4mm 0.5mm 0.4mm', pagePad: '4mm 7mm 2mm 7mm',
+      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '1mm', notePad: '1.8mm 3mm 1.8mm 4mm',
     },
     compact: {
-      fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '1.8mm',
-      pad: '1.15mm 0.7mm', padHead: '0.5mm', badgePadX: '1.5mm',
-      sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
-      titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
-      cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
-      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '1.1mm 0.6mm 0.9mm 0.6mm', pagePad: '6mm 6mm 15mm 6mm',
-      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '1.1mm',
+      fs: '2.05mm', fsSm: '1.9mm', fsXs: '1.7mm', badgeFs: '1.6mm',
+      pad: '0.85mm 0.6mm', padHead: '0.4mm', badgePadX: '1.3mm',
+      sectionMb: '1.1mm', titleMb: '0.6mm', blockMt: '1.2mm', headerMb: '1.5mm',
+      titleFs: '3.8mm', accentMb: '0.6mm', cardGap: '1.1mm', cardMb: '0.8mm',
+      cardPad: '0.9mm 1.3mm 1.3mm', cardLbl: '1.85mm', cardVal: '2.7mm',
+      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.45mm 0.35mm 0.4mm 0.35mm', pagePad: '3.5mm 6mm 1.5mm 6mm',
+      pillH: '4mm', badgeH: '3.2mm', rowGap: '0.8mm', notePad: '1.5mm 2.8mm 1.5mm 3.6mm',
     },
     tight: {
-      fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.6mm',
-      pad: '0.95mm 0.6mm', padHead: '0.4mm', badgePadX: '1.3mm',
-      sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
-      titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
-      cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
-      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.9mm 0.5mm 0.7mm 0.5mm', pagePad: '5.5mm 5.5mm 14mm 5.5mm',
-      pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.9mm',
+      fs: '1.85mm', fsSm: '1.7mm', fsXs: '1.55mm', badgeFs: '1.45mm',
+      pad: '0.65mm 0.5mm', padHead: '0.3mm', badgePadX: '1.1mm',
+      sectionMb: '0.8mm', titleMb: '0.45mm', blockMt: '0.9mm', headerMb: '1.2mm',
+      titleFs: '3.4mm', accentMb: '0.5mm', cardGap: '0.9mm', cardMb: '0.6mm',
+      cardPad: '0.7mm 1.1mm 1mm', cardLbl: '1.7mm', cardVal: '2.4mm',
+      nocMb: '0.7mm', nocPad: '0.6mm 1mm', wrapPad: '0.3mm 0.25mm 0.3mm 0.25mm', pagePad: '3mm 5.5mm 1mm 5.5mm',
+      pillH: '3.6mm', badgeH: '2.8mm', rowGap: '0.6mm', notePad: '1.2mm 2.4mm 1.2mm 3.2mm',
     },
   }[densityTier];
 
-  // No fixed height — that clipped descenders in html2canvas. Asymmetric pad counters html2canvas downward text shift.
-  const thFs = densityTier === 'tight' ? 8 : 9;
-  const tdFs = densityTier === 'tight' ? 9 : 10;
-  const badgeFs = densityTier === 'tight' ? 8 : 9;
-  const cellPadTop = densityTier === 'tight' ? 5 : densityTier === 'compact' ? 6 : 7;
-  const cellPadBottom = densityTier === 'tight' ? 9 : densityTier === 'compact' ? 10 : 11;
-  const cellPadX = 6;
+  // Compact asymmetric pad (html2canvas paints text slightly low).
+  const thFs = densityTier === 'tight' ? 7 : densityTier === 'compact' ? 8 : 9;
+  const tdFs = densityTier === 'tight' ? 8 : densityTier === 'compact' ? 9 : 10;
+  const badgeFs = densityTier === 'tight' ? 7 : densityTier === 'compact' ? 8 : 9;
+  const cellPadTop = densityTier === 'tight' ? 3 : densityTier === 'compact' ? 4 : 5;
+  const cellPadBottom = densityTier === 'tight' ? 5 : densityTier === 'compact' ? 6 : 7;
+  const cellPadX = densityTier === 'tight' ? 4 : 5;
   const cellPad = `${cellPadTop}px ${cellPadX}px ${cellPadBottom}px ${cellPadX}px`;
 
   const thCell =
@@ -6157,7 +6158,7 @@ const createPaymentDetailsSlide = () => {
       `<tr><td align="center" valign="middle" style="background:${bg} !important;color:${fg} !important;` +
       `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:1.15 !important;` +
       `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
-      `padding:4px 12px 8px 12px !important;text-align:center !important;vertical-align:middle !important;` +
+      `padding:3px 10px 6px 10px !important;text-align:center !important;vertical-align:middle !important;` +
       `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${status}</td></tr></table>`
     );
   };
@@ -6361,9 +6362,9 @@ const createPaymentDetailsSlide = () => {
   ` : '';
 const noteBlock = `
   <div style="margin:${d.blockMt} 0 0 0 !important; width:100% !important; box-sizing:border-box !important; clear:both !important;">
-    <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:2.4mm 3.5mm 2.4mm 4.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:block !important; box-sizing:border-box !important;">
+    <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:${d.notePad} !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:block !important; box-sizing:border-box !important;">
       <div style="position:absolute !important; left:0 !important; top:0 !important; bottom:0 !important; width:1mm !important; background:#FAA300 !important;"></div>
-      <p style="margin:0 !important; color:rgba(255,255,255,0.92) !important; font-size:${d.fsXs} !important; line-height:1.45 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
+      <p style="margin:0 !important; color:rgba(255,255,255,0.92) !important; font-size:${d.fsXs} !important; line-height:1.35 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
         Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
       </p>
     </div>
@@ -6371,22 +6372,22 @@ const noteBlock = `
 `;
 
   const summaryCard = (label, valueHtml, { dark = false, accent = false } = {}) => `
-    <div style="position:relative;overflow:hidden;background:${dark ? '#0f1f3a' : '#e8ecf2'};color:${dark ? '#ffffff' : '#0f1f3a'};border-radius:3mm;padding:${accent ? '10px 8px 14px' : '10px 8px'};box-sizing:border-box;text-align:center !important;min-height:48px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-      <div style="display:block;font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 4px 0;line-height:1.2;width:100%;text-align:center !important;">${label}</div>
-      <div style="display:block;font-size:${d.cardVal};font-weight:700;line-height:1.2;width:100%;text-align:center !important;">${valueHtml}</div>
-      ${accent ? '<div style="display:block;position:absolute;left:0;right:0;bottom:0;height:3px;background:#FAA300;line-height:0;font-size:0;">&nbsp;</div>' : ''}
+    <div style="position:relative;overflow:hidden;background:${dark ? '#0f1f3a' : '#e8ecf2'};color:${dark ? '#ffffff' : '#0f1f3a'};border-radius:2.5mm;padding:${d.cardPad};box-sizing:border-box;text-align:center !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <div style="display:block;font-size:${d.cardLbl};opacity:${dark ? '0.88' : '1'};margin:0 0 2px 0;line-height:1.15;width:100%;text-align:center !important;">${label}</div>
+      <div style="display:block;font-size:${d.cardVal};font-weight:700;line-height:1.15;width:100%;text-align:center !important;">${valueHtml}</div>
+      ${accent ? '<div style="display:block;position:absolute;left:0;right:0;bottom:0;height:2.5px;background:#FAA300;line-height:0;font-size:0;">&nbsp;</div>' : ''}
     </div>
   `;
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
-    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
-      <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
+    <div style="position:absolute !important; top:3.5mm !important; right:6mm !important; z-index:10 !important;">
+      <img src="${pnglogo}" style="width:15mm !important; display:block !important;" />
     </div>
     <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:90% !important; overflow:hidden !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
-        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;margin:0;padding:0 0 2.4mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="display:block;width:14mm;height:0.85mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
+        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#0f1f3a;line-height:1.1;margin:0;padding:0 0 1mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
+        <div style="display:block;width:12mm;height:0.7mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};align-items:stretch;">
