@@ -1,9 +1,8 @@
 <template>
   <Teleport to="body">
     <div
-      v-show="show"
+      v-if="show"
       class="chat-popup-overlay"
-      :style="show ? { display: 'flex' } : {}"
       @click.self="close"
     >
       <div class="chat-popup">

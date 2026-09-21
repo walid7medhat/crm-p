@@ -2572,10 +2572,18 @@ const featuresButtonLabel = computed(() => {
       resizeHandler = () => { isMobileViewport.value = window.innerWidth <= 768; };
       resizeHandler();
       window.addEventListener('resize', resizeHandler);
-      fetchAreas();
-      fetchPropertyTypes();
-      fetchAgents();
-fetchProjects()
+      // Defer filter dictionaries so the listings grid can paint first.
+      const loadFilterOptions = () => {
+        fetchAreas();
+        fetchPropertyTypes();
+        fetchAgents();
+        fetchProjects();
+      };
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(loadFilterOptions, { timeout: 1800 });
+      } else {
+        window.setTimeout(loadFilterOptions, 350);
+      }
       document.addEventListener('click', (e) => {
         const searchContainer = document.querySelector('.search-container');
         if (searchContainer && !searchContainer.contains(e.target)) {

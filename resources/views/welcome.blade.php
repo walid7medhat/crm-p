@@ -18,7 +18,7 @@
         </script>
         @vite('resources/js/main.js')
     </head>
-    <body class="antialiased app-loader-active">
+    <body class="antialiased">
         <div class="crm-bg-image" aria-hidden="true"></div>
 
         <style>

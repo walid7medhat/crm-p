@@ -42,7 +42,7 @@
       @close="closeChat"
     />
     <ViewLeadModal
-      v-if="showLayout"
+      v-if="showLayout && (showLeadViewModal || leadViewModalId)"
       v-model="showLeadViewModal"
       :leadId="leadViewModalId"
       :initialLead="leadViewModalSeed"
@@ -52,7 +52,7 @@
 </template>
 
 <script>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
@@ -62,7 +62,7 @@ import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
-import ViewLeadModal from './components/kanban/viewLead/ViewLeadModal.vue'
+const ViewLeadModal = defineAsyncComponent(() => import('./components/kanban/viewLead/ViewLeadModal.vue'))
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'

@@ -33,6 +33,7 @@
         centered
     >
         <SettingsHub
+            v-if="showSettingsHub"
             :initial-section="settingsHubInitialSection"
             @close="onSettingsHubClose"
         />
@@ -41,6 +42,7 @@
     <CreateLeadModal v-if="showCreateModal" v-model="showCreateModal" @lead-created="handleLeadCreated" />
     <CreateDealModal v-if="showCreateDealModal" v-model="showCreateDealModal" @deal-created="handleDealCreated" :deal-type="currentDealType" />
     <ViewDealModal
+        v-if="showDealViewModal"
         v-model="showDealViewModal"
         :deal="dealViewPayload"
         :auto-edit-section="dealViewAutoEditSection"
@@ -65,26 +67,27 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue'
-import Deals from './deals/Deals.vue'
-import Leads from './leadList/leads.vue'
-import LeadSearchModal from './leadList/LeadSearchModal.vue'
-import DealSearchModal from './deals/DealSearchModal.vue'
-import CreateLeadModal from './createLead/CreateLeadModal.vue'
-import CreateDealModal from './deals/CreateDealModal.vue'
-import ViewDealModal from './deals/ViewDealModal.vue'
-import AddStageModal from './stage/AddStageModal.vue'
-import LeadPool from './leadList/LeadPool.vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide, defineAsyncComponent } from 'vue'
 import { openDealView, useDealViewModal } from '@/composables/useDealViewModal.js'
 
 const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
-import SettingsHub from './settings/SettingsHub.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { rememberCrmSection, CRM_SECTIONS, DEAL_TYPE_KEY } from '@/composables/useLayoutNavigation.js'
+
+// Split board + modals into separate chunks so first open of Leads or Deals
+// does not download/parse both boards (~800KB shared bundle before).
+const Deals = defineAsyncComponent(() => import('./deals/Deals.vue'))
+const Leads = defineAsyncComponent(() => import('./leadList/leads.vue'))
+const LeadPool = defineAsyncComponent(() => import('./leadList/LeadPool.vue'))
+const CreateLeadModal = defineAsyncComponent(() => import('./createLead/CreateLeadModal.vue'))
+const CreateDealModal = defineAsyncComponent(() => import('./deals/CreateDealModal.vue'))
+const ViewDealModal = defineAsyncComponent(() => import('./deals/ViewDealModal.vue'))
+const AddStageModal = defineAsyncComponent(() => import('./stage/AddStageModal.vue'))
+const SettingsHub = defineAsyncComponent(() => import('./settings/SettingsHub.vue'))
 
 const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab'
 

@@ -749,7 +749,7 @@
 
 <script setup>
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
-import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
   buildHeaderTabs,
@@ -772,8 +772,8 @@ import NotificationBell from '@/components/NotificationBell.vue';
 import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue';
 import SystemOverviewLangToggle from '@/components/system-overview/SystemOverviewLangToggle.vue';
 import userAvatarPlaceholder from '@/assets/images/users/user1.png';
-import DealSearchModal from '@/components/kanban/deals/DealSearchModal.vue';
-import LeadSearchModal from '@/components/kanban/leadList/LeadSearchModal.vue';
+const DealSearchModal = defineAsyncComponent(() => import('@/components/kanban/deals/DealSearchModal.vue'));
+const LeadSearchModal = defineAsyncComponent(() => import('@/components/kanban/leadList/LeadSearchModal.vue'));
 import { getUnreadAnnouncements, getAnnouncement } from '@/services/announcementsApi';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
 const { isMobileViewport, toggleMobileMenu } = useMobileNavigation();

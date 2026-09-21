@@ -1225,8 +1225,9 @@ const toggleDropdown = (name) => {
 const openCrmDropdown = () => {
   activeDropdown.value = 'crm';
   localStorage.setItem('activeDropdown', 'crm');
-  // Warm CRM + listings chunks while the menu is open (before click).
-  prefetchRoutes(['/kanban', '/kanban_deal', ...allListingsMenuPaths.value]);
+  // Prefetch only the two CRM boards — avoid downloading every listings chunk
+  // while the user is still deciding / navigating.
+  prefetchRoutes(['/kanban', '/kanban_deal']);
 };
 
 const closeCrmDropdown = () => {
@@ -1237,7 +1238,8 @@ const closeCrmDropdown = () => {
 
 async function goToCrmSection(section) {
   rememberCrmSection(section);
-  openCrmDropdown();
+  activeDropdown.value = 'crm';
+  localStorage.setItem('activeDropdown', 'crm');
   crmListingsExpanded.value = false;
   if (isMobileViewport.value) closeMobileMenu();
 
@@ -1245,7 +1247,6 @@ async function goToCrmSection(section) {
     localStorage.setItem('kanban_active_tab', 'leads');
     if (route.path !== '/kanban') {
       startNavProgress();
-      prefetchRoute('/kanban');
       router.push('/kanban');
     }
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }));
@@ -1256,7 +1257,6 @@ async function goToCrmSection(section) {
     localStorage.setItem('kanban_active_tab', 'deals');
     if (route.path !== '/kanban_deal') {
       startNavProgress();
-      prefetchRoute('/kanban_deal');
       router.push('/kanban_deal');
     }
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }));
@@ -1268,11 +1268,11 @@ async function goToCrmSection(section) {
 async function goToListingsItem(path) {
   rememberCrmSection(CRM_SECTIONS.LISTINGS);
   rememberListingsPath(path);
-  openCrmDropdown();
+  activeDropdown.value = 'crm';
+  localStorage.setItem('activeDropdown', 'crm');
   if (isMobileViewport.value) closeMobileMenu();
   if (route.path !== path) {
     startNavProgress();
-    prefetchRoute(path);
     router.push(path);
   }
 }
@@ -1280,11 +1280,11 @@ async function goToListingsItem(path) {
 async function goToCrmListingsFlat() {
   rememberCrmSection(CRM_SECTIONS.LISTINGS);
   rememberListingsPath(crmListingsFlatPath.value);
-  openCrmDropdown();
+  activeDropdown.value = 'crm';
+  localStorage.setItem('activeDropdown', 'crm');
   crmListingsExpanded.value = false;
   if (route.path !== crmListingsFlatPath.value) {
     startNavProgress();
-    prefetchRoute(crmListingsFlatPath.value);
     router.push(crmListingsFlatPath.value);
   }
 }
@@ -1348,15 +1348,9 @@ const handleCrmClick = () => {
 const handleCrmListingsClick = () => {
   if (isMobileViewport.value) {
     crmListingsExpanded.value = !crmListingsExpanded.value;
-    if (crmListingsExpanded.value) {
-      prefetchRoutes(allListingsMenuPaths.value);
-    }
     return;
   }
   crmListingsExpanded.value = !crmListingsExpanded.value;
-  if (crmListingsExpanded.value) {
-    prefetchRoutes(allListingsMenuPaths.value);
-  }
 };
 
 const handleMobileDrawerClose = () => {
@@ -1473,12 +1467,19 @@ onMounted(() => {
   startPolling();
   nextTick(attachDockObservers);
 
-  // Warm the most-used CRM chunks after first paint (idle), so first click is faster.
-  const warm = () => prefetchRoutes(['/kanban', '/kanban_deal', '/alllisting', '/my-listing']);
+  // Warm primary CRM boards after first paint — one at a time so we don't
+  // saturate the network before the user clicks.
+  const warm = () => prefetchRoute('/kanban');
+  const warmMore = () => {
+    prefetchRoute('/kanban_deal');
+    prefetchRoute('/alllisting');
+  };
   if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(warm, { timeout: 2500 });
+    window.requestIdleCallback(warm, { timeout: 3000 });
+    window.requestIdleCallback(warmMore, { timeout: 6000 });
   } else {
-    window.setTimeout(warm, 1200);
+    window.setTimeout(warm, 1500);
+    window.setTimeout(warmMore, 3500);
   }
 });
 

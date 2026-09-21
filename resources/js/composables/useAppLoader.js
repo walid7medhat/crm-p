@@ -62,6 +62,10 @@ export function useAppLoader() {
   }
 
   if (!APP_LOADER_ENABLED) {
+    // Loader is off — never leave body locked from the blade bootstrap class.
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('app-loader-active')
+    }
     return {
       isAppLoading,
       onLoaderHidden,

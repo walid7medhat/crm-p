@@ -309,8 +309,6 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const isValidToken = isTokenValid()
 
-  console.log(`Navigation to: ${to.path}, Token valid: ${isValidToken}`)
-
   if (to.path.startsWith('/__dev__/')) {
     if (import.meta.env.PROD) {
       next('/project-map')
@@ -319,20 +317,17 @@ router.beforeEach((to, from, next) => {
   }
 
   if (token && !isValidToken) {
-    console.log('Token exists but is invalid, logging out...')
     logout()
     next('/sign-in')
     return
   }
 
   if (to.meta.requiresAuth && !isValidToken) {
-    console.log('Auth required, redirecting to sign-in')
     next('/sign-in')
     return
   }
 
   if (to.matched.some((r) => r.meta.requiresSuperAdmin) && !isSuperAdminFromStorage()) {
-    console.log('Super admin only — redirecting home')
     next('/')
     return
   }
@@ -341,7 +336,6 @@ router.beforeEach((to, from, next) => {
         !isAdminFromStorage() &&
         !(to.matched.some((r) => r.meta.allowHr) && isHrFromStorage())
       ) {
-          console.log('Admin required — redirecting home')
           next('/')
           return
       }

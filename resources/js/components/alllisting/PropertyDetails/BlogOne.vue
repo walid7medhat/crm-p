@@ -5687,24 +5687,33 @@ const createSlide2 = () => {
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
-  // html2canvas + global CRM CSS break nested chips. Flat cells + line-height==height centers text.
+  // Equal-width feature grid; pad last row so borders match. No fixed height (clips text in html2canvas).
   const featuresPerRow = 6;
   const featureRows = [];
   for (let i = 0; i < features.length; i += featuresPerRow) {
-    featureRows.push(features.slice(i, i + featuresPerRow));
+    const row = features.slice(i, i + featuresPerRow);
+    while (row.length < featuresPerRow) row.push(null);
+    featureRows.push(row);
   }
-  const featureTd = (text) =>
-    `<td align="center" valign="middle" height="26" ` +
-    `style="height:26px !important;width:auto !important;vertical-align:middle !important;text-align:center !important;` +
-    `background:rgba(255,255,255,0.22) !important;border:1px solid rgba(255,255,255,0.7) !important;` +
-    `color:#ffffff !important;font-size:9px !important;line-height:26px !important;padding:0 12px !important;` +
-    `margin:0 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;font-weight:500 !important;` +
-    `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`;
+  const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
+  const featureTd = (text) => {
+    if (text == null) {
+      return `<td style="width:${colW};padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
+    }
+    return (
+      `<td align="center" valign="middle" style="width:${colW};vertical-align:middle !important;text-align:center !important;` +
+      `background:rgba(255,255,255,0.20) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
+      `color:#ffffff !important;font-size:10px !important;line-height:14px !important;` +
+      `padding:8px 6px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
+      `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
+      `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
+    );
+  };
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; box-sizing:border-box !important;">
       <div style="width:100% !important; height:1px !important; background:rgba(255,255,255,0.28) !important; margin:0 0 14px 0 !important; font-size:1px !important; line-height:1px !important;">&nbsp;</div>
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:9px !important; margin:0 0 10px 0 !important; font-family:Arial,sans-serif !important; line-height:12px !important; text-align:left !important;">Features</p>
-      <table class="offer-features" cellpadding="0" cellspacing="8" style="border-collapse:separate !important; border-spacing:8px 10px !important; table-layout:auto !important;">
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:10px !important; margin:0 0 10px 0 !important; font-family:Arial,sans-serif !important; line-height:14px !important; text-align:left !important;">Features</p>
+      <table class="offer-features" cellpadding="0" cellspacing="0" style="width:100% !important; border-collapse:separate !important; border-spacing:6px 8px !important; table-layout:fixed !important;">
         ${featureRows.map((row) => `<tr>${row.map((feature) => featureTd(feature)).join('')}</tr>`).join('')}
       </table>
     </div>
@@ -6095,38 +6104,38 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  // Flat cells + !important + line-height==height. Avoid nested tables (global CSS breaks them).
-  const thH = densityTier === 'tight' ? 22 : densityTier === 'compact' ? 24 : 26;
-  const tdH = densityTier === 'tight' ? 20 : densityTier === 'compact' ? 22 : 24;
-  const thFs = densityTier === 'tight' ? 7 : 8;
-  const tdFs = densityTier === 'tight' ? 8 : 9;
-  const badgeFs = densityTier === 'tight' ? 7 : 8;
+  // No fixed height — that clipped descenders in html2canvas. Pad + valign middle instead.
+  const thFs = densityTier === 'tight' ? 8 : 9;
+  const tdFs = densityTier === 'tight' ? 9 : 10;
+  const badgeFs = densityTier === 'tight' ? 8 : 9;
+  const cellPadY = densityTier === 'tight' ? 7 : densityTier === 'compact' ? 8 : 9;
+  const cellPadX = 6;
 
   const thCell =
-    `height:${thH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `vertical-align:middle !important;text-align:center !important;` +
     `background:#0f1f3a !important;color:#ffffff !important;font-size:${thFs}px !important;` +
-    `line-height:${thH}px !important;padding:0 4px !important;margin:0 !important;font-weight:700 !important;` +
-    `font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
+    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+    `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tdCell =
-    `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `vertical-align:middle !important;text-align:center !important;` +
     `background:#ffffff !important;color:#1e293b !important;font-size:${tdFs}px !important;` +
-    `line-height:${tdH}px !important;padding:0 4px !important;margin:0 !important;` +
+    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
     `font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tdMuted =
-    `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `vertical-align:middle !important;text-align:center !important;` +
     `background:#ffffff !important;color:#64748b !important;font-size:${tdFs}px !important;` +
-    `line-height:${tdH}px !important;padding:0 4px !important;margin:0 !important;` +
+    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
     `font-family:Arial,sans-serif !important;`;
 
   const tdTotal =
-    `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    `vertical-align:middle !important;text-align:center !important;` +
     `background:#f1f5f9 !important;color:#0f1f3a !important;font-size:${tdFs}px !important;` +
-    `line-height:${tdH}px !important;padding:0 4px !important;margin:0 !important;font-weight:700 !important;` +
-    `font-family:Arial,sans-serif !important;` +
+    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+    `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tableStyle =
@@ -6139,10 +6148,10 @@ const createPaymentDetailsSlide = () => {
     if (status === 'Paid') { bg = '#22c55e'; fg = '#ffffff'; }
     else if (status === 'Due on transfer') { bg = '#bae6fd'; fg = '#075985'; }
     else if (status === 'Selling below original price') { bg = '#fecaca'; fg = '#b91c1c'; }
-    return `height:${tdH}px !important;vertical-align:middle !important;text-align:center !important;` +
+    return `vertical-align:middle !important;text-align:center !important;` +
       `background:${bg} !important;color:${fg} !important;font-size:${badgeFs}px !important;` +
-      `line-height:${tdH}px !important;padding:0 6px !important;margin:0 !important;font-weight:700 !important;` +
-      `font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
+      `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+      `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
       `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
   };
 
@@ -6162,11 +6171,11 @@ const createPaymentDetailsSlide = () => {
 
     const rowHtml = `
       <tr>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">Installment</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${pct}%</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(amount)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${dateCell}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${statusCellStyle(status)}">${status}</td>
+        <td align="center" valign="middle" style="${tdCell}">Installment</td>
+        <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
+        <td align="center" valign="middle" style="${statusCellStyle(status)}">${status}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6179,22 +6188,22 @@ const createPaymentDetailsSlide = () => {
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumRow = hasPremiumRow
     ? `<tr>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;">Premium</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}background:#f8fafc !important;">—</td>
-        <td align="center" valign="middle" height="${tdH}" style="${statusCellStyle(premiumStatus)}">${premiumStatus}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">Premium</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
+        <td align="center" valign="middle" style="${statusCellStyle(premiumStatus)}">${premiumStatus}</td>
       </tr>`
     : '';
 
   const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
   const handoverRow = hasHandoverRow
     ? `<tr>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(handoverAmount)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtDate(p.handover_date)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${statusCellStyle(handoverStatus)}">${handoverStatus}</td>
+        <td align="center" valign="middle" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
+        <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
+        <td align="center" valign="middle" style="${statusCellStyle(handoverStatus)}">${handoverStatus}</td>
       </tr>`
     : '';
 
@@ -6222,11 +6231,11 @@ const createPaymentDetailsSlide = () => {
 
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}font-weight:500 !important;">NOC Fees</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdMuted}">${fmtAed(nocAmount)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(nocAmount)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">—</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}font-weight:600 !important;">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:500 !important;">NOC Fees</td>
+        <td align="center" valign="middle" style="${tdMuted}">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">—</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600 !important;">${fmtAed(nocAmount)}</td>
       </tr>
     `);
 
@@ -6249,11 +6258,11 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${l?.label || '—'}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdMuted}">${detail}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${fmtAed(amt)}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
-        <td align="center" valign="middle" height="${tdH}" style="${tdCell}font-weight:600 !important;">${fmtAed(total)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${l?.label || '—'}</td>
+        <td align="center" valign="middle" style="${tdMuted}">${detail}</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amt)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600 !important;">${fmtAed(total)}</td>
       </tr>
     `);
   });
@@ -6267,20 +6276,20 @@ const createPaymentDetailsSlide = () => {
         <table cellpadding="0" cellspacing="0" style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:18%;">Label</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:24%;">Detail</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:20%;">Amount</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:16%;">VAT</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:22%;">Total</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">Label</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">Detail</th>
+              <th align="center" valign="middle" style="${thCell}width:20%;">Amount</th>
+              <th align="center" valign="middle" style="${thCell}width:16%;">VAT</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">Total</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRowsHtml}
             <tr>
-              <td align="center" valign="middle" colspan="2" height="${tdH}" style="${tdTotal}">Total</td>
-              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(expSubtotal)}</td>
-              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(expVatTotal)}</td>
-              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(expGrand)}</td>
+              <td align="center" valign="middle" colspan="2" style="${tdTotal}">Total</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expSubtotal)}</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expVatTotal)}</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expGrand)}</td>
             </tr>
           </tbody>
         </table>
@@ -6295,11 +6304,11 @@ const createPaymentDetailsSlide = () => {
         <table cellpadding="0" cellspacing="0" style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:22%;">Payment type</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:13%;">Percentage</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:24%;">Amount</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:18%;">Date</th>
-              <th align="center" valign="middle" height="${thH}" style="${thCell}width:15%;">Status</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">Payment type</th>
+              <th align="center" valign="middle" style="${thCell}width:13%;">Percentage</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">Amount</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">Date</th>
+              <th align="center" valign="middle" style="${thCell}width:15%;">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -6308,9 +6317,9 @@ const createPaymentDetailsSlide = () => {
             ${installmentRowsNotPaid}
             ${handoverRow}
             <tr>
-              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}" colspan="2">Total</td>
-              <td align="center" valign="middle" height="${tdH}" style="${tdTotal}">${fmtAed(totalAmount)}</td>
-              <td colspan="2" height="${tdH}" style="${tdTotal}"></td>
+              <td align="center" valign="middle" style="${tdTotal}" colspan="2">Total</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(totalAmount)}</td>
+              <td colspan="2" style="${tdTotal}"></td>
             </tr>
           </tbody>
         </table>
