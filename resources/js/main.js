@@ -439,11 +439,35 @@ window.addEventListener('scroll', (event) => {
   if (searchInput) searchInput.blur()
 }, true)
 
+// After a new deploy, cached index.html may reference old lazy chunks — reload once.
+const STALE_CHUNK_RELOAD_KEY = 'crm-stale-chunk-reload-at'
+const STALE_CHUNK_ERROR =
+  /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk|Loading CSS chunk/i
+
+function reloadOnceForStaleChunk() {
+  const now = Date.now()
+  const last = Number(sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) || 0)
+  if (last && now - last < 15000) return
+  sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, String(now))
+  window.location.reload()
+}
+
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  reloadOnceForStaleChunk()
+})
+
 // in main.js, after app creation, before app.mount
 window.addEventListener('unhandledrejection', (event) => {
-  if (String(event.reason?.message || event.reason).includes('Element not found')) {
+  const message = String(event.reason?.message || event.reason || '')
+  if (message.includes('Element not found')) {
     // Known benign ApexCharts race when a chart's container unmounts mid-update
     event.preventDefault()
+    return
+  }
+  if (STALE_CHUNK_ERROR.test(message)) {
+    event.preventDefault()
+    reloadOnceForStaleChunk()
   }
 })
 // Mount app

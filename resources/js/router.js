@@ -361,4 +361,19 @@ router.beforeEach((to, from, next) => {
 
 installNavProgress(router)
 
+// Lazy routes: after deploy, old cached main.js may request missing chunks — reload once.
+router.onError((error) => {
+  const message = String(error?.message || error || '')
+  const isStaleChunk = /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk|Loading CSS chunk/i.test(message)
+  if (!isStaleChunk) return
+
+  const key = 'crm-stale-chunk-reload-at'
+  const now = Date.now()
+  const last = Number(sessionStorage.getItem(key) || 0)
+  if (last && now - last < 15000) return
+
+  sessionStorage.setItem(key, String(now))
+  window.location.reload()
+})
+
 export default router
