@@ -5338,7 +5338,9 @@ const renderOfferPdfInIsolation = async (pdfContent, options) => {
 
   const idoc = iframe.contentDocument || iframe.contentWindow.document;
   idoc.open();
-  idoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  idoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
+    <style>
     html, body { margin: 0; padding: 0; background: #ffffff; }
     * { box-sizing: border-box !important; }
     table { border-collapse: collapse !important; border-spacing: 0 !important; }
@@ -5356,7 +5358,21 @@ const renderOfferPdfInIsolation = async (pdfContent, options) => {
   idoc.body.appendChild(pdfContent);
 
   try {
-    // Let the isolated document settle before capture
+    // This isolated document has its own font-loading context — Montserrat being loaded on
+    // the main page does NOT carry over to it. Without actually loading it here (and waiting
+    // for it), every element using font-family:'Montserrat' silently fell back to the browser
+    // default font at capture time, whose glyph metrics don't match what this file's
+    // line-heights/paddings were tuned for — the real cause of text rendering low/clipped
+    // ("cut with a line") across the whole export, not just the badges.
+    if (idoc.fonts && idoc.fonts.ready) {
+      await Promise.race([
+        idoc.fonts.ready,
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]).catch(() => {});
+    } else {
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    // Let the isolated document settle (layout/reflow after the font swap) before capture.
     await new Promise((r) => setTimeout(r, 50));
     return await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
   } finally {
@@ -5459,12 +5475,6 @@ const generatePDF = async () => {
       `,
       confirmButtonColor: '#0B0736'
     });
-    await document.fonts.ready;
-    await Promise.all([
-      document.fonts.load('400 16px Montserrat'),
-      document.fonts.load('600 16px Montserrat'),
-      document.fonts.load('700 16px Montserrat'),
-    ]);
 
   } catch (error) {
     console.error('PDF generation error:', error);
@@ -5696,16 +5706,19 @@ const createSlide2 = () => {
     featureRows.push(row);
   }
   const colW = `${(100 / featuresPerRow).toFixed(4)}%`;
+  const pillH = 24;
   const featureTd = (text) => {
     if (text == null) {
-      return `<td style="width:${colW};padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
+      return `<td style="width:${colW};height:${pillH}px;padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
     }
-    // html2canvas paints text slightly low — asymmetric pad (less top / more bottom) optically centers.
+    // Asymmetric padding was a hand-tuned guess to compensate for html2canvas painting text
+    // low — fragile and still off-center. A fixed height with line-height equal to it (and
+    // only horizontal padding) is what reliably centers a single line under html2canvas.
     return (
-      `<td align="center" valign="middle" style="width:${colW};vertical-align:middle !important;text-align:center !important;` +
+      `<td align="center" valign="middle" height="${pillH}" style="width:${colW};height:${pillH}px !important;vertical-align:middle !important;text-align:center !important;` +
       `background:rgba(255,255,255,0.18) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
-      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:1.15 !important;` +
-      `padding:5px 10px 11px 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
+      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:${pillH}px !important;` +
+      `padding:0 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
       `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
       `box-sizing:border-box !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
     );
@@ -5779,28 +5792,24 @@ const createSlide3 = () => {
   const col2 = features.slice(half);
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
   const projectImage = getProjectImageBySlot(3);
+  // A flex row (icon + text as siblings) is not reliable under html2canvas — it has
+  // wrapped the icon onto its own line above the text in exports. A table row can't do
+  // that: the icon cell and text cell are locked onto the same row no matter what.
   const renderItem = (feature) => {
-      console.log(feature);
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
+    const iconCell = imageUrl
+      ? `<img src="${imageUrl}" style="width:4mm !important; height:4mm !important; object-fit:contain !important; display:block !important;" />`
+      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D" style="width:3mm !important; height:3mm !important; display:block !important;">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>`;
 
-    return `
-      <div style="display:flex !important; align-items:flex-start !important; gap:2mm !important; margin:0 0 3mm 0 !important;">
-        
-        ${
-          imageUrl
-            ? `<img src="${imageUrl}" 
-                  style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; margin-top:0.5mm !important;" />`
-            : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D"
-                  style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>`
-        }
-
-        <p style="margin:0 !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important;">
-          ${feature.name}
-        </p>
-      </div>
-    `;
+    return (
+      `<table cellpadding="0" cellspacing="0" style="width:100% !important; border-collapse:collapse !important; margin:0 0 3mm 0 !important;">` +
+      `<tr>` +
+      `<td align="center" valign="middle" style="width:6mm !important; padding:0 2mm 0 0 !important; vertical-align:middle !important; text-align:center !important;">${iconCell}</td>` +
+      `<td valign="middle" style="padding:0 !important; margin:0 !important; vertical-align:middle !important; text-align:left !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important; font-family:Arial,sans-serif !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important;">${feature.name}</td>` +
+      `</tr></table>`
+    );
   };
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
