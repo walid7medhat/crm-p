@@ -6082,7 +6082,7 @@ const createPaymentDetailsSlide = () => {
       sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
       titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
       cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
-      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1.4mm 0.8mm 1.2mm 0.8mm', pagePad: '7mm 7mm 28mm 7mm',
+      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1.4mm 0.8mm 1.2mm 0.8mm', pagePad: '7mm 7mm 16mm 7mm',
       pillH: '5.2mm', badgeH: '4mm', rowGap: '1.3mm',
     },
     compact: {
@@ -6091,7 +6091,7 @@ const createPaymentDetailsSlide = () => {
       sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
       titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
       cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
-      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '1.1mm 0.6mm 0.9mm 0.6mm', pagePad: '6mm 6mm 27mm 6mm',
+      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '1.1mm 0.6mm 0.9mm 0.6mm', pagePad: '6mm 6mm 15mm 6mm',
       pillH: '4.6mm', badgeH: '3.6mm', rowGap: '1.1mm',
     },
     tight: {
@@ -6100,7 +6100,7 @@ const createPaymentDetailsSlide = () => {
       sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
       titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
       cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
-      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.9mm 0.5mm 0.7mm 0.5mm', pagePad: '5.5mm 5.5mm 26mm 5.5mm',
+      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.9mm 0.5mm 0.7mm 0.5mm', pagePad: '5.5mm 5.5mm 14mm 5.5mm',
       pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.9mm',
     },
   }[densityTier];
@@ -6360,8 +6360,8 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 const noteBlock = `
-  <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:18mm !important; z-index:50 !important; box-sizing:border-box !important;">
-    <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:2.4mm 3.5mm 2.4mm 4.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:flex !important; align-items:center !important; min-height:8mm !important;">
+  <div style="margin:${d.blockMt} 0 0 0 !important; width:100% !important; box-sizing:border-box !important; clear:both !important;">
+    <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:2.4mm 3.5mm 2.4mm 4.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:block !important; box-sizing:border-box !important;">
       <div style="position:absolute !important; left:0 !important; top:0 !important; bottom:0 !important; width:1mm !important; background:#FAA300 !important;"></div>
       <p style="margin:0 !important; color:rgba(255,255,255,0.92) !important; font-size:${d.fsXs} !important; line-height:1.45 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
         Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
@@ -6383,7 +6383,7 @@ const noteBlock = `
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
+    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:90% !important; overflow:hidden !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
       <div style="margin:0 0 ${d.headerMb} 0;padding:0;box-sizing:border-box;">
         <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.2;margin:0;padding:0 0 2.4mm 0;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
         <div style="display:block;width:14mm;height:0.85mm;background:#FAA300;border-radius:1mm;margin:0;line-height:0;font-size:0;overflow:hidden;">&nbsp;</div>
