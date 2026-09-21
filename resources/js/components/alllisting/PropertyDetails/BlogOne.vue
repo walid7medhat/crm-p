@@ -6145,12 +6145,17 @@ const createPaymentDetailsSlide = () => {
     if (status === 'Paid') { bg = '#0f1f3a'; fg = '#ffffff'; }
     else if (status === 'Due on transfer') { bg = '#d5dde8'; fg = '#0f1f3a'; }
     else if (status === 'Selling below original price') { bg = '#e8ecf2'; fg = '#0f1f3a'; }
+    // Vertical padding + a tight line-height fight each other under html2canvas (it doesn't
+    // reliably honor vertical-align on table cells), which pushed the glyph to the bottom of
+    // the pill and let the cell's own bottom edge cut through it. A single, generous
+    // line-height with only horizontal padding is what actually centers reliably here.
+    const pillH = badgeFs + 12;
     return (
       `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;margin:0 auto !important;">` +
-      `<tr><td align="center" valign="middle" style="background:${bg} !important;color:${fg} !important;` +
-      `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:${badgeFs + 4}px !important;` +
+      `<tr><td align="center" valign="middle" height="${pillH}" style="background:${bg} !important;color:${fg} !important;` +
+      `border-radius:999px !important;font-size:${badgeFs}px !important;height:${pillH}px !important;line-height:${pillH}px !important;` +
       `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
-      `padding:5px 11px !important;text-align:center !important;vertical-align:middle !important;` +
+      `padding:0 11px !important;text-align:center !important;vertical-align:middle !important;` +
       `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${status}</td></tr></table>`
     );
   };
@@ -6331,7 +6336,7 @@ const createPaymentDetailsSlide = () => {
   const nocPercentageStrip = (hasNocPercentage) ? `
     <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
       <span style="display:inline-flex;align-items:center;gap:0.8mm;">
-        <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0.3mm 2mm;font-weight:700;font-size:${d.fsSm};display:inline-flex;align-items:center;gap:0.5mm;">
+        <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0 2mm;font-weight:700;font-size:${d.fsSm};display:inline-block;line-height:16px;height:16px;vertical-align:middle;white-space:nowrap;">
           <span style="font-size:${d.fsXs};">%</span> NOC
         </span>
         <span style="font-weight:500;">Required:</span>
@@ -6347,7 +6352,7 @@ const createPaymentDetailsSlide = () => {
         <span style="color:#f59e0b;">⏳</span>
         Remaining: <strong>${fmtAed(nocRemainingFromPercentage)}</strong>
       </span>
-      <span style="display:inline-flex;align-items:center;padding:0.3mm 1.6mm;border-radius:4mm;font-weight:700;font-size:${d.badgeFs};${nocMetFromPercentage ? 'background:#22c55e;color:#fff;' : 'background:#f59e0b;color:#fff;'}">
+      <span style="display:inline-block;padding:0 1.6mm;border-radius:4mm;font-weight:700;font-size:${d.badgeFs};line-height:16px;height:16px;vertical-align:middle;white-space:nowrap;${nocMetFromPercentage ? 'background:#22c55e;color:#fff;' : 'background:#f59e0b;color:#fff;'}">
         ${nocMetFromPercentage ? '✅ NOC met' : '⚠️ Below NOC'}
       </span>
     </div>
