@@ -2399,6 +2399,7 @@ onMounted(async () => {
     
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
+    window.addEventListener('echo-ready', onEchoReady)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
     if (leadIdFromUrl) {
@@ -2419,6 +2420,7 @@ onUnmounted(() => {
     stopScroll()
     cancelPersonHoverHide()
     window.removeEventListener('resize', updateScrollArrows)
+    window.removeEventListener('echo-ready', onEchoReady)
     cleanup()
 })
 
@@ -2461,12 +2463,22 @@ const parseRevertWarningPayload = (event) => {
     }
 }
 
+const onEchoReady = () => {
+    initializeLeadUpdates()
+}
+
 const initializeLeadUpdates = () => {
+    if (echoListeners.value.length > 0) {
+        return
+    }
+
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || !window.Echo) {
         startPolling()
         return
     }
+
+    stopPolling()
 
     try {
         const channel = window.Echo.private(`user.${user.id}`)
@@ -3045,6 +3057,13 @@ const showLeadNotification = (event) => {
             toast.querySelector('.crm-toast__close')?.addEventListener('click', () => Swal.close())
         }
     })
+}
+
+const stopPolling = () => {
+    if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+        pollingInterval.value = null
+    }
 }
 
 const startPolling = () => {

@@ -52,7 +52,7 @@
 </template>
 
 <script>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
@@ -62,7 +62,7 @@ import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
-import ViewLeadModal from './components/kanban/viewLead/ViewLeadModal.vue'
+const ViewLeadModal = defineAsyncComponent(() => import('./components/kanban/viewLead/ViewLeadModal.vue'))
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
@@ -141,6 +141,10 @@ export default {
       document.body.classList.toggle('app-has-video-bg', showLayout.value)
     }
 
+    const preloadViewLeadModal = () => {
+      import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
+    }
+
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
       window.__openLeadView = openLeadView
@@ -148,6 +152,11 @@ export default {
       syncVideoBgClass()
       if (!showLayout.value) {
         resetSidebarLayout()
+      }
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(preloadViewLeadModal, { timeout: 4000 })
+      } else {
+        setTimeout(preloadViewLeadModal, 2000)
       }
     })
     onUnmounted(() => {
@@ -162,6 +171,16 @@ export default {
         resetSidebarLayout()
       }
     })
+
+    watch(
+      () => route.path,
+      (path) => {
+        if (path === '/kanban' || path === '/kanban_deal') {
+          preloadViewLeadModal()
+        }
+      },
+      { immediate: true },
+    )
 
     return {
       isAppLoading,

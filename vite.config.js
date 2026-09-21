@@ -123,6 +123,12 @@ export default defineConfig(({ command }) => ({
                     ) {
                         return 'vendor-vue';
                     }
+                    if (n.includes('/node_modules/bootstrap/')) {
+                        return 'vendor-bootstrap';
+                    }
+                    if (n.includes('/node_modules/sweetalert2/')) {
+                        return 'vendor-swal';
+                    }
                 },
             },
         },

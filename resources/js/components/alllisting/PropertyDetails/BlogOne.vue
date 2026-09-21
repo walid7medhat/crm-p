@@ -754,7 +754,7 @@
                 <!-- Owner Information -->
                 <div class="request-action-item">
                   <div class="approved-info">
-                    <div class="info-display" @click="openOwnerDetailsModal" style="cursor: pointer;">
+                    <div class="info-display" @click.stop="openOwnerDetailsModal" style="cursor: pointer;">
                       <i class="ri-user-line"></i>
                       <span class="info-value">View Owner Info</span>
                     </div>
@@ -799,7 +799,7 @@
                 <div class="request-action-item">
                   <!-- If owner info is approved -->
                   <div v-if="requestStatus?.owner_info_status === 'approved' && property?.canShowOwner && getApprovedOwnerData()" class="approved-info">
-                    <div class="info-display" @click="openOwnerDetailsModal" style="cursor: pointer;">
+                    <div class="info-display" @click.stop="openOwnerDetailsModal" style="cursor: pointer;">
                       <i class="ri-user-line"></i>
                       <span class="info-value">view Owner Info</span>
                     </div>
@@ -944,8 +944,9 @@
       </div>
     </div>
 
-<!-- Owner Details Modal -->
-<div v-if="showOwnerDetailsModal" class="modal-overlay" @click="showOwnerDetailsModal = false">
+<!-- Owner Details Modal — teleported so fixed overlay escapes sidebar/router stacking contexts -->
+<Teleport to="body">
+<div v-if="showOwnerDetailsModal" class="modal-overlay owner-details-modal-overlay" @click="showOwnerDetailsModal = false">
   <div class="modal-content owner-details-modal" @click.stop>
     <div class="modal-header">
       <div class="header-content">
@@ -1129,6 +1130,7 @@
     </div>
   </div>
 </div>
+</Teleport>
 
 <!-- Mark as Sold Out Modal -->
 <div v-if="showSoldOutModal" class="modal-overlay" @click="closeSoldOutModal">
@@ -10599,6 +10601,11 @@ margin: 0 2px;
 
 </style>
 <style>
+/* Owner details modal must sit above app header/nav (style.css forces .modal-overlay to z-index 100). */
+body .owner-details-modal-overlay {
+  z-index: 105000 !important;
+}
+
 /* Property actions open — allow sidebar to grow, keep same width/position */
 body.property-actions-open .sidebar-sticky-container {
   max-height: none !important;

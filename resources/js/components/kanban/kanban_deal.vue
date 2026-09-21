@@ -388,6 +388,7 @@ onMounted(() => {
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: activeTab.value }))
     updateKanbanMobileBreakpoint()
     window.addEventListener('resize', updateKanbanMobileBreakpoint)
+    window.addEventListener('echo-ready', onEchoReady)
     setTimeout(() => {
         initializeStageUpdates()
     }, 1000)
@@ -483,6 +484,7 @@ watch(
 
 onUnmounted(() => {
     window.removeEventListener('resize', updateKanbanMobileBreakpoint)
+    window.removeEventListener('echo-ready', onEchoReady)
     document.removeEventListener('click', onDocumentClick)
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
@@ -501,14 +503,24 @@ onUnmounted(() => {
 
 })
 
+const onEchoReady = () => {
+    initializeStageUpdates()
+}
+
 // Initialize real-time updates for stages
 const initializeStageUpdates = () => {
+    if (echoListeners.value.length > 0) {
+        return
+    }
+
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || !window.Echo) {
         console.log('❌ Real-time stage updates not available, using polling...')
         startPolling()
         return
     }
+
+    stopPolling()
 
     console.log('🔔 Kanban: Initializing real-time stage updates for user:', user.id)
 
@@ -596,6 +608,13 @@ const showStageNotification = (event) => {
             window.$showNotification(message, icon)
         }
     }, 200)
+}
+
+const stopPolling = () => {
+    if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+        pollingInterval.value = null
+    }
 }
 
 const startPolling = () => {
