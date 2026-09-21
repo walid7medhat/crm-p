@@ -5700,11 +5700,12 @@ const createSlide2 = () => {
     if (text == null) {
       return `<td style="width:${colW};padding:0;border:none;background:transparent;font-size:0;line-height:0;">&nbsp;</td>`;
     }
+    // html2canvas paints text slightly low — asymmetric pad (less top / more bottom) optically centers.
     return (
       `<td align="center" valign="middle" style="width:${colW};vertical-align:middle !important;text-align:center !important;` +
       `background:rgba(255,255,255,0.18) !important;border:1px solid rgba(255,255,255,0.75) !important;` +
-      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:1.3 !important;` +
-      `padding:8px 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
+      `border-radius:999px !important;color:#ffffff !important;font-size:10px !important;line-height:1.15 !important;` +
+      `padding:5px 10px 11px 10px !important;margin:0 !important;font-family:Arial,sans-serif !important;` +
       `white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;` +
       `box-sizing:border-box !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${text}</td>`
     );
@@ -6081,7 +6082,7 @@ const createPaymentDetailsSlide = () => {
       sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
       titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
       cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
-      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1.4mm 0.8mm 1.2mm 0.8mm', pagePad: '7mm 7mm 14mm 7mm',
+      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1.4mm 0.8mm 1.2mm 0.8mm', pagePad: '7mm 7mm 20mm 7mm',
       pillH: '5.2mm', badgeH: '4mm', rowGap: '1.3mm',
     },
     compact: {
@@ -6090,7 +6091,7 @@ const createPaymentDetailsSlide = () => {
       sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
       titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
       cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
-      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '1.1mm 0.6mm 0.9mm 0.6mm', pagePad: '6mm 6mm 13mm 6mm',
+      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '1.1mm 0.6mm 0.9mm 0.6mm', pagePad: '6mm 6mm 18mm 6mm',
       pillH: '4.6mm', badgeH: '3.6mm', rowGap: '1.1mm',
     },
     tight: {
@@ -6099,45 +6100,46 @@ const createPaymentDetailsSlide = () => {
       sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
       titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
       cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
-      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.9mm 0.5mm 0.7mm 0.5mm', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
+      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.9mm 0.5mm 0.7mm 0.5mm', pagePad: '5.5mm 5.5mm 17mm 5.5mm',
       pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.9mm',
     },
   }[densityTier];
 
-  // No fixed height — that clipped descenders in html2canvas. Pad + valign middle instead.
+  // No fixed height — that clipped descenders in html2canvas. Asymmetric pad counters html2canvas downward text shift.
   const thFs = densityTier === 'tight' ? 8 : 9;
   const tdFs = densityTier === 'tight' ? 9 : 10;
   const badgeFs = densityTier === 'tight' ? 8 : 9;
-  const cellPadY = densityTier === 'tight' ? 7 : densityTier === 'compact' ? 8 : 9;
+  const cellPadTop = densityTier === 'tight' ? 5 : densityTier === 'compact' ? 6 : 7;
+  const cellPadBottom = densityTier === 'tight' ? 9 : densityTier === 'compact' ? 10 : 11;
   const cellPadX = 6;
+  const cellPad = `${cellPadTop}px ${cellPadX}px ${cellPadBottom}px ${cellPadX}px`;
 
   const thCell =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#0f1f3a !important;color:#ffffff !important;font-size:${thFs}px !important;` +
-    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tdCell =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#ffffff !important;color:#1e293b !important;font-size:${tdFs}px !important;` +
-    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
 
   const tdMuted =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#ffffff !important;color:#64748b !important;font-size:${tdFs}px !important;` +
-    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-family:Arial,sans-serif !important;`;
 
   const tdTotal =
     `vertical-align:middle !important;text-align:center !important;` +
     `background:#f1f5f9 !important;color:#0f1f3a !important;font-size:${tdFs}px !important;` +
-    `line-height:1.35 !important;padding:${cellPadY}px ${cellPadX}px !important;margin:0 !important;` +
+    `line-height:1.2 !important;padding:${cellPad} !important;margin:0 !important;` +
     `font-weight:700 !important;font-family:Arial,sans-serif !important;` +
     `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;`;
-
   const tableStyle =
     `width:100% !important;border-collapse:collapse !important;border-spacing:0 !important;` +
     `table-layout:fixed !important;font-family:Arial,sans-serif !important;`;
@@ -6153,9 +6155,9 @@ const createPaymentDetailsSlide = () => {
     return (
       `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse !important;margin:0 auto !important;">` +
       `<tr><td align="center" valign="middle" style="background:${bg} !important;color:${fg} !important;` +
-      `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:1.3 !important;` +
+      `border-radius:999px !important;font-size:${badgeFs}px !important;line-height:1.15 !important;` +
       `font-weight:700 !important;font-family:Arial,sans-serif !important;white-space:nowrap !important;` +
-      `padding:6px 12px !important;text-align:center !important;vertical-align:middle !important;` +
+      `padding:4px 12px 8px 12px !important;text-align:center !important;vertical-align:middle !important;` +
       `-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${status}</td></tr></table>`
     );
   };
@@ -6358,7 +6360,7 @@ const createPaymentDetailsSlide = () => {
     </div>
   ` : '';
 const noteBlock = `
-  <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:11.5% !important; z-index:20 !important; box-sizing:border-box !important;">
+  <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:8.5% !important; z-index:20 !important; box-sizing:border-box !important;">
     <div style="position:relative !important; overflow:hidden !important; background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-radius:2mm !important; padding:2.4mm 3.5mm 2.4mm 4.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important; display:flex !important; align-items:center !important; min-height:8mm !important;">
       <div style="position:absolute !important; left:0 !important; top:0 !important; bottom:0 !important; width:1mm !important; background:#FAA300 !important;"></div>
       <p style="margin:0 !important; color:rgba(255,255,255,0.92) !important; font-size:${d.fsXs} !important; line-height:1.45 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
