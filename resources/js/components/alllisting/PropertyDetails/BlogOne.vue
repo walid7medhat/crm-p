@@ -5437,7 +5437,11 @@ const generatePDF = async () => {
         useCORS: true,
         logging: false,
         allowTaint: true,
-        letterRendering: false,
+        // false renders whole words as one unit instead of glyph-by-glyph, which is faster
+        // but noticeably less accurate at positioning text vertically — a strong candidate
+        // for the systemic "text sits low / cut" look across headers, badges and icon rows
+        // in this export, on top of the font-loading fix in renderOfferPdfInIsolation.
+        letterRendering: true,
         backgroundColor: '#ffffff',
       },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
@@ -5676,8 +5680,8 @@ const createSlide1 = (currentUser) => {
       <p style="font-size:16px; line-height: 25px; font-weight:normal; background:#01062D; display:inline-block; padding:0px 20px 10px 20px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0px 0 18px 0; position:absolute !important; top:-10px !important;  font-family: 'Montserrat', sans-serif; ">For ${listingStatus}</p>
       <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:bold; margin:0 0 12px 0; line-height:1.1; text-transform:uppercase;font-family: 'Montserrat', sans-serif;">${projectTitle}</h1>
       <p  style="font-size:20px; color:#01062D; font-weight:600; margin:0 0 18px 0;font-family: 'Montserrat', sans-serif;">${bedroomsText} ${propertyTypeName}</p>
-      <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;">
-       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; margin-top:2px !important;" fill="#733E87"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
+      <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:center !important; gap:2mm !important;">
+       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; display:block !important;" fill="#733E87"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
         <span  style="font-size: 14px; color: #818181;font-family: 'Montserrat', sans-serif;" >${location}</span>
       </p>
       <div style="border-top:0.3mm solid #ddd !important; margin-bottom:5mm !important; margin-top:15mm !important;"></div>
