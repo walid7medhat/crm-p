@@ -6044,22 +6044,17 @@ const createPaymentDetailsSlide = () => {
     },
   }[densityTier];
 
-  // --- CENTERING CORE (html2canvas-safe) ---
-  // Avoid flex align-items/gap — html2canvas often offsets text out of pills and collapses rows.
-  // Prefer fixed line-height = height, block/inline-block, and explicit text colors.
-  const thCell = `padding:${d.padHead};vertical-align:middle;text-align:center;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.25;vertical-align:middle;text-align:center;color:#1e293b !important;`;
+  // --- html2canvas-safe table cells (no nested flex / no pill wrappers) ---
+  // Style <th>/<td> directly — nested chip divs often paint text outside the background.
+  const thCell = `padding:1.4mm 1mm;vertical-align:middle;text-align:center;background:#0f1f3a;color:#ffffff !important;font-weight:700;font-size:${d.fsSm};line-height:1.2;border-radius:999px;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#1e293b !important;background:#ffffff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;`;
+  const tdMuted = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#64748b !important;background:#ffffff !important;`;
+  const tdTotal = `padding:${d.pad};font-size:${d.fs};line-height:1.35;vertical-align:middle;text-align:center;color:#0f1f3a !important;background:#f1f5f9 !important;font-weight:700;`;
 
-  const cellInner = (content) =>
-    `<div style="width:100%;display:block;text-align:center;line-height:1.25;box-sizing:border-box;color:inherit;">${content}</div>`;
-
-  const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
-
-  const thPill = (label) =>
-    `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#ffffff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:${d.pillH};height:${d.pillH};text-align:center;white-space:nowrap;overflow:hidden;">${label}</div>`;
+  const tableStyle = `width:100%;border-collapse:separate;border-spacing:1.2mm ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
 
   const makeBadge = (text, status) =>
-    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:${d.badgeH};height:${d.badgeH};white-space:nowrap;text-align:center;padding:0 ${d.badgePadX};vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;${badgeStyle(status)}">${text}</span>`;
+    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1.3;white-space:nowrap;text-align:center;padding:0.85mm ${d.badgePadX};vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;${badgeStyle(status)}">${text}</span>`;
   let cumulative = 0;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
@@ -6077,11 +6072,11 @@ const createPaymentDetailsSlide = () => {
 
     const rowHtml = `
       <tr>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner('Installment')}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(pct + '%')}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(amount))}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(dateCell)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(badge)}</td>
+        <td align="center" valign="middle" style="${tdCell}">Installment</td>
+        <td align="center" valign="middle" style="${tdCell}">${pct}%</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${dateCell}</td>
+        <td align="center" valign="middle" style="${tdCell}">${badge}</td>
       </tr>`;
 
     if (paid) installmentRowsPaidArr.push(rowHtml);
@@ -6094,12 +6089,12 @@ const createPaymentDetailsSlide = () => {
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumBadge = makeBadge(premiumStatus, premiumStatus);
   const premiumRow = hasPremiumRow
-    ? `<tr style="background:#f8fafc;">
-        <td align="center" valign="middle" style="${tdCell}">${cellInner('Premium')}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner('—')}</td>
-        <td align="center" valign="middle" style="${tdCell}${premium < 0 ? 'color:#b91c1c;' : ''}">${cellInner(fmtAed(premium))}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner('—')}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(premiumBadge)}</td>
+    ? `<tr>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">Premium</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;${premium < 0 ? 'color:#b91c1c !important;' : ''}">${fmtAed(premium)}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">—</td>
+        <td align="center" valign="middle" style="${tdCell}background:#f8fafc !important;">${premiumBadge}</td>
       </tr>`
     : '';
 
@@ -6107,11 +6102,11 @@ const createPaymentDetailsSlide = () => {
   const handoverBadge = makeBadge(handoverStatus, handoverStatus);
   const handoverRow = hasHandoverRow
     ? `<tr>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverPct.toFixed(2) + '%')}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(handoverAmount))}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtDate(p.handover_date))}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverBadge)}</td>
+        <td align="center" valign="middle" style="${tdCell}">Handover (${handoverPct.toFixed(0)}%)</td>
+        <td align="center" valign="middle" style="${tdCell}">${handoverPct.toFixed(2)}%</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(handoverAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtDate(p.handover_date)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${handoverBadge}</td>
       </tr>`
     : '';
 
@@ -6136,17 +6131,14 @@ const createPaymentDetailsSlide = () => {
 
   if (hasNoc) {
     const nocAmount = nocFixedAmount;
-    const isFullyPaid = scheduledAed >= nocRequired - 0.01;
-    const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
-    const nocValueBadge = `<span >${fmtAed(nocAmount)}</span>`;
 
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" style="${tdCell}font-weight:500;background:#ffffff !important;">${cellInner('NOC Fees')}</td>
-        <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner('—')}</td>
-        <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(nocValueBadge)}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:500;">NOC Fees</td>
+        <td align="center" valign="middle" style="${tdMuted}">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(nocAmount)}</td>
+        <td align="center" valign="middle" style="${tdCell}">—</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600;">${fmtAed(nocAmount)}</td>
       </tr>
     `);
 
@@ -6169,11 +6161,11 @@ const createPaymentDetailsSlide = () => {
       : fmtAed(toNum(l?.value));
     expenseRows.push(`
       <tr>
-        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(l?.label || '—')}</td>
-        <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(detail)}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(amt))}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(vat > 0 ? fmtAed(vat) : '—')}</td>
-        <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(fmtAed(total))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${l?.label || '—'}</td>
+        <td align="center" valign="middle" style="${tdMuted}">${detail}</td>
+        <td align="center" valign="middle" style="${tdCell}">${fmtAed(amt)}</td>
+        <td align="center" valign="middle" style="${tdCell}">${vat > 0 ? fmtAed(vat) : '—'}</td>
+        <td align="center" valign="middle" style="${tdCell}font-weight:600;">${fmtAed(total)}</td>
       </tr>
     `);
   });
@@ -6183,24 +6175,24 @@ const createPaymentDetailsSlide = () => {
   const expensesBlock = (expenseRows.length > 0) ? `
     <div style="margin-top:${d.blockMt};width:100%;">
       <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">other costs</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
+      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
         <table style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Label')}</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Detail')}</th>
-              <th align="center" valign="middle" style="${thCell}width:20%;">${thPill('Amount')}</th>
-              <th align="center" valign="middle" style="${thCell}width:16%;">${thPill('VAT')}</th>
-              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Total')}</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">Label</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">Detail</th>
+              <th align="center" valign="middle" style="${thCell}width:20%;">Amount</th>
+              <th align="center" valign="middle" style="${thCell}width:16%;">VAT</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">Total</th>
             </tr>
           </thead>
           <tbody>
             ${expenseRowsHtml}
-            <tr style="background:#f1f5f9;">
-              <td align="center" valign="middle" colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
+            <tr>
+              <td align="center" valign="middle" colspan="2" style="${tdTotal}">Total</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expSubtotal)}</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expVatTotal)}</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(expGrand)}</td>
             </tr>
           </tbody>
         </table>
@@ -6211,15 +6203,15 @@ const createPaymentDetailsSlide = () => {
   const installmentTable = (installmentRowsPaid || installmentRowsNotPaid || premiumRow || handoverRow) && hasInstallments ? `
     <div style="margin-bottom:${d.sectionMb};width:100%;">
       <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm #ffffff;width:100%;box-sizing:border-box;">
+      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};width:100%;box-sizing:border-box;">
         <table style="${tableStyle}">
           <thead>
             <tr>
-              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Payment type')}</th>
-              <th align="center" valign="middle" style="${thCell}width:13%;">${thPill('Percentage')}</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Amount')}</th>
-              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Date')}</th>
-              <th align="center" valign="middle" style="${thCell}width:15%;">${thPill('Status')}</th>
+              <th align="center" valign="middle" style="${thCell}width:22%;">Payment type</th>
+              <th align="center" valign="middle" style="${thCell}width:13%;">Percentage</th>
+              <th align="center" valign="middle" style="${thCell}width:24%;">Amount</th>
+              <th align="center" valign="middle" style="${thCell}width:18%;">Date</th>
+              <th align="center" valign="middle" style="${thCell}width:15%;">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -6227,10 +6219,10 @@ const createPaymentDetailsSlide = () => {
             ${premiumRow}
             ${installmentRowsNotPaid}
             ${handoverRow}
-            <tr style="background:#f1f5f9;">
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;" colspan="2">${cellInner('Total')}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
-              <td colspan="2"></td>
+            <tr>
+              <td align="center" valign="middle" style="${tdTotal}" colspan="2">Total</td>
+              <td align="center" valign="middle" style="${tdTotal}">${fmtAed(totalAmount)}</td>
+              <td colspan="2" style="${tdTotal}"></td>
             </tr>
           </tbody>
         </table>
