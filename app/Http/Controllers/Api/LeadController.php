@@ -1541,6 +1541,42 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             return $h;
         });
     }
+
+    // bitrix24_last_activity_by_id stores a user id, but /users (used by the frontend to
+    // label ids) is scoped to "my subordinates" for non-super-admins — it can't resolve an
+    // arbitrary other user who touched this lead. Resolve the name here instead, server-side,
+    // where we're not limited by the viewer's own visibility scope.
+    $activityByIds = [];
+    foreach ($histories->getCollection() as $h) {
+        $field = data_get($h->changes, 'fields.bitrix24_last_activity_by_id');
+        if (is_array($field)) {
+            if (! empty($field['old']) && is_numeric($field['old'])) {
+                $activityByIds[] = (int) $field['old'];
+            }
+            if (! empty($field['new']) && is_numeric($field['new'])) {
+                $activityByIds[] = (int) $field['new'];
+            }
+        }
+    }
+    if (! empty($activityByIds)) {
+        $activityByNames = User::whereIn('id', array_unique($activityByIds))->pluck('name', 'id');
+        $histories->getCollection()->transform(function ($h) use ($activityByNames) {
+            $changes = $h->changes;
+            if (is_array($changes) && isset($changes['fields']['bitrix24_last_activity_by_id'])) {
+                $field = $changes['fields']['bitrix24_last_activity_by_id'];
+                if (! empty($field['old']) && is_numeric($field['old'])) {
+                    $field['old'] = $activityByNames[(int) $field['old']] ?? $field['old'];
+                }
+                if (! empty($field['new']) && is_numeric($field['new'])) {
+                    $field['new'] = $activityByNames[(int) $field['new']] ?? $field['new'];
+                }
+                $changes['fields']['bitrix24_last_activity_by_id'] = $field;
+                $h->changes = $changes; // in-memory بس، مش بيتحفظ
+            }
+            return $h;
+        });
+    }
+
     return ApiResponse::success([
         'items' => LeadHistoryResource::collection($histories),
         'pagination' => [

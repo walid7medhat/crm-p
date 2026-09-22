@@ -532,6 +532,39 @@ const transformHistoryEntry = (entry) => {
         bitrix24_last_activity_at: 'Last Activity',
          bitrix24_last_activity_by_id: 'Last Activity By',
     }
+    // Old/new values captured at write time come from different sources (DB datetime
+    // cast vs a raw ISO-with-microseconds timestamp), so the same field can show two
+    // different formats — normalize both for display instead of printing them raw.
+    const DATE_VALUE_FIELDS = new Set(['bitrix24_last_activity_at', 'last_engagement_at'])
+    // Fields whose stored value is a user id — show the person's name instead of the id.
+    const USER_ID_VALUE_FIELDS = new Set(['bitrix24_last_activity_by_id'])
+
+    const formatHistoryDateValue = (v) => {
+        if (v === null || v === undefined || v === '') return '-'
+        const d = new Date(v)
+        if (isNaN(d.getTime())) return v
+        return d.toLocaleString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        })
+    }
+
+    const formatHistoryFieldValue = (key, raw) => {
+        if (raw === null || raw === undefined || raw === '') return '-'
+        if (DATE_VALUE_FIELDS.has(key)) return formatHistoryDateValue(raw)
+        // Backend now resolves this to a name server-side (LeadController@history) —
+        // it isn't scoped to the viewer's own subordinates the way /users is, so it can
+        // actually resolve an arbitrary user. Only fall back to the client-side /users
+        // lookup for a purely numeric value (older cached responses, or no match found).
+        if (USER_ID_VALUE_FIELDS.has(key)) {
+            return /^\d+$/.test(String(raw)) ? getUserName(raw) : raw
+        }
+        return raw
+    }
     eventType = eventTypeMap[eventType] || eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/_/g, ' ')
     
     // Format changes
@@ -555,10 +588,10 @@ const transformHistoryEntry = (entry) => {
                 .filter(([key]) => key !== 'updated_at');
         
             changesHtml = entries.map(([key, val]) => {
-        
-                const oldVal = val?.old !== null && val?.old !== undefined ? val.old : '-'
-                const newVal = val?.new !== null && val?.new !== undefined ? val.new : '-'
-        
+
+                const oldVal = formatHistoryFieldValue(key, val?.old)
+                const newVal = formatHistoryFieldValue(key, val?.new)
+
                 const label = fieldLabels[key] || key
                         .replace(/_/g, ' ')
                         .replace(/\b\w/g, l => l.toUpperCase())
@@ -740,9 +773,10 @@ watch(() => props.lead?.id, (newId, oldId) => {
     }
 })
 
-// Initial fetch
-onMounted(() => {
-    fetchUsers()
+// Initial fetch — wait for the user list first so "Last Activity By" resolves to a
+// name on the first paint instead of racing fetchHistory and baking in "Unknown User".
+onMounted(async () => {
+    await fetchUsers()
     if (props.isActive && props.lead?.id) {
         fetchHistory(1)
     }
