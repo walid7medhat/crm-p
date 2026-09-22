@@ -22,7 +22,7 @@
         <!-- Right Column: Activity & Comments -->
         <div class="col-md-7">
             <div class="activity-card bg-white p-3 radius-12 shadow-sm" v-if="!lead?.hide_created_info">
-              <div v-if="qualityStatusBadge || callResultBadge || leadTypeBadge" class="info-section compact-status-section mb-3">
+              <div v-if="canViewLeadQualificationSection && (qualityStatusBadge || callResultBadge || leadTypeBadge)" class="info-section compact-status-section mb-3">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div class="info-section-title lead-section-title-match mb-0">Lead Qualification</div>
                     </div>
@@ -265,6 +265,13 @@ const isSuperAdminUser = computed(() => user.value?.roles?.includes('super_admin
 // Lead Pool (stage_id = 10) comments/activities are super_admin-only — they're cleared
 // on assign-to-me anyway, and we don't want non-admins to see them during triage.
 const isLeadPoolLead = computed(() => Number(props.lead?.stage_id) === 10)
+// Same "Lead Pool is admin-only" rule as comments/activities, applied to the Quality
+// Status/Call Result/Lead Type badges — kept as its own computed (not reusing
+// canViewCommentsAndActivities) so the two can diverge later without confusion.
+const canViewLeadQualificationSection = computed(() => {
+    if (!isLeadPoolLead.value) return true
+    return isSuperAdminUser.value
+})
 const canViewCommentsAndActivities = computed(() => {
     if (!isLeadPoolLead.value) return true
     return isSuperAdminUser.value

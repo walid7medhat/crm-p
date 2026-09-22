@@ -289,6 +289,7 @@
     <ViewLeadModal
         v-model="showViewModal"
         :leadId="selectedLeadId"
+        @update:leadId="selectedLeadId = $event"
         @lead-updated="handleLeadUpdated"
     />
     
@@ -309,6 +310,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
@@ -320,6 +322,9 @@ import { useLeadPoolBulkActions } from './composables/useLeadPoolBulkActions.js'
 
 // Emits
 const emit = defineEmits(['lead-clicked'])
+
+const route = useRoute()
+const router = useRouter()
 
 // State
 const leads = ref([])
@@ -775,6 +780,11 @@ const viewLead = (lead) => {
     selectedLeadId.value = lead.id
     showViewModal.value = true
     if (lead?.id) {
+        // Sync the URL so a page refresh while this modal is open can restore it — unlike
+        // the regular Kanban lead modal (which does this via the global instance in
+        // App.vue), this Lead Pool instance never touched the URL before, so a refresh
+        // reopened the modal (via ViewLeadModal's own ?lead= restore) with no id to fetch.
+        router.push({ query: { ...route.query, lead: lead.id } }).catch(() => {})
         // Fire-and-forget: log a "view" history entry so admins see who opened the lead.
         api.get(`/leads/${lead.id}/history/view`).catch(() => {})
     }
@@ -799,6 +809,7 @@ const handleViewDuplicateLead = (leadId) => {
     selectedLeadId.value = leadId
     showViewModal.value = true
     if (leadId) {
+        router.push({ query: { ...route.query, lead: leadId } }).catch(() => {})
         api.get(`/leads/${leadId}/history/view`).catch(() => {})
     }
 }

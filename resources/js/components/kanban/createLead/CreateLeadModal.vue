@@ -709,7 +709,6 @@
     
    const salesSourceOptions = [
             { value: 'My Self Network',    text: 'My Self Network' },
-            { value: 'My Social Account',  text: 'My Social Account' },
             { value: 'My Social Media App', text: 'My Social Media App' },
             { value: 'referral',           text: 'Referral' }
         ]

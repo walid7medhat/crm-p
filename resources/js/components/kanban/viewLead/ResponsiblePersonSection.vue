@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!lead?.hide_responsible_person" class="responsible-card bg-white p-3 radius-12 shadow-sm mt-3">
+    <div v-if="!shouldHideSection" class="responsible-card bg-white p-3 radius-12 shadow-sm mt-3">
         
         <div class="info-group">
             <div class="d-flex align-items-center justify-content-between mb-2">
@@ -156,6 +156,28 @@ import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const props = defineProps({ lead: Object })
 const emit = defineEmits(['person-updated'])
+
+// The modal paints first from a lightweight kanban-card seed (has stage_id, not the
+// backend-computed hide_responsible_person — that only arrives after the full /leads/{id}
+// fetch), so relying on hide_responsible_person alone flashed this section open for a beat
+// before it disappeared. Mirror the backend rule (LeadResource::applyVisibilityRules — Lead
+// Pool = stage_id 10 is admin/super_admin only) using data available from the first render.
+const currentUser = (() => {
+    try {
+        return JSON.parse(localStorage.getItem('user') || 'null')
+    } catch (error) {
+        return null
+    }
+})()
+const isAdminOrSuperAdmin = computed(() => {
+    const roles = currentUser?.roles || []
+    return roles.includes('super_admin') || roles.includes('admin')
+})
+const isLeadPoolLead = computed(() => Number(props.lead?.stage_id) === 10)
+const shouldHideSection = computed(() => {
+    if (props.lead?.hide_responsible_person) return true
+    return isLeadPoolLead.value && !isAdminOrSuperAdmin.value
+})
 
 const showPersonModal = ref(false)
 const isLoadingPersons = ref(false)

@@ -90,7 +90,7 @@
                     </a>
                 </div>
             </div>
-            <div
+            <!-- <div
                 v-else-if="expectsPortalLink"
                 class="info-group portal-links-group"
             >
@@ -99,7 +99,7 @@
                     No Property Finder / Bayut listing URL was found in Bitrix comments or fields for this lead.
                     Re-sync from Bitrix after the latest update so HTML/WhatsApp links are preserved.
                 </div>
-            </div>
+            </div> -->
             
             <div class="info-group" v-if="lead?.more_information">
                 <label class="form-label-custom">Comments</label>

@@ -737,34 +737,34 @@ onUnmounted(() => {
 const handleClose = () => {
   show.value = false
   if (route.query.lead) {
+    // No `path` — this modal is embedded on more than one page (Kanban, Lead Pool inside
+    // kanban_deal, …), so pushing a query-only location keeps whichever page it's actually
+    // on instead of always redirecting to /kanban.
     router.push({
-      path: '/kanban',
       query: {}
     }).catch(() => {})
   }
 }
 const showWithLeadId = (leadId) => {
   if (!leadId) return
-  
+
   const numericId = Number(leadId)
   if (isNaN(numericId) || numericId <= 0) return
-  
+
   emit('update:leadId', numericId)
-  
+
   router.push({
-    path: '/kanban',
     query: { lead: numericId }
   }).catch(() => {})
-  
+
   show.value = true
 }
 
 const hideModal = () => {
   show.value = false
-  
+
   if (route.query.lead) {
     router.push({
-      path: '/kanban',
       query: {}
     }).catch(() => {})
   }
@@ -787,12 +787,17 @@ watch(() => props.modelValue, (val) => {
     show.value = val
 })
 
+// This modal is embedded on more than one page (Kanban, Lead Pool inside kanban_deal, …).
+// Capture whichever path it's actually opened on so the "navigated away entirely" guard
+// below compares against reality instead of an assumed fixed host page.
+const modalHostPath = ref(route.path)
+
 // Navigating away entirely (e.g. "More properties" / a matching listing card
 // inside GeneralTab) should just close the modal — not fight the pending
-// navigation with the /kanban redirect below (route.query.lead is already
-// gone on the new route by the time this fires, so that guard no-ops).
+// navigation with the redirect below (route.query.lead is already gone on the
+// new route by the time this fires, so that guard no-ops).
 watch(() => route.path, (newPath) => {
-    if (show.value && newPath !== '/kanban') {
+    if (show.value && newPath !== modalHostPath.value) {
         show.value = false
     }
 })
@@ -800,6 +805,7 @@ watch(() => route.path, (newPath) => {
 
 watch(show, (val) => {
   if (val) {
+    modalHostPath.value = route.path
     if (props.leadId) {
       fetchLead()
       initializeLeadListener()
@@ -809,7 +815,6 @@ watch(show, (val) => {
     activeTab.value = 'general'
     if (route.query.lead) {
       router.push({
-        path: '/kanban',
         query: {}
       }).catch(() => {})
     }
@@ -823,7 +828,6 @@ watch(() => props.leadId, (newLeadId, oldLeadId) => {
     if (!newLeadId || newLeadId === oldLeadId) return
       // تحديث الرابط عند تغيير leadId
     router.push({
-        path: '/kanban',
         query: { lead: newLeadId }
     }).catch(() => {})
     fetchLead()
