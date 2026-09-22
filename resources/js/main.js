@@ -60,29 +60,6 @@ window.axios = api
 
 const initialToken = resolveAuthToken()
 
-// Pusher and Echo initialization
-import Echo from 'laravel-echo'
-import Pusher from 'pusher-js/dist/web/pusher'
-
-Pusher.logToConsole = import.meta.env.DEV
-
-window.Pusher = Pusher
-
-if (initialToken && import.meta.env.VITE_PUSHER_APP_KEY) {
-  window.Echo = new Echo({
-    broadcaster: 'pusher',
-    key: import.meta.env.VITE_PUSHER_APP_KEY,
-    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
-    forceTLS: true,
-    authEndpoint: `${getAppOrigin()}/broadcasting/auth`,
-    auth: {
-      headers: {
-        Authorization: `Bearer ${initialToken}`,
-        Accept: 'application/json',
-      },
-    },
-  })
-  // ================= Live notifications (Pusher) =================
 function getStoredUserId() {
   try {
     const raw = localStorage.getItem('user')
@@ -93,41 +70,6 @@ function getStoredUserId() {
     return null
   }
 }
-
-if (window.Echo) {
-  const currentUserId = getStoredUserId()
-
-  if (currentUserId) {
-    window.Echo.private(`user.${currentUserId}`)
-      .notification((notification) => {
-        console.log('[Notification]', notification)
-
-        // Toast it
-        const type = String(notification.type || '').includes('status')
-          ? (notification.status === 'approved' ? 'success' : 'error')
-          : 'info'
-        showNotificationDeferred(notification.message || 'New notification', type)
-
-        // ===== التعديل هنا =====
-        // لو نوع الإشعار leave_request_parent_status (يعني HR قبل أو رفض)
-        if (notification.type === 'leave_request_parent_status') {
-          // هنبعت إشعار مخصص عشان Vue component يعرف يحدث نفسه
-          window.dispatchEvent(new CustomEvent('app-notification', { 
-            detail: { 
-              ...notification,
-              // نحدد إنه parent status عشان نعرفه في الـ component
-              isParentStatus: true 
-            } 
-          }))
-        } else {
-          // باقي الإشعارات زي ما هي
-          window.dispatchEvent(new CustomEvent('app-notification', { detail: notification }))
-        }
-      })
-  }
-}
-}
-
 
 const app = createApp(App)
 app.component('SearchableSelect', SearchableSelect)
@@ -352,6 +294,70 @@ window.$showNotification = showNotificationDeferred
 app.config.globalProperties.$hideNotification = closeGlassToast
 window.$hideNotification = closeGlassToast
 
+function scheduleEchoInit() {
+  if (!initialToken || !import.meta.env.VITE_PUSHER_APP_KEY) return
+
+  const run = async () => {
+    try {
+      const [{ default: Echo }, { default: Pusher }] = await Promise.all([
+        import('laravel-echo'),
+        import('pusher-js/dist/web/pusher'),
+      ])
+      if (import.meta.env.DEV) {
+        Pusher.logToConsole = true
+      }
+      window.Pusher = Pusher
+      window.Echo = new Echo({
+        broadcaster: 'pusher',
+        key: import.meta.env.VITE_PUSHER_APP_KEY,
+        cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+        forceTLS: true,
+        authEndpoint: `${getAppOrigin()}/broadcasting/auth`,
+        auth: {
+          headers: {
+            Authorization: `Bearer ${initialToken}`,
+            Accept: 'application/json',
+          },
+        },
+      })
+
+      const currentUserId = getStoredUserId()
+      if (currentUserId) {
+        window.Echo.private(`user.${currentUserId}`)
+          .notification((notification) => {
+            console.log('[Notification]', notification)
+
+            const type = String(notification.type || '').includes('status')
+              ? (notification.status === 'approved' ? 'success' : 'error')
+              : 'info'
+            showNotificationDeferred(notification.message || 'New notification', type)
+
+            if (notification.type === 'leave_request_parent_status') {
+              window.dispatchEvent(new CustomEvent('app-notification', {
+                detail: {
+                  ...notification,
+                  isParentStatus: true,
+                },
+              }))
+            } else {
+              window.dispatchEvent(new CustomEvent('app-notification', { detail: notification }))
+            }
+          })
+      }
+
+      window.dispatchEvent(new CustomEvent('echo-ready'))
+    } catch (error) {
+      console.warn('Echo init failed', error)
+    }
+  }
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(run, { timeout: 3000 })
+  } else {
+    setTimeout(run, 0)
+  }
+}
+
 // Global confirmation function
 import showConfirmation from './composables/useConfirmation'
 app.config.globalProperties.$showConfirmation = showConfirmation
@@ -472,3 +478,4 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 // Mount app
 app.mount('#app')
+scheduleEchoInit()

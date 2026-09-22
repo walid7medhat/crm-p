@@ -246,7 +246,15 @@ class LeadActivityController extends Controller
         }
 
         $comments = $lead->comments()
-            ->with(['user', 'attachments', 'mentionedUsers'])
+            ->with([
+                'user.roles:id,name',
+                'user.parent:id,name,display_name,parent_id',
+                'user.parent.parent:id,name,display_name,parent_id',
+                'user.parent.parent.parent:id,name,display_name,parent_id',
+                'attachments',
+                'mentionedUsers',
+                'mentions',
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
             

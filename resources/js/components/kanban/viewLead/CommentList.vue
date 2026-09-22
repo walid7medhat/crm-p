@@ -171,7 +171,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
+import { ref, computed, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import { formatBitrixRichText } from '@/utils/bitrixRichText'
@@ -200,6 +200,8 @@ const props = defineProps({
     }
 })
 
+const emit = defineEmits(['comments-loaded'])
+
 const comments = ref([])
 const activeHoverUserId = ref(null)
 const loading = ref(false)
@@ -226,10 +228,6 @@ const openPersonProfile = (lead, userId, event) => {
     showProfilePopup.value = true
 }
 
-
-watch(() => props.key, () => {
-    fetchComments()
-}, { immediate: true })
 
 // Format date to match image format
 const formatDateLabel = (dateString) => {
@@ -391,6 +389,10 @@ const groupedComments = computed(() => {
     })
 })
 
+const emitCommentsLoaded = () => {
+    emit('comments-loaded', comments.value.map((comment) => ({ comment: comment.comment })))
+}
+
 // Fetch comments from API (first page)
 const fetchComments = async () => {
     if (!props.leadId) {
@@ -410,6 +412,7 @@ const fetchComments = async () => {
         
         // Store pagination info
         nextPageUrl.value = responseData.links?.next || null
+        emitCommentsLoaded()
     } catch (error) {
         console.error('Error fetching comments:', error)
         comments.value = []
@@ -457,6 +460,7 @@ const loadOlderComments = async () => {
         
         // Update pagination info
         nextPageUrl.value = responseData.links?.next || null
+        emitCommentsLoaded()
     } catch (error) {
         console.error('Error loading older comments:', error)
     } finally {
@@ -480,12 +484,6 @@ watch(() => props.leadId, (newLeadId) => {
     }
 }, { immediate: true })
 
-onMounted(() => {
-    if (props.leadId) {
-        fetchComments()
-    }
-})
-
 // Method to add a new comment to the list
 const addComment = (newComment) => {
     if (!newComment) return
@@ -503,6 +501,7 @@ const addComment = (newComment) => {
         } else {
             comments.value.unshift(transformedComment)
         }
+        emitCommentsLoaded()
         return
     }
 
@@ -511,6 +510,7 @@ const addComment = (newComment) => {
     
     // Add to the beginning of the comments array (newest first)
     comments.value.unshift(transformedComment)
+    emitCommentsLoaded()
 }
 
 // Expose the method for parent component to call

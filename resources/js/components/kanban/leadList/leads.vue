@@ -1,19 +1,25 @@
 <template>
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': isSearching }">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': showKanbanSearchOverlay }">
         <div
-            v-if="isSearching"
+            v-if="showKanbanSearchOverlay"
             class="kanban-search-overlay"
             role="status"
             aria-live="polite"
             aria-label="Searching leads"
         >
+            <div class="kanban-search-overlay__beam" aria-hidden="true"></div>
             <div class="kanban-search-overlay__card">
-                <div class="kanban-empty-spinner" />
-                <span class="kanban-search-overlay__text">Loading…</span>
+                <span class="kanban-search-overlay__ring" aria-hidden="true"></span>
+                <iconify-icon icon="lucide:search" class="kanban-search-overlay__icon" aria-hidden="true" />
+                <span class="kanban-search-overlay__text">Searching leads</span>
+                <span class="kanban-search-overlay__dots" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </span>
             </div>
+            <div class="kanban-search-overlay__shimmer" aria-hidden="true"></div>
         </div>
         <div
-            v-else-if="showNoSearchResults"
+            v-if="showNoSearchResults"
             class="kanban-no-results-overlay"
             role="status"
             aria-live="polite"
@@ -1079,6 +1085,18 @@ const showNoSearchResults = computed(() => {
 
 const activeShortcutFilter = ref(null)
 
+const isBoardFilterActive = computed(() => {
+    return hasActiveSearchOrFilters.value || !!activeShortcutFilter.value
+})
+
+const showKanbanSearchOverlay = computed(() => {
+    return (
+        isFetching.value &&
+        columns.value.length > 0 &&
+        isBoardFilterActive.value
+    )
+})
+
 function normalizeLeadHeat(lead) {
     const status = String(lead?.status_lead || '').toLowerCase()
     const priority = String(lead?.priority || '').toLowerCase()
@@ -1454,8 +1472,10 @@ const fetchLeads = async (immediate = false, queryOverride = undefined, options 
         appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
     }
     const silent = !!options.silent
-    // Show searching feedback immediately when a search/filter is applied.
-    if (!silent && appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
+    const hasSearchCriteria =
+        (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length > 0) ||
+        !!activeShortcutFilter.value
+    if (!silent && hasSearchCriteria) {
         isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     }
@@ -1526,16 +1546,19 @@ const executeFetchLeads = async (options = {}) => {
     abortController.value = new AbortController()
     const hadColumns = columns.value.length > 0
     const silent = !!options.silent
+    const hasSearchCriteria =
+        (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length > 0) ||
+        !!activeShortcutFilter.value
     isFetching.value = true
     // Never block the board with "Updating…" when we already have columns (refresh / cache hit).
     if (!silent && !hadColumns) {
         isSearching.value = true
         loading.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
-    } else if (!silent && appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
+    } else if (!silent && hasSearchCriteria) {
         isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
-    }    
+    }
     try {
         const q = effectiveSearchParams.value
 
@@ -2414,6 +2437,7 @@ onMounted(async () => {
     
     nextTick(() => updateScrollArrows())
     window.addEventListener('resize', updateScrollArrows)
+    window.addEventListener('echo-ready', onEchoReady)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
     if (leadIdFromUrl) {
@@ -2434,6 +2458,7 @@ onUnmounted(() => {
     stopScroll()
     cancelPersonHoverHide()
     window.removeEventListener('resize', updateScrollArrows)
+    window.removeEventListener('echo-ready', onEchoReady)
     cleanup()
 })
 
@@ -2476,12 +2501,22 @@ const parseRevertWarningPayload = (event) => {
     }
 }
 
+const onEchoReady = () => {
+    initializeLeadUpdates()
+}
+
 const initializeLeadUpdates = () => {
+    if (echoListeners.value.length > 0) {
+        return
+    }
+
     const user = JSON.parse(localStorage.getItem('user'))
     if (!user || !window.Echo) {
         startPolling()
         return
     }
+
+    stopPolling()
 
     try {
         const channel = window.Echo.private(`user.${user.id}`)
@@ -3062,6 +3097,13 @@ const showLeadNotification = (event) => {
     })
 }
 
+const stopPolling = () => {
+    if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+        pollingInterval.value = null
+    }
+}
+
 const startPolling = () => {
     // Only start polling if not already polling and Echo is not available
     if (pollingInterval.value) {
@@ -3227,6 +3269,16 @@ function onMobileCardTouchEnd(column, event) {
     }
 }
 
+function findLeadInColumns(leadId) {
+    const id = Number(leadId)
+    if (!id) return null
+    for (const col of columns.value) {
+        const hit = (col.leads || []).find((lead) => Number(lead.id) === id)
+        if (hit) return hit
+    }
+    return null
+}
+
 const viewLead = (task) => {
     const dealId = task?.converted_to_deal_id
     if (dealId) {
@@ -3246,12 +3298,10 @@ const viewLead = (task) => {
 }
 
 watch(() => route.query.lead, (leadId) => {
-    if (leadId && viewLeadModalRef.value) {
-        const numericId = Number(leadId)
-        if (!isNaN(numericId) && numericId > 0) {
-            console.log('📌 Opening lead from URL:', numericId)
-            viewLeadModalRef.value.show(numericId)
-        }
+    if (!leadId) return
+    const numericId = Number(leadId)
+    if (!isNaN(numericId) && numericId > 0) {
+        openLeadView(numericId, findLeadInColumns(numericId))
     }
 }, { immediate: true })
 
@@ -4298,9 +4348,56 @@ const fetchRevertNotifications = async () => {
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 16px;
-    background: transparent;
+    padding-top: 20px;
+    background: linear-gradient(
+        180deg,
+        rgba(11, 7, 54, 0.08) 0%,
+        rgba(11, 7, 54, 0.02) 38%,
+        transparent 100%
+    );
     pointer-events: none;
+    overflow: hidden;
+}
+
+.kanban-search-overlay__beam {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(115, 62, 135, 0.15) 20%,
+        rgba(115, 62, 135, 0.95) 50%,
+        rgba(115, 62, 135, 0.15) 80%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: kanban-search-beam 1.1s ease-in-out infinite;
+}
+
+@keyframes kanban-search-beam {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+.kanban-search-overlay__shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 42%,
+        rgba(255, 255, 255, 0.07) 50%,
+        transparent 58%
+    );
+    background-size: 220% 100%;
+    animation: kanban-search-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes kanban-search-shimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
 }
 
 .kanban-no-results-overlay {
@@ -4325,25 +4422,104 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-search-overlay__card {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 16px;
+    padding: 11px 18px;
     border-radius: 999px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(115, 62, 135, 0.22);
+    box-shadow:
+        0 10px 32px rgba(11, 7, 54, 0.14),
+        0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1;
+}
+
+.kanban-search-overlay__ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 999px;
+    border: 2px solid rgba(115, 62, 135, 0.35);
+    animation: kanban-search-ring 1.4s ease-out infinite;
+}
+
+@keyframes kanban-search-ring {
+    0% {
+        transform: scale(0.92);
+        opacity: 0.85;
+    }
+    70% {
+        transform: scale(1.08);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1.08);
+        opacity: 0;
+    }
+}
+
+.kanban-search-overlay__icon {
+    font-size: 16px;
+    color: #733e87;
+    animation: kanban-search-icon 1.2s ease-in-out infinite;
+}
+
+@keyframes kanban-search-icon {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.12); opacity: 0.82; }
 }
 
 .kanban-search-overlay__text {
     font-size: 13px;
     font-weight: 600;
-    color: #475569;
+    color: #0b0736;
+    letter-spacing: 0.01em;
+}
+
+.kanban-search-overlay__dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.kanban-search-overlay__dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #733e87;
+    animation: kanban-search-dot 1s ease-in-out infinite;
+}
+
+.kanban-search-overlay__dots span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.kanban-search-overlay__dots span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes kanban-search-dot {
+    0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.35;
+    }
+    40% {
+        transform: translateY(-3px);
+        opacity: 1;
+    }
 }
 
 .kanban-outer--searching .kanban-column {
-    opacity: 0.72;
-    transition: opacity 0.2s ease;
+    opacity: 0.78;
+    filter: saturate(0.88);
+    transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.kanban-outer--searching .kanban-container {
+    pointer-events: none;
 }
 
 .kanban-container::-webkit-scrollbar {

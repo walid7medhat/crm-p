@@ -313,8 +313,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
-import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
+import { openLeadView } from '@/composables/useLeadViewModal.js'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadPoolCard from './LeadPoolCard.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
@@ -335,8 +335,6 @@ const hasActivePoolSearch = computed(() => {
     const q = currentQuery.value
     return !!(q && typeof q === 'object' && Object.keys(q).length > 0)
 })
-const showViewModal = ref(false)
-const selectedLeadId = ref(null)
 const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
@@ -777,8 +775,6 @@ const closeProfilePopup = () => {
 
 // View lead details
 const viewLead = (lead) => {
-    selectedLeadId.value = lead.id
-    showViewModal.value = true
     if (lead?.id) {
         // Sync the URL so a page refresh while this modal is open can restore it — unlike
         // the regular Kanban lead modal (which does this via the global instance in
@@ -809,7 +805,6 @@ const handleViewDuplicateLead = (leadId) => {
     selectedLeadId.value = leadId
     showViewModal.value = true
     if (leadId) {
-        router.push({ query: { ...route.query, lead: leadId } }).catch(() => {})
         api.get(`/leads/${leadId}/history/view`).catch(() => {})
     }
 }
@@ -947,9 +942,13 @@ defineExpose({
     gap: 8px 12px;
     margin-bottom: 8px;
     padding: 10px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid rgba(115, 62, 135, 0.18);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 1px 2px rgba(15, 23, 42, 0.05),
+        0 6px 16px rgba(115, 62, 135, 0.08);
 }
 
 .lead-pool-toolbar__btn {
@@ -961,26 +960,38 @@ defineExpose({
     border: 1px solid transparent;
     font-size: 13px;
     font-weight: 600;
+    line-height: 1.2;
     font-family: Montserrat, Inter, system-ui, sans-serif;
     cursor: pointer;
 }
 
+.lead-pool-toolbar__btn iconify-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
 .lead-pool-toolbar__btn--primary {
     color: #fff;
-    background: rgba(0, 167, 250, 0.35);
-    border-color: rgba(0, 167, 250, 0.5);
+    background: linear-gradient(135deg, #00a7fa 0%, #733e87 100%);
+    border-color: transparent;
 }
 
 .lead-pool-toolbar__btn--ghost {
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    color: #0B0736;
+    background: #f6f2f9;
+    border-color: rgba(115, 62, 135, 0.28);
+}
+
+.lead-pool-toolbar__btn--ghost:hover {
+    background: #efe6f5;
+    border-color: rgba(115, 62, 135, 0.42);
 }
 
 .lead-pool-toolbar__btn--assign {
     margin-left: auto;
     color: #fff;
     background: linear-gradient(135deg, #00a7fa 0%, #733e87 100%);
+    border-color: transparent;
 }
 
 .lead-pool-toolbar__btn--assign:disabled {
@@ -999,24 +1010,47 @@ defineExpose({
 .lead-pool-toolbar__select-all {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin: 0;
-    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
+    color: #1e293b;
+    cursor: pointer;
+}
+
+.lead-pool-toolbar__select-all input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #733e87;
     cursor: pointer;
 }
 
 .lead-pool-toolbar__count {
     font-size: 12px;
     font-weight: 700;
-    color: #7dd3fc;
+    color: #733e87;
+    background: rgba(115, 62, 135, 0.1);
+    border-radius: 999px;
+    padding: 4px 10px;
 }
 
 .lead-pool-toolbar__tip {
+    display: inline-flex;
+    align-items: center;
     margin: 0 0 10px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.55);
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(115, 62, 135, 0.14);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #475569;
 }
 
 .leads-grid--select-mode {

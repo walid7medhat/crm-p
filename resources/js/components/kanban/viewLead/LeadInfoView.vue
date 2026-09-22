@@ -900,31 +900,21 @@ const portalLinks = computed(() => {
   })
 })
 
-async function loadPortalLinksFromComments(leadId) {
+function ingestCommentPortalLinks(rows) {
   commentPortalLinks.value = []
-  if (!leadId) return
-  try {
-    const response = await api.get(`/leads/${leadId}/comments`, { params: { per_page: 50 } })
-    const payload = response?.data?.data ?? response?.data
-    const rows = Array.isArray(payload?.data)
-      ? payload.data
-      : (Array.isArray(payload) ? payload : [])
-    const found = []
-    rows.forEach((row) => {
-      extractPortalLinks(row?.comment).forEach((link) => found.push(link))
-    })
-    commentPortalLinks.value = found
-  } catch (error) {
-    // Non-blocking — More Information / comment list still show links when available
-    console.warn('Could not load comments for portal links', error)
-  }
+  if (!rows?.length) return
+  const found = []
+  rows.forEach((row) => {
+    extractPortalLinks(row?.comment).forEach((link) => found.push(link))
+  })
+  commentPortalLinks.value = found
 }
 
 watch(
     () => props.lead?.id,
     (id) => {
         showMatchingProperties.value = false
-        loadPortalLinksFromComments(id)
+        commentPortalLinks.value = []
         if (!id) return
         // Matching listings can be heavy — load after lead details are visible.
         setTimeout(() => {
@@ -933,6 +923,10 @@ watch(
     },
     { immediate: true }
 )
+
+defineExpose({
+    ingestCommentPortalLinks,
+})
 
 // Person modal state
 const showPersonModal = ref(false)

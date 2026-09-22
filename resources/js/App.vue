@@ -141,6 +141,10 @@ export default {
       document.body.classList.toggle('app-has-video-bg', showLayout.value)
     }
 
+    const preloadViewLeadModal = () => {
+      import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
+    }
+
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
       window.__openLeadView = openLeadView
@@ -148,9 +152,11 @@ export default {
       syncVideoBgClass()
       if (!showLayout.value) {
         resetSidebarLayout()
+      }
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(preloadViewLeadModal, { timeout: 4000 })
       } else {
-        // Warm ViewLeadModal chunk so first card open after reload isn't blank.
-        import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
+        setTimeout(preloadViewLeadModal, 2000)
       }
     })
     onUnmounted(() => {
@@ -165,6 +171,16 @@ export default {
         resetSidebarLayout()
       }
     })
+
+    watch(
+      () => route.path,
+      (path) => {
+        if (path === '/kanban' || path === '/kanban_deal') {
+          preloadViewLeadModal()
+        }
+      },
+      { immediate: true },
+    )
 
     return {
       isAppLoading,
