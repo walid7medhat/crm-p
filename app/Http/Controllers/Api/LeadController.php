@@ -1467,13 +1467,15 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 // السيلز: Updated و Stage Changed بس (ده بيشيل View و Created أوتوماتيك)
                 $query->whereIn('changes->action', ['updated', 'stage_changed']);
 
-                // لو الليد اتعمله Reassign: بعد الـ Assign الأخير بس
+                // بعد آخر Assign بس — سواء كان ده أول تعيين للّيد (مثلاً من Lead Pool، حيث
+                // old_person_id بيبقى null) أو Reassign من سيلز لسيلز. في الحالتين السيلز
+                // ميشوفش تاريخ الليد قبل ما يتعين ليه.
                 $assignment = LeadHistory::where('lead_id', $lead->id)
                     ->where('changes->action', 'assigned')
                     ->latest('id')
                     ->first();
 
-                if ($assignment && ! empty(data_get($assignment, 'changes.old_person_id'))) {
+                if ($assignment) {
                     $query->where('id', '>', $assignment->id);
                 }
             }
