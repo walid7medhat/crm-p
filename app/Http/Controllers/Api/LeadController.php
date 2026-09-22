@@ -1459,8 +1459,13 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             }
 
             if (! $isAdmin) {
-                // أحداث Pool ← ليا مخفية عن غير الأدمن
-                $query->whereNull('changes->from_lead_pool');
+                // أحداث Pool ← ليا مخفية عن غير الأدمن. لازم نستثني from_lead_pool=true بس —
+                // whereNull لوحدها كانت بتشيل أي حدث بقيمة from_lead_pool=false صراحة (مش
+                // بس اللي مالهوش المفتاح خالص)، فكانت بتشيل كل الـ history تقريبًا للسيلز.
+                $query->where(function ($q) {
+                    $q->whereNull('changes->from_lead_pool')
+                      ->orWhere('changes->from_lead_pool', false);
+                });
             }
 
             if (! $isAdmin && ! $isManager) {
