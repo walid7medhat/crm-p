@@ -453,7 +453,7 @@
     
                                         <!-- Lead Type (Sale/Rent) - جديد -->
                                         <div v-if="shouldShowField('lead_type')" class="col-md-4" style="order: 3;">
-                                            <label class="form-label-custom">Lead Type <span class="text-danger">*</span></label>
+                                            <label class="form-label-custom">Lead Type</label>
                                             <v-select 
                                                 v-model="form.lead_type" 
                                                 :options="leadTypeOptions" 
@@ -476,7 +476,7 @@
                                         
                                         <!-- Property Status (Ready/Off Plan/Both) - جديد -->
                                         <div v-if="shouldShowField('property_status') && !isRentOnly" class="col-md-4" style="order: 4;">
-                                            <label class="form-label-custom">Property Status <span class="text-danger">*</span></label>
+                                            <label class="form-label-custom">Property Status</label>
                                             <v-select 
                                                 v-model="form.property_status" 
                                                 :options="propertyStatusOptions" 
@@ -1619,12 +1619,13 @@ watch(selectedExistingClient, (client) => {
             
             console.log('✅ Lead created successfully:', response.data)
             
-            // Success: close modal, reset form, and emit event to refetch leads
+            // Success: close modal, reset form, and emit the created lead so the
+            // parent can insert it into the board locally (no refetch/refresh)
             show.value = false
             resetForm()
-            
+
             console.log('📤 Emitting lead-created event to parent')
-            emit('lead-created', response.data)
+            emit('lead-created', response.data?.data || response.data)
             
             // Show success notification
             $showNotification('Lead created successfully!', 'success')

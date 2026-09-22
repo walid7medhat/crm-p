@@ -1113,6 +1113,56 @@ function normalizeLeadInteraction(lead) {
     return null
 }
 
+// Matches StageController::getStagesWithLeads' chip-count SQL exactly:
+// SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'/'no_answer' ...).
+// normalizeLeadInteraction() alone isn't enough here — it's shared with the shortcut-chip
+// filter, which intentionally matches interaction_result across every stage, not just 5.
+function normalizeLeadInteractionForAnalytics(lead) {
+    if (Number(lead?.stage_id) !== 5) return null
+    return normalizeLeadInteraction(lead)
+}
+
+let analyticsRefreshTimer = null
+// Debounced — a stage-change save can trigger this from more than one place
+// (optimistic update + server response reconcile) within the same tick.
+function scheduleLeadAnalyticsRefresh() {
+    if (analyticsRefreshTimer) clearTimeout(analyticsRefreshTimer)
+    analyticsRefreshTimer = setTimeout(refreshLeadAnalytics, 250)
+}
+
+// Re-fetches the authoritative "Answered" / "No Answer" (and temp) chip counts from the
+// backend — same filters/permissions as the board fetch, just without the stages+leads
+// payload. Called instead of estimating the delta locally, so it can't drift out of sync.
+async function refreshLeadAnalytics() {
+    try {
+        const params = buildLeadSearchApiParams(effectiveSearchParams.value)
+        const response = await api.get('/stages/kanban/lead-analytics', { params })
+        const analytics = response?.data?.data
+        if (analytics && typeof analytics === 'object') {
+            leadAnalyticsServer.value = {
+                tempCold: Number(analytics.tempCold) || 0,
+                tempWarm: Number(analytics.tempWarm) || 0,
+                tempHot: Number(analytics.tempHot) || 0,
+                callAnswered: Number(analytics.callAnswered) || 0,
+                callNoAnswer: Number(analytics.callNoAnswer) || 0,
+            }
+        }
+    } catch (error) {
+        console.error('Failed to refresh lead analytics', error)
+    }
+}
+
+// Refresh the "Answered" / "No Answer" chip counts from the backend when a lead's
+// interaction_result (or stage) changes locally (modal save, real-time update, drag
+// revert) — otherwise they only reflect the last /stages-with-leads fetch until the
+// board is refreshed.
+function adjustInteractionAnalytics(oldLead, newLead) {
+    const oldBucket = normalizeLeadInteractionForAnalytics(oldLead)
+    const newBucket = normalizeLeadInteractionForAnalytics(newLead)
+    if (oldBucket === newBucket) return
+    scheduleLeadAnalyticsRefresh()
+}
+
 // Populated from the backend `analytics` field on every /stages-with-leads response.
 // `countLoadedLeads` would only see the first 20 leads per stage that are currently
 // loaded — the chip totals must reflect the whole filtered set, not the visible page.
@@ -2467,6 +2517,10 @@ defineExpose({
     fetchLeads,
     isSearching,
     isFetching,
+    // Wrapped (not referenced directly) because handleNewLead is declared
+    // further down the script — a direct reference here would hit the
+    // temporal dead zone before setup() finishes running.
+    handleNewLead: (lead) => handleNewLead(lead),
 })
 
 // Initialize real-time updates with Echo/Pusher
@@ -2800,7 +2854,8 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
             const index = column.leads.findIndex(l => l && l.id === lead.id)
             if (index !== -1) {
                 leadFound = true
-                
+                adjustInteractionAnalytics(column.leads[index], lead)
+
                 if (column.status !== stageId) {
                     // Lead moved to different stage
                     column.leads.splice(index, 1)
@@ -3812,6 +3867,7 @@ async function applyProgrammaticStageChange(lead, targetColumn) {
 }
 
 async function moveLeadWithStageChange(lead, newStageId) {
+    const oldLeadSnapshot = { ...lead }
     try {
         const response = await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
@@ -3821,6 +3877,7 @@ async function moveLeadWithStageChange(lead, newStageId) {
             Object.assign(lead, freshLead)
         }
         lead.stage_id = newStageId
+        adjustInteractionAnalytics(oldLeadSnapshot, lead)
         columns.value.forEach((col) => {
             col.leads = col.leads.filter((l) => l.id !== lead.id)
         })

@@ -1,5 +1,5 @@
 <template>
-    <div class="stage-selector-wrapper py-3 pt-0 pb-0">
+    <div class="stage-selector-wrapper py-3 pt-0 pb-0" :class="{ 'stage-selector-disabled': disabled }" :title="disabled ? 'Stage cannot be changed from here' : undefined">
         <!-- Track = exact height of pills row so arrows align vertically in the middle -->
         <div class="stage-selector-track">
             <div
@@ -67,6 +67,10 @@ const props = defineProps({
        requireValidation: {
         type: Boolean,
         default: true
+    },
+    disabled: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -292,6 +296,7 @@ const selectedStageIndex = computed(() => {
 })
 
 const selectStage = (index) => {
+    if (props.disabled) return
     if (stages.value[index]) {
         const selectedStage = stages.value[index]
         const newStageId = selectedStage.id
@@ -357,6 +362,12 @@ onUnmounted(() => {
 .stage-selector-wrapper {
     overflow-x: clip;
     overflow-y: visible;
+}
+
+.stage-selector-disabled .stage-pill {
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .stage-selector-track {

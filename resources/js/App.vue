@@ -46,6 +46,8 @@
       v-model="showLeadViewModal"
       :leadId="leadViewModalId"
       :initialLead="leadViewModalSeed"
+      :disableStageChange="leadViewModalDisableStageChange"
+      @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
   </div>
@@ -53,7 +55,7 @@
 
 <script>
 import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
 import Footer from './components/layout/footer/index.vue'
@@ -67,7 +69,7 @@ import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
-import { useLeadViewModal } from './composables/useLeadViewModal.js'
+import { useLeadViewModal, initLeadViewModal, checkUrlForLead } from './composables/useLeadViewModal.js'
 import { useImpersonation } from './composables/useImpersonation.js'
 
 export default {
@@ -85,6 +87,10 @@ export default {
   },
   setup() {
     const route = useRoute()
+    const router = useRouter()
+    // Gives openLeadView()/closeLeadView() (used app-wide, e.g. LeadPool.vue) access to
+    // the router so their own ?lead= URL sync actually runs instead of silently no-op'ing.
+    initLeadViewModal(router, route)
     const { isAppLoading, onLoaderHidden } = useAppLoader()
     const { isNavigating } = useNavProgress()
     const { loadFromCache: loadBackgroundFromCache } = useBackground()
@@ -92,6 +98,7 @@ export default {
       showLeadViewModal,
       leadViewModalId,
       leadViewModalSeed,
+      leadViewModalDisableStageChange,
       openLeadView,
       notifyLeadViewUpdated,
     } = useLeadViewModal()
@@ -158,6 +165,10 @@ export default {
       } else {
         setTimeout(preloadViewLeadModal, 2000)
       }
+      // Auto-open the lead modal on a hard refresh with ?lead= in the URL.
+      // Done once here (page-agnostic) instead of per-page, so tabs like
+      // Lead Pool that never duplicated this check get it too.
+      checkUrlForLead()
     })
     onUnmounted(() => {
       window.__openPropertyChat = null
@@ -198,6 +209,7 @@ export default {
       showLeadViewModal,
       leadViewModalId,
       leadViewModalSeed,
+      leadViewModalDisableStageChange,
       notifyLeadViewUpdated,
       impersonatorUser,
       returnToSuperAdmin,

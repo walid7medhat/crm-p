@@ -287,7 +287,6 @@ class StageController extends Controller
         }
 
         // ================= base leads query with permissions =================
-        $baseLeadsQuery = Lead::query();
         $kanbanEagerLoads = [
             'addedBy:id,name,display_name,avatar',
             // parent_id: needed by KanbanLeadCardResource to resolve reports-to/branch (parent/admin_parent/office chain).
@@ -296,188 +295,7 @@ class StageController extends Controller
             'area:id,name',
         ];
 
-        // ================= permissions =================
-        if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
-            // super admin sees everything
-        } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-            $subordinatesIds = $user->getAllSubordinatesIds();
-            // Current responsible person only — a lead reassigned outside the team
-            // must stop showing up here just because someone on the team added it.
-            $baseLeadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
-            if ($user->hasAnyRole(['manager', 'team_lead'])) {
-                $baseLeadsQuery->whereNull('revert');
-            }
-        } else {
-            // Once reassigned, a lead a sales agent merely added no longer belongs to them —
-            // visibility is by current responsible person only, not by who created it.
-            $baseLeadsQuery->where('responsible_person_id', $user->id)
-                ->whereNull('revert');
-        }
-
-        // ================= apply all filters (unchanged logic) =================
-        $baseLeadsQuery->where(function ($q) use ($request) {
-            if ($request->filled('changed_by')) {
-                $q->whereHas('histories', function ($query) use ($request) {
-                    $query->where('changes->action', 'stage_changed')
-                          ->where('user_id', $request->changed_by);
-                });
-            }
-            if ($request->filled('responsible_person_id')) {
-                $q->where('responsible_person_id', $request->responsible_person_id);
-            }
-            if ($request->filled('stage_id')) {
-                $q->where('stage_id', $request->stage_id);
-            }
-            if ($request->filled('email')) {
-                $q->where('email', $request->email);
-            }
-            if ($request->filled('work_phone')) {
-                $q->where(function ($query) use ($request) {
-                    $query->where('work_phone', $request->work_phone)
-                          ->orWhere('work_phone_2', $request->work_phone);
-                });
-            }
-            if ($request->filled('added_by')) {
-                $q->where('added_by', $request->added_by);
-            }
-            if ($request->filled('created_from')) {
-                $q->whereDate('created_at', '>=', $request->created_from);
-            }
-            if ($request->filled('created_to')) {
-                $q->whereDate('created_at', '<=', $request->created_to);
-            }
-            if ($request->filled('created_at')) {
-                $q->whereDate('created_at', '=', $request->created_at);
-            }
-            $this->applyLeadSourceFilter($q, $request);
-            if ($request->filled('bedrooms')) {
-                $q->where('bedrooms', $request->bedrooms);
-            }
-            if ($request->filled('source_information')) {
-                $q->where('source_information', 'like', "%{$request->source_information}%");
-            }
-            if ($request->filled('closed')) {
-                $closed = Stage::where('stage_type', 'lead')
-                    ->where('name', 'like', '%Converted%')
-                    ->orderBy('order', 'desc')
-                    ->first();
-                $q->where('stage_id', $closed->id);
-            }
-            if ($request->filled('lead_name')) {
-                $q->where('lead_name', 'like', "%{$request->lead_name}%");
-            }
-            if ($request->filled('first_name')) {
-                $q->where('first_name', 'like', "%{$request->first_name}%");
-            }
-            if ($request->filled('lead_branch_source')) {
-                $q->where('lead_branch_source', $request->lead_branch_source);
-            }
-            if ($request->filled('office_branch')) {
-                $officeBranches = $request->office_branch;
-                if (is_string($officeBranches)) {
-                    $officeBranches = explode(',', $officeBranches);
-                }
-                if (is_array($officeBranches) && count($officeBranches) > 0) {
-                    $allTeamMembers = [];
-                    foreach ($officeBranches as $officeBranchId) {
-                        if (is_numeric($officeBranchId)) {
-                            $branchTeam = User::find($officeBranchId);
-                            if ($branchTeam) {
-                                $teamMembers = $branchTeam->getAllSubordinatesIds();
-                                if (is_array($teamMembers)) {
-                                    $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
-                                }
-                                $allTeamMembers[] = $branchTeam->id;
-                            }
-                        }
-                    }
-                    $allTeamMembers = array_unique($allTeamMembers);
-                    if (!empty($allTeamMembers)) {
-                        $q->whereIn('responsible_person_id', $allTeamMembers);
-                    }
-                } elseif (is_numeric($officeBranches)) {
-                    $branchTeam = User::find($officeBranches);
-                    if ($branchTeam) {
-                        $teamMembers = $branchTeam->getAllSubordinatesIds();
-                        if (is_array($teamMembers)) {
-                            $teamMembers[] = $branchTeam->id;
-                            $q->whereIn('responsible_person_id', $teamMembers);
-                        }
-                    }
-                }
-            }
-            if ($request->filled('team_id')) {
-                $teamLead = User::find($request->team_id);
-                if ($teamLead) {
-                    $teamMemberIds = $teamLead->getAllSubordinatesIds();
-                    $teamMemberIds[] = $teamLead->id;
-                    $q->whereIn('responsible_person_id', $teamMemberIds);
-                }
-            }
-            if ($request->filled('status_lead')) {
-                $q->where('status_lead', $request->status_lead);
-            }
-            if ($request->filled('why_lost_lead')) {
-                $q->where('why_lost_lead', $request->why_lost_lead);
-            }
-            if ($request->filled('lead_type') && $request->lead_type != 'both') {
-                $q->where(function ($q) use ($request) {
-                    $q->where('lead_type', $request->lead_type)
-                      ->orWhere('lead_type', 'both');
-                });
-            }
-            if ($request->filled('property_status') && $request->property_status != 'both') {
-                $q->where(function ($q) use ($request) {
-                    $q->where('property_status', $request->property_status)
-                      ->orWhere('property_status', 'both');
-                });
-            }
-            $this->applyBudgetRangeFilter($q, $request);
-            if ($request->filled('property_type_id')) {
-                $q->where('property_type_id', $request->property_type_id);
-            }
-            if ($request->has('area_id')) {
-                $areaId = $request->area_id;
-                $area = Area::find($areaId);
-                if ($area) {
-                    $childAreaIds = $area->getChildIdsAttribute();
-                    $allAreaIds = array_merge([$areaId], $childAreaIds);
-                    $q->whereIn('area_id', $allAreaIds);
-                }
-            }
-            if ($request->filled('interaction_result')) {
-                $q->where('interaction_result', $request->interaction_result);
-            }
-            if ($request->filled('purpose_buying')) {
-                $q->where('purpose_buying', $request->purpose_buying);
-            }
-            if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
-                $assignedFrom = $request->assigned_from;
-                $assignedTo = $request->assigned_to;
-                $assignedDate = $request->assigned_at;
-                $q->whereHas('histories', function ($query) use ($assignedFrom, $assignedTo, $assignedDate) {
-                    $query->where('changes->action', 'assigned');
-                    if ($assignedDate) {
-                        $query->whereDate('created_at', $assignedDate);
-                    } else {
-                        if ($assignedFrom) {
-                            $query->whereDate('created_at', '>=', $assignedFrom);
-                        }
-                        if ($assignedTo) {
-                            $query->whereDate('created_at', '<=', $assignedTo);
-                        }
-                    }
-                });
-            }
-            if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
-                LeadTextSearch::apply($q, (string) $request->search, [
-                    'comments' => false,
-                    'relations' => true,
-                    'admin' => true,
-                    'lean' => true,
-                ]);
-            }
-        });
+        $baseLeadsQuery = $this->scopedLeadsQuery($request, $user);
 
         // Below min length is ignored (normal board) — avoids 1-char full-table LIKE scans.
         $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
@@ -772,6 +590,250 @@ class StageController extends Controller
         return ApiResponse::error($e->getMessage());
     }
 }
+
+    /**
+     * Lightweight re-fetch of just the chip totals (temp cold/warm/hot, call answered/no
+     * answer) — same filters/permissions as getStagesWithLeads(), without the stages+leads
+     * payload. Lets the frontend refresh these counts from the backend after a stage
+     * change instead of estimating the delta locally.
+     */
+    public function getLeadAnalytics(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            $baseLeadsQuery = $this->scopedLeadsQuery($request, $user);
+
+            $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
+            $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
+
+            if ($isTextSearch || $skipSearchRanking) {
+                $leadAnalytics = [
+                    'tempCold' => 0,
+                    'tempWarm' => 0,
+                    'tempHot' => 0,
+                    'callAnswered' => 0,
+                    'callNoAnswer' => 0,
+                ];
+            } else {
+                $heatCounts = (clone $baseLeadsQuery)
+                    ->selectRaw(
+                        "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                        SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
+                        SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                        SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                        SUM(CASE WHEN stage_id = 5 AND interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                    )
+                    ->first();
+
+                $leadAnalytics = [
+                    'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
+                    'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
+                    'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
+                    'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
+                    'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
+                ];
+            }
+
+            return ApiResponse::success($leadAnalytics, 'Lead analytics retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error($e->getMessage());
+        }
+    }
+
+    /**
+     * Base Lead query scoped by the current user's visibility permissions and every
+     * search/shortcut filter param — shared by getStagesWithLeads() and getLeadAnalytics()
+     * so the two endpoints' counts can never drift apart.
+     */
+    private function scopedLeadsQuery(Request $request, User $user)
+    {
+        $baseLeadsQuery = Lead::query();
+
+        // ================= permissions =================
+        if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
+            // super admin sees everything
+        } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            // Current responsible person only — a lead reassigned outside the team
+            // must stop showing up here just because someone on the team added it.
+            $baseLeadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
+            if ($user->hasAnyRole(['manager', 'team_lead'])) {
+                $baseLeadsQuery->whereNull('revert');
+            }
+        } else {
+            // Once reassigned, a lead a sales agent merely added no longer belongs to them —
+            // visibility is by current responsible person only, not by who created it.
+            $baseLeadsQuery->where('responsible_person_id', $user->id)
+                ->whereNull('revert');
+        }
+
+        // ================= apply all filters (unchanged logic) =================
+        $baseLeadsQuery->where(function ($q) use ($request) {
+            if ($request->filled('changed_by')) {
+                $q->whereHas('histories', function ($query) use ($request) {
+                    $query->where('changes->action', 'stage_changed')
+                          ->where('user_id', $request->changed_by);
+                });
+            }
+            if ($request->filled('responsible_person_id')) {
+                $q->where('responsible_person_id', $request->responsible_person_id);
+            }
+            if ($request->filled('stage_id')) {
+                $q->where('stage_id', $request->stage_id);
+            }
+            if ($request->filled('email')) {
+                $q->where('email', $request->email);
+            }
+            if ($request->filled('work_phone')) {
+                $q->where(function ($query) use ($request) {
+                    $query->where('work_phone', $request->work_phone)
+                          ->orWhere('work_phone_2', $request->work_phone);
+                });
+            }
+            if ($request->filled('added_by')) {
+                $q->where('added_by', $request->added_by);
+            }
+            if ($request->filled('created_from')) {
+                $q->whereDate('created_at', '>=', $request->created_from);
+            }
+            if ($request->filled('created_to')) {
+                $q->whereDate('created_at', '<=', $request->created_to);
+            }
+            if ($request->filled('created_at')) {
+                $q->whereDate('created_at', '=', $request->created_at);
+            }
+            $this->applyLeadSourceFilter($q, $request);
+            if ($request->filled('bedrooms')) {
+                $q->where('bedrooms', $request->bedrooms);
+            }
+            if ($request->filled('source_information')) {
+                $q->where('source_information', 'like', "%{$request->source_information}%");
+            }
+            if ($request->filled('closed')) {
+                $closed = Stage::where('stage_type', 'lead')
+                    ->where('name', 'like', '%Converted%')
+                    ->orderBy('order', 'desc')
+                    ->first();
+                $q->where('stage_id', $closed->id);
+            }
+            if ($request->filled('lead_name')) {
+                $q->where('lead_name', 'like', "%{$request->lead_name}%");
+            }
+            if ($request->filled('first_name')) {
+                $q->where('first_name', 'like', "%{$request->first_name}%");
+            }
+            if ($request->filled('lead_branch_source')) {
+                $q->where('lead_branch_source', $request->lead_branch_source);
+            }
+            if ($request->filled('office_branch')) {
+                $officeBranches = $request->office_branch;
+                if (is_string($officeBranches)) {
+                    $officeBranches = explode(',', $officeBranches);
+                }
+                if (is_array($officeBranches) && count($officeBranches) > 0) {
+                    $allTeamMembers = [];
+                    foreach ($officeBranches as $officeBranchId) {
+                        if (is_numeric($officeBranchId)) {
+                            $branchTeam = User::find($officeBranchId);
+                            if ($branchTeam) {
+                                $teamMembers = $branchTeam->getAllSubordinatesIds();
+                                if (is_array($teamMembers)) {
+                                    $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
+                                }
+                                $allTeamMembers[] = $branchTeam->id;
+                            }
+                        }
+                    }
+                    $allTeamMembers = array_unique($allTeamMembers);
+                    if (!empty($allTeamMembers)) {
+                        $q->whereIn('responsible_person_id', $allTeamMembers);
+                    }
+                } elseif (is_numeric($officeBranches)) {
+                    $branchTeam = User::find($officeBranches);
+                    if ($branchTeam) {
+                        $teamMembers = $branchTeam->getAllSubordinatesIds();
+                        if (is_array($teamMembers)) {
+                            $teamMembers[] = $branchTeam->id;
+                            $q->whereIn('responsible_person_id', $teamMembers);
+                        }
+                    }
+                }
+            }
+            if ($request->filled('team_id')) {
+                $teamLead = User::find($request->team_id);
+                if ($teamLead) {
+                    $teamMemberIds = $teamLead->getAllSubordinatesIds();
+                    $teamMemberIds[] = $teamLead->id;
+                    $q->whereIn('responsible_person_id', $teamMemberIds);
+                }
+            }
+            if ($request->filled('status_lead')) {
+                $q->where('status_lead', $request->status_lead);
+            }
+            if ($request->filled('why_lost_lead')) {
+                $q->where('why_lost_lead', $request->why_lost_lead);
+            }
+            if ($request->filled('lead_type') && $request->lead_type != 'both') {
+                $q->where(function ($q) use ($request) {
+                    $q->where('lead_type', $request->lead_type)
+                      ->orWhere('lead_type', 'both');
+                });
+            }
+            if ($request->filled('property_status') && $request->property_status != 'both') {
+                $q->where(function ($q) use ($request) {
+                    $q->where('property_status', $request->property_status)
+                      ->orWhere('property_status', 'both');
+                });
+            }
+            $this->applyBudgetRangeFilter($q, $request);
+            if ($request->filled('property_type_id')) {
+                $q->where('property_type_id', $request->property_type_id);
+            }
+            if ($request->has('area_id')) {
+                $areaId = $request->area_id;
+                $area = Area::find($areaId);
+                if ($area) {
+                    $childAreaIds = $area->getChildIdsAttribute();
+                    $allAreaIds = array_merge([$areaId], $childAreaIds);
+                    $q->whereIn('area_id', $allAreaIds);
+                }
+            }
+            if ($request->filled('interaction_result')) {
+                $q->where('interaction_result', $request->interaction_result);
+            }
+            if ($request->filled('purpose_buying')) {
+                $q->where('purpose_buying', $request->purpose_buying);
+            }
+            if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
+                $assignedFrom = $request->assigned_from;
+                $assignedTo = $request->assigned_to;
+                $assignedDate = $request->assigned_at;
+                $q->whereHas('histories', function ($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+                    $query->where('changes->action', 'assigned');
+                    if ($assignedDate) {
+                        $query->whereDate('created_at', $assignedDate);
+                    } else {
+                        if ($assignedFrom) {
+                            $query->whereDate('created_at', '>=', $assignedFrom);
+                        }
+                        if ($assignedTo) {
+                            $query->whereDate('created_at', '<=', $assignedTo);
+                        }
+                    }
+                });
+            }
+            if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
+                LeadTextSearch::apply($q, (string) $request->search, [
+                    'comments' => false,
+                    'relations' => true,
+                    'admin' => true,
+                    'lean' => true,
+                ]);
+            }
+        });
+
+        return $baseLeadsQuery;
+    }
 
     /**
      * Load more leads for a specific stage (infinite scroll)

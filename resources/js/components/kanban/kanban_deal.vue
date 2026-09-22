@@ -902,21 +902,21 @@ const handleDealCreated = (payload) => {
     }
 }
 
-const handleLeadCreated = async () => {
-    console.log('🎯 handleLeadCreated triggered')
-    
+const handleLeadCreated = async (lead) => {
+    console.log('🎯 handleLeadCreated triggered', lead)
+
     // Wait for DOM to update
     await nextTick()
-    
-    // Don't refetch - real-time updates will handle the new lead via Pusher events
-    // Only refetch if real-time updates are not available (fallback)
-    if (leadsRef.value && (!window.Echo || !JSON.parse(localStorage.getItem('user')))) {
-        const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
-        
-        if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-            console.log('✅ Calling fetchLeads after lead creation (no real-time updates)')
-            await leadsComponent.fetchLeads(true) // Immediate execution
-        }
+
+    // Insert the new lead into the board locally — no full refetch/refresh.
+    // Pusher will also deliver a 'created' event for other viewers, but
+    // handleNewLead() dedupes by id so this is safe either way.
+    const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+    if (leadsComponent && lead?.id && typeof leadsComponent.handleNewLead === 'function') {
+        leadsComponent.handleNewLead(lead)
+    } else if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
+        // Fallback if the created lead payload is missing for any reason
+        await leadsComponent.fetchLeads(true)
     }
 }
 

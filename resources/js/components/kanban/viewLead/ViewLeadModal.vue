@@ -22,8 +22,9 @@
             </div>
 
             <!-- Stages Progress -->
-            <StageSelector v-model="leadStageId"   
+            <StageSelector v-model="leadStageId"
             :require-validation="true"
+            :disabled="disableStageChange"
             :class="pt-0"
             @stage-change-request="handleStageChangeRequest"/>
 
@@ -127,6 +128,23 @@ const props = defineProps({
     zIndex: {
         type: Number,
         default: 1040
+    },
+    /**
+     * This component is mounted twice at once in the app — globally in App.vue, and
+     * locally inside LeadPool.vue — and both instances would otherwise read/write the
+     * SAME shared route.query.lead, stepping on each other's open/close state (one
+     * instance's own show/leadId gets reset by the other reacting to a URL change it
+     * didn't cause). Only one instance should own that query param; the other passes
+     * syncUrl=false and manages its own persistence separately (see LeadPool.vue).
+     */
+    syncUrl: {
+        type: Boolean,
+        default: true
+    },
+    /** Lead Pool leads shouldn't be movable from inside this modal. */
+    disableStageChange: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -216,8 +234,9 @@ const fetchStageOrders = async () => {
 
 // Handle stage change request from StageSelector
 const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
+    if (props.disableStageChange) return
     console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
-    
+
     const targetStageOrder = stageOrderMap.value[stageId] || stageOrder || 0
 
     const normalizeStageName = (name) =>
@@ -571,6 +590,7 @@ let fetchLeadInFlightId = null
 let fetchLeadGeneration = 0
 
 const fetchLead = async ({ silent = false } = {}) => {
+    console.log('[ViewLeadModal] fetchLead called', { propsLeadId: props.leadId })
     if (!props.leadId) return
     const leadIdNum = Number(props.leadId)
 
@@ -741,6 +761,8 @@ const cleanup = () => {
     }
 }
 const checkUrlForLead = () => {
+  console.log('[ViewLeadModal] checkUrlForLead', { syncUrl: props.syncUrl, routeQueryLead: route.query.lead, showValue: show.value, routePath: route.path })
+  if (!props.syncUrl) return
   const leadIdFromUrl = route.query.lead
   if (leadIdFromUrl && !show.value) {
     const numericId = Number(leadIdFromUrl)
@@ -749,6 +771,7 @@ const checkUrlForLead = () => {
         emit('update:leadId', numericId)
       }
       show.value = true
+      console.log('[ViewLeadModal] checkUrlForLead -> show set true', { numericId })
     }
   }
 }
@@ -764,7 +787,7 @@ onUnmounted(() => {
 
 const handleClose = () => {
   show.value = false
-  if (route.query.lead) {
+  if (props.syncUrl && route.query.lead) {
     // No `path` — this modal is embedded on more than one page (Kanban, Lead Pool inside
     // kanban_deal, …), so pushing a query-only location keeps whichever page it's actually
     // on instead of always redirecting to /kanban.
@@ -781,9 +804,11 @@ const showWithLeadId = (leadId) => {
 
   emit('update:leadId', numericId)
 
-  router.push({
-    query: { lead: numericId }
-  }).catch(() => {})
+  if (props.syncUrl) {
+    router.push({
+      query: { lead: numericId }
+    }).catch(() => {})
+  }
 
   show.value = true
 }
@@ -791,7 +816,7 @@ const showWithLeadId = (leadId) => {
 const hideModal = () => {
   show.value = false
 
-  if (route.query.lead) {
+  if (props.syncUrl && route.query.lead) {
     router.push({
       query: {}
     }).catch(() => {})
@@ -799,6 +824,8 @@ const hideModal = () => {
 }
 
 watch(() => route.query.lead, (newLeadId) => {
+  console.log('[ViewLeadModal] watch route.query.lead', { syncUrl: props.syncUrl, newLeadId, showValue: show.value, propsLeadId: props.leadId })
+  if (!props.syncUrl) return
   if (newLeadId && !show.value) {
     const numericId = Number(newLeadId)
     if (!isNaN(numericId) && numericId > 0) {
@@ -807,6 +834,7 @@ watch(() => route.query.lead, (newLeadId) => {
         emit('update:leadId', numericId)
       }
       show.value = true
+      console.log('[ViewLeadModal] watch route.query.lead -> show set true', { numericId })
     }
   }
 }, { immediate: true })
@@ -832,17 +860,20 @@ watch(() => route.path, (newPath) => {
 
 
 watch(show, (val, oldVal) => {
+  console.log('[ViewLeadModal] watch show', { val, oldVal, propsLeadId: props.leadId, syncUrl: props.syncUrl, routePath: route.path })
   if (val) {
     modalHostPath.value = route.path
     if (props.leadId) {
       fetchLead()
       initializeLeadListener()
+    } else {
+      console.log('[ViewLeadModal] watch show -> val true but props.leadId falsy, fetchLead NOT called')
     }
   } else if (oldVal) {
     fetchLeadGeneration++
     cleanup()
     activeTab.value = 'general'
-    if (route.query.lead) {
+    if (props.syncUrl && route.query.lead) {
       router.push({
         query: {}
       }).catch(() => {})
@@ -855,10 +886,12 @@ watch(show, (val, oldVal) => {
 watch(() => props.leadId, (newLeadId, oldLeadId) => {
     if (!show.value) return
     if (!newLeadId || newLeadId === oldLeadId) return
+    if (props.syncUrl) {
       // تحديث الرابط عند تغيير leadId
-    router.push({
-        query: { lead: newLeadId }
-    }).catch(() => {})
+      router.push({
+          query: { lead: newLeadId }
+      }).catch(() => {})
+    }
     fetchLead()
     initializeLeadListener()
 })

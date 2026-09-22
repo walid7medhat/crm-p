@@ -495,15 +495,18 @@ class LeadController extends Controller
             );
         $this->broadcastLeadUpdated($lead, 'created');
 
+            // Lightweight kanban card payload so the frontend can insert the new lead
+            // into the board locally instead of refetching the whole list.
+            $lead->loadMissing([
+                'stage:id,name,order,color',
+                'responsiblePerson:id,name,display_name,email,avatar,status',
+                'addedBy:id,name,display_name,email,avatar,status',
+                'propertyType:id,name',
+                'area:id,name',
+            ]);
+
             return ApiResponse::success(
-                new LeadResource($lead->load([
-                    'stage',
-                    'addedBy',
-                    'responsiblePerson',
-                    'participants',
-                    'observers.user',
-                    'integration:id,project_id',
-                ])),
+                new KanbanLeadCardResource($lead),
                 'Lead created successfully',
                 201
             );

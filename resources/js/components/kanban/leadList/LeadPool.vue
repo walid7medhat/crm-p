@@ -286,14 +286,9 @@
     </div>
 
     <!-- Modals -->
-    <ViewLeadModal
-        v-model="showViewModal"
-        :leadId="selectedLeadId"
-        @update:leadId="selectedLeadId = $event"
-        @lead-updated="handleLeadUpdated"
-    />
-    
-    <DuplicateLeadsModal 
+    <!-- Lead details open in the single app-wide modal (App.vue), via openLeadView() below. -->
+
+    <DuplicateLeadsModal
         v-model="showDuplicateModal" 
         :leadId="selectedLeadForDuplicates"
         :triggerElement="currentTriggerElement"
@@ -310,21 +305,20 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
-import { openLeadView } from '@/composables/useLeadViewModal.js'
+import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadPoolCard from './LeadPoolCard.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
 import { useLeadPoolBulkActions } from './composables/useLeadPoolBulkActions.js'
 
+const route = useRoute()
+
 // Emits
 const emit = defineEmits(['lead-clicked'])
-
-const route = useRoute()
-const router = useRouter()
 
 // State
 const leads = ref([])
@@ -773,22 +767,16 @@ const closeProfilePopup = () => {
     profileUserId.value = null
 }
 
-// View lead details
+// View lead details — opens the single app-wide lead modal (App.vue) via the shared
+// composable instead of a separate local <ViewLeadModal> instance. openLeadView() already
+// logs the "view" history entry and syncs ?lead= on the URL for refresh-restore, so this
+// stays in sync with the exact same open/close/URL behavior as the regular Kanban lead
+// modal — no separate local state or URL param needed here. Stage changing is disabled
+// from this modal for Lead Pool leads — use the pool's own assign/claim actions instead.
 const viewLead = (lead) => {
     if (lead?.id) {
-        // Sync the URL so a page refresh while this modal is open can restore it — unlike
-        // the regular Kanban lead modal (which does this via the global instance in
-        // App.vue), this Lead Pool instance never touched the URL before, so a refresh
-        // reopened the modal (via ViewLeadModal's own ?lead= restore) with no id to fetch.
-        router.push({ query: { ...route.query, lead: lead.id } }).catch(() => {})
-        // Fire-and-forget: log a "view" history entry so admins see who opened the lead.
-        api.get(`/leads/${lead.id}/history/view`).catch(() => {})
+        openLeadView(lead.id, lead, { disableStageChange: true })
     }
-}
-
-// Handle lead update from modal
-const handleLeadUpdated = (updatedLead) => {
-    fetchLeadPool()
 }
 
 // Open duplicate leads modal
@@ -802,10 +790,8 @@ const openDuplicateLeadsModal = (leadId, event) => {
 
 // Handle view duplicate lead
 const handleViewDuplicateLead = (leadId) => {
-    selectedLeadId.value = leadId
-    showViewModal.value = true
     if (leadId) {
-        api.get(`/leads/${leadId}/history/view`).catch(() => {})
+        openLeadView(leadId, null, { disableStageChange: true })
     }
 }
 
@@ -855,15 +841,33 @@ async function fetchAssignmentStatus() {
         )
     }
 }
+// Refresh the pool list when the shared lead modal (opened via openLeadView above) saves
+// a change — replaces the old @lead-updated listener from this component's own removed
+// local <ViewLeadModal> instance.
+const unsubscribeLeadViewUpdated = onLeadViewUpdated(() => {
+    fetchLeadPool()
+})
+
 onMounted(async () => {
     window.addEventListener('keydown', onLeadPoolKeydown)
     scheduleFetchLeadPool()
         await fetchAssignmentStatus()
 
+    // Restore the lead modal on a hard refresh while ?lead= is in the URL — same
+    // explicit check leads.vue already does for the regular Kanban board, done here
+    // too instead of relying only on the global App.vue mount timing.
+    const leadIdFromUrl = route.query.lead
+    if (leadIdFromUrl) {
+        const numericId = Number(leadIdFromUrl)
+        if (!isNaN(numericId) && numericId > 0) {
+            openLeadView(numericId, null, { disableStageChange: true })
+        }
+    }
 })
 
 onUnmounted(() => {
     window.removeEventListener('keydown', onLeadPoolKeydown)
+    unsubscribeLeadViewUpdated()
     if (fetchDebounceTimer) {
         clearTimeout(fetchDebounceTimer)
         fetchDebounceTimer = null

@@ -4541,13 +4541,21 @@ const isFormEmpty = () => {
     })
 }
 
-function applySearch(options = {}) {
+async function applySearch(options = {}) {
     showBudgetDropdown.value = false
     removeBudgetDropdownListeners()
  if (isFormEmpty()) {
-        show.value = false  
-        emit('update:modelValue', false) 
+        show.value = false
+        emit('update:modelValue', false)
         return
+    }
+    // Team display name comes from allTeams, which is normally only fetched when the
+    // user opens the Team dropdown. If a team filter is applied without that dropdown
+    // ever being opened (or before its fetch resolves), the summary falls back to the
+    // raw team id instead of its name — so make sure it's loaded before building the
+    // active-filter summary below.
+    if (hasValue(form.value.team)) {
+        await loadTeams()
     }
     let createdFrom = undefined
 
