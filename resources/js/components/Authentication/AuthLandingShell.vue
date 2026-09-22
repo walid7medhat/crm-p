@@ -18,16 +18,16 @@
             :src="altcrmLogo"
             alt="altcrm"
             class="auth-landing__brand-logo auth-landing__brand-logo--altcrm"
-            width="200"
-            height="96"
+            width="112"
+            height="111"
           />
           <span class="auth-landing__brand-divider" aria-hidden="true" />
           <img
             :src="oiaLogo"
             alt="Oia Properties"
             class="auth-landing__brand-logo auth-landing__brand-logo--oia"
-            width="220"
-            height="90"
+            width="168"
+            height="115"
           />
         </div>
 
@@ -82,24 +82,24 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 
-const altcrmLogo = '/assets/images/auth/altcrm-logo.png';
-const oiaLogo = '/assets/images/auth/oia-properties-logo.png';
+const altcrmLogo = '/assets/images/auth/altcrm-logo.png?v=4';
+const oiaLogo = '/assets/images/auth/oia-properties-logo.svg?v=4';
 
 const featureCards = [
   {
     id: 'pipeline',
     title: 'Your sales pipeline, simplified',
-    image: '/assets/images/auth/mockup-pipeline.png',
+    image: '/assets/images/auth/mockup-pipeline.png?v=4',
   },
   {
     id: 'analytics',
     title: 'Analyze sales and team performance easily',
-    image: '/assets/images/auth/mockup-analytics.png',
+    image: '/assets/images/auth/mockup-analytics.png?v=4',
   },
   {
     id: 'mobile',
     title: 'Mobile CRM built for faster teamwork',
-    image: '/assets/images/auth/mockup-mobile.png',
+    image: '/assets/images/auth/mockup-mobile.png?v=4',
   },
 ];
 

@@ -1552,22 +1552,31 @@ onUnmounted(() => {
   border-bottom: 1px solid #eef0f4;
 }
 .sidebar-menu li a {
-    padding: 0.55rem 0.55rem !important;
-    min-height: 44px;
+    padding: 0.28rem 0.4rem !important;
+    min-height: 34px;
     box-sizing: border-box;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 1px;
 }
-.sidebar-menu li a span,
-.sidebar-submenu li a span {
-  font-size: 0.875rem;
-  line-height: 1.3;
+.sidebar-menu > li > a span {
+  font-size: 0.8125rem;
+  line-height: 1.25;
   font-weight: 500;
+}
+.sidebar-submenu li a span,
+.sidebar-submenu .menu-label {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+.sidebar:not(.active) .sidebar-submenu,
+.sidebar.active:hover .sidebar-submenu {
+  padding-inline-start: 14px;
 }
 /* 2. Keep light surface when collapsed + hover — compact readable width */
 .sidebar.active:hover {
-  width: 13rem !important;
-  min-width: 13rem !important;
+  width: 11.75rem !important;
+  min-width: 11.75rem !important;
   background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -1749,20 +1758,20 @@ onUnmounted(() => {
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
-    width: 13rem !important;
-    min-width: 13rem !important;
+    width: 11.75rem !important;
+    min-width: 11.75rem !important;
   }
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 13.5rem !important;
-    min-width: 13.5rem !important;
+    width: 11.75rem !important;
+    min-width: 11.75rem !important;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 13.5rem !important;
-    min-width: 13.5rem !important;
+    width: 11.75rem !important;
+    min-width: 11.75rem !important;
   }
 }
 

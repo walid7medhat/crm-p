@@ -125,13 +125,15 @@
 }
 
 .auth-landing__brand-logo--altcrm {
-  width: clamp(140px, 14vw, 200px);
-  max-height: clamp(64px, 8vh, 96px);
+  width: auto;
+  height: clamp(78px, 10vh, 112px);
+  max-width: 150px;
 }
 
 .auth-landing__brand-logo--oia {
-  width: clamp(160px, 16vw, 220px);
-  max-height: clamp(60px, 7.5vh, 90px);
+  width: auto;
+  height: clamp(54px, 7.2vh, 80px);
+  max-width: 240px;
 }
 
 .auth-landing__brand-divider {
@@ -218,11 +220,12 @@
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(11, 7, 54, 0.25);
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
 }
 
 .auth-landing__feature-image {
@@ -233,6 +236,7 @@
   max-height: min(100%, 320px);
   object-fit: contain;
   object-position: center center;
+  filter: drop-shadow(0 14px 18px rgba(15, 23, 42, 0.16));
 }
 
 .auth-landing__dots {
@@ -343,6 +347,11 @@
     gap: 28px;
     margin-bottom: 0;
     flex-shrink: 0;
+    background: #fff;
+    border-radius: 18px;
+    padding: 8px 16px;
+    width: fit-content;
+    margin-inline: auto;
   }
 
   .auth-landing__brand-divider {
@@ -350,13 +359,17 @@
   }
 
   .auth-landing__brand-logo--altcrm {
-    width: 120px;
-    max-height: 56px;
+    width: auto;
+    height: 64px;
+    max-width: 86px;
+    max-height: none;
   }
 
   .auth-landing__brand-logo--oia {
-    width: 110px;
-    max-height: 52px;
+    width: auto;
+    height: 52px;
+    max-width: 156px;
+    max-height: none;
   }
 
   .auth-landing__headline--desktop {
@@ -413,15 +426,16 @@
   .auth-landing__feature-media {
     flex: 1 1 auto;
     min-height: 0;
-    background: rgba(42, 21, 72, 0.35);
+    background: transparent;
   }
 
   .auth-landing__feature-image {
     max-height: 78px;
     height: 100%;
-    object-fit: cover;
-    object-position: center top;
-    border-radius: 8px;
+    object-fit: contain;
+    object-position: center center;
+    border-radius: 0;
+    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28));
   }
 
   .auth-landing__dots {
@@ -534,13 +548,17 @@
 
 @media (max-width: 639px) {
   .auth-landing__brand-logo--altcrm {
-    width: 100px;
-    max-height: 48px;
+    width: auto;
+    height: 56px;
+    max-width: 76px;
+    max-height: none;
   }
 
   .auth-landing__brand-logo--oia {
-    width: 100px;
-    max-height: 48px;
+    width: auto;
+    height: 46px;
+    max-width: 132px;
+    max-height: none;
   }
 
   .auth-landing__headline--mobile {
