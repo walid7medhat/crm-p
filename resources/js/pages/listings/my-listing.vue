@@ -266,6 +266,7 @@
 
 <script>
 import { ref, onMounted, computed ,watch } from 'vue';
+import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useRoute, useRouter } from 'vue-router';
 import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
@@ -520,6 +521,7 @@ const fetchProperties = async (filters = {}, page = 1) => {
     pagination.value = null;
   } finally {
     isLoading.value = false;
+    markKanbanReady();
   }
 };
 const pruneEmptyQueryValues = (obj) => {

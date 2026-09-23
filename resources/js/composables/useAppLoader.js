@@ -1,6 +1,7 @@
 import { ref, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  isContentLoaderRoute,
   isKanbanRoute,
   resetKanbanReady,
   waitForKanbanReady,
@@ -44,7 +45,7 @@ function shouldUseNavLoader(to, from) {
 
 async function prepareRoute(route) {
   await nextTick()
-  if (route && isKanbanRoute(route.path)) {
+  if (route && isContentLoaderRoute(route.path)) {
     await waitForKanbanReady()
   }
   await withTimeout(waitForPaint(), MAX_WAIT_MS)
@@ -129,14 +130,18 @@ export function useAppLoader() {
 
       window.clearTimeout(navTimer)
       if (shouldUseNavLoader(to, from)) {
-        if (isKanbanRoute(to.path)) {
+        if (isContentLoaderRoute(to.path)) {
           resetKanbanReady()
-        }
-        navTimer = window.setTimeout(() => {
           navShownAt = performance.now()
           isAppLoading.value = true
           document.body.classList.add('app-loader-active')
-        }, NAV_SHOW_AFTER_MS)
+        } else {
+          navTimer = window.setTimeout(() => {
+            navShownAt = performance.now()
+            isAppLoading.value = true
+            document.body.classList.add('app-loader-active')
+          }, NAV_SHOW_AFTER_MS)
+        }
       }
 
       next()
@@ -145,7 +150,13 @@ export function useAppLoader() {
     router.afterEach(async (to, from) => {
       if (!initialBootstrapDone) return
       window.clearTimeout(navTimer)
-      if (!shouldUseNavLoader(to, from) || !isAppLoading.value) return
+      if (!shouldUseNavLoader(to, from)) return
+      if (!isAppLoading.value && !isContentLoaderRoute(to.path)) return
+      if (!isAppLoading.value) {
+        navShownAt = performance.now()
+        isAppLoading.value = true
+        document.body.classList.add('app-loader-active')
+      }
 
       try {
         await prepareRoute(to)

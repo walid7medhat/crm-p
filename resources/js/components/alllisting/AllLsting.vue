@@ -263,6 +263,7 @@
 </template>
 <script>
 import { ref, onMounted, computed, watch, nextTick } from 'vue'; // ✅ إضافة nextTick و watch
+import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useRoute, useRouter } from 'vue-router'; // ✅ إضافة useRoute/useRouter
 import SearchBar from "./SearchBar.vue";
 import MobileListingCard from '@/components/listings/MobileListingCard.vue';
@@ -629,6 +630,7 @@ export default {
       } finally {
         if (requestId === fetchRequestId) {
           isLoading.value = false;
+          markKanbanReady();
         }
       }
     };

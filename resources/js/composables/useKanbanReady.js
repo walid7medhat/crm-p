@@ -1,4 +1,5 @@
 const KANBAN_ROUTE_PREFIXES = ['/kanban', '/kanban_deal']
+const CONTENT_LOADER_EXACT = ['/alllisting', '/my-listing']
 
 let readyResolve = null
 let readyPromise = null
@@ -10,6 +11,13 @@ function wait(ms) {
 
 export function isKanbanRoute(path = '') {
   return KANBAN_ROUTE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}
+
+/** Leads, deals, properties, and a property page keep the logo loader until their data is in. */
+export function isContentLoaderRoute(path = '') {
+  if (isKanbanRoute(path)) return true
+  if (CONTENT_LOADER_EXACT.includes(path)) return true
+  return path.startsWith('/property-details/')
 }
 
 export function resetKanbanReady() {

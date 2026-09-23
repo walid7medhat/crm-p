@@ -126,6 +126,7 @@
                     <a
                       href="#"
                       class="sidebar-nav-link"
+                      :class="{ 'sidebar-nav-link--under-heading': section.key !== 'listings' }"
                       @mouseenter="prefetchRoute(item.path)"
                       @click.prevent="goToListingsItem(item.path)"
                     >

@@ -2133,6 +2133,7 @@
 
 <script>
 import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextTick } from 'vue';
+import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.vue';
 import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
@@ -4493,6 +4494,7 @@ const revertFromConverted = async () => {
         handleApiError(err, 'Failed to load property details');
       } finally {
         loading.value = false;
+        markKanbanReady();
       }
     };
 

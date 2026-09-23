@@ -597,6 +597,15 @@ aside.sidebar.active:hover .sidebar-submenu__heading--with-icon {
   margin-left: 0 !important;
 }
 
+/* Child rows under a headed group have no icon, so shift the label
+   onto the same column as the heading text (Projects List, All Requests, …). */
+aside.sidebar:not(.active) .sidebar-submenu li a.sidebar-nav-link--under-heading,
+aside.sidebar.active:hover .sidebar-submenu li a.sidebar-nav-link--under-heading,
+aside.sidebar .sidebar-menu .sidebar-submenu li a.sidebar-nav-link--under-heading {
+  padding-inline-start: calc(var(--sidebar-row-pad-x) + var(--sidebar-icon-size) + var(--sidebar-label-gap)) !important;
+  padding-left: calc(var(--sidebar-row-pad-x) + var(--sidebar-icon-size) + var(--sidebar-label-gap)) !important;
+}
+
 /* Same icon box size so every glyph starts on the same x */
 aside.sidebar .sidebar-menu-icon,
 aside.sidebar .imgicon,
