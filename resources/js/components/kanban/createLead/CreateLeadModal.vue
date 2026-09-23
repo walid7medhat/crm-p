@@ -2612,7 +2612,16 @@ watch(selectedExistingClient, (client) => {
       color: #64748b;
       line-height: 1.2;
     }
-    
+
+    .custom-v-select .vs__dropdown-option--highlight .location-option-name,
+    .custom-v-select .vs__dropdown-option--selected .location-option-name,
+    .custom-v-select .vs__dropdown-option--highlight .location-option-subtitle,
+    .custom-v-select .vs__dropdown-option--selected .location-option-subtitle,
+    .custom-v-select .vs__dropdown-option--highlight .location-option-icon,
+    .custom-v-select .vs__dropdown-option--selected .location-option-icon {
+      color: #fff !important;
+    }
+
     /* Location dropdown list: wider */
     :deep(.location-select + .vs__dropdown-menu),
     :deep(.location-select .vs__dropdown-menu) {

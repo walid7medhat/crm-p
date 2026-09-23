@@ -2938,7 +2938,15 @@ body.stage-change-modal-open .vs__dropdown-menu {
 body.stage-change-modal-open .vs__dropdown-menu .location-option-name,
 body.stage-change-modal-open .vs__dropdown-menu .location-option-subtitle,
 body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option {
-    color: #0f172a !important;
+    /* color: #0f172a !important; */
     opacity: 1 !important;
+}
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option--highlight .location-option-name,
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option--selected .location-option-name,
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option--highlight .location-option-subtitle,
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option--selected .location-option-subtitle,
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option--highlight .location-option-icon,
+body.stage-change-modal-open .vs__dropdown-menu .vs__dropdown-option--selected .location-option-icon {
+    color: #fff !important;
 }
 </style>

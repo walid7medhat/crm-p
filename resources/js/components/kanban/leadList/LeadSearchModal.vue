@@ -7099,6 +7099,15 @@ onBeforeUnmount(() => {
     color: #64748b;
 }
 
+:deep(.vs__dropdown-option--highlight .location-option-name),
+:deep(.vs__dropdown-option--selected .location-option-name),
+:deep(.vs__dropdown-option--highlight .location-option-subtitle),
+:deep(.vs__dropdown-option--selected .location-option-subtitle),
+:deep(.vs__dropdown-option--highlight .location-option-icon),
+:deep(.vs__dropdown-option--selected .location-option-icon) {
+    color: #fff !important;
+}
+
 .location-selected {
     display: flex;
     flex-direction: column;
@@ -7388,7 +7397,7 @@ onBeforeUnmount(() => {
     vertical-align: middle !important;
 }
 
-:deep(.custom-v-select .vs__dropdown-menu) {
+:deep(.vs__dropdown-menu) {
     border: 1px solid #E2E8F0;
     box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
     padding: 0;
@@ -7396,7 +7405,7 @@ onBeforeUnmount(() => {
     z-index: 1100;
 }
 
-:deep(.custom-v-select .vs__dropdown-option) {
+:deep(.vs__dropdown-option) {
     padding: 5px 10px;
     font-size: 12px;
     color: #475569;
@@ -7404,12 +7413,12 @@ onBeforeUnmount(() => {
       font-size: 14px !important;
 }
 
-:deep(.custom-v-select .vs__dropdown-option--highlight) {
+:deep(.vs__dropdown-option--highlight) {
     background: #733E87 !important;
     color: #fff !important;
 }
 
-:deep(.custom-v-select .vs__dropdown-option--selected) {
+:deep(.vs__dropdown-option--selected) {
     background: #733E87 !important;
     color: #fff !important;
 }
@@ -7457,12 +7466,18 @@ onBeforeUnmount(() => {
     to { transform: rotate(360deg); }
 }
 
-/* Responsible person select — same info density as ResponsiblePersonSection modal */
-:deep(.lead-search-rp-select .vs__dropdown-menu) {
+/* Responsible person / team select — same info density as ResponsiblePersonSection
+ * modal. append-to-body physically detaches .vs__dropdown-menu from being a DOM
+ * descendant of .lead-search-rp-select (vue-select does a raw document.body.appendChild,
+ * not a Vue Teleport), so that ancestor class can never match here — :has() identifies
+ * the right menu/option by its rendered content instead, which survives the move. */
+:deep(.vs__dropdown-menu:has(.lead-rp-opt)),
+:deep(.vs__dropdown-menu:has(.lead-rp-opt-placeholder)) {
     max-height: min(360px, 55vh) !important;
 }
 
-:deep(.lead-search-rp-select .vs__dropdown-option) {
+:deep(.vs__dropdown-option:has(.lead-rp-opt)),
+:deep(.vs__dropdown-option:has(.lead-rp-opt-placeholder)) {
     padding: 8px 10px !important;
     white-space: normal !important;
       font-size: 14px !important;
@@ -7544,26 +7559,31 @@ onBeforeUnmount(() => {
     color: #cbd5e1;
 }
 
-:deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-item-name),
-:deep(.lead-search-rp-select .vs__dropdown-option--selected .user-item-name) {
+:deep(.vs__dropdown-option--highlight .user-item-name),
+:deep(.vs__dropdown-option--selected .user-item-name) {
     color: #fff !important;
 }
 
-:deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-item-meta-line),
-:deep(.lead-search-rp-select .vs__dropdown-option--selected .user-item-meta-line) {
+:deep(.vs__dropdown-option--highlight .user-item-meta-line),
+:deep(.vs__dropdown-option--selected .user-item-meta-line) {
     color: #f1f5f9 !important;
 }
 
-:deep(.lead-search-rp-select .vs__dropdown-option--highlight .meta-value),
-:deep(.lead-search-rp-select .vs__dropdown-option--selected .meta-value) {
+:deep(.vs__dropdown-option--highlight .meta-value),
+:deep(.vs__dropdown-option--selected .meta-value) {
     color: #fff !important;
 }
 
-:deep(.lead-search-rp-select .vs__dropdown-option--highlight .user-position-badge),
-:deep(.lead-search-rp-select .vs__dropdown-option--selected .user-position-badge) {
+:deep(.vs__dropdown-option--highlight .user-position-badge),
+:deep(.vs__dropdown-option--selected .user-position-badge) {
     background: rgba(255, 255, 255, 0.15) !important;
     border-color: rgba(255, 255, 255, 0.4) !important;
     color: #fff !important;
+}
+
+:deep(.vs__dropdown-option--highlight .meta-divider),
+:deep(.vs__dropdown-option--selected .meta-divider) {
+    color: rgba(255, 255, 255, 0.6) !important;
 }
 
 </style>
@@ -7616,5 +7636,37 @@ onBeforeUnmount(() => {
     }
     .vs__dropdown-option{
         font-size: 14px !important;
+    }
+    /* Bare/unscoped on purpose, matching the rule above: these dropdowns use
+     * append-to-body, and vue-select relocates the menu with a raw
+     * document.body.appendChild() (not a Vue Teleport) — see vue-select's own
+     * `appendToBody` directive. Any selector requiring a scoped ancestor class
+     * (.custom-v-select, .lead-search-rp-select) silently stops matching once the
+     * menu is moved, so these have to stay ancestor-free like the rule above. */
+    .vs__dropdown-option--highlight .location-option-name,
+    .vs__dropdown-option--selected .location-option-name,
+    .vs__dropdown-option--highlight .location-option-subtitle,
+    .vs__dropdown-option--selected .location-option-subtitle,
+    .vs__dropdown-option--highlight .location-option-icon,
+    .vs__dropdown-option--selected .location-option-icon,
+    .vs__dropdown-option--highlight .user-item-name,
+    .vs__dropdown-option--selected .user-item-name,
+    .vs__dropdown-option--highlight .meta-value,
+    .vs__dropdown-option--selected .meta-value {
+        color: #fff !important;
+    }
+    .vs__dropdown-option--highlight .user-item-meta-line,
+    .vs__dropdown-option--selected .user-item-meta-line {
+        color: #f1f5f9 !important;
+    }
+    .vs__dropdown-option--highlight .meta-divider,
+    .vs__dropdown-option--selected .meta-divider {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+    .vs__dropdown-option--highlight .user-position-badge,
+    .vs__dropdown-option--selected .user-position-badge {
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        color: #fff !important;
     }
 </style>
