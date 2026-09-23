@@ -5591,13 +5591,22 @@ const getProjectImageBySlot = (slot) => {
 };
 
 const createSlide1 = (currentUser) => {
-  const bedroomsText = property.value?.number_of_bedrooms === 0 ? 'Studio' : `${property.value?.number_of_bedrooms || ''} Bedrooms`;
   const propertyTypeName = property.value?.property_type?.name || '';
+  const bedrooms = property.value?.number_of_bedrooms;
+  const isPlot = /plot|land/i.test(propertyTypeName);
+  let subtitle = propertyTypeName;
+  if (!isPlot && bedrooms === 0) subtitle = `Studio ${propertyTypeName}`.trim();
+  else if (!isPlot && bedrooms) subtitle = `${bedrooms} Bedroom${Number(bedrooms) === 1 ? '' : 's'} ${propertyTypeName}`.trim();
   const rawLocation = property.value?.area?.area_title || property.value?.area?.title || 'Abu Dhabi, UAE';
-  const location = [...new Set(
+  const locationParts = [...new Set(
     String(rawLocation).split(',').map((part) => part.trim()).filter(Boolean)
-  )].slice(0, 2).join(' · ') || 'Abu Dhabi, UAE';
+  )];
+  const location = locationParts.find((part) => locationParts.some((other) => other !== part && other.toLowerCase().includes(part.toLowerCase())))
+    ? locationParts[0]
+    : (locationParts.slice(0, 2).join(', ') || 'Abu Dhabi, UAE');
   const price = formatPrice(property.value?.price) || '';
+  const priceText = `AED ${price}`;
+  const priceSize = priceText.length > 18 ? '15px' : priceText.length > 14 ? '18px' : '22px';
   const listingStatus = property.value?.listing_status || 'Sale';
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
   const project = property.value?.project;
@@ -5610,38 +5619,13 @@ const createSlide1 = (currentUser) => {
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:98mm !important; background:#fff !important; border-radius:4mm !important; padding:5.5mm 6.5mm 5.5mm 6.5mm !important; box-sizing:border-box !important;">
-      <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important;">
-        <tr>
-          <td style="padding:0 0 3.2mm 0 !important;">
-            <span style="display:inline-block !important; background:#0B0736 !important; color:#fff !important; font-family:Arial, Helvetica, sans-serif !important; font-size:2.5mm !important; line-height:3.2mm !important; letter-spacing:0.35mm !important; text-transform:uppercase !important; padding:1.3mm 3mm 1.5mm 3mm !important; border-radius:1.2mm !important;">For ${listingStatus}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0.4mm 0 1mm 0 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:5.8mm !important; line-height:7.2mm !important; font-weight:700 !important; color:#0B0736 !important; text-transform:uppercase !important;">${projectTitle}</td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 3mm 0 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:3.4mm !important; line-height:4.6mm !important; font-weight:600 !important; color:#334155 !important;">${bedroomsText} ${propertyTypeName}</td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 3.2mm 0 !important;">
-            <table style="border-collapse:collapse !important;">
-              <tr>
-                <td style="width:4.5mm !important; vertical-align:middle !important; padding:0 1.6mm 0 0 !important;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 30" fill="#0B0736"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
-                </td>
-                <td style="vertical-align:middle !important; font-family:Arial, Helvetica, sans-serif !important; font-size:2.8mm !important; line-height:3.8mm !important; color:#64748b !important;">${location}</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="border-top:0.25mm solid #e6e8ee !important; padding:3.2mm 0 0.4mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">
-            <span style="font-size:2.8mm !important; line-height:4.2mm !important; font-weight:600 !important; color:#64748b !important; letter-spacing:0.3mm !important;">AED</span>
-            <span style="font-size:6.2mm !important; line-height:7.6mm !important; font-weight:700 !important; color:#0B0736 !important; padding-left:1.6mm !important;">${price}</span>
-          </td>
-        </tr>
-      </table>
+    <div style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:108mm !important; background:#fff !important; border-radius:5mm !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
+      <p style="font-size:13px; line-height:18px; font-weight:normal; background:#01062D; display:inline-block; padding:2px 14px 8px 14px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0 0 12px 0; position:absolute !important; top:-10px !important; font-family:Arial, Helvetica, sans-serif;">For ${listingStatus}</p>
+      <h1 style="color:#0B0736 !important; font-size:22px !important; font-weight:700 !important; margin:0 0 6px 0 !important; padding:1px 0 !important; line-height:28px !important; text-transform:uppercase !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</h1>
+      <p style="font-size:15px; line-height:20px; color:#01062D; font-weight:600; margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif;">${subtitle}</p>
+      <p style="font-size:12px; line-height:16px; color:#6b7280; margin:0 0 8px 0; font-family:Arial, Helvetica, sans-serif;">&#9679;&nbsp;&nbsp;${location}</p>
+      <div style="border-top:1px solid #e5e7eb !important; margin:0 0 8px 0 !important;"></div>
+      <h2 style="font-size:${priceSize} !important; line-height:26px !important; color:#01062D !important; font-weight:700 !important; margin:0 !important; white-space:nowrap !important; font-family:Arial, Helvetica, sans-serif !important;">${priceText}</h2>
     </div>
     ${createFooter()}
   </div>
@@ -5727,33 +5711,31 @@ const createSlide3 = () => {
   const col2 = features.slice(half);
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
   const projectImage = getProjectImageBySlot(3);
-  const renderItem = (feature) => {
+  const iconCell = (feature) => {
+    if (!feature) return `<td style="display:table-cell !important; width:16px !important; padding:0 !important; border:none !important;"></td><td style="display:table-cell !important; border:none !important;"></td>`;
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
     const icon = imageUrl
-      ? `<img src="${imageUrl}" width="11" height="11" style="width:3mm;height:3mm;display:block;" />`
-      : `<span style="display:block;width:1.6mm;height:1.6mm;margin:0.7mm auto;border-radius:50%;background:#0B0736;"></span>`;
-
+      ? `<img src="${imageUrl}" width="13" height="13" style="width:13px !important; height:13px !important; max-width:13px !important; max-height:13px !important; display:block !important;" />`
+      : `<span style="display:block !important; width:6px !important; height:6px !important; margin:3px !important; border-radius:50% !important; background:#0B0736 !important;"></span>`;
     return `
-      <tr>
-        <td style="width:5.5mm;vertical-align:middle;padding:1.15mm 1.4mm 1.15mm 0;border-bottom:0.15mm solid #eef1f5;">${icon}</td>
-        <td style="vertical-align:middle;padding:1.15mm 1.5mm 1.15mm 0;border-bottom:0.15mm solid #eef1f5;font-family:Arial,Helvetica,sans-serif;font-size:2.6mm;line-height:3.4mm;color:#1e293b;">${feature.name}</td>
-      </tr>
+      <td style="display:table-cell !important; width:18px !important; vertical-align:middle !important; padding:5px 6px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; line-height:0 !important;">${icon}</td>
+      <td style="display:table-cell !important; vertical-align:middle !important; padding:5px 10px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:11px !important; line-height:14px !important; color:#1e293b !important; white-space:nowrap !important;">${feature.name}</td>
     `;
   };
+  const rowCount = Math.max(col1.length, col2.length);
+  const amenityRows = Array.from({ length: rowCount }, (_, index) => `
+    <tr style="display:table-row !important;">
+      ${iconCell(col1[index])}
+      ${iconCell(col2[index])}
+    </tr>
+  `).join('');
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
       <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 7mm 6mm 8mm !important; box-sizing:border-box !important;">
         <h1 style="color:#0B0736 !important; font-size:6.2mm !important; font-weight:700 !important; margin:0 0 5mm 0 !important; padding:0.5mm 0 !important; line-height:7.4mm !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">Amenities &amp;<br>Features</h1>
-        <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important;">
-          <tr>
-            <td style="width:50% !important; vertical-align:top !important; padding-right:3mm !important;">
-              <table style="width:100% !important; border-collapse:collapse !important;">${col1.map(renderItem).join('')}</table>
-            </td>
-            <td style="width:50% !important; vertical-align:top !important; padding-left:2mm !important;">
-              <table style="width:100% !important; border-collapse:collapse !important;">${col2.map(renderItem).join('')}</table>
-            </td>
-          </tr>
+        <table style="display:table !important; width:100% !important; table-layout:fixed !important; border-collapse:collapse !important; border-spacing:0 !important;">
+          ${amenityRows}
         </table>
       </div>
       <div style="width:50% !important; height:100% !important; position:relative !important;">
@@ -5777,14 +5759,20 @@ const createSlide4 = () => {
   // Slide 4 uses the project's multi-image at order 2 (fallback to current image).
   const projectImage = getProjectImageBySlot(2);
   const aboutLimited = limitText(projectAbout, 720);
+  const aboutHtml = String(aboutLimited).replace(/\s+/g, ' ').trim().split(' ').reduce((lines, word) => {
+    const current = lines[lines.length - 1];
+    if (!current || `${current} ${word}`.length > 52) lines.push(word);
+    else lines[lines.length - 1] = `${current} ${word}`;
+    return lines;
+  }, []).join('<br>');
 
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important;">
     <div style="width:100% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
-      <div style="width:50% !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
-        <h1 style="color:#01062C !important; font-size:6.2mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; padding:0.6mm 0 !important; line-height:7.6mm !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">About<br>The Project</h1>
+      <div style="width:50% !important; padding:8mm 10mm 6mm 8mm !important; box-sizing:border-box !important;">
+        <h1 style="color:#01062C !important; font-size:5.2mm !important; font-weight:700 !important; margin:0 0 4mm 0 !important; padding:0.6mm 0 !important; line-height:7mm !important; white-space:nowrap !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">About the Project</h1>
         <p style="font-size:4.2mm !important; font-weight:700 !important; line-height:6mm !important; padding:1mm 0 1.5mm 0 !important; color:#01062C !important; margin:0 0 2mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</p>
-        <p style="font-size:2.9mm !important; line-height:4.5mm !important; padding:0.5mm 0 2mm 0 !important; color:#3f3f46 !important; margin:0 !important; font-family:Arial, Helvetica, sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
+        <p style="font-size:11px !important; line-height:16px !important; padding:0 0 2mm 0 !important; color:#3f3f46 !important; margin:0 !important; word-break:keep-all !important; font-family:Arial, Helvetica, sans-serif !important;">${aboutHtml}</p>
       </div>
       <div style="width:50% !important;position:relative !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
@@ -6086,7 +6074,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
   write(
     "Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.",
     margin,
-    Math.min(y, 140),
+    138,
     innerW,
     6,
     { size: 6, color: muted }
