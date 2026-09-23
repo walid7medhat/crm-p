@@ -37,7 +37,7 @@ class CheckDocumentExpiry extends Command
 
         $today = Carbon::today();
 
-        $hrUsers = User::role(['super_admin', 'hr'])->get();
+        $hrUsers = User::role([ 'hr'])->get();
 
         if ($hrUsers->isEmpty()) {
             $this->warn('No HR users found to notify.');

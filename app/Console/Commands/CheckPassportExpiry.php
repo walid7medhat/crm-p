@@ -46,7 +46,7 @@ class CheckPassportExpiry extends Command
         $this->info("\n📋 Found " . $users->count() . " employee(s) with expiring passports:\n");
         
         // جلب الـ HR Managers
-        $hrManagers = User::role([ 'super_admin'])->get();
+        $hrManagers = User::role([ 'hr'])->get();
         
         if ($hrManagers->isEmpty()) {
             $this->warn("⚠️ No HR managers found to notify.");
