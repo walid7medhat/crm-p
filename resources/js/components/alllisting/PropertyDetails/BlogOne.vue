@@ -5593,7 +5593,10 @@ const getProjectImageBySlot = (slot) => {
 const createSlide1 = (currentUser) => {
   const bedroomsText = property.value?.number_of_bedrooms === 0 ? 'Studio' : `${property.value?.number_of_bedrooms || ''} Bedrooms`;
   const propertyTypeName = property.value?.property_type?.name || '';
-  const location = property.value?.area?.title || property.value?.area?.area_title || 'Abu Dhabi, UAE';
+  const rawLocation = property.value?.area?.area_title || property.value?.area?.title || 'Abu Dhabi, UAE';
+  const location = [...new Set(
+    String(rawLocation).split(',').map((part) => part.trim()).filter(Boolean)
+  )].slice(0, 2).join(' · ') || 'Abu Dhabi, UAE';
   const price = formatPrice(property.value?.price) || '';
   const listingStatus = property.value?.listing_status || 'Sale';
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
@@ -5607,16 +5610,38 @@ const createSlide1 = (currentUser) => {
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:absolute !important; bottom:16% !important; left:10mm !important; width:42% !important; background:#fff !important; border-radius:5mm !important; padding:7mm 9mm 7mm 9mm !important; box-sizing:border-box !important;">
-      <p style="font-size:16px; line-height: 25px; font-weight:normal; background:#01062D; display:inline-block; padding:0px 20px 10px 20px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0px 0 18px 0; position:absolute !important; top:-10px !important;  font-family: 'Montserrat', sans-serif; ">For ${listingStatus}</p>
-      <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:bold; margin:0 0 12px 0; line-height:1.1; text-transform:uppercase;font-family: 'Montserrat', sans-serif;">${projectTitle}</h1>
-      <p  style="font-size:20px; color:#01062D; font-weight:600; margin:0 0 18px 0;font-family: 'Montserrat', sans-serif;">${bedroomsText} ${propertyTypeName}</p>
-      <p style="font-size:3.2mm !important; line-height:5mm !important; margin:0 0 4mm 0 !important; color:#818181 !important; display:flex !important; align-items:flex-start !important; gap:2mm !important;">
-       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 24 30" style="flex-shrink:0 !important; margin-top:2px !important;" fill="#733E87"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
-        <span  style="font-size: 14px; color: #818181;font-family: 'Montserrat', sans-serif;" >${location}</span>
-      </p>
-      <div style="border-top:0.3mm solid #ddd !important; margin-bottom:5mm !important; margin-top:15mm !important;"></div>
-      <h2 style="font-size:7mm !important; color:#01062D !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">AED ${price}</h2>
+    <div style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:98mm !important; background:#fff !important; border-radius:4mm !important; padding:5.5mm 6.5mm 5.5mm 6.5mm !important; box-sizing:border-box !important;">
+      <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important;">
+        <tr>
+          <td style="padding:0 0 3.2mm 0 !important;">
+            <span style="display:inline-block !important; background:#0B0736 !important; color:#fff !important; font-family:Arial, Helvetica, sans-serif !important; font-size:2.5mm !important; line-height:3.2mm !important; letter-spacing:0.35mm !important; text-transform:uppercase !important; padding:1.3mm 3mm 1.5mm 3mm !important; border-radius:1.2mm !important;">For ${listingStatus}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0.4mm 0 1mm 0 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:5.8mm !important; line-height:7.2mm !important; font-weight:700 !important; color:#0B0736 !important; text-transform:uppercase !important;">${projectTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 3mm 0 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:3.4mm !important; line-height:4.6mm !important; font-weight:600 !important; color:#334155 !important;">${bedroomsText} ${propertyTypeName}</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 3.2mm 0 !important;">
+            <table style="border-collapse:collapse !important;">
+              <tr>
+                <td style="width:4.5mm !important; vertical-align:middle !important; padding:0 1.6mm 0 0 !important;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14" viewBox="0 0 24 30" fill="#0B0736"><path d="M12 0C7.6 0 4 3.6 4 8c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/></svg>
+                </td>
+                <td style="vertical-align:middle !important; font-family:Arial, Helvetica, sans-serif !important; font-size:2.8mm !important; line-height:3.8mm !important; color:#64748b !important;">${location}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:0.25mm solid #e6e8ee !important; padding:3.2mm 0 0.4mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">
+            <span style="font-size:2.8mm !important; line-height:4.2mm !important; font-weight:600 !important; color:#64748b !important; letter-spacing:0.3mm !important;">AED</span>
+            <span style="font-size:6.2mm !important; line-height:7.6mm !important; font-weight:700 !important; color:#0B0736 !important; padding-left:1.6mm !important;">${price}</span>
+          </td>
+        </tr>
+      </table>
     </div>
     ${createFooter()}
   </div>
