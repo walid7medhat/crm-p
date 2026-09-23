@@ -5382,14 +5382,15 @@ const generatePDF = async () => {
     const options = {
       margin: [0,0],
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 3, useCORS: true, logging: false, allowTaint: true },
+      html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     const pdf = await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
     const pageCount = pdf.internal.getNumberOfPages();
-    pdf.deletePage(pageCount);
+    if (pageCount > 1) pdf.deletePage(pageCount);
+    await paintPaymentDetailsPage(pdf, pdfContent);
 
     const pdfBlob = pdf.output('blob');
     const link = document.createElement('a');
@@ -5629,10 +5630,10 @@ const createSlide2 = () => {
   const features = additionalFeaturesList.value || [];
   const featuresBlock = features.length > 0 ? `
     <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Features</p>
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 4.5mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important;">Features</p>
       <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
           ${features.map((feature) => `
-            <span style="display:inline-flex !important; align-items:center !important; justify-content:center !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important; padding:1mm 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;">${feature}</span>
+            <span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:2.5mm !important; height:5.2mm !important; padding:0 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;"><span style="display:inline-block !important; position:relative !important; top:-1.15mm !important;">${feature}</span></span>
           `).join('')}
         </div>
     </div>
@@ -5886,6 +5887,188 @@ const formatTextForPDF = (text) => {
   return text.replace(/\n/g, '<br>');
 };
 
+let paymentSlideModel = null;
+
+const loadPdfLogo = () => new Promise((resolve) => {
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    } catch {
+      resolve(null);
+    }
+  };
+  img.onerror = () => resolve(null);
+  img.src = pnglogo;
+});
+
+const paintPaymentDetailsPage = async (pdf, container) => {
+  const model = paymentSlideModel;
+  if (!model) return;
+  const slides = [...container.children];
+  const pageIndex = slides.findIndex((el) => el.id === 'payment-details-slide');
+  if (pageIndex < 0 || pageIndex + 1 > pdf.internal.getNumberOfPages()) return;
+
+  pdf.setPage(pageIndex + 1);
+  const logo = await loadPdfLogo();
+
+  const ink = [30, 41, 59];
+  const muted = [100, 116, 139];
+  const navy = [15, 31, 58];
+  const write = (text, x, y, w, h, opts = {}) => {
+    const value = String(text ?? '');
+    if (!value) return;
+    pdf.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+    pdf.setFontSize(opts.size || 7);
+    pdf.setTextColor(...(opts.color || ink));
+    pdf.text(value, x + w / 2, y + h / 2, { align: 'center', baseline: 'middle' });
+  };
+  const badgeFill = (status) => {
+    if (status === 'Paid') return { bg: [34, 197, 94], fg: [255, 255, 255] };
+    if (status === 'Due on transfer') return { bg: [186, 230, 253], fg: [7, 89, 133] };
+    if (status === 'Selling below original price') return { bg: [254, 202, 202], fg: [185, 28, 28] };
+    return { bg: [254, 205, 211], fg: [159, 18, 57] };
+  };
+
+  pdf.setFillColor(243, 245, 250);
+  pdf.rect(0, 0, 210, 148, 'F');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  pdf.setTextColor(...navy);
+  pdf.text('PAYMENT DETAILS', 6, 8, { baseline: 'middle' });
+  pdf.setFillColor(232, 93, 28);
+  pdf.roundedRect(6, 11, 12, 1, 0.4, 0.4, 'F');
+  if (logo) {
+    try { pdf.addImage(logo, 'PNG', 188, 4, 16, 11); } catch { /* logo is optional */ }
+  }
+
+  const margin = 6;
+  const innerW = 210 - margin * 2;
+  let y = 15;
+
+  write('SUMMARY', margin, y, innerW, 4, { size: 7, bold: true, color: muted });
+  y += 5;
+
+  const cards = model.cards;
+  const gap = 2;
+  const cardW = (innerW - gap * (cards.length - 1)) / cards.length;
+  const cardH = 12;
+  cards.forEach((card, i) => {
+    const x = margin + i * (cardW + gap);
+    if (card.hero) pdf.setFillColor(...navy);
+    else pdf.setFillColor(232, 236, 242);
+    pdf.roundedRect(x, y, cardW, cardH, 1.6, 1.6, 'F');
+    if (card.hero) {
+      pdf.setFillColor(232, 93, 28);
+      pdf.rect(x, y + cardH - 1, cardW, 1, 'F');
+    }
+    write(card.label, x, y + 0.6, cardW, 4.2, { size: 6.5, bold: true, color: card.hero ? [255, 255, 255] : muted });
+    write(card.value, x, y + 4.6, cardW, 6, {
+      size: 8,
+      bold: true,
+      color: card.hero ? [255, 255, 255] : (card.negative ? [185, 28, 28] : navy),
+    });
+  });
+  y += cardH + 3;
+
+  const drawTable = (title, headers, rows, totalCells) => {
+    write(title, margin, y, innerW, 4, { size: 7, bold: true, color: muted });
+    y += 4.5;
+    const weights = headers.map((h) => h.w);
+    const weightSum = weights.reduce((s, n) => s + n, 0);
+    const cols = weights.map((w) => (w / weightSum) * (innerW - 3));
+    const rowH = 5.2;
+    const headH = 5.6;
+    pdf.setFillColor(255, 255, 255);
+    const bodyH = headH + (rows.length + (totalCells ? 1 : 0)) * rowH + 2;
+    pdf.roundedRect(margin, y, innerW, bodyH, 2, 2, 'F');
+    pdf.setDrawColor(226, 232, 240);
+    pdf.roundedRect(margin, y, innerW, bodyH, 2, 2, 'S');
+
+    let x = margin + 1.5;
+    headers.forEach((header, i) => {
+      pdf.setFillColor(...navy);
+      pdf.roundedRect(x, y + 1.1, cols[i] - 1, headH - 1.6, (headH - 1.6) / 2, (headH - 1.6) / 2, 'F');
+      write(header.label, x, y + 1.1, cols[i] - 1, headH - 1.6, { size: 6.5, bold: true, color: [255, 255, 255] });
+      x += cols[i];
+    });
+    y += headH;
+
+    const paintRow = (cells, status, alt, bold) => {
+      if (alt) {
+        pdf.setFillColor(241, 245, 249);
+        pdf.rect(margin + 0.4, y, innerW - 0.8, rowH, 'F');
+      }
+      let cx = margin + 1.5;
+      cells.forEach((cell, i) => {
+        if (i === cells.length - 1 && status) {
+          const colors = badgeFill(status);
+          const text = String(status);
+          const badgeW = Math.min(cols[i] - 1.2, Math.max(14, text.length * 1.25 + 4));
+          const bx = cx + (cols[i] - 1 - badgeW) / 2;
+          const by = y + 0.7;
+          const bh = rowH - 1.4;
+          pdf.setFillColor(...colors.bg);
+          pdf.roundedRect(bx, by, badgeW, bh, bh / 2, bh / 2, 'F');
+          write(text, bx, by, badgeW, bh, { size: 6, bold: true, color: colors.fg });
+        } else {
+          write(cell, cx, y, cols[i] - 1, rowH, { size: 7, bold: !!bold, color: ink });
+        }
+        cx += cols[i];
+      });
+      y += rowH;
+    };
+
+    rows.forEach((row, index) => paintRow(row.cells, row.status, index % 2 === 1, false));
+    if (totalCells) paintRow(totalCells, null, true, true);
+    y += 3;
+  };
+
+  if (model.showInstallments) {
+    drawTable(
+      'INSTALLMENT BREAKDOWN',
+      [
+        { label: 'Payment type', w: 22 },
+        { label: 'Percentage', w: 16 },
+        { label: 'Amount', w: 24 },
+        { label: 'Date', w: 16 },
+        { label: 'Status', w: 22 },
+      ],
+      model.installments,
+      ['Total', '', model.installmentTotal, '', '']
+    );
+  }
+
+  if (model.showExpenses) {
+    drawTable(
+      'OTHER COSTS',
+      [
+        { label: 'Label', w: 22 },
+        { label: 'Detail', w: 16 },
+        { label: 'Amount', w: 22 },
+        { label: 'VAT', w: 18 },
+        { label: 'Total', w: 22 },
+      ],
+      model.expenses,
+      ['Total', '', ...model.expenseTotals]
+    );
+  }
+
+  write(
+    "Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.",
+    margin,
+    Math.min(y, 140),
+    innerW,
+    6,
+    { size: 6, color: muted }
+  );
+};
+
 const createPaymentDetailsSlide = () => {
   const p = property.value || {};
 
@@ -5998,58 +6181,23 @@ const createPaymentDetailsSlide = () => {
 
   const expenseRowCount = expenses.length > 0 ? expenses.length + 1 : 0;
   const contentPressure = breakdownRowCount + expenseRowCount + (hasNoc ? 1 : 0);
-  const densityTier = contentPressure >= 12 ? 'tight' : contentPressure >= 9 ? 'compact' : 'normal';
-
-  const d = {
-    normal: {
-      fs: '2.5mm', fsSm: '2.3mm', fsXs: '2.1mm', badgeFs: '2mm',
-      pad: '1.05mm 0.8mm', padHead: '0.25mm', badgePadX: '1.8mm',
-      sectionMb: '2mm', titleMb: '1.2mm', blockMt: '2.5mm', headerMb: '3.5mm',
-      titleFs: '5mm', accentMb: '1.2mm', cardGap: '2mm', cardMb: '1.3mm',
-      cardPad: '1.4mm 2mm 2.4mm', cardLbl: '2.3mm', cardVal: '3.4mm',
-      nocMb: '1.6mm', nocPad: '1.3mm 1.6mm', wrapPad: '1mm 0 0.8mm 0', pagePad: '7mm 7mm 14mm 7mm',
-      pillH: '4.6mm', badgeH: '3.6mm', rowGap: '0.2mm',
-    },
-    compact: {
-      fs: '2.25mm', fsSm: '2.05mm', fsXs: '1.9mm', badgeFs: '1.8mm',
-      pad: '0.85mm 0.7mm', padHead: '0.2mm', badgePadX: '1.5mm',
-      sectionMb: '1.5mm', titleMb: '0.9mm', blockMt: '1.8mm', headerMb: '2.5mm',
-      titleFs: '4.3mm', accentMb: '0.9mm', cardGap: '1.4mm', cardMb: '1mm',
-      cardPad: '1mm 1.6mm 1.6mm', cardLbl: '2.05mm', cardVal: '3mm',
-      nocMb: '1.2mm', nocPad: '1mm 1.4mm', wrapPad: '0.8mm 0 0.6mm 0', pagePad: '6mm 6mm 13mm 6mm',
-      pillH: '4.2mm', badgeH: '3.2mm', rowGap: '0.15mm',
-    },
-    tight: {
-      fs: '2mm', fsSm: '1.85mm', fsXs: '1.7mm', badgeFs: '1.6mm',
-      pad: '0.7mm 0.6mm', padHead: '0.15mm', badgePadX: '1.3mm',
-      sectionMb: '1.1mm', titleMb: '0.7mm', blockMt: '1.3mm', headerMb: '2mm',
-      titleFs: '3.8mm', accentMb: '0.7mm', cardGap: '1.1mm', cardMb: '0.8mm',
-      cardPad: '0.8mm 1.4mm 1.3mm', cardLbl: '1.9mm', cardVal: '2.6mm',
-      nocMb: '0.9mm', nocPad: '0.8mm 1.2mm', wrapPad: '0.7mm 0 0.5mm 0', pagePad: '5.5mm 5.5mm 12mm 5.5mm',
-      pillH: '3.8mm', badgeH: '2.9mm', rowGap: '0.1mm',
-    },
-  }[densityTier];
-
-  // --- CENTERING CORE ---
-  // html2canvas places glyphs at the BOTTOM of a tall line-height box, so
-  // never use height === line-height for pills. Use line-height:1 + padding.
-  const thCell = `padding:${d.padHead};vertical-align:middle;text-align:center;`;
-  const tdCell = `padding:${d.pad};font-size:${d.fs};line-height:1.25;vertical-align:middle;text-align:center;`;
-
-  const cellInner = (content) =>
-    `<div style="width:100%;text-align:center;line-height:1.25;position:relative;top:-0.18mm;">${content}</div>`;
-
-  // Asymmetric padding (slightly more bottom) keeps text optically centered in PDF
+  const font = 'font-family:Arial,Helvetica,sans-serif;';
+  const thCell = `padding:2px 4px 6px;vertical-align:middle;text-align:center;background:transparent;border:none;`;
+  const tdCell = `padding:6px 6px;vertical-align:middle;text-align:center;background:transparent;color:#1e293b;border:none;font-size:11px;line-height:14px;${font}`;
+  const cellInner = (content) => content;
   const thPill = (label) =>
-    `<div style="display:block;width:100%;box-sizing:border-box;background:#0f1f3a;color:#fff;border-radius:999px;font-weight:700;font-size:${d.fsSm};line-height:1;text-align:center;white-space:nowrap;padding:0.95mm 1.2mm 1.55mm;position:relative;top:-0.14mm;">${label}</div>`;
-  const tableStyle = `width:100%;border-collapse:separate;border-spacing:0 ${d.rowGap};font-size:${d.fs};table-layout:fixed;`;
+    `<span style="display:block;background:#0f1f3a;color:#ffffff;border-radius:999px;padding:6px 8px;font-size:10px;line-height:12px;font-weight:700;${font}">${label}</span>`;
+  const tableStyle = `width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;background:#ffffff;${font}`;
+  const sectionStyle = `width:100%;margin:0 0 8px 0;background:#ffffff;border-radius:12px;padding:8px 8px 4px;border:1px solid rgba(15,31,58,0.08);box-sizing:border-box;`;
 
   const makeBadge = (text, status) =>
-    `<span style="display:inline-block;box-sizing:border-box;border-radius:999px;font-weight:700;font-size:${d.badgeFs};line-height:1;white-space:nowrap;text-align:center;padding:0.7mm ${d.badgePadX} 1.3mm;position:relative;top:-0.14mm;${badgeStyle(status)}">${text}</span>`;
+    `<span style="display:inline-block;border-radius:999px;padding:4px 10px;font-size:10px;line-height:12px;font-weight:700;${font}${badgeStyle(status)}">${text}</span>`;
 
   let cumulative = 0;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
+  const paidModels = [];
+  const unpaidModels = [];
 
   sorted.forEach((entry) => {
     const amount = installmentAmount(entry);
@@ -6061,6 +6209,9 @@ const createPaymentDetailsSlide = () => {
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
     const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
     const badge = makeBadge(status, status);
+    const rowModel = { cells: ['Installment', `${pct}%`, fmtAed(amount), dateCell, ''], status };
+    if (paid) paidModels.push(rowModel);
+    else unpaidModels.push(rowModel);
 
     const rowHtml = `
       <tr>
@@ -6120,6 +6271,7 @@ const createPaymentDetailsSlide = () => {
   let expGrand = 0;
 
   const expenseRows = [];
+  const expenseModels = [];
 
   if (hasNoc) {
     const nocAmount = nocFixedAmount;
@@ -6139,6 +6291,7 @@ const createPaymentDetailsSlide = () => {
 
     expSubtotal += nocAmount;
     expGrand += nocAmount;
+    expenseModels.push({ cells: ['NOC Fees', fmtAed(nocAmount), fmtAed(nocAmount), '—', fmtAed(nocAmount)] });
   }
 
   // ✅ إضافة باقي التكاليف
@@ -6154,6 +6307,9 @@ const createPaymentDetailsSlide = () => {
     const detail = calc === 'percentage'
       ? `${toNum(l?.value)}%`
       : fmtAed(toNum(l?.value));
+    expenseModels.push({
+      cells: [l?.label || '—', detail, fmtAed(amt), vat > 0 ? fmtAed(vat) : '—', fmtAed(total)],
+    });
     expenseRows.push(`
       <tr>
         <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(l?.label || '—')}</td>
@@ -6167,137 +6323,109 @@ const createPaymentDetailsSlide = () => {
 
   const expenseRowsHtml = expenseRows.join('');
 
+  const sectionTitle = `display:block;margin:0 0 6px 2px;font-size:11px;line-height:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;${font}`;
+  const cardLabel = `display:block;margin:0 0 4px 0;font-size:11px;line-height:14px;font-weight:600;${font}`;
+  const cardValue = `display:block;margin:0;font-size:13px;line-height:16px;font-weight:700;${font}`;
+  const cardBox = `width:25%;box-sizing:border-box;padding:10px 12px;vertical-align:middle;border-radius:10px;`;
+
   const expensesBlock = (expenseRows.length > 0) ? `
-    <div style="margin-top:${d.blockMt};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">other costs</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm rgba(15,31,58,0.08);width:100%;box-sizing:border-box;">
-        <table style="${tableStyle}">
-          <thead>
-            <tr>
-              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Label')}</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Detail')}</th>
-              <th align="center" valign="middle" style="${thCell}width:20%;">${thPill('Amount')}</th>
-              <th align="center" valign="middle" style="${thCell}width:16%;">${thPill('VAT')}</th>
-              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Total')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${expenseRowsHtml}
-            <tr style="background:#f1f5f9;">
-              <td align="center" valign="middle" colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div style="${sectionStyle}margin-top:8px;">
+      <div style="${sectionTitle}">Other costs</div>
+      <table style="${tableStyle}">
+        <thead>
+          <tr>
+            <th style="${thCell}width:22%;">${thPill('Label')}</th>
+            <th style="${thCell}width:20%;">${thPill('Detail')}</th>
+            <th style="${thCell}width:20%;">${thPill('Amount')}</th>
+            <th style="${thCell}width:16%;">${thPill('VAT')}</th>
+            <th style="${thCell}width:22%;">${thPill('Total')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${expenseRowsHtml}
+          <tr style="background:#f1f5f9;">
+            <td colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+            <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expSubtotal))}</td>
+            <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expVatTotal))}</td>
+            <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(expGrand))}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   ` : '';
 
   const installmentTable = (installmentRowsPaid || installmentRowsNotPaid || premiumRow || handoverRow) && hasInstallments ? `
-    <div style="margin-bottom:${d.sectionMb};width:100%;">
-      <div style="font-size:${d.fs};font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;margin-bottom:${d.titleMb};">Installment breakdown</div>
-      <div style="background:#ffffff !important;border-radius:3mm;padding:${d.wrapPad};box-shadow:inset 0 0 0 0.2mm #ffffff;width:100%;box-sizing:border-box;">
-        <table style="${tableStyle}">
-          <thead>
-            <tr>
-              <th align="center" valign="middle" style="${thCell}width:22%;">${thPill('Payment type')}</th>
-              <th align="center" valign="middle" style="${thCell}width:13%;">${thPill('Percentage')}</th>
-              <th align="center" valign="middle" style="${thCell}width:24%;">${thPill('Amount')}</th>
-              <th align="center" valign="middle" style="${thCell}width:18%;">${thPill('Date')}</th>
-              <th align="center" valign="middle" style="${thCell}width:15%;">${thPill('Status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-             ${installmentRowsPaid}
-            ${premiumRow}
-            ${installmentRowsNotPaid}
-            ${handoverRow}
-            <tr style="background:#f1f5f9;">
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;" colspan="2">${cellInner('Total')}</td>
-              <td align="center" valign="middle" style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
-              <td colspan="2"></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div style="${sectionStyle}">
+      <div style="${sectionTitle}">Installment breakdown</div>
+      <table style="${tableStyle}">
+        <thead>
+          <tr>
+            <th style="${thCell}width:22%;">${thPill('Payment type')}</th>
+            <th style="${thCell}width:16%;">${thPill('Percentage')}</th>
+            <th style="${thCell}width:22%;">${thPill('Amount')}</th>
+            <th style="${thCell}width:16%;">${thPill('Date')}</th>
+            <th style="${thCell}width:24%;">${thPill('Status')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${installmentRowsPaid}
+          ${premiumRow}
+          ${installmentRowsNotPaid}
+          ${handoverRow}
+          <tr style="background:#f1f5f9;">
+            <td colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+            <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
+            <td colspan="2" style="${tdCell}"></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   ` : '';
 
-  // ✅ NOC Percentage Strip - يستخدم paidAed (المدفوع فقط)
-  const nocPercentageStrip = (hasNocPercentage) ? `
-    <div style="background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-radius:3mm;padding:${d.nocPad};margin-bottom:${d.nocMb};display:flex;flex-wrap:wrap;align-items:center;gap:1.5mm 3mm;font-size:${d.fs};">
-      <span style="display:inline-flex;align-items:center;gap:0.8mm;">
-        <span style="background:#0ea5e9;color:#fff;border-radius:4mm;padding:0.3mm 2mm;font-weight:700;font-size:${d.fsSm};display:inline-flex;align-items:center;gap:0.5mm;">
-          <span style="font-size:${d.fsXs};">%</span> NOC
-        </span>
-        <span style="font-weight:500;">Required:</span>
-        <strong style="font-weight:700;">${fmtAed(nocRequiredFromPercentage)}</strong>
-        <span style="color:#64748b;font-size:${d.fsXs};">(${nocPercentage}% of OP)</span>
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:0.5mm;">
-        <span style="color:#22c55e;">✓</span>
-        Paid: <strong>${fmtAed(paidAed)}</strong>
-        <span style="color:#64748b;font-size:${d.fsXs};">(${originalPrice > 0 ? ((paidAed / originalPrice) * 100).toFixed(2) : '0.00'}% of OP)</span>
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:0.5mm;">
-        <span style="color:#f59e0b;">⏳</span>
-        Remaining: <strong>${fmtAed(nocRemainingFromPercentage)}</strong>
-      </span>
-      <span style="display:inline-flex;align-items:center;padding:0.3mm 1.6mm;border-radius:4mm;font-weight:700;font-size:${d.badgeFs};${nocMetFromPercentage ? 'background:#22c55e;color:#fff;' : 'background:#f59e0b;color:#fff;'}">
-        ${nocMetFromPercentage ? '✅ NOC met' : '⚠️ Below NOC'}
-      </span>
-    </div>
+  const nocPercentageStrip = hasNocPercentage ? `
+    <table style="${tableStyle}margin:0 0 8px 0;page-break-inside:avoid;background:#f0f9ff;">
+      <tbody>
+        <tr>
+          <td style="${tdCell}text-align:left;background:#f0f9ff;border-bottom:none;">NOC required <strong>${fmtAed(nocRequiredFromPercentage)}</strong> <span style="color:#64748b;">(${nocPercentage}% of OP)</span></td>
+          <td style="${tdCell}background:#f0f9ff;border-bottom:none;">Paid <strong>${fmtAed(paidAed)}</strong></td>
+          <td style="${tdCell}background:#f0f9ff;border-bottom:none;">Remaining <strong>${fmtAed(nocRemainingFromPercentage)}</strong></td>
+          <td style="${tdCell}background:#f0f9ff;border-bottom:none;">${makeBadge(nocMetFromPercentage ? 'NOC met' : 'Below NOC', nocMetFromPercentage ? 'Paid' : 'Upcoming')}</td>
+        </tr>
+      </tbody>
+    </table>
   ` : '';
-const noteBlock = `
-  <div style="position:absolute !important; left:${d.pagePad.split(' ')[1] || '7mm'} !important; right:${d.pagePad.split(' ')[1] || '7mm'} !important; bottom:11.5% !important; z-index:20 !important; box-sizing:border-box !important;">
-    <div style="background:linear-gradient(135deg,#0f1f3a 0%,#132043 100%) !important; border-left:1mm solid #FAA300 !important; border-radius:2mm !important; padding:2mm 3.5mm !important; box-shadow:0 1mm 3mm rgba(15,31,58,0.25) !important;">
-      <p style="margin:0 !important; color:rgba(255,255,255,0.85) !important; font-size:${d.fsXs} !important; line-height:1.5 !important; font-family:Arial, sans-serif !important; letter-spacing:0.1px !important;">
-        Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
-      </p>
+
+  const noteBlock = `
+    <div style="margin:2px 4px 0;font-size:9px;line-height:12px;color:#64748b;${font}">
+      Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.
     </div>
-  </div>
-`;
+  `;
+
+  paymentSlideModel = {
+    cards: [
+      { label: 'Selling price', value: fmtAed(sellingPrice), hero: true },
+      ...(isUnderConstruction ? [{ label: 'Original price', value: fmtAed(originalPrice) }] : []),
+      ...(planLabel ? [{ label: 'Payment plan', value: planLabel }] : []),
+      { label: 'Premium', value: fmtAed(premium), negative: premium < 0 },
+    ],
+    showInstallments: Boolean(installmentTable),
+    installments: [
+      ...paidModels,
+      ...(hasPremiumRow ? [{ cells: ['Premium', '—', fmtAed(premium), '—', ''], status: premiumStatus, negative: premium < 0 }] : []),
+      ...unpaidModels,
+      ...(hasHandoverRow ? [{
+        cells: [`Handover (${handoverPct.toFixed(0)}%)`, `${handoverPct.toFixed(2)}%`, fmtAed(handoverAmount), fmtDate(p.handover_date), ''],
+        status: handoverStatus,
+      }] : []),
+    ],
+    installmentTotal: fmtAed(totalAmount),
+    showExpenses: expenseModels.length > 0,
+    expenses: expenseModels,
+    expenseTotals: [fmtAed(expSubtotal), fmtAed(expVatTotal), fmtAed(expGrand)],
+  };
+
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#fff !important;">
-    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
-      <img src="${pnglogo}" style="width:18mm !important; display:block !important;" />
-    </div>
-    <div style="position:relative !important; z-index:5 !important; padding:${d.pagePad} !important; box-sizing:border-box !important; height:100% !important; color:#1e293b !important; font-family:Arial, sans-serif !important;">
-      <div style="margin-bottom:${d.headerMb};">
-        <div style="font-size:${d.titleFs};font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#0f1f3a;line-height:1.15;font-family:'Montserrat', Arial, sans-serif;">Payment details</div>
-        <div style="width:14mm;height:1mm;background:#FAA300;border-radius:1mm;margin-top:${d.accentMb};"></div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:${d.cardGap};margin-bottom:${d.cardMb};">
-        <div style="background:linear-gradient(160deg,#132043 0%,#0f1f3a 100%);color:#fff;border-bottom:1mm solid #FAA300;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};opacity:0.88;margin-bottom:0.6mm;">Selling price</div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(sellingPrice)}</div>
-        </div>
-        ${isUnderConstruction ?  `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Original price </div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${fmtAed(originalPrice)}</div>
-        </div> ` : ''}
-
-           ${planLabel ? `
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Payment plan</div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;">${planLabel || '—'}</div>
-        </div>    ` : ''}
-        <div style="background:#e8ecf2;color:#0f1f3a;border-radius:3mm;padding:${d.cardPad};">
-          <div style="font-size:${d.cardLbl};margin-bottom:0.6mm;">Premium</div>
-          <div style="font-size:${d.cardVal};font-weight:700;line-height:1.1;${premium < 0 ? 'color:#b91c1c;' : ''}">${fmtAed(premium)}</div>
-        </div>
-      </div>
-    ${nocPercentageStrip}
-      ${installmentTable}
-      ${expensesBlock}
-      ${noteBlock}
-    </div>
-    ${createFooter()}
-  </div>
+  <div id="payment-details-slide" style="width:210mm;height:148mm;margin:0;padding:0;overflow:hidden;background:#f3f5fa;page-break-inside:avoid;"></div>
   `;
 };
 

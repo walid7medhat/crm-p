@@ -190,8 +190,7 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
   border: 1px solid rgba(255, 255, 255, 0.45) !important;
   border-radius: 22px !important;
   box-shadow: 0 4px 20px rgba(30, 27, 46, 0.04) !important;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  /* No backdrop-filter here: it traps position:fixed popups inside this panel. */
   box-sizing: border-box !important;
 }
 

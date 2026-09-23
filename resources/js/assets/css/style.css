@@ -15800,15 +15800,16 @@ body .modal-dialog {
  */
 body .modal-backdrop,
 body .modal-backdrop.show {
-  z-index: 100 !important;
+  z-index: 100600 !important;
 }
 body .modal,
 body .modal.fade,
 body .modal.show {
-  z-index: 100 !important;
+  z-index: 100700 !important;
 }
 body .stage-modal-overlay,
 body .modal-overlay,
+body .lightbox-overlay,
 body .confirmation-modal-overlay {
-  z-index: 100 !important;
+  z-index: 100700 !important;
 }
