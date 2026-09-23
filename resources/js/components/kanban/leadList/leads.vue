@@ -176,7 +176,7 @@
                                             >
                                                 <!-- Task Header - Lead Name + badges (single row) -->
                                                 <div class="task-header d-flex align-items-center gap-2 mb-12 min-w-0">
-                                                    <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate">{{ task.lead_name }}</p>
+                                                    <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate" :title="task.lead_name">{{ task.lead_name }}</p>
                                                     <div class="task-header-badges d-inline-flex align-items-center gap-1 flex-shrink-0">
                                                         <span
                                                             v-if="task.has_service_duplicate"
@@ -4800,6 +4800,13 @@ const fetchRevertNotifications = async () => {
     font-size: 13px !important;
     font-weight: 700 !important;
     letter-spacing: -0.2px;
+}
+
+.kanban-card .task-title:hover {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-word;
 }
 
 .kanban-card .info-label {
