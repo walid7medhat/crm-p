@@ -28,32 +28,25 @@
     </header>
     <div
       v-if="!isMobileViewport"
-      class="sidebar-toggle-container sidebar-header d-flex align-items-center"
-      :class="{ 'sidebar-header--open': !isSidebarActive, 'sidebar-header--closed': isSidebarActive }"
+      class="sidebar-brand"
+      :class="{ 'sidebar-brand--collapsed': isSidebarActive }"
     >
-      <div
-        class="sidebar-toggle-wrap"
-        @mouseenter="sidebarHeaderHover = true"
-        @mouseleave="sidebarHeaderHover = false"
-      >
-        <button
-          type="button"
-          class="sidebar-toggle"
-          :class="{ 'sidebar-toggle-with-label': !isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)) }"
-          @click="isMobileViewport ? closeMobileMenu() : handleSidebarToggleClick()"
-          :aria-label="isMobileViewport ? 'Close menu' : (isSidebarActive ? 'Expand menu' : 'Collapse menu')"
-        >
-          <iconify-icon
-            :icon="isMobileViewport ? 'lucide:x' : 'material-symbols:menu-rounded'"
-            class="sidebar-menu-icon"
-          />
-          <!-- "Oia Properties" when open; "Expand menu" with icon when collapsed + hover anywhere on sidebar -->
-          <span
-            v-show="!isMobileViewport && (!isSidebarActive || (isSidebarActive && (sidebarHeaderHover || sidebarHover)))"
-            class="sidebar-toggle-label"
-          >Oia Properties</span>
-        </button>
+      <div class="sidebar-brand__mark">
+        <img
+          :src="oiaBrandLogo"
+          alt="Oia Properties"
+          class="sidebar-brand__logo"
+        />
       </div>
+      <button
+        type="button"
+        class="sidebar-edge-toggle"
+        :aria-label="isSidebarActive ? 'Open menu' : 'Close menu'"
+        @pointerdown.stop
+        @click.stop="handleSidebarToggleClick"
+      >
+        <iconify-icon :icon="isSidebarActive ? 'lucide:chevron-right' : 'lucide:chevron-left'" />
+      </button>
     </div>
     <!-- Menu -->
     <div class="sidebar-menu-area" @click="onMobileSidebarNavClick">
@@ -270,6 +263,20 @@
           </transition>
         </li>
       </ul>
+    </div>
+
+    <div v-if="!isMobileViewport && user" class="sidebar-user" :class="{ 'sidebar-user--collapsed': isSidebarActive }">
+      <img
+        v-if="user.avatar"
+        :src="user.avatar"
+        alt=""
+        class="sidebar-user__avatar"
+      />
+      <span v-else class="sidebar-user__avatar sidebar-user__avatar--fallback">{{ sidebarUserInitial }}</span>
+      <span v-show="!isSidebarActive" class="sidebar-user__meta">
+        <span class="sidebar-user__label">Logged in</span>
+        <span class="sidebar-user__name">{{ user.name }}</span>
+      </span>
     </div>
 
     <!-- Mobile: Listings panel slides in front of the main menu -->
@@ -494,6 +501,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch.js';
 import { startNavProgress } from '@/composables/useNavProgress.js';
 
 const logo = ref('/assets/images/LogoWhite.png');
+const oiaBrandLogo = ref('/assets/images/auth/oia-properties-logo.svg');
 const dashboardIcon = ref('/assets/icons/dashboard-icon.svg?v=2');
 const leadsIcon = ref('/assets/icons/leads-icon.svg?v=2');
 const dealsIcon = ref('/assets/icons/deals-icon.svg?v=2');
@@ -566,6 +574,12 @@ const getUserFromStorage = () => {
 }
 
 const user = ref(getUserFromStorage());
+const sidebarUserInitial = computed(() => {
+  const name = String(user.value?.name || '').trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'U';
+  return parts.slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+});
 
 const isAdmin = computed(() => {
   if (!user.value) return false;
@@ -1500,7 +1514,7 @@ onUnmounted(() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-color: rgba(232, 234, 239, 0.8) !important;
-  z-index: 99 !important;
+  z-index: 1100 !important;
   position: fixed;
 }
 
@@ -1551,27 +1565,217 @@ onUnmounted(() => {
   background: transparent;
   border-bottom: 1px solid #eef0f4;
 }
+
+aside.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff !important;
+  border-radius: 28px !important;
+  overflow: visible !important;
+  box-shadow: 0 12px 32px rgba(76, 29, 149, 0.08) !important;
+}
+
+.sidebar-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 14px 16px 6px;
+  min-height: 0;
+}
+
+.sidebar-brand__mark {
+  width: 86px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-brand__logo {
+  width: 86px;
+  height: auto;
+  display: block;
+}
+
+.sidebar-brand--collapsed {
+  min-height: 0;
+  padding: 16px 0 10px;
+}
+
+.sidebar-brand--collapsed .sidebar-brand__mark {
+  width: 28px;
+  height: 26px;
+  flex: 0 0 28px;
+  overflow: hidden;
+  background: url('/assets/images/auth/oia-properties-logo.svg') center top / 49px auto no-repeat;
+}
+
+.sidebar-brand--collapsed .sidebar-brand__logo {
+  display: none;
+}
+
+.sidebar.active:hover .sidebar-brand--collapsed .sidebar-brand__mark {
+  width: 86px;
+  height: auto;
+  flex: 0 0 auto;
+  background: none;
+}
+
+.sidebar.active:hover .sidebar-brand--collapsed .sidebar-brand__logo {
+  display: block;
+  width: 86px;
+  height: auto;
+  max-width: none;
+}
+
+.sidebar-edge-toggle {
+  position: absolute;
+  top: 18px;
+  inset-inline-end: -12px;
+  transform: none;
+  z-index: 40;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #ece7f6;
+  background: #fff;
+  color: #5b21b6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(76, 29, 149, 0.16);
+  padding: 0;
+  pointer-events: auto;
+}
+
+.sidebar-edge-toggle iconify-icon {
+  font-size: 14px;
+  display: inline-flex;
+  pointer-events: none;
+}
+
+.sidebar-edge-toggle:hover {
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+.sidebar-menu-area {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0;
+}
+
+.sidebar-user {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 14px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: #f8f6fc;
+}
+
+.sidebar-user--collapsed {
+  justify-content: center;
+  margin-inline: 6px;
+  padding: 8px 0;
+  background: transparent;
+}
+
+.sidebar-user__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.sidebar-user__avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sidebar-user__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.sidebar-user__label {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.sidebar-user__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e1b4b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+aside.sidebar .sidebar-menu > li > a.active,
+aside.sidebar .sidebar-menu .nav-link.active-page > a {
+  position: relative;
+  color: #6d28d9 !important;
+}
+
+aside.sidebar .sidebar-menu > li > a.active span,
+aside.sidebar .sidebar-menu .nav-link.active-page > a span {
+  color: #6d28d9 !important;
+  font-weight: 600;
+}
+
+aside.sidebar .sidebar-menu > li > a.active::before,
+aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: #6d28d9;
+}
 .sidebar-menu li a {
-    padding: 0.55rem 0.55rem !important;
-    min-height: 44px;
+    padding: 0.28rem 0.4rem !important;
+    min-height: 34px;
     box-sizing: border-box;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 1px;
 }
-.sidebar-menu li a span,
-.sidebar-submenu li a span {
-  font-size: 0.875rem;
-  line-height: 1.3;
+.sidebar-menu > li > a span {
+  font-size: 0.8125rem;
+  line-height: 1.25;
   font-weight: 500;
 }
-/* 2. Keep light surface when collapsed + hover — compact readable width */
+.sidebar-submenu li a span,
+.sidebar-submenu .menu-label {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+.sidebar:not(.active) .sidebar-submenu,
+.sidebar.active:hover .sidebar-submenu {
+  padding-inline-start: 14px;
+}
+/* Hovering a closed menu opens it so the labels can be read. */
 .sidebar.active:hover {
-  width: 13rem !important;
-  min-width: 13rem !important;
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  z-index: 1300 !important;
+  width: 11.75rem !important;
+  min-width: 11.75rem !important;
+  max-width: none !important;
+  background: #ffffff !important;
+  z-index: 1100 !important;
 }
 @media (max-width: 991px) {
   .sidebar.sidebar-open:not(.sidebar--mobile-drawer) {
@@ -1749,20 +1953,20 @@ onUnmounted(() => {
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
-    width: 13rem !important;
-    min-width: 13rem !important;
+    width: 11.75rem !important;
+    min-width: 11.75rem !important;
   }
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 13.5rem !important;
-    min-width: 13.5rem !important;
+    width: 11.75rem !important;
+    min-width: 11.75rem !important;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 13.5rem !important;
-    min-width: 13.5rem !important;
+    width: 11.75rem !important;
+    min-width: 11.75rem !important;
   }
 }
 
