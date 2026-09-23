@@ -24,25 +24,72 @@
         :key="viewing.id"
         class="approved-viewings-panel__item"
       >
-        <img
-          :src="viewing.requested_by?.avatar || defaultAvatar"
-          class="approved-viewings-panel__avatar"
-          alt=""
+        <PersonHoverCard
+          v-if="viewing.requested_by?.id"
+          :user-id="viewing.requested_by?.id"
+          :name="viewing.requested_by?.name"
+          :avatar="viewing.requested_by?.avatar"
+          class="approved-viewings-panel__hover"
+          @click="openUserProfile(viewing.requested_by?.id)"
         >
-        <div class="approved-viewings-panel__body">
-          <span class="approved-viewings-panel__name">{{ viewing.requested_by?.name || 'Agent' }}</span>
-          <span class="approved-viewings-panel__time">
-            <i class="ri-time-line"></i>
-            {{ displayWhen(viewing) }}
-          </span>
-        </div>
+          <div class="d-flex align-items-center gap-2" style="cursor: pointer;">
+            <img
+              :src="viewing.requested_by?.avatar || defaultAvatar"
+              class="approved-viewings-panel__avatar"
+              alt=""
+            >
+            <div class="approved-viewings-panel__body">
+              <span class="approved-viewings-panel__name">{{ viewing.requested_by?.name || 'Agent' }}</span>
+              <span class="approved-viewings-panel__time">
+                <i class="ri-time-line"></i>
+                {{ displayWhen(viewing) }}
+              </span>
+            </div>
+          </div>
+        </PersonHoverCard>
+        <template v-else>
+          <img
+            :src="viewing.requested_by?.avatar || defaultAvatar"
+            class="approved-viewings-panel__avatar"
+            alt=""
+          >
+          <div class="approved-viewings-panel__body">
+            <span class="approved-viewings-panel__name">{{ viewing.requested_by?.name || 'Agent' }}</span>
+            <span class="approved-viewings-panel__time">
+              <i class="ri-time-line"></i>
+              {{ displayWhen(viewing) }}
+            </span>
+          </div>
+        </template>
       </li>
     </ul>
+
+    <ProfilePopup
+      v-if="showProfilePopup && profileUserId"
+      v-model="showProfilePopup"
+      :user-id="profileUserId"
+      @update:model-value="closeProfilePopup"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+function openUserProfile(userId) {
+  if (userId) {
+    profileUserId.value = userId
+    showProfilePopup.value = true
+  }
+}
+function closeProfilePopup() {
+  showProfilePopup.value = false
+  profileUserId.value = null
+}
 
 const props = defineProps({
   viewings: { type: Array, default: () => [] },
@@ -173,6 +220,12 @@ function displayWhen(viewing) {
   border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #eef2f7;
+}
+
+.approved-viewings-panel__hover {
+  display: flex !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .approved-viewings-panel__avatar {

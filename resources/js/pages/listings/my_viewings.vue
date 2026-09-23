@@ -115,10 +115,31 @@
                     </div>
 
                     <div class="text-muted" v-if="req.sales_person_name" style="font-size: 10px !important; margin-top: 2px !important;">
-                      <span class="fw-medium">listing:</span> {{ req.sales_person_name }}
+                      <span class="fw-medium">listing:</span>
+                      <PersonHoverCard
+                        v-if="req.listing?.agent_id"
+                        :user-id="req.listing?.agent_id"
+                        :name="req.sales_person_name"
+                        align="right"
+                        @click="openUserProfile(req.listing?.agent_id)"
+                      >
+                        <span style="cursor: pointer;">{{ req.sales_person_name }}</span>
+                      </PersonHoverCard>
+                      <span v-else>{{ req.sales_person_name }}</span>
                     </div>
                     <div class="text-muted" v-if="req.request_person_name" style="font-size: 10px !important; margin-top: 2px !important;">
-                      <span class="fw-medium">Request By:</span> {{ req.request_person_name }}
+                      <span class="fw-medium">Request By:</span>
+                      <PersonHoverCard
+                        v-if="req.requested_by?.id"
+                        :user-id="req.requested_by?.id"
+                        :name="req.request_person_name"
+                        :avatar="req.requested_by?.avatar"
+                        align="right"
+                        @click="openUserProfile(req.requested_by?.id)"
+                      >
+                        <span style="cursor: pointer;">{{ req.request_person_name }}</span>
+                      </PersonHoverCard>
+                      <span v-else>{{ req.request_person_name }}</span>
                     </div>
 
                     <div class="mt-1">
@@ -233,6 +254,13 @@
       </div>
     </div>
   </div>
+
+  <ProfilePopup
+    v-if="showProfilePopup && profileUserId"
+    v-model="showProfilePopup"
+    :user-id="profileUserId"
+    @update:model-value="closeProfilePopup"
+  />
 </template>
 
 <script setup>
@@ -247,6 +275,21 @@ import 'vue-select/dist/vue-select.css'
 import Swal from 'sweetalert2'
 
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
+import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+function openUserProfile(userId) {
+  if (userId) {
+    profileUserId.value = userId
+    showProfilePopup.value = true
+  }
+}
+function closeProfilePopup() {
+  showProfilePopup.value = false
+  profileUserId.value = null
+}
 
 const loading = ref(true)
 const viewings = ref([])

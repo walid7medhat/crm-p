@@ -63,21 +63,34 @@
                             <tr v-for="order in paginatedOrders" :key="order.id">
                                  <td>{{order.reference_number}}</td>
                                 <td v-if="hasShowAllColumn">
-                                    <div class="d-flex align-items-center">
-                                                    <img :src="avatarUrl(order.requested_by?.avatar)"
-                                            :alt="getRequesterName(order)"
-                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
-                                            style="object-fit: cover;"
-                                            @error="handleImageError"
-                                        />
-                                        <div class="flex-grow-1">
-                                            
-                                            <span class=" name text-md mb-0 fw-bolder text-primary-light d-block">{{ getRequesterName(order) }}</span>
+                                    <PersonHoverCard
+                                        :user-id="order.requested_by?.id"
+                                        :name="getRequesterName(order)"
+                                        :avatar="avatarUrl(order.requested_by?.avatar)"
+                                        @click="goToUser(order.requested_by?.id)"
+                                    >
+                                        <div class="d-flex align-items-center" style="cursor: pointer;">
+                                                        <img :src="avatarUrl(order.requested_by?.avatar)"
+                                                :alt="getRequesterName(order)"
+                                                class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
+                                                style="object-fit: cover;"
+                                                @error="handleImageError"
+                                            />
+                                            <div class="flex-grow-1">
+
+                                                <span class=" name text-md mb-0 fw-bolder text-primary-light d-block">{{ getRequesterName(order) }}</span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    </PersonHoverCard>
                                 </td>
                                 <td>
-                                     <div class="d-flex align-items-center">
+                                    <PersonHoverCard
+                                        :user-id="order.listing?.agent_id"
+                                        :name="order.listing?.agent"
+                                        :avatar="avatarUrl(order.listing?.agent_avatar)"
+                                        @click="goToUser(order.listing?.agent_id)"
+                                    >
+                                     <div class="d-flex align-items-center" style="cursor: pointer;">
                                       <img :src="avatarUrl(order.listing?.agent_avatar)"
                                             :alt="order.listing?.agent || ''"
                                             class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden"
@@ -94,7 +107,7 @@
                                               </span>
                                             </div>
                                     </div>
-                                
+                                    </PersonHoverCard>
                                 </td>
                                 <td>
                                     <!--<span class="text-sm mb-0 fw-normal text-secondary-light d-block">{{ order.property_title }}</span>-->
@@ -533,7 +546,15 @@
         </div>
     </div>
 </div>
-   </div>     
+   </div>
+
+<ProfilePopup
+    v-if="showProfilePopup && profileUserId"
+    v-model="showProfilePopup"
+    :user-id="profileUserId"
+    @update:model-value="closeProfilePopup"
+/>
+
 </template>
 
 <script setup>
@@ -541,6 +562,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
+import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
 
 const defaultAvatar = '/assets/images/user.png'
 const filtericon = '/assets/images/filter.png'
@@ -578,6 +601,19 @@ function handleImageError(event) {
     if (el.dataset.avatarFallback === '1') return
     el.dataset.avatarFallback = '1'
     el.src = defaultAvatar
+}
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+function goToUser(userId) {
+    if (userId) {
+        profileUserId.value = userId
+        showProfilePopup.value = true
+    }
+}
+function closeProfilePopup() {
+    showProfilePopup.value = false
+    profileUserId.value = null
 }
 
 // Router

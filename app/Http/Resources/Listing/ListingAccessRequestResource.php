@@ -140,6 +140,7 @@ class ListingAccessRequestResource extends JsonResource
                     'size_sqft' => $this->listing->size_sqft,
                     'size_sqmt' => $this->listing->size_sqmt,
                     'agent' => User::resolveDisplayName($this->listing?->agent),
+                    'agent_id' => $this->listing->agent_id,
                       'agent_avatar' => $this->listing->agent && $this->listing->agent->avatar?asset('storage/'. $this->listing->agent->avatar):'',
                 ];
             }),

@@ -169,8 +169,31 @@
                 />
               </td>
               <td class="date-time-column">{{ entry.dateTime }}</td>
-              <td class="created-by-column">
-                <div class="d-flex align-items-center gap-2">
+              <td class="created-by-column" @click.stop>
+                <PersonHoverCard
+                  v-if="entry.createdBy.id"
+                  :user-id="entry.createdBy.id"
+                  :name="entry.createdBy.name"
+                  :avatar="entry.createdBy.avatar"
+                  @click="openUserProfile(entry.createdBy.id)"
+                >
+                  <div class="d-flex align-items-center gap-2" style="cursor: pointer;">
+                    <img
+                      v-if="entry.createdBy.avatar"
+                      :src="entry.createdBy.avatar"
+                      :alt="entry.createdBy.name"
+                      class="history-avatar rounded-circle"
+                    />
+                    <div
+                      v-else
+                      class="history-avatar rounded-circle bg-neutral-200 d-flex align-items-center justify-content-center"
+                    >
+                      <iconify-icon icon="lucide:user" class="text-neutral-500" />
+                    </div>
+                    <span class="created-by-name">{{ entry.createdBy.name }}</span>
+                  </div>
+                </PersonHoverCard>
+                <div v-else class="d-flex align-items-center gap-2">
                   <img
                     v-if="entry.createdBy.avatar"
                     :src="entry.createdBy.avatar"
@@ -254,14 +277,37 @@
       </div>
     </div>
   </div>
+
+  <ProfilePopup
+      v-if="showProfilePopup && profileUserId"
+      v-model="showProfilePopup"
+      :user-id="profileUserId"
+      @update:model-value="closeProfilePopup"
+  />
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, getCurrentInstance, nextTick } from 'vue'
 import api from '@/plugins/axios'
 import DealHistorySearchModal from './DealHistorySearchModal.vue'
+import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
 
 const instance = getCurrentInstance()
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+function openUserProfile(userId) {
+  if (userId) {
+    profileUserId.value = userId
+    showProfilePopup.value = true
+  }
+}
+function closeProfilePopup() {
+  showProfilePopup.value = false
+  profileUserId.value = null
+}
+
 const $showNotification = (message, type = 'info') => {
   if (instance?.appContext?.config?.globalProperties?.$showNotification) {
     instance.appContext.config.globalProperties.$showNotification(message, type)
@@ -572,6 +618,7 @@ function transformDealHistoryEntry(entry) {
     id: entry.id,
     dateTime,
     createdBy: {
+      id: user.id || null,
       name: user.name || 'System',
       avatar
     },

@@ -78,29 +78,43 @@
                             <tr v-for="request in paginatedRequests" :key="request.id">
                                   <td>{{request.reference_number}}</td>
                                 <td>
-                                    <div class="d-flex align-items-center" style="cursor: pointer;" @click="goToUser(request.requested_by?.id)">
-                                        <img :src="request.requested_by?.avatar || defaultAvatar"  alt=""
-                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
-                                        <div class="flex-grow-1">
-                                            <span class="text-md mb-0 fw-bolder text-primary-light d-block">{{ request.requester_name }}</span>
+                                    <PersonHoverCard
+                                        :user-id="request.requested_by?.id"
+                                        :name="request.requester_name"
+                                        :avatar="request.requested_by?.avatar"
+                                        @click="goToUser(request.requested_by?.id)"
+                                    >
+                                        <div class="d-flex align-items-center" style="cursor: pointer;">
+                                            <img :src="request.requested_by?.avatar || defaultAvatar"  alt=""
+                                                class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
+                                            <div class="flex-grow-1">
+                                                <span class="text-md mb-0 fw-bolder text-primary-light d-block">{{ request.requester_name }}</span>
 
+                                            </div>
                                         </div>
-                                    </div>
+                                    </PersonHoverCard>
                                 </td>
                                 <td  v-if="hasShowAllColumn">
-                                    <div class="d-flex align-items-center">
-                                         <img :src="request.listing?.agent_avatar|| defaultAvatar"  alt=""
-                                            class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
-                                          <div class="d-flex flex-column">
-                                              <span class="text-md mb-1 fw-bolder text-primary-light">
-                                                  
-                                                {{ request.listing.agent }}
-                                              </span>
-                                              <span class="text-sm text-secondary-light">
-                                                {{ request.property_title }}
-                                              </span>
-                                            </div>
-                                    </div>
+                                    <PersonHoverCard
+                                        :user-id="request.listing?.agent_id"
+                                        :name="request.listing?.agent"
+                                        :avatar="request.listing?.agent_avatar"
+                                        @click="goToUser(request.listing?.agent_id)"
+                                    >
+                                        <div class="d-flex align-items-center" style="cursor: pointer;">
+                                             <img :src="request.listing?.agent_avatar|| defaultAvatar"  alt=""
+                                                class="w-40-px h-40-px rounded-circle flex-shrink-0 me-12 overflow-hidden" />
+                                              <div class="d-flex flex-column">
+                                                  <span class="text-md mb-1 fw-bolder text-primary-light">
+
+                                                    {{ request.listing.agent }}
+                                                  </span>
+                                                  <span class="text-sm text-secondary-light">
+                                                    {{ request.property_title }}
+                                                  </span>
+                                                </div>
+                                        </div>
+                                    </PersonHoverCard>
                                 </td>
                                  <td  v-if="!hasShowAllColumn">
 
@@ -502,12 +516,21 @@
   </div>
 </div>
 
+<ProfilePopup
+    v-if="showProfilePopup && profileUserId"
+    v-model="showProfilePopup"
+    :user-id="profileUserId"
+    @update:model-value="closeProfilePopup"
+/>
+
 </template>
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import { useRouter } from 'vue-router'
+import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
 
 const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 const filtericon= '/assets/images/filter.png'
@@ -764,11 +787,18 @@ function formatDate(dateString) {
         minute: '2-digit'
     })
 }
-function  goToUser(userId) {
-        if (userId) {
-            router.push(`/users/${userId}`);
-        }
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+function goToUser(userId) {
+    if (userId) {
+        profileUserId.value = userId
+        showProfilePopup.value = true
     }
+}
+function closeProfilePopup() {
+    showProfilePopup.value = false
+    profileUserId.value = null
+}
 watch(searchText, () => {
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     searchDebounceTimer = setTimeout(() => {

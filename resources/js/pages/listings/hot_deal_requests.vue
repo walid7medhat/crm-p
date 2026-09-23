@@ -33,7 +33,15 @@
                                     </div>
                                 </td>
                                 <td>
-                                    {{ req.requester?.name }}
+                                    <PersonHoverCard
+                                        v-if="req.requester?.id"
+                                        :user-id="req.requester?.id"
+                                        :name="req.requester?.name"
+                                        @click="openUserProfile(req.requester?.id)"
+                                    >
+                                        <span style="cursor: pointer;">{{ req.requester?.name }}</span>
+                                    </PersonHoverCard>
+                                    <span v-else>{{ req.requester?.name }}</span>
                                 </td>
 
                                 <td>
@@ -152,11 +160,33 @@
         </div>
 
     </div>
+
+    <ProfilePopup
+        v-if="showProfilePopup && profileUserId"
+        v-model="showProfilePopup"
+        :user-id="profileUserId"
+        @update:model-value="closeProfilePopup"
+    />
 </template>
 <script setup>
 import { ref, onMounted,computed } from 'vue'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
+import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
+
+const showProfilePopup = ref(false)
+const profileUserId = ref(null)
+function openUserProfile(userId) {
+    if (userId) {
+        profileUserId.value = userId
+        showProfilePopup.value = true
+    }
+}
+function closeProfilePopup() {
+    showProfilePopup.value = false
+    profileUserId.value = null
+}
 
 const hotDealRequests = ref([])
 const loading = ref(false)
