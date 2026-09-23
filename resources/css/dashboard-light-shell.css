@@ -325,7 +325,7 @@ aside.sidebar {
   padding: 0 2px !important;
   box-sizing: border-box !important;
   position: fixed !important;
-  overflow: hidden;
+  overflow: visible;
 }
 
 aside.sidebar,
@@ -377,9 +377,9 @@ aside.sidebar .sidebar-menu-area,
 
 /* Collapsed rail: fixed icon column, icons centered on one vertical line */
 aside.sidebar.active {
-  width: 56px !important;
-  padding: 0 3px !important;
-  border-radius: 14px !important;
+  width: 64px !important;
+  padding: 0 6px !important;
+  border-radius: 22px !important;
 }
 
 aside.sidebar.active .sidebar-header,
@@ -450,7 +450,7 @@ aside.sidebar.active .sidebar-menu > li > a .imgicon {
   object-fit: contain;
 }
 
-/* Expanded / hover: narrow rail matching the compact menu */
+/* Open sidebar, and the closed rail while the pointer is over it */
 aside.sidebar:not(.active),
 aside.sidebar.active:hover {
   width: 11.75rem !important;
@@ -772,7 +772,7 @@ aside.sidebar .sidebar-header {
 @media (min-width: 1199px) {
   body.app-has-video-bg #app main.dashboard-main.active,
   main.dashboard-main.active {
-    margin-inline-start: 4.5rem !important;
+    margin-inline-start: 5.75rem !important;
   }
 }
 

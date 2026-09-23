@@ -39,6 +39,10 @@ class ProjectController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
+            if ($request->filled('per_page')) {
+                return $this->cardIndex($request);
+            }
+
             $filtersHash = md5(serialize($request->all()));
             $cacheKey = self::versionedKey('index_' . Auth::id() . '_' . $filtersHash);
 
@@ -697,9 +701,117 @@ class ProjectController extends Controller
     }
 
 
+    private function cardIndex(Request $request): JsonResponse
+    {
+        $filtersHash = md5(serialize($request->only(['search', 'status', 'per_page', 'page', 'sort'])));
+        $cacheKey = self::versionedKey('cards_' . Auth::id() . '_' . $filtersHash);
+        $resolver = fn () => $this->getProjectCards($request);
+
+        if (method_exists(Cache::getStore(), 'tags')) {
+            $result = Cache::tags([self::CACHE_TAG])->remember($cacheKey, self::CACHE_TTL, $resolver);
+        } else {
+            $result = Cache::remember($cacheKey, self::CACHE_TTL, $resolver);
+        }
+
+        return ApiResponse::success(
+            $result['projects'],
+            'Projects retrieved successfully',
+            200,
+            $result['pagination']
+        );
+    }
+
+    /**
+     * One page of card fields. The projects screen asks for this so it does
+     * not download every project, gallery, feature, and listing count.
+     */
+    private function getProjectCards(Request $request): array
+    {
+        $query = Project::query()->with(['developer', 'area', 'mainImage']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('about', 'like', "%{$search}%")
+                    ->orWhereHas('developer', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('area', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $sort = $request->get('sort', 'created_at_desc');
+        switch ($sort) {
+            case 'title_asc':
+                $query->orderBy('title', 'asc');
+                break;
+            case 'title_desc':
+                $query->orderBy('title', 'desc');
+                break;
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $perPage = max(1, min((int) $request->get('per_page', 10), 20));
+        $page = $query->paginate($perPage);
+
+        $projects = $page->getCollection()->map(function (Project $project) {
+            return [
+                'id' => $project->id,
+                'title' => $project->title,
+                'status' => $project->status,
+                'status_label' => $project->status ? ucfirst($project->status) : null,
+                'about' => $project->about,
+                'developer' => $project->developer ? [
+                    'id' => $project->developer->id,
+                    'name' => $project->developer->name,
+                    'avatar' => $project->developer->avatar_path
+                        ? asset('storage/' . $project->developer->avatar_path)
+                        : null,
+                ] : null,
+                'area' => $project->area ? [
+                    'id' => $project->area->id,
+                    'name' => $project->area->name,
+                ] : null,
+                'main_image' => $project->mainImage
+                    ? asset('storage/' . $project->mainImage->image_path)
+                    : null,
+                'created_at' => $project->created_at?->format('Y-m-d H:i:s'),
+            ];
+        })->values();
+
+        return [
+            'projects' => $projects,
+            'pagination' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ];
+    }
+
     private function fallbackIndex(Request $request, \Exception $e = null): JsonResponse
     {
         try {
+            if ($request->filled('per_page')) {
+                $result = $this->getProjectCards($request);
+                return ApiResponse::success(
+                    $result['projects'],
+                    'Projects retrieved successfully (cache fallback)',
+                    200,
+                    $result['pagination']
+                );
+            }
+
             $result = $this->getProjectsData($request);
             return ApiResponse::success(
                 ProjectResource::collection($result['projects']),

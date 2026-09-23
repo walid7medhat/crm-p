@@ -15276,9 +15276,8 @@ td.fc-header-center {
 }
 
 .sidebar.active:hover {
-  width: auto;
-  /* Keep hovered sidebar above header and page overlays */
-  z-index: 1300;
+  width: 11.75rem;
+  z-index: 1100;
 }
 
 .sidebar.active .sidebar-menu li a i {
@@ -15292,12 +15291,12 @@ td.fc-header-center {
 }
 @media (min-width: 1400px) {
   .sidebar.active:hover {
-    width: 17.1875rem;
+    width: 11.75rem;
   }
 }
 @media (min-width: 1650px) {
   .sidebar.active:hover {
-    width: 19.5rem;
+    width: 11.75rem;
   }
 }
 .sidebar.active:hover .sidebar-logo img.light-logo {

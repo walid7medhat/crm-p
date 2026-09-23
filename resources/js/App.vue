@@ -280,8 +280,7 @@ export default {
   height: 100dvh;
   padding: 0;
   margin: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 #app main.auth-page-main > * {
@@ -295,10 +294,18 @@ export default {
 
 html:has(#app main.auth-page-main),
 html:has(#app main.auth-page-main) body {
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   height: 100%;
   max-height: 100dvh;
+  background-color: #f7f5fb !important;
+  background-image: none !important;
+}
+
+html:has(#app main.auth-page-main) #app {
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {

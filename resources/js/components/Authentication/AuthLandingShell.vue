@@ -89,17 +89,17 @@ const featureCards = [
   {
     id: 'pipeline',
     title: 'Your sales pipeline, simplified',
-    image: '/assets/images/auth/mockup-pipeline.png?v=4',
+    image: '/assets/images/auth/mockup-pipeline.png?v=5',
   },
   {
     id: 'analytics',
     title: 'Analyze sales and team performance easily',
-    image: '/assets/images/auth/mockup-analytics.png?v=4',
+    image: '/assets/images/auth/mockup-analytics.png?v=5',
   },
   {
     id: 'mobile',
     title: 'Mobile CRM built for faster teamwork',
-    image: '/assets/images/auth/mockup-mobile.png?v=4',
+    image: '/assets/images/auth/mockup-mobile.png?v=5',
   },
 ];
 
