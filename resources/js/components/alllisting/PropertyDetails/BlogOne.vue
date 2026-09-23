@@ -5395,6 +5395,8 @@ const generatePDF = async () => {
       pageCount -= 1;
     }
     await paintPaymentDetailsPage(pdf, pdfContent);
+    await paintAmenitiesPage(pdf, pdfContent);
+    paintCoverBadge(pdf, pdfContent);
 
     const pdfBlob = pdf.output('blob');
     const link = document.createElement('a');
@@ -5594,9 +5596,10 @@ const createSlide1 = (currentUser) => {
   const propertyTypeName = property.value?.property_type?.name || '';
   const bedrooms = property.value?.number_of_bedrooms;
   const isPlot = /plot|land/i.test(propertyTypeName);
-  let subtitle = propertyTypeName;
-  if (!isPlot && bedrooms === 0) subtitle = `Studio ${propertyTypeName}`.trim();
-  else if (!isPlot && bedrooms) subtitle = `${bedrooms} Bedroom${Number(bedrooms) === 1 ? '' : 's'} ${propertyTypeName}`.trim();
+  const typeWithoutApartment = propertyTypeName.replace(/\bapartments?\b/ig, '').replace(/\s+/g, ' ').trim();
+  let subtitle = typeWithoutApartment;
+  if (!isPlot && bedrooms === 0) subtitle = 'Studio';
+  else if (!isPlot && bedrooms) subtitle = `${bedrooms} Bedroom${Number(bedrooms) === 1 ? '' : 's'}${typeWithoutApartment ? ` ${typeWithoutApartment}` : ''}`;
   const rawLocation = property.value?.area?.area_title || property.value?.area?.title || 'Abu Dhabi, UAE';
   const locationParts = [...new Set(
     String(rawLocation).split(',').map((part) => part.trim()).filter(Boolean)
@@ -5608,19 +5611,19 @@ const createSlide1 = (currentUser) => {
   const priceText = `AED ${price}`;
   const priceSize = priceText.length > 18 ? '15px' : priceText.length > 14 ? '18px' : '22px';
   const listingStatus = property.value?.listing_status || 'Sale';
+  coverBadgeLabel = `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`;
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
   const project = property.value?.project;
   // Slide 1 uses the project's main image (fallback to current listing image).
   const bgImage = project?.image ? getImageUrl(project.image) : getMainImage();
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+  <div id="cover-slide" style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.40) !important;"></div>
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
       <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    <div style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:108mm !important; background:#fff !important; border-radius:5mm !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
-      <p style="font-size:13px; line-height:18px; font-weight:normal; background:#01062D; display:inline-block; padding:2px 14px 8px 14px; text-transform:uppercase; border-radius:6px; color:#fff; margin:0 0 12px 0; position:absolute !important; top:-10px !important; font-family:Arial, Helvetica, sans-serif;">For ${listingStatus}</p>
+    <div id="cover-offer-card" style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:108mm !important; background:#fff !important; border-radius:5mm !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
       <h1 style="color:#0B0736 !important; font-size:22px !important; font-weight:700 !important; margin:0 0 6px 0 !important; padding:1px 0 !important; line-height:28px !important; text-transform:uppercase !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</h1>
       <p style="font-size:15px; line-height:20px; color:#01062D; font-weight:600; margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif;">${subtitle}</p>
       <p style="font-size:12px; line-height:16px; color:#6b7280; margin:0 0 8px 0; font-family:Arial, Helvetica, sans-serif;">&#9679;&nbsp;&nbsp;${location}</p>
@@ -5711,6 +5714,12 @@ const createSlide3 = () => {
   const col2 = features.slice(half);
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
   const projectImage = getProjectImageBySlot(3);
+  amenitiesSlideModel = {
+    items: features.map((feature) => ({
+      name: feature.name,
+      imageUrl: feature.image ? getImageUrl(feature.image) : null,
+    })),
+  };
   const iconCell = (feature) => {
     if (!feature) return `<td style="display:table-cell !important; width:16px !important; padding:0 !important; border:none !important;"></td><td style="display:table-cell !important; border:none !important;"></td>`;
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
@@ -5730,7 +5739,7 @@ const createSlide3 = () => {
     </tr>
   `).join('');
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
+  <div id="amenities-features-slide" style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
       <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 7mm 6mm 8mm !important; box-sizing:border-box !important;">
         <h1 style="color:#0B0736 !important; font-size:6.2mm !important; font-weight:700 !important; margin:0 0 5mm 0 !important; padding:0.5mm 0 !important; line-height:7.4mm !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">Amenities &amp;<br>Features</h1>
@@ -5900,6 +5909,105 @@ const formatTextForPDF = (text) => {
 };
 
 let paymentSlideModel = null;
+let amenitiesSlideModel = null;
+let coverBadgeLabel = '';
+
+const paintCoverBadge = (pdf, container) => {
+  if (!coverBadgeLabel) return;
+  const slides = [...container.children];
+  const pageIndex = slides.findIndex((el) => el.id === 'cover-slide');
+  if (pageIndex < 0 || pageIndex + 1 > pdf.internal.getNumberOfPages()) return;
+  const card = slides[pageIndex].querySelector('#cover-offer-card');
+  if (!card) return;
+
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:0;top:0;width:210mm;height:148mm;opacity:0;pointer-events:none;z-index:-1;';
+  holder.appendChild(slides[pageIndex].cloneNode(true));
+  document.body.appendChild(holder);
+  const cloneSlide = holder.firstElementChild;
+  const cloneCard = cloneSlide.querySelector('#cover-offer-card');
+  const slideRect = cloneSlide.getBoundingClientRect();
+  const cardRect = cloneCard.getBoundingClientRect();
+  document.body.removeChild(holder);
+  if (!slideRect.width || !cardRect.height) return;
+
+  const pxToMm = 210 / slideRect.width;
+  const cardLeft = (cardRect.left - slideRect.left) * pxToMm;
+  const cardTop = (cardRect.top - slideRect.top) * pxToMm;
+  pdf.setPage(pageIndex + 1);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  const badgeH = 7.2;
+  const badgeW = Math.max(pdf.getTextWidth(coverBadgeLabel) + 10, 28);
+  const badgeX = cardLeft + 8;
+  const badgeY = cardTop - (badgeH / 2);
+  pdf.setFillColor(1, 6, 45);
+  pdf.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.6, 1.6, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(coverBadgeLabel, badgeX + badgeW / 2, badgeY + badgeH / 2, { align: 'center', baseline: 'middle' });
+};
+
+const loadPdfImage = (src) => new Promise((resolve) => {
+  if (!src) return resolve(null);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width || 64;
+      canvas.height = img.naturalHeight || img.height || 64;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    } catch {
+      resolve(null);
+    }
+  };
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
+
+const paintAmenitiesPage = async (pdf, container) => {
+  const model = amenitiesSlideModel;
+  if (!model?.items?.length) return;
+  const slides = [...container.children];
+  const pageIndex = slides.findIndex((el) => el.id === 'amenities-features-slide');
+  if (pageIndex < 0 || pageIndex + 1 > pdf.internal.getNumberOfPages()) return;
+
+  pdf.setPage(pageIndex + 1);
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(0, 27, 105, 106, 'F');
+
+  const icons = await Promise.all(model.items.map((item) => loadPdfImage(item.imageUrl)));
+  const half = Math.ceil(model.items.length / 2);
+  const columns = [
+    { items: model.items.slice(0, half), icons: icons.slice(0, half), x: 8 },
+    { items: model.items.slice(half), icons: icons.slice(half), x: 56 },
+  ];
+  const rowH = 7.1;
+  const startY = 29;
+  const iconSize = 4.2;
+
+  columns.forEach((column) => {
+    column.items.forEach((item, index) => {
+      const y = startY + index * rowH;
+      const icon = column.icons[index];
+      const iconY = y + (rowH - iconSize) / 2;
+      if (icon) {
+        try { pdf.addImage(icon, 'PNG', column.x, iconY, iconSize, iconSize); } catch { /* skip a broken icon */ }
+      } else {
+        pdf.setFillColor(11, 7, 54);
+        pdf.circle(column.x + iconSize / 2, y + rowH / 2, 0.7, 'F');
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(String(item.name || ''), column.x + iconSize + 2, y + rowH / 2, { baseline: 'middle' });
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setLineWidth(0.12);
+      pdf.line(column.x, y + rowH - 0.3, column.x + 42, y + rowH - 0.3);
+    });
+  });
+};
 
 const loadPdfLogo = () => new Promise((resolve) => {
   const img = new Image();
