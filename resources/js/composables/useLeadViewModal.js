@@ -55,41 +55,35 @@ export function openLeadView(leadId, leadData = null, options = {}) {
   showLeadViewModal.value = true
   api.get(`/leads/${id}/history/view`).catch(() => {})
 
-  if (router) {
-    const target = { path: '/kanban', query: { lead: id } }
-    if (route?.path === '/kanban') {
-      router.replace(target).catch(() => {})
-    } else {
-      router.push(target).catch(() => {})
-    }
+  // Stay on the current page. Sending the user to /kanban first left a blank
+  // screen until that page finished loading, then the lead appeared.
+  if (router && route && String(route.query.lead || '') !== String(id)) {
+    router.replace({ query: { ...route.query, lead: String(id) } }).catch(() => {})
   }
 }
 export function openLeadViewWithUrl(leadId, leadData = null) {
   openLeadView(leadId, leadData)
 }
 
+function clearLeadQuery() {
+  if (!router || !route?.query?.lead) return
+  const query = { ...route.query }
+  delete query.lead
+  router.replace({ query }).catch(() => {})
+}
+
 export function closeLeadViewWithUrl() {
   showLeadViewModal.value = false
   leadViewModalSeed.value = null
   leadViewModalDisableStageChange.value = false
-  if (router && route?.query?.lead) {
-    router.push({
-      path: '/kanban',
-      query: {}
-    }).catch(() => {})
-  }
+  clearLeadQuery()
 }
 
 export function closeLeadView() {
   showLeadViewModal.value = false
   leadViewModalSeed.value = null
   leadViewModalDisableStageChange.value = false
-  if (router && route?.query?.lead) {
-    router.push({
-      path: '/kanban',
-      query: {}
-    }).catch(() => {})
-  }
+  clearLeadQuery()
 }
 
 export function checkUrlForLead() {

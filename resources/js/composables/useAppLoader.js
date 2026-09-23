@@ -6,13 +6,15 @@ import {
   waitForKanbanReady,
 } from './useKanbanReady.js'
 
-/** Set to false to disable splash + navigation loader entirely */
-const APP_LOADER_ENABLED = false
+/** Boot splash stays off so the app itself opens immediately. */
+const APP_SPLASH_ENABLED = false
+/** Page changes that actually take time show the logo loader. */
+const NAV_LOADER_ENABLED = true
+const NAV_SHOW_AFTER_MS = 140
+const NAV_MIN_VISIBLE_MS = 380
 
 const MIN_DISPLAY_MS = 900
-const NAV_MIN_DISPLAY_MS = 650
 const KANBAN_MIN_DISPLAY_MS = 400
-const KANBAN_NAV_MIN_DISPLAY_MS = 300
 const MAX_WAIT_MS = 8000
 
 function wait(ms) {
@@ -53,7 +55,7 @@ async function prepareRoute(route) {
  * Initial splash + loader on sidebar / in-app navigation until the route is painted.
  */
 export function useAppLoader() {
-  const isAppLoading = ref(APP_LOADER_ENABLED)
+  const isAppLoading = ref(false)
 
   function onLoaderHidden() {
     if (!isAppLoading.value) {
@@ -61,8 +63,7 @@ export function useAppLoader() {
     }
   }
 
-  if (!APP_LOADER_ENABLED) {
-    // Loader is off — never leave body locked from the blade bootstrap class.
+  if (!APP_SPLASH_ENABLED && !NAV_LOADER_ENABLED) {
     if (typeof document !== 'undefined') {
       document.body.classList.remove('app-loader-active')
     }
@@ -80,12 +81,6 @@ export function useAppLoader() {
     if (overrideMs != null) return overrideMs
     const path = route?.path ?? router.currentRoute.value?.path ?? ''
     return isKanbanRoute(path) ? KANBAN_MIN_DISPLAY_MS : MIN_DISPLAY_MS
-  }
-
-  function resolveNavMinDisplayMs(route, overrideMs) {
-    if (overrideMs != null) return overrideMs
-    const path = route?.path ?? ''
-    return isKanbanRoute(path) ? KANBAN_NAV_MIN_DISPLAY_MS : NAV_MIN_DISPLAY_MS
   }
 
   async function runLoader({ minDisplayMs, route } = {}) {
@@ -116,8 +111,15 @@ export function useAppLoader() {
 
   onMounted(async () => {
     await router.isReady()
-    await runLoader({ minDisplayMs: MIN_DISPLAY_MS })
+    if (APP_SPLASH_ENABLED) {
+      await runLoader({ minDisplayMs: MIN_DISPLAY_MS })
+    }
     initialBootstrapDone = true
+
+    if (!NAV_LOADER_ENABLED) return
+
+    let navTimer = 0
+    let navShownAt = 0
 
     router.beforeEach((to, from, next) => {
       if (!initialBootstrapDone) {
@@ -125,12 +127,16 @@ export function useAppLoader() {
         return
       }
 
+      window.clearTimeout(navTimer)
       if (shouldUseNavLoader(to, from)) {
         if (isKanbanRoute(to.path)) {
           resetKanbanReady()
         }
-        isAppLoading.value = true
-        document.body.classList.add('app-loader-active')
+        navTimer = window.setTimeout(() => {
+          navShownAt = performance.now()
+          isAppLoading.value = true
+          document.body.classList.add('app-loader-active')
+        }, NAV_SHOW_AFTER_MS)
       }
 
       next()
@@ -138,8 +144,18 @@ export function useAppLoader() {
 
     router.afterEach(async (to, from) => {
       if (!initialBootstrapDone) return
-      if (!shouldUseNavLoader(to, from)) return
-      await runLoader({ minDisplayMs: resolveNavMinDisplayMs(to), route: to })
+      window.clearTimeout(navTimer)
+      if (!shouldUseNavLoader(to, from) || !isAppLoading.value) return
+
+      try {
+        await prepareRoute(to)
+      } catch {
+        /* always dismiss */
+      }
+
+      const remaining = Math.max(0, NAV_MIN_VISIBLE_MS - (performance.now() - navShownAt))
+      if (remaining > 0) await wait(remaining)
+      isAppLoading.value = false
     })
   })
 

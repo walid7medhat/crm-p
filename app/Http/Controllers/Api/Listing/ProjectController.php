@@ -704,7 +704,7 @@ class ProjectController extends Controller
     private function cardIndex(Request $request): JsonResponse
     {
         $filtersHash = md5(serialize($request->only(['search', 'status', 'per_page', 'page', 'sort'])));
-        $cacheKey = self::versionedKey('cards_' . Auth::id() . '_' . $filtersHash);
+        $cacheKey = self::versionedKey('cards_content_' . Auth::id() . '_' . $filtersHash);
         $resolver = fn () => $this->getProjectCards($request);
 
         if (method_exists(Cache::getStore(), 'tags')) {
@@ -719,6 +719,30 @@ class ProjectController extends Controller
             200,
             $result['pagination']
         );
+    }
+
+    /**
+     * Projects with a photo and real details lead the list. Newest of those
+     * come first; shells with no image or no details follow.
+     */
+    private function orderReadyProjectsFirst($query): void
+    {
+        $hasImage = "EXISTS (
+            SELECT 1 FROM project_images
+            WHERE project_images.project_id = projects.id
+              AND project_images.image_path IS NOT NULL
+              AND project_images.image_path <> ''
+        )";
+        $hasDetails = "(
+            (projects.about IS NOT NULL AND TRIM(projects.about) <> '')
+            OR projects.developer_id IS NOT NULL
+            OR projects.area_id IS NOT NULL
+            OR projects.from_price IS NOT NULL
+        )";
+
+        $query->orderByRaw("CASE WHEN {$hasImage} AND {$hasDetails} THEN 1 ELSE 0 END DESC")
+            ->orderBy('projects.created_at', 'desc')
+            ->orderBy('projects.id', 'desc');
     }
 
     /**
@@ -756,7 +780,7 @@ class ProjectController extends Controller
                 $query->orderBy('title', 'desc');
                 break;
             default:
-                $query->orderBy('created_at', 'desc');
+                $this->orderReadyProjectsFirst($query);
                 break;
         }
 

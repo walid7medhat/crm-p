@@ -5604,9 +5604,7 @@ const createSlide1 = (currentUser) => {
   const locationParts = [...new Set(
     String(rawLocation).split(',').map((part) => part.trim()).filter(Boolean)
   )];
-  const location = locationParts.find((part) => locationParts.some((other) => other !== part && other.toLowerCase().includes(part.toLowerCase())))
-    ? locationParts[0]
-    : (locationParts.slice(0, 2).join(', ') || 'Abu Dhabi, UAE');
+  const location = locationParts.join(', ') || 'Abu Dhabi, UAE';
   const price = formatPrice(property.value?.price) || '';
   const priceText = `AED ${price}`;
   const priceSize = priceText.length > 18 ? '15px' : priceText.length > 14 ? '18px' : '22px';
@@ -5626,8 +5624,7 @@ const createSlide1 = (currentUser) => {
     <div id="cover-offer-card" style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:108mm !important; background:#fff !important; border-radius:5mm !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
       <h1 style="color:#0B0736 !important; font-size:22px !important; font-weight:700 !important; margin:0 0 6px 0 !important; padding:1px 0 !important; line-height:28px !important; text-transform:uppercase !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</h1>
       <p style="font-size:15px; line-height:20px; color:#01062D; font-weight:600; margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif;">${subtitle}</p>
-      <p style="font-size:12px; line-height:16px; color:#6b7280; margin:0 0 8px 0; font-family:Arial, Helvetica, sans-serif;">&#9679;&nbsp;&nbsp;${location}</p>
-      <div style="border-top:1px solid #e5e7eb !important; margin:0 0 8px 0 !important;"></div>
+      <p style="font-size:12px; line-height:16px; color:#6b7280; margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif;">&#9679;&nbsp;&nbsp;${location}</p>
       <h2 style="font-size:${priceSize} !important; line-height:26px !important; color:#01062D !important; font-weight:700 !important; margin:0 !important; white-space:nowrap !important; font-family:Arial, Helvetica, sans-serif !important;">${priceText}</h2>
     </div>
     ${createFooter()}

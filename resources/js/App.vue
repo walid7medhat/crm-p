@@ -11,11 +11,11 @@
       <span>Return to Super Admin</span>
     </button>
     <NavProgressBar :show="isNavigating" />
-    <AppLoader :show="isAppLoading" @hidden="onLoaderHidden" />
+    <AppLoader :show="isAppLoading" label="Loading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
-    <Header v-if="showLayout && !isAppLoading" />
+    <Header v-if="showLayout" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
-      <Navbar v-if="showLayout && !isAppLoading" />
+      <Navbar v-if="showLayout" />
       <div
         :class="[
           showLayout ? 'dashboard-main-router' : '',
@@ -54,7 +54,7 @@
 </template>
 
 <script>
-import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
@@ -62,9 +62,22 @@ import Footer from './components/layout/footer/index.vue'
 import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
+import BrandLoader from './components/layout/BrandLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
-const ViewLeadModal = defineAsyncComponent(() => import('./components/kanban/viewLead/ViewLeadModal.vue'))
+const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
+loadViewLeadModal().catch(() => {})
+const LeadOpeningLoader = {
+  name: 'LeadOpeningLoader',
+  setup() {
+    return () => h(BrandLoader, { variant: 'overlay', label: 'Opening lead' })
+  },
+}
+const ViewLeadModal = defineAsyncComponent({
+  loader: loadViewLeadModal,
+  delay: 80,
+  loadingComponent: LeadOpeningLoader,
+})
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'

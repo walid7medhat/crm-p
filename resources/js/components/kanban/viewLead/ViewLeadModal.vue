@@ -51,10 +51,7 @@
 
             <!-- Main Content -->
             <div class="modal-body-custom p-4">
-                <div v-if="isLoadingLead && !lead" class="lead-view-loading text-center py-5">
-                    <b-spinner class="mb-2"></b-spinner>
-                    <div class="text-muted small">Loading lead…</div>
-                </div>
+                <BrandLoader v-if="isLoadingLead && !lead" variant="inline" label="Opening lead" />
 
                 <!-- General Tab Content -->
                 <GeneralTab 
@@ -103,6 +100,7 @@ import StageSelector from '../shared/StageSelector.vue'
 import StageChangeReasonModal from '../leadList/StageChangeReasonModal.vue'
 import ConvertLeadModal from '../leadList/ConvertLeadModal.vue'
 
+import BrandLoader from '@/components/layout/BrandLoader.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'

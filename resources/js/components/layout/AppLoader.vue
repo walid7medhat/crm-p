@@ -40,7 +40,7 @@
           </div>
 
           <p class="app-loader__brand">Alt CRM</p>
-          <p class="app-loader__text">Loading Alt CRM...</p>
+          <p class="app-loader__text">{{ label }}</p>
 
           <div class="app-loader__progress" aria-hidden="true">
             <span class="app-loader__progress-line" />
@@ -66,6 +66,10 @@ const props = defineProps({
   show: {
     type: Boolean,
     default: true,
+  },
+  label: {
+    type: String,
+    default: 'Loading...',
   },
 })
 
@@ -338,13 +342,11 @@ function onAfterLeave() {
 
 /* Enter / leave transitions */
 .app-loader-enter-active {
-  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.22s ease;
 }
 
 .app-loader-leave-active {
-  transition:
-    opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.2s ease;
 }
 
 .app-loader-enter-from,
