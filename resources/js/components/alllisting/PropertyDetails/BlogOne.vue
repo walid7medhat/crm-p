@@ -5388,8 +5388,12 @@ const generatePDF = async () => {
     };
 
     const pdf = await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
-    const pageCount = pdf.internal.getNumberOfPages();
-    if (pageCount > 1) pdf.deletePage(pageCount);
+    const slideCount = pdfContent.children.length;
+    let pageCount = pdf.internal.getNumberOfPages();
+    while (pageCount > slideCount && pageCount > 1) {
+      pdf.deletePage(pageCount);
+      pageCount -= 1;
+    }
     await paintPaymentDetailsPage(pdf, pdfContent);
 
     const pdfBlob = pdf.output('blob');
@@ -5699,37 +5703,33 @@ const createSlide3 = () => {
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
   const projectImage = getProjectImageBySlot(3);
   const renderItem = (feature) => {
-      console.log(feature);
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
+    const icon = imageUrl
+      ? `<img src="${imageUrl}" width="11" height="11" style="width:3mm;height:3mm;display:block;" />`
+      : `<span style="display:block;width:1.6mm;height:1.6mm;margin:0.7mm auto;border-radius:50%;background:#0B0736;"></span>`;
 
     return `
-      <div style="display:flex !important; align-items:flex-start !important; gap:2mm !important; margin:0 0 3mm 0 !important;">
-        
-        ${
-          imageUrl
-            ? `<img src="${imageUrl}" 
-                  style="width:4mm !important; height:4mm !important; object-fit:contain !important; flex-shrink:0 !important; margin-top:0.5mm !important;" />`
-            : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#01062D"
-                  style="width:3mm !important; height:3mm !important; flex-shrink:0 !important; margin-top:0.5mm !important;">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>`
-        }
-
-        <p style="margin:0 !important; font-size:3.2mm !important; line-height:4.5mm !important; color:#333 !important;">
-          ${feature.name}
-        </p>
-      </div>
+      <tr>
+        <td style="width:5.5mm;vertical-align:middle;padding:1.15mm 1.4mm 1.15mm 0;border-bottom:0.15mm solid #eef1f5;">${icon}</td>
+        <td style="vertical-align:middle;padding:1.15mm 1.5mm 1.15mm 0;border-bottom:0.15mm solid #eef1f5;font-family:Arial,Helvetica,sans-serif;font-size:2.6mm;line-height:3.4mm;color:#1e293b;">${feature.name}</td>
+      </tr>
     `;
   };
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
     <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
-      <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 8mm 10mm 8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important;">
-        <h1 style="color:#0B0736 !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 10mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Amenities &amp;<br>Features</h1>
-        <div style="display:flex !important; gap:5mm !important; flex:1 !important;">
-          <div style="flex:1 !important;">${col1.map(renderItem).join('')}</div>
-          <div style="flex:1 !important;">${col2.map(renderItem).join('')}</div>
-        </div>
+      <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 7mm 6mm 8mm !important; box-sizing:border-box !important;">
+        <h1 style="color:#0B0736 !important; font-size:6.2mm !important; font-weight:700 !important; margin:0 0 5mm 0 !important; padding:0.5mm 0 !important; line-height:7.4mm !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">Amenities &amp;<br>Features</h1>
+        <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important;">
+          <tr>
+            <td style="width:50% !important; vertical-align:top !important; padding-right:3mm !important;">
+              <table style="width:100% !important; border-collapse:collapse !important;">${col1.map(renderItem).join('')}</table>
+            </td>
+            <td style="width:50% !important; vertical-align:top !important; padding-left:2mm !important;">
+              <table style="width:100% !important; border-collapse:collapse !important;">${col2.map(renderItem).join('')}</table>
+            </td>
+          </tr>
+        </table>
       </div>
       <div style="width:50% !important; height:100% !important; position:relative !important;">
         <div style="width:100% !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
@@ -5751,16 +5751,15 @@ const createSlide4 = () => {
   const projectAbout = project?.about || '';
   // Slide 4 uses the project's multi-image at order 2 (fallback to current image).
   const projectImage = getProjectImageBySlot(2);
-  const aboutLimited = limitText(projectAbout, 800);
+  const aboutLimited = limitText(projectAbout, 720);
 
   return `
   <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important;">
     <div style="width:100% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
-      <div style="width:50% !important; padding:8mm !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important; overflow:hidden !important;">
-        <h1 style="color:#01062C !important; font-size:7mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">About<br>The Project</h1>
-        
-        <p style="font-size:5mm !important; font-weight:bold !important; line-height:10mm !important; color:#01062C !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important; margin-bottom:2mm !important;">${projectTitle}</p>
-        <p style="font-size:3.2mm !important; line-height:5.5mm !important; color:#444 !important; margin:0 !important; text-align:justify !important; overflow:hidden !important;font-family: 'Montserrat', sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
+      <div style="width:50% !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
+        <h1 style="color:#01062C !important; font-size:6.2mm !important; font-weight:700 !important; margin:0 0 3mm 0 !important; padding:0.6mm 0 !important; line-height:7.6mm !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">About<br>The Project</h1>
+        <p style="font-size:4.2mm !important; font-weight:700 !important; line-height:6mm !important; padding:1mm 0 1.5mm 0 !important; color:#01062C !important; margin:0 0 2mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</p>
+        <p style="font-size:2.9mm !important; line-height:4.5mm !important; padding:0.5mm 0 2mm 0 !important; color:#3f3f46 !important; margin:0 !important; font-family:Arial, Helvetica, sans-serif !important;">${formatTextForPDF(aboutLimited)}</p>
       </div>
       <div style="width:50% !important;position:relative !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
