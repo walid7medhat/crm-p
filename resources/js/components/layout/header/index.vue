@@ -207,21 +207,6 @@
           </router-link>
         </li>
 
-        <li v-if="!isShowOnlyListing">
-          <router-link to="/suggestion" custom v-slot="{ navigate, href }">
-            <a
-              :href="href"
-              class="sidebar-nav-link"
-              :class="{ active: isSidebarSubItemActive('/suggestion') }"
-              @mouseenter="prefetchRoute('/suggestion')"
-              @click="navigate"
-            >
-              <img :src="suggestionIcon" class="imgicon" alt="" />
-              <span>Suggestions</span>
-            </a>
-          </router-link>
-        </li>
-
         <li
           v-if="filteredUsersItems.length > 0"
           :class="{ dropdown: true, open: activeDropdown === 'users', 'active-parent': isSidebarModuleActive('agents') }"
@@ -246,6 +231,22 @@
             </ul>
           </transition>
         </li>
+
+        <li v-if="!isShowOnlyListing">
+          <router-link to="/suggestion" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarSubItemActive('/suggestion') }"
+              @mouseenter="prefetchRoute('/suggestion')"
+              @click="navigate"
+            >
+              <img :src="suggestionIcon" class="imgicon" alt="" />
+              <span>Suggestions</span>
+            </a>
+          </router-link>
+        </li>
+
         <li
           v-if="settingsSidebarSections.length > 0"
           class="sidebar-menu__settings"
@@ -925,10 +926,10 @@ const settingsSidebarSections = computed(() => {
     ? [{ path: '/admin/chat', label: 'All Chats', iconSrc: allChatsIcon.value }]
     : [];
 
-  // Suggestions moved to its own top-level sidebar item (see the standalone <li> above the
-  // Agents dropdown) — for a plain sales user it used to be the only entry here, leaving a
-  // one-item "Settings" dropdown; promoting it out lets Settings itself disappear for them
-  // (settingsSidebarSections.length > 0 gate below) when nothing else remains.
+  // Suggestions moved to its own top-level sidebar item (see the standalone <li> right
+  // before the Settings dropdown) — for a plain sales user it used to be the only entry
+  // here, leaving a one-item "Settings" dropdown; promoting it out lets Settings itself
+  // disappear for them (settingsSidebarSections.length > 0 gate below) when nothing else remains.
   const roles = (filteredRolesItems.value || []).map((item) => ({
     ...item,
     iconSrc: item.iconSrc || roleIcon.value,

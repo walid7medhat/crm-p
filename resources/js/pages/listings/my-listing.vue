@@ -1726,6 +1726,8 @@ watch(() => route.query, (newQuery, oldQuery) => {
   font-size: 0.75rem;
   /*color: #666;*/
   margin-bottom:0 !important;
+  display: flex;
+
 }
 
 .property-listed-date i {

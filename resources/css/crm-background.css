@@ -286,6 +286,19 @@ body.app-has-video-bg .kanban-outer {
   background: transparent !important;
 }
 
+/* Lead Pool (rendered inside .kanban-main-wrapper alongside Deals/Leads) is a flat grid,
+   not a column board with its own internal scroll like Kanban's .column-content-scrollable.
+   The ancestor chain above forces .dashboard-main-body to overflow:hidden + height:100% so
+   the Kanban board can scroll per-column — without its own scroll region, Lead Pool's
+   content taller than the viewport was simply clipped. Give it one here, scoped to this
+   theme only (default/non-video-bg mode already scrolls the page normally). */
+body.app-has-video-bg .kanban-main-wrapper .lead-pool-wrapper {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body.app-has-video-bg a.property-card-link .property-card,
 body.app-has-video-bg a.property-card-link .property-content,
 body.app-has-video-bg a.property-card-link .property-content.p-3 {

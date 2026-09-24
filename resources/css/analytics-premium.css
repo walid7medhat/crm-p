@@ -2525,7 +2525,7 @@ body:has(.ap-dashboard--uni) .ap-dashboard--uni .adx-header__sub {
 
 .adx-uni-closer__meta span,
 .adx-uni-closer span {
-  display: block;
+  display: flex;
   font-size: 11px;
   font-weight: 500;
   color: #8b8798;

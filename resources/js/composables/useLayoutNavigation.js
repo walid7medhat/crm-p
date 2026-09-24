@@ -146,12 +146,28 @@ const LISTINGS_FORM_PATHS = [
   '/add-projects',
 ];
 
+/**
+ * Request/approval-management pages under the listings prefix — not listings browse
+ * pages. Visiting one of these must not overwrite the remembered "Listings" entry, or
+ * the top-level sidebar link gets stuck pointing at a requests inbox instead of All
+ * Listing.
+ */
+const LISTINGS_REQUEST_PATHS = [
+  '/my-requests',
+  '/my-orders',
+  '/all-requests',
+  '/hotDeal-requests',
+  '/need-approve-requests',
+  '/my-viewings',
+];
+
 /** List pages only — detail/create/edit forms must not overwrite the remembered listings entry. */
 export function isListingsRememberablePath(path) {
   if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return false;
   if (path === '/property-details' || path.startsWith('/property-details/')) return false;
   if (LISTINGS_FORM_PATHS.includes(path)) return false;
   if (path.endsWith('/edit')) return false;
+  if (LISTINGS_REQUEST_PATHS.includes(path)) return false;
   return true;
 }
 

@@ -643,6 +643,14 @@
                           >
                           <span v-else class="profile-contact-value">{{ user && user.phone ? user.phone : '—' }}</span>
                         </div>
+                        <div class="profile-contact-item" v-if="!isShowOnlyListing">
+                          <span class="profile-contact-label">Report To</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.parent_name ? user.parent_name : '—' }}</span>
+                        </div>
+                        <div class="profile-contact-item" v-if="!isShowOnlyListing">
+                          <span class="profile-contact-label">Branch</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ userBranchName }}</span>
+                        </div>
                       </div>
                     </section>
                     <section class="profile-section profile-section-team" v-if="!isShowOnlyListing">
@@ -1848,6 +1856,13 @@ const lastName = computed(() => {
 const notificationLanguage = computed(() => {
   const u = user.value;
   return u?.notification_language || u?.locale || 'English';
+});
+// UserResource exposes a few branch-like fields depending on how the user is set up
+// (CRM hierarchy office vs. HR employee profile's company branch) — fall back through
+// whichever is populated rather than assuming one is always present.
+const userBranchName = computed(() => {
+  const u = user.value;
+  return u?.office_name || u?.admin_parent_name || u?.branch || '—';
 });
 
 // Personal Info edit mode (First Name, Last Name, Email, Phone)
