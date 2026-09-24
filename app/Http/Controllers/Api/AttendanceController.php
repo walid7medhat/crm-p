@@ -866,9 +866,11 @@ private function syncUserAttendanceFromRemote(User $user, Carbon $startDate, Car
 /**
  * Build attendance stats and daily breakdown for one user in a date range.
  *
- * Check-in at or before 09:15 is Present; a later check-in is Late; no
- * check-in (or Sunday) is Absent. No deduction percentages. Days after today
- * are left out entirely — they haven't happened yet.
+ * Check-in at or before 09:15 (any second within that minute) is Present;
+ * 09:16 or later is Late; no check-in on a weekday is Absent; Sunday is its
+ * own Weekend status and isn't counted in total_working_days. No deduction
+ * percentages. Days after today are left out entirely — they haven't
+ * happened yet.
  */
 private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $endDate): array
 {
@@ -877,6 +879,8 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
     $present = 0;
     $late = 0;
     $absent = 0;
+    $weekend = 0;
+    $totalWorkingDays = 0;
 
     $today = Carbon::now('Asia/Dubai')->toDateString();
     $days = $this->getAllDaysInRange($startDate, $endDate, $today);
@@ -893,10 +897,13 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
         $attendance = $attendanceMap->get($date);
 
         $checkInTime = null;
+        $checkInMinute = null;
         $checkOutTime = null;
 
         if ($attendance?->check_in) {
-            $checkInTime = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai')->format('H:i:s');
+            $checkIn = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai');
+            $checkInTime = $checkIn->format('H:i:s');
+            $checkInMinute = $checkIn->format('H:i');
         }
         if ($attendance?->check_out) {
             $checkOutTime = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai')->format('H:i:s');
@@ -904,20 +911,21 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
 
         $isSunday = Carbon::parse($date)->isSunday();
 
-        if ($isSunday || $checkInTime === null) {
-            $status = 'Absent';
-        } elseif ($checkInTime <= '09:15:00') {
-            $status = 'Present';
+        if ($isSunday) {
+            $status = 'Weekend';
+            $weekend++;
         } else {
-            $status = 'Late';
-        }
-
-        if ($status === 'Present') {
-            $present++;
-        } elseif ($status === 'Late') {
-            $late++;
-        } else {
-            $absent++;
+            $totalWorkingDays++;
+            if ($checkInMinute === null) {
+                $status = 'Absent';
+                $absent++;
+            } elseif ($checkInMinute <= '09:15') {
+                $status = 'Present';
+                $present++;
+            } else {
+                $status = 'Late';
+                $late++;
+            }
         }
 
         $dailyBreakdown[] = [
@@ -932,7 +940,8 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
         'present' => $present,
         'late' => $late,
         'absent' => $absent,
-        'total_working_days' => count($days),
+        'weekend' => $weekend,
+        'total_working_days' => $totalWorkingDays,
         'daily_breakdown' => $dailyBreakdown,
     ];
 }
