@@ -117,6 +117,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">Role <span class="text-danger">*</span></label>
                                      <v-select
+                                     append-to-body
                                          v-model="userForm.role_id"
                                         :options="roles"
                                         label="name"
@@ -150,6 +151,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">Parent / Manager</label>
                                         <v-select
+                                        append-to-body
                                             v-model="userForm.parent_id"
                                             :options="availableManagers"
                                             label="name"
@@ -225,15 +227,18 @@
 
                                         <div class="d-flex gap-2">
                                             <v-select
-                                                v-model="permissionsToAssign"
-                                                :options="availablePermissionsToAssign"
-                                                label="name"
-                                                :reduce="(perm) => perm.name"
-                                                :get-option-label="(perm) => formatPermissionName(perm.name)"
-                                                multiple
-                                                placeholder="Select permissions to grant..."
-                                                class="flex-grow-1"
-                                            />
+                                                    v-model="permissionsToAssign"
+                                                    :options="availablePermissionsToAssign"
+                                                    label="name"
+                                                    :reduce="(perm) => perm.name"
+                                                    :get-option-label="(perm) => formatPermissionName(perm.name)"
+                                                    multiple
+                                                    placeholder="Select permissions to grant..."
+                                                    class="flex-grow-1"
+                                                    :clearable="false"
+                                                    :close-on-select="false"
+                                                    append-to-body
+                                                />
                                             <button type="button" class="btn btn-outline-primary flex-shrink-0"
                                                     :disabled="!permissionsToAssign.length || assigningPermissions"
                                                     @click="assignSelectedPermissions">
@@ -956,5 +961,36 @@ watch(roles, (newRoles) => {
     background-position: right calc(0.375em + 0.1875rem) center;
     background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
     padding-right: calc(1.5em + 0.75rem);
+}
+@media (max-width: 767.98px) {
+    .v-select {
+        width: 100%;
+    }
+
+    .v-select .vs__dropdown-menu {
+        max-height: 250px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .v-select.vs--open {
+        z-index: 9999;
+    }
+}
+:deep(.vs__dropdown-menu) {
+    z-index: 99999 !important;
+}
+
+:deep(.vs--open) {
+    z-index: 99999 !important;
+}
+
+@media (max-width: 767.98px) {
+    :deep(.vs__dropdown-menu) {
+        max-height: 250px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        z-index: 99999 !important;
+    }
 }
 </style>
