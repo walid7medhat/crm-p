@@ -158,13 +158,20 @@ class LeadTextSearch
                     });
             }
 
-            if ($includeRelations && ! $lean) {
+            // Responsible person's name (long "name" or short "display_name") — kept out of the
+            // lean-mode skip below since it's a single indexed FK join (responsible_person_id),
+            // not the broader table scans lean mode is meant to avoid.
+            if ($includeRelations) {
                 $s->orWhereHas('responsiblePerson', function ($r) use ($like) {
-                    $r->where('name', 'like', $like);
+                    $r->where('name', 'like', $like)
+                        ->orWhere('display_name', 'like', $like);
+                });
+            }
+
+            if ($includeRelations && ! $lean) {
+                $s->orWhereHas('propertyType', function ($pt) use ($like) {
+                    $pt->where('name', 'like', $like);
                 })
-                    ->orWhereHas('propertyType', function ($pt) use ($like) {
-                        $pt->where('name', 'like', $like);
-                    })
                     ->orWhereHas('stage', function ($st) use ($like) {
                         $st->where('name', 'like', $like);
                     })

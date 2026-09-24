@@ -329,14 +329,24 @@ public function show(User $user): JsonResponse
             return ApiResponse::error('Unauthenticated', 401);
         }
 
-        $user->load([
+        // getOfficeAttribute()/getAdminParentAttribute() (used by UserResource) walk the
+        // manager chain via $current->parent in a loop — without preloading several levels
+        // up front, each step lazy-loads its own parent + roles query, turning a single
+        // request into 10-20+ sequential queries for a deep hierarchy. Preload the chain.
+        $ancestorChain = [];
+        $path = 'parent';
+        for ($i = 0; $i < 8; $i++) {
+            $ancestorChain[] = "{$path}.roles";
+            $path .= '.parent';
+        }
+
+        $user->load(array_merge([
             'roles',
-            'parent.roles',
             'addedBy',
             'employeeProfile.companyBranch',
             'employeeProfile.designation',
             'employeeProfile.department',
-        ]);
+        ], $ancestorChain));
 
         return ApiResponse::success(
             new UserResource($user),
