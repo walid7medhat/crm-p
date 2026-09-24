@@ -378,6 +378,7 @@ $branchName =
 
             'created_at' => $this->created_at->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at,
             'duplicate_no' => count($duplicateIds),
             'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
