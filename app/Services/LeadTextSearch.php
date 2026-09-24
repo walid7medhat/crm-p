@@ -162,9 +162,22 @@ class LeadTextSearch
             // lean-mode skip below since it's a single indexed FK join (responsible_person_id),
             // not the broader table scans lean mode is meant to avoid.
             if ($includeRelations) {
-                $s->orWhereHas('responsiblePerson', function ($r) use ($like) {
+                // "yasmeen hasan" as one substring won't match "Yasmeen Abdlrhman Hasan" (middle
+                // name in between) — also require every individual word to appear somewhere in
+                // the name when the search has more than one word.
+                $nameWords = array_slice(preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY), 0, 6);
+
+                $s->orWhereHas('responsiblePerson', function ($r) use ($like, $nameWords) {
                     $r->where('name', 'like', $like)
                         ->orWhere('display_name', 'like', $like);
+
+                    if (count($nameWords) > 1) {
+                        $r->orWhere(function ($multi) use ($nameWords) {
+                            foreach ($nameWords as $word) {
+                                $multi->where('name', 'like', '%'.$word.'%');
+                            }
+                        });
+                    }
                 });
             }
 
