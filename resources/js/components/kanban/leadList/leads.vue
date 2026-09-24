@@ -82,6 +82,36 @@
             @toggle-filter="onShortcutFilterToggle"
         />
 
+        <Transition name="lead-select-bar">
+            <div
+                v-if="isAdminOrSuperAdmin && leadSelectionActive"
+                class="lead-select-bar"
+                role="toolbar"
+                aria-label="Selected leads"
+            >
+                <div class="lead-select-bar__cluster">
+                    <span class="lead-select-bar__count-label">Selected</span>
+                    <strong>{{ selectedLeadIds.length }}</strong>
+                    <button type="button" class="lead-select-bar__clear" aria-label="Clear selection" @click="clearLeadSelection">
+                        <iconify-icon icon="lucide:x" />
+                    </button>
+                    <span class="lead-select-bar__rule" aria-hidden="true"></span>
+                    <button type="button" class="lead-select-bar__btn lead-select-bar__btn--danger" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="deleteSelectedLeads">
+                        <iconify-icon icon="lucide:trash-2" />
+                        Delete
+                    </button>
+                    <button type="button" class="lead-select-bar__btn" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="openBulkStagePicker">
+                        <iconify-icon icon="lucide:git-branch" />
+                        Change stage
+                    </button>
+                    <button type="button" class="lead-select-bar__btn" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="openBulkAssignPicker">
+                        <iconify-icon icon="lucide:user-round" />
+                        Assign responsible person
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
         <div
             ref="kanbanContainerRef"
             class="kanban-container"
@@ -153,7 +183,7 @@
                                     class="tasks-list flex-grow-1"
                                     :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
-                                    :disabled="kanbanIsMobile"
+                                    :disabled="kanbanIsMobile || leadSelectionActive"
                                     :force-fallback="kanbanIsMobile"
                                     :scroll="true"
                                     :bubble-scroll="true"
@@ -167,13 +197,28 @@
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 cursor-pointer"
-                                                :class="{ 'kanban-card--mobile': kanbanIsMobile }"
+                                                :class="{
+                                                    'kanban-card--mobile': kanbanIsMobile,
+                                                    'kanban-card--selected': isLeadSelected(task.id),
+                                                }"
                                                 v-show="leadMatchesShortcutFilter(task) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
-                                                @click="onLeadCardClick(task, column)"
+                                                @click="onLeadCardClick(task, column, $event)"
+                                                @dblclick.stop.prevent="onLeadCardDblClick(task)"
                                             >
+                                                <button
+                                                    v-if="isAdminOrSuperAdmin && leadSelectionActive"
+                                                    type="button"
+                                                    class="lead-card-check"
+                                                    :class="{ 'lead-card-check--on': isLeadSelected(task.id) }"
+                                                    :aria-pressed="isLeadSelected(task.id)"
+                                                    aria-label="Select lead"
+                                                    @click.stop="toggleLeadSelection(task)"
+                                                >
+                                                    <iconify-icon :icon="isLeadSelected(task.id) ? 'lucide:check' : 'lucide:square'" />
+                                                </button>
                                                 <!-- Task Header - Lead Name + badges (single row) -->
                                                 <div class="task-header d-flex align-items-center gap-2 mb-12 min-w-0">
                                                     <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate" :title="task.lead_name">{{ task.lead_name }}</p>
@@ -787,6 +832,112 @@
             </div>
         </div>
     </div>
+
+    <div v-if="showBulkStagePicker" class="lead-bulk-overlay" @click.self="showBulkStagePicker = false">
+        <div class="lead-bulk-panel" role="dialog" aria-label="Change stage">
+            <header class="lead-bulk-panel__head">
+                <span class="lead-bulk-panel__title">Change stage</span>
+                <button type="button" class="lead-bulk-panel__close" aria-label="Close" @click="showBulkStagePicker = false">
+                    <iconify-icon icon="lucide:x" />
+                </button>
+            </header>
+            <p class="lead-bulk-panel__hint">{{ selectedLeadIds.length }} selected</p>
+            <div class="lead-bulk-list">
+                <button
+                    v-for="column in columns"
+                    :key="column.status"
+                    type="button"
+                    class="lead-bulk-option"
+                    :disabled="bulkActionBusy"
+                    @click="applyBulkStage(column)"
+                >
+                    <span class="lead-bulk-option__dot" :style="{ background: column.color }"></span>
+                    <span>{{ column.title }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showBulkAssignPicker" class="lead-bulk-overlay" @click.self="showBulkAssignPicker = false">
+        <div class="lead-bulk-panel" role="dialog" aria-label="Assign responsible person">
+            <header class="lead-bulk-panel__head">
+                <span class="lead-bulk-panel__title">Assign person</span>
+                <button type="button" class="lead-bulk-panel__close" aria-label="Close" @click="showBulkAssignPicker = false">
+                    <iconify-icon icon="lucide:x" />
+                </button>
+            </header>
+            <label class="lead-bulk-search">
+                <iconify-icon icon="lucide:search" />
+                <input v-model="bulkAssignQuery" type="search" placeholder="Search by name" />
+            </label>
+            <div class="lead-bulk-list">
+                <p v-if="bulkAssignLoading" class="lead-bulk-panel__hint">Loading…</p>
+                <button
+                    v-for="person in visibleBulkAssignees"
+                    :key="person.id"
+                    type="button"
+                    class="lead-bulk-option"
+                    :disabled="bulkActionBusy"
+                    @click="applyBulkAssign(person)"
+                >
+                    <span class="lead-bulk-option__avatar">{{ personInitial(person.name) }}</span>
+                    <span class="lead-bulk-option__copy">
+                        <strong>{{ person.name }}</strong>
+                        <small v-if="person.branch_name">{{ person.branch_name }}</small>
+                    </span>
+                </button>
+                <p v-if="!bulkAssignLoading && bulkAssignQuery.trim() && !visibleBulkAssignees.length" class="lead-bulk-panel__hint">No match. Try another name.</p>
+                <p v-else-if="!bulkAssignLoading && !bulkAssignQuery.trim() && bulkAssignees.length > visibleBulkAssignees.length" class="lead-bulk-panel__hint">Search to see the rest.</p>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showLeadArchive" class="lead-bulk-overlay" @click.self="showLeadArchive = false">
+        <div class="lead-bulk-panel lead-bulk-panel--wide" role="dialog" aria-label="Archived leads">
+            <header class="lead-bulk-panel__head">
+                <h3>Archived leads</h3>
+                <button type="button" class="lead-select-bar__clear" aria-label="Close" @click="closeLeadArchive">
+                    <iconify-icon icon="lucide:x" />
+                </button>
+            </header>
+            <input v-model="archiveSearch" type="search" class="lead-bulk-search" placeholder="Search archived leads" @input="onArchiveSearchInput" />
+            <div v-if="archiveDetail" class="lead-archive-detail">
+                <button type="button" class="lead-select-bar__btn lead-select-bar__btn--ghost" @click="archiveDetail = null">
+                    <iconify-icon icon="lucide:arrow-left" />
+                    Back
+                </button>
+                <h4>{{ archiveDetail.lead_name || 'Lead' }}</h4>
+                <p>Stage: {{ archiveDetail.stage?.name || '—' }}</p>
+                <p>Responsible: {{ archiveDetail.responsible_person?.name || archiveDetail.responsiblePerson?.name || '—' }}</p>
+                <p>Archived: {{ formatDate(archiveDetail.deleted_at) }}</p>
+                <p>Phone: {{ archiveDetail.work_phone || '—' }}</p>
+                <p>Email: {{ archiveDetail.email || '—' }}</p>
+                <button type="button" class="lead-select-bar__btn lead-select-bar__btn--danger" :disabled="bulkActionBusy" @click="forceDeleteArchived(archiveDetail)">
+                    <iconify-icon icon="lucide:trash-2" />
+                    Delete forever
+                </button>
+            </div>
+            <div v-else class="lead-bulk-list">
+                <p v-if="archiveLoading" class="lead-bulk-panel__hint">Loading archive…</p>
+                <article v-for="lead in archiveLeads" :key="lead.id" class="lead-archive-row">
+                    <div>
+                        <strong>{{ lead.lead_name || 'Untitled lead' }}</strong>
+                        <span>{{ lead.stage?.name || 'No stage' }} · {{ formatDate(lead.deleted_at) }}</span>
+                    </div>
+                    <div class="lead-archive-row__actions">
+                        <button type="button" class="lead-select-bar__btn" @click="openArchivedLead(lead)">Open</button>
+                        <button type="button" class="lead-select-bar__btn lead-select-bar__btn--danger" :disabled="bulkActionBusy" @click="forceDeleteArchived(lead)">Delete forever</button>
+                    </div>
+                </article>
+                <p v-if="!archiveLoading && !archiveLeads.length" class="lead-bulk-panel__hint">No archived leads.</p>
+            </div>
+            <footer v-if="!archiveDetail && archivePagination.last_page > 1" class="lead-archive-pager">
+                <button type="button" class="lead-select-bar__btn" :disabled="archivePagination.current_page <= 1" @click="loadArchivedLeads(archivePagination.current_page - 1)">Previous</button>
+                <span>{{ archivePagination.current_page }} / {{ archivePagination.last_page }}</span>
+                <button type="button" class="lead-select-bar__btn" :disabled="archivePagination.current_page >= archivePagination.last_page" @click="loadArchivedLeads(archivePagination.current_page + 1)">Next</button>
+            </footer>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -1039,15 +1190,246 @@ const appliedSearchParams = ref(null)
 
 // Check if user is admin or super_admin (same pattern as header/index.vue)
 const isAdminOrSuperAdmin = computed(() => {
- 
-
-
-       if (!user.value) return false
-    
-    const isAdminUser = user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') 
-       console.log("user.value"+isAdminUser);
-    return isAdminUser
+    if (!user.value) return false
+    return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin')
 })
+
+const leadSelectionActive = ref(false)
+const selectedLeadIds = ref([])
+const bulkActionBusy = ref(false)
+const showBulkStagePicker = ref(false)
+const showBulkAssignPicker = ref(false)
+const showLeadArchive = ref(false)
+const bulkAssignQuery = ref('')
+const bulkAssignees = ref([])
+const bulkAssignLoading = ref(false)
+const archiveSearch = ref('')
+const archiveLeads = ref([])
+const archiveLoading = ref(false)
+const archiveDetail = ref(null)
+const archivePagination = ref({ current_page: 1, last_page: 1, per_page: 20, total: 0 })
+let leadCardClickTimer = null
+let archiveSearchTimer = null
+
+function isLeadSelected(id) {
+    return selectedLeadIds.value.includes(Number(id))
+}
+
+function toggleLeadSelection(task) {
+    const id = Number(task?.id)
+    if (!id) return
+    leadSelectionActive.value = true
+    if (isLeadSelected(id)) {
+        selectedLeadIds.value = selectedLeadIds.value.filter((item) => item !== id)
+        if (!selectedLeadIds.value.length) leadSelectionActive.value = false
+        return
+    }
+    selectedLeadIds.value = [...selectedLeadIds.value, id]
+}
+
+function clearLeadSelection() {
+    selectedLeadIds.value = []
+    leadSelectionActive.value = false
+}
+
+function removeLeadsFromBoard(ids) {
+    const drop = new Set(ids.map(Number))
+    columns.value.forEach((column) => {
+        const before = column.leads?.length || 0
+        column.leads = (column.leads || []).filter((lead) => !drop.has(Number(lead.id)))
+        const removed = before - column.leads.length
+        const page = stagePagination.value[column.status]
+        if (page && typeof page.total === 'number' && removed > 0) {
+            page.total = Math.max(0, page.total - removed)
+        }
+    })
+}
+
+async function deleteSelectedLeads() {
+    if (!isAdminOrSuperAdmin.value || !selectedLeadIds.value.length || bulkActionBusy.value) return
+    const ids = [...selectedLeadIds.value]
+    const result = await Swal.fire({
+        title: ids.length === 1 ? 'Archive this lead?' : `Archive ${ids.length} leads?`,
+        text: 'They move to the archive. You can delete them forever from there.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Archive',
+        cancelButtonText: 'Cancel',
+    })
+    if (!result.isConfirmed) return
+    bulkActionBusy.value = true
+    const failed = []
+    for (const id of ids) {
+        try {
+            await api.delete(`/leads/${id}`)
+        } catch (error) {
+            failed.push(id)
+        }
+    }
+    const archived = ids.filter((id) => !failed.includes(id))
+    removeLeadsFromBoard(archived)
+    clearLeadSelection()
+    bulkActionBusy.value = false
+    if (failed.length) {
+        window.$showNotification?.(`${archived.length} archived, ${failed.length} could not be archived.`, 'error')
+    } else {
+        window.$showNotification?.(archived.length === 1 ? 'Lead deleted.' : `${archived.length} leads deleted.`, 'success')
+    }
+}
+
+function openBulkStagePicker() {
+    if (!selectedLeadIds.value.length) return
+    showBulkStagePicker.value = true
+}
+
+async function applyBulkStage(column) {
+    if (!column || bulkActionBusy.value) return
+    bulkActionBusy.value = true
+    const ids = [...selectedLeadIds.value]
+    const failed = []
+    for (const id of ids) {
+        try {
+            await api.post(`/leads/${id}/change-stage`, { stage_id: column.status })
+        } catch (error) {
+            failed.push(id)
+        }
+    }
+    showBulkStagePicker.value = false
+    clearLeadSelection()
+    bulkActionBusy.value = false
+    if (failed.length) {
+        window.$showNotification?.('Some leads need extra fields before that stage. Open each one to finish the move.', 'error')
+    } else {
+        window.$showNotification?.('Stage updated.', 'success')
+    }
+    fetchLeads(true)
+}
+
+const ASSIGN_PREVIEW_LIMIT = 8
+
+function personInitial(name) {
+    const part = String(name || '').trim().charAt(0)
+    return part ? part.toUpperCase() : '?'
+}
+
+const visibleBulkAssignees = computed(() => {
+    const q = bulkAssignQuery.value.trim().toLowerCase()
+    if (!q) return bulkAssignees.value.slice(0, ASSIGN_PREVIEW_LIMIT)
+    return bulkAssignees.value
+        .filter((person) => String(person.name || '').toLowerCase().includes(q))
+        .slice(0, 20)
+})
+
+async function openBulkAssignPicker() {
+    if (!selectedLeadIds.value.length) return
+    bulkAssignQuery.value = ''
+    showBulkAssignPicker.value = true
+    if (bulkAssignees.value.length) return
+    bulkAssignLoading.value = true
+    try {
+        const response = await api.get('/available-responsible-persons')
+        const payload = response.data?.data
+        bulkAssignees.value = Array.isArray(payload) ? payload : (payload?.data || [])
+    } catch (error) {
+        window.$showNotification?.('Could not load people.', 'error')
+    } finally {
+        bulkAssignLoading.value = false
+    }
+}
+
+async function applyBulkAssign(person) {
+    if (!person?.id || bulkActionBusy.value) return
+    bulkActionBusy.value = true
+    const ids = [...selectedLeadIds.value]
+    let failed = 0
+    for (const id of ids) {
+        try {
+            await api.post(`/leads/${id}/assign-responsible-person`, { responsible_person_id: person.id })
+        } catch (error) {
+            failed += 1
+        }
+    }
+    showBulkAssignPicker.value = false
+    clearLeadSelection()
+    bulkActionBusy.value = false
+    window.$showNotification?.(
+        failed ? `Assigned with ${failed} error${failed === 1 ? '' : 's'}.` : `Assigned to ${person.name}.`,
+        failed ? 'error' : 'success'
+    )
+    fetchLeads(true)
+}
+
+function openLeadArchive() {
+    showLeadArchive.value = true
+    archiveDetail.value = null
+    loadArchivedLeads(1)
+}
+
+function closeLeadArchive() {
+    showLeadArchive.value = false
+    archiveDetail.value = null
+}
+
+function onArchiveSearchInput() {
+    clearTimeout(archiveSearchTimer)
+    archiveSearchTimer = setTimeout(() => loadArchivedLeads(1), 300)
+}
+
+async function loadArchivedLeads(page = 1) {
+    archiveLoading.value = true
+    try {
+        const response = await api.get('/leads/archived', {
+            params: {
+                search: archiveSearch.value.trim() || undefined,
+                per_page: 20,
+                page,
+            },
+        })
+        const body = response.data?.data || {}
+        archiveLeads.value = Array.isArray(body.data) ? body.data : []
+        archivePagination.value = body.pagination || { current_page: 1, last_page: 1, per_page: 20, total: 0 }
+    } catch (error) {
+        archiveLeads.value = []
+        window.$showNotification?.('Could not load archived leads.', 'error')
+    } finally {
+        archiveLoading.value = false
+    }
+}
+
+async function openArchivedLead(lead) {
+    archiveLoading.value = true
+    try {
+        const response = await api.get(`/leads/archived/${lead.id}`)
+        archiveDetail.value = response.data?.data || lead
+    } catch (error) {
+        window.$showNotification?.('Could not open that archived lead.', 'error')
+    } finally {
+        archiveLoading.value = false
+    }
+}
+
+async function forceDeleteArchived(lead) {
+    const result = await Swal.fire({
+        title: 'Delete forever?',
+        text: 'This archived lead cannot be restored.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Delete forever',
+        cancelButtonText: 'Cancel',
+    })
+    if (!result.isConfirmed) return
+    bulkActionBusy.value = true
+    try {
+        await api.delete(`/leads/archived/${lead.id}/force`)
+        archiveDetail.value = null
+        window.$showNotification?.('Lead permanently deleted.', 'success')
+        await loadArchivedLeads(archivePagination.value.current_page || 1)
+    } catch (error) {
+        window.$showNotification?.('Could not permanently delete that lead.', 'error')
+    } finally {
+        bulkActionBusy.value = false
+    }
+}
 
 const columns = ref([])
 
@@ -3368,16 +3750,24 @@ function isColumnVisibleOnMobile(column) {
     return String(column.status) === String(mobileListFilterStageId.value)
 }
 
-function onLeadCardClick(task, column) {
+function onLeadCardClick(task, column, event) {
     if (kanbanIsMobile.value && mobileSwipeMoved.value[String(column.status)]) {
         mobileSwipeMoved.value[String(column.status)] = false
         return
     }
-    if (kanbanIsMobile.value) {
-        viewLead(task)
+    if (event?.detail > 1) return
+    if (isAdminOrSuperAdmin.value && leadSelectionActive.value) {
+        toggleLeadSelection(task)
         return
     }
-    viewLead(task)
+    clearTimeout(leadCardClickTimer)
+    leadCardClickTimer = setTimeout(() => viewLead(task), 220)
+}
+
+function onLeadCardDblClick(task) {
+    if (!isAdminOrSuperAdmin.value) return
+    clearTimeout(leadCardClickTimer)
+    toggleLeadSelection(task)
 }
 
 function closeMobileQuickSheet() {
@@ -4713,6 +5103,368 @@ const fetchRevertNotifications = async () => {
 .add-new-btn:hover {
     background-color: #f8f9fa !important;
     border-color: #d1d5db !important;
+}
+
+.lead-select-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0 0 8px;
+    padding: 4px 8px;
+    min-height: 36px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e6e8ee;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    position: sticky;
+    top: 6px;
+    z-index: 30;
+}
+
+.lead-select-bar__cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.lead-select-bar__rule {
+    width: 1px;
+    height: 16px;
+    background: #e2e8f0;
+    margin: 0 4px;
+}
+
+.lead-archive-row,
+.lead-archive-row__actions,
+.lead-archive-pager,
+.lead-bulk-panel__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lead-select-bar__count-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.lead-select-bar__cluster strong {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #111827;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.lead-select-bar__clear {
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.lead-select-bar__clear:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.lead-select-bar .lead-select-bar__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    background: transparent;
+    color: #334155;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.lead-select-bar .lead-select-bar__btn iconify-icon {
+    font-size: 14px;
+}
+
+.lead-select-bar .lead-select-bar__btn:hover:not(:disabled) {
+    background: #f4f6f8;
+}
+
+.lead-select-bar .lead-select-bar__btn:disabled {
+    opacity: 0.4;
+}
+
+.lead-select-bar .lead-select-bar__btn--danger {
+    color: #e11d48;
+    background: transparent;
+}
+
+.lead-select-bar .lead-select-bar__btn--danger:hover:not(:disabled) {
+    background: #fff1f2;
+}
+
+.lead-bulk-panel .lead-select-bar__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.lead-bulk-panel .lead-select-bar__btn--danger {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #be123c;
+}
+.lead-select-bar-leave-active {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.lead-select-bar-enter-from,
+.lead-select-bar-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+.lead-card-check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lead-card-check--on {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #fff;
+}
+
+.kanban-card--selected {
+    border-color: #0f172a !important;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.18), 0 8px 18px rgba(15, 23, 42, 0.12) !important;
+}
+
+.lead-bulk-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(11, 7, 54, 0.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.lead-bulk-panel {
+    width: min(460px, 100%);
+    max-height: min(78vh, 640px);
+    overflow: auto;
+    background: #fff;
+    color: #0B0736;
+    border-radius: 16px;
+    padding: 18px 16px 14px;
+    border: 1px solid rgba(11, 7, 54, 0.08);
+    box-shadow: 0 18px 48px rgba(11, 7, 54, 0.22);
+}
+
+.lead-bulk-panel--wide {
+    width: min(760px, 100%);
+}
+
+.lead-bulk-panel__head {
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 8px;
+}
+
+.lead-bulk-panel__title {
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: #0B0736;
+}
+
+.lead-bulk-panel__close {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #0B0736;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.lead-bulk-panel__close:hover {
+    background: rgba(11, 7, 54, 0.08);
+    color: #0B0736;
+}
+
+.lead-bulk-panel__head h3,
+.lead-archive-detail h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 1.2;
+    color: #0B0736;
+}
+
+.lead-bulk-panel__hint {
+    color: rgba(11, 7, 54, 0.55);
+    font-size: 12px;
+    margin: 0 2px 10px;
+}
+
+.lead-bulk-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: 1px solid rgba(11, 7, 54, 0.14);
+    border-radius: 10px;
+    padding: 0 12px;
+    margin: 8px 0 10px;
+    background: #f7f6fb;
+    color: #0B0736;
+}
+
+.lead-bulk-search:focus-within {
+    border-color: #0B0736;
+    background: #fff;
+}
+
+.lead-bulk-search input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #0B0736;
+    outline: none;
+}
+
+.lead-bulk-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lead-bulk-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #0B0736;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.lead-bulk-option:hover:not(:disabled) {
+    background: rgba(11, 7, 54, 0.06);
+}
+
+.lead-bulk-option__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.06);
+}
+
+.lead-bulk-option__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: #0B0736;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.lead-bulk-option__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.lead-bulk-option__copy strong {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #0B0736;
+}
+
+.lead-bulk-option__copy small {
+    color: rgba(11, 7, 54, 0.5);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.lead-archive-row {
+    justify-content: space-between;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px;
+}
+
+.lead-archive-row span,
+.lead-archive-detail p {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.lead-archive-detail {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.lead-archive-pager {
+    justify-content: flex-end;
+    margin-top: 12px;
 }
 
 .kanban-card {

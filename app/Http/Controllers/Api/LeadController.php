@@ -41,7 +41,8 @@ class LeadController extends Controller
         $this->middleware('permission:leads-list', ['only' => ['index', 'show', 'export']]);
         $this->middleware('permission:leads-create', ['only' => ['store']]);
         $this->middleware('permission:leads-edit', ['only' => ['update', 'changeStage', 'assignResponsiblePerson', 'updateExtraClientRequirements']]);
-        $this->middleware('permission:leads-delete', ['only' => ['destroy']]);
+        // leads-delete is assigned to super_admin only; admin must be able to archive leads too.
+        $this->middleware('role_or_permission:super_admin|admin|leads-delete', ['only' => ['destroy']]);
     }
 
     /**
