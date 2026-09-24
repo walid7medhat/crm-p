@@ -146,16 +146,13 @@
                                         class="form-control form-control-sm revert-stage-select"
                                         :key="'select_' + stage.id"
                                     >
-                                        <option :value="null">⬅️ Previous Stage (Default)</option>
-                                        
-                                        <option 
-                                            v-for="s in allStages" 
+                                        <option :value="null">Previous stage (default)</option>
+                                        <option
+                                            v-for="s in previousStagesFor(stage)"
                                             :key="'option_' + s.id"
                                             :value="s.id"
-                                            :disabled="s.id === stage.id"
                                         >
                                             {{ s.name || 'Unnamed' }}
-                                            <span v-if="s.id === stage.id">(current)</span>
                                         </option>
                                     </select>
                                 </div>
@@ -428,6 +425,13 @@ const saving = ref(false)
 const error = ref(null)
 
 const allStages = ref([])
+
+const previousStagesFor = (stage) => {
+    const order = Number(stage?.order)
+    return (allStages.value || [])
+        .filter((s) => s?.id && s.id !== stage.id && Number(s.order) < order)
+        .sort((a, b) => Number(b.order) - Number(a.order))
+}
 const roles = ref([])
 const settings = ref({})
 const changedRoles = ref(new Set())

@@ -467,12 +467,12 @@ public function getRevertTargetStage()
         return Stage::where('stage_type', 'lead')->where('order', 9)->first();
     }
 
-    if ($this->stage?->revert_to_stage_id) {
-        return $this->stage->revertToStage;
-    }
-
-    if ($this->revertHours()) {
-        return Stage::where('stage_type', 'lead')->where('order', 1)->first();
+    $configured = $this->stage?->revertToStage;
+    if (
+        $configured
+        && (int) $configured->order < (int) ($this->stage?->order ?? 0)
+    ) {
+        return $configured;
     }
 
     return $this->getPreviousStage();
@@ -501,8 +501,31 @@ public function shouldSendRevertNotificationAt($minutesBefore): bool
      */
     public function getPreviousStage()
     {
-        return \App\Models\Stage::where('order', '<', $this->stage->order)
-            ->orderBy('order', 'desc')
+        if (!$this->stage) {
+            return null;
+        }
+
+        $type = $this->stage->stage_type ?: 'lead';
+        $candidates = \App\Models\Stage::where('stage_type', $type)
+            ->where('order', '<', $this->stage->order)
+            ->orderByDesc('order')
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $previousOrder = $candidates->first()->order;
+        $sameOrder = $candidates->where('order', $previousOrder);
+
+        if ($sameOrder->count() === 1) {
+            return $sameOrder->first();
+        }
+
+        $currentId = (int) $this->stage->id;
+
+        return $sameOrder
+            ->sortBy(fn ($stage) => abs((int) $stage->id - $currentId))
             ->first();
     }
 

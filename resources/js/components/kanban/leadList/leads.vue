@@ -378,20 +378,23 @@
                                                                         <div class="info-label text-secondary-light text-xs mb-1">Activity</div>
                                                                         <div class="info-value">{{ formatActivityDate(task) }}</div>
                                                                     </div>
-                                                                    <div
-                                                                        v-if="activityPerson(task)"
-                                                                        class="person-hover-anchor person-hover-clickable"
-                                                                        :title="activityPerson(task)?.name || ''"
-                                                                        @mouseenter.stop="showPersonHoverCard(task, 'activity', $event)"
-                                                                        @mouseleave.stop="hidePersonHoverCard"
-                                                                        @click.stop="openPersonProfile(task, 'activity', $event)"
-                                                                    >
-                                                                        <img
-                                                                            :src="activityPersonAvatar(task)"
-                                                                            :alt="activityPerson(task)?.name || ''"
-                                                                            class="avatar-sm rounded-circle"
+                                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                                        <div
+                                                                            v-if="activityPerson(task)"
+                                                                            class="person-hover-anchor person-hover-clickable"
+                                                                            :title="activityPerson(task)?.name || ''"
+                                                                            @mouseenter.stop="showPersonHoverCard(task, 'activity', $event)"
+                                                                            @mouseleave.stop="hidePersonHoverCard"
                                                                             @click.stop="openPersonProfile(task, 'activity', $event)"
-                                                                        />
+                                                                        >
+                                                                            <img
+                                                                                :src="activityPersonAvatar(task)"
+                                                                                :alt="activityPerson(task)?.name || ''"
+                                                                                class="avatar-sm rounded-circle"
+                                                                                @click.stop="openPersonProfile(task, 'activity', $event)"
+                                                                            />
+                                                                        </div>
+                                                                        <LeadSourceMark :source="task.lead_source" />
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -401,6 +404,12 @@
                                                             </div>
                                                           
                                                         </template>
+                                                        <div
+                                                            v-if="task.lead_source && !cardShowsActivityRow(column, task)"
+                                                            class="d-flex justify-content-end"
+                                                        >
+                                                            <LeadSourceMark :source="task.lead_source" />
+                                                        </div>
                                                     </div>
                                             </div>
                                         </template>
@@ -949,6 +958,7 @@ import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
+import LeadSourceMark from './LeadSourceMark.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
 import ProfilePopup from '../shared/ProfilePopup.vue'
@@ -2385,6 +2395,10 @@ const activityDisplayAt = (task) =>
 
 const hasAssignedBy = (task) => {
     return !!(activityDisplayAt(task) || activityPerson(task)?.name || task?.bitrix24_last_activity_by_id)
+}
+
+const cardShowsActivityRow = (column, task) => {
+    return hasAssignedBy(task) && enabledFieldsForColumn(column, task).some((field) => field.key === 'assigned_by')
 }
 
 const enabledFieldsForColumn = (column, task) => {

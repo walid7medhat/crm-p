@@ -161,6 +161,7 @@
                                         <div class="info-label text-secondary-light text-xs mb-1">Assigned</div>
                                         <div class="info-value">{{ formatDate(lead.assigned_at) }}</div>
                                     </div>
+                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                     <div
                                         class="person-hover-anchor"
                                         @mouseenter.stop="showPersonHoverCard(lead, 'assigned')"
@@ -198,6 +199,8 @@
                                                 <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
                                             </div>
                                         </transition>
+                                    </div>
+                                    <LeadSourceMark :source="lead.lead_source" />
                                     </div>
                                 </div>
                             </div>
@@ -244,6 +247,12 @@
                                 <div class="info-value">{{ getDynamicFieldDisplay(lead, field.key) }}</div>
                             </div>
                         </template>
+                        <div
+                            v-if="lead.lead_source && !(hasAssignedBy(lead) && enabledFieldsForLead(lead).some((field) => field.key === 'assigned_by'))"
+                            class="d-flex justify-content-end"
+                        >
+                            <LeadSourceMark :source="lead.lead_source" />
+                        </div>
                     </div>
                 </div>
             </LeadPoolCard>
@@ -312,6 +321,7 @@ import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadPoolCard from './LeadPoolCard.vue'
+import LeadSourceMark from './LeadSourceMark.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
 import { useLeadPoolBulkActions } from './composables/useLeadPoolBulkActions.js'
 
