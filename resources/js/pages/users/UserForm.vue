@@ -237,7 +237,9 @@
                                                     class="permission-select flex-grow-1"
                                                     :clearable="false"
                                                     :close-on-select="false"
+                                                    :searchable="!isMobileLayout"
                                                     :append-to-body="true"
+                                                    :calculate-position="placePermissionDropdown"
                                                 />
 
                                                 <button
@@ -317,6 +319,30 @@ export default {
         const userEffectivePermissions = ref([]);
         const permissionsToAssign = ref([]);
         const assigningPermissions = ref(false);
+        const isMobileLayout = ref(window.matchMedia('(max-width: 768px)').matches);
+
+        const placePermissionDropdown = (dropdownList, component, { width, top, left }) => {
+            dropdownList.style.setProperty('z-index', '13000', 'important');
+            dropdownList.style.left = left;
+            dropdownList.style.width = width;
+            dropdownList.style.top = top;
+
+            requestAnimationFrame(() => {
+                const toggle = component?.$refs?.toggle;
+                const rect = toggle?.getBoundingClientRect?.();
+                if (!rect) return;
+
+                const menuHeight = dropdownList.getBoundingClientRect().height || 200;
+                const dockClearance = 96;
+                const spaceBelow = window.innerHeight - rect.bottom;
+                if (spaceBelow < menuHeight + dockClearance) {
+                    const available = Math.max(140, rect.top - 12);
+                    const height = Math.min(menuHeight, available);
+                    dropdownList.style.maxHeight = `${height}px`;
+                    dropdownList.style.top = `${Math.max(8, rect.top + window.scrollY - height - 4)}px`;
+                }
+            });
+        };
 
         const isSuperAdmin = computed(() => {
             try {
@@ -882,7 +908,9 @@ watch(roles, (newRoles) => {
             assigningPermissions,
             availablePermissionsToAssign,
             formatPermissionName,
-            assignSelectedPermissions
+            assignSelectedPermissions,
+            isMobileLayout,
+            placePermissionDropdown
         };
     }
 };

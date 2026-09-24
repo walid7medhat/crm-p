@@ -436,7 +436,19 @@ app.mixin({
 // There's no cheap way to keep every independent instance repositioned live, so
 // close the open dropdown instead — but ignore scrolls that happen *inside* the
 // dropdown's own option list, since scrolling through a long list is normal.
+// A tap near the bottom of a phone page focuses the vue-select search box, and
+// the browser scrolls that box into view. That scroll used to blur the field
+// immediately, so the menu looked like it never opened.
+let ignoreSelectCloseUntil = 0
+document.addEventListener('pointerdown', (event) => {
+  const target = event.target
+  if (target && typeof target.closest === 'function' && target.closest('.v-select, .vs__dropdown-menu')) {
+    ignoreSelectCloseUntil = Date.now() + 700
+  }
+}, true)
+
 window.addEventListener('scroll', (event) => {
+  if (Date.now() < ignoreSelectCloseUntil) return
   const openSelect = document.querySelector('.v-select.vs--open')
   if (!openSelect) return
   const menu = document.querySelector('.vs__dropdown-menu')
