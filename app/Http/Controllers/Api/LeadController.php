@@ -286,7 +286,15 @@ class LeadController extends Controller
                                             ->whereNull('responsible_person_id')
                                             ->whereIn('added_by', $branchUserIds);
                                     });
-                            });
+                            })
+
+                                // A lead already assigned to the viewing user themself belongs in
+                                // their own kanban/leads view, not the shared pool — never show it
+                                // here even if it otherwise matches the branch scope above.
+                                ->where(function ($q) use ($user) {
+                                    $q->whereNull('responsible_person_id')
+                                        ->orWhere('responsible_person_id', '!=', $user->id);
+                                });
 
                         } else {
 
