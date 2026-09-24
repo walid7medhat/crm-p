@@ -225,29 +225,33 @@
                                         </div>
                                         <small v-else class="text-muted d-block mb-2">This user has no permissions yet.</small>
 
-                                        <div class="d-flex gap-2">
-                                            <v-select
+                                        <div class="d-flex gap-2 permission-select-wrapper">
+                                                <v-select
                                                     v-model="permissionsToAssign"
                                                     :options="availablePermissionsToAssign"
                                                     label="name"
-                                                    :reduce="(perm) => perm.name"
-                                                    :get-option-label="(perm) => formatPermissionName(perm.name)"
+                                                    :reduce="perm => perm.name"
+                                                    :get-option-label="perm => formatPermissionName(perm.name)"
                                                     multiple
                                                     placeholder="Select permissions to grant..."
-                                                    class="flex-grow-1"
+                                                    class="permission-select flex-grow-1"
                                                     :clearable="false"
                                                     :close-on-select="false"
-                                                    append-to-body
+                                                    :append-to-body="true"
                                                 />
-                                            <button type="button" class="btn btn-outline-primary flex-shrink-0"
+
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-outline-primary flex-shrink-0"
                                                     :disabled="!permissionsToAssign.length || assigningPermissions"
-                                                    @click="assignSelectedPermissions">
-                                                <span v-if="assigningPermissions">
-                                                    <iconify-icon icon="lucide:loader-2" class="spin"></iconify-icon>
-                                                </span>
-                                                <span v-else>Assign</span>
-                                            </button>
-                                        </div>
+                                                    @click="assignSelectedPermissions"
+                                                >
+                                                    <span v-if="assigningPermissions">
+                                                        <iconify-icon icon="lucide:loader-2" class="spin"></iconify-icon>
+                                                    </span>
+                                                    <span v-else>Assign</span>
+                                                </button>
+                                            </div>
                                         <small class="text-muted">On top of whatever the role above already grants. Only permissions this user doesn't already have are listed.</small>
                                     </div>
                                 </div>
@@ -962,35 +966,6 @@ watch(roles, (newRoles) => {
     background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
     padding-right: calc(1.5em + 0.75rem);
 }
-@media (max-width: 767.98px) {
-    .v-select {
-        width: 100%;
-    }
 
-    .v-select .vs__dropdown-menu {
-        max-height: 250px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-    }
 
-    .v-select.vs--open {
-        z-index: 9999;
-    }
-}
-:deep(.vs__dropdown-menu) {
-    z-index: 99999 !important;
-}
-
-:deep(.vs--open) {
-    z-index: 99999 !important;
-}
-
-@media (max-width: 767.98px) {
-    :deep(.vs__dropdown-menu) {
-        max-height: 250px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        z-index: 99999 !important;
-    }
-}
 </style>
