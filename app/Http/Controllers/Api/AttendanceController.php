@@ -865,6 +865,10 @@ private function syncUserAttendanceFromRemote(User $user, Carbon $startDate, Car
 
 /**
  * Build attendance stats and daily breakdown for one user in a date range.
+ *
+ * Check-in at or before 09:15 is Present; a later check-in is Late; no
+ * check-in (or Sunday) is Absent. No deduction percentages. Days after today
+ * are left out entirely — they haven't happened yet.
  */
 private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $endDate): array
 {
@@ -873,10 +877,9 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
     $present = 0;
     $late = 0;
     $absent = 0;
-    $totalDeductionPercent = 0;
-    $daysWithDeduction = 0;
 
-    $workingDays = $this->getWorkingDaysInRange($startDate, $endDate);
+    $today = Carbon::now('Asia/Dubai')->toDateString();
+    $days = $this->getAllDaysInRange($startDate, $endDate, $today);
     $dailyBreakdown = [];
 
     // If duplicate rows exist for the same day, prefer the one with check-in data.
@@ -886,61 +889,35 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
             return Carbon::parse($a->date)->timezone('Asia/Dubai')->toDateString();
         });
 
-    foreach ($workingDays as $date) {
+    foreach ($days as $date) {
         $attendance = $attendanceMap->get($date);
 
-        $checkIn = null;
-        $checkOut = null;
         $checkInTime = null;
         $checkOutTime = null;
-        $dayDeductionPercent = 0;
-        $status = 'Absent';
 
-        if ($attendance) {
-            if ($attendance->check_in) {
-                $checkIn = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai');
-                $checkInTime = $checkIn->format('H:i:s');
-            }
-            if ($attendance->check_out) {
-                $checkOut = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai');
-                $checkOutTime = $checkOut->format('H:i:s');
-            }
+        if ($attendance?->check_in) {
+            $checkInTime = Carbon::parse($attendance->check_in)->timezone('Asia/Dubai')->format('H:i:s');
+        }
+        if ($attendance?->check_out) {
+            $checkOutTime = Carbon::parse($attendance->check_out)->timezone('Asia/Dubai')->format('H:i:s');
+        }
 
-            $storedStatus = strtolower((string) ($attendance->status ?? ''));
+        $isSunday = Carbon::parse($date)->isSunday();
 
-            if ($checkIn) {
-                $dayDeductionPercent = $this->calculateDayDeduction($checkIn);
-                if ($storedStatus === 'late' || ($storedStatus !== 'present' && $dayDeductionPercent > 0)) {
-                    $status = 'Late';
-                    $late++;
-                    $totalDeductionPercent += $dayDeductionPercent > 0 ? $dayDeductionPercent : 10;
-                    $daysWithDeduction++;
-                } else {
-                    $status = 'Present';
-                    $present++;
-                }
-            } elseif (in_array($storedStatus, ['present', 'late'], true)) {
-                $status = ucfirst($storedStatus);
-                if ($storedStatus === 'late') {
-                    $late++;
-                    $dayDeductionPercent = 10;
-                    $totalDeductionPercent += 10;
-                    $daysWithDeduction++;
-                } else {
-                    $present++;
-                }
-            } else {
-                $status = 'Absent';
-                $absent++;
-                $dayDeductionPercent = 100;
-                $totalDeductionPercent += 100;
-                $daysWithDeduction++;
-            }
+        if ($isSunday || $checkInTime === null) {
+            $status = 'Absent';
+        } elseif ($checkInTime <= '09:15:00') {
+            $status = 'Present';
+        } else {
+            $status = 'Late';
+        }
+
+        if ($status === 'Present') {
+            $present++;
+        } elseif ($status === 'Late') {
+            $late++;
         } else {
             $absent++;
-            $dayDeductionPercent = 100;
-            $totalDeductionPercent += 100;
-            $daysWithDeduction++;
         }
 
         $dailyBreakdown[] = [
@@ -948,91 +925,16 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
             'check_in' => $checkInTime,
             'check_out' => $checkOutTime,
             'status' => $status,
-            'deduction_percent' => $dayDeductionPercent,
         ];
     }
-
-    $avgDeductionPercent = $daysWithDeduction > 0
-        ? round($totalDeductionPercent / $daysWithDeduction, 2)
-        : 0;
-
-    $totalWorkingDays = count($workingDays);
-    $overallDeductionPercent = $totalWorkingDays > 0
-        ? round(($totalDeductionPercent / $totalWorkingDays), 2)
-        : 0;
 
     return [
         'present' => $present,
         'late' => $late,
         'absent' => $absent,
-        'total_working_days' => $totalWorkingDays,
-        'avg_deduction_percent' => $avgDeductionPercent,
-        'total_deduction_percent' => $overallDeductionPercent,
-        'total_deduction_sum' => $totalDeductionPercent,
-        'days_with_deduction' => $daysWithDeduction,
+        'total_working_days' => count($days),
         'daily_breakdown' => $dailyBreakdown,
     ];
-}
-
-/**
- * Get day status based on attendance and deduction
- */
-private function getDayStatus($attendance, float $deductionPercent): string
-{
-    if (!$attendance) {
-        return 'Absent';
-    }
-    
-    if ($deductionPercent == 0) {
-        return 'Present';
-    }
-    
-    return 'Late';
-}
-
-/**
- * Calculate deduction percentage for a single day
- * Returns percentage value (0-100) for that specific day only
- */
-private function calculateDayDeduction($checkIn = null): float
-{
-    // If no check-in, full day deduction
-    if (!$checkIn) {
-        return 100;
-    }
-
-    // Ensure $checkIn is Carbon instance
-    if (!($checkIn instanceof \Carbon\Carbon)) {
-        try {
-            $checkIn = Carbon::parse($checkIn)->timezone('Asia/Dubai');
-        } catch (\Exception $e) {
-            return 100;
-        }
-    }
-
-    $time = $checkIn->format('H:i');
-
-    // Before 09:16 - No deduction
-    if ($time < '09:16') {
-        return 0;
-    }
-    
-    // Between 09:16 and 10:00 - 10% deduction for this day
-    if ($time >= '09:16' && $time <= '10:00') {
-        return 10;
-    }
-
-    // Between 10:01 and 12:00 - 25% deduction for this day
-    if ($time >= '10:01' && $time <= '12:00') {
-        return 25;
-    }
-
-    // After 12:01 - Full day deduction
-    if ($time >= '12:01') {
-        return 100;
-    }
-
-    return 0;
 }
 
 /**
@@ -1055,18 +957,18 @@ private function getWorkingDaysCount(Carbon $startDate, Carbon $endDate): int
 }
 
 /**
- * Get array of working days in date range (Monday to Friday only)
+ * Every calendar day in the range, including Sunday, but never past $today —
+ * used by buildUserPeriodReport so upcoming days are simply left out.
  */
-private function getWorkingDaysInRange(Carbon $startDate, Carbon $endDate): array
+private function getAllDaysInRange(Carbon $startDate, Carbon $endDate, string $today): array
 {
     $days = [];
     $current = $startDate->copy();
 
     while ($current <= $endDate) {
-        // Monday (1) to Friday (5) only, skip Saturday (6) and Sunday (0)
-        // !$current->isSaturday() &&
-        if ( !$current->isSunday()) {
-            $days[] = $current->format('Y-m-d');
+        $dateStr = $current->format('Y-m-d');
+        if ($dateStr <= $today) {
+            $days[] = $dateStr;
         }
         $current->addDay();
     }

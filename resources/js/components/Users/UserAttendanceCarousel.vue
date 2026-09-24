@@ -31,8 +31,7 @@
       <div class="uac-toolbar">
         <div class="uac-summary">
           <span class="uac-chip present">{{ currentMonth.present }} Present</span>
-          <span class="uac-chip late">{{ currentMonth.late }} Late</span>
-          <span class="uac-chip absent">{{ currentMonth.absent }} Absent</span>
+          <span class="uac-chip absent">{{ absentCount }} Absent</span>
         </div>
         <div class="uac-month-nav">
           <button
@@ -68,16 +67,8 @@
             <strong class="uac-rate-value rate-safe">{{ presentRate }}%</strong>
           </div>
           <div class="uac-rate-tile">
-            <span class="uac-rate-label">Late Rate</span>
-            <strong class="uac-rate-value rate-warning">{{ lateRate }}%</strong>
-          </div>
-          <div class="uac-rate-tile">
             <span class="uac-rate-label">Absent Rate</span>
             <strong class="uac-rate-value rate-danger">{{ absentRate }}%</strong>
-          </div>
-          <div class="uac-rate-tile">
-            <span class="uac-rate-label">Deduction</span>
-            <strong class="uac-rate-value" :class="`rate-${deductionClass}`">{{ deductionRate.toFixed(1) }}%</strong>
           </div>
         </div>
       </div>
@@ -96,9 +87,9 @@
             <tr v-for="row in sortedDays" :key="row.date">
               <td class="uac-date">{{ formatDate(row.date) }}</td>
               <td>
-                <span class="status-badge" :class="statusClass(row.status)">
+                <span class="status-badge" :class="statusClass(displayStatus(row.status))">
                   <span class="status-dot" aria-hidden="true" />
-                  {{ row.status }}
+                  {{ displayStatus(row.status) }}
                 </span>
               </td>
               <td>
@@ -186,34 +177,28 @@ export default {
     totalWorkingDays() {
       return this.currentMonth?.total_working_days || 0;
     },
+    // Binary view: a late check-in still counts as absent here (the profile
+    // carousel only shows Present/Absent — the Late split lives in Analytics).
+    absentCount() {
+      if (!this.currentMonth) return 0;
+      return (Number(this.currentMonth.late) || 0) + (Number(this.currentMonth.absent) || 0);
+    },
     presentRate() {
       if (!this.totalWorkingDays) return 0;
       return Math.round((this.currentMonth.present / this.totalWorkingDays) * 100);
     },
-    lateRate() {
-      if (!this.totalWorkingDays) return 0;
-      return Math.round((this.currentMonth.late / this.totalWorkingDays) * 100);
-    },
     absentRate() {
       if (!this.totalWorkingDays) return 0;
-      return Math.round((this.currentMonth.absent / this.totalWorkingDays) * 100);
-    },
-    deductionRate() {
-      return Number(this.currentMonth?.total_deduction_percent || 0);
-    },
-    deductionClass() {
-      if (this.deductionRate >= 25) return 'danger';
-      if (this.deductionRate >= 10) return 'warning';
-      return 'safe';
+      return Math.round((this.absentCount / this.totalWorkingDays) * 100);
     },
     donutSeries() {
-      if (!this.currentMonth) return [0, 0, 0];
-      return [this.currentMonth.present, this.currentMonth.late, this.currentMonth.absent];
+      if (!this.currentMonth) return [0, 0];
+      return [this.currentMonth.present, this.absentCount];
     },
     donutOptions() {
       return {
-        labels: ['Present', 'Late', 'Absent'],
-        colors: ['#16a34a', '#f59e0b', '#ef4444'],
+        labels: ['Present', 'Absent'],
+        colors: ['#16a34a', '#ef4444'],
         legend: { position: 'bottom', fontSize: '12px' },
         dataLabels: { enabled: true },
         stroke: { width: 2 },
@@ -294,6 +279,11 @@ export default {
       } finally {
         this.loadingMore = false;
       }
+    },
+    // Binary view: anything that isn't Present (including a Late check-in)
+    // reads as Absent here — the Late split only shows up in Analytics.
+    displayStatus(status) {
+      return status === 'Present' ? 'Present' : 'Absent';
     },
     statusClass(status) {
       return `status-${String(status || '').toLowerCase()}`;
@@ -431,11 +421,6 @@ export default {
   color: #166534;
 }
 
-.uac-chip.late {
-  background: #fef3c7;
-  color: #b45309;
-}
-
 .uac-chip.absent {
   background: #fee2e2;
   color: #991b1b;
@@ -491,10 +476,6 @@ export default {
 
 .uac-rate-value.rate-safe {
   color: #166534;
-}
-
-.uac-rate-value.rate-warning {
-  color: #b45309;
 }
 
 .uac-rate-value.rate-danger {
@@ -596,11 +577,6 @@ export default {
 .status-absent {
   background: #fee2e2;
   color: #991b1b;
-}
-
-.status-late {
-  background: #fef3c7;
-  color: #b45309;
 }
 
 .check-flow {

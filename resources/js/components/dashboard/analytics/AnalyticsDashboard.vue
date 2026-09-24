@@ -498,23 +498,23 @@
             <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
             <template v-else>
               <div class="adx-uni-attendance-chips">
-                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good" title="Checked in before 9:16 AM">
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good" title="Checked in at or before 9:15 AM">
                   <strong>{{ formatNumber(personalAttendance.present) }}</strong>
                   <span>Present</span>
                 </div>
-                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn" title="Checked in after 9:16 AM">
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn" title="Checked in after 9:15 AM">
                   <strong>{{ formatNumber(personalAttendance.late) }}</strong>
                   <span>Late</span>
                 </div>
-                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--danger" title="No check-in recorded for that working day">
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--danger" title="No check-in recorded for that working day, or Sunday">
                   <strong>{{ formatNumber(personalAttendance.absent) }}</strong>
                   <span>Absent</span>
                 </div>
               </div>
               <p class="adx-uni-attendance-legend">
                 <iconify-icon icon="lucide:info" width="12" height="12" />
-                <strong>Present</strong> = in before 9:16&nbsp;AM ·
-                <strong>Late</strong> = in after 9:16&nbsp;AM ·
+                <strong>Present</strong> = in at or before 9:15&nbsp;AM ·
+                <strong>Late</strong> = in after 9:15&nbsp;AM ·
                 <strong>Absent</strong> = no check-in that day
               </p>
             </template>
@@ -556,7 +556,7 @@
                   <span
                     class="adx-uni-attendance-status"
                     :class="`adx-uni-attendance-status--${attendanceStatusTone(member)}`"
-                    title="P = Present (in before 9:16 AM) · L = Late · A = Absent"
+                    title="P = Present (in at or before 9:15 AM) · L = Late · A = Absent"
                   >
                     {{ member.present }}P · {{ member.late }}L · {{ member.absent }}A
                   </span>

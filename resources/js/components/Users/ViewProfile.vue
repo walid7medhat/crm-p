@@ -79,13 +79,6 @@
           </div>
         </div>
         <div class="vp-personal__item">
-          <iconify-icon icon="lucide:calendar" class="vp-personal__icon" />
-          <div>
-            <span class="vp-personal__label">Member Since</span>
-            <span class="vp-personal__value">{{ user.created_at || '—' }}</span>
-          </div>
-        </div>
-        <div class="vp-personal__item">
           <iconify-icon icon="lucide:user-check" class="vp-personal__icon" />
           <div>
             <span class="vp-personal__label">Supervisor</span>
