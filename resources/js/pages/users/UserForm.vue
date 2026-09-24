@@ -123,7 +123,6 @@
                                         :reduce="(role) => role.id"
                                         placeholder="Select role..."
                                         :class="{'is-invalid': errors.role_id}"
-                                        :append-to-body="true"
                                     />
                                         <div class="invalid-feedback" v-if="errors.role_id">
                                             {{ errors.role_id[0] }}
@@ -157,7 +156,6 @@
                                             :reduce="(user) => user.id"
                                             placeholder="Select manager..."
                                             :class="{'is-invalid': errors.parent_id}"
-                                            :append-to-body="true"
                                         />
                                         <!-- <small class="text-muted">User will report to this manager</small> -->
                                         <div class="invalid-feedback" v-if="errors.parent_id">
@@ -235,7 +233,6 @@
                                                 multiple
                                                 placeholder="Select permissions to grant..."
                                                 class="flex-grow-1"
-                                                :append-to-body="true"
                                             />
                                             <button type="button" class="btn btn-outline-primary flex-shrink-0"
                                                     :disabled="!permissionsToAssign.length || assigningPermissions"
