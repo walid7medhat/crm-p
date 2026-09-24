@@ -990,6 +990,130 @@ class LeadController extends Controller
     }
 
     /**
+     * super_admin (and ids 30/33, matching the rest of this controller) see every
+     * archived lead; a plain admin only sees archived leads that were added by or
+     * assigned to someone in their own hierarchy.
+     */
+    private function scopeArchivedToHierarchy($query, $user)
+    {
+        if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
+            return $query;
+        }
+
+        $subordinatesIds = $user->getAllSubordinatesIds();
+
+        return $query->where(function ($q) use ($subordinatesIds) {
+            $q->whereIn('added_by', $subordinatesIds)
+                ->orWhereIn('responsible_person_id', $subordinatesIds);
+        });
+    }
+
+    /**
+     * List archived (soft-deleted) leads. destroy() above only soft-deletes —
+     * this is the trash bin those leads land in. Admin/super_admin only; a plain
+     * admin is further scoped to their own hierarchy (see scopeArchivedToHierarchy()).
+     */
+    public function archived(Request $request): JsonResponse
+    {
+        try {
+            $perPage = (int) $request->get('per_page', 20);
+
+            $query = Lead::onlyTrashed()
+                ->with([
+                    'addedBy:id,name,display_name,avatar',
+                    'responsiblePerson:id,name,display_name,avatar',
+                    'stage:id,name',
+                ])
+                ->orderByDesc('deleted_at');
+
+            $query = $this->scopeArchivedToHierarchy($query, auth()->user());
+
+            if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
+                LeadTextSearch::apply($query, (string) $request->search, [
+                    'comments' => false,
+                    'relations' => true,
+                    'admin' => true,
+                    'lean' => true,
+                ]);
+            }
+
+            $leads = $query->paginate($perPage);
+
+            return ApiResponse::success([
+                'data' => LeadResource::collection($leads->items()),
+                'pagination' => [
+                    'current_page' => $leads->currentPage(),
+                    'last_page' => $leads->lastPage(),
+                    'per_page' => $leads->perPage(),
+                    'total' => $leads->total(),
+                ],
+            ], 'Archived leads retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve archived leads: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Full details of a single archived (soft-deleted) lead. Admin/super_admin only;
+     * a plain admin is further scoped to their own hierarchy.
+     */
+    public function showArchived($id): JsonResponse
+    {
+        try {
+            $lead = $this->scopeArchivedToHierarchy(Lead::onlyTrashed(), auth()->user())->find($id);
+
+            if (! $lead) {
+                return ApiResponse::error('Archived lead not found', 404);
+            }
+
+            return ApiResponse::success(
+                new LeadResource($lead->load([
+                    'stage',
+                    'addedBy.roles:id,name',
+                    'addedBy.parent:id,name,display_name,avatar',
+                    'addedBy.employeeProfile.companyBranch:id,name',
+                    'addedBy.employeeProfile.designation:id,name',
+                    'responsiblePerson.roles:id,name',
+                    'responsiblePerson.parent.parent.parent.parent:id,name,display_name,avatar,parent_id',
+                    'responsiblePerson.employeeProfile.companyBranch:id,name',
+                    'responsiblePerson.employeeProfile.designation:id,name',
+                    'participants',
+                    'observers.user:id,name,display_name,avatar,email',
+                    'integration:id,project_id',
+                    'propertyType:id,name',
+                    'area' => fn ($q) => $q->with(['parent.parent.parent.parent']),
+                    'createdHistory',
+                ])),
+                'Archived lead retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve archived lead: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Permanently delete an archived lead — irreversible, bypasses SoftDeletes.
+     * Admin/super_admin only (also gated by the role middleware on the route);
+     * a plain admin is further scoped to their own hierarchy.
+     */
+    public function forceDeleteArchived($id): JsonResponse
+    {
+        try {
+            $lead = $this->scopeArchivedToHierarchy(Lead::onlyTrashed(), auth()->user())->find($id);
+
+            if (! $lead) {
+                return ApiResponse::error('Archived lead not found', 404);
+            }
+
+            $lead->forceDelete();
+
+            return ApiResponse::success(null, 'Lead permanently deleted');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to permanently delete lead: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Change lead stage
      */
 

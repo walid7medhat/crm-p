@@ -678,6 +678,14 @@ Route::prefix('users/{user}')->group(function () {
 
 // leadssssss
 
+// Archived (soft-deleted) leads bin — admin/super_admin only. Registered before the
+// apiResource below so "archived" isn't swallowed by the GET /leads/{lead} show route.
+Route::middleware('role:super_admin|admin')->group(function () {
+    Route::get('/leads/archived', [LeadController::class, 'archived']);
+    Route::get('/leads/archived/{id}', [LeadController::class, 'showArchived']);
+    Route::delete('/leads/archived/{id}/force', [LeadController::class, 'forceDeleteArchived']);
+});
+
 Route::apiResource('leads', LeadController::class);
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);
