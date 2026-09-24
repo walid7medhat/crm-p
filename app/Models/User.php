@@ -213,8 +213,40 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 
     public function canViewLead(Lead $lead): bool
     {
-        if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33 || $lead->stage_id==10) {
+        if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
             return true;
+        }
+
+        if ((int) $lead->stage_id === 10) {
+            // Lead Pool: same rules as LeadController::index() — a lead already assigned to
+            // this user is hidden from their pool entirely (it belongs in their own
+            // kanban/leads view), and everything else must belong to their branch. Without
+            // the branch check, any authenticated user could open any pool lead by id.
+            if ($lead->responsible_person_id === $this->id) {
+                return false;
+            }
+
+            $branchAdmin = $this->admin_parent;
+            $userBranch = $branchAdmin?->name;
+            if (! $userBranch) {
+                return false;
+            }
+
+            if ($lead->lead_branch_source === $userBranch) {
+                return true;
+            }
+
+            if ($lead->lead_branch_source === null) {
+                $branchUserIds = $branchAdmin->getAllSubordinatesIds();
+
+                if ($lead->responsible_person_id !== null) {
+                    return in_array($lead->responsible_person_id, $branchUserIds);
+                }
+
+                return in_array($lead->added_by, $branchUserIds);
+            }
+
+            return false;
         }
 
         if ($this->hasRole('sales')) {
