@@ -267,20 +267,10 @@
     font-weight: 700 !important;
   }
 
-  /* Chevron */
+  /* Chevron — removed on mobile: the whole row is already tappable to expand/collapse,
+     and next to the leading icon it read as a second icon. */
   aside.sidebar .dropdown-arrow {
-    margin-left: auto !important;
-    width: 8px !important;
-    height: 8px !important;
-    border-right: 2px solid #94a3b8 !important;
-    border-bottom: 2px solid #94a3b8 !important;
-    transform: rotate(-45deg);
-    transition: transform 0.2s ease;
-    flex-shrink: 0;
-  }
-
-  aside.sidebar .dropdown-arrow.rotated {
-    transform: rotate(45deg);
+    display: none !important;
   }
 
   /* Submenu — align with top-level items (same left edge as Dashboard) */

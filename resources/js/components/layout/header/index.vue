@@ -1533,6 +1533,17 @@ onUnmounted(() => {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  list-style: none;
+}
+
+.sidebar-menu,
+.sidebar-submenu,
+.sidebar-menu li,
+.sidebar-submenu li {
+  /* display:flex on the <ul> suppresses the native bullet in Chrome, but not reliably in
+     iOS Safari — there it can still render a marker dot next to the icon on every row,
+     which looks like a second icon. */
+  list-style: none;
 }
 
 .sidebar-submenu {
