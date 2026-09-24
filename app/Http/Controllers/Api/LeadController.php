@@ -969,14 +969,35 @@ class LeadController extends Controller
 }
 
     /**
+     * super_admin (and ids 30/33, matching the rest of this controller) can delete any
+     * lead. A plain admin is scoped to their own hierarchy — leads added by or assigned
+     * to someone in their team. Anyone else can only delete a lead they personally added.
+     */
+    private function canDeleteLead($user, Lead $lead): bool
+    {
+        if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
+            return true;
+        }
+
+        if ($user->hasRole('admin')) {
+            $subordinatesIds = $user->getAllSubordinatesIds();
+
+            return in_array($lead->added_by, $subordinatesIds)
+                || in_array($lead->responsible_person_id, $subordinatesIds);
+        }
+
+        return $lead->added_by === $user->id;
+    }
+
+    /**
      * Delete a lead
      */
     public function destroy(Lead $lead): JsonResponse
     {
         try {
             $user = auth()->user();
-            
-            if (!($user->hasRole('admin') || $user->hasRole('super_admin')) && $lead->added_by !== $user->id) {
+
+            if (! $this->canDeleteLead($user, $lead)) {
                 return ApiResponse::error('You are not authorized to delete this lead', 403);
             }
         $this->broadcastLeadUpdated($lead, 'deleted');
