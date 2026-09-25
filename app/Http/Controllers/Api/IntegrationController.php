@@ -720,7 +720,7 @@ public function store_website(Request $request)
     if (!$this->verifyWebsiteLeadSecret($request, 'website_lead')) {
         return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
-
+$response=$data['responsible_person_id'];
     $data = $request->all();
     // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
@@ -759,7 +759,7 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => $data['responsible_person_id']?? 1,
+        'responsible_person_id' =>$response?? 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
