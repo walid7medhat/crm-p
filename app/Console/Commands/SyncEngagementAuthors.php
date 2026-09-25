@@ -149,7 +149,7 @@ class SyncEngagementAuthors extends Command
 
         $t0 = microtime(true);
         $this->line('➤ Fetching lead records…');
-        $leads = $leadsQuery->get(['id', 'bitrix24_id', 'lead_name','deleted_at']);
+        $leads = $leadsQuery->get(['id', 'bitrix24_id', 'lead_name']);
         $this->line(sprintf('  %d lead(s) to process (%.1fs)', $leads->count(), microtime(true) - $t0));
 
         if ($leads->isEmpty()) {
