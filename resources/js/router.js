@@ -145,30 +145,30 @@ const baseRoutes = [
   {
   path: '/projects',
   component: () => import('./pages/projects/projects-list.vue'),
-  meta: { requiresAuth: true }
+  meta: { requiresAuth: true, requiresPermission: 'projects-list' }
 },
 {
   path: '/add-projects',
   component: () => import('./pages/projects/form.vue'),
-  meta: { requiresAuth: true }
+  meta: { requiresAuth: true, requiresPermission: 'projects-create' }
 },
 {
   path: '/projects/:id/edit',
   component: () => import('./pages/projects/form.vue'),
   name: 'edit-project',
-  meta: { requiresAuth: true }
+  meta: { requiresAuth: true, requiresPermission: 'projects-edit' }
 },
 {
   path: '/projects/:id',
   component: () => import('./pages/projects/show.vue'),
   name: 'show-project',
-  meta: { requiresAuth: true }
+  meta: { requiresAuth: true, requiresPermission: 'projects-list' }
 },
 {
     path:'/projects/:id/floor-plans',
     component: () => import('./pages/projects/FloorPlans.vue'),
     name:'project-floorplan',
-    meta:{ requiresAuth: true }
+    meta:{ requiresAuth: true, requiresPermission: 'projects-list' }
 }
 ]
 

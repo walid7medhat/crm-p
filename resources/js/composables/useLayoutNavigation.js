@@ -168,6 +168,10 @@ export function isListingsRememberablePath(path) {
   if (LISTINGS_FORM_PATHS.includes(path)) return false;
   if (path.endsWith('/edit')) return false;
   if (LISTINGS_REQUEST_PATHS.includes(path)) return false;
+  // Projects is its own section reachable from the Listings dropdown, not the Listings
+  // table itself — visiting it must not hijack the top-level "Listings" sidebar link into
+  // always reopening Projects afterward. That link should always land on All Listing.
+  if (path === '/projects' || path.startsWith('/projects/')) return false;
   return true;
 }
 
