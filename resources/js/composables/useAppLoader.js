@@ -40,6 +40,9 @@ function shouldUseNavLoader(to, from) {
   if (!localStorage.getItem('token')) return false
   if (!hasAuthenticatedLayout(to) || !hasAuthenticatedLayout(from)) return false
   if (to.path === from.path) return false
+  // Leads/Deals paint their own board. Holding the route behind the full-page
+  // loader left a blank content area until the request finished.
+  if (isKanbanRoute(to.path)) return false
   return true
 }
 

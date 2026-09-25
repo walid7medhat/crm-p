@@ -125,6 +125,14 @@
             <p class="kanban-empty-text">{{ error }}</p>
             <button type="button" class="kanban-empty-btn" @click="fetchLeads(true)">Try again</button>
         </div>
+        <div v-else-if="loading && columns.length === 0" class="kanban-board-skeleton" aria-hidden="true">
+            <div v-for="n in 4" :key="n" class="kanban-board-skeleton__col">
+                <span class="kanban-board-skeleton__head"></span>
+                <span class="kanban-board-skeleton__card"></span>
+                <span class="kanban-board-skeleton__card"></span>
+                <span class="kanban-board-skeleton__card kanban-board-skeleton__card--short"></span>
+            </div>
+        </div>
         <!-- No stages yet -->
         <div v-else-if="!loading && columns.length === 0" class="kanban-empty-state">
             <iconify-icon icon="lucide:columns-3" class="kanban-empty-icon"></iconify-icon>
@@ -2860,6 +2868,7 @@ let unsubscribeLeadViewUpdated = null
 
 onMounted(async () => {
     unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
+    markKanbanReady()
 
     const hadCache = loadCachedColumns()
     if (hadCache) {
@@ -4736,6 +4745,49 @@ const fetchRevertNotifications = async () => {
 .kanban-nav-arrow-right {
     border-radius: 50%;
     padding-right: 0;
+}
+
+.kanban-board-skeleton {
+    display: flex;
+    gap: 14px;
+    height: 100%;
+    min-height: 420px;
+    padding: 8px 4px 12px;
+    box-sizing: border-box;
+}
+.kanban-board-skeleton__col {
+    flex: 1 1 0;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+}
+.kanban-board-skeleton__head,
+.kanban-board-skeleton__card {
+    display: block;
+    border-radius: 12px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.85), rgba(255,255,255,0.35));
+    background-size: 200% 100%;
+    animation: kanban-skeleton-shimmer 1.1s ease-in-out infinite;
+}
+.kanban-board-skeleton__head {
+    height: 28px;
+    width: 55%;
+    border-radius: 999px;
+}
+.kanban-board-skeleton__card {
+    height: 92px;
+}
+.kanban-board-skeleton__card--short {
+    height: 64px;
+}
+@keyframes kanban-skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
 }
 
 /* Empty / loading / error states */

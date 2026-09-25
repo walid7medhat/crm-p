@@ -1,5 +1,5 @@
 <template>
-    <div class="card basic-data-table">
+    <div class="card basic-data-table users-list">
         <div class="card-header">
             <div class="row">
                 <div class="col-md-6 text-start">
@@ -39,17 +39,15 @@
                         Add User
                     </button>
                     
-                    <div class="icon-field d-flex align-items-center" style="padding-bottom: 5px;">
-                        <span class="me-13">Search:</span>
-                        <div class="position-relative" style="width: 100%; max-width: 240px;">
-                            <input type="text" class="form-control form-control-sm w-100 px-3 pe-5" v-model="searchText"
-                                style="border-radius: 10px; height: 2.5rem;" placeholder="Search users..." />
-                            <span class="icon position-absolute end-0 top-50 translate-middle-y me-3 text-muted"
-                                style="pointer-events: none;">
-                                <iconify-icon icon="lucide:search"></iconify-icon>
-                            </span>
-                        </div>
-                    </div>
+                    <label class="users-search">
+                        <iconify-icon icon="lucide:search" class="users-search__icon"></iconify-icon>
+                        <input
+                            type="text"
+                            v-model="searchText"
+                            placeholder="Search name, email..."
+                            aria-label="Search users"
+                        />
+                    </label>
                 </div>
             </div>
 
@@ -70,7 +68,7 @@
                                         </label>
                                     </div>
                                 </th>
-                                <th scope="col" @click="sortBy('name')" class="sortable">
+                                <th scope="col" class="users-col-name sortable" @click="sortBy('name')">
                                     User
                                     <span v-if="sortKey === 'name'">
                                         <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
@@ -80,9 +78,8 @@
                                 <th scope="col"  v-if="$hasPermission('users-code')">Biometric Code</th>
                                 <th scope="col">Role</th>
                                 <th scope="col">Manager</th>
-                                <th scope="col">Branch</th>
-                                <th scope="col">Position</th>
-                                 <th scope="col">Department</th>
+                                <th scope="col" class="users-col-meta">Branch</th>
+                                <th scope="col" class="users-col-meta">Department</th>
                                 
                                 <th scope="col">Active/Inactive</th>
                                 <th scope="col" @click="sortBy('last_login_at')" class="sortable">
@@ -109,25 +106,19 @@
                                         <label class="form-check-label">{{ user.id }}</label>
                                     </div>
                                 </td>
-                                <td>
-                                    <div class="d-flex align-items-center user-name-link" style="cursor: pointer;" @click="viewUser(user.id)">
-                                        <div class="position-relative">
+                                <td class="users-col-name">
+                                    <div class="user-name-link" @click="viewUser(user.id)">
+                                        <span class="user-name-link__avatar">
                                             <img
                                                 :src="avatarUrl(user)"
                                                 :alt="user.name || ''"
-                                                class="flex-shrink-0 me-12 radius-8"
-                                                width="40"
-                                                height="40"
-                                                style="object-fit: cover;"
+                                                width="32"
+                                                height="32"
                                                 @error="handleImageError"
                                             />
-                                            <span v-if="isUserOnline(user)"
-                                                  class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white"
-                                                  style="width: 10px; height: 10px;"></span>
-                                        </div>
-                                        <div>
-                                            <h6 class="text-md mb-0 fw-medium">{{ user.name }}</h6>
-                                        </div>
+                                            <span v-if="isUserOnline(user)" class="user-name-link__online"></span>
+                                        </span>
+                                        <span class="user-name-link__name">{{ user.name }}</span>
                                     </div>
                                 </td>
                                 <td>{{user.email}}</td>
@@ -156,14 +147,11 @@
                                     <p v-else class="text-muted">-</p>
                                     <span class="text-muted" v-if="user.admin_parent_name && user.parent_id != user.admin_parent_id">{{ user.admin_parent_name }}</span>
                                 </td>
-                             <td>
-                                <span class="">{{ user.branch}}</span>
+                             <td class="users-col-meta">
+                                <span>{{ user.branch || user.admin_parent_name || '—' }}</span>
                             </td>
-                            <td>
-                                <span class="">{{ user.position }}</span>
-                            </td>
-                            <td>
-                                <span class="">{{ user.department}}</span>
+                            <td class="users-col-meta">
+                                <span>{{ user.department || user.office_name || '—' }}</span>
                             </td>
                              <td>
                                     <div class="status-toggle" v-if="(hasAdminRole() || hasSuperAdminRole()) && user.id != 1">
@@ -281,7 +269,7 @@
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="!loading && users.length > 0" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-24">
+                <div v-if="!loading && users.length > 0" class="users-list__pager d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <span>
                         Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ totalEntries }} entries
                     </span>
@@ -945,6 +933,172 @@ export default {
 </script>
 
 <style scoped>
+.users-list.card {
+    height: auto;
+    min-height: 0;
+    margin-bottom: 0;
+}
+
+.users-list > .card-header {
+    padding: 14px 18px;
+}
+
+.users-list > .card-header .card-title {
+    font-size: 16px !important;
+}
+
+.users-list > .card {
+    margin-bottom: 0;
+    box-shadow: none;
+}
+
+.users-list .card-header {
+    padding: 12px 18px;
+}
+
+.users-list .card-body {
+    padding: 8px 16px 16px;
+}
+
+.users-list .btn {
+    padding: 6px 12px;
+    font-size: 14px;
+    min-height: 36px;
+}
+
+.users-list .form-select,
+.users-list .form-control {
+    height: 36px !important;
+    min-height: 36px;
+    font-size: 14px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.users-list :deep(.bordered-table) {
+    min-width: 0;
+    width: 100%;
+}
+
+.users-list :deep(.bordered-table thead tr th),
+.users-list :deep(.bordered-table tbody tr td) {
+    padding: 10px 12px !important;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.users-list :deep(.bordered-table thead tr th) {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.users-list .users-col-name {
+    min-width: 180px;
+}
+
+.users-list :deep(.users-col-meta) {
+    min-width: 110px;
+    white-space: nowrap;
+}
+
+.users-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    min-width: 220px;
+    padding: 0 12px;
+    margin: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.users-search:focus-within {
+    border-color: #733e87;
+    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.12);
+}
+
+.users-search__icon {
+    flex-shrink: 0;
+    font-size: 16px;
+    color: #94a3b8;
+}
+
+.users-search input {
+    width: 160px;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: #0f172a;
+    padding: 0;
+}
+
+.users-search input::placeholder {
+    color: #94a3b8;
+}
+
+.users-list .user-name-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.users-list .user-name-link__avatar {
+    position: relative;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+}
+
+.users-list .user-name-link__avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.users-list .user-name-link__online {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid #fff;
+}
+
+.users-list .user-name-link__name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.users-list .user-name-link:hover .user-name-link__name {
+    color: #0B0736;
+    text-decoration: underline;
+}
+
+.users-list .form-control-sm {
+    max-width: 110px;
+    height: 32px !important;
+    min-height: 32px;
+    padding: 4px 8px;
+}
+
+.users-list__pager {
+    margin-top: 14px;
+    font-size: 14px;
+}
+
 .status-toggle {
     position: relative;
     display: inline-block;

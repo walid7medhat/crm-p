@@ -1274,7 +1274,10 @@ async function goToCrmSection(section) {
   if (section === CRM_SECTIONS.LEAD) {
     localStorage.setItem('kanban_active_tab', 'leads');
     if (route.path !== '/kanban') {
-      startNavProgress();
+      await Promise.all([
+        import('@/pages/kanban.vue'),
+        import('@/components/kanban/leadList/leads.vue'),
+      ]);
       router.push('/kanban');
     }
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }));

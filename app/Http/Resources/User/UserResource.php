@@ -68,9 +68,11 @@ class UserResource extends JsonResource
             'addedBy' => new UserResource($this->whenLoaded('addedBy')),
             'is_listing_team'=>($this->is_listing_team ) || (auth()->check() &&(auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin'))),
             'biometric_code'=>$this->biometric_code,
-            'branch' => $this->employeeProfile?->companyBranch?->name,
+            'branch' => $this->employeeProfile?->companyBranch?->name
+                ?: User::resolveDisplayName($this->admin_parent),
             'position' => $this->employeeProfile?->designation?->name,
-            'department' => $this->employeeProfile?->department?->name,
+            'department' => $this->employeeProfile?->department?->name
+                ?: User::resolveDisplayName($this->office),
             'joining_date' => $this->employeeProfile?->joining_date,
         ];
     }

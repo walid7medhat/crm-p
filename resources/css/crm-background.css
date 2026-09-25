@@ -292,10 +292,19 @@ body.app-has-video-bg .kanban-outer {
    the Kanban board can scroll per-column — without its own scroll region, Lead Pool's
    content taller than the viewport was simply clipped. Give it one here, scoped to this
    theme only (default/non-video-bg mode already scrolls the page normally). */
+body.app-has-video-bg .kanban-main-wrapper:has(.lead-pool-wrapper) {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 body.app-has-video-bg .kanban-main-wrapper .lead-pool-wrapper {
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 1 1 auto !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
 }
 
