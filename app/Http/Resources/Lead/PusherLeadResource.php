@@ -105,9 +105,20 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // Relationships
             'stage' => new \App\Http\Resources\Stage\MainStageResource($this->whenLoaded('stage')),
             // 'added_by_user' => new \App\Http\Resources\User\UserResource($this->whenLoaded('addedBy')),
-            // 'responsible_person' => new \App\Http\Resources\User\UserResource($this->responsiblePerson),
-          
-            
+            // Card-shaped (id/name/avatar), matching KanbanLeadCardResource — the Kanban board
+            // does a full card replace (not a merge) on every Pusher lead.updated/created event,
+            // so omitting this here previously wiped the responsible person off the card the
+            // instant a live update arrived, even though it was already loaded correctly on
+            // the initial page fetch.
+            'responsible_person' => $this->responsiblePerson ? [
+                'id' => $this->responsiblePerson->id,
+                'name' => \App\Models\User::resolveDisplayName($this->responsiblePerson),
+                'display_name' => $this->responsiblePerson->display_name,
+                'email' => $this->responsiblePerson->email,
+                'avatar' => $this->responsiblePerson->avatar ? asset('storage/'.$this->responsiblePerson->avatar) : null,
+                'status' => $this->responsiblePerson->status,
+            ] : null,
+
             'budget' =>  (int) $this->budget,
             'budget_from' => (int)$this->budget_from,
             'budget_to' => (int) $this->budget_to,
