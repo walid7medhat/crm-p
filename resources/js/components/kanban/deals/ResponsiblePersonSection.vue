@@ -454,6 +454,11 @@ const updateResponsiblePerson = async () => {
 .person-search-input::placeholder {
     font-size: 10px !important;
 }
+.btn-content{
+        display: flex;
+    align-items: center;
+    gap: 2px;
+}
 </style>
 
 <style>

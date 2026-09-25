@@ -755,7 +755,7 @@ $fieldMappings = [
         'email' => $data['email'] ?? null,
         'work_phone' => $data['phone'] ?? null,
         'stage_id' => $newStageId,
-        'lead_source' => 'Oiaproperties.com',
+        'lead_source' => $data['source']??'Oiaproperties.com',
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
