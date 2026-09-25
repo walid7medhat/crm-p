@@ -7395,8 +7395,6 @@ const getHistoryIcon = (event) => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
-
 .property-actions-accordion {
   width: 100%;
   margin: 0;
