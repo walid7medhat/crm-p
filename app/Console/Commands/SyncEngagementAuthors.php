@@ -137,7 +137,7 @@ class SyncEngagementAuthors extends Command
                 ->getSchemaBuilder()
                 ->hasColumn('leads', 'deleted_at') ? 'YES' : 'NO')
         );
-        $leads = $leadsQuery->get(['id', 'bitrix24_id', 'lead_name']);
+        $leads = $leadsQuery->get(['id', 'bitrix24_id', 'lead_name','deleted_at']);
 
         if ($leads->isEmpty()) {
             $this->warn('No matching leads with a locally-imported comment or activity found.');
