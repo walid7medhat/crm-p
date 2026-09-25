@@ -146,6 +146,11 @@ return [
         'path' => storage_path('logs/sync-responsible.log'),
         'level' => 'debug',
     ],
+    'sync_engagement_authors' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/sync-engagement-authors.log'),
+        'level' => 'debug',
+    ],
      'bitrix_missing' => [
         'driver' => 'single',
         'path' => storage_path('logs/bitrix_missing.log'),
