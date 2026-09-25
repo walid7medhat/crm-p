@@ -98,7 +98,7 @@ class KanbanLeadCardResource extends JsonResource
             'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
             'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
-            'responsible_person' => $this->whenLoaded('responsiblePerson', fn () => $this->formatLeadPoolUser($this->responsiblePerson, withHierarchy: true)),
+                        'responsible_person' => $this->formatLeadPoolUser($this->responsiblePerson),
             'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,
             'last_activity_at' => $lastActivityAt,
