@@ -286,24 +286,19 @@ body.app-has-video-bg .kanban-outer {
   background: transparent !important;
 }
 
-/* Lead Pool is a tall grid, not a per-column board. The kanban shell locks every
-   ancestor to the viewport with overflow:hidden, which clips the extra rows and
-   the pagination. Release those locks and scroll the router, which already has
-   a real viewport height. */
-body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.lead-pool-wrapper) {
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
-}
-
-body.app-has-video-bg .dashboard-main-body:has(.lead-pool-wrapper),
-body.app-has-video-bg .kanban-main-wrapper:has(.lead-pool-wrapper),
+/* Lead Pool sits inside a shell that is overflow:hidden and exactly one screen
+   tall. Percentage heights never become a scroll box there, so the extra cards
+   and pagination are clipped. Size the list itself to the space under the
+   navbar and scroll inside it. */
 body.app-has-video-bg .kanban-main-wrapper .lead-pool-wrapper {
   flex: 0 0 auto !important;
   height: auto !important;
-  max-height: none !important;
   min-height: 0 !important;
-  overflow: visible !important;
+  max-height: calc(100dvh - 150px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 body.app-has-video-bg a.property-card-link .property-card,

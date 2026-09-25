@@ -910,7 +910,12 @@ defineExpose({
     padding: 16px 20px 28px;
     position: relative;
     height: auto;
-    overflow: visible;
+    min-height: 0;
+    max-height: calc(100dvh - 150px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .lead-pool-empty-state {
