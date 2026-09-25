@@ -8,6 +8,7 @@ use App\Models\LeadComment;
 use App\Models\User;
 use App\Services\Bitrix24\Bitrix24Client;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Console\Helper\ProgressBar;
 
@@ -31,16 +32,30 @@ use Symfony\Component\Console\Helper\ProgressBar;
  * crm.activity.list scoped by lead), so case (1) is still one (or two) Bitrix API
  * calls per relevant lead. Use --limit or --lead-id to test on a small batch first.
  *
+ * Resumable: the last lead id fully processed is checkpointed after every lead (real
+ * runs only, --dry-run never touches it), so a stopped/crashed/Ctrl+C'd run picks up
+ * right after where it left off next time instead of starting over. Pass --restart to
+ * discard the checkpoint and scan from the first lead again. The checkpoint only
+ * auto-clears itself once an unrestricted run (no --limit/--lead-id) reaches the true
+ * end of the dataset.
+ *
  *   php artisan bitrix24:sync-engagement-authors --dry-run --limit=20
  *   php artisan bitrix24:sync-engagement-authors --lead-id=123 --dry-run
  *   php artisan bitrix24:sync-engagement-authors
+ *   php artisan bitrix24:sync-engagement-authors --restart
  */
 class SyncEngagementAuthors extends Command
 {
     protected $signature = 'bitrix24:sync-engagement-authors
         {--dry-run : Show what would change without writing}
         {--limit=0 : Only process the first N local leads that have a bitrix24_id (0 = all)}
-        {--lead-id= : Only process this one local lead id (for testing)}';
+        {--lead-id= : Only process this one local lead id (for testing)}
+        {--restart : Ignore any saved resume checkpoint and start over from the first lead}';
+
+    /** Cache key: last local lead id fully processed, so a stopped/crashed run resumes
+     *  from there instead of rescanning from the first lead. Real runs only — --dry-run
+     *  never reads or writes this, so a preview run can't disturb a real run's progress. */
+    private const RESUME_KEY = 'bitrix24_engagement_authors_resume_lead_id';
 
     protected $description = "Check/fix lead_comments.user_id and lead_activities.user_id against Bitrix24 (linked rows), and flag broken user_id on rows with no Bitrix link";
 
@@ -93,14 +108,35 @@ class SyncEngagementAuthors extends Command
             ->merge(LeadActivity::whereNotNull('bitrix24_id')->distinct()->pluck('lead_id'))
             ->unique();
 
-        $leadsQuery = Lead::query()->whereNotNull('bitrix24_id')->whereIn('id', $relevantLeadIds);
+        $leadsQuery = Lead::query()->whereNotNull('bitrix24_id')->whereIn('id', $relevantLeadIds)->orderBy('id');
+
         if ($onlyLeadId) {
             $leadsQuery->where('id', $onlyLeadId);
+        } elseif (! $dryRun) {
+            if ($this->option('restart')) {
+                Cache::forget(self::RESUME_KEY);
+            } elseif ($resumeFrom = Cache::get(self::RESUME_KEY)) {
+                $leadsQuery->where('id', '>', $resumeFrom);
+                $this->info("Resuming after lead id {$resumeFrom} (use --restart to scan from the beginning instead).");
+            }
         }
+
         if ($limit > 0) {
             $leadsQuery->limit($limit);
         }
 
+        // Only a genuinely unrestricted run (no --limit, no --lead-id) can reach the true
+        // end of the dataset — that's the only case where finishing means "start fresh
+        // next time" instead of "there may be more left for the next chunk to pick up".
+        $canReachEnd = $limit <= 0 && ! $onlyLeadId;
+        $this->info('DB: ' . Lead::query()->getConnection()->getDatabaseName());
+
+        $this->info(
+            'deleted_at: ' .
+            (Lead::query()->getConnection()
+                ->getSchemaBuilder()
+                ->hasColumn('leads', 'deleted_at') ? 'YES' : 'NO')
+        );
         $leads = $leadsQuery->get(['id', 'bitrix24_id', 'lead_name']);
 
         if ($leads->isEmpty()) {
@@ -127,11 +163,24 @@ class SyncEngagementAuthors extends Command
                 $this->logChange('Lead failed', ['lead_id' => $lead->id, 'bitrix24_id' => $b24LeadId, 'error' => $e->getMessage()]);
             }
 
+            // Saved after every lead (not just at the end) so a Ctrl+C, crash, or timeout
+            // mid-run loses nothing — the next invocation resumes right after this lead
+            // instead of rescanning everything already checked.
+            if (! $dryRun) {
+                Cache::put(self::RESUME_KEY, $lead->id, now()->addDays(7));
+            }
+
             $bar->advance();
             $bar->setMessage("updated: {$this->counts['comments_updated']} comments, {$this->counts['activities_updated']} activities");
         }
 
         $bar->finish();
+
+        // Reached the true end of the dataset (no --limit/--lead-id cutting it short) —
+        // start fresh next time instead of resuming from here forever.
+        if ($canReachEnd && ! $dryRun) {
+            Cache::forget(self::RESUME_KEY);
+        }
 
         $this->flagUnlinkedBrokenRows();
 
