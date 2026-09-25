@@ -720,8 +720,9 @@ public function store_website(Request $request)
     if (!$this->verifyWebsiteLeadSecret($request, 'website_lead')) {
         return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
-$response=$data['responsible_person_id'];
     $data = $request->all();
+    $response=$data['responsible_person_id'];
+
     // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
 
