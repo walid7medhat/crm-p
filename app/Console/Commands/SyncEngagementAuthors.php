@@ -110,14 +110,31 @@ class SyncEngagementAuthors extends Command
         // that actually have at least one locally-imported comment or activity are worth
         // visiting at all, so this skips the Bitrix call (and the loop iteration) entirely
         // for leads with neither, instead of looping every lead and discovering that per-lead.
-        $t0 = microtime(true);
-        $this->line('➤ Finding leads with locally-imported comments/activities…');
-        $relevantLeadIds = LeadComment::whereNotNull('bitrix24_id')->distinct()->pluck('lead_id')
-            ->merge(LeadActivity::whereNotNull('bitrix24_id')->distinct()->pluck('lead_id'))
-            ->unique();
-        $this->line(sprintf('  %d relevant lead id(s) (%.1fs)', $relevantLeadIds->count(), microtime(true) - $t0));
+        //
+        // This MUST stay an EXISTS-based filter, not `whereIn('id', $allMatchingIds)` — on
+        // a large table that id list can run into the hundreds of thousands, which inlines
+        // into a WHERE IN (...) clause bigger than the server's max_allowed_packet. MySQL
+        // then receives a truncated/garbled query and throws a confusing, unrelated-looking
+        // error (e.g. "Unknown column") instead of an obvious size error. EXISTS lets MySQL
+        // use the lead_comments.lead_id / lead_activities.lead_id indexes directly — no id
+        // list ever gets built in PHP or sent over the wire.
+        $hasComment = function ($q) {
+            $q->selectRaw('1')
+                ->from('lead_comments')
+                ->whereColumn('lead_comments.lead_id', 'leads.id')
+                ->whereNotNull('lead_comments.bitrix24_id');
+        };
+        $hasActivity = function ($q) {
+            $q->selectRaw('1')
+                ->from('lead_activities')
+                ->whereColumn('lead_activities.lead_id', 'leads.id')
+                ->whereNotNull('lead_activities.bitrix24_id');
+        };
 
-        $leadsQuery = Lead::withTrashed()->whereNotNull('bitrix24_id')->whereIn('id', $relevantLeadIds)->orderBy('id');
+        $leadsQuery = Lead::withTrashed()
+            ->whereNotNull('bitrix24_id')
+            ->where(fn ($q) => $q->whereExists($hasComment)->orWhereExists($hasActivity))
+            ->orderBy('id');
 
         if ($onlyLeadId) {
             $leadsQuery->where('id', $onlyLeadId);
@@ -138,14 +155,6 @@ class SyncEngagementAuthors extends Command
         // end of the dataset — that's the only case where finishing means "start fresh
         // next time" instead of "there may be more left for the next chunk to pick up".
         $canReachEnd = $limit <= 0 && ! $onlyLeadId;
-        $this->info('DB: ' . Lead::query()->getConnection()->getDatabaseName());
-
-        $this->info(
-            'deleted_at: ' .
-            (Lead::query()->getConnection()
-                ->getSchemaBuilder()
-                ->hasColumn('leads', 'deleted_at') ? 'YES' : 'NO')
-        );
 
         $t0 = microtime(true);
         $this->line('➤ Fetching lead records…');
