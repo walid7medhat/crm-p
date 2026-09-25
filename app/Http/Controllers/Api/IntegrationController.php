@@ -759,7 +759,7 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => 1,
+        'responsible_person_id' => $data['responsible_person_id']?? 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
