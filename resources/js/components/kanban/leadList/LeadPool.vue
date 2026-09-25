@@ -907,18 +907,10 @@ defineExpose({
 
 <style scoped>
 .lead-pool-wrapper {
-    padding: 16px 20px;
+    padding: 16px 20px 28px;
     position: relative;
-    /* The kanban shell locks the page to the viewport (overflow: hidden) so
-       stage columns can scroll on their own. Lead Pool is a tall grid, so this
-       wrapper has to be the scroll region — a viewport min-height makes it
-       grow past the shell and the extra rows + pagination get clipped. */
-    flex: 1 1 auto;
-    min-height: 0;
-    max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    height: auto;
+    overflow: visible;
 }
 
 .lead-pool-empty-state {
