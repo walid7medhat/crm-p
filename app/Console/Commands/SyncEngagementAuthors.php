@@ -87,28 +87,37 @@ class SyncEngagementAuthors extends Command
         $limit = (int) $this->option('limit');
         $onlyLeadId = $this->option('lead-id') ? (int) $this->option('lead-id') : null;
 
+        $t0 = microtime(true);
+        $this->line('➤ Loading users.bitrix24_id map…');
         $userMap = User::whereNotNull('bitrix24_id')->pluck('id', 'bitrix24_id');
+        $this->line(sprintf('  %d user(s) mapped (%.1fs)', $userMap->count(), microtime(true) - $t0));
         if ($userMap->isEmpty()) {
             $this->warn('No users have bitrix24_id — run bitrix24:provision-users first.');
             return self::SUCCESS;
         }
 
+        $t0 = microtime(true);
+        $this->line('➤ Connecting to Bitrix24…');
         try {
             $client = new Bitrix24Client();
         } catch (\Throwable $e) {
             $this->error('Bitrix24 is not configured: '.$e->getMessage());
             return self::FAILURE;
         }
+        $this->line(sprintf('  connected (%.1fs)', microtime(true) - $t0));
 
         // Start from the comments/activities themselves, not from every lead — only leads
         // that actually have at least one locally-imported comment or activity are worth
         // visiting at all, so this skips the Bitrix call (and the loop iteration) entirely
         // for leads with neither, instead of looping every lead and discovering that per-lead.
+        $t0 = microtime(true);
+        $this->line('➤ Finding leads with locally-imported comments/activities…');
         $relevantLeadIds = LeadComment::whereNotNull('bitrix24_id')->distinct()->pluck('lead_id')
             ->merge(LeadActivity::whereNotNull('bitrix24_id')->distinct()->pluck('lead_id'))
             ->unique();
+        $this->line(sprintf('  %d relevant lead id(s) (%.1fs)', $relevantLeadIds->count(), microtime(true) - $t0));
 
-        $leadsQuery = Lead::query()->whereNotNull('bitrix24_id')->whereIn('id', $relevantLeadIds)->orderBy('id');
+        $leadsQuery = Lead::withTrashed()->whereNotNull('bitrix24_id')->whereIn('id', $relevantLeadIds)->orderBy('id');
 
         if ($onlyLeadId) {
             $leadsQuery->where('id', $onlyLeadId);
@@ -137,7 +146,11 @@ class SyncEngagementAuthors extends Command
                 ->getSchemaBuilder()
                 ->hasColumn('leads', 'deleted_at') ? 'YES' : 'NO')
         );
+
+        $t0 = microtime(true);
+        $this->line('➤ Fetching lead records…');
         $leads = $leadsQuery->get(['id', 'bitrix24_id', 'lead_name','deleted_at']);
+        $this->line(sprintf('  %d lead(s) to process (%.1fs)', $leads->count(), microtime(true) - $t0));
 
         if ($leads->isEmpty()) {
             $this->warn('No matching leads with a locally-imported comment or activity found.');
@@ -182,7 +195,10 @@ class SyncEngagementAuthors extends Command
             Cache::forget(self::RESUME_KEY);
         }
 
+        $t0 = microtime(true);
+        $this->line('➤ Flagging broken user_id on rows with no Bitrix link…');
         $this->flagUnlinkedBrokenRows();
+        $this->line(sprintf('  done (%.1fs)', microtime(true) - $t0));
 
         $this->logChange('Sync finished', array_merge($this->counts, ['dry_run' => $dryRun]));
 
