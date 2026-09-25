@@ -25,12 +25,20 @@ use Symfony\Component\Console\Helper\ProgressBar;
  *     user id that no longer exists), never auto-fixed.
  *
  * Only leads that actually have at least one such row are visited at all — starts
- * from the comments/activities themselves, not from every lead, and skips the
- * Bitrix API call (and the loop iteration) entirely for leads with neither.
- * Unlike leads (one flat crm.lead.list call), Bitrix has no flat "all comments" /
- * "all activities" endpoint — they're fetched per lead (crm.timeline.comment.list /
- * crm.activity.list scoped by lead), so case (1) is still one (or two) Bitrix API
- * calls per relevant lead. Use --limit or --lead-id to test on a small batch first.
+ * from the comments/activities themselves, not from every lead, and skips both the
+ * local queries and the Bitrix lookup for leads with neither.
+ *
+ * Batched against Bitrix: Bitrix has no flat "all comments"/"all activities" endpoint
+ * — they're normally fetched per lead. At real-world volume (hundreds of thousands of
+ * leads) that's hundreds of thousands of sequential HTTP round trips — hours. Instead
+ * this packs up to BATCH_SIZE crm.timeline.comment.list / crm.activity.list calls (one
+ * or two per lead) into a single Bitrix `batch` REST call, cutting round trips by
+ * roughly BATCH_SIZE×. Trade-off: a batched list call returns one page (Bitrix's
+ * default page size, typically 50) rather than the full paginated history — a lead
+ * with more than that many comments or activities will only have the first page
+ * checked. Such leads are logged (storage/logs/sync-engagement-authors.log) so they
+ * can be re-checked individually with --lead-id, which still only reads one page but
+ * at least makes it obvious which leads need a closer look.
  *
  * Resumable: the last lead id fully processed is checkpointed after every lead (real
  * runs only, --dry-run never touches it), so a stopped/crashed/Ctrl+C'd run picks up
@@ -56,6 +64,9 @@ class SyncEngagementAuthors extends Command
      *  from there instead of rescanning from the first lead. Real runs only — --dry-run
      *  never reads or writes this, so a preview run can't disturb a real run's progress. */
     private const RESUME_KEY = 'bitrix24_engagement_authors_resume_lead_id';
+
+    /** Bitrix24 REST batch hard limit: at most 50 commands per HTTP request. */
+    private const BATCH_SIZE = 50;
 
     protected $description = "Check/fix lead_comments.user_id and lead_activities.user_id against Bitrix24 (linked rows), and flag broken user_id on rows with no Bitrix link";
 
@@ -174,26 +185,108 @@ class SyncEngagementAuthors extends Command
         $bar->setMessage('starting…');
         $bar->start();
 
-        foreach ($leads as $lead) {
-            $this->counts['leads_scanned']++;
-            $b24LeadId = (int) $lead->bitrix24_id;
+        $queue = $leads->values();
+        $queueTotal = $queue->count();
+        $cursor = 0;
 
+        while ($cursor < $queueTotal) {
+            // Pack leads into this batch until either the queue runs out or the next
+            // lead's command(s) would exceed Bitrix's 50-commands-per-request limit.
+            $commands = [];
+            $batchLeads = [];
+
+            while ($cursor < $queueTotal) {
+                $lead = $queue[$cursor];
+
+                $localComments = LeadComment::where('lead_id', $lead->id)
+                    ->whereNotNull('bitrix24_id')
+                    ->get(['id', 'user_id', 'bitrix24_id'])
+                    ->keyBy('bitrix24_id');
+                $localActivities = LeadActivity::where('lead_id', $lead->id)
+                    ->whereNotNull('bitrix24_id')
+                    ->get(['id', 'user_id', 'bitrix24_id'])
+                    ->keyBy('bitrix24_id');
+
+                $wantsComments = $localComments->isNotEmpty();
+                $wantsActivities = $localActivities->isNotEmpty();
+                $needed = ($wantsComments ? 1 : 0) + ($wantsActivities ? 1 : 0);
+
+                if ($needed === 0) {
+                    // The EXISTS filter guarantees this shouldn't happen, but stay safe.
+                    $cursor++;
+                    $this->finishLead($lead, $dryRun, $bar);
+                    continue;
+                }
+
+                if (count($commands) + $needed > self::BATCH_SIZE) {
+                    break; // doesn't fit — leave it for the next batch
+                }
+
+                $b24LeadId = (int) $lead->bitrix24_id;
+                if ($wantsComments) {
+                    $commands["c_{$lead->id}"] = "crm.timeline.comment.list?filter[ENTITY_TYPE]=lead&filter[ENTITY_ID]={$b24LeadId}&order[CREATED]=ASC";
+                }
+                if ($wantsActivities) {
+                    $commands["a_{$lead->id}"] = "crm.activity.list?filter[OWNER_ID]={$b24LeadId}&filter[OWNER_TYPE_ID]=1&order[CREATED]=ASC";
+                }
+
+                $batchLeads[] = [
+                    'lead' => $lead,
+                    'wants_comments' => $wantsComments,
+                    'wants_activities' => $wantsActivities,
+                    'local_comments' => $localComments,
+                    'local_activities' => $localActivities,
+                ];
+                $cursor++;
+            }
+
+            if (empty($batchLeads)) {
+                continue;
+            }
+
+            $results = [];
+            $errors = [];
             try {
-                $this->syncComments($client, $lead, $b24LeadId, $userMap, $dryRun);
-                $this->syncActivities($client, $lead, $b24LeadId, $userMap, $dryRun);
+                $response = $client->batch($commands);
+                $results = $response['result']['result'] ?? [];
+                $errors = $response['result']['result_error'] ?? [];
             } catch (\Throwable $e) {
-                $this->logChange('Lead failed', ['lead_id' => $lead->id, 'bitrix24_id' => $b24LeadId, 'error' => $e->getMessage()]);
+                foreach ($batchLeads as $entry) {
+                    $this->logChange('Lead batch failed', ['lead_id' => $entry['lead']->id, 'error' => $e->getMessage()]);
+                }
             }
 
-            // Saved after every lead (not just at the end) so a Ctrl+C, crash, or timeout
-            // mid-run loses nothing — the next invocation resumes right after this lead
-            // instead of rescanning everything already checked.
-            if (! $dryRun) {
-                Cache::put(self::RESUME_KEY, $lead->id, now()->addDays(7));
-            }
+            foreach ($batchLeads as $entry) {
+                $lead = $entry['lead'];
 
-            $bar->advance();
-            $bar->setMessage("updated: {$this->counts['comments_updated']} comments, {$this->counts['activities_updated']} activities");
+                if ($entry['wants_comments']) {
+                    $key = "c_{$lead->id}";
+                    if (isset($errors[$key])) {
+                        $this->logChange('Lead comments batch item failed', ['lead_id' => $lead->id, 'error' => $errors[$key]]);
+                    } else {
+                        $items = $results[$key] ?? [];
+                        $this->reconcileComments($lead, $entry['local_comments'], $items, $userMap, $dryRun);
+                        if (count($items) >= 50) {
+                            $this->logChange('Lead may have more comments than one batch page covers — re-check with --lead-id', ['lead_id' => $lead->id, 'fetched' => count($items)]);
+                        }
+                    }
+                }
+
+                if ($entry['wants_activities']) {
+                    $key = "a_{$lead->id}";
+                    if (isset($errors[$key])) {
+                        $this->logChange('Lead activities batch item failed', ['lead_id' => $lead->id, 'error' => $errors[$key]]);
+                    } else {
+                        $items = $results[$key] ?? [];
+                        $this->reconcileActivities($lead, $entry['local_activities'], $items, $userMap, $dryRun);
+                        if (count($items) >= 50) {
+                            $this->logChange('Lead may have more activities than one batch page covers — re-check with --lead-id', ['lead_id' => $lead->id, 'fetched' => count($items)]);
+                        }
+                    }
+                }
+
+                $this->finishLead($lead, $dryRun, $bar);
+            }
         }
 
         $bar->finish();
@@ -279,25 +372,30 @@ class SyncEngagementAuthors extends Command
         return $local;
     }
 
-    private function syncComments(Bitrix24Client $client, Lead $lead, int $b24LeadId, $userMap, bool $dryRun): void
+    /** Bookkeeping shared by every lead once its comments/activities are reconciled
+     *  (or skipped because it had neither): bump the count, checkpoint, advance the bar. */
+    private function finishLead(Lead $lead, bool $dryRun, ProgressBar $bar): void
     {
-        // Check locally first — if this lead has no imported comments to reconcile,
-        // skip the Bitrix API call entirely instead of fetching data we'd discard.
-        $byBitrixId = LeadComment::where('lead_id', $lead->id)
-            ->whereNotNull('bitrix24_id')
-            ->get(['id', 'user_id', 'bitrix24_id'])
-            ->keyBy('bitrix24_id');
+        $this->counts['leads_scanned']++;
 
-        if ($byBitrixId->isEmpty()) {
-            return;
+        // Saved after every lead (not just at the end) so a Ctrl+C, crash, or timeout
+        // mid-run loses nothing — the next invocation resumes right after this lead
+        // instead of rescanning everything already checked.
+        if (! $dryRun) {
+            Cache::put(self::RESUME_KEY, $lead->id, now()->addDays(7));
         }
 
-        $comments = $client->listTimelineComments($b24LeadId);
-        if (empty($comments)) {
-            return;
-        }
+        $bar->advance();
+        $bar->setMessage("updated: {$this->counts['comments_updated']} comments, {$this->counts['activities_updated']} activities");
+    }
 
-        foreach ($comments as $c) {
+    /**
+     * Pure reconciliation — no Bitrix call here, $items is whatever came back from this
+     * lead's "c_{id}" slot in the batch response (one page, see the class docblock).
+     */
+    private function reconcileComments(Lead $lead, $byBitrixId, array $items, $userMap, bool $dryRun): void
+    {
+        foreach ($items as $c) {
             $b24CommentId = (int) ($c['ID'] ?? 0);
             if ($b24CommentId <= 0 || ! $byBitrixId->has($b24CommentId)) {
                 if ($b24CommentId > 0) {
@@ -329,25 +427,13 @@ class SyncEngagementAuthors extends Command
         }
     }
 
-    private function syncActivities(Bitrix24Client $client, Lead $lead, int $b24LeadId, $userMap, bool $dryRun): void
+    /**
+     * Pure reconciliation — no Bitrix call here, $items is whatever came back from this
+     * lead's "a_{id}" slot in the batch response (one page, see the class docblock).
+     */
+    private function reconcileActivities(Lead $lead, $byBitrixId, array $items, $userMap, bool $dryRun): void
     {
-        // Check locally first — if this lead has no imported activities to reconcile,
-        // skip the Bitrix API call entirely instead of fetching data we'd discard.
-        $byBitrixId = LeadActivity::where('lead_id', $lead->id)
-            ->whereNotNull('bitrix24_id')
-            ->get(['id', 'user_id', 'bitrix24_id'])
-            ->keyBy('bitrix24_id');
-
-        if ($byBitrixId->isEmpty()) {
-            return;
-        }
-
-        $activities = $client->listActivities($b24LeadId);
-        if (empty($activities)) {
-            return;
-        }
-
-        foreach ($activities as $a) {
+        foreach ($items as $a) {
             $b24ActivityId = (int) ($a['ID'] ?? 0);
             if ($b24ActivityId <= 0 || ! $byBitrixId->has($b24ActivityId)) {
                 if ($b24ActivityId > 0) {
