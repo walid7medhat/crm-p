@@ -3437,7 +3437,7 @@ const documentTypesByParty = computed(() => {
 
   // ✅ Security Deposit appears for buyer + seller in SECONDARY deals from stage 2 (Security Deposit) onwards,
   // even if the backend hasn't surfaced it via missing_fields and even if `targetStageOrder` is missing.
-  // Seller's is always OPTIONAL. Buyer's becomes REQUIRED starting at the MOU stage (order 3).
+  // Seller's is always OPTIONAL. Buyer's is REQUIRED as soon as it's shown, i.e. from stage 2 onward.
   if (normalizedDealType.value === 'secondary') {
     const targetOrder = Number(props.targetStageOrder) || 0
     const targetStageName = String(props.targetStageName || '').toLowerCase()
@@ -3449,10 +3449,9 @@ const documentTypesByParty = computed(() => {
       targetStageName.includes('noc') ||
       targetStageName.includes('won') ||
       targetStageName.includes('spa')
-    const isMouOrLater = targetOrder >= 3 || targetStageName.includes('mou') || targetStageName.includes('noc') || targetStageName.includes('won')
 
     if (shouldShowSecurityDeposit) {
-      [{ party: 'buyer', required: isMouOrLater }, { party: 'seller', required: false }].forEach(({ party, required }) => {
+      [{ party: 'buyer', required: true }, { party: 'seller', required: false }].forEach(({ party, required }) => {
         const existing = result[party].find((d) => d.id === 'security_deposit')
         if (existing) {
           existing.required = required
@@ -3690,8 +3689,10 @@ function shouldShowPropertyField(fieldName, property) {
       return isPropertyFieldRequired(fieldName) || !!property?.[fieldName] || dt !== 'primary'
 
     case 'bedrooms':
-      // عرض الحقل للخاصية الجديدة إذا كانت تظهر bedrooms بشكل عام
-      if (isNewProperty) return true
+      // showBedroomsForProperty() already returns true when property_type_id isn't set
+      // yet (new/untyped property), so it covers the "new property" case on its own —
+      // unconditionally returning true for isNewProperty bypassed the land/plot check
+      // once a plot listing was picked (property_type_id set) but the row was still new.
       return showBedroomsForProperty(property)
 
     case 'developer_id':
@@ -4058,10 +4059,11 @@ const effectiveMissingFields = computed(() => {
     return true
   })
 
-  // ✅ Security Deposit is OPTIONAL — strip any *_document_security_deposit keys
-  // so the badge count, submit blocker, and required indicators all ignore it.
+  // Security Deposit is required for the buyer from stage 2 (Security Deposit) onward —
+  // only the seller's copy stays optional, so only strip seller_document_security_deposit
+  // from required/missing checks.
   const withoutSecurityDeposit = finalWithBudgetFilter.filter(
-    (field) => !/^(buyer|seller)_document_security_deposit$/.test(field)
+    (field) => field !== 'seller_document_security_deposit'
   )
 
   // ✅ *_party keys are backend markers ("party record missing") with no corresponding UI
@@ -4522,6 +4524,13 @@ async function submitForm() {
   await nextTick()
 
   if (unresolvedMissingKeys.value.length > 0) {
+    const count = unresolvedMissingKeys.value.length
+    const msg = `Please fill in ${count} required field${count > 1 ? 's' : ''} before submitting (highlighted in red below).`
+    if (window?.$showNotification) {
+      window.$showNotification(msg, 'warning')
+    } else {
+      alert(msg)
+    }
     await nextTick()
     requestAnimationFrame(() => {
       scrollToFirstValidationError()
