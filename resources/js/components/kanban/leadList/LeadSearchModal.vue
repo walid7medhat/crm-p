@@ -376,13 +376,17 @@
 
                                 label="text"
 
-                                :placeholder="field.placeholder || 'Select Person'"
+                                placeholder="Search name, email, or phone"
+
+                                multiple
+
+                                :close-on-select="false"
 
                                 :clearable="hasValue(form.responsible)"
 
                                 append-to-body
 
-                                class="custom-v-select lead-search-rp-select"
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
 
                                 @open="loadResponsiblePersons"
 
@@ -458,37 +462,13 @@
 
                                     </div>
 
-                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                    <span v-else class="lead-rp-chip">
 
-                                        <img
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
 
-                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+                                        <span>{{ option.text }}</span>
 
-                                            alt=""
-
-                                            class="lead-rp-sel-avatar"
-
-                                        />
-
-                                        <div class="min-w-0 flex-grow-1">
-
-                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
-
-                                            <div
-
-                                                v-if="option.parent_name || option.branch_name"
-
-                                                class="lead-rp-sel-meta text-truncate small text-muted"
-
-                                            >
-
-                                                {{ [option.parent_name, option.branch_name].filter(Boolean).join(' | ') }}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
+                                    </span>
 
                                 </template>
 
@@ -508,11 +488,15 @@
 
                                 :placeholder="field.placeholder || 'Select Team'"
 
+                                multiple
+
+                                :close-on-select="false"
+
                                 :clearable="hasValue(form.team)"
 
                                 append-to-body
 
-                                class="custom-v-select lead-search-rp-select"
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
 
                                 @open="loadTeams"
 
@@ -586,31 +570,13 @@
 
                                     </div>
 
-                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                    <span v-else class="lead-rp-chip">
 
-                                        <img
+                                        <img :src="option.avatar || DEFAULT_TEAM_AVATAR" alt="" />
 
-                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                        <span>{{ option.text }}</span>
 
-                                            alt=""
-
-                                            class="lead-rp-sel-avatar"
-
-                                        />
-
-                                        <div class="min-w-0 flex-grow-1">
-
-                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
-
-                                            <div v-if="option.parent_name || option.branch_name || option.team_size" class="lead-rp-sel-meta text-truncate small text-muted">
-
-                                                {{ [option.parent_name, option.branch_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
+                                    </span>
 
                                 </template>
 
@@ -1221,13 +1187,17 @@
 
                                 label="text"
 
-                                :placeholder="field.placeholder || 'Select Person'"
+                                placeholder="Search name, email, or phone"
+
+                                multiple
+
+                                :close-on-select="false"
 
                                 :clearable="hasValue(form.responsible)"
 
                                 append-to-body
 
-                                class="custom-v-select lead-search-rp-select"
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
 
                                 @open="loadResponsiblePersons"
 
@@ -1303,37 +1273,13 @@
 
                                     </div>
 
-                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                    <span v-else class="lead-rp-chip">
 
-                                        <img
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
 
-                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+                                        <span>{{ option.text }}</span>
 
-                                            alt=""
-
-                                            class="lead-rp-sel-avatar"
-
-                                        />
-
-                                        <div class="min-w-0 flex-grow-1">
-
-                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
-
-                                            <div
-
-                                                v-if="option.parent_name || option.branch_name"
-
-                                                class="lead-rp-sel-meta text-truncate small text-muted"
-
-                                            >
-
-                                                {{ [option.parent_name, option.branch_name].filter(Boolean).join(' | ') }}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
+                                    </span>
 
                                 </template>
 
@@ -1353,11 +1299,15 @@
 
                                 :placeholder="field.placeholder || 'Select Team'"
 
+                                multiple
+
+                                :close-on-select="false"
+
                                 :clearable="hasValue(form.team)"
 
                                 append-to-body
 
-                                class="custom-v-select lead-search-rp-select"
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
 
                                 @open="loadTeams"
 
@@ -1431,31 +1381,13 @@
 
                                     </div>
 
-                                    <div v-else class="lead-rp-sel d-flex align-items-center gap-2 min-w-0">
+                                    <span v-else class="lead-rp-chip">
 
-                                        <img
+                                        <img :src="option.avatar || DEFAULT_TEAM_AVATAR" alt="" />
 
-                                            :src="option.avatar || DEFAULT_TEAM_AVATAR"
+                                        <span>{{ option.text }}</span>
 
-                                            alt=""
-
-                                            class="lead-rp-sel-avatar"
-
-                                        />
-
-                                        <div class="min-w-0 flex-grow-1">
-
-                                            <div class="lead-rp-sel-name text-truncate fw-semibold">{{ option.text }}</div>
-
-                                            <div v-if="option.parent_name || option.branch_name || option.team_size" class="lead-rp-sel-meta text-truncate small text-muted">
-
-                                                {{ [option.parent_name, option.branch_name, option.team_size ? `${option.team_size} members` : null].filter(Boolean).join(' | ') }}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
+                                    </span>
 
                                 </template>
 
@@ -2010,7 +1942,7 @@ const officeOptions = ref([])
 
 const allResponsiblePersons = ref([])
 
-const pinnedResponsiblePerson = ref(null)
+const pinnedResponsiblePersons = ref([])
 
 const allTeams = ref([])
 
@@ -2316,31 +2248,18 @@ function pruneTeamAndResponsible() {
 
     const teamOpts = computedTeamOptions.value.filter((o) => o.value != null)
 
-    if (
+    const selectedTeamIds = normalizeResponsibleIds(form.value.team)
 
-        form.value.team &&
+    const validTeamIds = selectedTeamIds.filter((id) => teamOpts.some((o) => Number(o.value) === id))
 
-        !teamOpts.some((o) => Number(o.value) === Number(form.value.team))
+    if (teamOpts.length && validTeamIds.length !== selectedTeamIds.length) {
 
-    ) {
-
-        form.value.team = ''
+        form.value.team = validTeamIds
 
     }
 
-    const personOpts = personOptions.value.filter((o) => o.value != null)
-
-    if (
-
-        form.value.responsible &&
-
-        !personOpts.some((o) => Number(o.value) === Number(form.value.responsible))
-
-    ) {
-
-        form.value.responsible = ''
-
-    }
+    // Keep people the user already picked. The dropdown only holds the current
+    // search page, so a chosen person is often missing from that page.
 
 }
 
@@ -2586,11 +2505,11 @@ async function loadAllSelectDataForCurrentForm() {
         promises.push(loadPropertyTypes(true))
     }
     
-    if (form.value.responsible) {
+    if (hasValue(form.value.responsible)) {
         promises.push(loadResponsiblePersons(true))
     }
     
-    if (form.value.team) {
+    if (hasValue(form.value.team)) {
         promises.push(loadTeams(true))
     }
     
@@ -2617,7 +2536,7 @@ function syncFormFromQuery(query) {
         search: '',
         id: '',
         firstName: '',
-        responsible: '',
+        responsible: [],
         createdOn: '',
         createdFrom: '',   
         createdTo: '', 
@@ -2636,7 +2555,7 @@ function syncFormFromQuery(query) {
          sourceWhatsapp: [],  
         interactionResult: '',
         qualityStatus: '',
-        team: '',
+        team: [],
         office: [],
         leadType: '',
         propertyStatus: '',
@@ -2709,10 +2628,9 @@ function syncFormFromQuery(query) {
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
     next.budgetTo = formatBudgetWithCommas(next.budgetTo)
     
-    if (next.team !== '' && next.team != null && next.team !== undefined) {
-        const tn = Number(next.team)
-        if (!Number.isNaN(tn)) next.team = tn
-    }
+    next.team = normalizeResponsibleIds(next.team)
+
+    next.responsible = normalizeResponsibleIds(next.responsible)
     
     form.value = next
 
@@ -2939,7 +2857,7 @@ const form = ref({
 
     firstName: '',
 
-    responsible: '',
+    responsible: [],
 
     createdOn: '',
 
@@ -2976,7 +2894,7 @@ const form = ref({
 
     createdTo: '',  
 
-    team: '',
+    team: [],
 
     office: [],
 
@@ -3012,61 +2930,79 @@ const DEFAULT_RESPONSIBLE_AVATAR =
 
 
 
+function normalizeResponsibleIds(value) {
+
+    const list = Array.isArray(value) ? value : (value === '' || value == null ? [] : [value])
+
+    return [...new Set(list.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0))]
+
+}
+
+
+
+function personToOption(person) {
+
+    return {
+
+        value: person.id,
+
+        text: person.name || `User ${person.id}`,
+
+        avatar: person.avatar,
+
+        role_name: person.role_name,
+
+        parent_name: person.parent_name,
+
+        branch_name: person.branch_name,
+
+    }
+
+}
+
+
+
+function rememberResponsiblePeople(people) {
+
+    const ids = normalizeResponsibleIds(form.value.responsible)
+
+    people.forEach((person) => {
+
+        if (!ids.includes(Number(person.id))) return
+
+        if (pinnedResponsiblePersons.value.some((pinned) => Number(pinned.id) === Number(person.id))) return
+
+        pinnedResponsiblePersons.value.push(person)
+
+    })
+
+    pinnedResponsiblePersons.value = pinnedResponsiblePersons.value.filter((person) => ids.includes(Number(person.id)))
+
+}
+
+
+
 const personOptions = computed(() => {
 
     const opts = []
 
-    // Office and team are already applied on the request. Filtering again here
-    // hid people the search had just returned.
-    const filteredPersons = [...allResponsiblePersons.value]
+    const seen = new Set()
 
+    const pushPerson = (person) => {
 
+        const id = Number(person?.id ?? person?.value)
 
-    filteredPersons.forEach((p) => {
+        if (!Number.isFinite(id) || seen.has(id)) return
 
-        opts.push({
+        seen.add(id)
 
-            value: p.id,
-
-            text: p.name || `User ${p.id}`,
-
-            avatar: p.avatar,
-
-            role_name: p.role_name,
-
-            parent_name: p.parent_name,
-
-            branch_name: p.branch_name
-
-        })
-
-    })
-
-
-
-    const pinned = pinnedResponsiblePerson.value
-
-    if (pinned && !opts.some((o) => Number(o.value) === Number(pinned.id))) {
-
-        opts.unshift({
-
-            value: pinned.id,
-
-            text: pinned.name || `User ${pinned.id}`,
-
-            avatar: pinned.avatar,
-
-            role_name: pinned.role_name,
-
-            parent_name: pinned.parent_name,
-
-            branch_name: pinned.branch_name
-
-        })
+        opts.push(personToOption(person.id != null ? person : { ...person, id: person.value, name: person.text }))
 
     }
 
+    pinnedResponsiblePersons.value.forEach(pushPerson)
 
+    allResponsiblePersons.value.forEach(pushPerson)
 
     return opts
 
@@ -3098,33 +3034,17 @@ const computedTeamOptions = computed(() => {
 
 
 
-    const selectedId =
+    normalizeResponsibleIds(form.value.team).forEach((selectedId) => {
 
-        form.value.team !== null &&
+        if (!filteredTeams.some((t) => Number(t.id) === selectedId)) {
 
-        form.value.team !== undefined &&
+            const missing = allTeams.value.find((t) => Number(t.id) === selectedId)
 
-        form.value.team !== ''
+            if (missing) filteredTeams = [...filteredTeams, missing]
 
-            ? Number(form.value.team)
+        }
 
-            : null
-
-    if (
-
-        selectedId &&
-
-        !Number.isNaN(selectedId) &&
-
-        !filteredTeams.some((t) => Number(t.id) === selectedId)
-
-    ) {
-
-        const missing = allTeams.value.find((t) => Number(t.id) === selectedId)
-
-        if (missing) filteredTeams = [...filteredTeams, missing]
-
-    }
+    })
 
 
 
@@ -4577,9 +4497,13 @@ async function applySearch(options = {}) {
 
     let queryOfficeBranch = undefined
 
-    let responsiblePersonId = form.value.responsible ?? undefined
+    const responsibleIds = normalizeResponsibleIds(form.value.responsible)
 
-    let teamId = form.value.team ?? undefined
+    let responsiblePersonId = responsibleIds.length ? responsibleIds : undefined
+
+    const teamIds = normalizeResponsibleIds(form.value.team)
+
+    let teamId = teamIds.length ? teamIds : undefined
 
     
 
@@ -5494,9 +5418,9 @@ async function handleSidebarPillClick(pill) {
 
         
 
-        form.value.responsible = ''
+        form.value.responsible = []
 
-        form.value.team = ''
+        form.value.team = []
 
         
 
@@ -5590,29 +5514,37 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
 
         const term = String(search || '').trim()
 
-        if (term) params.search = term
+        const selectedIds = normalizeResponsibleIds(form.value.responsible)
 
-        if (form.value.team) params.team_id = form.value.team
+        if (selectedIds.length) params.selected_id = selectedIds.join(',')
 
-        if (form.value.responsible) params.selected_id = form.value.responsible
+        if (term) {
 
-        
+            // A typed name searches everyone. Team and branch stay filled on the
+            // form, but they must not hide the second person.
+            params.search = term
 
-        if (selectedOffice.value && Array.isArray(selectedOffice.value) && selectedOffice.value.length) {
+        } else {
 
-            params.office_ids = selectedOffice.value.join(',')
+            const teamIds = normalizeResponsibleIds(form.value.team)
 
-        } else if (selectedOffice.value && !Array.isArray(selectedOffice.value)) {
+            if (teamIds.length === 1) params.team_id = teamIds[0]
 
-            params.office_id = selectedOffice.value
+            if (selectedOffice.value && Array.isArray(selectedOffice.value) && selectedOffice.value.length) {
 
-        }
+                params.office_ids = selectedOffice.value.join(',')
 
-        
+            } else if (selectedOffice.value && !Array.isArray(selectedOffice.value)) {
 
-        if (selectedPillType.value) {
+                params.office_id = selectedOffice.value
 
-            params.pill_type = selectedPillType.value
+            }
+
+            if (selectedPillType.value) {
+
+                params.pill_type = selectedPillType.value
+
+            }
 
         }
 
@@ -5636,9 +5568,7 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
 
         }
 
-        const selected = allResponsiblePersons.value.find((p) => Number(p.id) === Number(form.value.responsible))
-
-        if (selected) pinnedResponsiblePerson.value = selected
+        rememberResponsiblePeople(allResponsiblePersons.value)
 
     } catch (error) {
 
@@ -5820,7 +5750,7 @@ function resetFormValues() {
 
         firstName: '',
 
-        responsible: '',
+        responsible: [],
 
         createdOn: '',
 
@@ -5858,7 +5788,7 @@ function resetFormValues() {
 
         qualityStatus: '',
 
-        team: '',
+        team: [],
 
         office: [],
 
@@ -6190,19 +6120,25 @@ const resetForm = () => {
 
 
 
-watch(() => form.value.responsible, async (newResponsibleId) => {
+watch(() => normalizeResponsibleIds(form.value.responsible).join(','), async () => {
+
+    const ids = normalizeResponsibleIds(form.value.responsible)
+
+    rememberResponsiblePeople(allResponsiblePersons.value)
 
     if (hydratingFromQuery.value) return
 
-    if (!newResponsibleId) return
+    if (!ids.length) return
 
+    const people = ids.map((id) =>
 
+        allResponsiblePersons.value.find((person) => Number(person.id) === id)
 
-    const selectedPerson = allResponsiblePersons.value.find(p => p.id === newResponsibleId)
+        || pinnedResponsiblePersons.value.find((person) => Number(person.id) === id)
 
-    if (!selectedPerson) return
+    ).filter(Boolean)
 
-    pinnedResponsiblePerson.value = selectedPerson
+    if (!people.length) return
 
 
 
@@ -6210,47 +6146,23 @@ watch(() => form.value.responsible, async (newResponsibleId) => {
 
     try {
 
-        if (selectedPerson.team_id != null && selectedPerson.team_id !== '') {
+        const teamIds = [...new Set(people.map((person) => Number(person.team_id)).filter((id) => Number.isFinite(id) && id > 0))]
 
-            form.value.team = Number(selectedPerson.team_id)
+        const branchIds = [...new Set(people.map((person) => normalizeOfficeId(person.branch_id || person.office_id || person.officeId)).filter((id) => id != null))]
 
-        }
+        form.value.team = teamIds
 
+        if (branchIds.length) {
 
+            form.value.office = branchIds
 
-        const branchIdFromApi =
-
-            selectedPerson.branch_id || selectedPerson.office_id || selectedPerson.officeId
-
-
-
-        if (branchIdFromApi) {
-
-            const normalizedBranch = normalizeOfficeId(branchIdFromApi)
-
-            if (normalizedBranch !== null && normalizedBranch !== undefined) {
-
-                form.value.office = [normalizedBranch]
-
-                selectedOffice.value = [normalizedBranch]
-
-            }
+            selectedOffice.value = [...branchIds]
 
         }
 
 
 
-        await Promise.all([
-
-            fetchResponsiblePersonsWithFilter(),
-
-            fetchTeamsWithFilter()
-
-        ])
-
-        await nextTick()
-
-        pruneTeamAndResponsible()
+        await fetchTeamsWithFilter()
 
     } finally {
 
@@ -6264,15 +6176,17 @@ watch(() => form.value.responsible, async (newResponsibleId) => {
 
 watch(
 
-    () => form.value.team,
+    () => normalizeResponsibleIds(form.value.team).join(','),
 
-    async (teamId) => {
+    async () => {
 
         if (hydratingFromQuery.value) return
 
         if (syncingFromResponsible.value) return
 
-        if (!teamId) {
+        const teamIds = normalizeResponsibleIds(form.value.team)
+
+        if (!teamIds.length) {
 
             await Promise.all([
 
@@ -6290,15 +6204,23 @@ watch(
 
         }
 
-        const team = allTeams.value.find((t) => Number(t.id) === Number(teamId))
+        const branchIds = []
 
-        const bid = teamBranchId(team)
+        teamIds.forEach((teamId) => {
 
-        if (bid != null) {
+            const team = allTeams.value.find((t) => Number(t.id) === Number(teamId))
 
-            form.value.office = [bid]
+            const bid = teamBranchId(team)
 
-            selectedOffice.value = [bid]
+            if (bid != null && !branchIds.includes(bid)) branchIds.push(bid)
+
+        })
+
+        if (branchIds.length) {
+
+            form.value.office = branchIds
+
+            selectedOffice.value = [...branchIds]
 
         }
 
@@ -7539,6 +7461,58 @@ onBeforeUnmount(() => {
     padding: 8px 10px !important;
     white-space: normal !important;
       font-size: 14px !important;
+}
+
+:deep(.lead-rp-multi.custom-v-select .vs__dropdown-toggle) {
+    height: 40px !important;
+    min-height: 40px;
+}
+
+:deep(.lead-rp-multi .vs__selected-options) {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 4px;
+}
+
+:deep(.lead-rp-multi .vs__selected) {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    white-space: nowrap !important;
+}
+
+.lead-rp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px 0 3px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.lead-rp-chip img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.lead-rp-chip span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1;
 }
 
 :deep(.lead-search-rp-select .vs__selected) {
