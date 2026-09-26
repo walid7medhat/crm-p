@@ -137,11 +137,17 @@ public const FEATURE_LABELS = [
         $showDocuments=false;
         
         if ($user) {
-            $canEdit = $user->id == $this->added_by || 
+            $canEdit = $user->id == $this->added_by ||
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin') || $user->canEditListings($this->agent_id);
             $canDelete = auth()->user()->hasRole('super_admin');
-            $showDocuments= $user->id == $this->added_by || 
+            $showDocuments= $user->id == $this->added_by ||
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
+
+            // A converted (sold) or rented listing is a closed deal — only super_admin
+            // may still edit it, regardless of ownership/hierarchy.
+            if (in_array($this->status, ['converted', 'rented'], true) && ! $user->hasRole('super_admin')) {
+                $canEdit = false;
+            }
         }
          $canAssignAgent = false;$canViewUpdate=false;
 

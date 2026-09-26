@@ -1720,7 +1720,15 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin') && !$user->canEditListings($listing->agent_id)) {
             return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
-  
+
+        // A converted (sold) or rented listing is a closed deal — only super_admin may
+        // still edit it, regardless of ownership/hierarchy. Mirrors ListingResource's
+        // user_permissions.can_edit so the API rejects what the UI already hides.
+        if (in_array($listing->status, ['converted', 'rented'], true) && ! $user->hasRole('super_admin')) {
+            DB::rollBack();
+            return ApiResponse::error('This listing has been converted or rented and can no longer be edited.', 403);
+        }
+
         // ========== تتبع الحالة قبل التحديث ==========
         $oldStatus = $listing->status;
         $wasRejected = !is_null($listing->rejection_reason) && $listing->approved == false;
