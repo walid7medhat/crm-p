@@ -5401,13 +5401,26 @@ const generatePDF = async () => {
     paintCoverBadge(pdf, pdfContent);
 
     const pdfBlob = pdf.output('blob');
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(pdfBlob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+    const blobUrl = URL.createObjectURL(pdfBlob);
+
+    // iOS Safari (and most in-app mobile webviews) ignore the `download` attribute on a
+    // synthetic <a> click — it just tries to navigate the tab to the blob: URL instead of
+    // saving a file, so the user sees nothing happen. Opening it in a new tab instead lets
+    // Safari's built-in PDF viewer show its own Share/Save button.
+    const isMobileSafariLike = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isMobileSafariLike) {
+      window.open(blobUrl, '_blank');
+    } else {
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 
     await loadingToast.close();
 
@@ -5430,6 +5443,11 @@ const generatePDF = async () => {
 
   } catch (error) {
     console.error('PDF generation error:', error);
+    // The "Generating..." modal (allowOutsideClick: false) previously stayed stuck open
+    // forever whenever anything in the try block threw — a common outcome on mobile, where
+    // html2canvas is far more likely to choke on this multi-slide, scale:2 layout. Always
+    // close it before reporting the failure.
+    await Swal.close();
     proxy.$showNotification('Failed to generate PDF. Please try again.', 'error');
   }
 };
