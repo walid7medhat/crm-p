@@ -196,15 +196,30 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         // triggered a lazy-loaded query for every single subordinate (huge N+1
         // on any manager/team_lead with a deep or wide team).
         $ids = [$this->id];
+        $visited = [$this->id => true];
         $queue = [$this->id];
 
         while (!empty($queue)) {
             $children = static::whereIn('parent_id', $queue)->pluck('id')->all();
-            if (empty($children)) {
+
+            // Only follow ids we haven't seen yet — a cycle in parent_id (e.g. two
+            // users pointing at each other, or a parent_id set to a descendant)
+            // would otherwise re-queue the same ids forever, growing $ids without
+            // bound until memory is exhausted.
+            $newIds = [];
+            foreach ($children as $childId) {
+                if (!isset($visited[$childId])) {
+                    $visited[$childId] = true;
+                    $newIds[] = $childId;
+                }
+            }
+
+            if (empty($newIds)) {
                 break;
             }
-            $ids = array_merge($ids, $children);
-            $queue = $children;
+
+            $ids = array_merge($ids, $newIds);
+            $queue = $newIds;
         }
 
         return $ids;
