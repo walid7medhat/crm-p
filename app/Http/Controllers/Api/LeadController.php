@@ -905,23 +905,21 @@ class LeadController extends Controller
             }
         }
         
-        // 'office'/'admin_parent' (used below) walk up the parent chain until they find
-        // the right admin ancestor, however deep that is. Eager-loading only 3 levels
-        // meant any org deeper than that fell back to a lazy-loaded query per level per
-        // row — an N+1 that scales with (rows returned) x (hierarchy depth) and was the
-        // real driver of slow/heavy responses on large teams. 8 levels covers any
-        // realistic reporting chain, and — since with() batches each level in one query
-        // instead of one per row — costs a fixed handful of extra queries total, not per
-        // person returned.
+        // 'office' (used below) walks up the parent chain until it finds the right admin
+        // ancestor, however deep that is. Eager-loading the chain N levels deep only
+        // helps rows whose office is within N levels, and costs real query time to build
+        // even for rows that don't need it — stacking more levels here doesn't scale.
+        // The actual fix is memoizing getOfficeAttribute() itself (see User::$officeCache
+        // below): once any row's walk resolves or passes through a given ancestor, every
+        // other row sharing that ancestor (siblings under the same team/branch, which is
+        // most rows) reuses the cached result instead of re-walking or re-querying it.
+        // Keep a shallow 3-level eager load for the common case; memoization covers the
+        // rest without guessing a depth.
         $responsiblePersonRelations = [
             'roles:id,name',
             'parent:id,name,display_name,parent_id',
             'parent.parent:id,name,display_name,parent_id',
             'parent.parent.parent:id,name,display_name,parent_id',
-            'parent.parent.parent.parent:id,name,display_name,parent_id',
-            'parent.parent.parent.parent.parent:id,name,display_name,parent_id',
-            'parent.parent.parent.parent.parent.parent:id,name,display_name,parent_id',
-            'parent.parent.parent.parent.parent.parent.parent:id,name,display_name,parent_id',
         ];
 
         // Defensive cap: bounds memory/time on a runaway-large team regardless of how

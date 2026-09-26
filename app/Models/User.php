@@ -344,39 +344,82 @@ public function agents()
     {
         return $this->hasMany(UserSkill::class, 'user_id');
     }
+    // Per-request memoization for the ancestor-chain walks below. Without this, mapping
+    // a large list of users through ->admin_parent/->office re-walks and re-lazy-loads
+    // the same shared ancestors (siblings under the same team/branch — most rows) over
+    // and over, which is what made large-team responses slow. Any node visited by any
+    // walk caches its final result, so a sibling's walk that reaches the same node
+    // short-circuits immediately instead of repeating the climb.
+    protected static array $adminParentCache = [];
+    protected static array $officeCache = [];
+
 function getAdminParentAttribute()
 {
+    if (array_key_exists($this->id, static::$adminParentCache)) {
+        return static::$adminParentCache[$this->id];
+    }
+
+    $visited = [$this->id];
     $current = $this;
+    $result = null;
 
     while ($current->parent_id) {
+        if (array_key_exists($current->id, static::$adminParentCache)) {
+            $result = static::$adminParentCache[$current->id];
+            break;
+        }
+
         // for not branch get parent
         if(!($current && $current->hasRole('admin') && $current->parent && $current->parent->parent_id==null )){
-        $current = $current->parent; 
+        $current = $current->parent;
+        $visited[] = $current->id;
         }
 
         if ($current && $current->hasRole('admin') && $current->parent && $current->parent->parent_id==null ) {
-            return $current; 
+            $result = $current;
+            break;
         }
     }
 
-    return null; 
+    foreach ($visited as $id) {
+        static::$adminParentCache[$id] = $result;
+    }
+
+    return $result;
 }
 function getOfficeAttribute()
 {
+    if (array_key_exists($this->id, static::$officeCache)) {
+        return static::$officeCache[$this->id];
+    }
+
+    $visited = [$this->id];
     $current = $this;
+    $result = null;
 
     while ($current->parent_id) {
+        if (array_key_exists($current->id, static::$officeCache)) {
+            $result = static::$officeCache[$current->id];
+            break;
+        }
+
         // for not branch get parent
         if(!($current && $current->hasRole('admin') && $current->parent && $current->parent->parent && $current->parent->parent->parent_id==null )){
-        $current = $current->parent; 
+        $current = $current->parent;
+        $visited[] = $current->id;
         }
 
         if ($current && $current->hasRole('admin') && $current->parent && $current->parent->parent && $current->parent->parent->parent_id==null ) {
-            return $current; 
+            $result = $current;
+            break;
         }
     }
 
-    return null; 
+    foreach ($visited as $id) {
+        static::$officeCache[$id] = $result;
+    }
+
+    return $result;
 }
  public function getManagerAttribute()
     {
