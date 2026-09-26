@@ -2147,6 +2147,7 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
@@ -5238,23 +5239,32 @@ const svgIconCache = {};
 // Works for SVG, PNG, JPG. No fetch needed — browser handles loading.
 const imgUrlToPng = (url, size = 80) => {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), 6000);
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      clearTimeout(timer);
       try {
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
         canvas.getContext('2d').drawImage(img, 0, 0, size, size);
-        resolve(canvas.toDataURL('image/png'));
+        finish(canvas.toDataURL('image/png'));
       } catch (e) {
         console.warn('Canvas draw failed:', url, e.message);
-        resolve(null);
+        finish(null);
       }
     };
     img.onerror = () => {
+      clearTimeout(timer);
       console.warn('Image load failed:', url);
-      resolve(null);
+      finish(null);
     };
     img.src = url;
   });
@@ -5267,6 +5277,7 @@ const imgUrlToPng = (url, size = 80) => {
 // pdfMobileMode gates a downscaled-JPEG cache that pdfImg() swaps in transparently, only
 // while generating a PDF on mobile; desktop keeps the original full-quality images.
 let pdfMobileMode = false;
+let offerPdfInFlight = false;
 const pdfImageCache = {};
 
 // 1x1 transparent GIF — used when a source image can't be fetched/resized in time, so
@@ -5321,19 +5332,36 @@ const pdfImg = (resolvedUrl) => {
   return pdfImageCache[resolvedUrl] || PDF_BLANK_IMG;
 };
 
-const preloadMobileHeroImages = async () => {
+const collectOfferImageUrls = () => {
   const urls = new Set();
   const push = (u) => { if (u) urls.add(u); };
 
   push(getMainImage());
   (property.value?.gallery_images || []).slice(0, 9).forEach((img) => push(getImageUrl(img.image_url)));
+  (property.value?.floor_plans || []).slice(0, 2).forEach((img) => push(getImageUrl(img.image_url)));
+
   const project = property.value?.project;
   if (project?.image) push(getImageUrl(project.image));
-  (Array.isArray(project?.gallery_images) ? project.gallery_images : []).forEach((img) => push(getImageUrl(img.image_url)));
+  const gallery = Array.isArray(project?.gallery_images) ? project.gallery_images : [];
+  [1, 2, 3].forEach((slot) => {
+    const byOrder = gallery.find((img) => Number(img?.sort_order) === slot);
+    if (byOrder?.image_url) push(getImageUrl(byOrder.image_url));
+    else if (gallery[slot - 1]?.image_url) push(getImageUrl(gallery[slot - 1].image_url));
+  });
 
-  await Promise.all([...urls].map(async (url) => {
-    pdfImageCache[url] = await resizeImageToDataUrl(url, 900, 0.6);
-  }));
+  return [...urls];
+};
+
+const preloadMobileHeroImages = async () => {
+  const urls = collectOfferImageUrls();
+  const queue = [...urls];
+  const workers = Array.from({ length: Math.min(2, queue.length) }, async () => {
+    while (queue.length) {
+      const url = queue.shift();
+      pdfImageCache[url] = await resizeImageToDataUrl(url, 800, 0.62, 7000);
+    }
+  });
+  await Promise.all(workers);
 };
 
 const preloadSvgIcons = async () => {
@@ -5355,26 +5383,35 @@ const preloadSvgIcons = async () => {
 // دالة لتحويل SVG URL إلى Base64 PNG
 const convertSvgToPng = async (svgUrl) => {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`SVG load timed out: ${svgUrl}`));
+    }, 6000);
     const img = new Image();
     img.crossOrigin = "Anonymous";
     
     img.onload = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // تحديد أبعاد الصورة
       canvas.width = img.width || 100;
       canvas.height = img.height || 100;
       
-      // رسم الصورة على canvas
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // تحويل إلى PNG
       const pngDataUrl = canvas.toDataURL('image/png');
       resolve(pngDataUrl);
     };
     
     img.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       console.error('Failed to load SVG:', svgUrl);
       reject(new Error(`Failed to load SVG: ${svgUrl}`));
     };
@@ -5409,10 +5446,136 @@ const preloadFeatureImages = async () => {
   await Promise.all(conversionPromises);
   console.log('✅ All feature images preloaded and converted');
 };
-const generatePDF = async () => {
+
+const isMobileOfferDevice = () => (
+  /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  || window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches
+);
+
+const isIosOfferDevice = () => (
+  /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+);
+
+const escapeOfferHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+// Phones lay out a 210mm slide inside a ~390px viewport, and html2pdf's capture
+// overlay is clipped to that viewport. Render each slide in a fixed 794×560 box
+// (210mm × 148mm at 96dpi) so html2canvas is not measuring against the screen width.
+const renderMobileOfferSlide = async (slideEl) => {
+  const host = document.createElement('div');
+  host.setAttribute('data-offer-pdf-host', '1');
+  host.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:560px;margin:0;padding:0;overflow:hidden;z-index:1;pointer-events:none;background:#ffffff;';
+  const clone = slideEl.cloneNode(true);
+  clone.style.setProperty('width', '794px', 'important');
+  clone.style.setProperty('height', '560px', 'important');
+  clone.style.setProperty('max-width', 'none', 'important');
+  clone.style.setProperty('min-width', '794px', 'important');
+  host.appendChild(clone);
+  document.body.appendChild(host);
   try {
-    // Show loading
-    const loadingToast = Swal.fire({
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return await html2canvas(clone, {
+      scale: 1,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      logging: false,
+      imageTimeout: 8000,
+      width: 794,
+      height: 560,
+      windowWidth: 794,
+      windowHeight: 560,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
+    });
+  } finally {
+    host.remove();
+  }
+};
+
+// iOS drops programmatic downloads and window.open() once the original tap has
+// been followed by async work. A real link inside the success dialog is a fresh
+// user gesture, which Safari and Android both honor.
+const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }) => {
+  const blobUrl = URL.createObjectURL(blob);
+  let pdfFile = null;
+  try {
+    pdfFile = new File([blob], filename, { type: 'application/pdf' });
+  } catch {
+    pdfFile = null;
+  }
+  const safeFilename = escapeOfferHtml(filename);
+
+  if (!isIosOfferDevice()) {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  return Swal.fire({
+    icon: 'success',
+    title: 'Offer ready',
+    html: `
+      <div style="text-align: left;">
+        <p><strong>Offer Number:</strong> ${escapeOfferHtml(offerNumber)}</p>
+        <p><strong>Created By:</strong> ${escapeOfferHtml(creatorName || 'You')}</p>
+        <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
+        <p style="margin-top: 12px;">Tap Download PDF to save the file. On iPhone, use the share button and choose Save to Files.</p>
+      </div>
+      <a id="offer-pdf-download" href="${blobUrl}" download="${safeFilename}" target="_blank" rel="noopener"
+        style="display:inline-block;margin-top:16px;background:#0B0736;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;">
+        Download PDF
+      </a>
+    `,
+    showConfirmButton: false,
+    showCloseButton: true,
+    allowOutsideClick: true,
+    didOpen: () => {
+      const link = document.getElementById('offer-pdf-download');
+      if (!link) return;
+      link.addEventListener('click', (event) => {
+        let canShareFile = false;
+        try {
+          canShareFile = !!(pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+        } catch {
+          canShareFile = false;
+        }
+        if (!canShareFile) return;
+        event.preventDefault();
+        navigator.share({ files: [pdfFile], title: filename }).catch((err) => {
+          if (err?.name === 'AbortError') return;
+          const fallback = document.createElement('a');
+          fallback.href = blobUrl;
+          fallback.target = '_blank';
+          fallback.rel = 'noopener';
+          document.body.appendChild(fallback);
+          fallback.click();
+          fallback.remove();
+        });
+      });
+    },
+    didClose: () => {
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 180000);
+    },
+  });
+};
+
+const generatePDF = async () => {
+  if (offerPdfInFlight) return;
+  offerPdfInFlight = true;
+  try {
+    Swal.fire({
       title: 'Generating Sales Offer...',
       text: 'Please wait while we prepare your document',
       allowOutsideClick: false,
@@ -5424,9 +5587,6 @@ const generatePDF = async () => {
     const userData = localStorage.getItem('user');
     const currentUser = userData ? JSON.parse(userData) : null;
 
-    // Pre-load SVG feature icons as base64 so html2canvas can render them
-    await preloadSvgIcons();
-    await preloadFeatureImages();
     // Prepare offer data
     const offerData = {
       generated_at: new Date().toISOString(),
@@ -5454,114 +5614,112 @@ const generatePDF = async () => {
 
     console.log('✅ Offer saved:', saveResponse.data);
 
-    // scale:2 on every slide stacked into one giant canvas is heavy enough that mobile
-    // Safari/Chrome can silently stall rendering it (no thrown error — the promise just
-    // never settles) instead of erroring out. Halving it there cuts the pixel count 4x.
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isMobileDevice = isMobileOfferDevice();
 
-    // The bigger win on mobile: every slide embeds a full-resolution property photo as a
-    // background — html2canvas has to decode and rasterize each one, which is what's
-    // actually stalling out past the timeout. Swap in downscaled JPEGs before building
-    // the slide HTML (createNewDesignContent reads pdfMobileMode/pdfImageCache via pdfImg()).
+    // Full-size listing photos are what stall html2canvas on a phone. Swap in
+    // downscaled JPEGs before the slide HTML is built.
     pdfMobileMode = isMobileDevice;
     if (isMobileDevice) {
+      Swal.update({ text: 'Preparing images…' });
       await preloadMobileHeroImages();
     }
 
-    // Continue with PDF generation
     const pdfContent = createNewDesignContent(currentUser);
-    const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
+    const offerNumber = saveResponse.data.data.offer.offer_number;
+    const filename = `sales-offer-${offerNumber}.pdf`;
 
     const options = {
-      html2canvas: { scale: isMobileDevice ? 1 : 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
     };
 
-    // Watchdog: if html2canvas stalls (observed on mobile — no error, it just never settles),
-    // surface it as a failure instead of leaving the "Generating..." modal stuck forever.
     const withTimeout = (promise, ms, message) => Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
     ]);
 
-    // Render slide-by-slide instead of handing html2canvas the whole multi-page container
-    // in one call. html2canvas isn't GPU-accelerated — it walks the DOM and manually paints
-    // every computed style in JS — so one call covering ~8-10 full-page slides scales badly
-    // on a slow mobile CPU even with lighter images. One html2canvas call per slide keeps
-    // each unit of work small, gives each slide its own timeout budget (so a stuck slide is
-    // identifiable instead of one opaque 90s failure), and empty slides (e.g. the
-    // payment-details placeholder) come back near-instantly.
     const slideElements = [...pdfContent.children];
     const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
+    const jpegQuality = isMobileDevice ? 0.72 : 0.98;
 
     for (let i = 0; i < slideElements.length; i++) {
+      Swal.update({ text: `Building page ${i + 1} of ${slideElements.length}` });
       const slideCanvas = await withTimeout(
-        html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
-        25000,
+        isMobileDevice
+          ? renderMobileOfferSlide(slideElements[i])
+          : html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
+        isMobileDevice ? 20000 : 25000,
         `Slide ${i + 1} of ${slideElements.length} timed out rendering`
       );
-      const imgData = slideCanvas.toDataURL('image/jpeg', 0.98);
+      let outputCanvas = slideCanvas;
+      if (isMobileDevice && slideCanvas.width > 1000) {
+        const ratio = 794 / slideCanvas.width;
+        outputCanvas = document.createElement('canvas');
+        outputCanvas.width = 794;
+        outputCanvas.height = Math.max(1, Math.round(slideCanvas.height * ratio));
+        outputCanvas.getContext('2d').drawImage(slideCanvas, 0, 0, outputCanvas.width, outputCanvas.height);
+      }
+      const imgData = outputCanvas.toDataURL('image/jpeg', jpegQuality);
+      slideCanvas.width = 0;
+      slideCanvas.height = 0;
+      if (outputCanvas !== slideCanvas) {
+        outputCanvas.width = 0;
+        outputCanvas.height = 0;
+      }
       if (i > 0) pdf.addPage([210, 148], 'landscape');
       pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
+      if (isMobileDevice) {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
     }
 
+    Swal.update({ text: 'Finishing the PDF…' });
     await paintPaymentDetailsPage(pdf, pdfContent);
     await paintAmenitiesPage(pdf, pdfContent);
     paintCoverBadge(pdf, pdfContent);
 
     const pdfBlob = pdf.output('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
 
-    // iOS Safari (and most in-app mobile webviews) ignore the `download` attribute on a
-    // synthetic <a> click — it just tries to navigate the tab to the blob: URL instead of
-    // saving a file, so the user sees nothing happen. Opening it in a new tab instead lets
-    // Safari's built-in PDF viewer show its own Share/Save button.
-    const isMobileSafariLike = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    proxy.$showNotification(`Sales Offer ${offerNumber} generated successfully!`, 'success');
 
-    if (isMobileSafariLike) {
-      window.open(blobUrl, '_blank');
+    if (isMobileDevice) {
+      await presentMobileOfferDownload({
+        blob: pdfBlob,
+        filename,
+        offerNumber,
+        creatorName: currentUser?.name,
+      });
     } else {
+      const blobUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Offer Generated!',
+        html: `
+          <div style="text-align: left;">
+            <p><strong>Offer Number:</strong> ${escapeOfferHtml(offerNumber)}</p>
+            <p><strong>Created By:</strong> ${escapeOfferHtml(currentUser?.name || 'You')}</p>
+            <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
+          </div>
+        `,
+        confirmButtonColor: '#0B0736'
+      });
     }
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-
-    await loadingToast.close();
-
-    // Show success with offer number
-    proxy.$showNotification(`Sales Offer ${saveResponse.data.data.offer.offer_number} generated successfully!`, 'success');
-
-    // Optional: Show who created the offer
-    Swal.fire({
-      icon: 'success',
-      title: 'Offer Generated!',
-      html: `
-        <div style="text-align: left;">
-          <p><strong>Offer Number:</strong> ${saveResponse.data.data.offer.offer_number}</p>
-          <p><strong>Created By:</strong> ${currentUser?.name || 'You'}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-        </div>
-      `,
-      confirmButtonColor: '#0B0736'
-    });
 
   } catch (error) {
     console.error('PDF generation error:', error);
-    // The "Generating..." modal (allowOutsideClick: false) previously stayed stuck open
-    // forever whenever anything in the try block threw — a common outcome on mobile, where
-    // html2canvas is far more likely to choke on this multi-slide, scale:2 layout. Always
-    // close it before reporting the failure.
-    await Swal.close();
-    // Surface the real error text — without this, "Failed to generate PDF" gives no way to
-    // tell a timeout apart from a network error, a tainted-canvas CORS failure, etc. without
-    // pulling mobile device logs.
+    Swal.close();
     const detail = error?.response?.data?.message || error?.message || 'Unknown error';
     proxy.$showNotification(`Failed to generate PDF: ${detail}`, 'error');
+  } finally {
+    pdfMobileMode = false;
+    offerPdfInFlight = false;
   }
 };
 const showOfferHistory = async () => {
@@ -5930,8 +6088,8 @@ const createSlide4 = () => {
 const createSlide5 = () => {
   const floorPlans = property.value?.floor_plans || [];
   if (!floorPlans.length) return '';
-  const floorPlan1 = getImageUrl(floorPlans[0].image_url);
-  const floorPlan2 = floorPlans.length > 1 ? getImageUrl(floorPlans[1].image_url) : null;
+  const floorPlan1 = pdfImg(getImageUrl(floorPlans[0].image_url));
+  const floorPlan2 = floorPlans.length > 1 ? pdfImg(getImageUrl(floorPlans[1].image_url)) : null;
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
@@ -6079,20 +6237,31 @@ const paintCoverBadge = (pdf, container) => {
 
 const loadPdfImage = (src) => new Promise((resolve) => {
   if (!src) return resolve(null);
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  const timer = setTimeout(() => finish(null), 6000);
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    clearTimeout(timer);
     try {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width || 64;
       canvas.height = img.naturalHeight || img.height || 64;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      finish(canvas.toDataURL('image/png'));
     } catch {
-      resolve(null);
+      finish(null);
     }
   };
-  img.onerror = () => resolve(null);
+  img.onerror = () => {
+    clearTimeout(timer);
+    finish(null);
+  };
   img.src = src;
 });
 
@@ -6140,19 +6309,30 @@ const paintAmenitiesPage = async (pdf, container) => {
 };
 
 const loadPdfLogo = () => new Promise((resolve) => {
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  const timer = setTimeout(() => finish(null), 6000);
   const img = new Image();
   img.onload = () => {
+    clearTimeout(timer);
     try {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      finish(canvas.toDataURL('image/png'));
     } catch {
-      resolve(null);
+      finish(null);
     }
   };
-  img.onerror = () => resolve(null);
+  img.onerror = () => {
+    clearTimeout(timer);
+    finish(null);
+  };
   img.src = pnglogo;
 });
 
