@@ -5465,7 +5465,11 @@ const generatePDF = async () => {
     // html2canvas is far more likely to choke on this multi-slide, scale:2 layout. Always
     // close it before reporting the failure.
     await Swal.close();
-    proxy.$showNotification('Failed to generate PDF. Please try again.', 'error');
+    // Surface the real error text — without this, "Failed to generate PDF" gives no way to
+    // tell a timeout apart from a network error, a tainted-canvas CORS failure, etc. without
+    // pulling mobile device logs.
+    const detail = error?.response?.data?.message || error?.message || 'Unknown error';
+    proxy.$showNotification(`Failed to generate PDF: ${detail}`, 'error');
   }
 };
 const showOfferHistory = async () => {
