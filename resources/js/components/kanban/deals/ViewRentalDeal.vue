@@ -448,6 +448,8 @@
           :property-types="inlineEditLookup.propertyTypes || []"
           :developers="inlineEditLookup.developers || []"
           :selected-stage-name="selectedStageName"
+          :selected-stage-order="selectedStageOrder || 0"
+          :deal-type="deal?.deal_type || 'rental'"
           @property-added="onInlinePropertyAdded"
           @cancel="showInlineAddProperty = false"
         />

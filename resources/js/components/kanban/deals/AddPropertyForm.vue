@@ -27,12 +27,67 @@
         </v-select>
       </div>
 
-      <div class="col-md-6">
+      <!-- Secondary/rental: unit comes from a linked sold/rented listing — pick it, don't
+           type it in. Its data (unit no, type, bedrooms, size) is read-only, filled from
+           the listing itself. -->
+      <div class="col-md-6" v-if="isListingDeal">
+        <label class="form-label-custom">
+          Select Unit
+          <span v-if="dealType === 'secondary'" class="text-danger">*</span>
+        </label>
+        <v-select
+          :model-value="formData.listing_id"
+          @update:modelValue="onListingSelected"
+          :options="availableListings"
+          :reduce="item => item.id"
+          label="display_name"
+          placeholder="Select a unit..."
+          class="custom-v-select"
+          :disabled="loadingListings || !formData.area_id"
+          clearable
+        >
+          <template #open-indicator="{ attributes }">
+            <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
+          </template>
+          <template #option="option">
+            <div class="unit-select-option">
+              <span class="fw-semibold">{{ option.unit_number || 'No Unit' }}</span>
+              <span class="small text-muted ms-1">
+                {{ option.property_type || 'N/A' }} · {{ option.bedrooms_text || '—' }} ·
+                {{ option.size_sqft ? `${option.size_sqft} sqft` : 'N/A' }}
+              </span>
+            </div>
+          </template>
+        </v-select>
+        <div class="small text-muted mt-1" v-if="loadingListings">
+          <b-spinner small></b-spinner> Loading units...
+        </div>
+        <div class="small text-muted mt-1" v-else-if="!formData.area_id">
+          <iconify-icon icon="lucide:info" class="me-1"></iconify-icon>
+          Select a property address first
+        </div>
+        <div class="small text-muted mt-1" v-else-if="availableListings.length === 0">
+          <iconify-icon icon="lucide:alert-circle" class="me-1"></iconify-icon>
+          No {{ dealType === 'secondary' ? 'sold' : 'rented' }} units available for you in this area
+        </div>
+      </div>
+
+      <!-- Secondary read-only summary once a unit is picked. -->
+      <div class="col-12" v-if="isListingDeal && formData.listing_id">
+        <div class="listing-summary-card">
+          <span><strong>Unit No:</strong> {{ formData.unit_no || '—' }}</span>
+          <span><strong>Type:</strong> {{ selectedListingTypeName || '—' }}</span>
+          <span v-if="formData.bedrooms"><strong>Bedrooms:</strong> {{ formData.bedrooms === 'studio' ? 'Studio' : formData.bedrooms }}</span>
+          <span v-if="formData.unit_size"><strong>Size:</strong> {{ formData.unit_size }} sqft</span>
+        </div>
+      </div>
+
+      <div class="col-md-6" v-if="!isListingDeal">
         <label class="form-label-custom">Unit No</label>
         <b-form-input v-model="formData.unit_no" placeholder="Enter Unit No" class="custom-input" />
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-6" v-if="!isListingDeal">
         <label class="form-label-custom">Property Type</label>
         <v-select
           v-model="formData.property_type_id"
@@ -48,7 +103,7 @@
         </v-select>
       </div>
 
-      <div class="col-md-6" v-if="showBedroomsField">
+      <div class="col-md-6" v-if="!isListingDeal && showBedroomsField">
         <label class="form-label-custom">Bedrooms</label>
         <v-select
           v-model="formData.bedrooms"
@@ -64,12 +119,12 @@
         </v-select>
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-6" v-if="!isListingDeal">
         <label class="form-label-custom">Unit Size (sq.ft)</label>
         <b-form-input v-model="formData.unit_size" type="number" placeholder="Size" class="custom-input" />
       </div>
 
-    
+
 
 
        <div v-if="showBudgetFields" class="col-md-6">
@@ -146,7 +201,9 @@
         </div>
       </div>
 
-      <div class="col-md-6">
+      <!-- Developer/sales-person fields are primary-only (off-plan) — secondary/rental
+           units come from a listing and never carry a developer contact. -->
+      <div class="col-md-6" v-if="!isListingDeal">
         <label class="form-label-custom">Developer</label>
         <v-select
           v-model="formData.developer_id"
@@ -162,14 +219,27 @@
         </v-select>
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-6" v-if="!isListingDeal">
         <label class="form-label-custom">Developer Sales Person Name</label>
         <b-form-input v-model="formData.developer_name" placeholder="Sales Person Person" class="custom-input" />
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-6" v-if="!isListingDeal">
         <label class="form-label-custom">Developer Sales Person Phone</label>
         <CrmPhoneInput v-model="formData.developer_phone" placeholder="Phone Number" />
+      </div>
+
+      <!-- Property documents — Title Deed (2 slots: Old/New once the deal reaches Won) +
+           Proof of Payment. Same types/labels as PropertyCardReadonly.vue's edit mode. -->
+      <div class="col-12 mt-2">
+        <label class="form-label-custom mb-2">Property Documents</label>
+        <DocumentUpload
+          v-model="propertyDocs"
+          category="property"
+          :document-types="propertyDocTypes"
+          :box-label-overrides="titleDeedBoxLabelOverrides"
+          :deal-id="dealId"
+        />
       </div>
     </div>
 
@@ -190,6 +260,8 @@ import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import vSelect from 'vue-select'
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { buildListingFilterParams } from '@/composables/useDealListingPicker'
+import DocumentUpload from './DocumentUpload.vue'
 
 const props = defineProps({
   dealId: { type: Number, required: true },
@@ -211,6 +283,7 @@ const formData = ref({
   bedrooms: null,
   unit_size: '',
   area_id: null,
+  listing_id: null,
   developer_id: null,
   developer_name: '',
   developer_phone: '',
@@ -219,6 +292,62 @@ const formData = ref({
   purchase_price: null,
   commission: null,
 })
+
+// Secondary/rental: the unit is picked from a sold/rented listing, not typed manually.
+const isListingDeal = computed(() => props.dealType === 'secondary' || props.dealType === 'rental')
+
+const availableListings = ref([])
+const loadingListings = ref(false)
+
+const selectedListingTypeName = computed(() => {
+  const typeId = formData.value.property_type_id
+  if (!typeId) return null
+  return props.propertyTypes.find((t) => t.id === typeId)?.name || null
+})
+
+async function fetchListings(areaId) {
+  if (!isListingDeal.value) return
+  if (!areaId) {
+    availableListings.value = []
+    return
+  }
+  loadingListings.value = true
+  try {
+    const params = buildListingFilterParams({ dealType: props.dealType, areaId })
+    const response = await axios.get('/api/listings/properties', { params })
+    const listings = response.data?.data || []
+    availableListings.value = listings.map((listing) => ({
+      id: listing.id,
+      unit_number: listing.unit_number,
+      property_type: listing.property_type,
+      property_type_id: listing.property_type_id,
+      bedrooms: listing.number_of_bedrooms,
+      bedrooms_text: listing.number_of_bedrooms === 0 ? 'Studio' : `${listing.number_of_bedrooms} Bed`,
+      size_sqft: listing.size_sqft,
+      developer_id: listing.developer_id,
+      status: listing.status,
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type || 'Property'}`,
+    }))
+  } catch (error) {
+    console.error('Error fetching listings:', error)
+    availableListings.value = []
+  } finally {
+    loadingListings.value = false
+  }
+}
+
+function onListingSelected(listingId) {
+  const listing = availableListings.value.find((l) => l.id === listingId) || null
+  if (!listing) {
+    formData.value.listing_id = null
+    return
+  }
+  formData.value.listing_id = listing.id
+  formData.value.unit_no = listing.unit_number || ''
+  formData.value.property_type_id = listing.property_type_id || null
+  formData.value.bedrooms = listing.bedrooms === 0 ? 'studio' : (listing.bedrooms ? String(listing.bedrooms) : null)
+  formData.value.unit_size = listing.size_sqft || ''
+}
 
 const showBudgetFields = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
@@ -255,6 +384,24 @@ const bedroomOptions = [
   { value: '5', text: '5 Bedrooms' },
   { value: '5+', text: '5+ Bedrooms' }
 ]
+
+// Property documents — same types/labels as PropertyCardReadonly.vue's edit mode.
+const propertyDocs = ref([])
+const isWonStage = computed(() => {
+  const order = Number(props.selectedStageOrder) || 0
+  const stageName = props.selectedStageName?.toLowerCase() || ''
+  return order >= 5 || stageName.includes('won')
+})
+const propertyDocTypes = computed(() => [
+  { id: 'title_deed', name: 'Title Deed', required: isWonStage.value },
+  { id: 'payment_proof', name: 'Proof of Payment', required: false },
+])
+// At Won stage, Title Deed needs two fixed slots (Old/New) instead of one open box —
+// matches PropertyCardReadonly.vue's titleDeedBoxLabelOverrides.
+const titleDeedBoxLabelOverrides = computed(() => {
+  if (!isWonStage.value) return {}
+  return { title_deed: ['Old Title Deed', 'New Title Deed'] }
+})
 const onAreaSelected = async (areaId) => {
   
   // Reset property fields (but keep area_id)
@@ -265,6 +412,17 @@ const onAreaSelected = async (areaId) => {
 
     // ✅ set area
   formData.value.area_id = areaId
+
+  if (isListingDeal.value) {
+    // Unit is picked from the listing list for this area — clear any previous pick.
+    formData.value.listing_id = null
+    formData.value.unit_no = ''
+    formData.value.property_type_id = null
+    formData.value.bedrooms = null
+    formData.value.unit_size = ''
+    fetchListings(areaId)
+    return
+  }
 
     // ✅ auto select developer from area or project
     if (selectedArea.project?.developer_id) {
@@ -282,6 +440,7 @@ function resetForm() {
     bedrooms: null,
     unit_size: '',
     area_id: null,
+    listing_id: null,
     developer_id: null,
     developer_name: '',
     developer_phone: '',
@@ -290,6 +449,8 @@ function resetForm() {
     purchase_price: null,
     commission: null,
   }
+  availableListings.value = []
+  propertyDocs.value = []
 }
 
 defineExpose({ resetForm })
@@ -297,7 +458,28 @@ defineExpose({ resetForm })
 async function saveProperty() {
   saving.value = true
   try {
-    const response = await axios.post(`/api/deals/${props.dealId}/properties`, formData.value)
+    const payload = new FormData()
+    Object.keys(formData.value).forEach((key) => {
+      const val = formData.value[key]
+      if (val !== null && val !== undefined && val !== '') {
+        payload.append(key, val)
+      }
+    })
+
+    let titleDeedIdx = 0
+    let paymentProofIdx = 0
+    propertyDocs.value.forEach((doc) => {
+      if (!(doc.file instanceof File)) return
+      if (doc.document_type === 'title_deed') {
+        payload.append(`title_deed_documents[${titleDeedIdx++}]`, doc.file)
+      } else if (doc.document_type === 'payment_proof') {
+        payload.append(`payment_proof[${paymentProofIdx++}]`, doc.file)
+      }
+    })
+
+    const response = await axios.post(`/api/deals/${props.dealId}/properties`, payload, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     if (response.data.success) {
       Swal.fire({
         icon: 'success',
@@ -452,6 +634,22 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.unit-select-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.listing-summary-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #334155;
+}
 .form-label-custom {
   font-size: 12px;
   font-weight: 500;
@@ -478,6 +676,13 @@ onBeforeUnmount(() => {
   border: 1px solid #e2e8f0;
   font-size: 12px;
   color: #64748b;
+}
+/* .custom-input's width:100% overrides Bootstrap's .input-group > .form-control
+   (flex: 1 1 auto; width: 1%), which is what keeps the AED/% suffix on the same
+   line — without this it has no room left and wraps underneath the input. */
+.input-group .custom-input {
+  width: 1%;
+  flex: 1 1 auto;
 }
 .btn-cancel {
   background: #f4f4f4;

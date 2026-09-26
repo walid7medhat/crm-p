@@ -2130,19 +2130,24 @@ public function addProperty(Request $request, Deal $deal)
     }
     
     // ✅ Validation rules
+    // Developer/sales-person fields are primary-only (off-plan) — secondary/rental units
+    // come from a linked listing and never carry a developer contact. unit_size/bedrooms
+    // are still nullable there since a land/plot listing has no bedrooms.
+    $isPrimary = $deal->deal_type === 'primary';
     $validated = $request->validate([
         'unit_no' => 'required|string|max:255',
         'property_type_id' => 'required|exists:property_types,id',
         'bedrooms' => 'nullable|string|max:50',
-        'unit_size' => 'required|numeric|min:0',
+        'unit_size' => $isPrimary ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
         'area_id' => 'required|exists:areas,id',
-        'developer_id' => 'required|exists:developers,id',
-        'developer_name' => 'required|string|max:255',
-        'developer_phone' => 'required|string|max:50',
+        'developer_id' => $isPrimary ? 'required|exists:developers,id' : 'nullable|exists:developers,id',
+        'developer_name' => $isPrimary ? 'required|string|max:255' : 'nullable|string|max:255',
+        'developer_phone' => $isPrimary ? 'required|string|max:50' : 'nullable|string|max:50',
         'budget_from' => 'nullable|numeric|min:0',
         'budget_to' => 'nullable|numeric|min:0|gte:budget_from',
         'purchase_price' => 'nullable|numeric|min:0',
         'commission' => 'nullable|numeric|min:0|max:100',
+        'listing_id' => 'nullable|exists:listings,id',
     ]);
     
     try {
@@ -2155,7 +2160,7 @@ public function addProperty(Request $request, Deal $deal)
             'bedrooms' => $validated['bedrooms'] ?? null,
             'unit_size' => $validated['unit_size'] ?? null,
             'area_id' => $validated['area_id'] ?? null,
-            'listing_id' => $request->input('listing_id'),
+            'listing_id' => $validated['listing_id'] ?? null,
             'developer_id' => $validated['developer_id'] ?? null,
             'developer_name' => $validated['developer_name'] ?? null,
             'developer_phone' => $validated['developer_phone'] ?? null,
@@ -2164,9 +2169,44 @@ public function addProperty(Request $request, Deal $deal)
             'purchase_price' => $validated['purchase_price'] ?? null,
             'commission' => $validated['commission'] ?? null,
         ]);
-        
+
+        // Same file-handling as updateProperty() — a freshly-added property can already
+        // carry its Title Deed / Proof of Payment if the stage they're adding it at
+        // already requires one (e.g. Won).
+        if ($request->hasFile('title_deed_documents')) {
+            $newTitleDeed = [];
+            foreach ($request->file('title_deed_documents') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                $newTitleDeed[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->title_deed_documents = $newTitleDeed;
+        }
+
+        if ($request->hasFile('payment_proof')) {
+            $newProof = [];
+            foreach ($request->file('payment_proof') as $file) {
+                $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $newProof[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->payment_proof = $newProof;
+        }
+
+        if ($property->isDirty()) {
+            $property->save();
+        }
+
         DB::commit();
-        
+
         // Load relationships for response
         $property->load(['propertyType', 'area', 'developer']);
         
