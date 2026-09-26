@@ -82,7 +82,7 @@
                 </span>
               </div>
               <div class="unit-select-option-bottom">
-                <span>{{ option.property_type?.name || 'N/A' }}</span>
+                <span>{{ option.property_type || 'N/A' }}</span>
                 <span class="unit-select-option-dot">&middot;</span>
                 <span>{{ option.bedrooms_text || '—' }}</span>
                 <span class="unit-select-option-dot">&middot;</span>

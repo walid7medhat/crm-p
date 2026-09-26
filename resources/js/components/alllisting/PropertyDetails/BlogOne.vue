@@ -5269,11 +5269,26 @@ const imgUrlToPng = (url, size = 80) => {
 let pdfMobileMode = false;
 const pdfImageCache = {};
 
-const resizeImageToDataUrl = (url, maxWidth = 900, quality = 0.6) => new Promise((resolve) => {
+// 1x1 transparent GIF — used when a source image can't be fetched/resized in time, so
+// html2canvas never gets handed the original (possibly slow/large/CORS-blocked) network
+// URL as a fallback. A blank slide background beats one that hangs the whole render.
+const PDF_BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
+
+const resizeImageToDataUrl = (url, maxWidth = 900, quality = 0.6, timeoutMs = 8000) => new Promise((resolve) => {
   if (!url) return resolve(null);
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  // A slow/stuck network fetch (large camera photo over cellular, or a CORS-blocked
+  // external host) must not hang preload indefinitely — cap it and fall back to blank.
+  const timer = setTimeout(() => finish(null), timeoutMs);
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    clearTimeout(timer);
     try {
       const naturalW = img.naturalWidth || img.width || maxWidth;
       const naturalH = img.naturalHeight || img.height || maxWidth;
@@ -5284,21 +5299,26 @@ const resizeImageToDataUrl = (url, maxWidth = 900, quality = 0.6) => new Promise
       canvas.width = w;
       canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      finish(canvas.toDataURL('image/jpeg', quality));
     } catch (e) {
       console.warn('PDF image resize failed:', url, e?.message);
-      resolve(null);
+      finish(null);
     }
   };
-  img.onerror = () => resolve(null);
+  img.onerror = () => {
+    clearTimeout(timer);
+    finish(null);
+  };
   img.src = url;
 });
 
 // Swap in the downscaled version of an already-resolved image URL when in mobile PDF
-// mode; falls back to the original URL if resizing failed or hasn't been cached.
+// mode. Never falls back to the original URL — if resizing failed, timed out, or wasn't
+// cached, that original fetch is exactly what was slow/stuck in the first place, so
+// html2canvas would just hit the same wall again. A blank background is the safe fallback.
 const pdfImg = (resolvedUrl) => {
   if (!pdfMobileMode || !resolvedUrl) return resolvedUrl;
-  return pdfImageCache[resolvedUrl] || resolvedUrl;
+  return pdfImageCache[resolvedUrl] || PDF_BLANK_IMG;
 };
 
 const preloadMobileHeroImages = async () => {
