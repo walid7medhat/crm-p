@@ -5562,11 +5562,41 @@ const darkenOfferImage = (dataUrl, amount) => new Promise((resolve) => {
   img.src = dataUrl;
 });
 
-const paintOfferPhoto = async (pdf, dataUrl, darken) => {
+const snapshotDisplayedImage = (url) => {
+  if (!url || typeof url !== 'string' || url.startsWith('data:image/gif')) return null;
+  if (url.startsWith('data:image/')) return url;
+  let targetPath = url;
+  try { targetPath = new URL(url, location.origin).pathname; } catch { /* keep the raw value */ }
+  const img = [...document.querySelectorAll('img')].find((el) => {
+    if (!el.complete || !el.naturalWidth || el.naturalWidth > 1000 || el.naturalHeight > 1000) return false;
+    const src = el.currentSrc || el.src || '';
+    if (!src) return false;
+    try {
+      return new URL(src, location.origin).pathname === targetPath;
+    } catch {
+      return src === url;
+    }
+  });
+  if (!img) return null;
+  try {
+    const scale = Math.min(1, 640 / img.naturalWidth);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const data = canvas.toDataURL('image/jpeg', 0.6);
+    canvas.width = 0;
+    canvas.height = 0;
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+const paintOfferPhoto = (pdf, dataUrl) => {
   pdf.setFillColor(1, 6, 45);
   pdf.rect(0, 0, 210, 148, 'F');
-  const photo = await darkenOfferImage(dataUrl, darken);
-  tryAddOfferImage(pdf, photo, 0, 0, 210, 133);
+  tryAddOfferImage(pdf, dataUrl, 0, 0, 210, 133);
 };
 
 const offerCoverFields = () => {
@@ -5588,21 +5618,22 @@ const offerCoverFields = () => {
     priceText,
     projectTitle: project?.title || project?.name || property.value?.title || 'Property',
     badge: `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`,
-    background: mobileOfferImage(project?.image ? getImageUrl(project.image) : getMainImage()),
+    background: snapshotDisplayedImage(project?.image ? getImageUrl(project.image) : getMainImage()),
   };
 };
 
 const drawMobileCover = async (pdf, logo) => {
   const fields = offerCoverFields();
   coverBadgeLabel = fields.badge;
-  await paintOfferPhoto(pdf, fields.background, 0.42);
+  paintOfferPhoto(pdf, fields.background);
   if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
   pdf.setFillColor(255, 255, 255);
   pdf.roundedRect(10, 70, 112, 56, 4, 4, 'F');
   pdf.setFillColor(1, 6, 45);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
-  const badgeW = Math.max(28, pdf.getTextWidth(fields.badge) + 8);
+  const badgeTextWidth = typeof pdf.getTextWidth === 'function' ? pdf.getTextWidth(fields.badge) : fields.badge.length * 2.2;
+  const badgeW = Math.max(28, badgeTextWidth + 8);
   pdf.roundedRect(18, 66, badgeW, 8, 1.5, 1.5, 'F');
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
@@ -5626,8 +5657,8 @@ const drawMobileCover = async (pdf, logo) => {
   drawOfferFooter(pdf);
 };
 
-const drawMobileDetails = async (pdf, logo) => {
-  await paintOfferPhoto(pdf, mobileOfferImage(getProjectImageBySlot(1)), 0.62);
+const drawMobileDetails = (pdf, logo) => {
+  paintOfferPhoto(pdf, snapshotDisplayedImage(getProjectImageBySlot(1)));
   if (logo) tryAddOfferImage(pdf, logo, 184, 8, 18, 12);
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
@@ -5680,7 +5711,7 @@ const drawMobileFloor = (pdf, logo) => {
   pdf.setTextColor(11, 7, 54);
   pdf.text('FLOOR PLAN', 14, 16);
   if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
-  const plans = (property.value?.floor_plans || []).slice(0, 2).map((plan) => mobileOfferImage(getImageUrl(plan.image_url))).filter(Boolean);
+  const plans = (property.value?.floor_plans || []).slice(0, 2).map((plan) => snapshotDisplayedImage(getImageUrl(plan.image_url))).filter(Boolean);
   if (plans.length === 1) tryAddOfferImage(pdf, plans[0], 30, 24, 150, 100);
   plans.forEach((plan, index) => {
     if (plans.length < 2) return;
@@ -5693,18 +5724,18 @@ const drawMobileGallery = (pdf, images, logo) => {
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
   images.forEach((image, index) => {
-    const data = mobileOfferImage(getImageUrl(image.image_url));
+    const data = snapshotDisplayedImage(getImageUrl(image.image_url));
     tryAddOfferImage(pdf, data, 4 + index * 68, 6, 65, 122);
   });
   if (logo) tryAddOfferImage(pdf, logo, 184, 8, 16, 11);
   drawOfferFooter(pdf);
 };
 
-const drawMobileAbout = async (pdf, logo) => {
+const drawMobileAbout = (pdf, logo) => {
   const project = property.value?.project || {};
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
-  const photo = mobileOfferImage(getProjectImageBySlot(2));
+  const photo = snapshotDisplayedImage(getProjectImageBySlot(2));
   if (photo) tryAddOfferImage(pdf, photo, 108, 0, 102, 133);
   else {
     pdf.setFillColor(1, 6, 45);
@@ -5769,7 +5800,7 @@ const rememberAmenitiesModel = () => {
 // same pages with jsPDF instead so generation stays on a small canvas.
 const buildMobileOfferPdf = async (currentUser) => {
   const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
-  const logo = await imgUrlToPng(OiaLogo, 140);
+  const logo = null;
   const paymentHtml = createPaymentDetailsSlide();
   const hasPayment = Boolean(paymentHtml);
   const hasFloor = Array.isArray(property.value?.floor_plans) && property.value.floor_plans.length > 0;
@@ -5792,25 +5823,155 @@ const buildMobileOfferPdf = async (currentUser) => {
     if (index > 0) pdf.addPage([210, 148], 'landscape');
     const page = pages[index];
     const kind = typeof page === 'string' ? page : page.type;
-    setOfferProgress(`Building page ${index + 1} of ${pages.length}`);
+    setMobileOfferBusyText(`Building page ${index + 1} of ${pages.length}`);
     const marker = document.createElement('div');
     if (kind === 'cover') marker.id = 'cover-slide';
     if (kind === 'payment') marker.id = 'payment-details-slide';
     if (kind === 'amenities') marker.id = 'amenities-features-slide';
     container.appendChild(marker);
 
-    if (kind === 'cover') await drawMobileCover(pdf, logo);
-    else if (kind === 'details') await drawMobileDetails(pdf, logo);
+    if (kind === 'cover') drawMobileCover(pdf, logo);
+    else if (kind === 'details') drawMobileDetails(pdf, logo);
     else if (kind === 'floor') drawMobileFloor(pdf, logo);
     else if (kind === 'gallery') drawMobileGallery(pdf, page.images, logo);
-    else if (kind === 'about') await drawMobileAbout(pdf, logo);
+    else if (kind === 'about') drawMobileAbout(pdf, logo);
     else if (kind === 'thanks') drawMobileThanks(pdf, currentUser);
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
+  setMobileOfferBusyText('Finishing the PDF…');
   await paintPaymentDetailsPage(pdf, container);
   await paintAmenitiesPage(pdf, container);
   return pdf;
+};
+
+const MOBILE_OFFER_PANEL_ID = 'mobile-offer-panel';
+
+const closeMobileOfferPanel = () => {
+  document.getElementById(MOBILE_OFFER_PANEL_ID)?.remove();
+};
+
+const renderMobileOfferPanel = (html) => {
+  let root = document.getElementById(MOBILE_OFFER_PANEL_ID);
+  if (!root) {
+    root = document.createElement('div');
+    root.id = MOBILE_OFFER_PANEL_ID;
+    root.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center;font-family:Montserrat,Arial,sans-serif;';
+    document.body.appendChild(root);
+  }
+  root.innerHTML = `<div style="width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:22px 18px calc(28px + env(safe-area-inset-bottom));box-sizing:border-box;">${html}</div>`;
+  return root;
+};
+
+const showMobileOfferBusy = (text) => {
+  renderMobileOfferPanel(`
+    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Creating sales offer</p>
+    <p id="mobile-offer-status-text" style="margin:0;font-size:14px;color:#64748b;">${escapeOfferHtml(text)}</p>
+  `);
+};
+
+const setMobileOfferBusyText = (text) => {
+  const node = document.getElementById('mobile-offer-status-text');
+  if (node) node.textContent = text;
+  else showMobileOfferBusy(text);
+};
+
+const showMobileOfferError = (message) => {
+  const root = renderMobileOfferPanel(`
+    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Could not create the offer</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#64748b;">${escapeOfferHtml(message)}</p>
+    <button type="button" id="mobile-offer-close" style="width:100%;height:46px;border:0;border-radius:10px;background:#0B0736;color:#fff;font-size:16px;font-weight:700;">Close</button>
+  `);
+  root.querySelector('#mobile-offer-close').onclick = () => closeMobileOfferPanel();
+};
+
+const showMobileOfferReady = ({ blob, filename, offerNumber, creatorName }) => {
+  const blobUrl = URL.createObjectURL(blob);
+  let pdfFile = null;
+  try {
+    pdfFile = new File([blob], filename, { type: 'application/pdf' });
+  } catch {
+    pdfFile = null;
+  }
+  const root = renderMobileOfferPanel(`
+    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Offer ready</p>
+    <p style="margin:0 0 4px;font-size:14px;color:#334155;"><strong>Offer number:</strong> ${escapeOfferHtml(offerNumber)}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#334155;"><strong>Created by:</strong> ${escapeOfferHtml(creatorName || 'You')}</p>
+    <button type="button" id="mobile-offer-download" style="width:100%;height:48px;border:0;border-radius:10px;background:#0B0736;color:#fff;font-size:16px;font-weight:700;">Download PDF</button>
+    <button type="button" id="mobile-offer-close" style="width:100%;height:44px;margin-top:8px;border:0;background:transparent;color:#64748b;font-size:15px;">Close</button>
+  `);
+  const release = () => setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+  root.querySelector('#mobile-offer-close').onclick = () => {
+    closeMobileOfferPanel();
+    release();
+  };
+  root.querySelector('#mobile-offer-download').onclick = () => {
+    let canShareFile = false;
+    try {
+      canShareFile = !!(pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+    } catch {
+      canShareFile = false;
+    }
+    if (canShareFile) {
+      navigator.share({ files: [pdfFile], title: filename }).catch((err) => {
+        if (err?.name === 'AbortError') return;
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      });
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+};
+
+const usesMobileOfferFlow = () => Boolean(isMobileViewport.value) || isMobileOfferDevice();
+
+const generateMobileOffer = async () => {
+  showMobileOfferBusy('Saving the offer…');
+  const userData = localStorage.getItem('user');
+  const currentUser = userData ? JSON.parse(userData) : null;
+  const offerData = {
+    generated_at: new Date().toISOString(),
+    property_id: property.value.id,
+    property_title: property.value.title || property.value.area?.area_title,
+    client_name: 'Potential Client',
+    generated_by: currentUser?.name,
+    offer_details: {
+      price: property.value.price,
+      bedrooms: property.value.number_of_bedrooms,
+      bathrooms: property.value.number_of_bathrooms,
+      area: property.value.area?.area_title
+    }
+  };
+  const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
+    offer_data: offerData,
+    client_name: 'Potential Client'
+  });
+  if (!saveResponse.data.status) {
+    throw new Error(saveResponse.data?.message || 'Failed to save offer record');
+  }
+  const offerNumber = saveResponse.data?.data?.offer?.offer_number;
+  if (!offerNumber) throw new Error('Offer number was not returned');
+  setMobileOfferBusyText('Building the PDF…');
+  const pdf = await buildMobileOfferPdf(currentUser);
+  showMobileOfferReady({
+    blob: pdf.output('blob'),
+    filename: `sales-offer-${offerNumber}.pdf`,
+    offerNumber,
+    creatorName: currentUser?.name,
+  });
 };
 
 // iOS drops programmatic downloads and window.open() once the original tap has
@@ -5889,6 +6050,19 @@ const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }
 const generatePDF = async () => {
   if (offerPdfInFlight) return;
   offerPdfInFlight = true;
+  if (usesMobileOfferFlow()) {
+    try {
+      await generateMobileOffer();
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      const detail = error?.response?.data?.message || error?.message || 'Unknown error';
+      showMobileOfferError(detail);
+    } finally {
+      pdfMobileMode = false;
+      offerPdfInFlight = false;
+    }
+    return;
+  }
   try {
     Swal.fire({
       title: 'Generating Sales Offer...',
@@ -5929,25 +6103,8 @@ const generatePDF = async () => {
 
     console.log('✅ Offer saved:', saveResponse.data);
 
-    const isMobileDevice = isMobileOfferDevice();
     const offerNumber = saveResponse.data.data.offer.offer_number;
     const filename = `sales-offer-${offerNumber}.pdf`;
-
-    if (isMobileDevice) {
-      pdfMobileMode = true;
-      await preloadMobileHeroImages();
-      setOfferProgress('Building the PDF…');
-      const pdf = await buildMobileOfferPdf(currentUser);
-      const pdfBlob = pdf.output('blob');
-      proxy.$showNotification(`Sales Offer ${offerNumber} generated successfully!`, 'success');
-      await presentMobileOfferDownload({
-        blob: pdfBlob,
-        filename,
-        offerNumber,
-        creatorName: currentUser?.name,
-      });
-      return;
-    }
 
     pdfMobileMode = false;
     const pdfContent = createNewDesignContent(currentUser);
@@ -5987,14 +6144,7 @@ const generatePDF = async () => {
 
     proxy.$showNotification(`Sales Offer ${offerNumber} generated successfully!`, 'success');
 
-    if (isMobileDevice) {
-      await presentMobileOfferDownload({
-        blob: pdfBlob,
-        filename,
-        offerNumber,
-        creatorName: currentUser?.name,
-      });
-    } else {
+    {
       const blobUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
