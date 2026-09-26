@@ -103,10 +103,10 @@ class AdminEmailController extends Controller
                                 'subtitle' => $this->subtitle,
                                 'headline' => $this->subjectLine,
                                 'bodyLines' => $lines,
-                                'ctaText' => 'Start Chatting Now',
+                                'ctaText' => 'Access the New CRM',
                                 'ctaUrl' => $this->ctaUrl,
                                 'fallbackUrl' => $this->ctaUrl,
-                                'footerNote' => 'You’re receiving this message from Oia Properties Listing Portal.',
+                                'footerNote' => 'You’re receiving this message from Oia Properties.',
                             ]);
                     }
                 });
