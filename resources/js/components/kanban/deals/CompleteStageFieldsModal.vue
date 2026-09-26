@@ -4417,6 +4417,11 @@ function scrollToFirstValidationError() {
 
   const selector = [
     '.document-property-section-add--missing',
+    // Buyer/Seller/Tenant/Landlord document boxes (DocumentUpload.vue) mark a missing
+    // required doc with `.required`, not `.is-invalid` — add it explicitly so a missing
+    // buyer/seller document (e.g. Security Deposit) scrolls into view like any other
+    // unresolved field, instead of only property documents getting that treatment.
+    '.document-box.required',
     '.budget-field-wrap-stage.is-invalid-group',
     '.crm-phone-input.is-invalid',
     '.custom-v-select.is-invalid',

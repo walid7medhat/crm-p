@@ -7287,6 +7287,15 @@ const createPaymentDetailsSlide = () => {
     </div>
   `;
 
+  // Nothing worth a whole slide: no installment breakdown, no NOC/other costs, and the
+  // selling price matches the original price (no premium to call out either).
+  const hasAnyTableData = hasInstallments || expenseModels.length > 0;
+  const pricesEqual = Math.abs(premium) < 0.01;
+  if (!hasAnyTableData && pricesEqual) {
+    paymentSlideModel = null;
+    return '';
+  }
+
   paymentSlideModel = {
     cards: [
       { label: 'Selling price', value: fmtAed(sellingPrice), hero: true },
