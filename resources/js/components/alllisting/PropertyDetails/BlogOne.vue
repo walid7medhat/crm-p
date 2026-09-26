@@ -5259,6 +5259,62 @@ const imgUrlToPng = (url, size = 80) => {
   });
 };
 
+// Mobile-only PDF optimization: every slide's background is a full-resolution property
+// photo (often several MB straight off a phone camera). html2canvas has to decode and
+// rasterize every one of those into the offscreen canvas, which is what actually stalls
+// out past the 90s watchdog on mobile — desktop just has the CPU/memory to absorb it.
+// pdfMobileMode gates a downscaled-JPEG cache that pdfImg() swaps in transparently, only
+// while generating a PDF on mobile; desktop keeps the original full-quality images.
+let pdfMobileMode = false;
+const pdfImageCache = {};
+
+const resizeImageToDataUrl = (url, maxWidth = 900, quality = 0.6) => new Promise((resolve) => {
+  if (!url) return resolve(null);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const naturalW = img.naturalWidth || img.width || maxWidth;
+      const naturalH = img.naturalHeight || img.height || maxWidth;
+      const scale = Math.min(1, maxWidth / naturalW);
+      const w = Math.max(1, Math.round(naturalW * scale));
+      const h = Math.max(1, Math.round(naturalH * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    } catch (e) {
+      console.warn('PDF image resize failed:', url, e?.message);
+      resolve(null);
+    }
+  };
+  img.onerror = () => resolve(null);
+  img.src = url;
+});
+
+// Swap in the downscaled version of an already-resolved image URL when in mobile PDF
+// mode; falls back to the original URL if resizing failed or hasn't been cached.
+const pdfImg = (resolvedUrl) => {
+  if (!pdfMobileMode || !resolvedUrl) return resolvedUrl;
+  return pdfImageCache[resolvedUrl] || resolvedUrl;
+};
+
+const preloadMobileHeroImages = async () => {
+  const urls = new Set();
+  const push = (u) => { if (u) urls.add(u); };
+
+  push(getMainImage());
+  (property.value?.gallery_images || []).slice(0, 9).forEach((img) => push(getImageUrl(img.image_url)));
+  const project = property.value?.project;
+  if (project?.image) push(getImageUrl(project.image));
+  (Array.isArray(project?.gallery_images) ? project.gallery_images : []).forEach((img) => push(getImageUrl(img.image_url)));
+
+  await Promise.all([...urls].map(async (url) => {
+    pdfImageCache[url] = await resizeImageToDataUrl(url, 900, 0.6);
+  }));
+};
+
 const preloadSvgIcons = async () => {
   const features = property.value?.project?.features || [];
   if (!features.length) return;
@@ -5377,15 +5433,24 @@ const generatePDF = async () => {
 
     console.log('✅ Offer saved:', saveResponse.data);
 
-    // Continue with PDF generation
-    const pdfContent = createNewDesignContent(currentUser);
-    const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
-
     // scale:2 on every slide stacked into one giant canvas is heavy enough that mobile
     // Safari/Chrome can silently stall rendering it (no thrown error — the promise just
     // never settles) instead of erroring out. Halving it there cuts the pixel count 4x.
     const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // The bigger win on mobile: every slide embeds a full-resolution property photo as a
+    // background — html2canvas has to decode and rasterize each one, which is what's
+    // actually stalling out past the timeout. Swap in downscaled JPEGs before building
+    // the slide HTML (createNewDesignContent reads pdfMobileMode/pdfImageCache via pdfImg()).
+    pdfMobileMode = isMobileDevice;
+    if (isMobileDevice) {
+      await preloadMobileHeroImages();
+    }
+
+    // Continue with PDF generation
+    const pdfContent = createNewDesignContent(currentUser);
+    const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
 
     const options = {
       margin: [0,0],
@@ -5579,15 +5644,15 @@ const chunkArray = (arr, size = 3) => {
 };
 const createGallerySlide = (imagesChunk) => {
   const img1 = imagesChunk[0]
-    ? getImageUrl(imagesChunk[0].image_url)
+    ? pdfImg(getImageUrl(imagesChunk[0].image_url))
     : 'placeholder.png';
 
   const img2 = imagesChunk[1]
-    ? getImageUrl(imagesChunk[1].image_url)
+    ? pdfImg(getImageUrl(imagesChunk[1].image_url))
     : 'placeholder.png';
 
   const img3 = imagesChunk[2]
-    ? getImageUrl(imagesChunk[2].image_url)
+    ? pdfImg(getImageUrl(imagesChunk[2].image_url))
     : 'placeholder.png';
 
   return `
@@ -5625,12 +5690,12 @@ const getProjectImageBySlot = (slot) => {
   const list = Array.isArray(project.gallery_images) ? project.gallery_images : [];
   if (list.length > 0) {
     const byOrder = list.find((img) => Number(img?.sort_order) === Number(slot));
-    if (byOrder?.image_url) return getImageUrl(byOrder.image_url);
+    if (byOrder?.image_url) return pdfImg(getImageUrl(byOrder.image_url));
     const byIndex = list[slot - 1];
-    if (byIndex?.image_url) return getImageUrl(byIndex.image_url);
+    if (byIndex?.image_url) return pdfImg(getImageUrl(byIndex.image_url));
   }
-  if (project?.image) return getImageUrl(project.image);
-  return getMainImage();
+  if (project?.image) return pdfImg(getImageUrl(project.image));
+  return pdfImg(getMainImage());
 };
 
 const createSlide1 = (currentUser) => {
@@ -5654,7 +5719,7 @@ const createSlide1 = (currentUser) => {
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
   const project = property.value?.project;
   // Slide 1 uses the project's main image (fallback to current listing image).
-  const bgImage = project?.image ? getImageUrl(project.image) : getMainImage();
+  const bgImage = pdfImg(project?.image ? getImageUrl(project.image) : getMainImage());
   return `
   <div id="cover-slide" style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>

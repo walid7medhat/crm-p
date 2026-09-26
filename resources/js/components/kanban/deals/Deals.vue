@@ -698,12 +698,15 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
     person?.manager_name ||
     person?.team_lead_name ||
     'Not specified'
+    // branch_name/branch must outrank admin_parent_name — the latter is a *person's*
+    // name (the admin-hierarchy parent, same source used for "manager" above), not a
+    // branch/office label. With it ahead of branch_name, any responsible person with
+    // an empty office_name silently showed their manager's name in the Branch field.
     const branch =
         person?.office_name ||
-        person?.admin_parent_name ||
         person?.branch_name ||
         person?.branch?.name ||
-        task?.lead_branch_source ||
+        person?.admin_parent_name ||
         'Not specified'
     const avatar = person?.avatar || person?.image || person?.photo || ''
     return { name, position, manager, branch, avatar }

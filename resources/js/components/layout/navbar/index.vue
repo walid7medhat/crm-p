@@ -1650,6 +1650,14 @@ let modalOpenObserver = null;
 // showing — disables the nav search input outright so it can't silently steal
 // focus/keystrokes meant for that modal's own fields.
 const isAnyModalOpen = ref(false);
+// Matches both real Bootstrap modals (.modal.show) and this app's many custom,
+// Teleported overlay modals that don't use BModal at all — e.g. the deals/leads
+// StageChangeReasonModal.vue (.stage-reason-modal-overlay / .stage-change-modal-overlay),
+// Deals.vue's stage editor (.stage-modal-overlay), owner/document preview overlays
+// (*-modal-overlay), etc. Without the second half, typing into any of those
+// custom-overlay modals wasn't recognized as "a modal is open" at all, so the nav
+// search input stayed enabled and could still steal the keystrokes.
+const ANY_MODAL_OPEN_SELECTOR = '.modal.show, [class*="modal-overlay"]';
 
 function armIgnoreOutsideClick(ms = 150) {
     ignoreSearchOutsideClick = true;
@@ -1672,13 +1680,14 @@ function isInsideSearchUi(target) {
         return true;
     }
 
-    // Any other Bootstrap modal (Create Lead/Deal, Add Stage, Settings, ...) that is
+    // Any other modal (Bootstrap-based Create Lead/Deal/Settings, or one of the app's
+    // custom Teleported overlay modals like StageChangeReasonModal.vue) that is
     // currently open owns this click, even if it lands on a v-select/popper element
     // that would otherwise match the generic checks below — those selectors aren't
     // unique to the search popup's own fields, and without this guard the popup stayed
     // open (and kept floating above the other modal, stealing its keystrokes) whenever
-    // the user picked a v-select field inside that modal.
-    if (target.closest('.modal') && document.querySelector('.modal.show')) {
+    // the user picked a field inside that modal.
+    if (target.closest(ANY_MODAL_OPEN_SELECTOR) && document.querySelector(ANY_MODAL_OPEN_SELECTOR)) {
         return false;
     }
 
@@ -2338,7 +2347,7 @@ onMounted(() => {
   // for that modal's own fields. Also blurs it if it already had focus right as the
   // modal appeared (a click-based guard can't catch that — no new click happens).
   modalOpenObserver = new MutationObserver(() => {
-    const open = !!document.querySelector('.modal.show')
+    const open = !!document.querySelector(ANY_MODAL_OPEN_SELECTOR)
     isAnyModalOpen.value = open
     if (!open) return
     const active = document.activeElement
@@ -3922,14 +3931,15 @@ const showBackButton = computed(() => {
     z-index: 501;
 }
 
-/* Whenever a real app modal (Create Lead/Deal, Add Stage, Settings, ...) is open,
-   this search box must never win a click/keystroke meant for that modal's own
-   fields — it sits in the persistent navbar, so it can end up stacked above a
-   modal's content depending on where that modal renders in the page. Making it
-   non-interactive while any `.modal.show` exists lets clicks pass through to the
-   modal underneath instead of opening/filling the search popup and refiltering
-   the board behind it. */
-body:has(.modal.show) .search-area-column {
+/* Whenever a real app modal (Create Lead/Deal, Add Stage, Settings, ...) — or one of
+   this app's custom Teleported overlay modals, e.g. StageChangeReasonModal.vue's
+   `.stage-reason-modal-overlay` / `.stage-change-modal-overlay` — is open, this search
+   box must never win a click/keystroke meant for that modal's own fields — it sits in
+   the persistent navbar, so it can end up stacked above a modal's content depending on
+   where that modal renders in the page. Making it non-interactive while any such
+   overlay exists lets clicks pass through to the modal underneath instead of
+   opening/filling the search popup and refiltering the board behind it. */
+body:has(.modal.show, [class*="modal-overlay"]) .search-area-column {
     pointer-events: none;
 }
 
