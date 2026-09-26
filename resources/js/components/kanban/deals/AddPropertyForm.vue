@@ -314,7 +314,7 @@ async function fetchListings(areaId) {
   loadingListings.value = true
   try {
     const params = buildListingFilterParams({ dealType: props.dealType, areaId })
-    const response = await axios.get('/api/listings/properties', { params })
+    const response = await axios.get('/listings/properties', { params })
     const listings = response.data?.data || []
     availableListings.value = listings.map((listing) => ({
       id: listing.id,
@@ -477,7 +477,7 @@ async function saveProperty() {
       }
     })
 
-    const response = await axios.post(`/api/deals/${props.dealId}/properties`, payload, {
+    const response = await axios.post(`/deals/${props.dealId}/properties`, payload, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     if (response.data.success) {
