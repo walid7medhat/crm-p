@@ -1657,7 +1657,17 @@ const isAnyModalOpen = ref(false);
 // (*-modal-overlay), etc. Without the second half, typing into any of those
 // custom-overlay modals wasn't recognized as "a modal is open" at all, so the nav
 // search input stayed enabled and could still steal the keystrokes.
-const ANY_MODAL_OPEN_SELECTOR = '.modal.show, [class*="modal-overlay"]';
+//
+// A handful of these overlay divs don't happen to have "modal" in their class name
+// (CompleteStageFieldsModal.vue's `.complete-fields-overlay`, DateTimePicker.vue's
+// `.date-time-picker-overlay`, leads.vue's bulk pickers `.lead-bulk-overlay`,
+// DealFilterFieldSettingsModal.vue's `.deal-field-settings-overlay`) — those are
+// listed explicitly rather than matched by a bare `[class*="overlay"]`, since that
+// would also match small decorative overlays that aren't modals at all (e.g.
+// PropertyDetails' `.image-overlay` badge on a gallery image), permanently
+// disabling the nav search on any page that happens to render one of those.
+const ANY_MODAL_OPEN_SELECTOR =
+  '.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-time-picker-overlay, .lead-bulk-overlay, .deal-field-settings-overlay';
 
 function armIgnoreOutsideClick(ms = 150) {
     ignoreSearchOutsideClick = true;
@@ -3939,7 +3949,7 @@ const showBackButton = computed(() => {
    where that modal renders in the page. Making it non-interactive while any such
    overlay exists lets clicks pass through to the modal underneath instead of
    opening/filling the search popup and refiltering the board behind it. */
-body:has(.modal.show, [class*="modal-overlay"]) .search-area-column {
+body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-time-picker-overlay, .lead-bulk-overlay, .deal-field-settings-overlay) .search-area-column {
     pointer-events: none;
 }
 
