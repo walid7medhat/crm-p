@@ -159,9 +159,13 @@ class ListingGridResource extends JsonResource
             || $flags['is_listing_manager']
             || $flags['is_user_30']
         );
-        $canSeeUnitNumber = $isPrivilegedViewer
-            || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER));
-        $canSeeOwnerData = $isPrivilegedViewer
+       $canSeeUnitNumber = $isPrivilegedViewer
+            || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER))
+            // The agent who converted (sold) or rented out this listing needs the unit
+            // number even if they aren't the current agent_id (e.g. it moved teams since).
+            || ($user && $this->sold_by_agent_id == $user->id)
+            || ($user && $this->rented_by_agent_id == $user->id);
+      $canSeeOwnerData = $isPrivilegedViewer
             || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_OWNER_DATA));
 
         $project = $this->relationLoaded('project') ? $this->project : null;

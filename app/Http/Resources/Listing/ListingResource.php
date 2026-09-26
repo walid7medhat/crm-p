@@ -126,7 +126,7 @@ public const FEATURE_LABELS = [
             || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER))
             // The agent who converted (sold) or rented out this listing needs the unit
             // number even if they aren't the current agent_id (e.g. it moved teams since).
-            || ($user && $this->converted_by == $user->id)
+            || ($user && $this->sold_by_agent_id == $user->id)
             || ($user && $this->rented_by_agent_id == $user->id);
         $canSeeOwnerData = $isPrivilegedViewer
             || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_OWNER_DATA));
