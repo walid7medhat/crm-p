@@ -68,6 +68,8 @@ class CompareBitrixLeads extends Command
 
                 $missingCount++;
 
+                $this->line("  ↳ Missing: bitrix_id={$bitrixId} title=" . ($lead['TITLE'] ?? '-'));
+
                 Log::channel('bitrix_missing')->info('Lead Missing', [
                     'bitrix_id' => $bitrixId,
                     'title' => $lead['TITLE'] ?? null,
@@ -83,6 +85,7 @@ class CompareBitrixLeads extends Command
 
                     if (!$b24Lead) {
                         $errors++;
+                        $this->warn("    ✗ crm.lead.get returned no result for bitrix_id={$bitrixId}");
                         Log::channel('bitrix_missing')->warning('crm.lead.get returned no result during import', [
                             'bitrix_id' => $bitrixId,
                         ]);
@@ -91,8 +94,10 @@ class CompareBitrixLeads extends Command
 
                     $importer->importOne($b24Lead);
                     $imported++;
+                    $this->line("    ✓ Imported bitrix_id={$bitrixId}");
                 } catch (\Throwable $e) {
                     $errors++;
+                    $this->warn("    ✗ Import failed for bitrix_id={$bitrixId}: {$e->getMessage()}");
                     Log::channel('bitrix_missing')->error('Import failed for missing lead', [
                         'bitrix_id' => $bitrixId,
                         'error' => $e->getMessage(),
@@ -105,6 +110,14 @@ class CompareBitrixLeads extends Command
             if ($start !== null) {
                 Cache::put(self::CACHE_KEY, $start, now()->addDays(7));
             }
+
+            $this->info(sprintf(
+                'Progress: offset=%s missing=%d imported=%d errors=%d',
+                $start ?? 'done',
+                $missingCount,
+                $imported,
+                $errors
+            ));
 
         } while ($start !== null);
 
