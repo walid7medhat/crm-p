@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { BButton, BModal, BFormInput, BSpinner } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import ProfilePopup from '../shared/ProfilePopup.vue'
@@ -207,19 +207,19 @@ const openPersonProfile = (task, type, event) => {
 }
 
 
-const filteredPersons = computed(() => {
-    if (!personSearchQuery.value) return personsList.value
-    const query = personSearchQuery.value.toLowerCase()
-    return personsList.value.filter(person =>
-        person.name.toLowerCase().includes(query) || person.email.toLowerCase().includes(query)
-    )
-})
+const filteredPersons = computed(() => personsList.value)
 
-const fetchAvailablePersons = async () => {
+let personSearchTimer = null
+
+const fetchAvailablePersons = async (search = '') => {
     isLoadingPersons.value = true
     personUpdateError.value = ''
     try {
-        const response = await api.get('/available-responsible-persons')
+        const params = { limit: 30 }
+        const term = String(search || '').trim()
+        if (term) params.search = term
+        if (props.lead?.responsible_person?.id) params.selected_id = props.lead.responsible_person.id
+        const response = await api.get('/available-responsible-persons', { params })
         personsList.value = response.data.data || response.data || []
     } catch (error) {
         personUpdateError.value = 'Failed to load persons list'
@@ -227,6 +227,11 @@ const fetchAvailablePersons = async () => {
         isLoadingPersons.value = false
     }
 }
+
+watch(personSearchQuery, (value) => {
+    clearTimeout(personSearchTimer)
+    personSearchTimer = setTimeout(() => fetchAvailablePersons(value), 300)
+})
 
 const openPersonModal = () => {
     selectedPersonId.value = props.lead?.responsible_person?.id || null

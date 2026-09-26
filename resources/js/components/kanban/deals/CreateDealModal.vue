@@ -320,7 +320,7 @@ async function loadInitialData() {
 async function fetchUsers() {
   usersLoading.value = true
   try {
-    const response = await api.get('/available-responsible-persons')
+    const response = await api.get('/available-responsible-persons', { params: { limit: 30 } })
     const responseData = response.data
     if (responseData?.data) {
       users.value = Array.isArray(responseData.data) ? responseData.data : []

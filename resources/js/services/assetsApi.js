@@ -463,9 +463,13 @@ export const fetchAssetStatistics = async () => {
  * Fetch list of responsible persons for asset assignment
  * @returns {Promise<Array>} List of responsible persons
  */
-export const fetchResponsiblePersons = async () => {
+export const fetchResponsiblePersons = async (search = '', selectedId = null) => {
   try {
-    const response = await api.get('/available-responsible-persons')
+    const params = { limit: 30 }
+    const term = String(search || '').trim()
+    if (term) params.search = term
+    if (selectedId) params.selected_id = selectedId
+    const response = await api.get('/available-responsible-persons', { params })
     return response.data.data || response.data || []
   } catch (error) {
     console.error('Error fetching responsible persons:', error)

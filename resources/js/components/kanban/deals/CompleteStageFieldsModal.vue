@@ -2529,7 +2529,7 @@ function normalizeStoredDocs(raw) {
 // Fetch functions
 async function fetchUsers() {
   try {
-    const response = await api.get('/available-responsible-persons')
+    const response = await api.get('/available-responsible-persons', { params: { limit: 30 } })
     const responseData = response.data
     users.value = responseData?.data || responseData || []
   } catch (error) {

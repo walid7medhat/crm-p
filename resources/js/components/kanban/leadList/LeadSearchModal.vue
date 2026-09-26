@@ -386,6 +386,10 @@
 
                                 @open="loadResponsiblePersons"
 
+                                @search="onResponsiblePersonSearch"
+
+                                :filterable="false"
+
                                 :loading="loadingResponsiblePersons"
 
                             >
@@ -1227,6 +1231,10 @@
 
                                 @open="loadResponsiblePersons"
 
+                                @search="onResponsiblePersonSearch"
+
+                                :filterable="false"
+
                                 :loading="loadingResponsiblePersons"
 
                             >
@@ -2001,6 +2009,8 @@ const activePill = ref(props.initialActivePill || 'leads-in-progress')
 const officeOptions = ref([])
 
 const allResponsiblePersons = ref([])
+
+const pinnedResponsiblePerson = ref(null)
 
 const allTeams = ref([])
 
@@ -3006,33 +3016,9 @@ const personOptions = computed(() => {
 
     const opts = []
 
-    let filteredPersons = [...allResponsiblePersons.value]
-
-
-
-    if (form.value.team) {
-
-        const tid = Number(form.value.team)
-
-        filteredPersons = filteredPersons.filter((p) => Number(p.team_id) === tid)
-
-    }
-
-
-
-    const officeSel = normalizeOfficeSelection(form.value.office || [])
-
-    if (officeSel.length) {
-
-        filteredPersons = filteredPersons.filter((p) => {
-
-            const bid = normalizeOfficeId(p.branch_id)
-
-            return bid != null && officeSel.includes(bid)
-
-        })
-
-    }
+    // Office and team are already applied on the request. Filtering again here
+    // hid people the search had just returned.
+    const filteredPersons = [...allResponsiblePersons.value]
 
 
 
@@ -3055,6 +3041,30 @@ const personOptions = computed(() => {
         })
 
     })
+
+
+
+    const pinned = pinnedResponsiblePerson.value
+
+    if (pinned && !opts.some((o) => Number(o.value) === Number(pinned.id))) {
+
+        opts.unshift({
+
+            value: pinned.id,
+
+            text: pinned.name || `User ${pinned.id}`,
+
+            avatar: pinned.avatar,
+
+            role_name: pinned.role_name,
+
+            parent_name: pinned.parent_name,
+
+            branch_name: pinned.branch_name
+
+        })
+
+    }
 
 
 
@@ -5564,11 +5574,27 @@ async function selectCityBranch(cityPill, child) {
 
 
 
-async function fetchResponsiblePersonsWithFilter() {
+let responsibleSearchTimer = null
+
+let responsibleFetchSeq = 0
+
+
+
+async function fetchResponsiblePersonsWithFilter(search = '') {
+
+    const seq = ++responsibleFetchSeq
 
     try {
 
-        const params = {}
+        const params = { limit: 30 }
+
+        const term = String(search || '').trim()
+
+        if (term) params.search = term
+
+        if (form.value.team) params.team_id = form.value.team
+
+        if (form.value.responsible) params.selected_id = form.value.responsible
 
         
 
@@ -5594,6 +5620,8 @@ async function fetchResponsiblePersonsWithFilter() {
 
         const res = await api.get('/available-responsible-persons', { params })
 
+        if (seq !== responsibleFetchSeq) return
+
         if (res.data.data) {
 
             allResponsiblePersons.value = res.data.data.map(person => ({
@@ -5608,13 +5636,41 @@ async function fetchResponsiblePersonsWithFilter() {
 
         }
 
+        const selected = allResponsiblePersons.value.find((p) => Number(p.id) === Number(form.value.responsible))
+
+        if (selected) pinnedResponsiblePerson.value = selected
+
     } catch (error) {
+
+        if (seq !== responsibleFetchSeq) return
 
         console.error('Error fetching responsible persons with filter:', error)
 
         allResponsiblePersons.value = []
 
     }
+
+}
+
+
+
+function onResponsiblePersonSearch(search, loading) {
+
+    if (responsibleSearchTimer) clearTimeout(responsibleSearchTimer)
+
+    loading?.(true)
+
+    loadingResponsiblePersons.value = true
+
+    responsibleSearchTimer = setTimeout(async () => {
+
+        await fetchResponsiblePersonsWithFilter(search)
+
+        loading?.(false)
+
+        loadingResponsiblePersons.value = false
+
+    }, 300)
 
 }
 
@@ -6145,6 +6201,8 @@ watch(() => form.value.responsible, async (newResponsibleId) => {
     const selectedPerson = allResponsiblePersons.value.find(p => p.id === newResponsibleId)
 
     if (!selectedPerson) return
+
+    pinnedResponsiblePerson.value = selectedPerson
 
 
 

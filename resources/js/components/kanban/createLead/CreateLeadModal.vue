@@ -1186,7 +1186,9 @@ watch(selectedExistingClient, (client) => {
     const fetchUsers = async () => {
         try {
             isLoadingUsers.value = true
-            const response = await api.get('/available-responsible-persons')
+            const response = await api.get('/available-responsible-persons', {
+                params: { limit: 30, selected_id: loggedInUserId || undefined },
+            })
             if (response.data && (response.data.data || response.data).length > 0) {
                 users.value = response.data.data || response.data
                 const defaultUser =

@@ -132,7 +132,9 @@ onMounted(() => {
 
 async function fetchUsers() {
     try {
-        const response = await api.get('/available-responsible-persons')
+        const response = await api.get('/available-responsible-persons', {
+            params: { limit: 30, selected_id: responsiblePersonId.value || undefined },
+        })
         users.value = response.data?.data ?? response.data ?? []
     } catch (e) {
         users.value = []

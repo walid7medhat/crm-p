@@ -67,6 +67,7 @@
                                 </div>
                                 
                                 <div class="user-list-scroll">
+                                    <div v-if="searching" class="text-center p-3 text-muted">Searching...</div>
                                     <div 
                                         v-for="user in filteredUsers" 
                                         :key="user.id"
@@ -116,8 +117,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { BDropdown, BFormInput } from 'bootstrap-vue-3'
+import api from '@/plugins/axios'
 
 const props = defineProps({
     modelValue: {
@@ -150,7 +152,49 @@ const emit = defineEmits(['update:modelValue', 'user-selected'])
 
 const searchQuery = ref('')
 const dropdownShow = ref(false)
+const searching = ref(false)
+const listedUsers = ref([])
 const defaultAvatar = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
+let searchTimer = null
+
+watch(() => props.users, (users) => {
+    if (!searchQuery.value.trim()) {
+        listedUsers.value = Array.isArray(users) ? users : []
+    }
+}, { immediate: true })
+
+async function fetchPeople(term) {
+    searching.value = true
+    try {
+        const params = { limit: 30 }
+        if (term) params.search = term
+        if (props.modelValue) params.selected_id = props.modelValue
+        const response = await api.get('/available-responsible-persons', { params })
+        listedUsers.value = response.data?.data || response.data || []
+    } catch (error) {
+        listedUsers.value = []
+    } finally {
+        searching.value = false
+    }
+}
+
+watch(searchQuery, (value) => {
+    clearTimeout(searchTimer)
+    const term = String(value || '').trim()
+    searchTimer = setTimeout(() => {
+        if (!term) {
+            listedUsers.value = Array.isArray(props.users) ? props.users : []
+            return
+        }
+        fetchPeople(term)
+    }, 300)
+})
+
+watch(dropdownShow, (open) => {
+    if (open && !listedUsers.value.length) {
+        fetchPeople('')
+    }
+})
 
 // Compute responsible person from users list if not provided
 const currentResponsiblePerson = computed(() => {
@@ -163,13 +207,7 @@ const currentResponsiblePerson = computed(() => {
     return null
 })
 
-const filteredUsers = computed(() => {
-    if (!searchQuery.value) return props.users
-    return props.users.filter(user => 
-        user.name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-})
+const filteredUsers = computed(() => listedUsers.value)
 
 const selectUser = (user) => {
     emit('update:modelValue', user.id)
