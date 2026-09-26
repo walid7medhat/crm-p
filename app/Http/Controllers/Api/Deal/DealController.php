@@ -1294,6 +1294,14 @@ class DealController extends Controller
 
             // 5. تغيير المرحلة
             if ($request->filled('stage_id')) {
+                // syncProperties()/syncPrimaryPropertyFromFlatRequest() above write straight to
+                // the DB via $deal->properties() (the query builder) — they never touch $deal's
+                // own cached `properties` relation. If anything earlier in this request already
+                // lazy-loaded $deal->properties (caching it), the validator below would see that
+                // stale pre-sync snapshot (e.g. the old property_type_id) instead of what was
+                // just saved, wrongly requiring bedrooms on a plot/land unit. Force a fresh load
+                // right before validation so it always sees the just-synced rows.
+                $deal->load('properties.propertyType');
                 $guard = app(DealStageValidatorService::class);
                 $paymentProofRootCount = count($this->extractRootKeyedValidFiles($request, 'payment_proof'));
                 $newPaymentProofUploads = $paymentProofRootCount > 0
