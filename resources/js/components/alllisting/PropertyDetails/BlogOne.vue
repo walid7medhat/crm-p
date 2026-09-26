@@ -2147,6 +2147,7 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import html2pdf from 'html2pdf.js';
+import jsPDF from 'jspdf';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
@@ -5453,11 +5454,7 @@ const generatePDF = async () => {
     const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
 
     const options = {
-      margin: [0,0],
-      image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: isMobileDevice ? 1 : 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     // Watchdog: if html2canvas stalls (observed on mobile — no error, it just never settles),
@@ -5467,17 +5464,27 @@ const generatePDF = async () => {
       new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
     ]);
 
-    const pdf = await withTimeout(
-      html2pdf().set(options).from(pdfContent).toPdf().get('pdf'),
-      90000,
-      'PDF rendering timed out'
-    );
-    const slideCount = pdfContent.children.length;
-    let pageCount = pdf.internal.getNumberOfPages();
-    while (pageCount > slideCount && pageCount > 1) {
-      pdf.deletePage(pageCount);
-      pageCount -= 1;
+    // Render slide-by-slide instead of handing html2canvas the whole multi-page container
+    // in one call. html2canvas isn't GPU-accelerated — it walks the DOM and manually paints
+    // every computed style in JS — so one call covering ~8-10 full-page slides scales badly
+    // on a slow mobile CPU even with lighter images. One html2canvas call per slide keeps
+    // each unit of work small, gives each slide its own timeout budget (so a stuck slide is
+    // identifiable instead of one opaque 90s failure), and empty slides (e.g. the
+    // payment-details placeholder) come back near-instantly.
+    const slideElements = [...pdfContent.children];
+    const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
+
+    for (let i = 0; i < slideElements.length; i++) {
+      const slideCanvas = await withTimeout(
+        html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
+        25000,
+        `Slide ${i + 1} of ${slideElements.length} timed out rendering`
+      );
+      const imgData = slideCanvas.toDataURL('image/jpeg', 0.98);
+      if (i > 0) pdf.addPage([210, 148], 'landscape');
+      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
     }
+
     await paintPaymentDetailsPage(pdf, pdfContent);
     await paintAmenitiesPage(pdf, pdfContent);
     paintCoverBadge(pdf, pdfContent);
