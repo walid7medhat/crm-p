@@ -5441,7 +5441,7 @@ const resizeImageForMobilePdf = (url, maxWidth = 640) => new Promise((resolve) =
 });
 
 const preloadMobileOfferImages = async () => {
-  const urls = collectOfferImageUrls().filter(Boolean);
+  const urls = [...collectOfferImageUrls().filter(Boolean), LastSlide_bg];
   for (let index = 0; index < urls.length; index += 1) {
     setMobileOfferBusyText(`Preparing image ${index + 1} of ${urls.length}`);
     if (!pdfImageCache[urls[index]]) {
@@ -5859,9 +5859,29 @@ const drawMobileAbout = (pdf, logo) => {
   drawOfferFooter(pdf);
 };
 
-const drawMobileThanks = (pdf, currentUser) => {
+const drawMobileAmenities = (pdf, logo) => {
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(0, 0, 210, 148, 'F');
+  const photo = mobilePdfImage(getProjectImageBySlot(3));
+  if (photo) tryAddOfferImage(pdf, photo, 105, 0, 105, 133);
+  else {
+    pdf.setFillColor(1, 6, 45);
+    pdf.rect(105, 0, 105, 133, 'F');
+  }
+  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 16, 11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(16);
+  pdf.setTextColor(1, 6, 44);
+  pdf.text('AMENITIES &', 10, 16);
+  pdf.text('FEATURES', 10, 24);
+  drawOfferFooter(pdf);
+};
+
+const drawMobileThanks = async (pdf, currentUser) => {
+  const photo = await darkenOfferJpeg(mobilePdfImage(LastSlide_bg), 0.62);
   pdf.setFillColor(1, 6, 44);
   pdf.rect(0, 0, 210, 148, 'F');
+  tryAddOfferImage(pdf, photo, 0, 0, 210, 148);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(28);
   pdf.setTextColor(255, 255, 255);
@@ -5875,6 +5895,9 @@ const drawMobileThanks = (pdf, currentUser) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(11);
   pdf.text(String(currentUser?.phone || ''), 150, 128);
+  pdf.setFontSize(8);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('Powered By Oia Properties', 8, 142);
 };
 
 const rememberAmenitiesModel = () => {
@@ -5938,7 +5961,8 @@ const buildMobileOfferPdf = async (currentUser) => {
     else if (kind === 'floor') drawMobileFloor(pdf, logo);
     else if (kind === 'gallery') drawMobileGallery(pdf, page.images, logo);
     else if (kind === 'about') drawMobileAbout(pdf, logo);
-    else if (kind === 'thanks') drawMobileThanks(pdf, currentUser);
+    else if (kind === 'amenities') drawMobileAmenities(pdf, logo);
+    else if (kind === 'thanks') await drawMobileThanks(pdf, currentUser);
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
