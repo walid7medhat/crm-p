@@ -460,45 +460,40 @@ private function filterBedroomsFieldsByPropertyType(array $fields, Deal $deal): 
     if (empty($fields)) {
         return [];
     }
-    
+
     $filtered = [];
     $properties = $deal->properties ?? collect([]);
-                 Log::info('PROPERTY TYPE DEBUG');
     foreach ($fields as $field) {
         $shouldSkip = false;
-        
+
         // التحقق من وجود property_X_bedrooms
         if (preg_match('/property_(\d+)_bedrooms/', $field, $matches)) {
             $propertyIndex = (int) $matches[1];
             $property = $properties->values()->get($propertyIndex);
-            
-            if ($property && $property->propertyType) {
-                $typeName = strtolower($property->propertyType->name ?? '');
-                Log::info('PROPERTY TYPE DEBUG', [
-    'field' => $field,
-    'property_index' => $propertyIndex,
-    'property_id' => $property?->id,
-    'property_type_id' => $property?->property_type_id,
-    'property_type_relation' => $property?->propertyType,
-    'property_type_name' => $typeName,
-]);
-                if (str_contains($typeName, 'land') || str_contains($typeName, 'plot')) {
-                    Log::info('Skipping bedrooms requirement - property type is land/plot', [
-                        'field' => $field,
-                        'property_index' => $propertyIndex,
-                        'property_type' => $typeName
-                    ]);
-                    $shouldSkip = true;
-                }
+
+            if ($property && $this->propertyTypeIsLandOrPlot($property)) {
+                $shouldSkip = true;
             }
         }
-        
+
         if (!$shouldSkip) {
             $filtered[] = $field;
         }
     }
-    
+
     return $filtered;
+}
+
+/** True when this property's type name is Land/Plot (no bedrooms). */
+private function propertyTypeIsLandOrPlot($property): bool
+{
+    if (!$property || !$property->propertyType) {
+        return false;
+    }
+
+    $typeName = strtolower($property->propertyType->name ?? '');
+
+    return str_contains($typeName, 'land') || str_contains($typeName, 'plot');
 }
 
 /**
@@ -596,20 +591,29 @@ private function ensurePropertyDetailsRequiredForSecondary(
 
     // Stage 2 (Security Deposit) basics; stage 3+ adds the deeper property fields.
     // Developer/sales-person fields are NOT part of secondary deals (primary-only).
-    $required = ['area_id', 'property_type_id', 'unit_no'];
-    if ($order >= 3) {
-        $required = array_merge($required, ['bedrooms', 'unit_size']);
-    }
+    $baseRequired = ['area_id', 'property_type_id', 'unit_no'];
 
     $properties = $deal->properties ?? collect();
     $newKeys = [];
 
     if ($properties->isEmpty()) {
+        // No property row to check the type of — fall back to requiring bedrooms/unit_size
+        // as before, same as any other missing property.
+        $required = $order >= 3 ? array_merge($baseRequired, ['bedrooms', 'unit_size']) : $baseRequired;
         foreach ($required as $field) {
             $newKeys[] = "property_0_{$field}";
         }
     } else {
         foreach ($properties as $index => $property) {
+            $required = $baseRequired;
+            if ($order >= 3) {
+                $required[] = 'unit_size';
+                // Land/plot units have no bedrooms — don't re-require it here, or it
+                // undoes filterBedroomsFieldsByPropertyType()'s exclusion above.
+                if (!$this->propertyTypeIsLandOrPlot($property)) {
+                    $required[] = 'bedrooms';
+                }
+            }
             foreach ($required as $field) {
                 $value = $property->$field ?? null;
                 $isEmpty = is_null($value) || $value === '' || $value === '0';
