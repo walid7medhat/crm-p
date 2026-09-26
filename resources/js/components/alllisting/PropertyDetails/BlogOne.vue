@@ -5385,6 +5385,72 @@ const collectOfferImageUrls = () => {
   return [...urls];
 };
 
+// Resize before decode. A full-size listing photo freezes a phone, so if the
+// browser cannot shrink it first, that photo is skipped and the PDF still finishes.
+const resizeImageForMobilePdf = (url, maxWidth = 640) => new Promise((resolve) => {
+  if (!url) return resolve(null);
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+    finish(null);
+  }, 8000);
+
+  (async () => {
+    try {
+      const response = await fetch(url, { mode: 'cors', signal: controller.signal });
+      if (!response.ok) throw new Error('image request failed');
+      const blob = await response.blob();
+      if (settled) return;
+      let bitmap;
+      try {
+        bitmap = await createImageBitmap(blob, { resizeWidth: maxWidth, resizeQuality: 'low' });
+      } catch {
+        if (blob.size > 1400000) throw new Error('image too large to decode');
+        bitmap = await createImageBitmap(blob);
+      }
+      if (settled) {
+        bitmap.close?.();
+        return;
+      }
+      if (bitmap.width > maxWidth + 40) {
+        bitmap.close?.();
+        throw new Error('image was not resized');
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = Math.max(1, bitmap.height);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0);
+      const data = canvas.toDataURL('image/jpeg', 0.62);
+      canvas.width = 0;
+      canvas.height = 0;
+      bitmap.close?.();
+      clearTimeout(timer);
+      finish(data);
+    } catch (error) {
+      clearTimeout(timer);
+      console.warn('Mobile offer image skipped', url, error?.message);
+      finish(null);
+    }
+  })();
+});
+
+const preloadMobileOfferImages = async () => {
+  const urls = collectOfferImageUrls().filter(Boolean);
+  for (let index = 0; index < urls.length; index += 1) {
+    setMobileOfferBusyText(`Preparing image ${index + 1} of ${urls.length}`);
+    if (!pdfImageCache[urls[index]]) {
+      pdfImageCache[urls[index]] = await resizeImageForMobilePdf(urls[index]);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+};
+
 const preloadMobileHeroImages = async () => {
   const urls = collectOfferImageUrls();
   for (let index = 0; index < urls.length; index += 1) {
@@ -5593,6 +5659,43 @@ const snapshotDisplayedImage = (url) => {
   }
 };
 
+const mobilePdfImage = (value) => {
+  if (!value || typeof value !== 'string' || value.startsWith('data:image/gif')) return null;
+  if (value.startsWith('data:image/')) return value;
+  const cached = pdfImageCache[value];
+  if (typeof cached === 'string' && cached.startsWith('data:image/') && !cached.startsWith('data:image/gif')) return cached;
+  return null;
+};
+
+const darkenOfferJpeg = (dataUrl, amount) => new Promise((resolve) => {
+  if (!dataUrl || amount <= 0) return resolve(dataUrl);
+  const img = new Image();
+  const timer = setTimeout(() => resolve(dataUrl), 1500);
+  img.onload = () => {
+    clearTimeout(timer);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || 1;
+      canvas.height = img.naturalHeight || 1;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      ctx.fillStyle = `rgba(0,0,0,${amount})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const out = canvas.toDataURL('image/jpeg', 0.64);
+      canvas.width = 0;
+      canvas.height = 0;
+      resolve(out);
+    } catch {
+      resolve(dataUrl);
+    }
+  };
+  img.onerror = () => {
+    clearTimeout(timer);
+    resolve(dataUrl);
+  };
+  img.src = dataUrl;
+});
+
 const paintOfferPhoto = (pdf, dataUrl) => {
   pdf.setFillColor(1, 6, 45);
   pdf.rect(0, 0, 210, 148, 'F');
@@ -5618,14 +5721,14 @@ const offerCoverFields = () => {
     priceText,
     projectTitle: project?.title || project?.name || property.value?.title || 'Property',
     badge: `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`,
-    background: snapshotDisplayedImage(project?.image ? getImageUrl(project.image) : getMainImage()),
+    background: mobilePdfImage(project?.image ? getImageUrl(project.image) : getMainImage()),
   };
 };
 
 const drawMobileCover = async (pdf, logo) => {
   const fields = offerCoverFields();
   coverBadgeLabel = fields.badge;
-  paintOfferPhoto(pdf, fields.background);
+  paintOfferPhoto(pdf, await darkenOfferJpeg(fields.background, 0.45));
   if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
   pdf.setFillColor(255, 255, 255);
   pdf.roundedRect(10, 70, 112, 56, 4, 4, 'F');
@@ -5657,8 +5760,8 @@ const drawMobileCover = async (pdf, logo) => {
   drawOfferFooter(pdf);
 };
 
-const drawMobileDetails = (pdf, logo) => {
-  paintOfferPhoto(pdf, snapshotDisplayedImage(getProjectImageBySlot(1)));
+const drawMobileDetails = async (pdf, logo) => {
+  paintOfferPhoto(pdf, await darkenOfferJpeg(mobilePdfImage(getProjectImageBySlot(1)), 0.55));
   if (logo) tryAddOfferImage(pdf, logo, 184, 8, 18, 12);
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
@@ -5711,7 +5814,7 @@ const drawMobileFloor = (pdf, logo) => {
   pdf.setTextColor(11, 7, 54);
   pdf.text('FLOOR PLAN', 14, 16);
   if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
-  const plans = (property.value?.floor_plans || []).slice(0, 2).map((plan) => snapshotDisplayedImage(getImageUrl(plan.image_url))).filter(Boolean);
+  const plans = (property.value?.floor_plans || []).slice(0, 2).map((plan) => mobilePdfImage(getImageUrl(plan.image_url))).filter(Boolean);
   if (plans.length === 1) tryAddOfferImage(pdf, plans[0], 30, 24, 150, 100);
   plans.forEach((plan, index) => {
     if (plans.length < 2) return;
@@ -5724,7 +5827,7 @@ const drawMobileGallery = (pdf, images, logo) => {
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
   images.forEach((image, index) => {
-    const data = snapshotDisplayedImage(getImageUrl(image.image_url));
+    const data = mobilePdfImage(getImageUrl(image.image_url));
     tryAddOfferImage(pdf, data, 4 + index * 68, 6, 65, 122);
   });
   if (logo) tryAddOfferImage(pdf, logo, 184, 8, 16, 11);
@@ -5735,7 +5838,7 @@ const drawMobileAbout = (pdf, logo) => {
   const project = property.value?.project || {};
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
-  const photo = snapshotDisplayedImage(getProjectImageBySlot(2));
+  const photo = mobilePdfImage(getProjectImageBySlot(2));
   if (photo) tryAddOfferImage(pdf, photo, 108, 0, 102, 133);
   else {
     pdf.setFillColor(1, 6, 45);
@@ -5800,7 +5903,7 @@ const rememberAmenitiesModel = () => {
 // same pages with jsPDF instead so generation stays on a small canvas.
 const buildMobileOfferPdf = async (currentUser) => {
   const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
-  const logo = null;
+  const logo = await imgUrlToPng(OiaLogo, 160);
   const paymentHtml = createPaymentDetailsSlide();
   const hasPayment = Boolean(paymentHtml);
   const hasFloor = Array.isArray(property.value?.floor_plans) && property.value.floor_plans.length > 0;
@@ -5830,8 +5933,8 @@ const buildMobileOfferPdf = async (currentUser) => {
     if (kind === 'amenities') marker.id = 'amenities-features-slide';
     container.appendChild(marker);
 
-    if (kind === 'cover') drawMobileCover(pdf, logo);
-    else if (kind === 'details') drawMobileDetails(pdf, logo);
+    if (kind === 'cover') await drawMobileCover(pdf, logo);
+    else if (kind === 'details') await drawMobileDetails(pdf, logo);
     else if (kind === 'floor') drawMobileFloor(pdf, logo);
     else if (kind === 'gallery') drawMobileGallery(pdf, page.images, logo);
     else if (kind === 'about') drawMobileAbout(pdf, logo);
@@ -5964,6 +6067,8 @@ const generateMobileOffer = async () => {
   }
   const offerNumber = saveResponse.data?.data?.offer?.offer_number;
   if (!offerNumber) throw new Error('Offer number was not returned');
+  setMobileOfferBusyText('Preparing images…');
+  await preloadMobileOfferImages();
   setMobileOfferBusyText('Building the PDF…');
   const pdf = await buildMobileOfferPdf(currentUser);
   showMobileOfferReady({
