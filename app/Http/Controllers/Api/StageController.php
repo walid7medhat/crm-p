@@ -675,8 +675,9 @@ class StageController extends Controller
                           ->where('user_id', $request->changed_by);
                 });
             }
-            if ($request->filled('responsible_person_id')) {
-                $q->where('responsible_person_id', $request->responsible_person_id);
+            $responsiblePersonIds = $this->requestedResponsiblePersonIds($request);
+            if ($responsiblePersonIds) {
+                $q->whereIn('responsible_person_id', $responsiblePersonIds);
             }
             if ($request->filled('stage_id')) {
                 $q->where('stage_id', $request->stage_id);
@@ -759,11 +760,18 @@ class StageController extends Controller
                     }
                 }
             }
-            if ($request->filled('team_id')) {
-                $teamLead = User::find($request->team_id);
-                if ($teamLead) {
-                    $teamMemberIds = $teamLead->getAllSubordinatesIds();
-                    $teamMemberIds[] = $teamLead->id;
+            $teamIds = $this->requestedIdList($request->input('team_id'));
+            if ($teamIds) {
+                $teamMemberIds = [];
+                foreach ($teamIds as $teamId) {
+                    $teamLead = User::find($teamId);
+                    if (! $teamLead) {
+                        continue;
+                    }
+                    $teamMemberIds = array_merge($teamMemberIds, $teamLead->getAllSubordinatesIds(), [$teamLead->id]);
+                }
+                $teamMemberIds = array_values(array_unique($teamMemberIds));
+                if ($teamMemberIds) {
                     $q->whereIn('responsible_person_id', $teamMemberIds);
                 }
             }
@@ -877,8 +885,9 @@ class StageController extends Controller
                           ->where('user_id', $request->changed_by);
                 });
             }
-            if ($request->filled('responsible_person_id')) {
-                $leadsQuery->where('responsible_person_id', $request->responsible_person_id);
+            $responsiblePersonIds = $this->requestedResponsiblePersonIds($request);
+            if ($responsiblePersonIds) {
+                $leadsQuery->whereIn('responsible_person_id', $responsiblePersonIds);
             }
             if ($request->filled('email')) {
                 $leadsQuery->where('email', $request->email);
@@ -966,11 +975,18 @@ class StageController extends Controller
                     }
                 }
 
-            if ($request->filled('team_id')) {
-                $teamLead = User::find($request->team_id);
-                if ($teamLead) {
-                    $teamMemberIds = $teamLead->getAllSubordinatesIds();
-                    $teamMemberIds[] = $teamLead->id;
+            $teamIds = $this->requestedIdList($request->input('team_id'));
+            if ($teamIds) {
+                $teamMemberIds = [];
+                foreach ($teamIds as $teamId) {
+                    $teamLead = User::find($teamId);
+                    if (! $teamLead) {
+                        continue;
+                    }
+                    $teamMemberIds = array_merge($teamMemberIds, $teamLead->getAllSubordinatesIds(), [$teamLead->id]);
+                }
+                $teamMemberIds = array_values(array_unique($teamMemberIds));
+                if ($teamMemberIds) {
                     $leadsQuery->whereIn('responsible_person_id', $teamMemberIds);
                 }
             }
@@ -1651,5 +1667,39 @@ public function getOffices()
         }
 
         return $flags;
+    }
+
+    /**
+     * Lead search can send one responsible person or several (array or comma-separated).
+     *
+     * @return array<int, int>
+     */
+    private function requestedResponsiblePersonIds(Request $request): array
+    {
+        return $this->requestedIdList($request->input('responsible_person_id'));
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function requestedIdList(mixed $raw): array
+    {
+        if ($raw === null || $raw === '' || $raw === []) {
+            return [];
+        }
+
+        $values = is_array($raw) ? $raw : preg_split('/\s*,\s*/', (string) $raw);
+        $ids = [];
+        foreach ($values as $value) {
+            if (is_array($value)) {
+                continue;
+            }
+            $id = (int) $value;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 }
