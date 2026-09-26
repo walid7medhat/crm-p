@@ -146,6 +146,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ->withoutOverlapping()
         ->appendOutputTo(storage_path('logs/document-expiry.log'));
 
+    // Catch any Bitrix24 leads that never made it into the local DB (e.g. a failed
+    // webhook) and import them. withoutOverlapping (no expiry given = 24h lock) means
+    // if a run is still walking Bitrix's lead list when the next hourly tick fires,
+    // that tick is skipped instead of starting a second overlapping pass — the
+    // current run always gets to finish before the next one can start.
+    $schedule->command('bitrix:compare-leads --import')
+        ->hourly()
+        ->timezone('Asia/Dubai')
+        ->withoutOverlapping()
+        ->appendOutputTo(storage_path('logs/bitrix-compare-leads.log'));
+
 
             // $schedule->command('bitrix:sync-leads')
             //     ->everyFifteenMinutes();
