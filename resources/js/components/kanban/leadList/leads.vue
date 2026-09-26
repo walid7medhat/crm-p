@@ -705,8 +705,18 @@
                         <div class="person-hover-role">{{ activePersonHover.data.position }}</div>
                     </div>
                 </div>
-                <div class="person-hover-line"><span>Reports To</span><b>{{ activePersonHover.data.manager }}</b></div>
-                <div class="person-hover-line"><span>Branch</span><b>{{ activePersonHover.data.branch }}</b></div>
+                <div class="person-hover-meta">
+                    <div class="person-hover-meta-item">
+                        <span>Reports to</span>
+                        <b v-if="activePersonHover.pending && activePersonHover.data.manager === 'Not specified'" class="person-hover-pending">Loading</b>
+                        <b v-else>{{ activePersonHover.data.manager }}</b>
+                    </div>
+                    <div class="person-hover-meta-item">
+                        <span>Branch</span>
+                        <b v-if="activePersonHover.pending && activePersonHover.data.branch === 'Not specified'" class="person-hover-pending">Loading</b>
+                        <b v-else>{{ activePersonHover.data.branch }}</b>
+                    </div>
+                </div>
             </div>
         </transition>
     </Teleport>
@@ -2457,7 +2467,7 @@ const positionPersonHoverCard = (event, type = 'responsible') => {
     }
     const rect = el.getBoundingClientRect()
     const width = 210
-    const estimatedHeight = 140
+    const estimatedHeight = 118
     const gap = 8
     const isRight = type === 'activity'
     let left = isRight ? rect.right - width : rect.left - 10
@@ -2489,22 +2499,27 @@ const normalizePersonHoverData = (person, task = {}, type = 'responsible', fallb
         // NOTE: task?.parent is the lead's added-by user, not the responsible/activity
         // person's manager — never fall back to it here, it silently shows the wrong name.
         'Not specified'
-    const branch =
+    const personBranch =
         person?.office_name ||
-        person?.admin_parent_name ||
+        (typeof person?.branch === 'string' ? person.branch : '') ||
         person?.branch_name ||
         person?.branch?.name ||
+        person?.admin_parent_name ||
         person?.office ||
-        person?.team ||
         person?.department ||
-        person?.location ||
         person?.team_name ||
-        task?.lead_branch_source ||
-        task?.branch_name ||
-        task?.branch?.name ||
-        task?.office_branch_name ||
-        task?.office_branch ||
-        'Not specified'
+        ''
+    const leadBranch = type === 'responsible'
+        ? ''
+        : (
+            task?.lead_branch_source ||
+            task?.branch_name ||
+            task?.branch?.name ||
+            task?.office_branch_name ||
+            task?.office_branch ||
+            ''
+        )
+    const branch = personBranch || leadBranch || 'Not specified'
     const avatar = person?.avatar || person?.image || person?.photo || ''
     return { name, position, manager, branch, avatar }
 }
@@ -2521,7 +2536,12 @@ const enrichPersonHoverFromApi = async (userId, leadId, type, basePerson, task, 
                 personHoverDetailsCache.set(userId, user)
             }
         }
-        if (!user?.id) return
+        if (!user?.id) {
+            if (activePersonHover.value?.leadId === leadId && activePersonHover.value?.type === type) {
+                activePersonHover.value = { ...activePersonHover.value, pending: false }
+            }
+            return
+        }
         if (user.avatar) {
             const resolved = resolveKanbanAvatarUrl(user.avatar)
             if (resolved) {
@@ -2535,6 +2555,7 @@ const enrichPersonHoverFromApi = async (userId, leadId, type, basePerson, task, 
         activePersonHover.value = {
             leadId,
             type,
+            pending: false,
             data: normalizePersonHoverData(
                 {
                     ...basePerson,
@@ -2551,7 +2572,9 @@ const enrichPersonHoverFromApi = async (userId, leadId, type, basePerson, task, 
             ),
         }
     } catch {
-        // keep card data from kanban payload
+        if (activePersonHover.value?.leadId === leadId && activePersonHover.value?.type === type) {
+            activePersonHover.value = { ...activePersonHover.value, pending: false }
+        }
     }
 }
 
@@ -2564,12 +2587,17 @@ const showPersonHoverCard = (task, type, event) => {
     const hoverType = isActivityPersonType(type) ? 'activity' : type
     personHoverTaskById.value = task || null
     positionPersonHoverCard(event, hoverType)
+    const hoverData = normalizePersonHoverData(person, task, hoverType, fallbackName)
+    const needsProfile = Boolean(person?.id) && (
+        hoverData.manager === 'Not specified' || hoverData.branch === 'Not specified' || !person?.role_name
+    )
     activePersonHover.value = {
         leadId: task?.id,
         type: hoverType,
-        data: normalizePersonHoverData(person, task, hoverType, fallbackName),
+        pending: needsProfile,
+        data: hoverData,
     }
-    if (isActivityPersonType(type) && person?.id) {
+    if (needsProfile || (isActivityPersonType(type) && person?.id)) {
         enrichPersonHoverFromApi(Number(person.id), task?.id, hoverType, person, task, fallbackName)
     }
 }
@@ -5692,6 +5720,23 @@ const fetchRevertNotifications = async () => {
     right: auto;
     z-index: 12080 !important;
     width: 210px;
+    border: 1px solid #efe6f5;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    padding: 8px 10px 8px 12px;
+    overflow: hidden;
+}
+
+.person-hover-card--portal::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(180deg, #733e87 0%, #e8a317 100%);
 }
 
 .person-hover-card-right {
@@ -5707,33 +5752,89 @@ const fetchRevertNotifications = async () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .person-hover-avatar {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     border-radius: 999px;
     object-fit: cover;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #fff;
+    box-shadow: 0 0 0 1.5px rgba(232, 163, 23, 0.55);
+    flex-shrink: 0;
 }
 
 .person-hover-avatar-fallback {
-    background: #f1f5f9;
+    background: linear-gradient(145deg, #fff7e8, #f3eaf8);
+    color: #733e87;
+}
+
+.person-hover-head-text {
+    min-width: 0;
 }
 
 .person-hover-name {
     font-size: 12px;
     font-weight: 700;
-    color: #0f172a;
+    color: #0b0736;
     line-height: 1.2;
 }
 
 .person-hover-role {
+    display: inline-flex;
     margin-top: 1px;
-    font-size: 11px;
-    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    color: #6d28d9;
     line-height: 1.2;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.person-hover-meta {
+    display: grid;
+    gap: 2px;
+}
+
+.person-hover-meta-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    border-top: 1px solid #f1e8f6;
+}
+
+.person-hover-meta-item span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.person-hover-meta-item b {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0b0736;
+    text-align: right;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.person-hover-pending {
+    color: #94a3b8 !important;
+    font-weight: 600 !important;
 }
 
 .person-hover-line {
