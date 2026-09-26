@@ -24,30 +24,45 @@
             </div>
 
             <div class="form-row">
-              <label class="form-label">Users *</label>
-              <div class="small-muted" style="margin: -4px 0 8px 0;">Choose who will receive the email.</div>
-              <div v-if="loadingAgents" class="small-muted">Loading users…</div>
-              <div v-else class="recipients-box">
+              <label class="form-label">Send to *</label>
+              <div class="small-muted" style="margin: -4px 0 8px 0;">Listing and Sales teams. You can add more emails below.</div>
+              <div class="recipients-box">
                 <div class="recipients-search">
                   <i class="ri-search-line"></i>
-                  <input v-model.trim="agentSearch" type="text" placeholder="Search users by name/email…" />
+                  <input v-model.trim="agentSearch" type="text" placeholder="Search by name or email…" />
                 </div>
+                <form class="recipients-add" @submit.prevent="addExtraEmail">
+                  <input
+                    v-model.trim="extraEmail"
+                    type="email"
+                    placeholder="Add another email"
+                    autocomplete="off"
+                  />
+                  <button type="submit" class="btn btn-sm btn-light">Add</button>
+                </form>
                 <div class="recipients-list">
-                  <div class="d-flex align-items-center justify-content-between gap-2 px-1 pb-2" style="position: sticky; top: 0; background: #fff; z-index: 1;">
-                    <div class="small-muted mb-0">Quick select</div>
-                    <div class="d-flex gap-2">
-                      <button type="button" class="btn btn-sm btn-light" @click="toggleSelectAll" :disabled="loadingAgents">
-                        {{ allSelected ? 'Clear All' : 'Select All' }}
-                      </button>
-                    </div>
+                  <div class="recipients-toolbar">
+                    <div class="small-muted mb-0">{{ recipients.length }} selected</div>
+                    <button type="button" class="btn btn-sm btn-light" @click="toggleSelectAll">
+                      {{ allSelected ? 'Clear All' : 'Select All' }}
+                    </button>
                   </div>
-                  <label v-for="a in filteredAgents" :key="a.email" class="recipient-item">
+                  <label
+                    v-for="a in filteredAgents"
+                    :key="a.email"
+                    class="recipient-item"
+                    :class="{ 'is-selected': isSelected(a.email) }"
+                  >
                     <input type="checkbox" :value="a.email" v-model="recipients" />
-                    <span class="recipient-name">{{ a.name || a.email }}</span>
-                    <span class="recipient-email">{{ a.email }}</span>
+                    <span class="recipient-copy">
+                      <span class="recipient-name">{{ a.name || a.email }}</span>
+                      <span class="recipient-email">{{ a.email }}</span>
+                    </span>
+                    <span v-if="a.department" class="recipient-tag">{{ a.department }}</span>
+                    <span v-else-if="a.custom" class="recipient-tag recipient-tag-custom">Added</span>
                   </label>
                   <div v-if="filteredAgents.length === 0" class="small-muted" style="padding: 10px 2px;">
-                    No users found.
+                    No people found.
                   </div>
                 </div>
               </div>
@@ -93,16 +108,17 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import api from '@/plugins/axios'
+import { emailBlastRecipients } from './emailBlastRecipients'
 
 const show = ref(false)
-const loadingAgents = ref(false)
-const agents = ref([])
+const agents = ref(emailBlastRecipients.map((person) => ({ ...person })))
 const agentSearch = ref('')
+const extraEmail = ref('')
 const recipients = ref([])
 const subject = ref('')
-const subtitle = ref('New Feature Available')
+const subtitle = ref('New CRM System')
 const ctaUrl = ref('')
 const body = ref('')
 const sending = ref(false)
@@ -138,13 +154,16 @@ const isValid = computed(() => {
   return subject.value.trim().length > 0 && body.value.trim().length > 0 && recipients.value.length > 0
 })
 
+function isSelected(email) {
+  return recipients.value.includes(email)
+}
+
 function open() {
   if (!canUse.value) return
   show.value = true
   success.value = ''
   error.value = ''
   failedRecipients.value = []
-  if (!agents.value.length) loadAgents()
 }
 
 function close() {
@@ -160,16 +179,23 @@ function toggleSelectAll() {
   }
 }
 
-async function loadAgents() {
-  loadingAgents.value = true
-  try {
-    const res = await api.get('/agents-emails')
-    agents.value = Array.isArray(res?.data?.data) ? res.data.data : []
-  } catch (e) {
-    agents.value = []
-  } finally {
-    loadingAgents.value = false
+function addExtraEmail() {
+  const email = extraEmail.value.trim().toLowerCase()
+  if (!email) return
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    error.value = 'Enter a valid email address.'
+    return
   }
+  error.value = ''
+  const existing = agents.value.find((person) => person.email.toLowerCase() === email)
+  if (!existing) {
+    agents.value = [{ name: email, email, custom: true }, ...agents.value]
+  }
+  const storedEmail = existing?.email || email
+  if (!recipients.value.includes(storedEmail)) {
+    recipients.value = [...recipients.value, storedEmail]
+  }
+  extraEmail.value = ''
 }
 
 async function send() {
@@ -211,11 +237,8 @@ async function send() {
 watch(show, (v) => {
   if (!v) {
     agentSearch.value = ''
+    extraEmail.value = ''
   }
-})
-
-onMounted(() => {
-  if (canUse.value) loadAgents()
 })
 </script>
 
@@ -315,17 +338,83 @@ onMounted(() => {
   background:#fff;
   padding: 6px 10px;
 }
+.recipients-add{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+.recipients-add input{
+  flex: 1;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+}
+.recipients-add input:focus{
+  border-color: #733e87;
+  box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.12);
+}
+.recipients-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+  padding: 2px 2px 8px;
+}
 .recipient-item{
   display:flex;
   align-items:center;
   gap: 10px;
-  padding: 8px 6px;
+  padding: 8px 8px;
   border-radius: 10px;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 .recipient-item:hover{ background:#f8fafc; }
+.recipient-item.is-selected{
+  background: #f6f0fa;
+  border-color: #e4d4ee;
+  box-shadow: inset 3px 0 0 #733e87;
+}
+.recipient-item input{
+  accent-color: #733e87;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.recipient-copy{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
 .recipient-name{ font-size:13px; font-weight:600; color:#0f172a; }
-.recipient-email{ margin-left:auto; font-size:12px; color:#64748b; }
+.recipient-item.is-selected .recipient-name{ color:#0b0736; }
+.recipient-email{ font-size:12px; color:#64748b; }
+.recipient-tag{
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #733e87;
+  background: #faf7fc;
+  border: 1px solid #efe6f5;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.recipient-tag-custom{
+  color: #0f766e;
+  background: #f0fdfa;
+  border-color: #99f6e4;
+}
 .email-modal-foot{
   padding: 12px 16px;
   border-top: 1px solid #e2e8f0;
