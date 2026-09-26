@@ -346,6 +346,12 @@ const onSearchInput = () => {
 const historyEntries = ref([])
 const loading = ref(false)
 const nextPageUrl = ref(null)
+// Bumped on every fetchHistory call; a response only gets applied if it's still
+// the latest request. Without this, overlapping calls (isActive watcher + lead.id
+// watcher + onMounted can all fire close together) let an older, out-of-order
+// response overwrite newer data — e.g. wiping a lead's history with an empty
+// result from a stale request for a different lead.
+let historyRequestId = 0
 
 // Pagination state
 const currentPage = ref(1)
@@ -685,7 +691,13 @@ const transformHistoryEntry = (entry) => {
 }
 
 // Fetch users
+let usersFetched = false
 const fetchUsers = async () => {
+    if (usersFetched) {
+        return
+    }
+    usersFetched = true
+
     try {
         const response = await api.get('/users', {
             params: { per_page: 100 }
@@ -701,6 +713,7 @@ const fetchUsers = async () => {
             users.value = response.data
         }
     } catch (error) {
+        usersFetched = false
         console.error('Error fetching users:', error)
     }
 }
@@ -711,9 +724,11 @@ const fetchHistory = async (page = 1) => {
         return
     }
     
+    const requestId = ++historyRequestId
+
     try {
         loading.value = true
-        
+
         const params = {
             page: page,
             per_page: entriesPerPage.value
@@ -741,7 +756,13 @@ const fetchHistory = async (page = 1) => {
         }
         
         const response = await api.get(`/leads/${props.lead.id}/history`, { params })
-        
+
+        // A newer fetchHistory call started while this one was in flight — drop
+        // this stale response instead of letting it overwrite fresher data.
+        if (requestId !== historyRequestId) {
+            return
+        }
+
         // Handle response
         const responseData = response.data
         
@@ -777,13 +798,18 @@ const fetchHistory = async (page = 1) => {
         }
         
     } catch (error) {
+        if (requestId !== historyRequestId) {
+            return
+        }
         console.error('Error fetching history:', error)
         historyEntries.value = []
         totalEntries.value = 0
         totalPages.value = 1
         $showNotification('Failed to load history', 'error')
     } finally {
-        loading.value = false
+        if (requestId === historyRequestId) {
+            loading.value = false
+        }
     }
 }
 
@@ -795,9 +821,13 @@ const goToPage = async (page) => {
     }
 }
 
-// When modal opens, position dropdown under search bar
+// When modal opens, position dropdown under search bar and lazily load the
+// user list — it's only needed for the "User" filter option and the rare
+// numeric-id fallback in formatHistoryFieldValue, so there's no reason to
+// make history load wait on it.
 watch(showSearchModal, async (isOpen) => {
     if (isOpen) {
+        fetchUsers()
         await nextTick()
         updateDropdownPosition()
     }
@@ -819,10 +849,9 @@ watch(() => props.lead?.id, (newId, oldId) => {
     }
 })
 
-// Initial fetch — wait for the user list first so "Last Activity By" resolves to a
-// name on the first paint instead of racing fetchHistory and baking in "Unknown User".
+// Initial fetch — history loads immediately; the user list is only needed for the
+// search dropdown, so it's loaded lazily when that's opened instead of blocking here.
 onMounted(async () => {
-    await fetchUsers()
     if (props.isActive && props.lead?.id) {
         fetchHistory(1)
     }
