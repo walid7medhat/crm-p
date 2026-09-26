@@ -905,21 +905,39 @@ class LeadController extends Controller
             }
         }
         
+        // 'office'/'admin_parent' (used below) walk up the parent chain until they find
+        // the right admin ancestor, however deep that is. Eager-loading only 3 levels
+        // meant any org deeper than that fell back to a lazy-loaded query per level per
+        // row — an N+1 that scales with (rows returned) x (hierarchy depth) and was the
+        // real driver of slow/heavy responses on large teams. 8 levels covers any
+        // realistic reporting chain, and — since with() batches each level in one query
+        // instead of one per row — costs a fixed handful of extra queries total, not per
+        // person returned.
         $responsiblePersonRelations = [
             'roles:id,name',
             'parent:id,name,display_name,parent_id',
             'parent.parent:id,name,display_name,parent_id',
             'parent.parent.parent:id,name,display_name,parent_id',
+            'parent.parent.parent.parent:id,name,display_name,parent_id',
+            'parent.parent.parent.parent.parent:id,name,display_name,parent_id',
+            'parent.parent.parent.parent.parent.parent:id,name,display_name,parent_id',
+            'parent.parent.parent.parent.parent.parent.parent:id,name,display_name,parent_id',
         ];
+
+        // Defensive cap: bounds memory/time on a runaway-large team regardless of how
+        // this endpoint is filtered. Generous enough not to affect any current usage.
+        $limit = min((int) (request()->input('limit', 1000) ?: 1000), 2000);
 
         if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
             $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
                 ->whereNotNull('parent_id')
+                ->where('status', 'active')
                 ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
                     // Filter by multiple office IDs
-                    $qq->whereIn('id', $officeAndDescendants); 
+                    $qq->whereIn('id', $officeAndDescendants);
                 })
                 ->with($responsiblePersonRelations)
+                ->limit($limit)
                 ->get(['id', 'name', 'display_name', 'email', 'avatar','parent_id'])
                 ->map(function($user) {
                     return [
@@ -939,11 +957,13 @@ class LeadController extends Controller
             $subordinatesIds = $user->getAllSubordinatesIds();
             $responsiblePersons = User::role(['team_lead','sales'])
                 ->whereIn('id', $subordinatesIds)
+                ->where('status', 'active')
                 ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
                     // Filter by multiple office IDs
                     $qq->whereIn('id', $officeAndDescendants); 
                 })
                 ->with($responsiblePersonRelations)
+                ->limit($limit)
                 ->get(['id', 'name', 'display_name', 'email','avatar','parent_id'])
                 ->map(function($user) {
                     return [
