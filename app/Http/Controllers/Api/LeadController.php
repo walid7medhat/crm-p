@@ -922,60 +922,75 @@ class LeadController extends Controller
             'parent.parent.parent:id,name,display_name,parent_id',
         ];
 
-        // Defensive cap: bounds memory/time on a runaway-large team regardless of how
-        // this endpoint is filtered. Generous enough not to affect any current usage.
-        $limit = min((int) (request()->input('limit', 1000) ?: 1000), 2000);
+        // A full company dump (every sales / team lead / manager, plus parent and
+        // office walks) is what exhausted the 1GB memory limit. Return a short
+        // page, and let the picker ask again with ?search= when the user types.
+        $search = mb_substr(trim((string) request()->input('search', '')), 0, 80);
+        $limit = (int) request()->input('limit', 30);
+        if ($limit < 1) {
+            $limit = 30;
+        }
+        $limit = min($limit, 50);
+        $teamId = request()->input('team_id');
+        $selectedId = (int) request()->input('selected_id', 0);
 
-        if (($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-            $responsiblePersons = User::role(['team_lead', 'sales', 'manager','admin'])
-                ->whereNotNull('parent_id')
-                ->where('status', 'active')
-                ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
-                    // Filter by multiple office IDs
-                    $qq->whereIn('id', $officeAndDescendants);
-                })
-                ->with($responsiblePersonRelations)
-                ->limit($limit)
-                ->get(['id', 'name', 'display_name', 'email', 'avatar','parent_id'])
-                ->map(function($user) {
-                    return [
-                        'id'     => $user->id,
-                       'name' => User::resolveDisplayName($user),
-                        'email'  => $user->email,
-                        'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                        'role_name' => $user->roles->first()?->name,
-                        'team_id'=>$user->parent?->id,
-                       'parent_name' => User::resolveDisplayName($user->parent),
-                       'branch_id' => $user->office?->id,
+        $columns = ['id', 'name', 'display_name', 'email', 'avatar', 'parent_id'];
+        $present = function ($person) {
+            return [
+                'id' => $person->id,
+                'name' => User::resolveDisplayName($person),
+                'email' => $person->email,
+                'avatar' => $person->avatar ? asset('storage/' . $person->avatar) : null,
+                'role_name' => $person->roles->first()?->name,
+                'team_id' => $person->parent?->id,
+                'parent_name' => User::resolveDisplayName($person->parent),
+                'branch_id' => $person->office?->id,
+                'branch_name' => User::resolveDisplayName($person->office),
+            ];
+        };
 
-                        'branch_name' => User::resolveDisplayName($user->office)
-                    ];
-                });
+        $base = User::query()->where('users.status', 'active');
+        if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
+            $base->role(['team_lead', 'sales', 'manager', 'admin'])
+                ->whereNotNull('users.parent_id');
         } else {
-            $subordinatesIds = $user->getAllSubordinatesIds();
-            $responsiblePersons = User::role(['team_lead','sales'])
-                ->whereIn('id', $subordinatesIds)
-                ->where('status', 'active')
-                ->when(!empty($officeAndDescendants), function($qq) use($officeAndDescendants){
-                    // Filter by multiple office IDs
-                    $qq->whereIn('id', $officeAndDescendants); 
-                })
-                ->with($responsiblePersonRelations)
-                ->limit($limit)
-                ->get(['id', 'name', 'display_name', 'email','avatar','parent_id'])
-                ->map(function($user) {
-                    return [
-                        'id'     => $user->id,
-                        'name' => User::resolveDisplayName($user),
-                        'email'  => $user->email,
-                        'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                        'team_id'=>$user->parent?->id,
-                       'parent_name' => User::resolveDisplayName($user->parent),
-                       'branch_id' => $user->office?->id,
+            $base->role(['team_lead', 'sales'])
+                ->whereIn('users.id', $user->getAllSubordinatesIds());
+        }
+        if (!empty($officeAndDescendants)) {
+            $base->whereIn('users.id', $officeAndDescendants);
+        }
+        if ($teamId !== null && $teamId !== '') {
+            $base->where('users.parent_id', (int) $teamId);
+        }
 
-                        'branch_name' => User::resolveDisplayName($user->office)
-                    ];
-                });
+        $listQuery = clone $base;
+        if ($search !== '') {
+            $like = '%'.addcslashes($search, '%_\\').'%';
+            $listQuery->where(function ($query) use ($like) {
+                $query->where('users.name', 'like', $like)
+                    ->orWhere('users.display_name', 'like', $like)
+                    ->orWhere('users.email', 'like', $like)
+                    ->orWhere('users.phone', 'like', $like);
+            });
+        }
+
+        $responsiblePersons = $listQuery
+            ->with($responsiblePersonRelations)
+            ->orderBy('users.name')
+            ->limit($limit)
+            ->get($columns)
+            ->map($present)
+            ->values();
+
+        if ($selectedId > 0 && !$responsiblePersons->contains(fn ($row) => (int) ($row['id'] ?? 0) === $selectedId)) {
+            $selected = (clone $base)
+                ->where('users.id', $selectedId)
+                ->with($responsiblePersonRelations)
+                ->first($columns);
+            if ($selected) {
+                $responsiblePersons->prepend($present($selected));
+            }
         }
 
         return ApiResponse::success(

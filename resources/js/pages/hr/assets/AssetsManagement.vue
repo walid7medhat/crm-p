@@ -489,17 +489,9 @@ const selectedAssetResponsiblePerson = computed(() =>
   assetResponsiblePersons.value.find((person) => Number(person.id) === Number(form.value.asset_user_id)) || null,
 )
 
-const filteredAssetResponsiblePersons = computed(() => {
-  if (!Array.isArray(assetResponsiblePersons.value) || assetResponsiblePersons.value.length === 0) {
-    return []
-  }
-  const query = assetUserSearchQuery.value.trim().toLowerCase()
-  if (!query) return assetResponsiblePersons.value
-  return assetResponsiblePersons.value.filter((person) =>
-    String(person.name || '').toLowerCase().includes(query) ||
-    String(person.email || '').toLowerCase().includes(query)
-  )
-})
+const filteredAssetResponsiblePersons = computed(() =>
+  Array.isArray(assetResponsiblePersons.value) ? assetResponsiblePersons.value : [],
+)
 
 // ===== Helper Functions =====
 function toDateValue(value) {
@@ -1056,17 +1048,26 @@ function exportList() {
 }
 
 // ===== Asset User Picker Functions =====
-async function fetchAssetResponsiblePersons() {
-  if (assetResponsiblePersons.value.length) return
+let assetPersonSearchTimer = null
+
+async function fetchAssetResponsiblePersons(search = '', force = false) {
+  const term = String(search || '').trim()
+  if (!force && !term && assetResponsiblePersons.value.length) return
   try {
-    const persons = await fetchResponsiblePersons()
+    const persons = await fetchResponsiblePersons(term, form.value.asset_user_id || null)
     assetResponsiblePersons.value = Array.isArray(persons) ? persons : []
-    console.log('✅ Responsible persons loaded:', assetResponsiblePersons.value.length)
   } catch (error) {
     console.error('❌ Failed to load responsible persons:', error)
     assetResponsiblePersons.value = []
   }
 }
+
+watch(assetUserSearchQuery, (value) => {
+  clearTimeout(assetPersonSearchTimer)
+  assetPersonSearchTimer = setTimeout(() => {
+    fetchAssetResponsiblePersons(value, true)
+  }, 300)
+})
 
 function closeAssetUserPicker() {
   showAssetUserPicker.value = false

@@ -947,23 +947,21 @@ const canView = computed(() => {
 })
 
 // Filter persons based on search query
-const filteredPersons = computed(() => {
-    if (!personSearchQuery.value) return personsList.value
-    
-    const query = personSearchQuery.value.toLowerCase()
-    return personsList.value.filter(person => 
-        person.name.toLowerCase().includes(query) ||
-        person.email.toLowerCase().includes(query)
-    )
-})
+const filteredPersons = computed(() => personsList.value)
 
-// Fetch available persons
-const fetchAvailablePersons = async () => {
+let personSearchTimer = null
+
+// Fetch available persons. Empty search returns a short list; typing asks the server.
+const fetchAvailablePersons = async (search = '') => {
     isLoadingPersons.value = true
     personUpdateError.value = ''
     
     try {
-        const response = await api.get('/available-responsible-persons')
+        const params = { limit: 30 }
+        const term = String(search || '').trim()
+        if (term) params.search = term
+        if (props.lead?.responsible_person?.id) params.selected_id = props.lead.responsible_person.id
+        const response = await api.get('/available-responsible-persons', { params })
         personsList.value = response.data.data || response.data || []
     } catch (error) {
         console.error('Error fetching persons:', error)
@@ -972,6 +970,11 @@ const fetchAvailablePersons = async () => {
         isLoadingPersons.value = false
     }
 }
+
+watch(personSearchQuery, (value) => {
+    clearTimeout(personSearchTimer)
+    personSearchTimer = setTimeout(() => fetchAvailablePersons(value), 300)
+})
 
 // Open person modal
 const openPersonModal = () => {

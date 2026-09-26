@@ -968,7 +968,7 @@ const normalizePhoneValue = (value) => {
 // Fetch users from API
 const fetchUsers = async () => {
     try {
-        const response = await api.get('/available-responsible-persons')
+        const response = await api.get('/available-responsible-persons', { params: { limit: 30 } })
         if (response.data && (response.data.data || response.data)?.length > 0) {
             users.value = response.data.data || response.data
         }

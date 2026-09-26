@@ -1341,28 +1341,40 @@ function personInitial(name) {
 }
 
 const visibleBulkAssignees = computed(() => {
-    const q = bulkAssignQuery.value.trim().toLowerCase()
+    const q = bulkAssignQuery.value.trim()
     if (!q) return bulkAssignees.value.slice(0, ASSIGN_PREVIEW_LIMIT)
-    return bulkAssignees.value
-        .filter((person) => String(person.name || '').toLowerCase().includes(q))
-        .slice(0, 20)
+    return bulkAssignees.value.slice(0, 30)
+})
+
+let bulkAssignTimer = null
+
+async function loadBulkAssignees(search = '') {
+    bulkAssignLoading.value = true
+    try {
+        const params = { limit: 30 }
+        const term = String(search || '').trim()
+        if (term) params.search = term
+        const response = await api.get('/available-responsible-persons', { params })
+        const payload = response.data?.data
+        bulkAssignees.value = Array.isArray(payload) ? payload : []
+    } catch (error) {
+        bulkAssignees.value = []
+    } finally {
+        bulkAssignLoading.value = false
+    }
+}
+
+watch(bulkAssignQuery, (value) => {
+    if (!showBulkAssignPicker.value) return
+    clearTimeout(bulkAssignTimer)
+    bulkAssignTimer = setTimeout(() => loadBulkAssignees(value), 300)
 })
 
 async function openBulkAssignPicker() {
     if (!selectedLeadIds.value.length) return
     bulkAssignQuery.value = ''
     showBulkAssignPicker.value = true
-    if (bulkAssignees.value.length) return
-    bulkAssignLoading.value = true
-    try {
-        const response = await api.get('/available-responsible-persons')
-        const payload = response.data?.data
-        bulkAssignees.value = Array.isArray(payload) ? payload : (payload?.data || [])
-    } catch (error) {
-        window.$showNotification?.('Could not load people.', 'error')
-    } finally {
-        bulkAssignLoading.value = false
-    }
+    await loadBulkAssignees('')
 }
 
 async function applyBulkAssign(person) {
@@ -2325,7 +2337,7 @@ function onColumnScroll(column, event) {
 // Fetch responsible persons
 async function fetchResponsiblePersons() {
     try {
-        const response = await api.get('/available-responsible-persons')
+        const response = await api.get('/available-responsible-persons', { params: { limit: 30 } })
         
         if (response.data && response.data.data) {
             responsiblePersons.value = response.data.data

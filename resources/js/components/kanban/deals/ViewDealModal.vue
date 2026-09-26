@@ -842,7 +842,7 @@ function collectEditDocuments(formData) {
 async function fetchEditLookups() {
   const base = axios
   const [usersRes, sourcesRes, propertyTypesRes, developersRes, areasRes] = await Promise.all([
-    base.get('/available-responsible-persons').catch(() => ({ data: {} })),
+    base.get('/available-responsible-persons', { params: { limit: 30 } }).catch(() => ({ data: {} })),
     base.get('/sources').catch(() => ({ data: {} })),
     base.get('/listings/property-types').catch(() => ({ data: {} })),
     base.get('/listings/developers').catch(() => ({ data: {} })),

@@ -39,8 +39,10 @@
                   placeholder="Select Person"
                   data-placeholder="Select Person"
                   :searchable="true"
+                  :filterable="false"
                   :clearable="true"
                   append-to-body
+                  @search="onPersonSearch"
                 >
                  <template #open-indicator="{ attributes }">
                       <span v-bind="attributes">
@@ -385,8 +387,10 @@
                   placeholder="Select Person"
                   data-placeholder="Select Person"
                   :searchable="true"
+                  :filterable="false"
                   :clearable="true"
                   append-to-body
+                  @search="onPersonSearch"
                 >
                  <template #open-indicator="{ attributes }">
                       <span v-bind="attributes">
@@ -438,8 +442,10 @@
                   placeholder="Select Person"
                   data-placeholder="Select Person"
                   :searchable="true"
+                  :filterable="false"
                   :clearable="true"
                   append-to-body
+                  @search="onPersonSearch"
                 >
                  <template #open-indicator="{ attributes }">
                       <span v-bind="attributes">
@@ -1343,14 +1349,42 @@ const searchSubCommunities = async (search) => {
   }
 }
 
-const fetchUsers = async () => {
+let peopleSearchTimer = null
+let peopleFetchSeq = 0
+
+const fetchUsers = async (search = '') => {
+  const seq = ++peopleFetchSeq
   try {
-    const res = await api.get('/available-responsible-persons')
+    const params = { limit: 30 }
+    const term = String(search || '').trim()
+    if (term) params.search = term
+    const selectedId = form.value.responsible_person_id || form.value.stage_changed_by || form.value.modified_by
+    if (selectedId) params.selected_id = selectedId
+    const res = await api.get('/available-responsible-persons', { params })
+    if (seq !== peopleFetchSeq) return
     const data = res?.data?.data || res?.data || []
-    people.value = Array.isArray(data) ? data : []
+    const next = Array.isArray(data) ? data : []
+    const keepIds = [form.value.responsible_person_id, form.value.stage_changed_by, form.value.modified_by].filter(Boolean)
+    keepIds.forEach((id) => {
+      if (!next.some((person) => Number(person.id) === Number(id))) {
+        const existing = people.value.find((person) => Number(person.id) === Number(id))
+        if (existing) next.unshift(existing)
+      }
+    })
+    people.value = next
   } catch {
+    if (seq !== peopleFetchSeq) return
     people.value = []
   }
+}
+
+function onPersonSearch(search, loading) {
+  clearTimeout(peopleSearchTimer)
+  loading?.(true)
+  peopleSearchTimer = setTimeout(async () => {
+    await fetchUsers(search)
+    loading?.(false)
+  }, 300)
 }
 
 const fetchStages = async () => {

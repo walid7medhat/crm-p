@@ -324,6 +324,12 @@
 
         <div v-if="mobileActionSheet.mode === 'assign'" class="mobile-action-panel">
           <div class="mobile-action-panel-title">Select responsible person</div>
+          <input
+            v-model="mobileResponsibleQuery"
+            type="search"
+            class="form-control form-control-sm mb-2"
+            placeholder="Search by name, email, or phone"
+          />
           <div v-if="mobileResponsibleLoading" class="mobile-action-loading">Loading...</div>
           <button
             v-for="person in mobileResponsibleOptions"
@@ -548,6 +554,8 @@ const TOUCH_MOVE_THRESHOLD = 10
 const suppressTapUntil = ref(0)
 const mobileResponsibleLoading = ref(false)
 const mobileResponsibleOptions = ref([])
+const mobileResponsibleQuery = ref('')
+let mobileResponsibleTimer = null
 const mobilePressState = ref({
   timer: null,
   startX: 0,
@@ -2202,11 +2210,14 @@ function closeMobileActionSheet() {
   }
 }
 
-async function ensureMobileResponsibleOptions() {
-  if (mobileResponsibleOptions.value.length > 0) return
+async function ensureMobileResponsibleOptions(search = '', force = false) {
+  const term = String(search || '').trim()
+  if (!force && !term && mobileResponsibleOptions.value.length > 0) return
   mobileResponsibleLoading.value = true
   try {
-    const response = await axios.get('/available-responsible-persons')
+    const params = { limit: 30 }
+    if (term) params.search = term
+    const response = await axios.get('/available-responsible-persons', { params })
     const data = response?.data?.data || response?.data || []
     mobileResponsibleOptions.value = Array.isArray(data) ? data : []
   } catch (error) {
@@ -2216,6 +2227,13 @@ async function ensureMobileResponsibleOptions() {
     mobileResponsibleLoading.value = false
   }
 }
+
+watch(mobileResponsibleQuery, (value) => {
+  clearTimeout(mobileResponsibleTimer)
+  mobileResponsibleTimer = setTimeout(() => {
+    ensureMobileResponsibleOptions(value, true)
+  }, 300)
+})
 
 function onDealTouchStart(event, deal, column) {
   if (!kanbanIsMobile.value) return
