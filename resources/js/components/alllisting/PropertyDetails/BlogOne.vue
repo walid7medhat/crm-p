@@ -5238,23 +5238,32 @@ const svgIconCache = {};
 // Works for SVG, PNG, JPG. No fetch needed — browser handles loading.
 const imgUrlToPng = (url, size = 80) => {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), 6000);
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      clearTimeout(timer);
       try {
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
         canvas.getContext('2d').drawImage(img, 0, 0, size, size);
-        resolve(canvas.toDataURL('image/png'));
+        finish(canvas.toDataURL('image/png'));
       } catch (e) {
         console.warn('Canvas draw failed:', url, e.message);
-        resolve(null);
+        finish(null);
       }
     };
     img.onerror = () => {
+      clearTimeout(timer);
       console.warn('Image load failed:', url);
-      resolve(null);
+      finish(null);
     };
     img.src = url;
   });
@@ -5267,6 +5276,7 @@ const imgUrlToPng = (url, size = 80) => {
 // pdfMobileMode gates a downscaled-JPEG cache that pdfImg() swaps in transparently, only
 // while generating a PDF on mobile; desktop keeps the original full-quality images.
 let pdfMobileMode = false;
+let offerPdfInFlight = false;
 const pdfImageCache = {};
 
 // 1x1 transparent GIF — used when a source image can't be fetched/resized in time, so
@@ -5274,7 +5284,7 @@ const pdfImageCache = {};
 // URL as a fallback. A blank slide background beats one that hangs the whole render.
 const PDF_BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
 
-const resizeImageToDataUrl = (url, maxWidth = 900, quality = 0.6, timeoutMs = 8000) => new Promise((resolve) => {
+const resizeImageToDataUrl = (url, maxWidth = 720, quality = 0.6, timeoutMs = 5000) => new Promise((resolve) => {
   if (!url) return resolve(null);
   let settled = false;
   const finish = (value) => {
@@ -5282,34 +5292,68 @@ const resizeImageToDataUrl = (url, maxWidth = 900, quality = 0.6, timeoutMs = 80
     settled = true;
     resolve(value);
   };
-  // A slow/stuck network fetch (large camera photo over cellular, or a CORS-blocked
-  // external host) must not hang preload indefinitely — cap it and fall back to blank.
   const timer = setTimeout(() => finish(null), timeoutMs);
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    clearTimeout(timer);
-    try {
-      const naturalW = img.naturalWidth || img.width || maxWidth;
-      const naturalH = img.naturalHeight || img.height || maxWidth;
-      const scale = Math.min(1, maxWidth / naturalW);
-      const w = Math.max(1, Math.round(naturalW * scale));
-      const h = Math.max(1, Math.round(naturalH * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      finish(canvas.toDataURL('image/jpeg', quality));
-    } catch (e) {
-      console.warn('PDF image resize failed:', url, e?.message);
+
+  const paintSource = (source, naturalW, naturalH) => {
+    const scale = Math.min(1, maxWidth / (naturalW || maxWidth));
+    const w = Math.max(1, Math.round((naturalW || maxWidth) * scale));
+    const h = Math.max(1, Math.round((naturalH || maxWidth) * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(source, 0, 0, w, h);
+    const data = canvas.toDataURL('image/jpeg', quality);
+    canvas.width = 0;
+    canvas.height = 0;
+    if (typeof source.close === 'function') source.close();
+    return data;
+  };
+
+  const loadWithImage = () => {
+    if (settled) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        finish(paintSource(img, img.naturalWidth || img.width, img.naturalHeight || img.height));
+      } catch (e) {
+        console.warn('PDF image resize failed:', url, e?.message);
+        finish(null);
+      }
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
       finish(null);
+    };
+    img.src = url;
+  };
+
+  // Decode a smaller bitmap off the main image element when the browser supports it.
+  // Full-size listing photos are what freeze the property page on a phone.
+  const loadWithBitmap = async () => {
+    if (typeof createImageBitmap !== 'function') return false;
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) return false;
+    const blob = await response.blob();
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(blob, { resizeWidth: maxWidth, resizeQuality: 'low' });
+    } catch {
+      bitmap = await createImageBitmap(blob);
     }
-  };
-  img.onerror = () => {
+    if (settled) {
+      bitmap.close?.();
+      return true;
+    }
     clearTimeout(timer);
-    finish(null);
+    finish(paintSource(bitmap, bitmap.width, bitmap.height));
+    return true;
   };
-  img.src = url;
+
+  loadWithBitmap().then((done) => {
+    if (!done) loadWithImage();
+  }).catch(() => loadWithImage());
 });
 
 // Swap in the downscaled version of an already-resolved image URL when in mobile PDF
@@ -5321,19 +5365,33 @@ const pdfImg = (resolvedUrl) => {
   return pdfImageCache[resolvedUrl] || PDF_BLANK_IMG;
 };
 
-const preloadMobileHeroImages = async () => {
+const collectOfferImageUrls = () => {
   const urls = new Set();
   const push = (u) => { if (u) urls.add(u); };
 
   push(getMainImage());
   (property.value?.gallery_images || []).slice(0, 9).forEach((img) => push(getImageUrl(img.image_url)));
+  (property.value?.floor_plans || []).slice(0, 2).forEach((img) => push(getImageUrl(img.image_url)));
+
   const project = property.value?.project;
   if (project?.image) push(getImageUrl(project.image));
-  (Array.isArray(project?.gallery_images) ? project.gallery_images : []).forEach((img) => push(getImageUrl(img.image_url)));
+  const gallery = Array.isArray(project?.gallery_images) ? project.gallery_images : [];
+  [1, 2, 3].forEach((slot) => {
+    const byOrder = gallery.find((img) => Number(img?.sort_order) === slot);
+    if (byOrder?.image_url) push(getImageUrl(byOrder.image_url));
+    else if (gallery[slot - 1]?.image_url) push(getImageUrl(gallery[slot - 1].image_url));
+  });
 
-  await Promise.all([...urls].map(async (url) => {
-    pdfImageCache[url] = await resizeImageToDataUrl(url, 900, 0.6);
-  }));
+  return [...urls];
+};
+
+const preloadMobileHeroImages = async () => {
+  const urls = collectOfferImageUrls();
+  for (let index = 0; index < urls.length; index += 1) {
+    setOfferProgress(`Preparing image ${index + 1} of ${urls.length}`);
+    pdfImageCache[urls[index]] = await resizeImageToDataUrl(urls[index], 640, 0.58, 5000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
 };
 
 const preloadSvgIcons = async () => {
@@ -5355,26 +5413,35 @@ const preloadSvgIcons = async () => {
 // دالة لتحويل SVG URL إلى Base64 PNG
 const convertSvgToPng = async (svgUrl) => {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`SVG load timed out: ${svgUrl}`));
+    }, 6000);
     const img = new Image();
     img.crossOrigin = "Anonymous";
     
     img.onload = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // تحديد أبعاد الصورة
       canvas.width = img.width || 100;
       canvas.height = img.height || 100;
       
-      // رسم الصورة على canvas
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // تحويل إلى PNG
       const pngDataUrl = canvas.toDataURL('image/png');
       resolve(pngDataUrl);
     };
     
     img.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       console.error('Failed to load SVG:', svgUrl);
       reject(new Error(`Failed to load SVG: ${svgUrl}`));
     };
@@ -5409,10 +5476,421 @@ const preloadFeatureImages = async () => {
   await Promise.all(conversionPromises);
   console.log('✅ All feature images preloaded and converted');
 };
-const generatePDF = async () => {
+
+const setOfferProgress = (text) => {
+  try { Swal.update({ text }); } catch { /* the loading dialog may already be closing */ }
+};
+
+const isMobileOfferDevice = () => (
+  /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  || window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches
+);
+
+const isIosOfferDevice = () => (
+  /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+);
+
+const escapeOfferHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+const mobileOfferImage = (value) => {
+  if (!value || value === PDF_BLANK_IMG || value === 'placeholder.png') return null;
+  if (typeof value !== 'string') return null;
+  if (value.startsWith('data:image/gif')) return null;
+  if (value.startsWith('data:image')) return value;
+  const cached = pdfImageCache[value];
+  if (typeof cached === 'string' && cached.startsWith('data:image') && !cached.startsWith('data:image/gif')) return cached;
+  return null;
+};
+
+const tryAddOfferImage = (pdf, dataUrl, x, y, w, h) => {
+  if (!dataUrl) return;
   try {
-    // Show loading
-    const loadingToast = Swal.fire({
+    const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+    pdf.addImage(dataUrl, format, x, y, w, h, undefined, 'FAST');
+  } catch (error) {
+    console.warn('Offer image skipped', error?.message);
+  }
+};
+
+const drawOfferFooter = (pdf) => {
+  pdf.setFillColor(11, 7, 54);
+  pdf.rect(0, 133, 210, 15, 'F');
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('Powered By Oia Properties', 8, 142);
+};
+
+const darkenOfferImage = (dataUrl, amount) => new Promise((resolve) => {
+  if (!dataUrl || amount <= 0) return resolve(dataUrl);
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  const timer = setTimeout(() => finish(dataUrl), 2000);
+  const img = new Image();
+  img.onload = () => {
+    clearTimeout(timer);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.min(img.naturalWidth || 640, 720));
+      canvas.height = Math.max(1, Math.min(img.naturalHeight || 480, 520));
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = `rgba(0,0,0,${amount})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const out = canvas.toDataURL('image/jpeg', 0.66);
+      canvas.width = 0;
+      canvas.height = 0;
+      finish(out);
+    } catch {
+      finish(dataUrl);
+    }
+  };
+  img.onerror = () => {
+    clearTimeout(timer);
+    finish(dataUrl);
+  };
+  img.src = dataUrl;
+});
+
+const paintOfferPhoto = async (pdf, dataUrl, darken) => {
+  pdf.setFillColor(1, 6, 45);
+  pdf.rect(0, 0, 210, 148, 'F');
+  const photo = await darkenOfferImage(dataUrl, darken);
+  tryAddOfferImage(pdf, photo, 0, 0, 210, 133);
+};
+
+const offerCoverFields = () => {
+  const propertyTypeName = property.value?.property_type?.name || '';
+  const bedrooms = property.value?.number_of_bedrooms;
+  const isPlot = /plot|land/i.test(propertyTypeName);
+  const typeWithoutApartment = propertyTypeName.replace(/\bapartments?\b/ig, '').replace(/\s+/g, ' ').trim();
+  let subtitle = typeWithoutApartment;
+  if (!isPlot && bedrooms === 0) subtitle = 'Studio';
+  else if (!isPlot && bedrooms) subtitle = `${bedrooms} Bedroom${Number(bedrooms) === 1 ? '' : 's'}${typeWithoutApartment ? ` ${typeWithoutApartment}` : ''}`;
+  const rawLocation = property.value?.area?.area_title || property.value?.area?.title || 'Abu Dhabi, UAE';
+  const location = [...new Set(String(rawLocation).split(',').map((part) => part.trim()).filter(Boolean))].join(', ') || 'Abu Dhabi, UAE';
+  const priceText = `AED ${formatPrice(property.value?.price) || ''}`;
+  const listingStatus = property.value?.listing_status || 'Sale';
+  const project = property.value?.project;
+  return {
+    subtitle,
+    location,
+    priceText,
+    projectTitle: project?.title || project?.name || property.value?.title || 'Property',
+    badge: `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`,
+    background: mobileOfferImage(project?.image ? getImageUrl(project.image) : getMainImage()),
+  };
+};
+
+const drawMobileCover = async (pdf, logo) => {
+  const fields = offerCoverFields();
+  coverBadgeLabel = fields.badge;
+  await paintOfferPhoto(pdf, fields.background, 0.42);
+  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
+  pdf.setFillColor(255, 255, 255);
+  pdf.roundedRect(10, 70, 112, 56, 4, 4, 'F');
+  pdf.setFillColor(1, 6, 45);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  const badgeW = Math.max(28, pdf.getTextWidth(fields.badge) + 8);
+  pdf.roundedRect(18, 66, badgeW, 8, 1.5, 1.5, 'F');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(fields.badge, 18 + badgeW / 2, 71.2, { align: 'center' });
+  pdf.setTextColor(11, 7, 54);
+  pdf.setFontSize(15);
+  pdf.text(pdf.splitTextToSize(String(fields.projectTitle).toUpperCase(), 96).slice(0, 2), 16, 84);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  pdf.setTextColor(1, 6, 45);
+  pdf.text(pdf.splitTextToSize(fields.subtitle || '', 96).slice(0, 1), 16, 100);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(107, 114, 128);
+  pdf.text(pdf.splitTextToSize(fields.location, 96).slice(0, 1), 16, 108);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(14);
+  pdf.setTextColor(1, 6, 45);
+  pdf.text(fields.priceText, 16, 118);
+  drawOfferFooter(pdf);
+};
+
+const drawMobileDetails = async (pdf, logo) => {
+  await paintOfferPhoto(pdf, mobileOfferImage(getProjectImageBySlot(1)), 0.62);
+  if (logo) tryAddOfferImage(pdf, logo, 184, 8, 18, 12);
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(22);
+  pdf.text('PROPERTY', 14, 18);
+  pdf.text('DETAILS', 14, 28);
+  const rows = [
+    ['Property Type', property.value?.property_type?.name || 'N/A'],
+    ['Bedrooms', property.value?.number_of_bedrooms === 0 ? 'Studio' : String(property.value?.number_of_bedrooms ?? 'N/A')],
+    ['Bathrooms', String(property.value?.number_of_bathrooms ?? 'N/A')],
+    ['Area Size', property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A'],
+  ];
+  rows.forEach((row, index) => {
+    const x = 14 + (index % 4) * 46;
+    const y = 48;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(220, 220, 220);
+    pdf.text(row[0], x, y);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(pdf.splitTextToSize(String(row[1]).toUpperCase(), 42).slice(0, 2), x, y + 6);
+  });
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(220, 220, 220);
+  pdf.text('Completion Status', 14, 72);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(String(property.value?.completion_status || 'Under Construction').toUpperCase(), 14, 80);
+  const features = (additionalFeaturesList.value || []).slice(0, 16);
+  if (features.length) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(230, 230, 230);
+    pdf.text('Features', 14, 96);
+    pdf.setFontSize(9);
+    pdf.text(pdf.splitTextToSize(features.join('   ·   '), 180).slice(0, 4), 14, 103);
+  }
+  drawOfferFooter(pdf);
+};
+
+const drawMobileFloor = (pdf, logo) => {
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(0, 0, 210, 148, 'F');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(18);
+  pdf.setTextColor(11, 7, 54);
+  pdf.text('FLOOR PLAN', 14, 16);
+  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
+  const plans = (property.value?.floor_plans || []).slice(0, 2).map((plan) => mobileOfferImage(getImageUrl(plan.image_url))).filter(Boolean);
+  if (plans.length === 1) tryAddOfferImage(pdf, plans[0], 30, 24, 150, 100);
+  plans.forEach((plan, index) => {
+    if (plans.length < 2) return;
+    tryAddOfferImage(pdf, plan, 12 + index * 96, 24, 90, 100);
+  });
+  drawOfferFooter(pdf);
+};
+
+const drawMobileGallery = (pdf, images, logo) => {
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(0, 0, 210, 148, 'F');
+  images.forEach((image, index) => {
+    const data = mobileOfferImage(getImageUrl(image.image_url));
+    tryAddOfferImage(pdf, data, 4 + index * 68, 6, 65, 122);
+  });
+  if (logo) tryAddOfferImage(pdf, logo, 184, 8, 16, 11);
+  drawOfferFooter(pdf);
+};
+
+const drawMobileAbout = async (pdf, logo) => {
+  const project = property.value?.project || {};
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(0, 0, 210, 148, 'F');
+  const photo = mobileOfferImage(getProjectImageBySlot(2));
+  if (photo) tryAddOfferImage(pdf, photo, 108, 0, 102, 133);
+  else {
+    pdf.setFillColor(1, 6, 45);
+    pdf.rect(108, 0, 102, 133, 'F');
+  }
+  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 16, 11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(16);
+  pdf.setTextColor(1, 6, 44);
+  pdf.text('ABOUT THE PROJECT', 10, 16);
+  pdf.setFontSize(12);
+  pdf.text(pdf.splitTextToSize(String(project.title || project.name || ''), 90).slice(0, 2), 10, 28);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(63, 63, 70);
+  const about = limitText(String(project.about || '').replace(/\s+/g, ' ').trim(), 700);
+  pdf.text(pdf.splitTextToSize(about, 90).slice(0, 16), 10, 42);
+  drawOfferFooter(pdf);
+};
+
+const drawMobileThanks = (pdf, currentUser) => {
+  pdf.setFillColor(1, 6, 44);
+  pdf.rect(0, 0, 210, 148, 'F');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(28);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text('THANK YOU', 105, 58, { align: 'center' });
+  pdf.setFontSize(8);
+  pdf.setTextColor(220, 220, 220);
+  pdf.text('Contact', 150, 112);
+  pdf.setFontSize(14);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(String(currentUser?.name || ''), 150, 120);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(11);
+  pdf.text(String(currentUser?.phone || ''), 150, 128);
+};
+
+const rememberAmenitiesModel = () => {
+  const features = Array.isArray(property.value?.project?.features)
+    ? property.value.project.features
+      .map((feature) => ({
+        name: feature?.name || feature?.title || feature,
+        image: feature?.img || feature?.icon || null,
+      }))
+      .filter((feature) => feature.name)
+    : [];
+  if (!features.length) {
+    amenitiesSlideModel = null;
+    return false;
+  }
+  amenitiesSlideModel = {
+    items: features.map((feature) => ({
+      name: feature.name,
+      imageUrl: feature.image ? getImageUrl(feature.image) : null,
+    })),
+  };
+  return true;
+};
+
+// html2canvas walks every style in JavaScript and stalls on a phone. Draw the
+// same pages with jsPDF instead so generation stays on a small canvas.
+const buildMobileOfferPdf = async (currentUser) => {
+  const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
+  const logo = await imgUrlToPng(OiaLogo, 140);
+  const paymentHtml = createPaymentDetailsSlide();
+  const hasPayment = Boolean(paymentHtml);
+  const hasFloor = Array.isArray(property.value?.floor_plans) && property.value.floor_plans.length > 0;
+  const hasProject = Boolean(property.value?.project?.id);
+  const hasAmenities = rememberAmenitiesModel();
+  const gallery = (property.value?.gallery_images || []).slice(0, 9);
+  const galleryChunks = [];
+  for (let index = 0; index < gallery.length; index += 3) galleryChunks.push(gallery.slice(index, index + 3));
+
+  const pages = ['cover', 'details'];
+  if (hasPayment) pages.push('payment');
+  if (hasFloor) pages.push('floor');
+  galleryChunks.forEach((chunk) => pages.push({ type: 'gallery', images: chunk }));
+  if (hasProject) pages.push('about');
+  if (hasAmenities) pages.push('amenities');
+  pages.push('thanks');
+
+  const container = document.createElement('div');
+  for (let index = 0; index < pages.length; index += 1) {
+    if (index > 0) pdf.addPage([210, 148], 'landscape');
+    const page = pages[index];
+    const kind = typeof page === 'string' ? page : page.type;
+    setOfferProgress(`Building page ${index + 1} of ${pages.length}`);
+    const marker = document.createElement('div');
+    if (kind === 'cover') marker.id = 'cover-slide';
+    if (kind === 'payment') marker.id = 'payment-details-slide';
+    if (kind === 'amenities') marker.id = 'amenities-features-slide';
+    container.appendChild(marker);
+
+    if (kind === 'cover') await drawMobileCover(pdf, logo);
+    else if (kind === 'details') await drawMobileDetails(pdf, logo);
+    else if (kind === 'floor') drawMobileFloor(pdf, logo);
+    else if (kind === 'gallery') drawMobileGallery(pdf, page.images, logo);
+    else if (kind === 'about') await drawMobileAbout(pdf, logo);
+    else if (kind === 'thanks') drawMobileThanks(pdf, currentUser);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  await paintPaymentDetailsPage(pdf, container);
+  await paintAmenitiesPage(pdf, container);
+  return pdf;
+};
+
+// iOS drops programmatic downloads and window.open() once the original tap has
+// been followed by async work. A fresh tap on Download PDF is what phones accept.
+const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }) => {
+  const blobUrl = URL.createObjectURL(blob);
+  let pdfFile = null;
+  try {
+    pdfFile = new File([blob], filename, { type: 'application/pdf' });
+  } catch {
+    pdfFile = null;
+  }
+  if (!isIosOfferDevice()) {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  return Swal.fire({
+    icon: 'success',
+    title: 'Offer ready',
+    html: `
+      <div style="text-align: left;">
+        <p><strong>Offer Number:</strong> ${escapeOfferHtml(offerNumber)}</p>
+        <p><strong>Created By:</strong> ${escapeOfferHtml(creatorName || 'You')}</p>
+        <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
+        <p style="margin-top: 12px;">Tap Download PDF. On iPhone, choose Save to Files from the share sheet.</p>
+      </div>
+      <button type="button" id="offer-pdf-download"
+        style="display:inline-block;margin-top:16px;background:#0B0736;color:#fff;padding:12px 22px;border-radius:8px;border:0;font-weight:600;">
+        Download PDF
+      </button>
+    `,
+    showConfirmButton: false,
+    showCloseButton: true,
+    allowOutsideClick: true,
+    didOpen: () => {
+      const button = document.getElementById('offer-pdf-download');
+      if (!button) return;
+      button.addEventListener('click', () => {
+        let canShareFile = false;
+        try {
+          canShareFile = !!(pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+        } catch {
+          canShareFile = false;
+        }
+        if (canShareFile) {
+          navigator.share({ files: [pdfFile], title: filename }).catch((err) => {
+            if (err?.name === 'AbortError') return;
+            const fallback = document.createElement('a');
+            fallback.href = blobUrl;
+            fallback.download = filename;
+            document.body.appendChild(fallback);
+            fallback.click();
+            fallback.remove();
+          });
+          return;
+        }
+        const fallback = document.createElement('a');
+        fallback.href = blobUrl;
+        fallback.download = filename;
+        document.body.appendChild(fallback);
+        fallback.click();
+        fallback.remove();
+      });
+    },
+    didClose: () => {
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 180000);
+    },
+  });
+};
+
+const generatePDF = async () => {
+  if (offerPdfInFlight) return;
+  offerPdfInFlight = true;
+  try {
+    Swal.fire({
       title: 'Generating Sales Offer...',
       text: 'Please wait while we prepare your document',
       allowOutsideClick: false,
@@ -5424,9 +5902,6 @@ const generatePDF = async () => {
     const userData = localStorage.getItem('user');
     const currentUser = userData ? JSON.parse(userData) : null;
 
-    // Pre-load SVG feature icons as base64 so html2canvas can render them
-    await preloadSvgIcons();
-    await preloadFeatureImages();
     // Prepare offer data
     const offerData = {
       generated_at: new Date().toISOString(),
@@ -5454,114 +5929,103 @@ const generatePDF = async () => {
 
     console.log('✅ Offer saved:', saveResponse.data);
 
-    // scale:2 on every slide stacked into one giant canvas is heavy enough that mobile
-    // Safari/Chrome can silently stall rendering it (no thrown error — the promise just
-    // never settles) instead of erroring out. Halving it there cuts the pixel count 4x.
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isMobileDevice = isMobileOfferDevice();
+    const offerNumber = saveResponse.data.data.offer.offer_number;
+    const filename = `sales-offer-${offerNumber}.pdf`;
 
-    // The bigger win on mobile: every slide embeds a full-resolution property photo as a
-    // background — html2canvas has to decode and rasterize each one, which is what's
-    // actually stalling out past the timeout. Swap in downscaled JPEGs before building
-    // the slide HTML (createNewDesignContent reads pdfMobileMode/pdfImageCache via pdfImg()).
-    pdfMobileMode = isMobileDevice;
     if (isMobileDevice) {
+      pdfMobileMode = true;
       await preloadMobileHeroImages();
+      setOfferProgress('Building the PDF…');
+      const pdf = await buildMobileOfferPdf(currentUser);
+      const pdfBlob = pdf.output('blob');
+      proxy.$showNotification(`Sales Offer ${offerNumber} generated successfully!`, 'success');
+      await presentMobileOfferDownload({
+        blob: pdfBlob,
+        filename,
+        offerNumber,
+        creatorName: currentUser?.name,
+      });
+      return;
     }
 
-    // Continue with PDF generation
+    pdfMobileMode = false;
     const pdfContent = createNewDesignContent(currentUser);
-    const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
 
     const options = {
-      html2canvas: { scale: isMobileDevice ? 1 : 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
     };
 
-    // Watchdog: if html2canvas stalls (observed on mobile — no error, it just never settles),
-    // surface it as a failure instead of leaving the "Generating..." modal stuck forever.
     const withTimeout = (promise, ms, message) => Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
     ]);
 
-    // Render slide-by-slide instead of handing html2canvas the whole multi-page container
-    // in one call. html2canvas isn't GPU-accelerated — it walks the DOM and manually paints
-    // every computed style in JS — so one call covering ~8-10 full-page slides scales badly
-    // on a slow mobile CPU even with lighter images. One html2canvas call per slide keeps
-    // each unit of work small, gives each slide its own timeout budget (so a stuck slide is
-    // identifiable instead of one opaque 90s failure), and empty slides (e.g. the
-    // payment-details placeholder) come back near-instantly.
     const slideElements = [...pdfContent.children];
     const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
 
     for (let i = 0; i < slideElements.length; i++) {
+      Swal.update({ text: `Building page ${i + 1} of ${slideElements.length}` });
       const slideCanvas = await withTimeout(
         html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
         25000,
         `Slide ${i + 1} of ${slideElements.length} timed out rendering`
       );
       const imgData = slideCanvas.toDataURL('image/jpeg', 0.98);
+      slideCanvas.width = 0;
+      slideCanvas.height = 0;
       if (i > 0) pdf.addPage([210, 148], 'landscape');
       pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
     }
 
+    Swal.update({ text: 'Finishing the PDF…' });
     await paintPaymentDetailsPage(pdf, pdfContent);
     await paintAmenitiesPage(pdf, pdfContent);
     paintCoverBadge(pdf, pdfContent);
 
     const pdfBlob = pdf.output('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
 
-    // iOS Safari (and most in-app mobile webviews) ignore the `download` attribute on a
-    // synthetic <a> click — it just tries to navigate the tab to the blob: URL instead of
-    // saving a file, so the user sees nothing happen. Opening it in a new tab instead lets
-    // Safari's built-in PDF viewer show its own Share/Save button.
-    const isMobileSafariLike = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    proxy.$showNotification(`Sales Offer ${offerNumber} generated successfully!`, 'success');
 
-    if (isMobileSafariLike) {
-      window.open(blobUrl, '_blank');
+    if (isMobileDevice) {
+      await presentMobileOfferDownload({
+        blob: pdfBlob,
+        filename,
+        offerNumber,
+        creatorName: currentUser?.name,
+      });
     } else {
+      const blobUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Offer Generated!',
+        html: `
+          <div style="text-align: left;">
+            <p><strong>Offer Number:</strong> ${escapeOfferHtml(offerNumber)}</p>
+            <p><strong>Created By:</strong> ${escapeOfferHtml(currentUser?.name || 'You')}</p>
+            <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
+          </div>
+        `,
+        confirmButtonColor: '#0B0736'
+      });
     }
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-
-    await loadingToast.close();
-
-    // Show success with offer number
-    proxy.$showNotification(`Sales Offer ${saveResponse.data.data.offer.offer_number} generated successfully!`, 'success');
-
-    // Optional: Show who created the offer
-    Swal.fire({
-      icon: 'success',
-      title: 'Offer Generated!',
-      html: `
-        <div style="text-align: left;">
-          <p><strong>Offer Number:</strong> ${saveResponse.data.data.offer.offer_number}</p>
-          <p><strong>Created By:</strong> ${currentUser?.name || 'You'}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-        </div>
-      `,
-      confirmButtonColor: '#0B0736'
-    });
 
   } catch (error) {
     console.error('PDF generation error:', error);
-    // The "Generating..." modal (allowOutsideClick: false) previously stayed stuck open
-    // forever whenever anything in the try block threw — a common outcome on mobile, where
-    // html2canvas is far more likely to choke on this multi-slide, scale:2 layout. Always
-    // close it before reporting the failure.
-    await Swal.close();
-    // Surface the real error text — without this, "Failed to generate PDF" gives no way to
-    // tell a timeout apart from a network error, a tainted-canvas CORS failure, etc. without
-    // pulling mobile device logs.
+    Swal.close();
     const detail = error?.response?.data?.message || error?.message || 'Unknown error';
     proxy.$showNotification(`Failed to generate PDF: ${detail}`, 'error');
+  } finally {
+    pdfMobileMode = false;
+    offerPdfInFlight = false;
   }
 };
 const showOfferHistory = async () => {
@@ -5930,8 +6394,8 @@ const createSlide4 = () => {
 const createSlide5 = () => {
   const floorPlans = property.value?.floor_plans || [];
   if (!floorPlans.length) return '';
-  const floorPlan1 = getImageUrl(floorPlans[0].image_url);
-  const floorPlan2 = floorPlans.length > 1 ? getImageUrl(floorPlans[1].image_url) : null;
+  const floorPlan1 = pdfImg(getImageUrl(floorPlans[0].image_url));
+  const floorPlan2 = floorPlans.length > 1 ? pdfImg(getImageUrl(floorPlans[1].image_url)) : null;
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
@@ -6079,20 +6543,31 @@ const paintCoverBadge = (pdf, container) => {
 
 const loadPdfImage = (src) => new Promise((resolve) => {
   if (!src) return resolve(null);
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  const timer = setTimeout(() => finish(null), 6000);
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    clearTimeout(timer);
     try {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width || 64;
       canvas.height = img.naturalHeight || img.height || 64;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      finish(canvas.toDataURL('image/png'));
     } catch {
-      resolve(null);
+      finish(null);
     }
   };
-  img.onerror = () => resolve(null);
+  img.onerror = () => {
+    clearTimeout(timer);
+    finish(null);
+  };
   img.src = src;
 });
 
@@ -6140,19 +6615,30 @@ const paintAmenitiesPage = async (pdf, container) => {
 };
 
 const loadPdfLogo = () => new Promise((resolve) => {
+  let settled = false;
+  const finish = (value) => {
+    if (settled) return;
+    settled = true;
+    resolve(value);
+  };
+  const timer = setTimeout(() => finish(null), 6000);
   const img = new Image();
   img.onload = () => {
+    clearTimeout(timer);
     try {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      finish(canvas.toDataURL('image/png'));
     } catch {
-      resolve(null);
+      finish(null);
     }
   };
-  img.onerror = () => resolve(null);
+  img.onerror = () => {
+    clearTimeout(timer);
+    finish(null);
+  };
   img.src = pnglogo;
 });
 
