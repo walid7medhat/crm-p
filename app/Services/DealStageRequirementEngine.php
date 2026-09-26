@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Deal;
 use App\Models\Stage;
+use App\Models\PropertyType;
 
 class DealStageRequirementEngine
 {
@@ -349,15 +350,15 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
             }
             $missing = [];
 
-            // أنواع العقارات التي لا تحتاج bedrooms
-            $typesWithoutBedrooms = [35,36,24,31];
-
             foreach ($deal->properties as $index => $property) {
 
                 $fieldsToValidate = $requiredFields;
 
-                // إزالة bedrooms للأراضي/القطع
-                if (in_array($property->property_type_id, $typesWithoutBedrooms)) {
+                // إزالة bedrooms للأراضي/القطع — matched by type name (not a hardcoded id
+                // list, which drifted out of sync with the actual land/plot types and kept
+                // flagging bedrooms as missing for plots whose id wasn't in the list).
+                // Mirrors DealProperty::setPropertyTypeIdAttribute()'s own land/plot check.
+                if ($this->propertyTypeHasNoBedrooms($property->property_type_id)) {
 
                     $fieldsToValidate = array_filter(
                         $fieldsToValidate,
@@ -394,6 +395,24 @@ $requiredFields = $this->getRequiredFieldsForStage($targetOrder, $deal);
 
             return $missing;
         }
+
+    /** Per-request memo: property_type_id => whether that type's name is land/plot. */
+    private array $noBedroomsTypeCache = [];
+
+    private function propertyTypeHasNoBedrooms(?int $propertyTypeId): bool
+    {
+        if (! $propertyTypeId) {
+            return false;
+        }
+
+        if (! array_key_exists($propertyTypeId, $this->noBedroomsTypeCache)) {
+            $name = strtolower((string) (PropertyType::find($propertyTypeId)?->name ?? ''));
+            $this->noBedroomsTypeCache[$propertyTypeId] =
+                str_contains($name, 'land') || str_contains($name, 'plot');
+        }
+
+        return $this->noBedroomsTypeCache[$propertyTypeId];
+    }
 
     private function countPropertyDocuments(Deal $deal, string $type): int
     {

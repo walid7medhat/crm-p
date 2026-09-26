@@ -179,7 +179,7 @@
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
 
-        <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
+        <!-- <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
           <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> Document Requests</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
@@ -190,8 +190,8 @@
         <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-leave' }" role="tab" @click="activeTab = 'my-leave'; loadMyLeave()">
           <span class="vp-nav__left"><iconify-icon icon="lucide:calendar-off" /> My Leave</span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
-        </button>
-        <button
+        </button> -->
+        <!-- <button
             v-if="isTeamLead || isSuperAdmin"
             type="button"
             class="vp-nav__item"
@@ -202,8 +202,8 @@
             <span class="vp-nav__left"><iconify-icon icon="lucide:users" /> Team Leave Requests</span>
             <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
             <span v-if="teamLeavePendingCount > 0" class="vp-nav__badge">{{ teamLeavePendingCount }}</span>
-          </button>
-          <button
+          </button> -->
+          <!-- <button
               v-if="isTeamLead || isSuperAdmin"
               type="button"
               class="vp-nav__item"
@@ -214,7 +214,7 @@
               <span class="vp-nav__left"><iconify-icon icon="lucide:clipboard-list" /> Pending Evaluations</span>
               <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
               <span v-if="pendingEvaluations.length > 0" class="vp-nav__badge">{{ pendingEvaluations.length }}</span>
-            </button>
+            </button> -->
           <button
               type="button"
               class="vp-nav__item"
