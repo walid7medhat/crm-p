@@ -5381,15 +5381,32 @@ const generatePDF = async () => {
     const pdfContent = createNewDesignContent(currentUser);
     const filename = `sales-offer-${saveResponse.data.data.offer.offer_number}.pdf`;
 
+    // scale:2 on every slide stacked into one giant canvas is heavy enough that mobile
+    // Safari/Chrome can silently stall rendering it (no thrown error — the promise just
+    // never settles) instead of erroring out. Halving it there cuts the pixel count 4x.
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     const options = {
       margin: [0,0],
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
+      html2canvas: { scale: isMobileDevice ? 1 : 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: [210, 148], orientation: 'landscape' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    const pdf = await html2pdf().set(options).from(pdfContent).toPdf().get('pdf');
+    // Watchdog: if html2canvas stalls (observed on mobile — no error, it just never settles),
+    // surface it as a failure instead of leaving the "Generating..." modal stuck forever.
+    const withTimeout = (promise, ms, message) => Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+    ]);
+
+    const pdf = await withTimeout(
+      html2pdf().set(options).from(pdfContent).toPdf().get('pdf'),
+      90000,
+      'PDF rendering timed out'
+    );
     const slideCount = pdfContent.children.length;
     let pageCount = pdf.internal.getNumberOfPages();
     while (pageCount > slideCount && pageCount > 1) {
