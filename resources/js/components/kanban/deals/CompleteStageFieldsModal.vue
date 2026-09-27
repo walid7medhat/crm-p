@@ -2048,7 +2048,10 @@ function isPropertyFieldInvalid(property, fieldName) {
     normalizedFieldName === 'developer_phone'
       ? (property.developer_phone ?? property.developer_sales_phone)
       : property[normalizedFieldName]
-  return value === null || value === undefined || value === ''
+  // Same empty()-parity fix as unresolvedMissingKeys — otherwise a property_type_id/area_id
+  // of 0 (unset foreign key) wouldn't get the red "invalid" outline even though the save
+  // just failed on exactly this field.
+  return value === null || value === undefined || value === '' || value === 0 || value === '0'
 }
 
 // Update property
@@ -4346,7 +4349,13 @@ if (key.startsWith('property_document_')) {
             fieldName === 'developer_phone'
               ? (property.developer_phone ?? property.developer_sales_phone)
               : property[fieldName]
-          if (value === null || value === undefined || value === '') {
+          // Mirror PHP's empty() (DealStageValidator.php uses empty($property->$field) to
+          // decide what's missing) — it treats 0 and '0' as empty too, not just null/''.
+          // area_id/property_type_id are foreign keys that default to 0 when unset, so a
+          // strict null/''-only check here disagreed with the backend: the section showed
+          // "Completed" while the actual save still failed with these fields as missing.
+          const isEmpty = value === null || value === undefined || value === '' || value === 0 || value === '0'
+          if (isEmpty) {
             if (!unresolved.includes(key)) {
               unresolved.push(key)
             }
