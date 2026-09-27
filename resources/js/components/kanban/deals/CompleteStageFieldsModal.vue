@@ -2671,6 +2671,14 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
     if (key === `property_${propIndex}_document_title_deed` || (propIndex === 0 && key === 'property_0_document_title_deed')) {
       missing.add('title_deed')
     }
+    // Contract (required per-property)
+    if (key === `property_${propIndex}_document_contract`) {
+      missing.add('contract')
+    }
+    // Ejari (required per-property)
+    if (key === `property_${propIndex}_document_ejari`) {
+      missing.add('ejari')
+    }
   })
 
   const prop = localProperties.value[propIndex]
@@ -2682,6 +2690,8 @@ function getMissingPropertyDocTypesForProperty(propIndex) {
     if (propertyStoredDocArrayHasContent(prop.mou_documents)) missing.delete('mou')
     if (propertyStoredDocArrayHasContent(prop.noc_documents)) missing.delete('noc')
     if (propertyStoredDocArrayHasContent(prop.title_deed_documents)) missing.delete('title_deed')
+    if (propertyStoredDocArrayHasContent(prop.contract_document)) missing.delete('contract')
+    if (propertyStoredDocArrayHasContent(prop.ejari_document)) missing.delete('ejari')
   }
   
   return Array.from(missing)
@@ -3911,7 +3921,10 @@ const titleDeedBoxLabelOverrides = computed(() => {
   if (dt !== 'secondary' && dt !== 'rental') return {}
   const targetOrder = Number(props.targetStageOrder) || 0
   const targetStageName = String(props.targetStageName || '').toLowerCase()
-  const isWonStage = targetOrder === 5 || targetStageName.includes('won')
+  // Won is order 5 for secondary, but order 7 for rental (which has two extra stages —
+  // Ejari/Tawtheq Issued at 5, Tenant moved in at 6 — before actually reaching Won).
+  const wonOrder = dt === 'rental' ? 7 : 5
+  const isWonStage = targetOrder === wonOrder || targetStageName.includes('won')
   if (!isWonStage) return {}
   return { title_deed: ['Old Title Deed', 'New Title Deed'] }
 })
@@ -4221,6 +4234,21 @@ const unresolvedMissingKeys = computed(() => {
         unresolved.push(key);
       }
     }
+const indexedPropertyDocMatch = key.match(/^property_(\d+)_document_(.+)$/)
+if (indexedPropertyDocMatch) {
+  // contract/ejari are required per-property (not "any one property has it"), so the
+  // backend emits an indexed key per property row. Check only that specific property's doc array.
+  const propIndex = parseInt(indexedPropertyDocMatch[1], 10)
+  const rawIndexedDocType = indexedPropertyDocMatch[2]
+  const indexedLocalKeyMap = { contract: 'contract_document', ejari: 'ejari_document' }
+  const localKey = indexedLocalKeyMap[rawIndexedDocType]
+  const property = localProperties.value[propIndex]
+  const hasDoc = property && localKey ? propertyStoredDocArrayHasContent(property[localKey]) : false
+  if (!hasDoc && !unresolved.includes(key)) {
+    unresolved.push(key)
+  }
+  return
+}
 if (key.startsWith('property_document_')) {
   const rawDocType = key.replace('property_document_', '')
 

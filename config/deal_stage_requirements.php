@@ -248,7 +248,34 @@ return [
                 // Title deed REQUIRED starting at MOU-equivalent stage.
                 'property_documents' => ['title_deed'],
             ],
+            // ===================== INTERNAL CONTRACT SIGNED (order 4) =====================
+            // Contract document introduced here. Ejari isn't issued yet — it belongs to the
+            // next stage ("Ejari / Tawtheq Issued") — so it must NOT be required this early.
             4 => [
+                'fields' => ['source', 'deal_name'],
+                'parties' => [
+                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
+                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
+                ],
+                'documents' => [
+                    'tenant' => ['passport', 'kyc'],
+                    'landlord' => ['passport', 'national_id'],
+                ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'rental_price' => true,
+                ],
+                'property_documents' => ['contract', 'title_deed'],
+            ],
+            // ===================== EJARI / TAWTHEQ ISSUED (order 5) =====================
+            // NOT the Won stage — the real "Deal Won" stage for rental is order 7 (rental has
+            // two extra stages after this one: "Tenant moved in" at 6, then "Deal Won" at 7).
+            // Ejari document introduced here.
+            5 => [
                 'fields' => ['source', 'deal_name'],
                 'parties' => [
                     'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
@@ -268,7 +295,30 @@ return [
                 ],
                 'property_documents' => ['contract', 'ejari', 'title_deed'],
             ],
-            5 => [
+            // ===================== TENANT MOVED IN (order 6) =====================
+            6 => [
+                'fields' => ['source', 'deal_name'],
+                'parties' => [
+                    'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
+                    'landlord' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'language'],
+                ],
+                'documents' => [
+                    'tenant' => ['passport', 'kyc', 'ejari', 'tenancy_contract', 'move_in_form', 'payment_proof'],
+                    'landlord' => ['passport', 'national_id'],
+                ],
+                'requires_properties' => true,
+                'properties' => [
+                    'area_id' => true,
+                    'property_type_id' => true,
+                    'unit_no' => true,
+                    'bedrooms' => true,
+                    'unit_size' => false,
+                    'rental_price' => true,
+                ],
+                'property_documents' => ['contract', 'ejari', 'title_deed'],
+            ],
+            // ===================== DEAL WON (order 7) =====================
+            7 => [
                 'fields' => ['source', 'deal_name', 'deal_total_amount', 'deal_commission'],
                 'parties' => [
                     'tenant' => ['first_name', 'last_name', 'phone', 'email', 'nationality', 'residency_status', 'language'],
@@ -289,6 +339,7 @@ return [
                 ],
                 'property_documents' => ['contract', 'ejari', 'title_deed'],
             ],
+            // ===================== DEAL LOST (order 8) =====================
             8 => [
                 'fields' => ['lost_reason'],
                 'parties' => [],

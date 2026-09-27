@@ -226,9 +226,12 @@ class DealStageValidator
                         }
                         if ($docType === 'title_deed') {
                             // At Won stage two title deeds are required (the old one from MOU
-                            // stage plus a new one); before Won, just one is enough.
+                            // stage plus a new one); before Won, just one is enough. Won is
+                            // order 5 for primary/secondary, but order 7 for rental (which has
+                            // two extra stages — Ejari/Tawtheq Issued at 5, Tenant moved in at 6).
                             $titleDeedDocs = is_array($property->title_deed_documents) ? $property->title_deed_documents : [];
-                            $requiredTitleDeedCount = ((int) $order === 5) ? 2 : 1;
+                            $wonOrder = $dealType === 'rental' ? 7 : 5;
+                            $requiredTitleDeedCount = ((int) $order === $wonOrder) ? 2 : 1;
                             if (count($titleDeedDocs) >= $requiredTitleDeedCount) {
                                 $hasDoc = true;
                                 break;
