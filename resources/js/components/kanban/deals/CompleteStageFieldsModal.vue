@@ -4238,14 +4238,31 @@ const unresolvedMissingKeys = computed(() => {
     }
 const indexedPropertyDocMatch = key.match(/^property_(\d+)_document_(.+)$/)
 if (indexedPropertyDocMatch) {
-  // contract/ejari are required per-property (not "any one property has it"), so the
-  // backend emits an indexed key per property row. Check only that specific property's doc array.
+  // Primary deals have always used indexed per-property doc keys (eoi/booking/spa/payment_proof
+  // via DealStageRequirementEngine); contract/ejari (rental) use the same indexed format too
+  // since they're required per-property. Check only that specific property's doc array.
   const propIndex = parseInt(indexedPropertyDocMatch[1], 10)
   const rawIndexedDocType = indexedPropertyDocMatch[2]
-  const indexedLocalKeyMap = { contract: 'contract_document', ejari: 'ejari_document' }
+  const indexedLocalKeyMap = {
+    eoi: 'eoi_documents',
+    booking: 'booking_documents',
+    mou: 'mou_documents',
+    noc: 'noc_documents',
+    spa: 'spa_document',
+    payment_proof: 'payment_proof',
+    payment: 'payment_proof',
+    title_deed: 'title_deed_documents',
+    contract: 'contract_document',
+    ejari: 'ejari_document',
+  }
   const localKey = indexedLocalKeyMap[rawIndexedDocType]
   const property = localProperties.value[propIndex]
-  const hasDoc = property && localKey ? propertyStoredDocArrayHasContent(property[localKey]) : false
+  let hasDoc = property && localKey ? propertyStoredDocArrayHasContent(property[localKey]) : false
+  if (rawIndexedDocType === 'title_deed' && property) {
+    const titleDeedDocs = Array.isArray(property.title_deed_documents) ? property.title_deed_documents : []
+    const requiredTitleDeedCount = titleDeedBoxLabelOverrides.value.title_deed ? 2 : 1
+    hasDoc = titleDeedDocs.filter((doc) => doc && (doc.path || doc.url || doc.file_url || isPendingUploadFile(doc.file))).length >= requiredTitleDeedCount
+  }
   if (!hasDoc && !unresolved.includes(key)) {
     unresolved.push(key)
   }
