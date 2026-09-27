@@ -5978,6 +5978,28 @@ const closeMobileOfferPanel = () => {
   document.getElementById(MOBILE_OFFER_PANEL_ID)?.remove();
 };
 
+const mobileOfferButtonStyle = (filled) => [
+  'display:flex',
+  'align-items:center',
+  'justify-content:center',
+  'width:100%',
+  'height:48px',
+  'margin:0',
+  'padding:0 16px',
+  'border-radius:12px',
+  'box-sizing:border-box',
+  'font-family:Montserrat,Arial,sans-serif',
+  'font-size:16px',
+  'font-weight:700',
+  'line-height:1',
+  'text-align:center',
+  'appearance:none',
+  '-webkit-appearance:none',
+  filled
+    ? 'border:0;background:#0B0736;color:#fff;'
+    : 'margin-top:10px;border:1px solid #d5dbe6;background:#fff;color:#0B0736;',
+].join(';');
+
 const renderMobileOfferPanel = (html) => {
   let root = document.getElementById(MOBILE_OFFER_PANEL_ID);
   if (!root) {
@@ -5986,7 +6008,7 @@ const renderMobileOfferPanel = (html) => {
     root.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center;font-family:Montserrat,Arial,sans-serif;';
     document.body.appendChild(root);
   }
-  root.innerHTML = `<div style="width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:22px 18px calc(28px + env(safe-area-inset-bottom));box-sizing:border-box;">${html}</div>`;
+  root.innerHTML = `<div style="width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom));box-sizing:border-box;">${html}</div>`;
   return root;
 };
 
@@ -6007,7 +6029,7 @@ const showMobileOfferError = (message) => {
   const root = renderMobileOfferPanel(`
     <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Could not create the offer</p>
     <p style="margin:0 0 16px;font-size:14px;color:#64748b;">${escapeOfferHtml(message)}</p>
-    <button type="button" id="mobile-offer-close" style="width:100%;height:46px;border:0;border-radius:10px;background:#0B0736;color:#fff;font-size:16px;font-weight:700;">Close</button>
+    <button type="button" id="mobile-offer-close" style="${mobileOfferButtonStyle(true)}">Close</button>
   `);
   root.querySelector('#mobile-offer-close').onclick = () => closeMobileOfferPanel();
 };
@@ -6024,8 +6046,8 @@ const showMobileOfferReady = ({ blob, filename, offerNumber, creatorName }) => {
     <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Offer ready</p>
     <p style="margin:0 0 4px;font-size:14px;color:#334155;"><strong>Offer number:</strong> ${escapeOfferHtml(offerNumber)}</p>
     <p style="margin:0 0 16px;font-size:14px;color:#334155;"><strong>Created by:</strong> ${escapeOfferHtml(creatorName || 'You')}</p>
-    <button type="button" id="mobile-offer-download" style="width:100%;height:48px;border:0;border-radius:10px;background:#0B0736;color:#fff;font-size:16px;font-weight:700;">Download PDF</button>
-    <button type="button" id="mobile-offer-close" style="width:100%;height:44px;margin-top:8px;border:0;background:transparent;color:#64748b;font-size:15px;">Close</button>
+    <button type="button" id="mobile-offer-download" style="${mobileOfferButtonStyle(true)}">Download PDF</button>
+    <button type="button" id="mobile-offer-close" style="${mobileOfferButtonStyle(false)}">Close</button>
   `);
   const release = () => setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
   root.querySelector('#mobile-offer-close').onclick = () => {
