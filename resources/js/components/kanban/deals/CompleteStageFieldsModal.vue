@@ -2740,6 +2740,18 @@ const updatePropertyDocuments = async  (propIndex, newDocuments) => {
             (doc.original_name && doc.original_name.toLowerCase().includes('title_deed'))
         )
 
+        const contractDocs = newDocuments.filter(doc =>
+            doc.document_type === 'contract' ||
+            doc.document_type === 'contract_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('contract'))
+        )
+
+        const ejariDocs = newDocuments.filter(doc =>
+            doc.document_type === 'ejari' ||
+            doc.document_type === 'ejari_document' ||
+            (doc.original_name && doc.original_name.toLowerCase().includes('ejari'))
+        )
+
         // تحديث المصفوفات
         localProperties.value[propIndex].eoi_documents = eoiDocs
         localProperties.value[propIndex].booking_documents = bookingDocs
@@ -2748,6 +2760,8 @@ const updatePropertyDocuments = async  (propIndex, newDocuments) => {
         localProperties.value[propIndex].mou_documents = mouDocs
         localProperties.value[propIndex].noc_documents = nocDocs
         localProperties.value[propIndex].title_deed_documents = titleDeedDocs
+        localProperties.value[propIndex].contract_document = contractDocs
+        localProperties.value[propIndex].ejari_document = ejariDocs
         
         console.log('Updated localProperties:', {
             eoi_documents: localProperties.value[propIndex].eoi_documents?.length,
@@ -2843,6 +2857,14 @@ function reinitializePropertyDocuments() {
           const t = String(d?.document_type || d?.type || '').toLowerCase()
           return t === 'title_deed' || t.includes('title_deed')
         })
+        const contractFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t === 'contract' || t.includes('contract')
+        })
+        const ejariFromPropertyDocs = propertyDocs.filter((d) => {
+          const t = String(d?.document_type || d?.type || '').toLowerCase()
+          return t === 'ejari' || t.includes('ejari')
+        })
 
         const paymentProof = normalizeStoredDocs(
           property.payment_proof ||
@@ -2890,6 +2912,20 @@ function reinitializePropertyDocuments() {
           property.title_deed ||
           property.title_deed_documents_raw ||
           titleDeedFromPropertyDocs
+        )
+        const contractDocument = normalizeStoredDocs(
+          property.contract_document ||
+          property.contract_documents ||
+          property.contract ||
+          property.contract_document_raw ||
+          contractFromPropertyDocs
+        )
+        const ejariDocument = normalizeStoredDocs(
+          property.ejari_document ||
+          property.ejari_documents ||
+          property.ejari ||
+          property.ejari_document_raw ||
+          ejariFromPropertyDocs
         )
 
         let docs = []
@@ -2988,6 +3024,34 @@ function reinitializePropertyDocuments() {
                     url: doc.url || doc.path || null,
                     file: doc.file || null,
                     name: doc.original_name || doc.name || 'Title Deed',
+                    uploaded: true,
+                    existing: true,
+                })
+            })
+        }
+
+        if (Array.isArray(contractDocument)) {
+            contractDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'contract',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'Contract',
+                    uploaded: true,
+                    existing: true,
+                })
+            })
+        }
+
+        if (Array.isArray(ejariDocument)) {
+            ejariDocument.forEach((doc) => {
+                docs.push({
+                    ...doc,
+                    document_type: 'ejari',
+                    url: doc.url || doc.path || null,
+                    file: doc.file || null,
+                    name: doc.original_name || doc.name || 'Ejari',
                     uploaded: true,
                     existing: true,
                 })
@@ -3753,6 +3817,8 @@ const PROPERTY_MODAL_DOC_SPECS = [
   { id: 'noc', name: 'NOC Document', missingFragments: ['document_noc', 'noc_document'], localKey: 'noc_documents' },
   { id: 'mou', name: 'MOU Document', missingFragments: ['document_mou', 'mou_document'], localKey: 'mou_documents' },
   { id: 'title_deed', name: 'Title Deed', missingFragments: ['document_title_deed', 'title_deed_document'], localKey: 'title_deed_documents' },
+  { id: 'contract', name: 'Contract', missingFragments: ['document_contract', 'contract_document'], localKey: 'contract_document' },
+  { id: 'ejari', name: 'Ejari', missingFragments: ['document_ejari', 'ejari_document'], localKey: 'ejari_document' },
   { id: 'spa', name: 'SPA Document', missingFragments: ['document_spa', 'spa_document'], localKey: 'spa_document' },
   { id: 'payment_proof', name: 'Proof of Payment', missingFragments: ['document_payment', 'payment_proof'], localKey: 'payment_proof' },
 ]
@@ -4746,6 +4812,26 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         })
       }
 
+      // جمع الملفات الجديدة من contract_document
+      const contractFiles = []
+      if (prop.contract_document && Array.isArray(prop.contract_document)) {
+        prop.contract_document.forEach(doc => {
+          if (isPendingUploadFile(doc.file)) {
+            contractFiles.push(doc.file)
+          }
+        })
+      }
+
+      // جمع الملفات الجديدة من ejari_document
+      const ejariFiles = []
+      if (prop.ejari_document && Array.isArray(prop.ejari_document)) {
+        prop.ejari_document.forEach(doc => {
+          if (isPendingUploadFile(doc.file)) {
+            ejariFiles.push(doc.file)
+          }
+        })
+      }
+
       return {
         sort_order: index,
         unit_no: prop.unit_no || '',
@@ -4777,6 +4863,8 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         payment_proof: [...persistedPropertyDocMetadataList(prop.payment_proof), ...paymentFiles.map((f) => ({ file: f }))],
         spa_document: [...persistedPropertyDocMetadataList(prop.spa_document), ...spaFiles.map((f) => ({ file: f }))],
         title_deed_documents: [...persistedPropertyDocMetadataList(prop.title_deed_documents), ...titleDeedFiles.map((f) => ({ file: f }))],
+        contract_document: [...persistedPropertyDocMetadataList(prop.contract_document), ...contractFiles.map((f) => ({ file: f }))],
+        ejari_document: [...persistedPropertyDocMetadataList(prop.ejari_document), ...ejariFiles.map((f) => ({ file: f }))],
       }
     })
   }
@@ -4789,7 +4877,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
   }, 0)
   if (payload.properties && Array.isArray(payload.properties)) {
     payload.properties.forEach((prop) => {
-      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents'].forEach((k) => {
+      ;['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents', 'contract_document', 'ejari_document'].forEach((k) => {
         const arr = prop[k]
         if (!Array.isArray(arr)) return
         arr.forEach((item) => {

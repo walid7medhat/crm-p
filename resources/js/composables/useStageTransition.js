@@ -71,7 +71,7 @@ export function useStageTransition() {
   /** New property files from CompleteStageFieldsModal (payment / SPA / EOI / booking / MOU / NOC) — indexed by property row. */
   function appendPropertyIndexedDocumentUploads(properties, formData) {
     if (!Array.isArray(properties)) return
-    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents']
+    const docFields = ['payment_proof', 'spa_document', 'eoi_documents', 'booking_documents', 'mou_documents', 'noc_documents', 'title_deed_documents', 'contract_document', 'ejari_document']
     properties.forEach((property, propIndex) => {
       if (!property || typeof property !== 'object') return
       docFields.forEach((field) => {
@@ -126,6 +126,8 @@ export function useStageTransition() {
             'mou_documents',
             'noc_documents',
             'title_deed_documents',
+            'contract_document',
+            'ejari_document',
           ]
 
           const sanitized = value.map((property) => {
@@ -144,6 +146,8 @@ export function useStageTransition() {
             lightweight.mou_documents = normalizeExistingPropertyDocs(property.mou_documents, 'mou')
             lightweight.noc_documents = normalizeExistingPropertyDocs(property.noc_documents, 'noc')
             lightweight.title_deed_documents = normalizeExistingPropertyDocs(property.title_deed_documents, 'title_deed')
+            lightweight.contract_document = normalizeExistingPropertyDocs(property.contract_document, 'contract')
+            lightweight.ejari_document = normalizeExistingPropertyDocs(property.ejari_document, 'ejari')
             return lightweight
           })
           formData.append('properties', JSON.stringify(sanitized))
@@ -164,6 +168,8 @@ export function useStageTransition() {
     let mouDocUploadIndex = 0
     let nocDocUploadIndex = 0
     let titleDeedDocUploadIndex = 0
+    let contractDocUploadIndex = 0
+    let ejariDocUploadIndex = 0
     documents.forEach((doc) => {
       if (!isUploadFile(doc?.file)) return
 
@@ -204,6 +210,16 @@ export function useStageTransition() {
         if (docType === 'title_deed' || docType === 'title_deed_document' || docType.includes('title_deed')) {
           formData.append(`title_deed_documents[${titleDeedDocUploadIndex}]`, doc.file)
           titleDeedDocUploadIndex += 1
+          return
+        }
+        if (docType === 'contract' || docType === 'contract_document' || docType.includes('contract')) {
+          formData.append(`contract_document[${contractDocUploadIndex}]`, doc.file)
+          contractDocUploadIndex += 1
+          return
+        }
+        if (docType === 'ejari' || docType === 'ejari_document' || docType.includes('ejari')) {
+          formData.append(`ejari_document[${ejariDocUploadIndex}]`, doc.file)
+          ejariDocUploadIndex += 1
           return
         }
       }

@@ -63,6 +63,8 @@ class DealProperty extends Model
         'mou_documents' => 'array',
         'noc_documents' => 'array',
         'title_deed_documents' => 'array',
+        'contract_document' => 'array',
+        'ejari_document' => 'array',
     ];
     
     // ========== Relationships ==========

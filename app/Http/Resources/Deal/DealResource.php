@@ -234,6 +234,14 @@ class DealResource extends JsonResource
                         // ✅ Title Deed Documents (property-level, secondary MOU+ / rental MOU-equivalent+)
                         'title_deed_documents_raw' => $property->title_deed_documents,
                         'title_deed_documents' => (new PropertyDocumentResource($property->title_deed_documents, 'title_deed'))->resolve($request),
+
+                        // ✅ Contract Documents (rental, from contract stage onward)
+                        'contract_document_raw' => $property->contract_document,
+                        'contract_document' => (new PropertyDocumentResource($property->contract_document, 'contract'))->resolve($request),
+
+                        // ✅ Ejari Documents (rental, from ejari stage onward)
+                        'ejari_document_raw' => $property->ejari_document,
+                        'ejari_document' => (new PropertyDocumentResource($property->ejari_document, 'ejari'))->resolve($request),
                     ];
                 });
             }),
