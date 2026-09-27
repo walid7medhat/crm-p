@@ -1425,7 +1425,6 @@
                     <div class="col-md-6" v-if="shouldShowField('deal_total_amount')">
                       <label class="form-label-custom">Deal amount <span v-if="isRequiredField('deal_total_amount')" class="text-danger">*</span></label>
                       <div class="input-group">
-                        <span class="input-group-text">AED</span>
                         <input
                           :value="displayedDealAmount"
                           type="text"
@@ -1437,6 +1436,7 @@
                           @keypress="onMoneyKeypress"
                           @input="(e) => onDealAmountInput(e.currentTarget.value)"
                         />
+                        <span class="input-group-text">AED</span>
                       </div>
                     </div>
                     <div class="col-md-6" v-if="shouldShowField('deal_commission')">
@@ -3455,7 +3455,9 @@ const computedTotalAmount = computed(() => {
   const properties = localProperties.value
   for (let i = 0; i < properties.length; i++) {
     const prop = properties[i]
-    let price = prop.purchase_price
+    // Rental deals never populate purchase_price (they use rental_price instead) — fall back
+    // to it so the auto-computed Deal Amount isn't always 0 for rental deals.
+    let price = prop.purchase_price || prop.rental_price
     if (price) {
       // تنظيف الرقم من الفواصل
       if (typeof price === 'string') {
