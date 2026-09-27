@@ -6,6 +6,11 @@ import { ref } from 'vue'
 
 const birthdayBannerVisible = ref(false)
 const birthdayBannerTitle = ref('HAPPY BIRTHDAY!')
+const birthdayBackgroundActive = ref(false)
+
+export function setBirthdayBackgroundActive(on) {
+  birthdayBackgroundActive.value = !!on
+}
 
 export function setBirthdayBanner({ visible, title }) {
   birthdayBannerVisible.value = !!visible
@@ -20,6 +25,8 @@ export function useBirthdayCelebrationBanner() {
   return {
     birthdayBannerVisible,
     birthdayBannerTitle,
+    birthdayBackgroundActive,
     setBirthdayBanner,
+    setBirthdayBackgroundActive,
   }
 }

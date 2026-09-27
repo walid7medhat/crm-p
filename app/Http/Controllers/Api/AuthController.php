@@ -7,11 +7,13 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\User\UserResource;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
 use Illuminate\Http\JsonResponse;
+use App\Notifications\BirthdaySelfNotification;
 use App\Notifications\NewSalesAgentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -312,8 +314,9 @@ public function deleteNotification($id): JsonResponse
     {
         try {
             $authUser = auth()->user();
+            $today = now();
             $users = User::query()
-                ->activeBirthdayOn()
+                ->activeBirthdayOn($today)
                 ->orderBy('id')
                 ->get(['id', 'name']);
 
@@ -323,6 +326,11 @@ public function deleteNotification($id): JsonResponse
 
             $firstName = null;
             if ($isMyBirthday) {
+                try {
+                    $this->ensureBirthdaySelfNotification($authUser, $today);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Birthday greeting notification skipped: '.$e->getMessage());
+                }
                 $full = trim((string) ($authUser->name ?? ''));
                 if ($full !== '') {
                     $parts = preg_split('/\s+/u', $full, 2) ?: [];
@@ -338,5 +346,23 @@ public function deleteNotification($id): JsonResponse
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to check today\'s birthdays: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * The 08:00 job may not have run yet. Create the in-app greeting when the
+     * birthday user opens the system so the celebration does not depend on it.
+     */
+    private function ensureBirthdaySelfNotification(User $user, $today): void
+    {
+        Cache::lock('birthday-self:'.$user->id.':'.$today->toDateString(), 10)->get(function () use ($user, $today) {
+            $already = $user->notifications()
+                ->where('type', BirthdaySelfNotification::class)
+                ->whereDate('created_at', $today->toDateString())
+                ->exists();
+
+            if (! $already) {
+                $user->notify(new BirthdaySelfNotification());
+            }
+        });
     }
 }

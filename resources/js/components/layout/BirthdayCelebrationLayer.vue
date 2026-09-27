@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div
     v-if="visible"
     class="birthday-celebration"
@@ -33,6 +34,7 @@
       Stop Celebration
     </button>
   </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -43,7 +45,7 @@ import {
   clearBirthdayCelebrationDevTest,
   useBirthdayCelebrationDevTest,
 } from '@/composables/useBirthdayCelebrationDevTest'
-import { setBirthdayBanner } from '@/composables/useBirthdayCelebrationBanner'
+import { setBirthdayBanner, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner'
 
 const props = defineProps({
   enabled: { type: Boolean, default: true },
@@ -57,6 +59,7 @@ let pollTimer = null
 
 // TEMPORARY DEV/TEST — Super Admin force-preview (does not touch birthday API)
 const { forceShow } = useBirthdayCelebrationDevTest()
+const { birthdayBackgroundActive } = useBirthdayCelebrationBanner()
 
 const todayKey = () => {
   const d = new Date()
@@ -85,7 +88,7 @@ function writeStopped() {
 const visible = computed(
   () =>
     props.enabled &&
-    (hasBirthdayToday.value || forceShow.value) &&
+    (hasBirthdayToday.value || birthdayBackgroundActive.value || forceShow.value) &&
     !stopped.value,
 )
 
@@ -233,7 +236,7 @@ watch(
 .birthday-celebration {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 10070;
   pointer-events: none;
   overflow: hidden;
 }
