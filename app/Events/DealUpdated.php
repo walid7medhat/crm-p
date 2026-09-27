@@ -129,9 +129,9 @@ class DealUpdated implements ShouldBroadcast
             $channels[] = new PrivateChannel('user.' . $this->deal->responsible_person_id);
         }
 
-        if ($this->deal->added_by) {
-            $channels[] = new PrivateChannel('user.' . $this->deal->added_by);
-        }
+        // if ($this->deal->added_by) {
+        //     $channels[] = new PrivateChannel('user.' . $this->deal->added_by);
+        // }
 
       
 
@@ -142,6 +142,14 @@ class DealUpdated implements ShouldBroadcast
             if ($responsibleUser) {
                 foreach ($this->getManagersHierarchy($responsibleUser) as $managerId) {
                     $channels[] = new PrivateChannel('user.' . $managerId);
+                }
+
+                // branch_admin sits as a PEER inside the office, not above it — the
+                // upward hierarchy walk above never reaches them. Notify any
+                // branch_admin whose own ->office resolves to the same branch admin
+                // as this deal's responsible person.
+                foreach ($this->getBranchAdminIdsForUser($responsibleUser) as $branchAdminId) {
+                    $channels[] = new PrivateChannel('user.' . $branchAdminId);
                 }
             }
         }
@@ -157,6 +165,25 @@ class DealUpdated implements ShouldBroadcast
         return collect($channels)
             ->unique(fn ($channel) => $channel->name)
             ->values()
+            ->all();
+    }
+
+    /**
+     * branch_admin users whose own ->office resolves to the same branch/office admin
+     * as $user — i.e. anyone administering the branch $user belongs to. Cheap in
+     * practice: there are only ever a handful of branch_admin users company-wide.
+     */
+    private function getBranchAdminIdsForUser(User $user): array
+    {
+        $officeAdmin = $user->office;
+        if (!$officeAdmin) {
+            return [];
+        }
+
+        return User::role('branch_admin')
+            ->get()
+            ->filter(fn (User $candidate) => $candidate->office?->id === $officeAdmin->id)
+            ->pluck('id')
             ->all();
     }
 

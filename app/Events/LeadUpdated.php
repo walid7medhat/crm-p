@@ -156,7 +156,7 @@ class LeadUpdated implements ShouldBroadcast
     }
 
     $this->addChannelIfNotSales($channels, $this->lead->responsible_person_id);
-    $this->addChannelIfNotSales($channels, $this->lead->added_by);
+    // $this->addChannelIfNotSales($channels, $this->lead->added_by);
 
     foreach ($this->lead->participants ?? [] as $participant) {
         $this->addChannelIfNotSales($channels, $participant->user_id);
@@ -175,6 +175,14 @@ class LeadUpdated implements ShouldBroadcast
         if ($responsibleUser) {
             foreach ($this->getManagersHierarchy($responsibleUser) as $managerId) {
                 $this->addChannelIfNotSales($channels, $managerId);
+            }
+
+            // branch_admin sits as a PEER inside the office, not above it — the
+            // upward hierarchy walk above never reaches them. Notify any
+            // branch_admin whose own ->office resolves to the same branch admin
+            // as this lead's responsible person.
+            foreach ($this->getBranchAdminIdsForUser($responsibleUser) as $branchAdminId) {
+                $this->addChannelIfNotSales($channels, $branchAdminId);
             }
         }
     }
@@ -216,32 +224,37 @@ class LeadUpdated implements ShouldBroadcast
 
         return array_unique($managerIds);
     }
+    /**
+     * branch_admin users whose own ->office resolves to the same branch/office admin
+     * as $user — i.e. anyone administering the branch $user belongs to. Cheap in
+     * practice: there are only ever a handful of branch_admin users company-wide.
+     */
+    private function getBranchAdminIdsForUser(User $user): array
+    {
+        $officeAdmin = $user->office;
+        if (!$officeAdmin) {
+            return [];
+        }
+
+        return User::role('branch_admin')
+            ->get()
+            ->filter(fn (User $candidate) => $candidate->office?->id === $officeAdmin->id)
+            ->pluck('id')
+            ->all();
+    }
+
+    // Every relevant user gets the channel regardless of role — sales included. This
+    // used to exclude plain `sales` users (hence the old name), which meant the agent
+    // actually responsible for the lead never got a live Kanban update when someone
+    // else touched it.
     private function addChannelIfNotSales(&$channels, $userId)
-{
-    if (!$userId) return;
+    {
+        if (!$userId) return;
 
-    $user = User::find($userId);
+        if (!User::find($userId)) {
+            return;
+        }
 
-    if (!$user) {
-        return;
-    }
-
-    // Revert moves must reach the responsible agent on Kanban (including sales role).
-    if ($this->actionType === 'revert' && (int) $userId === (int) $this->lead->responsible_person_id) {
-        $channels[] = new PrivateChannel('user.'.$userId);
-
-        return;
-    }
-
-    // Admins / super admins must always receive broadcasts (many also have `sales`; Kanban relies on Echo).
-    if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
-        $channels[] = new PrivateChannel('user.'.$userId);
-
-        return;
-    }
-
-    if (!$user->hasRole('sales')) {
         $channels[] = new PrivateChannel('user.'.$userId);
     }
-}
 }
