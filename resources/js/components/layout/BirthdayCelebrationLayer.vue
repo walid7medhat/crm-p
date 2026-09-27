@@ -233,7 +233,7 @@ watch(
 .birthday-celebration {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 2000;
   pointer-events: none;
   overflow: hidden;
 }

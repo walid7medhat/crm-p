@@ -2277,19 +2277,57 @@ function markBirthdayPopupSeen(id) {
   }
 }
 
-async function loadBirthdayPopup() {
-  if (activeBirthdayPopup.value) return;
+function birthdayPopupDayKey() {
+  const d = new Date();
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  let userId = 'me';
   try {
-    const response = await api.get('/auth/notifications');
-    const items = response?.data?.data || [];
+    userId = JSON.parse(localStorage.getItem('user') || '{}')?.id || 'me';
+  } catch {
+    userId = 'me';
+  }
+  return `birthday_popup_dismissed:${userId}:${day}`;
+}
+
+function birthdayPopupDismissedToday() {
+  try {
+    return localStorage.getItem(birthdayPopupDayKey()) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dismissBirthdayPopupForToday() {
+  try {
+    localStorage.setItem(birthdayPopupDayKey(), '1');
+  } catch {
+    /* private mode */
+  }
+}
+
+async function loadBirthdayPopup() {
+  if (activeBirthdayPopup.value || birthdayPopupDismissedToday()) return;
+  try {
+    const [notesRes, birthdayRes] = await Promise.all([
+      api.get('/auth/notifications'),
+      api.get('/auth/birthdays/today'),
+    ]);
+    const items = Array.isArray(notesRes?.data?.data) ? notesRes.data.data : [];
     const seen = getSeenBirthdayPopupIds();
     const unread = items.find(
       (n) => n.type === BIRTHDAY_SELF_NOTIFICATION_TYPE && !n.read_at && !seen.has(n.id),
     );
-    if (unread) {
-      markBirthdayPopupSeen(unread.id);
-      activeBirthdayPopup.value = unread;
-    }
+    const birthday = birthdayRes?.data?.data ?? {};
+    if (!birthday.has_birthday && !unread) return;
+    const firstName = typeof birthday.first_name === 'string' ? birthday.first_name.trim() : '';
+    activeBirthdayPopup.value = unread || {
+      id: null,
+      data: {
+        message: firstName
+          ? `🎉 Happy Birthday, ${firstName}! Wishing you a fantastic day.`
+          : '🎉 Happy Birthday! Wishing you a fantastic day.',
+      },
+    };
   } catch (error) {
     console.warn('Unable to load birthday popup', error);
   }
@@ -2299,8 +2337,10 @@ async function closeBirthdayPopup() {
   const item = activeBirthdayPopup.value;
   if (!item || closingBirthdayPopup.value) return;
   closingBirthdayPopup.value = true;
+  dismissBirthdayPopupForToday();
+  if (item.id) markBirthdayPopupSeen(item.id);
   try {
-    await api.post(`/auth/notifications/${item.id}/read`);
+    if (item.id) await api.post(`/auth/notifications/${item.id}/read`);
   } catch (error) {
     console.warn('Failed to mark birthday notification as read', error);
   } finally {
