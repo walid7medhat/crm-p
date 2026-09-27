@@ -10,25 +10,16 @@ class LoginRequest extends FormRequest
         return true;
     }
 
-    public function messages(): array
-    {
-        return [
-            'latitude.required' => 'Location access is required to sign in. Please allow location and try again.',
-            'longitude.required' => 'Location access is required to sign in. Please allow location and try again.',
-        ];
-    }
-
     public function rules(): array
     {
-        // Location is mandatory in production, but optional in local dev where
-        // there is usually no real GPS available.
-        $location = app()->environment('local') ? 'nullable' : 'required';
-
+        // Coordinates are optional: the sign-in page blocks users who deny location,
+        // but a device that can't get a GPS fix (timeout / unavailable) sends null
+        // and the controller falls back to IP-based location.
         return [
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:6',
-            'latitude' => $location . '|numeric|between:-90,90',
-            'longitude' => $location . '|numeric|between:-180,180',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ];
     }
 }
