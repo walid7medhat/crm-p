@@ -160,9 +160,21 @@ export default {
      */
     requestPosition(options) {
       return new Promise((resolve, reject) => {
+        // Some browsers never fire either callback (e.g. OS location service off),
+        // so guard with our own timer on top of the geolocation timeout.
+        const guard = setTimeout(
+          () => reject({ code: 3, message: 'Location request timed out' }),
+          (options.timeout || 10000) + 2000
+        );
         navigator.geolocation.getCurrentPosition(
-          (pos) => resolve(pos),
-          (err) => reject(err),
+          (pos) => {
+            clearTimeout(guard);
+            resolve(pos);
+          },
+          (err) => {
+            clearTimeout(guard);
+            reject(err);
+          },
           options
         );
       });
@@ -186,8 +198,8 @@ export default {
       }
 
       const attempts = [
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       ];
 
       let lastError = null;
@@ -207,16 +219,11 @@ export default {
         }
       }
 
-     const PERMISSION_DENIED = 1;
-
-      if (lastError && lastError.code === PERMISSION_DENIED) {
-        throw new Error(this.handleLocationError(lastError));
-      }
-
-      throw new Error(this.handleLocationError(lastError));
-      throw new Error(
-        'Could not determine your location. Check that your device location service is turned on, then try again.'
-      );
+      const err = new Error(this.handleLocationError(lastError));
+      // Only an explicit "deny" blocks login. Timeout / position unavailable
+      // (common on desktops without GPS) falls back to server-side IP location.
+      err.permissionDenied = lastError?.code === 1;
+      throw err;
     },
 
     async login() {
@@ -232,12 +239,15 @@ export default {
         try {
           coords = await this.getCurrentLocation();
         } catch (locationError) {
-          if (!isLocal) {
+          // Block only when the user denied permission (or the browser can't do
+          // geolocation at all). If the device simply couldn't get a fix, continue
+          // without coordinates — the server records the IP-based location.
+          const couldNotLocate = locationError.permissionDenied === false;
+          if (!isLocal && !couldNotLocate) {
             this.errorMessage = locationError.message;
             this.loading = false;
             return;
           }
-          // Local dev: ignore the error and continue without coordinates.
         }
 
         const response = await api.post('/auth/login', {

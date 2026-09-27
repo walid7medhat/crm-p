@@ -163,6 +163,15 @@ public function resetPassword(Request $request): JsonResponse
             $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
             $loginData['last_login_lat'] = $location['lat'] ?? $user->last_login_lat;
             $loginData['last_login_lng'] = $location['lon'] ?? $user->last_login_lng;
+        } else {
+            // Browser couldn't get a GPS fix (timeout / unavailable) — fall back
+            // to an approximate city-level location from the request IP.
+            $location = \App\Helpers\LocationHelper::fromIp($ip);
+            if (!empty($location['lat']) && !empty($location['lon'])) {
+                $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
+                $loginData['last_login_lat'] = $location['lat'];
+                $loginData['last_login_lng'] = $location['lon'];
+            }
         }
 
         $user->update($loginData);
