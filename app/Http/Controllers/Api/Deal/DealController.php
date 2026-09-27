@@ -115,11 +115,13 @@ class DealController extends Controller
     {
         $user = auth()->user();
         
-        if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
+        if (!$user->hasAnyRole(['super_admin']) && $user->id != 30 && $user->id != 33) {
             $canAccess = false;
             
-            if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-                $subordinatesIds = $user->getAllSubordinatesIds();
+            if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+                $subordinatesIds = $user->hasRole('branch_admin')
+                    ? $user->getBranchAdminSubordinateIds()
+                    : $user->getAllSubordinatesIds();
                 $canAccess = in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$user->id]));
             } else {
                 $canAccess = $deal->responsible_person_id == $user->id;
@@ -494,7 +496,7 @@ class DealController extends Controller
         try {
             $user = auth()->user();
 
-            if (!($user->hasRole(['super_admin','admin', 'manager', 'team_lead']))) {
+            if (!($user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin']))) {
                 return ApiResponse::error('You are not authorized to assign responsible person', 403);
             }
 
@@ -508,7 +510,9 @@ class DealController extends Controller
             $responsiblePerson = User::find($request->responsible_person_id);
 
             if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-                $subordinatesIds = $user->getAllSubordinatesIds();
+                $subordinatesIds = $user->hasRole('branch_admin')
+                    ? $user->getBranchAdminSubordinateIds()
+                    : $user->getAllSubordinatesIds();
                 if (!in_array($request->responsible_person_id, $subordinatesIds)) {
                     return ApiResponse::error('You can only assign responsible person from your team', 403);
                 }
@@ -1613,6 +1617,8 @@ class DealController extends Controller
         $mouFiles = $this->extractPropertyFiles($request, 'mou_documents', $index);
         $nocFiles = $this->extractPropertyFiles($request, 'noc_documents', $index);
         $titleDeedFiles = $this->extractPropertyFiles($request, 'title_deed_documents', $index);
+        $contractFiles = $this->extractPropertyFiles($request, 'contract_document', $index);
+        $ejariFiles = $this->extractPropertyFiles($request, 'ejari_document', $index);
 
         $changed = false;
 
@@ -1774,6 +1780,48 @@ class DealController extends Controller
                 ];
             }
             $property->title_deed_documents = array_values($existing);
+            $changed = true;
+        }
+
+        // =========================
+        // Contract documents (per property index)
+        // =========================
+        if (!empty($contractFiles)) {
+            $existing = is_array($property->contract_document) ? $property->contract_document : [];
+            foreach ($contractFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/contract_document",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->contract_document = array_values($existing);
+            $changed = true;
+        }
+
+        // =========================
+        // Ejari documents (per property index)
+        // =========================
+        if (!empty($ejariFiles)) {
+            $existing = is_array($property->ejari_document) ? $property->ejari_document : [];
+            foreach ($ejariFiles as $file) {
+                $path = $file->store(
+                    "deals/{$deal->id}/properties/{$property->id}/ejari_document",
+                    'public'
+                );
+                $existing[] = [
+                    'original_name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+            $property->ejari_document = array_values($existing);
             $changed = true;
         }
 

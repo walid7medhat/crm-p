@@ -175,8 +175,29 @@ class DealStageValidator
                     }
                 }
                 
+                // Contract / Ejari are property-specific legal documents — every property in
+                // the deal must have its own copy, unlike the other doc types below where any
+                // one property having it satisfies the whole deal. Emit an indexed key per
+                // property row so each missing one is flagged (and identified) individually.
+                foreach (['contract', 'ejari'] as $perPropertyDocType) {
+                    if (!in_array($perPropertyDocType, $requirements['property_documents'] ?? [], true)) {
+                        continue;
+                    }
+                    $field = $perPropertyDocType === 'contract' ? 'contract_document' : 'ejari_document';
+                    foreach ($properties as $propIndex => $property) {
+                        if (empty($property->$field)) {
+                            $key = "property_{$propIndex}_document_{$perPropertyDocType}";
+                            $stageMissing[] = $key;
+                            $missingFields[] = $key;
+                        }
+                    }
+                }
+
                 // Check property documents
                 foreach ($requirements['property_documents'] ?? [] as $docType) {
+                    if (in_array($docType, ['contract', 'ejari'], true)) {
+                        continue;
+                    }
                     $hasDoc = false;
                     foreach ($properties as $property) {
                         if ($docType === 'payment_proof' && !empty($property->payment_proof)) {
@@ -184,14 +205,6 @@ class DealStageValidator
                             break;
                         }
                         if ($docType === 'spa' && !empty($property->spa_document)) {
-                            $hasDoc = true;
-                            break;
-                        }
-                        if ($docType === 'contract' && !empty($property->contract_document)) {
-                            $hasDoc = true;
-                            break;
-                        }
-                        if ($docType === 'ejari' && !empty($property->ejari_document)) {
                             $hasDoc = true;
                             break;
                         }
