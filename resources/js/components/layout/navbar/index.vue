@@ -774,7 +774,7 @@ import {
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
-import { useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
+import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue';
@@ -2318,6 +2318,7 @@ async function loadBirthdayPopup() {
       (n) => n.type === BIRTHDAY_SELF_NOTIFICATION_TYPE && !n.read_at && !seen.has(n.id),
     );
     const birthday = birthdayRes?.data?.data ?? {};
+    setBirthdayBackgroundActive(!!birthday.has_birthday);
     if (!birthday.has_birthday && !unread) return;
     const firstName = typeof birthday.first_name === 'string' ? birthday.first_name.trim() : '';
     activeBirthdayPopup.value = unread || {

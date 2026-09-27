@@ -312,23 +312,16 @@ public function deleteNotification($id): JsonResponse
                 ->get(['id', 'name']);
 
             $count = $users->count();
-            $birth = $authUser?->birth_date;
-            if ($birth && ! $birth instanceof \DateTimeInterface) {
-                try {
-                    $birth = \Carbon\Carbon::parse($birth);
-                } catch (\Throwable) {
-                    $birth = null;
-                }
-            }
             $isMyBirthday = $authUser
-                && $authUser->status === 'active'
-                && $birth
-                && (int) $birth->month === (int) $today->month
-                && (int) $birth->day === (int) $today->day;
+                && $users->contains(fn (User $u) => (int) $u->id === (int) $authUser->id);
 
             $firstName = null;
             if ($isMyBirthday) {
-                $this->ensureBirthdaySelfNotification($authUser, $today);
+                try {
+                    $this->ensureBirthdaySelfNotification($authUser, $today);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Birthday greeting notification skipped: '.$e->getMessage());
+                }
                 $full = trim((string) ($authUser->name ?? ''));
                 if ($full !== '') {
                     $parts = preg_split('/\s+/u', $full, 2) ?: [];
