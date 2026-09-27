@@ -20,7 +20,10 @@ class DealStageValidatorService
         return $this->requirementEngine->validateStageTransition($deal, $targetStageId, $context);
     }
 
-    $resolvedType = $dealType ?: $deal->deal_type;
+    // The deal's own persisted type is authoritative — it must never be overridden by a
+    // request-supplied dealType (e.g. the Kanban's currently active tab), which can disagree
+    // with the actual deal (a rental deal being validated under secondary's purchase_price rules).
+    $resolvedType = $deal->deal_type ?: $dealType;
     
     // ✅ استخدام listing_id من الـ Request إذا وجد، وإلا استخدم الموجود في الـ Deal
     $effectiveListingId = $listingId ?? $deal->listing_id;
