@@ -4098,6 +4098,36 @@ const effectiveMissingFields = computed(() => {
     return withSecondaryRequirements
   }
 
+  // Rental deals: when this modal opens for a deal that had zero saved properties yet, the
+  // backend's initial check only returns the generic `at_least_one_property` flag — it can't
+  // know per-field requirements for a property that doesn't exist server-side yet. Once the
+  // user clicks "+ Add Property" that flag resolves immediately (length > 0), but the actual
+  // required fields (mirrors config/deal_stage_requirements.php's rental 'properties' lists)
+  // were never injected, so the section falsely showed "Completed" while still empty. Inject
+  // them here, per target stage order, same pattern as the secondary block above.
+  if (dt === 'rental' && Array.isArray(localProperties.value) && localProperties.value.length > 0) {
+    const targetOrder = Number(props.targetStageOrder) || 0
+    const rentalFieldsByOrder = {
+      2: ['area_id', 'property_type_id', 'unit_no', 'budget_from', 'budget_to'],
+      3: ['area_id', 'property_type_id', 'unit_no', 'bedrooms', 'rental_price'],
+      4: ['area_id', 'property_type_id', 'unit_no', 'bedrooms', 'rental_price'],
+      5: ['area_id', 'property_type_id', 'unit_no', 'bedrooms', 'rental_price'],
+    }
+    const requiredFieldNames = rentalFieldsByOrder[targetOrder] || []
+    if (requiredFieldNames.length > 0) {
+      const withRentalRequirements = [...withoutSecondaryBuyerKyc]
+      localProperties.value.forEach((_, idx) => {
+        requiredFieldNames.forEach((fieldName) => {
+          const key = `property_${idx}_${fieldName}`
+          if (!withRentalRequirements.includes(key)) {
+            withRentalRequirements.push(key)
+          }
+        })
+      })
+      return withRentalRequirements
+    }
+  }
+
   return withoutSecondaryBuyerKyc
 })
 
@@ -4737,6 +4767,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         budget_from: toNullableNumeric(prop.budget_from),
         budget_to: toNullableNumeric(prop.budget_to),
         purchase_price: toNullableNumeric(prop.purchase_price),
+        rental_price: toNullableNumeric(prop.rental_price),
         commission: prop.commission || null,
         // Persisted metadata + new files (previously only raw Files were sent — wiped EOI/booking/payment/SPA on save)
         eoi_documents: [...persistedPropertyDocMetadataList(prop.eoi_documents), ...eoiFiles.map((f) => ({ file: f }))],
