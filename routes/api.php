@@ -119,7 +119,7 @@ Route::post('auth/register', [AuthController::class, 'register']);
         ->middleware('throttle:600,1');
         // ,'block.bots'
 Route::middleware(['throttle:300,1'])->group(function () {
-Route::prefix('settings')->group(function () {
+Route::middleware(['jwt.auth'])->prefix('settings')->group(function () {
     Route::get('/deal-costs', [DealCostSettingController::class, 'index']);
     Route::get('/deal-costs/{key}', [DealCostSettingController::class, 'show']);
     Route::put('/deal-costs', [DealCostSettingController::class, 'updateMultiple']);

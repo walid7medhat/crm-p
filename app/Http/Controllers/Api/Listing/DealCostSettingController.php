@@ -22,7 +22,9 @@ class DealCostSettingController extends Controller
     public function __construct()
     {
         // صلاحيات الوصول
-        $this->middleware('permission:settings-view', ['only' => ['index', 'show']]);
+        // Deal cost settings (fee percentages) are read as reference data by every sales user
+        // when calculating listing/deal costs — not just settings admins — so reads are open to
+        // any authenticated user. Only changing the values stays restricted.
         $this->middleware('permission:settings-update', ['only' => ['update', 'updateMultiple']]);
     }
 
