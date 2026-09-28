@@ -440,9 +440,12 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
   }
 
   .kanban-outer--mobile .kanban-container {
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: visible !important;
     height: auto !important;
     max-height: none !important;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
 }

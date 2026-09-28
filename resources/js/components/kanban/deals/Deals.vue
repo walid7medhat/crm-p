@@ -39,6 +39,8 @@
           :group="'deals-columns'"
           handle=".column-header"
           :disabled="kanbanIsMobile"
+          :delay="200"
+          :delay-on-touch-only="true"
           :ghost-class="'ghost'" 
           :drag-class="'dragging'"
         >
@@ -85,6 +87,8 @@
                       item-key="id"
                       class="tasks-list flex-grow-1 min-height-cards" 
                       :disabled="kanbanIsMobile"
+                      :delay="200"
+                      :delay-on-touch-only="true"
                       :ghost-class="'ghost'"
                       :drag-class="'dragging'"
                       @start="onDealDragStart"
@@ -2489,6 +2493,9 @@ defineExpose({
   overflow-x: auto;
   overflow-y: hidden;
   width: 100%;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
   position: relative;
@@ -2666,15 +2673,17 @@ font-weight: 700;
 .column-content-scrollable {
   flex: 1 1 auto;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: clip;
   min-height: calc(100dvh - 180px);
   height: calc(100dvh - 180px);
   display: flex;
   flex-direction: column;
   scrollbar-width: none;
   transition: scrollbar-color 0.2s ease;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
 }
 
 .column-content-scrollable::-webkit-scrollbar {
@@ -3236,8 +3245,14 @@ font-weight: 700;
   }
 
   .kanban-container--mobile {
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: auto !important;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 8px;
     /* Keep equal left/right spacing on mobile */
     padding: 8px 8px 16px !important;
     scrollbar-width: none !important;
@@ -3250,18 +3265,21 @@ font-weight: 700;
   }
 
   .kanban-container--mobile .kanban-wrapper {
-    width: 100% !important;
-    min-width: 100% !important;
+    width: max-content !important;
+    min-width: max-content !important;
     display: flex !important;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
     gap: 10px;
     height: auto !important;
   }
 
   .kanban-container--mobile .kanban-column {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
+    flex: 0 0 min(320px, 86vw) !important;
+    width: min(320px, 86vw) !important;
+    min-width: min(320px, 86vw) !important;
+    max-width: min(320px, 86vw) !important;
+    scroll-snap-align: start;
     height: auto !important;
     min-height: 0 !important;
     border-left: none;

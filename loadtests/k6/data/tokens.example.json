@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "user_id": 1,
+      "token": "PASTE_EXISTING_JWT_FOR_THIS_USER",
+      "lead_ids": [100]
+    }
+  ],
+  "listing_ids": [1],
+  "lead_stage_id": 1,
+  "deal_type": "primary",
+  "search_term": "al"
+}

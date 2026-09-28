@@ -777,6 +777,45 @@ aside.sidebar .sidebar-header {
   box-sizing: border-box !important;
 }
 
+/* iPad portrait (820×1180 and 834×1194) is below the 1200px dock,
+   so the menu was off-screen and the page margin was forced to 6px. */
+@media (min-width: 820px) and (max-width: 1199px) {
+  aside.sidebar,
+  .sidebar {
+    inset-inline-start: 0 !important;
+    width: 13.25rem !important;
+    height: calc(100dvh - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
+    overflow: hidden !important;
+  }
+
+  aside.sidebar.active,
+  .sidebar.active {
+    width: 64px !important;
+  }
+
+  /* Listings submenu is taller than the iPad screen — scroll the menu, keep the user row pinned. */
+  body.app-has-video-bg aside.sidebar .sidebar-menu-area,
+  aside.sidebar .sidebar-menu-area {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main:not(.active),
+  main.dashboard-main:not(.active) {
+    margin-inline-start: 13.25rem !important;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main.active,
+  main.dashboard-main.active {
+    margin-inline-start: 5.75rem !important;
+  }
+}
+
 /* Tighter content offset next to sidebar — beat shell rules on specificity */
 @media (min-width: 1199px) {
   body.app-has-video-bg #app main.dashboard-main.active,

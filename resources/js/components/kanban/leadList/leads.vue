@@ -143,6 +143,8 @@
         <draggable v-else-if="columns.length > 0" v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
             handle=".column-header"
             :disabled="kanbanIsMobile"
+            :delay="200"
+            :delay-on-touch-only="true"
             :ghost-class="'ghost'" :drag-class="'dragging'">
             <template #item="{ element: column }">
                 <div
@@ -193,6 +195,8 @@
                                     :drag-class="'dragging'"
                                     :disabled="kanbanIsMobile || leadSelectionActive"
                                     :force-fallback="kanbanIsMobile"
+                                    :delay="200"
+                                    :delay-on-touch-only="true"
                                     :scroll="true"
                                     :bubble-scroll="true"
                                     :scroll-sensitivity="220"
@@ -3727,17 +3731,6 @@ function setMobileCardIndex(column, index) {
     mobileStageCardIndex.value[key] = Math.min(Math.max(index, 0), max)
 }
 
-function nextMobileCard(column) {
-    const max = Math.max((column.leads?.length || 1) - 1, 0)
-    const next = Math.min(getMobileCardIndex(column) + 1, max)
-    setMobileCardIndex(column, next)
-}
-
-function prevMobileCard(column) {
-    const prev = Math.max(getMobileCardIndex(column) - 1, 0)
-    setMobileCardIndex(column, prev)
-}
-
 function onMobileCardTouchStart(column, event) {
     if (!kanbanIsMobile.value) return
     const key = String(column.status)
@@ -3772,14 +3765,11 @@ function onMobileCardTouchEnd(column, event) {
     const SWIPE_THRESHOLD_X = 18
     const SWIPE_DOMINANCE_RATIO = 1.2
     if (Math.abs(deltaX) < SWIPE_THRESHOLD_X) return
-    // Ignore mostly-vertical gestures so scrolling still feels natural.
+    // Vertical gestures stay with page/column scrolling.
     if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_DOMINANCE_RATIO) return
+    // Horizontal swipe scrolls the stage board. Don't also flip the card,
+    // but swallow the click that follows the swipe.
     mobileSwipeMoved.value[key] = true
-    if (deltaX < 0) {
-        nextMobileCard(column)
-    } else {
-        prevMobileCard(column)
-    }
 }
 
 function findLeadInColumns(leadId) {
@@ -4676,13 +4666,15 @@ const fetchRevertNotifications = async () => {
 .column-content-scrollable {
     flex: 1 1 auto;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: clip;
     min-height: calc(100dvh - 240px);
     height: calc(100dvh - 240px);
     display: flex;
     flex-direction: column;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+    overscroll-behavior-x: auto;
+    overscroll-behavior-y: contain;
     scrollbar-width: none;
     transition: scrollbar-color 0.2s ease;
 }
@@ -4743,6 +4735,9 @@ const fetchRevertNotifications = async () => {
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
     position: relative;
@@ -6152,14 +6147,19 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .kanban-container {
-    overflow-x: hidden;
+    overflow-x: auto !important;
     overflow-y: visible;
     height: auto;
     min-height: 0;
     max-height: none;
     /* Keep lead board horizontal spacing perfectly balanced on mobile */
     padding: 8px 8px 16px;
+    touch-action: pan-x pan-y;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 8px;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -6170,18 +6170,21 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .kanban-wrapper {
-    flex-direction: column;
-    width: 100%;
-    min-width: 0;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    width: max-content !important;
+    min-width: max-content !important;
     height: auto !important;
     min-height: 0 !important;
     gap: 10px;
 }
 
 .kanban-outer--mobile .kanban-column {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
+    flex: 0 0 min(320px, 86vw) !important;
+    width: min(320px, 86vw) !important;
+    min-width: min(320px, 86vw) !important;
+    max-width: min(320px, 86vw) !important;
+    scroll-snap-align: start;
     border-left: none;
     height: auto !important;
     min-height: 0 !important;
@@ -6259,7 +6262,7 @@ const fetchRevertNotifications = async () => {
 .kanban-outer--mobile .kanban-card--mobile {
     border-radius: 14px !important;
     box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
-    touch-action: pan-y;
+    touch-action: pan-x pan-y;
     -webkit-user-select: none;
     user-select: none;
 }

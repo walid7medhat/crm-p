@@ -61,6 +61,10 @@ typings/
 # dotenv environment variables file
 .env
 
+# Local k6 secrets and run output (never commit)
+/loadtests/k6/data/tokens.json
+/loadtests/k6/results/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 

@@ -4745,9 +4745,67 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1199px) {
+  .sidebar-mobile-toggle {
+    display: none !important;
+  }
+
+  .navbar-header-toolbar {
+    grid-template-columns: minmax(240px, max-content) minmax(0, 1fr);
+  }
+
+  .navbar-header-left {
+    min-width: 240px;
+    width: max-content;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .navbar-header-left-row {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
   .module-tabs-nav {
-    max-width: min(52vw, 420px);
+    flex: 0 1 auto;
+    width: max-content;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .module-tab-btn,
+  .kanban-tab-btn {
+    flex: 0 0 auto;
+  }
+
+  .navbar-header-right {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .search-area-column {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100%;
+    width: auto;
+  }
+
+  .search-wrapper,
+  .search-wrapper-expanded,
+  .search-wrapper-tall {
+    min-width: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .search-input-container,
+  .search-input-container-tall {
+    min-width: 0 !important;
   }
 }
 

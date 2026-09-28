@@ -125,8 +125,11 @@ body.app-has-video-bg .kanban-outer:not(.kanban-outer--mobile) {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
-  overflow-x: hidden;
+  overflow-x: clip;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
 }
 
 /* Mobile: compact stacked stages — no viewport min-heights */
