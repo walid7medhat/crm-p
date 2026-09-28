@@ -777,9 +777,9 @@ $fieldMappings = [
 
 public function store_wordpress(Request $request)
 {
-    if (!$this->verifyWebsiteLeadSecret($request, 'wordpress_lead')) {
-        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
-    }
+    // if (!$this->verifyWebsiteLeadSecret($request, 'wordpress_lead')) {
+    //     return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    // }
 
     $data = $request->all();
     // Ignore client assignee fields — Lead Assignment (ProcessLeadAutoAssignmentJob on create) assigns.
