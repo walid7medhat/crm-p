@@ -5167,6 +5167,17 @@ const featuresButtonLabel = computed(() => {
   background: transparent !important;
 }
 
+/* .location-option-name/-subtitle/-icon set their own fixed dark colors, so without this
+   the highlighted row's background changes but the text never visibly responds to hover. */
+:deep(.listing-main-location .vs__dropdown-option--highlight .location-option-name) {
+  color: #b45309 !important;
+}
+
+:deep(.listing-main-location .vs__dropdown-option--highlight .location-option-subtitle),
+:deep(.listing-main-location .vs__dropdown-option--highlight .location-option-icon) {
+  color: #c2760f !important;
+}
+
 .listing-main-location .location-option.selected {
   border-radius: 0 !important;
   background: transparent !important;
