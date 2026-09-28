@@ -58,7 +58,8 @@ class UserController extends Controller
             if(!$request->has('agents') && !$request->has('chat')){
             
                     // Apply hierarchical filtering based on user role
-                 if (!$user->hasRole('super_admin') && $user->id != 30) {
+                 // users-code holders (biometric code managers) need the full list.
+                 if (!$user->hasRole('super_admin') && $user->id != 30 && !$user->can('users-code')) {
 
                         $ids = $user->getAllSubordinatesIds();
 
