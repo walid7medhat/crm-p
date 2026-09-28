@@ -42,7 +42,10 @@
                     >
                         <!-- Comment Header -->
                         <div class="comment-card-header">
-                            <span class="comment-label">Comment</span>
+                            <span class="comment-label">
+                                Comment
+                                <span v-if="comment.deletedAt" class="comment-deleted-badge">Soft deleted</span>
+                            </span>
                             <div class="comment-header-right">
                                 <span class="comment-time">{{ comment.time }}</span>
                                 <div
@@ -140,9 +143,17 @@
                                     <iconify-icon icon="lucide:file-text" class="icon-btn-icon"></iconify-icon>
                                     <span class="icon-btn-text">Comment</span>
                                 </button>
-                                <button class="comment-kebab-btn" @click="showCommentMenu(comment)">
-                                    <iconify-icon icon="lucide:more-vertical" class="kebab-icon"></iconify-icon>
+                                <button
+                                    v-if="isSuperAdmin && comment.id && !String(comment.id).startsWith('temp')"
+                                    class="comment-kebab-btn"
+                                    title="Delete comment"
+                                    @click="deleteComment(comment)"
+                                >
+                                    <iconify-icon icon="lucide:trash-2" class="kebab-icon delete-icon"></iconify-icon>
                                 </button>
+                                <!-- <button class="comment-kebab-btn" @click="showCommentMenu(comment)">
+                                    <iconify-icon icon="lucide:more-vertical" class="kebab-icon"></iconify-icon>
+                                </button> -->
                             </div>
                         </div>
                     </div>
@@ -173,6 +184,7 @@
 <script setup>
 import { ref, computed, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import { formatBitrixRichText } from '@/utils/bitrixRichText'
 
@@ -331,6 +343,73 @@ const deleteAttachment = async (comment, attachment, attachmentIndex) => {
     }
 }
 
+const isSuperAdmin = (() => {
+    try {
+        return JSON.parse(localStorage.getItem('user') || '{}')?.roles?.includes('super_admin') ?? false
+    } catch {
+        return false
+    }
+})()
+
+/**
+ * Ask soft vs hard delete. Resolves true = hard, false = soft, null = cancelled.
+ */
+const askDeleteType = async (alreadySoftDeleted = false) => {
+    // Already soft deleted → the only thing left is a permanent delete.
+    if (alreadySoftDeleted) {
+        const result = await Swal.fire({
+            title: 'Delete permanently?',
+            text: 'This comment is already soft deleted. Hard delete removes it and its attachments permanently.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Hard delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#DC2626',
+        })
+        return result.isConfirmed ? true : null
+    }
+
+    const result = await Swal.fire({
+        title: 'Delete comment',
+        html: '<b>Soft delete</b>: hides the comment, it can be restored later.<br>'
+            + '<b>Hard delete</b>: removes the comment and its attachments permanently.',
+        icon: 'warning',
+        showConfirmButton: true,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Soft delete',
+        denyButtonText: 'Hard delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#733E87',
+        denyButtonColor: '#DC2626',
+    })
+    if (result.isDenied) return true
+    if (result.isConfirmed) return false
+    return null
+}
+
+// Super admin: delete any comment on the lead
+const deleteComment = async (comment) => {
+    const hard = await askDeleteType(!!comment.deletedAt)
+    if (hard === null) return
+
+    try {
+        await api.delete(`/leads/comments/${comment.id}/admin-delete`, { params: hard ? { force: 1 } : {} })
+        if (hard) {
+            comments.value = comments.value.filter(c => c.id !== comment.id)
+        } else {
+            // Admins still see soft-deleted comments (same as after a reload) — just flag it.
+            const target = comments.value.find(c => c.id === comment.id)
+            if (target) target.deletedAt = new Date().toISOString()
+        }
+        emitCommentsLoaded()
+        $showNotification(hard ? 'Comment permanently deleted' : 'Comment deleted (can be restored)', 'success')
+    } catch (error) {
+        console.error('Error deleting comment:', error)
+        $showNotification(error.response?.data?.message || 'Failed to delete comment. Please try again.', 'error')
+    }
+}
+
 // Show comment menu
 const showCommentMenu = (comment) => {
     console.log('Show comment menu:', comment)
@@ -354,7 +433,8 @@ const transformComment = (comment) => {
         mentions: comment.mentions || [],
         mentioned_users: comment.mentioned_users || [],
         created_at: comment.created_at,
-        updated_at: comment.updated_at
+        updated_at: comment.updated_at,
+        deletedAt: comment.deleted_at || null
     }
 }
 
@@ -974,6 +1054,20 @@ defineExpose({
 .kebab-icon {
     font-size: 16px;
     color: #64748B;
+}
+
+.kebab-icon.delete-icon {
+    color: #DC2626;
+}
+
+.comment-deleted-badge {
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #FEE2E2;
+    color: #B91C1C;
+    font-size: 11px;
+    font-weight: 500;
 }
 
 .show-older-wrapper {

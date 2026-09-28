@@ -1109,9 +1109,10 @@ const formatLeadStatus = (status, stageOrder = null) => {
     // Stage 4: Qualified - Hot/Warm/Cold فقط
     if (order === 4) {
         const qualifiedMapping = {
-            'cold': 'Cold Lead',
+             'hot': 'Hot Lead',
             'warm': 'Warm Lead',
-            'hot': 'Hot Lead'
+            'cold': 'Cold Lead',
+           
         }
         return qualifiedMapping[status] || formatText(status)
     }
@@ -1536,9 +1537,10 @@ const clientReqQualityStatusOptions = computed(() => {
     // Stage 4: Qualified - Hot/Warm/Cold فقط
     if (stageOrder === 4) {
         return [
-             { value: 'cold', text: 'More than 3 Months' },
+             { value: 'hot', text: 'Within 1 Month' },
             { value: 'warm', text: '1–3 Months' },
-            { value: 'hot', text: 'Within 1 Month' }
+            { value: 'cold', text: 'More than 3 Months' },
+           
         ]
     }
 
@@ -1569,9 +1571,10 @@ const clientReqQualityStatusOptions = computed(() => {
     
     // Default لبقية المراحل (3,5,6,7,8)
     return [
-         { value: 'cold', text: 'More than 3 Months' },
+        { value: 'hot', text: 'Within 1 Month' },
          { value: 'warm', text: '1–3 Months' },
-         { value: 'hot', text: 'Within 1 Month' }
+        { value: 'cold', text: 'More than 3 Months' },
+         
     ]
 })
 const clientReqPurposeOptions = [

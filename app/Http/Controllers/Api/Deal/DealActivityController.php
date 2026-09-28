@@ -396,33 +396,48 @@ class DealActivityController extends Controller
      */
     public function destroyComment($id)
     {
-        $comment = DealComment::findOrFail($id);
-        
-        // Check if user owns this comment
-        if ($comment->user_id != auth()->id()) {
+        $comment = DealComment::withTrashed()->findOrFail($id);
+
+        // Owner can delete their own comment; super admin can delete any comment
+        if ($comment->user_id != auth()->id() && !auth()->user()->hasRole('super_admin')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to delete this comment'
             ], 403);
         }
         
+        // ?force=1 → hard delete (row + attachment files gone for good).
+        // Otherwise soft delete: the comment is hidden but can be restored.
+        $force = request()->boolean('force');
+
+        if (!$force && $comment->trashed()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Comment is already soft deleted'
+            ]);
+        }
+
         DB::beginTransaction();
-        
+
         try {
-            // Delete attachments from storage
-            foreach ($comment->attachments as $attachment) {
-                Storage::disk('public')->delete($attachment->file_path);
-            }
                      // ========================history===============
             DealHistoryHelper::log(
                     $comment->deal_id,
                     [
-                        'action' => 'comment_deleted',
+                        'action' => $force ? 'comment_hard_deleted' : 'comment_deleted',
                         'comment_id'=>$comment->id,
                         'comment' => Str::limit($comment->comment, 50)
                     ]
                 );
-            $comment->delete();
+
+            if ($force) {
+                foreach ($comment->attachments as $attachment) {
+                    Storage::disk('public')->delete($attachment->file_path);
+                }
+                $comment->forceDelete();
+            } else {
+                $comment->delete();
+            }
       
             DB::commit();
             

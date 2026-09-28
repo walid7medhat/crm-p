@@ -96,7 +96,7 @@
                         <iconify-icon icon="lucide:x" />
                     </button>
                     <span class="lead-select-bar__rule" aria-hidden="true"></span>
-                    <button type="button" class="lead-select-bar__btn lead-select-bar__btn--danger" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="deleteSelectedLeads">
+                    <button v-if="canDeleteLeads" type="button" class="lead-select-bar__btn lead-select-bar__btn--danger" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="deleteSelectedLeads">
                         <iconify-icon icon="lucide:trash-2" />
                         Delete
                     </button>
@@ -1223,6 +1223,12 @@ const isAdminOrSuperAdmin = computed(() => {
     return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') || user.value.roles?.includes('branch_admin')
 })
 
+// Deleting leads is super_admin/admin only — branch_admin keeps the other bulk tools.
+const canDeleteLeads = computed(() => {
+    if (!user.value) return false
+    return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin')
+})
+
 const leadSelectionActive = ref(false)
 const selectedLeadIds = ref([])
 const bulkActionBusy = ref(false)
@@ -1275,7 +1281,7 @@ function removeLeadsFromBoard(ids) {
 }
 
 async function deleteSelectedLeads() {
-    if (!isAdminOrSuperAdmin.value || !selectedLeadIds.value.length || bulkActionBusy.value) return
+    if (!canDeleteLeads.value || !selectedLeadIds.value.length || bulkActionBusy.value) return
     const ids = [...selectedLeadIds.value]
     const result = await Swal.fire({
         title: ids.length === 1 ? 'Archive this lead?' : `Archive ${ids.length} leads?`,

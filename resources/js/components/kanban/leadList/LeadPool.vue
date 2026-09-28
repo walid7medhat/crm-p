@@ -200,7 +200,7 @@
                                             </div>
                                         </transition>
                                     </div>
-                                    <LeadSourceMark :source="lead.lead_source" />
+                                    <!-- <LeadSourceMark :source="lead.lead_source" /> -->
                                     </div>
                                 </div>
                             </div>
@@ -247,12 +247,12 @@
                                 <div class="info-value">{{ getDynamicFieldDisplay(lead, field.key) }}</div>
                             </div>
                         </template>
-                        <div
+                        <!-- <div
                             v-if="lead.lead_source && !(hasAssignedBy(lead) && enabledFieldsForLead(lead).some((field) => field.key === 'assigned_by'))"
                             class="d-flex justify-content-end"
                         >
                             <LeadSourceMark :source="lead.lead_source" />
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </LeadPoolCard>

@@ -137,9 +137,17 @@
                                     <iconify-icon icon="lucide:file-text" class="icon-btn-icon"></iconify-icon>
                                     <span class="icon-btn-text">Comment</span>
                                 </button>
-                                <button class="comment-kebab-btn" @click="showCommentMenu(comment)">
-                                    <iconify-icon icon="lucide:more-vertical" class="kebab-icon"></iconify-icon>
+                                <button
+                                    v-if="isSuperAdmin && comment.id"
+                                    class="comment-kebab-btn"
+                                    title="Delete comment"
+                                    @click="deleteComment(comment)"
+                                >
+                                    <iconify-icon icon="lucide:trash-2" class="kebab-icon delete-icon"></iconify-icon>
                                 </button>
+                                <!-- <button class="comment-kebab-btn" @click="showCommentMenu(comment)">
+                                    <iconify-icon icon="lucide:more-vertical" class="kebab-icon"></iconify-icon>
+                                </button> -->
                             </div>
                         </div>
                     </div>
@@ -170,6 +178,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 
 const instance = getCurrentInstance()
@@ -324,6 +333,52 @@ const deleteAttachment = async (comment, attachment, attachmentIndex) => {
         // Show error notification
         const errorMessage = error.response?.data?.message || 'Failed to delete attachment. Please try again.'
         $showNotification(errorMessage, 'error')
+    }
+}
+
+const isSuperAdmin = (() => {
+    try {
+        return JSON.parse(localStorage.getItem('user') || '{}')?.roles?.includes('super_admin') ?? false
+    } catch {
+        return false
+    }
+})()
+
+/**
+ * Ask soft vs hard delete. Resolves true = hard, false = soft, null = cancelled.
+ */
+const askDeleteType = async () => {
+    const result = await Swal.fire({
+        title: 'Delete comment',
+        html: '<b>Soft delete</b>: hides the comment, it can be restored later.<br>'
+            + '<b>Hard delete</b>: removes the comment and its attachments permanently.',
+        icon: 'warning',
+        showConfirmButton: true,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Soft delete',
+        denyButtonText: 'Hard delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#733E87',
+        denyButtonColor: '#DC2626',
+    })
+    if (result.isDenied) return true
+    if (result.isConfirmed) return false
+    return null
+}
+
+// Super admin: delete any comment on the deal
+const deleteComment = async (comment) => {
+    const hard = await askDeleteType()
+    if (hard === null) return
+
+    try {
+        await api.delete(`/deals/comments/${comment.id}`, { params: hard ? { force: 1 } : {} })
+        comments.value = comments.value.filter(c => c.id !== comment.id)
+        $showNotification(hard ? 'Comment permanently deleted' : 'Comment deleted (can be restored)', 'success')
+    } catch (error) {
+        console.error('Error deleting comment:', error)
+        $showNotification(error.response?.data?.message || 'Failed to delete comment. Please try again.', 'error')
     }
 }
 
@@ -934,6 +989,10 @@ defineExpose({
 .kebab-icon {
     font-size: 16px;
     color: #64748B;
+}
+
+.kebab-icon.delete-icon {
+    color: #DC2626;
 }
 
 .show-older-wrapper {

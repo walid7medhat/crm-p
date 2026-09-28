@@ -1073,6 +1073,11 @@ class LeadController extends Controller
                 || in_array($lead->responsible_person_id, $subordinatesIds);
         }
 
+        // Branch admins can't delete leads (not even ones they added).
+        if ($user->hasRole('branch_admin')) {
+            return false;
+        }
+
         return $lead->added_by === $user->id;
     }
 

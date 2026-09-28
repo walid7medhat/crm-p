@@ -578,23 +578,39 @@ public function destroyCommentByAdmin($id)
             return ApiResponse::error('Unauthorized - Only admins can delete comments', 403);
         }
         
-        $comment = LeadComment::findOrFail($id);
-        
+        // withTrashed: admins still see soft-deleted comments, so they must be able to
+        // hard-delete one that is already soft deleted.
+        $comment = LeadComment::withTrashed()->findOrFail($id);
+
+        // ?force=1 → hard delete (row + attachment files gone for good).
+        // Otherwise soft delete: the comment is hidden but can be restored.
+        $force = request()->boolean('force');
+
+        if (!$force && $comment->trashed()) {
+            return ApiResponse::success(null, 'Comment is already soft deleted');
+        }
+
         // تسجيل الحدث قبل الحذف
         LeadHistoryHelper::log(
             $comment->lead_id,
             [
-                'action' => 'comment_deleted_by_admin',
+                'action' => $force ? 'comment_hard_deleted_by_admin' : 'comment_deleted_by_admin',
                 'comment_id' => $comment->id,
                 'comment' => Str::limit($comment->comment, 50),
                 'deleted_by' => $user->name
             ]
         );
-        
-        // soft delete
-        $comment->delete();
-        
-        return ApiResponse::success(null, 'Comment deleted successfully');
+
+        if ($force) {
+            foreach ($comment->attachments as $attachment) {
+                Storage::disk('public')->delete($attachment->file_path);
+            }
+            $comment->forceDelete();
+        } else {
+            $comment->delete();
+        }
+
+        return ApiResponse::success(null, $force ? 'Comment permanently deleted' : 'Comment deleted successfully');
         
     } catch (\Exception $e) {
         return ApiResponse::error('Failed to delete comment: ' . $e->getMessage());

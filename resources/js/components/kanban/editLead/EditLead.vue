@@ -684,9 +684,9 @@ const leadStatusOptions = computed(() => {
     // Stage 4: Qualified - Hot/Warm/Cold فقط
     if (stageOrder === 4) {
         return [
-            { value: 'cold', text: 'More than 3 Months' },
+            { value: 'hot', text: 'Within 1 Month' },
             { value: 'warm', text: '1–3 Months' },
-            { value: 'hot', text: 'Within 1 Month' }
+          { value: 'cold', text: 'More than 3 Months' },  
         ]
     }
     
@@ -716,9 +716,10 @@ const leadStatusOptions = computed(() => {
     }
     
     return [
-        { value: 'cold', text: 'More than 3 Months' },
+      { value: 'hot', text: 'Within 1 Month' },
         { value: 'warm', text: '1–3 Months' },
-        { value: 'hot', text: 'Within 1 Month' }
+      
+        { value: 'cold', text: 'More than 3 Months' },
     ]
 })
 const leadTypeOptions = [

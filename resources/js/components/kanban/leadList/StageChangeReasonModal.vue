@@ -693,9 +693,10 @@ const propertyStatusOptions = [
 ]
 
 const hotWarmLeadOptions = [
-    { value: 'cold', text: 'More than 3 Months' },
+   
+      { value: 'hot', text: 'Within 1 Month' },
     { value: 'warm', text: '1–3 Months' },
-    { value: 'hot', text: 'Within 1 Month' }
+     { value: 'cold', text: 'More than 3 Months' },
 ]
 const convertedStatusOptions = [
     { value: 'converted', text: 'Converted' }
@@ -703,12 +704,13 @@ const convertedStatusOptions = [
 
 /** Section 3: Cold / Warm / Hot radio columns (same values as hotWarmLeadOptions). */
 const qualityTemperatureRadios = [
-    {
-        value: 'cold',
-        label: 'More than 3 Months',
-        ringColor: '#38bdf8',
-        fillColor: '#0ea5e9',
-        tooltip: "Cold leads are fresh or haven't been contacted recently.",
+    
+     {
+        value: 'hot',
+        label: 'Within 1 Month',
+        ringColor: '#f43f5e',
+        fillColor: '#e11d48',
+        tooltip: 'Hot leads are very active and ready for follow-up.',
     },
     {
         value: 'warm',
@@ -718,12 +720,13 @@ const qualityTemperatureRadios = [
         tooltip: 'Warm leads are engaged recently, likely 1-3 months ago.',
     },
     {
-        value: 'hot',
-        label: 'Within 1 Month',
-        ringColor: '#f43f5e',
-        fillColor: '#e11d48',
-        tooltip: 'Hot leads are very active and ready for follow-up.',
+        value: 'cold',
+        label: 'More than 3 Months',
+        ringColor: '#38bdf8',
+        fillColor: '#0ea5e9',
+        tooltip: "Cold leads are fresh or haven't been contacted recently.",
     },
+   
 ]
 const statusOptionsForStage = computed(() => {
     switch (props.targetStageOrder) {
@@ -779,9 +782,10 @@ const unqualifiedStatusOptions = [
 ]
 
 const defaultLeadStatusOptions = [
-    { value: 'cold', text: 'More than 3 Months' },
+    { value: 'hot', text: 'Within 1 Month' },
     { value: 'warm', text: '1–3 Months' },
-    { value: 'hot', text: 'Within 1 Month' }
+    { value: 'cold', text: 'More than 3 Months' },
+    
 ]
 const reminderOptions = [
     { label: 'When event starts', value: '0' },
