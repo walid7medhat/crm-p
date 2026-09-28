@@ -347,7 +347,7 @@ const resetModal = () => {
 
 <style scoped>
 :deep(.create-integration-modal .modal-dialog) {
-    max-width: 600px;
+    max-width: 760px;
     margin: 1.75rem auto;
 }
 
@@ -356,10 +356,7 @@ const resetModal = () => {
     border: none;
     box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.2);
     overflow: hidden;
-}
-
-:deep(.create-integration-modal .modal-body) {
-    padding: 0;
+    max-height: calc(100vh - 2rem);
 }
 
 .create-integration-modal-content {
@@ -367,6 +364,12 @@ const resetModal = () => {
     display: flex;
     flex-direction: column;
     border-radius: 10px;
+    max-height: calc(100vh - 2rem);
+    min-height: 0;
+}
+
+:deep(.create-integration-modal .modal-body) {
+    padding: 0;
 }
 
 /* Header Section */
@@ -376,6 +379,7 @@ const resetModal = () => {
     justify-content: space-between;
     padding: 15px 32px;
     border-bottom: 1px solid #E2E8F0;
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -525,7 +529,11 @@ const resetModal = () => {
     pointer-events: none;
 }
 
-/* Tab Placeholder */
+.modal-body-section {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
 .tab-placeholder {
     font-family: 'Montserrat', sans-serif;
     font-size: 14px;
@@ -541,6 +549,7 @@ const resetModal = () => {
     padding: 15px 32px;
     border-top: 1px solid #E2E8F0;
     background: #FFFFFF;
+    flex-shrink: 0;
 }
 
 .footer-left {

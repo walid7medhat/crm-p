@@ -9,6 +9,8 @@
         body-class="p-0 view-lead-modal"
         :z-index="zIndex"
         :no-focus="true"
+        :no-close-on-backdrop="qualifiedRequirementBlocking"
+        :no-close-on-esc="qualifiedRequirementBlocking"
         dialog-class="kanban-mobile-fullscreen-modal"
          @hidden="handleClose"
     >
@@ -16,7 +18,7 @@
             <!-- Header -->
             <div class="modal-header-custom d-flex align-items-center gap-2 px-1">
                 <span class="modal-title">{{ lead?.lead_name }}</span>
-                <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
+                <button v-if="!qualifiedRequirementBlocking" type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
             </div>
@@ -78,6 +80,7 @@
             :leadData="pendingStageChange?.leadData"
             :isConversion="pendingStageChange?.isConversion || false"
             :interactionMode="pendingStageChange?.interactionMode || false"
+            :mandatory="pendingStageChange?.requirementOnly === true"
             @submit="handleStageChangeWithReason"
             @closed="clearPendingStageChange"
         />
@@ -167,6 +170,112 @@ const stageOrderMap = ref({})
 const selectedLeadForConversion = ref(null)
 const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
+
+const QUALIFIED_REQUIREMENT_FIELDS = [
+    'property_type_id',
+    'area_id',
+    'budget_from',
+    'budget_to',
+    'lead_type',
+    'property_status',
+    'purpose_buying',
+    'bedrooms',
+    'status_lead',
+]
+const QUAL_META_KIND = 'qualification_meta'
+
+const qualifiedRequirementBlocking = computed(() =>
+    showStageChangeModal.value && pendingStageChange.value?.requirementOnly === true
+)
+
+const normalizeRoleName = (role) => {
+    if (!role) return ''
+    const raw = typeof role === 'string' ? role : (role.name || role.role || '')
+    return String(raw).trim().toLowerCase().replace(/[\s-]+/g, '_')
+}
+
+const isQualifiedRequirementRole = (currentUser) => {
+    const roles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalizeRoleName) : []
+    if (currentUser?.role) roles.push(normalizeRoleName(currentUser.role))
+    if (currentUser?.role_name) roles.push(normalizeRoleName(currentUser.role_name))
+    return roles.some((role) => {
+        if (!role) return false
+        if (role === 'manager') return true
+        if (role === 'team_lead' || role === 'team_leader') return true
+        return role === 'sales' || role.includes('sales')
+    })
+}
+
+const isQualifiedLeadStage = (currentLead) => {
+    const name = String(currentLead?.stage?.name || currentLead?.stage_name || '').trim().toLowerCase()
+    if (name) return name === 'qualified'
+    const order = Number(currentLead?.stage?.order ?? currentLead?.stage_order)
+    return order === 4
+}
+
+const requirementRowHasContent = (req) => {
+    if (!req || req._kind === QUAL_META_KIND) return false
+    const hasBudget = Number(req.budget_from) > 0 || Number(req.budget_to) > 0 || Number(req.budget) > 0
+    return Boolean(
+        req.area_label || req.area_id || req.area ||
+        req.property_type_label || req.property_type_id || req.property_type ||
+        req.lead_type || req.property_status ||
+        (req.bedrooms !== null && req.bedrooms !== undefined && req.bedrooms !== '') ||
+        hasBudget || req.purpose_buying
+    )
+}
+
+const hasAtLeastOneClientRequirement = (currentLead) => {
+    if (!currentLead) return false
+    const extras = Array.isArray(currentLead.extra_client_requirements)
+        ? currentLead.extra_client_requirements
+        : []
+    if (extras.some(requirementRowHasContent)) return true
+    return requirementRowHasContent({
+        area: currentLead.area,
+        area_id: currentLead.area_id,
+        property_type: currentLead.property_type,
+        property_type_id: currentLead.property_type_id,
+        lead_type: currentLead.lead_type,
+        property_status: currentLead.property_status,
+        bedrooms: currentLead.bedrooms,
+        budget_from: currentLead.budget_from,
+        budget_to: currentLead.budget_to,
+        budget: currentLead.budget,
+        purpose_buying: currentLead.purpose_buying,
+    })
+}
+
+const blockQualifiedRequirementEscape = (event) => {
+    if (!qualifiedRequirementBlocking.value) return
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+}
+
+const maybeOpenQualifiedRequirementGate = () => {
+    const currentLead = lead.value
+    if (!show.value || !currentLead?.id) return
+    if (qualifiedRequirementBlocking.value) return
+    if (!isQualifiedRequirementRole(user.value)) return
+    if (!isQualifiedLeadStage(currentLead)) return
+    if (hasAtLeastOneClientRequirement(currentLead)) return
+
+    pendingStageChange.value = {
+        leadId: currentLead.id,
+        targetStageId: currentLead.stage_id,
+        targetStageName: currentLead?.stage?.name || 'Qualified',
+        // Order 4 selects the existing Qualified field set (Hot/Warm/Cold). The lead stage is not changed.
+        targetStageOrder: 4,
+        originalStageId: currentLead.stage_id,
+        leadData: { ...currentLead },
+        isConversion: false,
+        requirementOnly: true,
+    }
+    missingFieldsForLead.value = [...QUALIFIED_REQUIREMENT_FIELDS]
+    showStageChangeModal.value = true
+}
 
 function handleLeadConverted(deal) {
     // Let the Kanban board move/remove this lead's card immediately (it just became
@@ -446,8 +555,67 @@ const executeStageChange = async (newStageId, oldStageId) => {
     }
 }
 
+const saveQualifiedClientRequirement = async (form) => {
+    const currentLead = lead.value
+    if (!currentLead?.id) return false
+
+    const id = `ecr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    const now = new Date().toISOString()
+    const row = {
+        id,
+        created_at: now,
+        updated_at: now,
+        area_id: form.area_id ?? null,
+        area_label: form.area || '',
+        property_type_id: form.property_type_id ?? null,
+        property_type_label: form.property_type || '',
+        lead_type: form.lead_type ?? null,
+        property_status: form.property_status ?? null,
+        bedrooms: form.bedrooms ?? null,
+        status_lead: form.lead_status ?? null,
+        budget_from: form.budget_from ?? null,
+        budget_to: form.budget_to ?? null,
+        purpose_buying: form.purpose_buying ?? null,
+        selected_for_qualification: false,
+    }
+
+    const existing = Array.isArray(currentLead.extra_client_requirements)
+        ? currentLead.extra_client_requirements.filter((item) => item?._kind !== QUAL_META_KIND)
+        : []
+    const persisted = [
+        ...existing,
+        row,
+        { id: '__qualification_meta__', _kind: QUAL_META_KIND, source: 'primary' },
+    ]
+
+    try {
+        const response = await api.put(`/leads/${currentLead.id}/extra-client-requirements`, {
+            extra_client_requirements: persisted,
+        })
+        const savedLead = response?.data?.data
+        lead.value = {
+            ...currentLead,
+            ...(savedLead && typeof savedLead === 'object' ? savedLead : {}),
+            extra_client_requirements: savedLead?.extra_client_requirements || persisted,
+        }
+        emit('lead-updated', lead.value)
+        $showNotification('Client requirement saved', 'success')
+        return true
+    } catch (error) {
+        const message = error.response?.data?.message || 'Failed to save client requirement'
+        $showNotification(message, 'error')
+        return false
+    }
+}
+
 // Handle stage change with reason from modal (نفس الـ Kanban بالضبط)
 const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...additionalData }) => {
+    if (pendingStageChange.value?.requirementOnly) {
+        const finish = additionalData.__requirementSaved
+        const saved = await saveQualifiedClientRequirement(additionalData)
+        if (typeof finish === 'function') finish(saved)
+        return saved
+    }
     console.log('📝 handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
     
     try {
@@ -636,6 +804,7 @@ const fetchLead = async ({ silent = false } = {}) => {
             if (fresh) {
                 lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
                 if (fresh.stage_id) leadStageId.value = fresh.stage_id
+                maybeOpenQualifiedRequirementGate()
             }
         } catch (error) {
             if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
@@ -782,9 +951,11 @@ const checkUrlForLead = () => {
 onMounted(() => {
     fetchStageOrders()
     checkUrlForLead()
+    document.addEventListener('keydown', blockQualifiedRequirementEscape, true)
 })
 
 onUnmounted(() => {
+    document.removeEventListener('keydown', blockQualifiedRequirementEscape, true)
     cleanup()
 })
 

@@ -1,18 +1,18 @@
 <!-- StageChangeReasonModal.vue -->
 <template>
 
-    <div v-if="visible" class="stage-change-modal-overlay" @click.self="closeModal">
+    <div v-if="visible" class="stage-change-modal-overlay" :class="{ 'stage-change-modal-overlay--clear': mandatory }" @click.self="onOverlayClick">
         <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode }">
             <div class="modal-header">
-                <h5 class="modal-title">{{ isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}` }}</h5>
-                <button class="close-btn-custom" @click="closeModal">
+                <h5 class="modal-title">{{ mandatory ? 'Client Requirement' : (isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}`) }}</h5>
+                <button v-if="!mandatory" class="close-btn-custom" @click="closeModal">
                     <iconify-icon icon="lucide:x" width="20" height="20"></iconify-icon>
                 </button>
             </div>
             
             <div class="modal-body">
                 <!-- Reason Section -->
-                <div v-if="interactionMode || targetStageOrder !== 6" class="mb-4 box-shadow">
+                <div v-if="!mandatory && (interactionMode || targetStageOrder !== 6)" class="mb-4 box-shadow">
                     <template v-if="interactionMode">
                         <label class="form-label">Call Result <span class="text-danger">*</span></label>
                         <div ref="callResultGridRef" class="call-result-grid mb-3" :class="{ 'is-invalid': fieldErrors.interaction_result }">
@@ -526,7 +526,7 @@
             </div>
             
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" @click="closeModal">Cancel</button>
+                <button v-if="!mandatory" type="button" class="btn btn-light" @click="closeModal">Cancel</button>
                 <button type="button" class="btn btn-primary" @click="handleSubmit" :disabled="isSubmitting">
                     <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
                     Submit
@@ -661,6 +661,14 @@ const props = defineProps({
         default: false
     },
     interactionMode: {
+        type: Boolean,
+        default: false
+    },
+    /**
+     * Lead View gate: the Qualified client-requirement form cannot be dismissed.
+     * Existing stage-move behavior is unchanged when this stays false.
+     */
+    mandatory: {
         type: Boolean,
         default: false
     }
@@ -1229,10 +1237,25 @@ const loadLookupData = async () => {
     await Promise.all([loadAreas, loadTypes])
 }
 
-const closeModal = () => {
+const closeModal = (arg) => {
+    const force = arg?.force === true
+    if (props.mandatory && !force) return
     visible.value = false
     resetForm()
     emit('closed')
+}
+
+const onOverlayClick = () => {
+    if (props.mandatory) return
+    closeModal()
+}
+
+const blockMandatoryEscape = (event) => {
+    if (!props.mandatory || !visible.value) return
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
 }
 
 // This modal instance is reused across openings (parent drives it via the exposed
@@ -1325,7 +1348,7 @@ const handleSubmit = async () => {
         }
     } else {
         // Validate reason
-        if (props.targetStageOrder !== 6 && !formData.value.reason.trim()) {
+        if (!props.mandatory && props.targetStageOrder !== 6 && !formData.value.reason.trim()) {
             flagInvalid('reason', 'Please provide a reason')
         }
     }
@@ -1522,8 +1545,16 @@ const handleSubmit = async () => {
             }
         })
         
-        emit('submit', submitData)
-        closeModal()
+        if (props.mandatory) {
+            const saved = await new Promise((resolve) => {
+                emit('submit', { ...submitData, __requirementSaved: resolve })
+            })
+            if (saved === false) return
+            closeModal({ force: true })
+        } else {
+            emit('submit', submitData)
+            closeModal()
+        }
     } catch (error) {
         console.error('Error submitting:', error)
         $showNotification('An error occurred while submitting', 'error')
@@ -1582,18 +1613,21 @@ onMounted(() => {
     // it ever reaches this document listener, leaving the budget/reminder popups
     // stuck open no matter what else on the page gets clicked.
     document.addEventListener('click', handleClickOutside, true)
+    document.addEventListener('keydown', blockMandatoryEscape, true)
 })
 
 onUnmounted(() => {
     document.body.classList.remove('stage-change-modal-open')
     document.removeEventListener('click', handleClickOutside, true)
+    document.removeEventListener('keydown', blockMandatoryEscape, true)
     removeReminderDropdownListeners()
     removeBudgetDropdownListeners()
 })
 
 defineExpose({
     show: () => { visible.value = true },
-    hide: () => { visible.value = false }
+    hide: () => { if (!props.mandatory) visible.value = false },
+    forceClose: () => closeModal({ force: true })
 })
 </script>
 
@@ -1645,6 +1679,12 @@ defineExpose({
     justify-content: center;
     z-index: 12060 !important;
     pointer-events: auto !important;
+}
+
+.stage-change-modal-overlay.stage-change-modal-overlay--clear {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .stage-change-modal {
@@ -2336,6 +2376,10 @@ defineExpose({
             radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
             rgba(15, 23, 42, 0.45);
         z-index: 12060 !important;
+    }
+
+    .stage-change-modal-overlay.stage-change-modal-overlay--clear {
+        background: transparent;
     }
 
     .stage-change-modal,

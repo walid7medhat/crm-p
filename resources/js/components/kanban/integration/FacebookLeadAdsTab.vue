@@ -32,6 +32,8 @@
                     placeholder="Choose a page..."
                     class="custom-select"
                     :loading="loadingPages"
+                    append-to-body
+                    :calculate-position="positionIntegrationMenu"
                 >
                     <template #option="{ name, id, access_token }">
                         <div class="select-option">
@@ -58,6 +60,8 @@
                     class="custom-select"
                     :loading="loadingForms"
                     :disabled="loadingForms"
+                    append-to-body
+                    :calculate-position="positionIntegrationMenu"
                 >
                     <template #option="{ name, status, leads_count, id }">
                       <div class="select-option">
@@ -102,41 +106,61 @@
                 </div>
 
                 <div class="mappings-list">
-                    <div 
-                        v-for="(mapping, index) in localMappings" 
+                    <div
+                        v-for="(mapping, index) in localMappings"
                         :key="index"
                         class="mapping-row"
                     >
-                        <div class="mapping-field">
-                           <v-select
+                        <div class="mapping-col">
+                            <span v-if="index === 0" class="mapping-col-label">Facebook question</span>
+                            <v-select
                                 v-model="mapping.meta_field"
                                 :options="metaFields"
-                                label="name"                    
-                                :reduce="field => field"        
-                                placeholder="Select Meta Field"
-                                class="meta-field-select"
+                                label="name"
+                                :reduce="field => field"
+                                :filter-by="filterMetaField"
+                                placeholder="Select question"
+                                class="mapping-select"
+                                append-to-body
+                                :calculate-position="positionIntegrationMenu"
                             >
+                                <template #selected-option="{ name, label }">
+                                    <span class="mapping-selected" :title="metaFieldTitle(name, label)">
+                                        {{ metaFieldTitle(name, label) }}
+                                    </span>
+                                </template>
                                 <template #option="{ name, label }">
                                     <div class="meta-option">
-                                        <span class="meta-name">{{ name }}</span>
-                                        <span v-if="label && label !== name" class="meta-label">{{ label }}</span>
+                                        <span class="meta-label">{{ metaFieldTitle(name, label) }}</span>
+                                        <span v-if="label && label !== name" class="meta-name">{{ name }}</span>
                                     </div>
                                 </template>
                             </v-select>
-                            <iconify-icon icon="lucide:arrow-right" class="arrow-icon"></iconify-icon>
+                        </div>
+                        <iconify-icon icon="lucide:arrow-right" class="arrow-icon"></iconify-icon>
+                        <div class="mapping-col">
+                            <span v-if="index === 0" class="mapping-col-label">CRM field</span>
                             <v-select
                                 v-model="mapping.crm_field"
                                 :options="crmFields"
                                 :reduce="field => field.value"
                                 label="label"
                                 placeholder="Select CRM field"
-                                class="crm-field-select"
-                            />
+                                class="mapping-select"
+                                append-to-body
+                                :calculate-position="positionIntegrationMenu"
+                            >
+                                <template #selected-option="{ label }">
+                                    <span class="mapping-selected" :title="label">{{ label }}</span>
+                                </template>
+                            </v-select>
                         </div>
-                        <button 
+                        <button
                             class="remove-mapping-btn"
                             @click="removeMapping(index)"
                             v-if="localMappings.length > 1"
+                            type="button"
+                            aria-label="Remove mapping"
                         >
                             <iconify-icon icon="lucide:x"></iconify-icon>
                         </button>
@@ -226,6 +250,54 @@ const crmFields = [
 //     'website'
 // ])
 const metaFields = ref([])
+
+const metaFieldTitle = (name, label) => {
+    const question = label && label !== name ? String(label) : ''
+    return question || String(name || '')
+}
+
+const filterMetaField = (option, label, search) => {
+    const query = String(search || '').toLocaleLowerCase()
+    if (!query) return true
+    const name = String(option?.name || label || '').toLocaleLowerCase()
+    const text = String(option?.label || '').toLocaleLowerCase()
+    return name.includes(query) || text.includes(query)
+}
+
+const positionIntegrationMenu = (dropdownList, component) => {
+    dropdownList.classList.add('integration-mapping-menu')
+    const place = () => {
+        const toggle = component?.$refs?.toggle || component?.$el
+        if (!toggle?.getBoundingClientRect) return
+        const rect = toggle.getBoundingClientRect()
+        const gap = 6
+        const spaceBelow = window.innerHeight - rect.bottom
+        const openUp = spaceBelow < 180 && rect.top > spaceBelow
+        const menuWidth = Math.max(rect.width, 260)
+        let left = rect.left
+        if (left + menuWidth > window.innerWidth - 12) {
+            left = Math.max(12, window.innerWidth - menuWidth - 12)
+        }
+        dropdownList.style.width = `${menuWidth}px`
+        dropdownList.style.left = `${left}px`
+        if (openUp) {
+            dropdownList.style.top = 'auto'
+            dropdownList.style.bottom = `${window.innerHeight - rect.top + gap}px`
+            dropdownList.style.maxHeight = `${Math.max(140, Math.min(260, rect.top - 16))}px`
+        } else {
+            dropdownList.style.bottom = 'auto'
+            dropdownList.style.top = `${rect.bottom + gap}px`
+            dropdownList.style.maxHeight = `${Math.max(140, Math.min(260, spaceBelow - 16))}px`
+        }
+    }
+    place()
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
+    return () => {
+        window.removeEventListener('scroll', place, true)
+        window.removeEventListener('resize', place)
+    }
+}
 const loadMetaFields = async (formId) => {
     const res = await api.get(`/integrations/meta/form-fields/${formId}`)
     metaFields.value = res.data.fields || []
@@ -702,21 +774,38 @@ watch(localMappings, (newVal) => {
 .mappings-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 16px;
-    max-height: 300px;
+    max-height: 340px;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding-right: 8px;
+    padding-right: 6px;
 }
 
 .mapping-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr) 36px;
+    align-items: end;
+    gap: 8px;
+    padding: 10px;
     background: #F8FAFC;
-    border-radius: 8px;
+    border-radius: 10px;
     border: 1px solid #E2E8F0;
+}
+
+.mapping-col {
+    min-width: 0;
+}
+
+.mapping-col-label {
+    display: block;
+    margin-bottom: 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #64748B;
 }
 
 .mapping-field {
@@ -724,49 +813,81 @@ watch(localMappings, (newVal) => {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 }
 
-.meta-field {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: #1E293B;
-    min-width: 150px;
-    padding: 8px 12px;
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 6px;
+.mapping-selected {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .arrow-icon {
     font-size: 18px;
     color: #94A3B8;
+    margin-bottom: 12px;
+    justify-self: center;
 }
 
-:deep(.crm-field-select) {
-    flex: 1;
-    min-width: 200px;
+:deep(.mapping-select) {
+    width: 100%;
+    min-width: 0;
 }
 
-:deep(.crm-field-select .vs__dropdown-toggle) {
+:deep(.mapping-select .vs__dropdown-toggle) {
     height: 42px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #E2E8F0;
     background: #fff;
+    padding: 0 8px;
+}
+
+:deep(.mapping-select .vs__selected-options) {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    min-width: 0;
+    max-width: calc(100% - 28px);
+}
+
+:deep(.mapping-select .vs__selected) {
+    display: block;
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 40px;
+    font-size: 13px;
+    color: #1E293B;
+}
+
+:deep(.mapping-select .vs__search) {
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+}
+
+:deep(.mapping-select .vs__search::placeholder) {
+    color: #94A3B8;
 }
 
 .remove-mapping-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
+    margin-bottom: 3px;
     background: #FEE2E2;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #EF4444;
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .remove-mapping-btn:hover {
@@ -971,4 +1092,90 @@ watch(localMappings, (newVal) => {
     color: #fff !important;
 }
 
+@media (max-width: 640px) {
+    .mapping-row {
+        grid-template-columns: minmax(0, 1fr) 36px;
+        grid-template-areas:
+            "meta remove"
+            "arrow arrow"
+            "crm crm";
+    }
+
+    .mapping-col:first-child {
+        grid-area: meta;
+    }
+
+    .arrow-icon {
+        grid-area: arrow;
+        margin: 0;
+        justify-self: center;
+        transform: rotate(90deg);
+    }
+
+    .mapping-col:nth-child(3) {
+        grid-area: crm;
+    }
+
+    .remove-mapping-btn {
+        grid-area: remove;
+        justify-self: end;
+    }
+}
+</style>
+
+<style>
+.integration-mapping-menu.vs__dropdown-menu {
+    position: fixed !important;
+    z-index: 20000 !important;
+    margin: 0;
+    padding: 6px;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    background: #FFFFFF;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
+.integration-mapping-menu .vs__dropdown-option {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: #0F172A;
+}
+
+.integration-mapping-menu .vs__dropdown-option--highlight,
+.integration-mapping-menu .vs__dropdown-option--selected {
+    background: #733E87;
+    color: #FFFFFF;
+}
+
+.integration-mapping-menu .meta-option {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.integration-mapping-menu .meta-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+}
+
+.integration-mapping-menu .meta-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: #64748B;
+    word-break: break-all;
+}
+
+.integration-mapping-menu .vs__dropdown-option--highlight .meta-name,
+.integration-mapping-menu .vs__dropdown-option--selected .meta-name {
+    color: rgba(255, 255, 255, 0.82);
+}
 </style>
