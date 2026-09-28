@@ -692,7 +692,8 @@ Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
 Route::put('/leads/{lead}/extra-client-requirements', [LeadController::class, 'updateExtraClientRequirements']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
-Route::post('/check-revert', [LeadController::class, 'checkRevert']);
+// Auto-revert disabled for now.
+// Route::post('/check-revert', [LeadController::class, 'checkRevert']);
 Route::get('get/lead/branch_source',[StageController::class,'getLeadBranchSource']);
 Route::get('/get-offices', [StageController::class, 'getOffices']);
 Route::prefix('leads')->group(function(){

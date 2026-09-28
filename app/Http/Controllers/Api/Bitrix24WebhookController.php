@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\LeadUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\Lead;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Http\JsonResponse;
@@ -82,6 +83,18 @@ class Bitrix24WebhookController extends Controller
         if (! $leadId) {
             return;
         }
+        // Abu Dhabi leads are managed in the CRM only — ignore Bitrix24 updates for
+        // them so a Bitrix edit can't move the lead back (e.g. Contacted → New).
+        // New leads created in Bitrix24 still come through.
+        $existing = Lead::with('responsiblePerson')->where('bitrix24_id', $leadId)->first();
+        if ($existing && $this->isAbuDhabiLead($existing)) {
+            Log::channel('bitrix_leads')->info('Bitrix24 webhook skipped (Abu Dhabi lead)', [
+                'bitrix24_id' => $leadId,
+                'lead_id'     => $existing->id,
+            ]);
+            return;
+        }
+
         $b24 = $client->getLead($leadId);
         if (! $b24) {
             return;
@@ -100,6 +113,25 @@ class Bitrix24WebhookController extends Controller
                 'bitrix'
             ));
         }
+    }
+
+    /**
+     * Same branch rules as LeadAssignmentService::resolveLeadBranchId — explicit
+     * `branch`, then `lead_branch_source`, then the responsible person's branch
+     * (admin_parent, id 25 = "abu dhabi").
+     */
+    private function isAbuDhabiLead(Lead $lead): bool
+    {
+        $isAbuDhabi = fn ($name) => strtolower(trim((string) $name)) === 'abu dhabi';
+
+        if (trim((string) $lead->branch) !== '') {
+            return $isAbuDhabi($lead->branch);
+        }
+        if ($isAbuDhabi($lead->lead_branch_source)) {
+            return true;
+        }
+
+        return (int) ($lead->responsiblePerson?->admin_parent?->id ?? 0) === 25;
     }
 
     /** Resolve the owning lead id from an activity (OWNER_TYPE_ID 1 = lead). */

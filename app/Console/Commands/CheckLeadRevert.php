@@ -17,6 +17,10 @@ class CheckLeadRevert extends Command
 
     public function handle(): void
     {
+        // Auto-revert disabled for now — remove this early return to turn it back on.
+        $this->warn('leads:check-revert is disabled.');
+        return;
+
         $this->info('🔄 Starting leads:check-revert at ' . now()->toDateTimeString());
         Log::info('🔄 Starting leads:check-revert', ['time' => now()->toDateTimeString()]);
         
