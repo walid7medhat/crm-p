@@ -32,8 +32,12 @@ class Attendance extends Model
             return null;
         }
         $s = strtoupper(str_replace('#', '', trim((string) $raw)));
-        // Match frontend normalizeEmployeeId (EMPD-252 → EMP-252)
-        $s = preg_replace('/EMPD/i', 'EMP', $s) ?? $s;
+        // NOTE: previously collapsed EMPD-XXX into EMP-XXX here, assuming they were the
+        // same employee with a typo'd prefix. They are NOT — the external biometric system
+        // uses EMP-XXX and EMPD-XXX as genuinely distinct employee code series (e.g. EMP-060
+        // is a different real person from EMPD-060). Collapsing them caused attendance data
+        // to be silently overwritten between two different employees whenever their numeric
+        // suffix matched. Do not reintroduce that collapse.
         $s = preg_replace('/(EMP)+/', 'EMP', $s) ?? $s;
         $s = preg_replace('/EMP+/', 'EMP', $s) ?? $s;
         $s = trim((string) $s);
