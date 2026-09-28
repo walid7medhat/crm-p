@@ -1216,10 +1216,11 @@ const mobileSwipeMoved = ref({})
 // Applied search params (from search modal, not from URL)
 const appliedSearchParams = ref(null)
 
-// Check if user is admin or super_admin (same pattern as header/index.vue)
+// Check if user is admin or super_admin (same pattern as header/index.vue) — branch_admin
+// gets the same bulk-assign/bulk-stage tools, scoped to their branch by the backend.
 const isAdminOrSuperAdmin = computed(() => {
     if (!user.value) return false
-    return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin')
+    return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') || user.value.roles?.includes('branch_admin')
 })
 
 const leadSelectionActive = ref(false)
@@ -1287,11 +1288,14 @@ async function deleteSelectedLeads() {
     if (!result.isConfirmed) return
     bulkActionBusy.value = true
     const failed = []
+    const failureReasons = new Set()
     for (const id of ids) {
         try {
             await api.delete(`/leads/${id}`)
         } catch (error) {
             failed.push(id)
+            const message = error.response?.data?.message
+            if (message) failureReasons.add(message)
         }
     }
     const archived = ids.filter((id) => !failed.includes(id))
@@ -1299,7 +1303,10 @@ async function deleteSelectedLeads() {
     clearLeadSelection()
     bulkActionBusy.value = false
     if (failed.length) {
-        window.$showNotification?.(`${archived.length} archived, ${failed.length} could not be archived.`, 'error')
+        // Surface the backend's actual reason (e.g. "has a deal and cannot be deleted")
+        // when every failure shares it, instead of just a generic failure count.
+        const reason = failureReasons.size === 1 ? ` — ${[...failureReasons][0]}` : ''
+        window.$showNotification?.(`${archived.length} archived, ${failed.length} could not be archived${reason}.`, 'error')
     } else {
         window.$showNotification?.(archived.length === 1 ? 'Lead deleted.' : `${archived.length} leads deleted.`, 'success')
     }

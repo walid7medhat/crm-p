@@ -1743,7 +1743,7 @@ async function onDealDragChange(evt, targetColumn) {
     const res = await checkStageRequirements({
       dealId: deal.id,
       targetStageId: newStageId,
-      dealType: activeTypeTab.value,
+      dealType: fullDealData?.deal_type || deal.deal_type || activeTypeTab.value,
        dealData: fullDealData
     })
 
@@ -2123,7 +2123,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
     const normalized = await checkStageRequirements({
       dealId,
       targetStageId: targetColumn.stage_id,
-      dealType: activeTypeTab.value,
+      dealType: fullDealData?.deal_type || dealData?.deal_type || activeTypeTab.value,
     })
 
     const valid = normalized.valid

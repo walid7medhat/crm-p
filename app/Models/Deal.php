@@ -228,8 +228,10 @@ class Deal extends Model
 
     public function scopeVisibleFor($query, $user)
     {
-        if ($user->hasAnyRole(['manager', 'team_lead', 'admin']) && $user->id != 30 && $user->id != 33) {
-            $subordinatesIds = $user->getAllSubordinatesIds();
+        if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) && $user->id != 30 && $user->id != 33) {
+            $subordinatesIds = $user->hasRole('branch_admin')
+                ? $user->getBranchAdminSubordinateIds()
+                : $user->getAllSubordinatesIds();
             $query->whereIn(
                 'responsible_person_id',
                 array_merge($subordinatesIds, [$user->id])

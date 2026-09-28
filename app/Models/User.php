@@ -226,6 +226,19 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     }
 
 
+    /**
+     * branch_admin is placed as a regular team member INSIDE an office (not above it,
+     * unlike admin/manager/team_lead) — they typically have no subordinates of their
+     * own. Their scope is everyone under the real office/branch admin their own
+     * ->office resolves to (siblings + themselves), not their own descendants.
+     */
+    public function getBranchAdminSubordinateIds(): array
+    {
+        $officeAdmin = $this->office;
+
+        return $officeAdmin ? $officeAdmin->getAllSubordinatesIds() : [$this->id];
+    }
+
     public function canViewLead(Lead $lead): bool
     {
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
@@ -270,9 +283,11 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             return $lead->responsible_person_id === $this->id;
         }
 
-        // admin / manager / team_lead — subordinates only (getAllSubordinatesIds()
-        // already includes $this->id), matching LeadController::index()/totalCount().
-        $subordinatesIds = $this->getAllSubordinatesIds();
+        // branch_admin: peer user inside an office, scoped to that office's subordinates
+        // rather than their own (see getBranchAdminSubordinateIds()).
+        $subordinatesIds = $this->hasRole('branch_admin')
+            ? $this->getBranchAdminSubordinateIds()
+            : $this->getAllSubordinatesIds();
 
         return in_array($lead->responsible_person_id, $subordinatesIds);
     }
@@ -280,12 +295,14 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     /** Deal equivalent of canViewLead() — matches DealController::authorizeAccess(). */
     public function canViewDeal(Deal $deal): bool
     {
-        if ($this->hasRole('super_admin') || $this->id == 30) {
+        if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
             return true;
         }
 
-        if ($this->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-            $subordinatesIds = $this->getAllSubordinatesIds();
+        if ($this->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+            $subordinatesIds = $this->hasRole('branch_admin')
+                ? $this->getBranchAdminSubordinateIds()
+                : $this->getAllSubordinatesIds();
             return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$this->id]));
         }
 

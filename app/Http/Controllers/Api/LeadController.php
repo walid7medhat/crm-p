@@ -311,8 +311,10 @@ class LeadController extends Controller
                             $leadsQuery->whereRaw('1 = 0');
                         }
 
-                    }  elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-                    $subordinatesIds = $user->getAllSubordinatesIds();
+                    }  elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+                    $subordinatesIds = $user->hasRole('branch_admin')
+                        ? $user->getBranchAdminSubordinateIds()
+                        : $user->getAllSubordinatesIds();
                     // Current responsible person only — a lead reassigned outside the
                     // team must stop showing up here just because someone on the team added it.
                     $leadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
@@ -410,8 +412,10 @@ class LeadController extends Controller
 
             if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
                 // super_admin sees everything — no extra constraint
-            } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-                $subordinatesIds = $user->getAllSubordinatesIds();
+            } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+                $subordinatesIds = $user->hasRole('branch_admin')
+                    ? $user->getBranchAdminSubordinateIds()
+                    : $user->getAllSubordinatesIds();
                 // Current responsible person only — a lead reassigned outside the
                 // team must stop showing up here just because someone on the team added it.
                 $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
@@ -622,7 +626,7 @@ class LeadController extends Controller
                 }
 
                 $leadData = $request->validated();
-                if (!auth()->user()->hasRole('admin') && !auth()->user()->hasRole('super_admin')) {
+                if (!auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
                         unset($leadData['email']);
                         unset($leadData['secondary_email']);
                         unset($leadData['work_phone']);
@@ -768,7 +772,7 @@ class LeadController extends Controller
     try {
         $user = auth()->user();
 
-        if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead'])) {
+        if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin'])) {
             return ApiResponse::error('You are not authorized to assign responsible person', 403);
         }
 
@@ -786,7 +790,9 @@ class LeadController extends Controller
         // }
 
         if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-            $subordinatesIds = $user->getAllSubordinatesIds();
+            $subordinatesIds = $user->hasRole('branch_admin')
+                ? $user->getBranchAdminSubordinateIds()
+                : $user->getAllSubordinatesIds();
             if (!in_array($request->responsible_person_id, $subordinatesIds)) {
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
             }
@@ -963,7 +969,9 @@ class LeadController extends Controller
                 ->whereNotNull('users.parent_id');
         } else {
             $base->role(['team_lead', 'sales'])
-                ->whereIn('users.id', $user->getAllSubordinatesIds());
+                ->whereIn('users.id', $user->hasRole('branch_admin')
+                    ? $user->getBranchAdminSubordinateIds()
+                    : $user->getAllSubordinatesIds());
         }
         if (!empty($officeAndDescendants)) {
             $base->whereIn('users.id', $officeAndDescendants);
@@ -1079,6 +1087,14 @@ class LeadController extends Controller
             if (! $this->canDeleteLead($user, $lead)) {
                 return ApiResponse::error('You are not authorized to delete this lead', 403);
             }
+
+            // A lead already converted to a deal must go through the deal, not be
+            // deleted out from under it — that would orphan the deal's converted_to_deal_id
+            // reference back to a lead that no longer exists.
+            if ($lead->isConverted()) {
+                return ApiResponse::error('This lead has a deal and cannot be deleted', 422);
+            }
+
         $this->broadcastLeadUpdated($lead, 'deleted');
 
             $lead->delete();

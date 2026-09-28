@@ -78,15 +78,17 @@ class LeadConversionController extends Controller
        if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
             $canAccess = false;
             
-            if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-                $subordinatesIds = $user->getAllSubordinatesIds();
-                $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id])) 
+            if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+                $subordinatesIds = $user->hasRole('branch_admin')
+                    ? $user->getBranchAdminSubordinateIds()
+                    : $user->getAllSubordinatesIds();
+                $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id]))
                         || in_array($lead->added_by, $subordinatesIds);
             } else {
-                $canAccess = $lead->responsible_person_id == $user->id 
+                $canAccess = $lead->responsible_person_id == $user->id
                         || $lead->added_by == $user->id;
             }
-            
+
             if (!$canAccess) {
                 return response()->json([
                     'success' => false,
@@ -265,15 +267,17 @@ class LeadConversionController extends Controller
             if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
                 $canAccess = false;
                 
-                if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-                    $subordinatesIds = $user->getAllSubordinatesIds();
-                    $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id])) 
+                if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+                    $subordinatesIds = $user->hasRole('branch_admin')
+                        ? $user->getBranchAdminSubordinateIds()
+                        : $user->getAllSubordinatesIds();
+                    $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id]))
                             || in_array($lead->added_by, $subordinatesIds);
                 } else {
-                    $canAccess = $lead->responsible_person_id == $user->id 
+                    $canAccess = $lead->responsible_person_id == $user->id
                             || $lead->added_by == $user->id;
                 }
-                
+
                 if (!$canAccess) {
                     return response()->json([
                         'success' => false,
@@ -1124,15 +1128,17 @@ private function createDealProperties(Deal $deal, $request)
         if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
             $canAccess = false;
             
-            if ($user->hasAnyRole(['manager', 'team_lead', 'admin'])) {
-                $subordinatesIds = $user->getAllSubordinatesIds();
-                $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id])) 
+            if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
+                $subordinatesIds = $user->hasRole('branch_admin')
+                    ? $user->getBranchAdminSubordinateIds()
+                    : $user->getAllSubordinatesIds();
+                $canAccess = in_array($lead->responsible_person_id, array_merge($subordinatesIds, [$user->id]))
                         || in_array($lead->added_by, $subordinatesIds);
             } else {
-                $canAccess = $lead->responsible_person_id == $user->id 
+                $canAccess = $lead->responsible_person_id == $user->id
                         || $lead->added_by == $user->id;
             }
-            
+
             if (!$canAccess) {
                 return response()->json([
                     'success' => false,

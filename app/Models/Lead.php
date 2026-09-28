@@ -150,7 +150,7 @@ protected const NON_ENGAGEMENT_FIELDS = [
 
     public function histories()
     {
-        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
             return $this->hasMany(LeadHistory::class)->withTrashed()->latest();
         }
         return $this->hasMany(LeadHistory::class)->latest();
@@ -254,10 +254,16 @@ public function visibleEngagement(string $model, string $ownerColumn = 'user_id'
         return $relation->withTrashed()->latest();
     }
 
-    $allowed = array_values(array_unique(array_map(
-        'intval',
-        static::subordinateIds($user)
-    )));
+    // branch_admin is a peer user inside an office (no downward subordinates of their
+    // own), so static::subordinateIds() below would wrongly return just themselves —
+    // use the same office-wide scope as everywhere else instead of the admin/super_admin
+    // company-wide bypass above (this stays branch-scoped, not unrestricted).
+    $allowed = $user->hasRole('branch_admin')
+        ? array_values(array_unique(array_map('intval', $user->getBranchAdminSubordinateIds())))
+        : array_values(array_unique(array_map(
+            'intval',
+            static::subordinateIds($user)
+        )));
 
     if (empty($allowed)) {
         return $relation->whereRaw('1 = 0');

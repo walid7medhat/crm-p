@@ -613,6 +613,13 @@ const canShowLeadsTab = computed(() => {
   return isAdmin.value || proxy.$hasPermission('show-leads');
 });
 
+// branch_admin: leads/deals only, never listings — including the "My Listings" flat
+// link every other non-admin role gets by default (see showCrmListingsFlat below).
+const isBranchAdmin = computed(() => {
+  if (!user.value) return false;
+  return user.value.roles?.includes('branch_admin') ?? false;
+});
+
 const isShowOnlyListing = computed(() => {
   if (!user.value) return false;
   
@@ -876,9 +883,10 @@ const showCrmListingsDropdown = computed(() =>
 );
 
 const showCrmListingsFlat = computed(() =>
-  
+
   !isListingsDropdownAdmin.value &&
-  !isShowOnlyListing.value,
+  !isShowOnlyListing.value &&
+  !isBranchAdmin.value,
 );
 
 
