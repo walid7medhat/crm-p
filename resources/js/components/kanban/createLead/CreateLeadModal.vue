@@ -720,6 +720,7 @@
     
     
     const isSalesUser = ref(false)
+    const isListingTeamUser = ref(false)
     
    const salesSourceOptions = [
             { value: 'My Self Network',    text: 'My Self Network' },
@@ -1033,25 +1034,29 @@ watch(selectedExistingClient, (client) => {
             const userData = localStorage.getItem('user')
             if (userData) {
                 const user = JSON.parse(userData)
-                const role = user.roles.includes('sales') 
-                isSalesUser.value = role 
-                console.log('Is sales user:', isSalesUser.value)
+                const role = user.roles.includes('sales')
+                isSalesUser.value = role
+                isListingTeamUser.value = !!user.is_listing_team
+                console.log('Is sales user:', isSalesUser.value, 'Is listing team:', isListingTeamUser.value)
             }
         } catch (error) {
             console.error('Error fetching user role:', error)
             isSalesUser.value = false
+            isListingTeamUser.value = false
         }
     }
-    
-    
+
+
         const isReferralSelected = computed(() => {
             return isSalesUser.value && form.value.lead_source === 'referral'
         })
-        
-       
-            
+
+
+
     const dynamicSourceOptions = computed(() => {
-        if (isSalesUser.value) {
+        // Listing-team sales users work off the full source list like non-sales users —
+        // only regular sales are limited to the 3-option shortlist.
+        if (isSalesUser.value && !isListingTeamUser.value) {
             return salesSourceOptions
         }
         return sourceOptions.value
@@ -1161,7 +1166,7 @@ watch(selectedExistingClient, (client) => {
     const fetchSources = async () => {
         try {
             isLoadingSources.value = true
-            if (isSalesUser.value) {
+            if (isSalesUser.value && !isListingTeamUser.value) {
                 sourceOptions.value = salesSourceOptions
                 return
             }
