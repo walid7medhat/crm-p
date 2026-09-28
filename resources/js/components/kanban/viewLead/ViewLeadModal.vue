@@ -186,9 +186,14 @@ function handleLeadConverted(deal) {
 const canViewHistory = computed(() => {
     if (!user.value || !lead.value) return false
 
+    // Mirrors the backend's history() gate (LeadController.php) — admin/super_admin
+    // always, branch_admin for leads in their own branch (server enforces the actual
+    // branch check; showing the tab here just offers it, same as it already does for
+    // 'admin' without re-deriving admin's own scoping client-side).
     const isAdminUser =
         user.value.roles?.includes('super_admin') ||
-        user.value.roles?.includes('admin')
+        user.value.roles?.includes('admin') ||
+        user.value.roles?.includes('branch_admin')
 
     const isResponsible =
         lead.value.responsible_person_id === user.value.id

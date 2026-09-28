@@ -1698,7 +1698,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
         ->with('user:id,name,avatar');
             $user = auth()->user();
-            $isAdmin = $user->hasAnyRole(['admin', 'super_admin']);
+            // branch_admin sits as a PEER inside the office (no downward subordinates of
+            // their own), so isManagedBy() below — which walks down from $user — never
+            // recognizes a lead in their own branch. Give them the same admin-level
+            // history access as 'admin', but only for leads actually within their branch.
+            $isBranchAdminForLead = $user->hasRole('branch_admin')
+                && $lead->responsible_person_id
+                && in_array($lead->responsible_person_id, $user->getBranchAdminSubordinateIds());
+            $isAdmin = $user->hasAnyRole(['admin', 'super_admin']) || $isBranchAdminForLead;
             $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
             $isManager = $lead->isManagedBy($user);
 
@@ -1732,9 +1739,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     $query->where('id', '>', $assignment->id);
                 }
             }
-    // Lead Pool assign-to-me soft-deletes the prior history rows. Super_admin/admin should
-    // still see them; everyone else only gets live history.
-    if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+    // Lead Pool assign-to-me soft-deletes the prior history rows. Super_admin/admin (and
+    // branch_admin for their own branch) should still see them; everyone else only gets
+    // live history.
+    if ($isAdmin) {
         $query->withTrashed();
     }
     
