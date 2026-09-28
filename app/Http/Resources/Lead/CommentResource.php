@@ -15,6 +15,8 @@ class CommentResource extends JsonResource
             'user_name' => $this->user->name ?? null,
             'user_avatar' => $this->user->avatar_url ?? null,
             'user_role_name' => $this->user?->roles?->first()?->name,
+            // Employee profile designation — shown instead of the role when set.
+            'user_position' => $this->user?->employeeProfile?->designation?->name,
             'user_parent_name' => $this->user?->parent?->name,
             'user_branch_name' => $this->user?->office?->name,
             'comment' => $this->comment,

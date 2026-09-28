@@ -14,6 +14,9 @@ class CommentResource extends JsonResource
             'user_id' => $this->user_id,
             'user_name' => $this->user->name ?? null,
             'user_avatar' => $this->user->avatar_url ?? null,
+            'user_role_name' => $this->user?->roles?->first()?->name,
+            // Employee profile designation — shown instead of the role when set.
+            'user_position' => $this->user?->employeeProfile?->designation?->name,
             'comment' => $this->comment,
             'attachments' => CommentAttachmentResource::collection($this->attachments),
             'mentions' => $this->mentions->pluck('mentioned_user_id'),

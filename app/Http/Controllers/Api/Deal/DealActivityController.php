@@ -246,7 +246,7 @@ class DealActivityController extends Controller
         }
 
         $comments = $deal->comments()
-            ->with(['user', 'attachments', 'mentionedUsers'])
+            ->with(['user.roles:id,name', 'user.employeeProfile.designation', 'attachments', 'mentionedUsers'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
             

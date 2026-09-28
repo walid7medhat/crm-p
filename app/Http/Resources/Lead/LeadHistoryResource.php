@@ -24,6 +24,8 @@ class LeadHistoryResource extends JsonResource
                     'name' => $this->user?->name,
                     'avatar'=>$this->user?->avatar_url,
                      'user_role_name' => $this->user?->roles?->first()?->name,
+                    // Employee profile designation — shown instead of the role when set.
+                    'user_position' => $this->user?->employeeProfile?->designation?->name,
                     'user_parent_name' => $this->user?->parent?->name,
                     'user_branch_name' => $this->user?->office?->name,
                 ];

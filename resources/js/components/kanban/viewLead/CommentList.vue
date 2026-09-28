@@ -426,7 +426,7 @@ const transformComment = (comment) => {
         userAvatar: comment.user_avatar,
          userId: comment.user_id,
         userName: comment.user_name,
-        userRole: comment.user_role_name ? formatRoleName(comment.user_role_name) : null,
+        userRole: comment.user_position || (comment.user_role_name ? formatRoleName(comment.user_role_name) : null),
         userParentName: comment.user_parent_name || null,
         userBranchName: comment.user_branch_name || null,
         attachments: comment.attachments || [],

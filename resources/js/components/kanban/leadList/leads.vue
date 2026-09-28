@@ -2617,8 +2617,11 @@ const showPersonHoverCard = (task, type, event) => {
     personHoverTaskById.value = task || null
     positionPersonHoverCard(event, hoverType)
     const hoverData = normalizePersonHoverData(person, task, hoverType, fallbackName)
+    // Card payloads don't carry the employee-profile designation (`position`), so fetch
+    // the profile whenever it's missing — cached per user, so one request per person.
     const needsProfile = Boolean(person?.id) && (
         hoverData.manager === 'Not specified' || hoverData.branch === 'Not specified' || !person?.role_name
+        || person?.position === undefined
     )
     activePersonHover.value = {
         leadId: task?.id,

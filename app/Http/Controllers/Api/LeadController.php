@@ -1701,7 +1701,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
 {
     $lead=Lead::find($leadId);
     $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
-        ->with('user:id,name,avatar');
+        ->with(['user:id,name,avatar', 'user.employeeProfile.designation']);
             $user = auth()->user();
             // branch_admin sits as a PEER inside the office (no downward subordinates of
             // their own), so isManagedBy() below — which walks down from $user — never

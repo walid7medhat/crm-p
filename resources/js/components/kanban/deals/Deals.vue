@@ -725,7 +725,50 @@ const showPersonHoverCard = (task, type) => {
         type,
         data: normalizePersonHoverData(person, task, type, fallbackName),
     }
-  
+
+    // Deal payloads don't carry the employee-profile designation (`position`) — load the
+    // user's profile so the card shows the designation first, then the role.
+    if (person?.id && person?.position === undefined) {
+        enrichPersonHoverFromApi(Number(person.id), task?.id, type, person, task, fallbackName)
+    }
+}
+
+// One /users/{id} request per person for the whole page.
+const personHoverDetailsCache = new Map()
+
+const enrichPersonHoverFromApi = async (userId, dealId, type, basePerson, task, fallbackName) => {
+    try {
+        let user = personHoverDetailsCache.get(userId)
+        if (!user) {
+            const response = await axios.get(`/users/${userId}`)
+            const payload = response.data?.data
+            user = payload?.data && typeof payload.data === 'object' ? payload.data : payload
+            if (user?.id) {
+                personHoverDetailsCache.set(userId, user)
+            }
+        }
+        if (!user?.id) return
+        // The user may have moved to another card while the request was in flight.
+        if (activePersonHover.value?.leadId !== dealId || activePersonHover.value?.type !== type) return
+
+        activePersonHover.value = {
+            leadId: dealId,
+            type,
+            data: normalizePersonHoverData(
+                {
+                    ...basePerson,
+                    position: user.position || user.role_name || basePerson?.role_name,
+                    parent_name: basePerson?.parent_name || user.parent_name,
+                    branch_name: basePerson?.branch_name || user.branch,
+                },
+                task,
+                type,
+                fallbackName,
+            ),
+        }
+    } catch {
+        // Keep the card as-is (role fallback) if the profile can't be loaded.
+    }
 }
 
 const hidePersonHoverCard = () => {

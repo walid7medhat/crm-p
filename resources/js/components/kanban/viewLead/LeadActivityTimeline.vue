@@ -76,7 +76,7 @@
                                                 </div>
                                                 <div>
                                                     <div class="person-hover-name">{{ item.user.name || '—' }}</div>
-                                                    <div class="person-hover-role">{{ item.user.user_role_name || 'Team Member' }}</div>
+                                                    <div class="person-hover-role">{{ item.user.user_position || item.user.user_role_name || 'Team Member' }}</div>
                                                 </div>
                                             </div>
                                             <div class="person-hover-line">

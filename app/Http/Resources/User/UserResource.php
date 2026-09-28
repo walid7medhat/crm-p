@@ -70,7 +70,9 @@ class UserResource extends JsonResource
             'biometric_code'=>$this->biometric_code,
             'branch' => $this->employeeProfile?->companyBranch?->name
                 ?: User::resolveDisplayName($this->admin_parent),
-            'position' => $this->employeeProfile?->designation?->name,
+            // Employee-profile designation, falling back to the role label.
+            'position' => $this->employeeProfile?->designation?->name
+                ?: static::formatRoleLabel($this->roles->first()?->name),
             'department' => $this->employeeProfile?->department?->name
                 ?: User::resolveDisplayName($this->office),
             'joining_date' => $this->employeeProfile?->joining_date,

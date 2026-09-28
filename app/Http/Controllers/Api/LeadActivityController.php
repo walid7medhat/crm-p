@@ -248,6 +248,7 @@ class LeadActivityController extends Controller
         $comments = $lead->comments()
             ->with([
                 'user.roles:id,name',
+                'user.employeeProfile.designation',
                 'user.parent:id,name,display_name,parent_id',
                 'user.parent.parent:id,name,display_name,parent_id',
                 'user.parent.parent.parent:id,name,display_name,parent_id',

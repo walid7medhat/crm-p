@@ -71,7 +71,7 @@
                   </div>
                   <div class="profile-contact-item">
                     <span class="profile-contact-label">Departments</span>
-                    <span class="profile-contact-value profile-contact-readonly">{{ userData.role_name || '—' }}</span>
+                    <span class="profile-contact-value profile-contact-readonly">{{ userData.position || userData.role_name || '—' }}</span>
                   </div>
                   <div class="profile-contact-item">
                     <span class="profile-contact-label">Last Name</span>
@@ -136,7 +136,7 @@
                     </div>
                     <div class="profile-team-info">
                       <span class="profile-team-name">{{ teamMemberDisplayName(member) }}</span>
-                      <span class="profile-team-role">{{ member.role_name || member.role || '—' }}</span>
+                      <span class="profile-team-role">{{ member.position || member.role_name || member.role || '—' }}</span>
                     </div>
                   </div>
                 </div>
