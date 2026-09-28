@@ -1536,12 +1536,12 @@ const clientReqQualityStatusOptions = computed(() => {
     // Stage 4: Qualified - Hot/Warm/Cold فقط
     if (stageOrder === 4) {
         return [
-             { value: 'cold', text: 'Within 1 Month' },
+             { value: 'cold', text: 'More than 3 Months' },
             { value: 'warm', text: '1–3 Months' },
-            { value: 'hot', text: 'More than 3 Months' }
+            { value: 'hot', text: 'Within 1 Month' }
         ]
     }
-    
+
     // Stage 9: Lead Pool
     if (stageOrder === 9) {
         return [
@@ -1569,9 +1569,9 @@ const clientReqQualityStatusOptions = computed(() => {
     
     // Default لبقية المراحل (3,5,6,7,8)
     return [
-         { value: 'cold', text: 'Within 1 Month' },
+         { value: 'cold', text: 'More than 3 Months' },
          { value: 'warm', text: '1–3 Months' },
-         { value: 'hot', text: 'More than 3 Months' }
+         { value: 'hot', text: 'Within 1 Month' }
     ]
 })
 const clientReqPurposeOptions = [

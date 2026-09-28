@@ -693,9 +693,9 @@ const propertyStatusOptions = [
 ]
 
 const hotWarmLeadOptions = [
-    { value: 'cold', text: 'Within 1 Month' },
+    { value: 'cold', text: 'More than 3 Months' },
     { value: 'warm', text: '1–3 Months' },
-    { value: 'hot', text: 'More than 3 Months' }
+    { value: 'hot', text: 'Within 1 Month' }
 ]
 const convertedStatusOptions = [
     { value: 'converted', text: 'Converted' }
@@ -705,7 +705,7 @@ const convertedStatusOptions = [
 const qualityTemperatureRadios = [
     {
         value: 'cold',
-        label: 'Within 1 Month',
+        label: 'More than 3 Months',
         ringColor: '#38bdf8',
         fillColor: '#0ea5e9',
         tooltip: "Cold leads are fresh or haven't been contacted recently.",
@@ -719,7 +719,7 @@ const qualityTemperatureRadios = [
     },
     {
         value: 'hot',
-        label: 'More than 3 Months',
+        label: 'Within 1 Month',
         ringColor: '#f43f5e',
         fillColor: '#e11d48',
         tooltip: 'Hot leads are very active and ready for follow-up.',
@@ -779,9 +779,9 @@ const unqualifiedStatusOptions = [
 ]
 
 const defaultLeadStatusOptions = [
-    { value: 'cold', text: 'Within 1 Month' },
+    { value: 'cold', text: 'More than 3 Months' },
     { value: 'warm', text: '1–3 Months' },
-    { value: 'hot', text: 'More than 3 Months' }
+    { value: 'hot', text: 'Within 1 Month' }
 ]
 const reminderOptions = [
     { label: 'When event starts', value: '0' },
