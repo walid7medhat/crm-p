@@ -65,7 +65,7 @@
               <iconify-icon icon="lucide:plus" />
             </button>
             <button
-              v-if="isKanbanRoute && isSuperAdmin"
+              v-if="isKanbanRoute && isCustomAdmin"
               type="button"
               class="kanban-mob-icon-btn"
               aria-label="Settings"
@@ -470,7 +470,7 @@
             <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
         </button>
           <button 
-              v-if="isSuperAdmin"
+              v-if="isCustomAdmin"
               @click="openSettingsHub"
               class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border"
               style="width: 34px; height: 34px;"
@@ -487,7 +487,7 @@
           <span class="d-none d-sm-inline">Create Listing</span>
         </router-link>
         <button
-          v-if="isDashboardHome && isSuperAdmin"
+          v-if="isDashboardHome && isCustomAdmin"
           type="button"
           class="action-icon-btn d-flex align-items-center justify-content-center radius-circle border navbar-settings-btn"
           aria-label="Settings System"
