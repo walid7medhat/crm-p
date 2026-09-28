@@ -75,6 +75,7 @@ function getUserFromStorage() {
 const user = ref(getUserFromStorage())
 
 const isSuperAdmin = computed(() => user.value?.roles?.includes('super_admin') ?? false)
+const isAdmin = computed(() => user.value?.roles?.includes('admin') ?? false)
 
 const baseSections = [
   { id: 'leads', label: 'Leads Settings', icon: 'lucide:layout-template', component: KanbanSettings },
@@ -86,7 +87,7 @@ const baseSections = [
 
 const visibleSections = computed(() => {
   const sections = [...baseSections]
-  if (isSuperAdmin.value) {
+  if (isSuperAdmin.value || isAdmin.value) {
     sections.push({
       id: 'integrations',
       label: 'Integrations',
