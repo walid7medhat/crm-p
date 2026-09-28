@@ -1,98 +1,81 @@
 <template>
-  <section class="login">
-    <div class="login-card">
-      <div class="mx-auto w-100">
+  <AuthLandingShell>
+    <div class="auth-glass-card auth-glass-card--compact">
+      <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
+      <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
 
-        <!-- Logo -->
-        <div class="logo">
-          <img :src="logo" class="main-logo" />
-        </div>
-
-        <div class="form">
-          <form @submit.prevent="resetPassword">
-
-            <h4 class="mb-12 titleH">Reset Password</h4>
-            <p class="mb-32 titleH2">
-              Enter your new password
-            </p>
-
-            <!-- Password -->
-            <div class="position-relative mb-20">
-              <div class="icon-field">
-                <span class="icon top-50 translate-middle-y">
-                  <iconify-icon icon="solar:lock-password-outline"></iconify-icon>
-                </span>
-                <input
-                  :type="showPassword ? 'text' : 'password'"
-                  class="form-control h-56-px bg-neutral-50 radius-12"
-                  placeholder="New Password"
-                  v-model="password"
-                  required
-                />
-              </div>
-              <span
-                class="toggle-password ri-eye-line cursor-pointer position-absolute end-0 top-50 translate-middle-y me-16 text-secondary-light"
-                :class="{ 'ri-eye-off-line': showPassword }"
-                @click="togglePassword"
-              ></span>
-            </div>
-
-            <!-- Confirm -->
-            <div class="position-relative mb-20">
-              <div class="icon-field">
-                <span class="icon top-50 translate-middle-y">
-                  <iconify-icon icon="solar:lock-password-outline"></iconify-icon>
-                </span>
-                <input
-                  :type="showPassword ? 'text' : 'password'"
-                  class="form-control h-56-px bg-neutral-50 radius-12"
-                  placeholder="Confirm Password"
-                  v-model="password_confirmation"
-                  required
-                />
-              </div>
-              <span
-                class="toggle-password ri-eye-line cursor-pointer position-absolute end-0 top-50 translate-middle-y me-16 text-secondary-light"
-                :class="{ 'ri-eye-off-line': showPassword }"
-                @click="togglePassword"
-              ></span>
-            </div>
-
-            <!-- Button -->
-            <button
-              type="submit"
-              class="btn btn-primary text-sm btn-sm px-12 py-16 w-100 radius-12 mt-32"
-            >
-              Reset Password
-            </button>
-
-            <!-- Message -->
-            <p v-if="message" class="text-danger mt-3 text-center">
-              {{ message }}
-            </p>
-
-          </form>
-
-          <!-- Back -->
-          <div class="mt-32 text-center text-sm">
-            <p class="mb-0 text-white">
-              Back to
-              <router-link to="/sign-in" class="text-white fw-semibold">
-                Sign In
-              </router-link>
-            </p>
-          </div>
-
-        </div>
+      <div class="auth-reset-heading">
+        <h6 class="auth-reset-heading__title">Reset Password</h6>
+        <p class="auth-reset-heading__subtitle">Enter your new password</p>
       </div>
+
+      <form class="auth-glass-form" @submit.prevent="resetPassword">
+        <div class="auth-glass-field">
+          <label class="auth-glass-field__label" for="reset-password">New Password</label>
+          <div class="auth-glass-input-wrap">
+            <input
+              id="reset-password"
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              class="auth-glass-input"
+              placeholder="New Password"
+              autocomplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              class="auth-glass-input__icon auth-glass-input__icon--clickable"
+              :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              @click="togglePassword"
+            >
+              <iconify-icon
+                :icon="showPassword ? 'mdi:eye-outline' : 'mdi:eye-off-outline'"
+              />
+            </button>
+          </div>
+        </div>
+
+        <div class="auth-glass-field">
+          <label class="auth-glass-field__label" for="reset-password-confirm">Confirm Password</label>
+          <div class="auth-glass-input-wrap">
+            <input
+              id="reset-password-confirm"
+              v-model="password_confirmation"
+              :type="showPassword ? 'text' : 'password'"
+              class="auth-glass-input"
+              placeholder="Confirm Password"
+              autocomplete="new-password"
+              required
+            />
+          </div>
+        </div>
+
+        <div v-if="message" class="auth-glass-error" role="alert">
+          {{ message }}
+        </div>
+
+        <div class="auth-glass-actions">
+          <button type="submit" class="auth-glass-btn auth-glass-btn--primary auth-glass-btn--block">
+            Reset Password
+          </button>
+        </div>
+
+        <router-link to="/sign-in" class="auth-glass-pill-link">
+          Back to <b>Sign In</b>
+        </router-link>
+      </form>
     </div>
-  </section>
+  </AuthLandingShell>
 </template>
 
 <script>
 import api from '@/plugins/axios';
+import AuthLandingShell from './AuthLandingShell.vue';
 
 export default {
+  components: {
+    AuthLandingShell,
+  },
   data() {
     return {
       email: '',
@@ -100,15 +83,12 @@ export default {
       password_confirmation: '',
       token: '',
       message: '',
-      logo: '/assets/images/LogoWhite.png',
       showPassword: false,
     };
   },
   mounted() {
     this.token = this.$route.query.token;
     this.email = this.$route.query.email;
-    console.log('Token:', this.token);
-    console.log('Email:', this.email);
   },
   methods: {
     togglePassword() {
@@ -120,23 +100,23 @@ export default {
         this.message = 'Passwords do not match';
         return;
       }
-      
+
       // Validate password length
       if (this.password.length < 6) {
         this.message = 'Password must be at least 6 characters';
         return;
       }
-      
+
       try {
         const res = await api.post('/auth/reset-password', {
           email: this.email,
           password: this.password,
           password_confirmation: this.password_confirmation,
-          token: this.token
+          token: this.token,
         });
 
         this.message = res.data.message;
-        
+
         // Optional: redirect to login after successful reset
         if (res.data.success) {
           setTimeout(() => {
@@ -146,202 +126,38 @@ export default {
       } catch (e) {
         this.message = e.response?.data?.message || 'Error resetting password';
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
-
+<style src="./auth-glass-shared.css"></style>
 <style scoped>
-.login {
-  background-color: #0B0736 !important;
-  height: 100vh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+.auth-reset-heading {
+  margin-bottom: clamp(16px, 2.5vh, 22px);
+  text-align: center;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 586px; /* كما في الصورة */
-  background: transparent;
-}
-
-.max-w-464-px {
-  max-width: 464px;
-  margin: 0 auto;
-}
-
-.form {
-  /* التدرج اللوني - تم تعديله لتطابق الصورة */
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.5));
-  
-  /* الحدود */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  
-  /* الظلال والتأثيرات */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(40px);
-  
-  /* محاذاة داخلية */
-  padding: 40px 32px;
-  
-  /* تحسينات إضافية */
-  box-sizing: border-box;
-}
-
-.titleH {
-  font-size: 28px;
+.auth-reset-heading__title {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #FFFFFF;
-  margin-bottom: 12px;
-  text-align: center;
+  color: #0f172a;
 }
 
-.titleH2 {
-  font-size: 16px;
-  font-weight: 400;
-  color: #FFFFFF;
-  margin-bottom: 32px;
-  text-align: center;
+.auth-reset-heading__subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
-/* تحسين حقول الإدخال */
-.icon-field {
-  position: relative;
-}
-
-.icon-field .icon {
-  position: absolute;
-  left: 16px;
-  color: #666;
-  z-index: 2;
-}
-
-.icon-field input {
-  padding-left: 48px !important;
-  background-color: rgba(255, 255, 255, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px !important;
-  color: #0B0736 !important;
-  font-size: 14px;
-}
-
-.icon-field input::placeholder {
-  color: #888;
-}
-
-.icon-field input:focus {
-  border-color: #0B0736 !important;
-  box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1) !important;
-}
-
-/* زر تسجيل الدخول */
-.btn-primary {
-  background-color: #0B0736 !important;
-  border: none !important;
-  border-radius: 8px !important;
-  font-weight: 600;
-  font-size: 16px;
-  padding: 16px !important;
-  transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-  background-color: #020a4a !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(1, 6, 44, 0.2);
-}
-
-.btn-primary:disabled {
-  background-color: #666 !important;
-  opacity: 0.7;
-}
-
-/* Remember me checkbox */
-.form-check-input:checked {
-  background-color: #0B0736;
-  border-color: #0B0736;
-}
-
-.form-check-label {
-  color: #333;
-  font-size: 14px;
-}
-
-/* الروابط */
-.text-primary-600 {
-  color: #0B0736 !important;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.text-primary-600:hover {
-  text-decoration: underline;
-}
-
-/* رسالة الخطأ */
-.text-danger {
-  background: rgba(220, 53, 69, 0.1);
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid #dc3545;
-}
-
-/* زر إظهار/إخفاء كلمة المرور */
-.toggle-password {
-  color: #666;
-  font-size: 18px;
-}
-
-.toggle-password:hover {
-  color: #0B0736;
-}
-
-/* الشعار */
-.logo{
-    text-align: center;
-  justify-content: center;
-}
-.main-logo {
-  height: 60px;
-  width: auto;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
-  justify-content: center;
-}
-
-/* التجاوب */
 @media (max-width: 768px) {
-  .form {
-    padding: 32px 24px;
+  .auth-reset-heading__title {
+    color: #fff;
   }
-  
-  .login-card {
-    margin: 20px;
-  }
-  
-  .titleH {
-    font-size: 24px;
-  }
-  
-  .titleH2 {
-    font-size: 14px;
-  }
-}
 
-@media (max-width: 480px) {
-  .form {
-    padding: 24px 16px;
-  }
-  
-  .login {
-    padding: 16px;
+  .auth-reset-heading__subtitle {
+    color: rgba(255, 255, 255, 0.7);
   }
 }
 </style>
