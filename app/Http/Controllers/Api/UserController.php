@@ -37,16 +37,27 @@ class UserController extends Controller
             
             $isPaginated = $request->has('page') || $request->has('per_page');
 
+            // UserResource reads $user->admin_parent / $user->office, which walk the
+            // manager chain via $current->parent in a loop (see getAdminParentAttribute()/
+            // getOfficeAttribute() in User.php) — without preloading several levels up
+            // front, each step lazy-loads its own parent + roles query, turning this into
+            // an N+1 across every row on every search (same issue show() already fixes).
+            $ancestorChain = [];
+            $path = 'parent';
+            for ($i = 0; $i < 8; $i++) {
+                $ancestorChain[] = "{$path}.roles";
+                $path .= '.parent';
+            }
+
             // Start the query
-            $query = User::with([
+            $query = User::with(array_merge([
                 'roles',
                 'permissions',
-                'parent.roles',
                 'addedBy',
                 'employeeProfile.companyBranch',
                 'employeeProfile.designation',
                 'employeeProfile.department',
-            ])
+            ], $ancestorChain))
             // UserResource recursively rebuilds a full nested resource for every entry in
             // `children` — eager-loading it here is what the paginated table doesn't need
             // (it never reads `children`), so skip it there to avoid that blow-up; the
