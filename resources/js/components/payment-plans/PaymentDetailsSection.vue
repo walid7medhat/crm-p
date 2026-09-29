@@ -364,7 +364,7 @@ const tableTotals = computed(() => {
   let amountTotal = 0;
   let hasPercent = false;
   for (const row of breakdownRows.value) {
-    amountTotal += row.amount;
+    if (!row.dashOut) amountTotal += row.amount;
     if (row.type === 'Premium') continue;
     const p = parseFloat(row.percentage);
     if (Number.isFinite(p)) {

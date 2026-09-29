@@ -7299,7 +7299,7 @@ const createPaymentDetailsSlide = () => {
 
   const totalAmount = (installments.reduce((s, e) => s + installmentAmount(e), 0))
     + (installments.length > 0 || originalPrice > 0 || sellingPrice > 0 ? premium : 0)
-    + (Math.abs(handoverAmount) > 0.01 ? handoverAmount : 0);
+    + (Math.abs(handoverAmount) > 0.01 && !handoverIsFull ? handoverAmount : 0);
 
   const baseLabels = { op: 'OP', sp: 'SP', premium: 'premium' };
   const baseAmount = (b) => b === 'op' ? originalPrice : b === 'sp' ? sellingPrice : b === 'premium' ? premium : 0;
