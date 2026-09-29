@@ -789,9 +789,14 @@ class LeadController extends Controller
         // }
 
         if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-            $subordinatesIds = $user->hasRole('branch_admin')
-                ? [...$user->getBranchAdminSubordinateIds(), self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID]
-                : $user->getAllSubordinatesIds();
+            $subordinatesIds = $user->getAllSubordinatesIds();
+            if ($user->hasRole('branch_admin')) {
+                $subordinatesIds = [...$user->getBranchAdminSubordinateIds(), self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID];
+            }
+            // show-branch-leads: may assign to anyone in their whole branch.
+            if ($user->hasBranchLeadsPermission()) {
+                $subordinatesIds = [...$subordinatesIds, ...$user->getBranchUserIds()];
+            }
             if (!in_array($request->responsible_person_id, $subordinatesIds)) {
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
             }
@@ -966,13 +971,24 @@ class LeadController extends Controller
         if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
             $base->role(['team_lead', 'sales', 'manager', 'admin'])
                 ->whereNotNull('users.parent_id');
-        } elseif ($user->hasRole('branch_admin')) {
-            // Branch sales/team leads, plus user #33 (whatever their role).
-            $base->where(function ($q) use ($user) {
-                $q->where(function ($q) use ($user) {
-                    $q->role(['team_lead', 'sales'])
-                        ->whereIn('users.id', $user->getBranchAdminSubordinateIds());
-                })->orWhere('users.id', self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID);
+        } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin')) {
+            // show-branch-leads → agents across the whole branch (all offices);
+            // branch_admin → their office. Branch admins also get user #33.
+            $scopeIds = $user->hasBranchLeadsPermission()
+                ? $user->getBranchUserIds()
+                : $user->getBranchAdminSubordinateIds();
+            $roles = $user->hasBranchLeadsPermission()
+                ? ['team_lead', 'sales', 'manager']
+                : ['team_lead', 'sales'];
+            $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID] : [];
+
+            $base->where(function ($q) use ($scopeIds, $roles, $extraIds) {
+                $q->where(function ($q) use ($scopeIds, $roles) {
+                    $q->role($roles)->whereIn('users.id', $scopeIds);
+                });
+                if ($extraIds) {
+                    $q->orWhereIn('users.id', $extraIds);
+                }
             });
         } else {
             $base->role(['team_lead', 'sales'])
