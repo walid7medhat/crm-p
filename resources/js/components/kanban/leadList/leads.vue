@@ -483,6 +483,15 @@
                     <template v-if="listRows.length">{{ listRangeStart }}–{{ listRangeEnd }} of {{ listTotalLabel }}</template>
                     <template v-else>0 leads</template>
                 </p>
+                <div v-if="showListPager" class="lead-list-pager">
+                    <button type="button" class="lead-list-pager__btn" :disabled="listPage <= 1 || listMoreLoading" @click="goListPrev">
+                        Previous
+                    </button>
+                    <span class="lead-list-pager__status">Page {{ listPage }}<template v-if="!listHasMore"> of {{ listPageCount }}</template></span>
+                    <button type="button" class="lead-list-pager__btn" :disabled="!canListNext || listMoreLoading" @click="goListNext">
+                        {{ listMoreLoading ? 'Loading…' : 'Next' }}
+                    </button>
+                </div>
             </div>
 
             <div v-if="listRows.length === 0" class="lead-list-empty">
@@ -668,15 +677,6 @@
                 </table>
             </div>
 
-            <footer v-if="showListPager" class="lead-list-pager">
-                <button type="button" class="lead-list-pager__btn" :disabled="listPage <= 1 || listMoreLoading" @click="goListPrev">
-                    Previous
-                </button>
-                <span class="lead-list-pager__status">Page {{ listPage }}<template v-if="!listHasMore"> of {{ listPageCount }}</template></span>
-                <button type="button" class="lead-list-pager__btn" :disabled="!canListNext || listMoreLoading" @click="goListNext">
-                    {{ listMoreLoading ? 'Loading…' : 'Next' }}
-                </button>
-            </footer>
         </div>
         </div>
         <template v-if="!loading && !error && columns.length > 0 && boardView === 'kanban'">
@@ -4164,7 +4164,7 @@ const pagedListRows = computed(() => {
 const listRangeStart = computed(() => (listRows.value.length ? (listPage.value - 1) * LIST_PAGE_SIZE + 1 : 0))
 const listRangeEnd = computed(() => Math.min(listPage.value * LIST_PAGE_SIZE, listRows.value.length))
 const listTotalLabel = computed(() => Math.max(totalLeadsCount.value || 0, listRows.value.length))
-const showListPager = computed(() => listRows.value.length > LIST_PAGE_SIZE || listHasMore.value)
+const showListPager = computed(() => listTotalLabel.value > LIST_PAGE_SIZE || listRows.value.length > LIST_PAGE_SIZE || listHasMore.value)
 const canListNext = computed(() => listPage.value < listPageCount.value || listHasMore.value)
 
 watch(listPageCount, (count) => {
@@ -7381,21 +7381,39 @@ const fetchRevertNotifications = async () => {
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
 }
 
+.kanban-outer--list {
+    overflow: hidden;
+}
+
+.kanban-outer--list .board-head,
+.kanban-outer--list .lead-select-bar {
+    flex-shrink: 0;
+}
+
 .kanban-container.kanban-container--list {
-    overflow-x: auto;
-    overflow-y: auto !important;
-    padding: 0 8px 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 0;
+    overflow: hidden !important;
+    padding: 0 8px 8px;
 }
 
 .kanban-outer--mobile.kanban-outer--list .kanban-container {
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
-    height: auto;
+    overflow: hidden !important;
+    height: auto !important;
+    min-height: 0;
 }
 
 .lead-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
     background: rgba(255, 255, 255, 0.94);
     border: 1px solid rgba(226, 232, 240, 0.95);
     border-radius: 18px;
@@ -7406,7 +7424,10 @@ const fetchRevertNotifications = async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px 0;
+    gap: 12px;
+    flex-shrink: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eef2f7;
 }
 
 .lead-list__count {
@@ -7425,8 +7446,11 @@ const fetchRevertNotifications = async () => {
 }
 
 .lead-list-table-wrap {
+    flex: 1 1 auto;
     width: 100%;
-    overflow: visible;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .lead-list-table {
@@ -7634,8 +7658,9 @@ const fetchRevertNotifications = async () => {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex-shrink: 0;
     gap: 10px;
-    margin: 8px 16px 16px;
+    margin: 0;
 }
 
 .lead-list-pager__status {
@@ -7664,7 +7689,11 @@ const fetchRevertNotifications = async () => {
 .lead-list-cards {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: 10px;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 10px 12px 4px;
 }
 
