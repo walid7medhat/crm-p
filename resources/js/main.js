@@ -71,6 +71,21 @@ function getStoredUserId() {
   }
 }
 
+function isStoredSuperAdmin() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}')?.roles?.includes('super_admin') ?? false
+  } catch (_) {
+    return false
+  }
+}
+
+// LeadUpdatedNotification / LeadRevertWarningNotification — `type` is the class name.
+// Matched by class only: activity reminders and @mentions also carry a `lead` but
+// are personal, so they still pop up.
+function isLeadNotification(notification) {
+  return /\\Lead\w*Notification$/.test(String(notification?.type || ''))
+}
+
 const app = createApp(App)
 app.component('SearchableSelect', SearchableSelect)
 app.config.devtools = true
@@ -330,7 +345,11 @@ function scheduleEchoInit() {
             const type = String(notification.type || '').includes('status')
               ? (notification.status === 'approved' ? 'success' : 'error')
               : 'info'
-            showNotificationDeferred(notification.message || 'New notification', type)
+            // Super admins see every lead, so lead pop-ups would never stop for them.
+            // They still land in the bell via the 'app-notification' event below.
+            if (!(isLeadNotification(notification) && isStoredSuperAdmin())) {
+              showNotificationDeferred(notification.message || 'New notification', type)
+            }
 
             if (notification.type === 'leave_request_parent_status') {
               window.dispatchEvent(new CustomEvent('app-notification', {

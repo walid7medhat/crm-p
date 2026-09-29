@@ -20,7 +20,7 @@ return new class extends Migration
     {
         $role = Role::firstOrCreate(['name' => 'branch_admin', 'guard_name' => 'api']);
 
-        $permissionNames = ['show-leads', 'leads-list', 'leads-edit'];
+        $permissionNames = ['show-leads', 'leads-list', 'leads-edit','leads-create'];
         foreach ($permissionNames as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'api']);
         }
