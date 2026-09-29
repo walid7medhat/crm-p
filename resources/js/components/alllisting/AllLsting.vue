@@ -178,10 +178,7 @@
                     </p>
                     <div class="property-listed-date mb-2">
                         <i class="ri-calendar-line me-1"></i>
-                        <div class="property-listed-date-text">
-                          <small class="text-muted d-block">Listed at: {{ formatDate(property.created_at) }}</small>
-                          <!-- <small class="text-muted d-block">Updated at: {{ formatDate(property.updated_at) }}</small> -->
-                        </div>
+                        <small class="text-muted">Updated at: {{ formatDate(property.updated_at) }}</small>
                       </div>
                     </div>
                 <span class="view-more-btn">
@@ -1495,13 +1492,6 @@ const decodeFiltersFromQuery = async (query) => {
   margin-top: 2px;
 }
 
-.property-listed-date-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  gap: 2px;
-}
 .justify-between{
     justify-content:space-between;
 }
