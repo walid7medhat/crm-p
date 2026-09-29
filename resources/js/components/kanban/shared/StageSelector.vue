@@ -101,7 +101,14 @@ const user = ref(getUserFromStorage())
 // Check if user is admin or super_admin
 const isSuperAdmin = computed(() => {
     if (!user.value) return false
-    return user.value.roles?.includes('super_admin') 
+    return user.value.roles?.includes('super_admin')
+})
+
+// Listing-team sales create their own leads straight into the first stage (New Lead);
+// the auto-assign engine leaves those leads with them.
+const isListingTeamSales = computed(() => {
+    if (!user.value) return false
+    return !!user.value.is_listing_team && !!user.value.roles?.includes('sales')
 })
 
 function getColorByIndex(index) {
@@ -198,8 +205,8 @@ const autoSelectStage = () => {
     if (props.modelValue === null && !currentStageId.value) {
         let stageToSelectId
         
-        if (isSuperAdmin.value) {
-            // Admin: select first stage
+        if (isSuperAdmin.value || isListingTeamSales.value) {
+            // Super admin / listing-team sales: select first stage (New Lead)
             stageToSelectId = stages.value[0].id
             console.log('Admin auto-selecting first stage:', stageToSelectId, stages.value[0].name)
         } else {
