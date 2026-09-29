@@ -498,89 +498,12 @@
                 No leads match this view.
             </div>
 
-            <div v-else-if="kanbanIsMobile || listIsCompact" class="lead-list-cards" :class="{ 'lead-list-cards--grid': listIsCompact && !kanbanIsMobile }">
-                <article
-                    v-for="(row, index) in pagedListRows"
-                    :key="'m-' + row.task.id"
-                    class="lead-list-card"
-                    :class="{ 'is-selected': isLeadSelected(row.task.id) }"
-                    @click="onLeadCardClick(row.task, row.column, $event)"
-                    @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
-                >
-                    <div class="lead-list-card__top">
-                        <span class="lead-list-num">{{ listRangeStart + index }}</span>
-                        <button
-                            v-if="isAdminOrSuperAdmin && leadSelectionActive"
-                            type="button"
-                            class="lead-list-check"
-                            :class="{ 'is-on': isLeadSelected(row.task.id) }"
-                            :aria-pressed="isLeadSelected(row.task.id)"
-                            aria-label="Select lead"
-                            @click.stop="toggleLeadSelection(row.task)"
-                        >
-                            <iconify-icon :icon="isLeadSelected(row.task.id) ? 'lucide:check' : 'lucide:square'" />
-                        </button>
-                        <div class="lead-list-name">
-                            <div class="lead-list-name__row">
-                                <span class="lead-list-name__title">{{ row.task.lead_name || 'Untitled' }}</span>
-                                <span v-if="row.task.has_service_duplicate" class="lead-list-chip lead-list-chip--alert">Blacklisted</span>
-                                <button
-                                    v-if="canSeeDuplicates && row.task.duplicate_no > 0"
-                                    type="button"
-                                    class="lead-list-chip lead-list-chip--dup"
-                                    @click.stop="openDuplicateLeadsModal(row.task.id, $event)"
-                                >
-                                    {{ row.task.duplicate_no }} dup
-                                </button>
-                            </div>
-                            <span v-if="row.task.lead_source || row.task.lead_branch_source" class="lead-list-name__source">
-                                {{ row.task.lead_source || row.task.lead_branch_source }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="lead-list-stage">
-                        <div class="lead-list-stage__track" aria-hidden="true">
-                            <span
-                                v-for="(col, segIndex) in columns"
-                                :key="'seg-m-' + row.task.id + '-' + col.status"
-                                class="lead-list-stage__seg"
-                                :style="{ background: segIndex <= listStageIndex(row.column) ? (row.column.color || '#64748b') : '#e8eef6' }"
-                            />
-                        </div>
-                        <span class="lead-list-stage__name">{{ row.column.title }}</span>
-                    </div>
-                    <div class="lead-list-card__meta">
-                        <div>
-                            <span class="lead-list-kicker">Activity</span>
-                            <span class="lead-list-value">{{ listActivityLabel(row.task) || 'No activities' }}</span>
-                        </div>
-                        <div>
-                            <span class="lead-list-kicker">Created</span>
-                            <span class="lead-list-value" :title="formatDate(row.task.created_at)">{{ formatListCreated(row.task.created_at) }}</span>
-                        </div>
-                        <div>
-                            <span class="lead-list-kicker">Phone</span>
-                            <span class="lead-list-value">{{ listPhone(row.task) || '—' }}</span>
-                        </div>
-                        <div>
-                            <span class="lead-list-kicker">Name</span>
-                            <span class="lead-list-value">{{ listLeadFullName(row.task) }}</span>
-                        </div>
-                    </div>
-                    <div
-                        v-if="hasResponsiblePerson(row.task)"
-                        class="lead-list-person"
-                        @click.stop="openPersonProfile(row.task, 'responsible', $event)"
-                        @mouseenter.stop="showPersonHoverCard(row.task, 'responsible', $event)"
-                        @mouseleave.stop="hidePersonHoverCard"
-                    >
-                        <img :src="responsiblePersonAvatar(row.task)" alt="" />
-                        <span>{{ row.task.responsible_person?.name }}</span>
-                    </div>
-                </article>
-            </div>
-
-            <div v-else class="lead-list-table-wrap">
+            <div v-else class="lead-list-table-shell">
+            <div
+                ref="listTableWrapRef"
+                class="lead-list-table-wrap"
+                @scroll="updateListScrollArrows"
+            >
                 <table class="lead-list-table">
                     <thead>
                         <tr>
@@ -678,6 +601,31 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <div
+                v-show="showListLeftZone"
+                class="lead-list-nav lead-list-nav--left"
+                title="Move left"
+                aria-label="Move left"
+                @mouseenter="startListScrollLeft"
+                @mouseleave="stopListScroll"
+            >
+                <span class="kanban-nav-arrow kanban-nav-arrow-left">
+                    <iconify-icon icon="lucide:chevron-left" class="kanban-nav-arrow-icon" />
+                </span>
+            </div>
+            <div
+                v-show="showListRightZone"
+                class="lead-list-nav lead-list-nav--right"
+                title="Move right"
+                aria-label="Move right"
+                @mouseenter="startListScrollRight"
+                @mouseleave="stopListScroll"
+            >
+                <span class="kanban-nav-arrow kanban-nav-arrow-right">
+                    <iconify-icon icon="lucide:chevron-right" class="kanban-nav-arrow-icon" />
+                </span>
+            </div>
             </div>
 
         </div>
@@ -1987,6 +1935,50 @@ function stopScroll() {
     }
 }
 
+const listTableWrapRef = ref(null)
+const showListLeftZone = ref(false)
+const showListRightZone = ref(false)
+let listScrollInterval = null
+
+function updateListScrollArrows() {
+    const el = listTableWrapRef.value
+    if (!el) {
+        showListLeftZone.value = false
+        showListRightZone.value = false
+        return
+    }
+    const canScroll = el.scrollWidth - el.clientWidth > 2
+    showListLeftZone.value = canScroll && el.scrollLeft > 2
+    showListRightZone.value = canScroll && el.scrollWidth - el.clientWidth > el.scrollLeft + 2
+}
+
+function startListScrollLeft() {
+    stopListScroll()
+    listScrollInterval = setInterval(() => {
+        const el = listTableWrapRef.value
+        if (!el) return
+        el.scrollLeft -= SCROLL_SPEED
+        updateListScrollArrows()
+    }, SCROLL_TICK_MS)
+}
+
+function startListScrollRight() {
+    stopListScroll()
+    listScrollInterval = setInterval(() => {
+        const el = listTableWrapRef.value
+        if (!el) return
+        el.scrollLeft += SCROLL_SPEED
+        updateListScrollArrows()
+    }, SCROLL_TICK_MS)
+}
+
+function stopListScroll() {
+    if (listScrollInterval) {
+        clearInterval(listScrollInterval)
+        listScrollInterval = null
+    }
+}
+
 function onGlobalPointerMove(event) {
     const x = event?.touches?.[0]?.clientX ?? event?.clientX
     if (typeof x === 'number') {
@@ -3167,12 +3159,6 @@ watch(cardFields, () => {
 }, { deep: true })
 let unsubscribeLeadViewUpdated = null
 
-const listCompactQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 1440px)') : null
-const listIsCompact = ref(!!listCompactQuery?.matches)
-function syncListCompact() {
-    listIsCompact.value = !!listCompactQuery?.matches
-}
-
 onMounted(async () => {
     unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
     markKanbanReady()
@@ -3197,9 +3183,12 @@ onMounted(async () => {
   setupRevertAlertListener();
     fetchRevertNotifications();
     
-    nextTick(() => updateScrollArrows())
-    listCompactQuery?.addEventListener('change', syncListCompact)
+    nextTick(() => {
+        updateScrollArrows()
+        updateListScrollArrows()
+    })
     window.addEventListener('resize', updateScrollArrows)
+    window.addEventListener('resize', updateListScrollArrows)
     window.addEventListener('echo-ready', onEchoReady)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
@@ -3219,9 +3208,10 @@ onUnmounted(() => {
     }
     onLeadDragEnd()
     stopScroll()
+    stopListScroll()
     cancelPersonHoverHide()
-    listCompactQuery?.removeEventListener('change', syncListCompact)
     window.removeEventListener('resize', updateScrollArrows)
+    window.removeEventListener('resize', updateListScrollArrows)
     window.removeEventListener('echo-ready', onEchoReady)
     cleanup()
 })
@@ -4140,6 +4130,7 @@ function setBoardView(view) {
     } catch (e) {
         // ignore private-mode storage failures
     }
+    nextTick(() => updateListScrollArrows())
 }
 
 const LIST_PAGE_SIZE = 10
@@ -4162,6 +4153,10 @@ const listPageCount = computed(() => Math.max(1, Math.ceil(listRows.value.length
 const pagedListRows = computed(() => {
     const start = (listPage.value - 1) * LIST_PAGE_SIZE
     return listRows.value.slice(start, start + LIST_PAGE_SIZE)
+})
+
+watch(pagedListRows, () => {
+    nextTick(() => updateListScrollArrows())
 })
 
 const listRangeStart = computed(() => (listRows.value.length ? (listPage.value - 1) * LIST_PAGE_SIZE + 1 : 0))
@@ -7393,12 +7388,12 @@ const fetchRevertNotifications = async () => {
     flex-shrink: 0;
 }
 
-.kanban-container.kanban-container--list {
+.kanban-outer--list:not(.kanban-outer--mobile) .kanban-container.kanban-container--list {
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    flex: 1 1 0 !important;
     height: auto !important;
-    min-height: 0;
+    min-height: 0 !important;
     overflow: hidden !important;
     padding: 0 8px 8px;
 }
@@ -7448,6 +7443,15 @@ const fetchRevertNotifications = async () => {
     font-size: 14px;
 }
 
+.lead-list-table-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
 .lead-list-table-wrap {
     flex: 1 1 auto;
     width: 100%;
@@ -7456,11 +7460,31 @@ const fetchRevertNotifications = async () => {
     -webkit-overflow-scrolling: touch;
 }
 
+.lead-list-nav {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    cursor: pointer;
+}
+
+.lead-list-nav--left {
+    left: 14px;
+}
+
+.lead-list-nav--right {
+    right: 14px;
+}
+
 .lead-list-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 760px;
+    min-width: 1120px;
 }
 
 .lead-list-table th {
@@ -7710,16 +7734,37 @@ const fetchRevertNotifications = async () => {
     flex: 1 1 auto;
     gap: 10px;
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding: 10px 12px 4px;
+    scrollbar-width: thin;
+    padding: 10px 12px 16px;
+}
+
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list-cards,
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list-table-shell {
+    flex: 1 1 0;
+    height: 0;
+    min-height: 0;
+}
+
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list-table-wrap {
+    overflow-y: auto;
 }
 
 .lead-list-cards--grid {
     display: grid;
     grid-template-columns: 1fr;
+    grid-auto-rows: max-content;
+    align-content: start;
     gap: 12px;
-    padding: 12px;
+    padding: 12px 12px 16px;
     align-items: stretch;
 }
 
@@ -7782,33 +7827,6 @@ const fetchRevertNotifications = async () => {
     padding-top: 10px;
     border-top: 1px solid #f1f5f9;
     max-width: none;
-}
-
-@media (max-width: 1680px) {
-    .lead-list-col-optional {
-        display: none;
-    }
-
-    .lead-list-table {
-        table-layout: fixed;
-        min-width: 0;
-    }
-
-    .lead-list-col-lead { width: 30%; }
-    .lead-list-col-stage { width: 16%; }
-    .lead-list-col-created { width: 16%; }
-    .lead-list-col-person { width: 22%; }
-    .lead-list-col-phone { width: 16%; }
-
-    .lead-list-name,
-    .lead-list-stage,
-    .lead-list-person {
-        max-width: 100%;
-    }
-
-    .lead-list-stage {
-        min-width: 0;
-    }
 }
 
 @media (max-width: 768px) {
