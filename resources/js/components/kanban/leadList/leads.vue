@@ -6159,19 +6159,17 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .kanban-container {
-    overflow-x: auto !important;
+    overflow-x: hidden !important;
     overflow-y: visible;
     height: auto;
     min-height: 0;
     max-height: none;
-    /* Keep lead board horizontal spacing perfectly balanced on mobile */
     padding: 8px 8px 16px;
-    touch-action: pan-x pan-y;
+    touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
+    overscroll-behavior-x: none;
     overscroll-behavior-y: auto;
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 8px;
+    scroll-snap-type: none;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -6182,21 +6180,23 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .kanban-wrapper {
-    flex-direction: row !important;
+    flex-direction: column !important;
     flex-wrap: nowrap !important;
-    width: max-content !important;
-    min-width: max-content !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
-    gap: 10px;
+    gap: 12px;
 }
 
 .kanban-outer--mobile .kanban-column {
-    flex: 0 0 min(320px, 86vw) !important;
-    width: min(320px, 86vw) !important;
-    min-width: min(320px, 86vw) !important;
-    max-width: min(320px, 86vw) !important;
-    scroll-snap-align: start;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    scroll-snap-align: none;
     border-left: none;
     height: auto !important;
     min-height: 0 !important;
@@ -6274,7 +6274,7 @@ const fetchRevertNotifications = async () => {
 .kanban-outer--mobile .kanban-card--mobile {
     border-radius: 14px !important;
     box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
-    touch-action: pan-x pan-y;
+    touch-action: pan-y;
     -webkit-user-select: none;
     user-select: none;
 }
