@@ -992,9 +992,8 @@ class LeadController extends Controller
             // offices). Branch admins also get user #33, and user #33 gets the same
             // branch-wide visibility here in return.
             $scopeIds = $user->getBranchUserIds();
-            $roles = $user->hasBranchLeadsPermission()
-                ? ['team_lead', 'sales', 'manager']
-                : ['team_lead', 'sales'];
+            // Managers are assignable too (e.g. a listing-team manager in the branch).
+            $roles = ['team_lead', 'sales', 'manager'];
             $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID] : [];
 
             $base->where(function ($q) use ($scopeIds, $roles, $extraIds) {
