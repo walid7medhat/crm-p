@@ -399,7 +399,8 @@ public function activitiesWithTrashed()
      */
     public static function phoneDigits(?string $phone): string
     {
-        return str_replace(['+', ' ', '-', '(', ')', '.', '/'], '', (string) $phone);
+        // mb_substr(…, 64) mirrors the column's LEFT(…, 64) cap.
+        return mb_substr(str_replace(['+', ' ', '-', '(', ')', '.', '/'], '', (string) $phone), 0, 64);
     }
 
     /** Duplicates = other leads with the same phone, ignoring formatting (+971…, spaces…). */

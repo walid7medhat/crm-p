@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    private const EXPRESSION = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(work_phone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', ''), '.', ''), '/', '')";
+    // LEFT(…, 64): some rows hold pasted text / several numbers in work_phone — cap it
+    // so the column (and its index) always fits. Real phone numbers are far shorter.
+    private const EXPRESSION = "LEFT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(work_phone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', ''), '.', ''), '/', ''), 64)";
 
     public function up(): void
     {
