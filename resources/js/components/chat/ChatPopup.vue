@@ -86,10 +86,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import ConversationList from './ConversationList.vue'
 import ChatWindow from './ChatWindow.vue'
+import { messageAlertKey, setViewedChatConversation, whenEchoReady } from './incomingChatAlert'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -113,9 +114,6 @@ const onlineStatus = ref('')
 const typingUser = ref('')
 const typingTimeout = ref(null)
 const echoChannel = ref(null)
-let chatAudioContext = null
-let chatAudioElement = null
-let lastSoundAt = 0
 const messagesPage = ref(1)
 const messagesLastPage = ref(1)
 const startWithAgentFailed = ref(false)
@@ -128,7 +126,21 @@ let agentSearchDebounceTimer = null
 const inboxNewCount = ref(0)
 const inboxPulse = ref(false)
 const inboxEchoChannel = ref(null)
+const inboxSeenIds = new Set()
+let inboxMessageHandler = null
+let conversationMessageHandler = null
 let inboxPulseTimer = null
+let stopEchoWait = null
+
+watch([() => props.show, activeConversationId], ([visible, id]) => {
+  setViewedChatConversation(visible ? id : null)
+}, { immediate: true })
+
+onUnmounted(() => {
+  if (stopEchoWait) stopEchoWait()
+  stopEchoWait = null
+  setViewedChatConversation(null)
+})
 
 const filteredConversations = computed(() => {
   const q = chatSearchQuery.value.toLowerCase()
@@ -183,14 +195,6 @@ watch(() => props.show, (visible) => {
   } else {
     unsubscribeEcho()
     unsubscribeInboxNotifications()
-    if (chatAudioElement) {
-      chatAudioElement.pause()
-      chatAudioElement = null
-    }
-    if (chatAudioContext && typeof chatAudioContext.close === 'function') {
-      chatAudioContext.close().catch(() => {})
-      chatAudioContext = null
-    }
     if (agentSearchDebounceTimer) {
       clearTimeout(agentSearchDebounceTimer)
       agentSearchDebounceTimer = null
@@ -246,71 +250,50 @@ function triggerInboxPulse() {
   }, 900)
 }
 
-function playReceiveMessageSound() {
-  try {
-    if (typeof window === 'undefined') return
-    const nowMs = Date.now()
-    if (nowMs - lastSoundAt < 250) return
-    lastSoundAt = nowMs
-
-    if (!chatAudioElement) {
-      chatAudioElement = new Audio('/assets/notification-sound.mp3?v=3')
-      chatAudioElement.preload = 'auto'
-      chatAudioElement.volume = 0.42
-      chatAudioElement.playbackRate = 1.08
-    }
-
-    chatAudioElement.currentTime = 0
-    const playPromise = chatAudioElement.play()
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {
-        // Fallback soft ping if autoplay is blocked
-        const AudioCtx = window.AudioContext || window.webkitAudioContext
-        if (!AudioCtx) return
-        if (!chatAudioContext) chatAudioContext = new AudioCtx()
-        const now = chatAudioContext.currentTime
-        const osc = chatAudioContext.createOscillator()
-        const gain = chatAudioContext.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(1100, now)
-        gain.gain.setValueAtTime(0.0001, now)
-        gain.gain.exponentialRampToValueAtTime(0.09, now + 0.01)
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15)
-        osc.connect(gain)
-        gain.connect(chatAudioContext.destination)
-        osc.start(now)
-        osc.stop(now + 0.16)
-      })
-    }
-  } catch (_) {}
+function rememberInboxMessage(key) {
+  if (!key || inboxSeenIds.has(key)) return false
+  inboxSeenIds.add(key)
+  if (inboxSeenIds.size > 200) {
+    const first = inboxSeenIds.values().next().value
+    inboxSeenIds.delete(first)
+  }
+  return true
 }
 
 function subscribeInboxNotifications() {
-  if (!window.Echo) return
   if (!currentUserId.value) return
   if (activeConversationId.value) return
   if (inboxEchoChannel.value) return
+  if (!window.Echo) {
+    if (stopEchoWait) stopEchoWait()
+    stopEchoWait = whenEchoReady(() => subscribeInboxNotifications())
+    return
+  }
 
   try {
     const channel = window.Echo.private(`user.${currentUserId.value}`)
-    channel.listen('.message.sent', (e) => {
-      if (e.sender_id === currentUserId.value) return
+    inboxMessageHandler = (e) => {
+      if (Number(e.sender_id) === Number(currentUserId.value)) return
+      if (e.read_at) return
+      if (!rememberInboxMessage(messageAlertKey(e))) return
       // Only show counter when the user is still in the conversation list.
       if (!activeConversationId.value) {
         inboxNewCount.value = Math.max(0, inboxNewCount.value) + 1
         triggerInboxPulse()
-        playReceiveMessageSound()
       }
-    })
+    }
+    channel.listen('.message.sent', inboxMessageHandler)
     inboxEchoChannel.value = channel
   } catch (_) {}
 }
 
 function unsubscribeInboxNotifications() {
-  if (!inboxEchoChannel.value) return
-  try {
-    inboxEchoChannel.value.stopListening('.message.sent')
-  } catch (_) {}
+  if (inboxEchoChannel.value && inboxMessageHandler) {
+    try {
+      inboxEchoChannel.value.stopListening('.message.sent', inboxMessageHandler)
+    } catch (_) {}
+  }
+  inboxMessageHandler = null
   inboxEchoChannel.value = null
 }
 
@@ -728,11 +711,22 @@ function emitTyping() {
 
 function subscribeConversation(conversationId) {
   unsubscribeEcho()
-  if (!window.Echo || !currentUserId.value) return
+  if (!currentUserId.value) return
+  if (!window.Echo) {
+    if (stopEchoWait) stopEchoWait()
+    stopEchoWait = whenEchoReady(() => {
+      if (Number(activeConversationId.value) === Number(conversationId)) {
+        subscribeConversation(conversationId)
+      }
+    })
+    return
+  }
   try {
     const channel = window.Echo.private(`user.${currentUserId.value}`)
-    channel.listen('.message.sent', (e) => {
-      if (e.conversation_id === conversationId && e.sender_id !== currentUserId.value) {
+    conversationMessageHandler = (e) => {
+      if (Number(e.conversation_id) !== Number(conversationId)) return
+      if (Number(e.sender_id) === Number(currentUserId.value)) return
+      if (!messages.value.some((m) => m.id === e.id)) {
         messages.value = [...messages.value, {
           id: e.id,
           conversation_id: e.conversation_id,
@@ -743,10 +737,10 @@ function subscribeConversation(conversationId) {
           created_at: e.created_at,
           is_mine: false,
         }]
-        markRead(conversationId)
-        playReceiveMessageSound()
       }
-    })
+      markRead(conversationId)
+    }
+    channel.listen('.message.sent', conversationMessageHandler)
     echoChannel.value = channel
   } catch (e) {
     console.warn('Echo subscribe', e)
@@ -754,12 +748,13 @@ function subscribeConversation(conversationId) {
 }
 
 function unsubscribeEcho() {
-  if (echoChannel.value) {
+  if (echoChannel.value && conversationMessageHandler) {
     try {
-      echoChannel.value.stopListening('.message.sent')
+      echoChannel.value.stopListening('.message.sent', conversationMessageHandler)
     } catch (_) {}
-    echoChannel.value = null
   }
+  conversationMessageHandler = null
+  echoChannel.value = null
 }
 
 function close() {
@@ -1010,5 +1005,11 @@ function backToConversationList() {
   30% { transform: translateY(-1px) scale(1.08); }
   60% { transform: translateY(0) scale(0.98); }
   100% { transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inbox-new-badge--pulse {
+    animation: none;
+  }
 }
 </style>
