@@ -9,16 +9,14 @@
         body-class="p-0 view-lead-modal"
         :z-index="zIndex"
         :no-focus="true"
-        :no-close-on-backdrop="qualifiedRequirementBlocking"
-        :no-close-on-esc="qualifiedRequirementBlocking"
         dialog-class="kanban-mobile-fullscreen-modal"
          @hidden="handleClose"
     >
         <div v-if="show" class="view-lead-modal-content p-3 pb-0">
             <!-- Header -->
-            <div class="modal-header-custom d-flex align-items-center gap-2 px-1">
+            <div class="modal-header-custom d-flex align-items-center gap-2 px-1" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
                 <span class="modal-title">{{ lead?.lead_name }}</span>
-                <button v-if="!qualifiedRequirementBlocking" type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
+                <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
             </div>
@@ -83,6 +81,7 @@
             :mandatory="pendingStageChange?.requirementOnly === true"
             @submit="handleStageChangeWithReason"
             @closed="clearPendingStageChange"
+            @close-lead="show = false"
         />
        
     </b-modal>
@@ -251,7 +250,7 @@ const blockQualifiedRequirementEscape = (event) => {
     if (event.key !== 'Escape') return
     event.preventDefault()
     event.stopPropagation()
-    event.stopImmediatePropagation()
+    show.value = false
 }
 
 const maybeOpenQualifiedRequirementGate = () => {
@@ -576,16 +575,16 @@ const saveQualifiedClientRequirement = async (form) => {
         budget_from: form.budget_from ?? null,
         budget_to: form.budget_to ?? null,
         purpose_buying: form.purpose_buying ?? null,
-        selected_for_qualification: false,
+        selected_for_qualification: true,
     }
 
     const existing = Array.isArray(currentLead.extra_client_requirements)
         ? currentLead.extra_client_requirements.filter((item) => item?._kind !== QUAL_META_KIND)
         : []
     const persisted = [
-        ...existing,
+        ...existing.map((item) => ({ ...item, selected_for_qualification: false })),
         row,
-        { id: '__qualification_meta__', _kind: QUAL_META_KIND, source: 'primary' },
+        { id: '__qualification_meta__', _kind: QUAL_META_KIND, source: id },
     ]
 
     try {
@@ -1044,6 +1043,10 @@ watch(show, (val, oldVal) => {
       console.log('[ViewLeadModal] watch show -> val true but props.leadId falsy, fetchLead NOT called')
     }
   } else if (oldVal) {
+    if (pendingStageChange.value?.requirementOnly) {
+      showStageChangeModal.value = false
+      clearPendingStageChange()
+    }
     fetchLeadGeneration++
     cleanup()
     activeTab.value = 'general'
@@ -1111,6 +1114,10 @@ defineExpose({
 .modal-header-custom {
     background: #fff;
     position: relative;
+}
+
+.modal-header-custom.is-above-requirement {
+    z-index: 13000;
 }
 
 .modal-title {

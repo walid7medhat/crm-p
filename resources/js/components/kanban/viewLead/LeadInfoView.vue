@@ -1355,9 +1355,13 @@ const extraClientRequirementsList = computed(() =>
 const qualificationSourceId = computed(() => {
     const meta = localExtraClientRequirements.value.find((item) => item?._kind === QUAL_META_KIND)
     const source = meta?.source || 'primary'
-    if (source === 'primary') return 'primary'
-    const exists = extraClientRequirementsList.value.some((req) => req.id === source)
-    return exists ? source : 'primary'
+    if (source !== 'primary') {
+        const exists = extraClientRequirementsList.value.some((req) => req.id === source)
+        if (exists) return source
+    }
+    const singleExtra = extraClientRequirementsList.value.filter((req) => hasExtraBlockDisplay(req))
+    if (!hasPrimaryClientCoreContent.value && singleExtra.length === 1) return singleExtra[0].id
+    return 'primary'
 })
 
 const hasPrimaryClientCoreContent = computed(() => {
