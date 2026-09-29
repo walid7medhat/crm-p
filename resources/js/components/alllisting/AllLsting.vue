@@ -1483,13 +1483,12 @@ const decodeFiltersFromQuery = async (query) => {
   /*color: #666;*/
   margin-bottom:0 !important;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .property-listed-date i {
   font-size: 0.8rem;
   color: #733E87;
-  margin-top: 2px;
 }
 
 .justify-between{
