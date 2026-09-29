@@ -251,10 +251,40 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $this->checkPermissionTo('show-branch-leads');
     }
 
-    /** Every user under this user's branch (admin_parent), all offices included. */
+    /**
+     * The user's branch, by position in the tree only (no role check):
+     *   super_admin → parent_id = null
+     *   branch      → parent->parent_id = null   (e.g. Abu Dhabi #25, Dubai #59)
+     * Returns null for super_admin itself (no branch above them).
+     */
+    public function getBranchNode(): ?self
+    {
+        $current = $this;
+        $visited = [];
+
+        while ($current && $current->parent_id !== null) {
+            if (isset($visited[$current->id])) {
+                return null; // parent_id cycle
+            }
+            $visited[$current->id] = true;
+
+            $parent = $current->parent;
+            if (! $parent) {
+                return null;
+            }
+            if ($parent->parent_id === null) {
+                return $current; // parent is super_admin → current is the branch
+            }
+            $current = $parent;
+        }
+
+        return null;
+    }
+
+    /** Every user under this user's branch, all offices included. */
     public function getBranchUserIds(): array
     {
-        $branch = $this->admin_parent;
+        $branch = $this->getBranchNode();
 
         return $branch ? $branch->getAllSubordinatesIds() : [$this->id];
     }
