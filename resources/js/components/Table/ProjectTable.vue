@@ -61,7 +61,7 @@
         <div v-else-if="viewMode === 'grid'" class="projects-grid">
             <article v-for="project in paginatedProjects" :key="project.id" class="prj-card">
                 <div class="prj-media-wrap">
-                    <button type="button" class="prj-card__media" @click="onMediaClick(project)">
+                    <button type="button" class="prj-card__media" @click="viewProject(project.id)">
                         <img v-if="project.main_image" :src="project.main_image" :alt="project.title">
                         <span v-else class="prj-media-empty">
                             <iconify-icon icon="lucide:image" width="28"></iconify-icon>
@@ -143,7 +143,7 @@
 
         <div v-else class="projects-list">
             <article v-for="project in paginatedProjects" :key="`list-${project.id}`" class="prj-row">
-                <button type="button" class="prj-row__media" @click="onMediaClick(project)">
+                <button type="button" class="prj-row__media" @click="viewProject(project.id)">
                     <img v-if="project.main_image" :src="project.main_image" :alt="project.title">
                     <span v-else class="prj-media-empty">
                         <iconify-icon icon="lucide:image" width="28"></iconify-icon>
@@ -594,13 +594,6 @@ export default {
             } catch (error) {
                 this.$showNotification('Could not share this project', 'error');
             }
-        },
-        onMediaClick(project) {
-            if (project?.main_image || (Array.isArray(project?.images) && project.images.length)) {
-                this.openProjectGallery(project);
-                return;
-            }
-            this.viewProject(project.id);
         },
           sortBy(key) {
             if (this.sortKey === key) {

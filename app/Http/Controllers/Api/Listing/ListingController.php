@@ -2691,8 +2691,10 @@ public function toggleStatus($id)
         $user = Auth::user();
         $isAdmin = $user->hasRole('super_admin') || $user->hasRole('admin');
         $isAssignedAgent = (int) $property->agent_id === (int) $user->id;
+        $isListingTeamLead = $user->hasRole('team_lead') && $user->is_listing_team;
+        $isListingTeamManager = $user->hasRole('manager') && $user->listing_team;
 
-        if (! $isAdmin && ! $isAssignedAgent) {
+        if (! $isAdmin && ! $isAssignedAgent && ! $isListingTeamLead && ! $isListingTeamManager) {
             return ApiResponse::error('Access denied', 403);
         }
 

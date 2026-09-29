@@ -61,7 +61,9 @@ class UserController extends Controller
                  // users-code holders (biometric code managers) need the full list.
                  if (!$user->hasRole('super_admin') && $user->id != 30 && !$user->can('users-code')) {
 
-                        $ids = $user->getAllSubordinatesIds();
+                        // User #33: sees every user in their whole branch, not just their
+                        // own subordinates.
+                        $ids = $user->id == 33 ? $user->getBranchUserIds() : $user->getAllSubordinatesIds();
 
                         $query->whereIn('id', $ids);
                     }

@@ -689,6 +689,7 @@ Route::middleware('role:super_admin|admin')->group(function () {
 Route::apiResource('leads', LeadController::class);
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);
+Route::patch('/leads/{lead}/name', [LeadController::class, 'updateName']);
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
 Route::put('/leads/{lead}/extra-client-requirements', [LeadController::class, 'updateExtraClientRequirements']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);

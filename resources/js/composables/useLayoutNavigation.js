@@ -494,11 +494,20 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         label: 'Requests',
         type: 'route',
         path: '/my-requests',
-        matchPaths: REQUESTS_USER_PATHS,
+        matchPaths: ['/my-requests'],
         count: listingTabCounts.requests || 0,
       });
-      
-      if (user?.is_listing_team && 
+
+      tabs.push({
+        id: 'orders',
+        label: 'My Orders',
+        type: 'route',
+        path: '/my-orders',
+        matchPaths: ['/my-orders'],
+        count: listingTabCounts.orders || 0,
+      });
+
+      if (user?.is_listing_team &&
           (user.roles?.includes('super_admin') || 
            user.roles?.includes('admin') || 
            user.roles?.includes('team_lead') || 

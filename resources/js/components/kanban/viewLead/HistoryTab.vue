@@ -576,6 +576,7 @@ const transformHistoryEntry = (entry) => {
         'created': 'Lead Created'
     }
     const fieldLabels = {
+        lead_name: 'Lead Name',
         work_phone: 'Primary Phone',
         work_phone_2: 'Secondary Phone',
         email: 'Primary Email',

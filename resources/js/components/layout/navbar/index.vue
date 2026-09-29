@@ -882,7 +882,8 @@ const listingTabCounts = computed(() => {
     myListings: counts.listings?.my || 0,
     requests: isAdmin.value
       ? (counts.orders?.all || 0)
-      : ((counts.requests?.all || 0) + (counts.orders?.all || 0)),
+      : (counts.requests?.all || 0),
+    orders: counts.orders?.all || 0,
     viewings: 0,
   };
 });

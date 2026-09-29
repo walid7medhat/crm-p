@@ -48,7 +48,7 @@
       <span>Edit Property</span>
     </button>
 
-    <button v-if="canEditProperty" type="button" :class="itemClass()" @click="emit('toggle-active')">
+    <button v-if="canToggleActive" type="button" :class="itemClass()" @click="emit('toggle-active')">
       <i class="ri-toggle-line" v-if="property.is_active"></i>
       <i class="ri-toggle-fill" v-else></i>
       <span>{{ property.is_active ? 'Set Inactive' : 'Set Active' }}</span>
@@ -252,6 +252,7 @@ const props = defineProps({
   canShowOffers: { type: Boolean, default: false },
   canDeleteProperty: { type: Boolean, default: false },
   canEditProperty: { type: Boolean, default: false },
+  canToggleActive: { type: Boolean, default: false },
   canAssignAgent: { type: Boolean, default: false },
   canUsePropertyChat: { type: Boolean, default: false },
   canMarkAsConverted: { type: Boolean, default: false },

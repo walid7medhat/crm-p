@@ -43,7 +43,7 @@ class LeadController extends Controller
     {
         $this->middleware('permission:leads-list', ['only' => ['index', 'show', 'export']]);
         $this->middleware('permission:leads-create', ['only' => ['store']]);
-        $this->middleware('permission:leads-edit', ['only' => ['update', 'changeStage', 'assignResponsiblePerson', 'updateExtraClientRequirements']]);
+        $this->middleware('permission:leads-edit', ['only' => ['update', 'updateName', 'changeStage', 'assignResponsiblePerson', 'updateExtraClientRequirements']]);
         // leads-delete is assigned to super_admin only; admin must be able to archive leads too.
         $this->middleware('role_or_permission:super_admin|admin|leads-delete', ['only' => ['destroy']]);
     }
@@ -785,6 +785,55 @@ class LeadController extends Controller
                 return ApiResponse::error('Failed to update lead: ' . $e->getMessage());
             }
         }
+
+    /**
+     * Rename a lead from the view-lead header (inline edit, like the deal title).
+     * update() above validates the whole form, so the name gets its own endpoint.
+     * Logged to history in the same shape update() uses: action 'updated' + fields.
+     */
+    public function updateName(Request $request, Lead $lead): JsonResponse
+    {
+        $user = auth()->user();
+
+        if (! $user->canViewLead($lead)) {
+            return ApiResponse::error('You are not authorized to update this lead', 403);
+        }
+
+        // Sales outside the listing team can't rename leads.
+        if ($user->hasRole('sales') && ! $user->is_listing_team
+            && ! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead'])) {
+            return ApiResponse::error('You are not authorized to change the lead name', 403);
+        }
+
+        $data = $request->validate([
+            'lead_name' => 'required|string|max:255',
+        ]);
+
+        $oldName = $lead->lead_name;
+        $newName = trim($data['lead_name']);
+
+        if ($newName === '') {
+            return ApiResponse::error('Lead name cannot be empty', 422);
+        }
+
+        if ($newName !== $oldName) {
+            $lead->update(['lead_name' => $newName]);
+
+            LeadHistoryHelper::log($lead->id, [
+                'action' => 'updated',
+                'fields' => [
+                    'lead_name' => ['old' => $oldName, 'new' => $newName],
+                ],
+            ]);
+
+            $this->broadcastLeadUpdated($lead, 'updated');
+        }
+
+        return ApiResponse::success(
+            ['id' => $lead->id, 'lead_name' => $lead->lead_name],
+            'Lead name updated successfully'
+        );
+    }
 
     /**
      * Assign Responsible Person to Lead

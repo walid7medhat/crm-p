@@ -15,7 +15,42 @@
         <div v-if="show" class="view-lead-modal-content p-3 pb-0">
             <!-- Header -->
             <div class="modal-header-custom d-flex align-items-center gap-2 px-1" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
-                <span class="modal-title">{{ lead?.lead_name }}</span>
+                <!-- Lead name — inline edit, same UX as the deal title -->
+                <template v-if="!isEditingName">
+                    <div class="lead-title-read-row d-flex align-items-center gap-2 min-w-0">
+                        <span
+                            class="modal-title"
+                            :class="{ 'lead-title-editable': canEditName }"
+                            @click="canEditName && startEditName()"
+                        >{{ lead?.lead_name }}</span>
+                        <button
+                            v-if="canEditName"
+                            type="button"
+                            class="lead-title-edit-btn"
+                            aria-label="Edit lead name"
+                            title="Edit lead name"
+                            @click.stop="startEditName"
+                        >
+                            <span class="lead-title-edit-btn-inner">
+                                <iconify-icon icon="lucide:pencil" class="lead-title-edit-icon" />
+                            </span>
+                        </button>
+                    </div>
+                </template>
+                <div v-else class="lead-title-input-shell min-w-0">
+                    <input
+                        ref="leadNameInputRef"
+                        v-model="leadNameInput"
+                        type="text"
+                        class="view-lead-title-input"
+                        placeholder="Lead name"
+                        maxlength="255"
+                        :disabled="savingName"
+                        @keyup.enter="saveLeadName"
+                        @blur="onLeadNameBlur"
+                        @keydown.esc.prevent="cancelEditName"
+                    />
+                </div>
                 <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
@@ -311,6 +346,87 @@ const canViewHistory = computed(() => {
 
 const switchTab = (tab) => {
     activeTab.value = tab
+}
+
+// ================= Inline lead-name edit (like the deal title) =================
+const isEditingName = ref(false)
+const leadNameInput = ref('')
+const leadNameInputRef = ref(null)
+const savingName = ref(false)
+let leadNameBlurTimer = null
+
+// Same gate as LeadController::updateName (leads-edit + canViewLead on the server);
+// sales outside the listing team can't rename leads.
+const canEditName = computed(() => {
+    if (!lead.value?.id) return false
+    const perms = user.value?.permissions || []
+    const roles = user.value?.roles || []
+    if (roles.includes('super_admin')) return true
+    const isHigherRole = ['admin', 'branch_admin', 'manager', 'team_lead'].some((r) => roles.includes(r))
+    if (roles.includes('sales') && !isHigherRole && !user.value?.is_listing_team) return false
+    return perms.includes('leads-edit')
+})
+
+const startEditName = () => {
+    if (!canEditName.value) return
+    leadNameInput.value = lead.value?.lead_name || ''
+    isEditingName.value = true
+    nextTick(() => {
+        leadNameInputRef.value?.focus()
+        leadNameInputRef.value?.select()
+    })
+}
+
+const cancelEditName = () => {
+    if (leadNameBlurTimer) {
+        clearTimeout(leadNameBlurTimer)
+        leadNameBlurTimer = null
+    }
+    leadNameInput.value = lead.value?.lead_name || ''
+    isEditingName.value = false
+}
+
+const onLeadNameBlur = () => {
+    if (leadNameBlurTimer) clearTimeout(leadNameBlurTimer)
+    leadNameBlurTimer = setTimeout(() => {
+        leadNameBlurTimer = null
+        if (show.value && isEditingName.value) saveLeadName()
+    }, 120)
+}
+
+const saveLeadName = async () => {
+    if (leadNameBlurTimer) {
+        clearTimeout(leadNameBlurTimer)
+        leadNameBlurTimer = null
+    }
+    if (!lead.value?.id || savingName.value) return
+
+    const newName = String(leadNameInput.value || '').trim()
+    const oldName = lead.value.lead_name || ''
+
+    if (!newName) {
+        $showNotification('Lead name cannot be empty', 'error')
+        cancelEditName()
+        return
+    }
+    if (newName === oldName) {
+        isEditingName.value = false
+        return
+    }
+
+    savingName.value = true
+    try {
+        await api.patch(`/leads/${lead.value.id}/name`, { lead_name: newName })
+        lead.value = { ...lead.value, lead_name: newName }
+        emit('lead-updated', lead.value)
+        $showNotification('Lead name updated', 'success')
+    } catch (error) {
+        console.error('Error updating lead name:', error)
+        $showNotification(error.response?.data?.message || 'Failed to update lead name', 'error')
+    } finally {
+        savingName.value = false
+        isEditingName.value = false
+    }
 }
 
 // Fetch stage orders
@@ -1049,6 +1165,7 @@ watch(show, (val, oldVal) => {
     }
     fetchLeadGeneration++
     cleanup()
+    cancelEditName()
     activeTab.value = 'general'
     if (props.syncUrl && route.query.lead) {
       router.push({
@@ -1129,6 +1246,84 @@ defineExpose({
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Inline lead-name edit — mirrors the deal title styles in ViewDealModal */
+.lead-title-read-row {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 2px 0;
+}
+
+.lead-title-read-row .modal-title {
+    flex: 0 1 auto;
+}
+
+.lead-title-editable {
+    cursor: text;
+}
+
+.lead-title-edit-btn {
+    flex-shrink: 0;
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 11px;
+    line-height: 0;
+}
+
+.lead-title-edit-btn-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    border: 1px solid #c7d2fe;
+    background: linear-gradient(155deg, #eef2ff 0%, #e0e7ff 48%, #c7d2fe 100%);
+    color: #312e81;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lead-title-edit-btn:hover .lead-title-edit-btn-inner {
+    color: #3730a3;
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+}
+
+.lead-title-edit-icon {
+    font-size: 18px;
+}
+
+.lead-title-input-shell {
+    flex: 0 1 auto;
+    padding: 2px 0;
+    width: min(440px, calc(100vw - 210px));
+    max-width: 100%;
+}
+
+.view-lead-title-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Montserrat', sans-serif;
+    color: #0B0736;
+    line-height: 1.35;
+    padding: 6px 14px;
+    border-radius: 11px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.view-lead-title-input:focus {
+    border-color: #a5b4fc;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .settings-btn, .close-btn, .notification-btn {

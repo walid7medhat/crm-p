@@ -834,6 +834,7 @@
                         :can-show-offers="canShowOffers"
                         :can-delete-property="canDeleteProperty"
                         :can-edit-property="canEditProperty"
+                        :can-toggle-active="canToggleActive"
                         :can-assign-agent="canAssignAgent"
                         :can-use-property-chat="canUsePropertyChat"
                         :can-mark-as-converted="canMarkAsConverted"
@@ -2116,6 +2117,7 @@
           :can-show-offers="canShowOffers"
           :can-delete-property="canDeleteProperty"
           :can-edit-property="canEditProperty"
+          :can-toggle-active="canToggleActive"
           :can-assign-agent="canAssignAgent"
           :can-use-property-chat="canUsePropertyChat"
           :can-mark-as-converted="canMarkAsConverted"
@@ -2358,12 +2360,16 @@ const rejectingListing = ref(false);
 const canApproveListings = computed(() => {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
-  
+
   const isManagerWithListingTeam = (currentUser.roles?.includes('manager') || currentUser.roles?.includes('team_lead'))&& currentUser?.is_listing_team;
-  
+
   const isSuperAdminUser = currentUser.roles?.includes('super_admin') || currentUser.roles?.includes('admin');
   return isManagerWithListingTeam || isSuperAdminUser;
 });
+
+// Set Active/Inactive: same rule as approve (listing-team manager/team_lead) plus
+// whatever ListingResource already grants edit rights to (agent, added_by, etc.).
+const canToggleActive = computed(() => canEditProperty.value || canApproveListings.value);
 
 const approveListing = async () => {
   const result = await Swal.fire({
@@ -8037,6 +8043,7 @@ const getHistoryIcon = (event) => {
       showOwnerDetailsModal,
       isPropertyOwner,
       canEditProperty,
+      canToggleActive,
       canDeleteProperty,
       canEditOrDelete,
       canShowOffers,
