@@ -177,9 +177,12 @@
 
                 </p>
                 <div class="property-listed-date mb-2">
-                    <i class="ri-calendar-line me-1"></i>
-                    <small class="text-muted">Listed at: {{ formatDate(property.created_at) }}</small>
+                  <i class="ri-calendar-line me-1"></i>
+                  <div class="property-listed-date-text">
+                    <small class="text-muted d-block">Listed at: {{ formatDate(property.created_at) }}</small>
+                    <small class="text-muted d-block">Updated at: {{ formatDate(property.updated_at) }}</small>
                   </div>
+                </div>
                 </div>
 
               <div class="d-flex gap-2">
@@ -1727,12 +1730,21 @@ watch(() => route.query, (newQuery, oldQuery) => {
   /*color: #666;*/
   margin-bottom:0 !important;
   display: flex;
+  align-items: flex-start;
 
 }
 
 .property-listed-date i {
   font-size: 0.8rem;
   color: #733E87;
+  margin-top: 2px;
+}
+
+.property-listed-date-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 .justify-between{
     justify-content:space-between;
