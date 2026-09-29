@@ -7078,7 +7078,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
         { label: 'Status', w: 22 },
       ],
       model.installments,
-      ['Total', '', model.installmentTotal, '', '']
+      ['Total', model.installmentPercentTotal, model.installmentTotal, '', '']
     );
   }
 
@@ -7237,6 +7237,8 @@ const createPaymentDetailsSlide = () => {
     `<span style="display:inline-block;border-radius:999px;padding:4px 10px;font-size:10px;line-height:12px;font-weight:700;${font}${badgeStyle(status)}">${text}</span>`;
 
   let cumulative = 0;
+  let percentTotal = 0;
+  let hasPercent = false;
   const installmentRowsPaidArr = [];
   const installmentRowsNotPaidArr = [];
   const paidModels = [];
@@ -7250,6 +7252,10 @@ const createPaymentDetailsSlide = () => {
     if (paid) status = 'Paid';
     else if (nocPct > 0 && cumulative <= nocRequired + 0.01) status = 'Due on transfer';
     const pct = originalPrice > 0 ? ((amount / originalPrice) * 100).toFixed(2) : '—';
+    if (originalPrice > 0) {
+      percentTotal += Number(pct);
+      hasPercent = true;
+    }
     const dateCell = paid ? '—' : fmtDate(entry?.date); // only show date if NOT paid
     const badge = makeBadge(status, status);
     const rowModel = { cells: ['Installment', `${pct}%`, fmtAed(amount), dateCell, ''], status };
@@ -7271,6 +7277,7 @@ const createPaymentDetailsSlide = () => {
 
   const installmentRowsPaid = installmentRowsPaidArr.join('');
   const installmentRowsNotPaid = installmentRowsNotPaidArr.join('');
+  const percentTotalDisplay = hasPercent ? `${percentTotal.toFixed(2)}%` : '—';
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumBadge = makeBadge(premiumStatus, premiumStatus);
@@ -7417,7 +7424,8 @@ const createPaymentDetailsSlide = () => {
           ${installmentRowsNotPaid}
           ${handoverRow}
           <tr style="background:#f1f5f9;">
-            <td colspan="2" style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+            <td style="${tdCell}font-weight:700;">${cellInner('Total')}</td>
+            <td style="${tdCell}font-weight:700;">${cellInner(percentTotalDisplay)}</td>
             <td style="${tdCell}font-weight:700;">${cellInner(fmtAed(totalAmount))}</td>
             <td colspan="2" style="${tdCell}"></td>
           </tr>
@@ -7478,6 +7486,7 @@ const createPaymentDetailsSlide = () => {
       }] : []),
     ],
     installmentTotal: fmtAed(totalAmount),
+    installmentPercentTotal: percentTotalDisplay,
     showExpenses: expenseModels.length > 0,
     expenses: expenseModels,
     expenseTotals: [fmtAed(expSubtotal), fmtAed(expVatTotal), fmtAed(expGrand)],
