@@ -465,9 +465,10 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       }
       
       // ✅ إضافة Need Approval Listings للأدمن (نفس البرمشن)
-      if (user?.is_listing_team && 
-          (user.roles?.includes('super_admin') || 
-           user.roles?.includes('manager'))) {
+      if ( user.roles?.includes('super_admin') || (user?.is_listing_team &&
+          (
+           user.roles?.includes('manager') ||
+           user.roles?.includes('team_lead')))) {
         tabs.push({
           id: 'need-approve-requests',
           label: 'Need Approval Listings',
@@ -512,9 +513,10 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         });
       }
       
-      if (user?.is_listing_team && 
-          (user.roles?.includes('super_admin') || 
-           user.roles?.includes('manager'))) {
+      if (user?.is_listing_team &&
+          (user.roles?.includes('super_admin') ||
+           user.roles?.includes('manager') ||
+           user.roles?.includes('team_lead'))) {
         tabs.push({
           id: 'need-approve-requests',
           label: 'Need Approval Listings',
