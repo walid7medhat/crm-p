@@ -180,7 +180,7 @@
                         <i class="ri-calendar-line me-1"></i>
                         <div class="property-listed-date-text">
                           <small class="text-muted d-block">Listed at: {{ formatDate(property.created_at) }}</small>
-                          <small class="text-muted d-block">Updated at: {{ formatDate(property.updated_at) }}</small>
+                          <!-- <small class="text-muted d-block">Updated at: {{ formatDate(property.updated_at) }}</small> -->
                         </div>
                       </div>
                     </div>
