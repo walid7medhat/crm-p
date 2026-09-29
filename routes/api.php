@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\Listing\LayoutTypeController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BackgroundController;
+use App\Http\Controllers\Api\SystemCampaignController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\Listing\FeatureController;
 use App\Http\Controllers\Api\UserInvitationController;
@@ -634,6 +635,22 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::put('/backgrounds/{background}', [BackgroundController::class, 'update']);
         Route::post('/backgrounds/{background}/default', [BackgroundController::class, 'setDefault']);
         Route::delete('/backgrounds/{background}', [BackgroundController::class, 'destroy']);
+    });
+
+    // System campaign popups. Due/shown/dismiss are for eligible signed-in users.
+    // Create, edit, and delete stay Super Admin only.
+    Route::prefix('system-campaigns')->group(function () {
+        Route::get('/due', [SystemCampaignController::class, 'due']);
+        Route::post('/{campaign}/shown', [SystemCampaignController::class, 'shown'])->whereNumber('campaign');
+        Route::post('/{campaign}/dismiss', [SystemCampaignController::class, 'dismiss'])->whereNumber('campaign');
+
+        Route::middleware('role:super_admin')->group(function () {
+            Route::get('/', [SystemCampaignController::class, 'index']);
+            Route::post('/', [SystemCampaignController::class, 'store']);
+            Route::post('/{campaign}', [SystemCampaignController::class, 'update'])->whereNumber('campaign');
+            Route::patch('/{campaign}/active', [SystemCampaignController::class, 'updateActive'])->whereNumber('campaign');
+            Route::delete('/{campaign}', [SystemCampaignController::class, 'destroy'])->whereNumber('campaign');
+        });
     });
 
 

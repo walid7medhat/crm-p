@@ -13,6 +13,7 @@
     <NavProgressBar :show="isNavigating" />
     <AppLoader :show="isAppLoading" label="Loading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
+    <SystemCampaignPopup v-if="showLayout" />
     <Header v-if="showLayout" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
       <Navbar v-if="showLayout" />
@@ -73,6 +74,7 @@ const LeadOpeningLoader = {
     return () => h(BrandLoader, { variant: 'overlay', label: 'Opening lead' })
   },
 }
+const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layout/SystemCampaignPopup.vue'))
 const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
   delay: 80,
@@ -91,6 +93,7 @@ export default {
     AppLoader,
     NavProgressBar,
     BirthdayCelebrationLayer,
+    SystemCampaignPopup,
     Header,
     Navbar,
     Footer,

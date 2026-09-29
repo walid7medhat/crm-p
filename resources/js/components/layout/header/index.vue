@@ -232,6 +232,21 @@
           </transition>
         </li>
 
+        <li v-if="isSuperAdmin">
+          <router-link to="/system-announcements" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarSubItemActive('/system-announcements') }"
+              @mouseenter="prefetchRoute('/system-announcements')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:megaphone" class="menu-icon" />
+              <span>Announcements</span>
+            </a>
+          </router-link>
+        </li>
+
         <li v-if="!isShowOnlyListing">
           <router-link to="/suggestion" custom v-slot="{ navigate, href }">
             <a
