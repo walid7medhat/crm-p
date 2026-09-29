@@ -289,7 +289,7 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $branch ? $branch->getAllSubordinatesIds() : [$this->id];
     }
 
-    /** Sees leads beyond their own hierarchy: branch_admin (office) or show-branch-leads (branch). */
+    /** Sees every lead in their whole branch: branch_admin, or the show-branch-leads permission. */
     public function seesBranchLeads(): bool
     {
         return $this->hasRole('branch_admin') || $this->hasBranchLeadsPermission();
@@ -297,18 +297,14 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 
     /**
      * User ids whose leads this user sees:
-     *  - show-branch-leads → whole branch (all offices)
-     *  - branch_admin      → their office
-     *  - otherwise         → their own hierarchy
+     *  - branch_admin / show-branch-leads → whole branch (all its offices)
+     *  - otherwise                        → their own hierarchy
+     * (Deals still scope branch_admin to their office — see getBranchAdminSubordinateIds().)
      */
     public function leadScopeUserIds(): array
     {
-        if ($this->hasBranchLeadsPermission()) {
-            return $this->getBranchUserIds();
-        }
-
-        return $this->hasRole('branch_admin')
-            ? $this->getBranchAdminSubordinateIds()
+        return $this->seesBranchLeads()
+            ? $this->getBranchUserIds()
             : $this->getAllSubordinatesIds();
     }
 

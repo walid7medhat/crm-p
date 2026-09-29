@@ -653,9 +653,21 @@ class LeadController extends Controller
 
                 if (!empty($leadData['responsible_person_id']) && $leadData['responsible_person_id'] !== $lead->responsible_person_id) {
                     $newResponsiblePerson = User::find($leadData['responsible_person_id']);
-                    
-                    if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead'])) {
+
+                    if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin'])) {
                         return ApiResponse::error('You are not authorized to change responsible person', 403);
+                    }
+
+                    // Same rule as assignResponsiblePerson(): below admin, the new person must be
+                    // inside the caller's scope (branch for branch_admin / show-branch-leads).
+                    if (!$user->hasRole(['super_admin', 'admin'])) {
+                        $allowedIds = $user->leadScopeUserIds();
+                        if ($user->hasRole('branch_admin')) {
+                            $allowedIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
+                        }
+                        if (!in_array((int) $leadData['responsible_person_id'], array_map('intval', $allowedIds), true)) {
+                            return ApiResponse::error('You can only assign responsible person from your team', 403);
+                        }
                     }
                 }
 
@@ -789,13 +801,10 @@ class LeadController extends Controller
         // }
 
         if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-            $subordinatesIds = $user->getAllSubordinatesIds();
+            // branch_admin / show-branch-leads: may assign to anyone in their whole branch.
+            $subordinatesIds = $user->leadScopeUserIds();
             if ($user->hasRole('branch_admin')) {
-                $subordinatesIds = [...$user->getBranchAdminSubordinateIds(), self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID];
-            }
-            // show-branch-leads: may assign to anyone in their whole branch.
-            if ($user->hasBranchLeadsPermission()) {
-                $subordinatesIds = [...$subordinatesIds, ...$user->getBranchUserIds()];
+                $subordinatesIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
             }
             if (!in_array($request->responsible_person_id, $subordinatesIds)) {
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
@@ -972,11 +981,9 @@ class LeadController extends Controller
             $base->role(['team_lead', 'sales', 'manager', 'admin'])
                 ->whereNotNull('users.parent_id');
         } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin')) {
-            // show-branch-leads → agents across the whole branch (all offices);
-            // branch_admin → their office. Branch admins also get user #33.
-            $scopeIds = $user->hasBranchLeadsPermission()
-                ? $user->getBranchUserIds()
-                : $user->getBranchAdminSubordinateIds();
+            // branch_admin / show-branch-leads → agents across the whole branch (all
+            // offices). Branch admins also get user #33.
+            $scopeIds = $user->getBranchUserIds();
             $roles = $user->hasBranchLeadsPermission()
                 ? ['team_lead', 'sales', 'manager']
                 : ['team_lead', 'sales'];
@@ -1730,7 +1737,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             // history access as 'admin', but only for leads actually within their branch.
             $isBranchAdminForLead = $user->hasRole('branch_admin')
                 && $lead->responsible_person_id
-                && in_array($lead->responsible_person_id, $user->getBranchAdminSubordinateIds());
+                && in_array($lead->responsible_person_id, $user->getBranchUserIds());
             $isAdmin = $user->hasAnyRole(['admin', 'super_admin']) || $isBranchAdminForLead;
             $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
             $isManager = $lead->isManagedBy($user);

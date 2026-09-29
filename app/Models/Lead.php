@@ -254,11 +254,10 @@ public function visibleEngagement(string $model, string $ownerColumn = 'user_id'
         return $relation->withTrashed()->latest();
     }
 
-    // branch_admin is a peer user inside an office (no downward subordinates of their
-    // own), so static::subordinateIds() below would wrongly return just themselves —
-    // use the same office-wide scope as everywhere else instead of the admin/super_admin
-    // company-wide bypass above (this stays branch-scoped, not unrestricted).
-    $allowed = $user->seesBranchLeads()   // branch_admin (office) or show-branch-leads (branch)
+    // branch_admin / show-branch-leads have no useful subordinates of their own, so
+    // static::subordinateIds() below would return just themselves — use the same
+    // whole-branch scope as everywhere else (still branch-scoped, not company-wide).
+    $allowed = $user->seesBranchLeads()
         ? array_values(array_unique(array_map('intval', $user->leadScopeUserIds())))
         : array_values(array_unique(array_map(
             'intval',

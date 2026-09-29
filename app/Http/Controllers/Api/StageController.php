@@ -1231,7 +1231,9 @@ public function getTeamsWithLeads(Request $request): JsonResponse
             }
         }
         
-        $hasBranchLeads = $user->hasBranchLeadsPermission();
+        // branch_admin / show-branch-leads: teams across the whole branch (all offices),
+        // matching the leads they can see — not just their own subtree.
+        $hasBranchLeads = $user->seesBranchLeads();
 
         if (!$user->hasAnyRole(['super_admin', 'admin', 'manager']) && !$hasBranchLeads) {
             return ApiResponse::error('Unauthorized', 403);
@@ -1240,8 +1242,6 @@ public function getTeamsWithLeads(Request $request): JsonResponse
         $query = User::whereHas('children', function($query) {
             // users who have at least one child/subordinate
         })
-        // show-branch-leads: teams across the whole branch (all offices), matching the
-        // leads they can see — not just their own subtree.
         ->whereIn('id', $hasBranchLeads ? $user->getBranchUserIds() : $user->getAllSubordinatesIds())
         ->where('id', '!=', auth()->user()->id)->whereHas('roles');
         
