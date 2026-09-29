@@ -18,7 +18,7 @@
           <div class="pd-cell-label">Selling price</div>
           <div class="pd-cell-value">{{ formatAed(sellingPrice) }}</div>
         </div>
-        <div class="pd-cell pd-cell--muted">
+        <div class="pd-cell pd-cell--muted" v-if="isUnderConstruction">
           <div class="pd-cell-label">Original price </div>
           <div class="pd-cell-value pd-cell-value--dark">{{ formatAed(originalPrice) }}</div>
         </div>

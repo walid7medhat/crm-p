@@ -7277,7 +7277,6 @@ const createPaymentDetailsSlide = () => {
 
   const installmentRowsPaid = installmentRowsPaidArr.join('');
   const installmentRowsNotPaid = installmentRowsNotPaidArr.join('');
-  const percentTotalDisplay = hasPercent ? `${percentTotal.toFixed(2)}%` : '—';
 
   const premiumStatus = premium < -0.01 ? 'Selling below original price' : 'Due on transfer';
   const premiumBadge = makeBadge(premiumStatus, premiumStatus);
@@ -7294,6 +7293,11 @@ const createPaymentDetailsSlide = () => {
   const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
   const handoverBadge = makeBadge(handoverStatus, handoverStatus);
   const handoverIsFull = handoverPct >= 100;
+  if (hasHandoverRow && !handoverIsFull) {
+    percentTotal += handoverPct;
+    hasPercent = true;
+  }
+  const percentTotalDisplay = hasPercent ? `${percentTotal.toFixed(2)}%` : '—';
   const handoverRow = hasHandoverRow
     ? `<tr>
         <td align="center" valign="middle" style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>

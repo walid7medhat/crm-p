@@ -231,7 +231,7 @@
           </div>
           <div class="card-body payment-breakdown-card-body">
             <div class="row gy-3 payment-breakdown-prices">
-              <div v-if="!isRentListing" class="col-md-4">
+              <div v-if="showBreakdownFeatures" class="col-md-4">
                 <label class="form-label">Original price (OP) <span class="text-muted fw-normal small">(developer / contract)</span></label>
                 <input
                   :value="formatDecimalPriceDisplay(form.original_price)"
