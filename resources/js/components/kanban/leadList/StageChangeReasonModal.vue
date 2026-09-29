@@ -674,7 +674,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['update:modelValue', 'submit', 'closed'])
+const emit = defineEmits(['update:modelValue', 'submit', 'closed', 'close-lead'])
 
 const visible = computed({
     get: () => props.modelValue,
@@ -1246,7 +1246,10 @@ const closeModal = (arg) => {
 }
 
 const onOverlayClick = () => {
-    if (props.mandatory) return
+    if (props.mandatory) {
+        emit('close-lead')
+        return
+    }
     closeModal()
 }
 
@@ -1254,8 +1257,7 @@ const blockMandatoryEscape = (event) => {
     if (!props.mandatory || !visible.value) return
     if (event.key !== 'Escape') return
     event.preventDefault()
-    event.stopPropagation()
-    event.stopImmediatePropagation()
+    emit('close-lead')
 }
 
 // This modal instance is reused across openings (parent drives it via the exposed

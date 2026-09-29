@@ -279,14 +279,47 @@ const canViewCommentsAndActivities = computed(() => {
     return isSuperAdminUser.value
 })
 
+const requirementHasPropertyDetails = (req) => {
+    if (!req || req._kind === 'qualification_meta') return false
+    const hasBudget = Number(req.budget_from) > 0 || Number(req.budget_to) > 0 || Number(req.budget) > 0
+    return Boolean(
+        req.area_label || req.area_id || req.area ||
+        req.property_type_label || req.property_type_id || req.property_type ||
+        req.lead_type || req.property_status || req.status_lead ||
+        (req.bedrooms !== null && req.bedrooms !== undefined && req.bedrooms !== '') ||
+        hasBudget || req.purpose_buying
+    )
+}
+
 const selectedRequirementSource = computed(() => {
     const rows = Array.isArray(props.lead?.extra_client_requirements)
         ? props.lead.extra_client_requirements
         : []
+    const extras = rows.filter((item) => item?._kind !== 'qualification_meta')
     const meta = rows.find((item) => item?._kind === 'qualification_meta')
     const source = meta?.source || 'primary'
-    if (source === 'primary') return null
-    return rows.find((item) => item?._kind !== 'qualification_meta' && item?.id === source) || null
+    if (source !== 'primary') {
+        return extras.find((item) => item?.id === source) || null
+    }
+
+    const lead = props.lead
+    const primaryHasDetails = requirementHasPropertyDetails({
+        area: lead?.area,
+        area_id: lead?.area_id,
+        property_type: lead?.property_type,
+        property_type_id: lead?.property_type_id,
+        lead_type: lead?.lead_type,
+        property_status: lead?.property_status,
+        bedrooms: lead?.bedrooms,
+        budget_from: lead?.budget_from,
+        budget_to: lead?.budget_to,
+        budget: lead?.budget,
+        purpose_buying: lead?.purpose_buying,
+        status_lead: lead?.status_lead,
+    })
+    const withDetails = extras.filter(requirementHasPropertyDetails)
+    if (!primaryHasDetails && withDetails.length === 1) return withDetails[0]
+    return null
 })
 const selectedWhyLostLead = computed(() => {
     if (props.lead?.why_lost_lead) {
