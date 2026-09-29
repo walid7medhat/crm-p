@@ -50,22 +50,22 @@ class LeadResource extends JsonResource
 
         $leadIds = $collection->pluck('id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
 
-        // Duplicate phone ids (same semantics as per-row pluck, limit 200).
-        $phones = $collection->pluck('work_phone')->filter()->unique()->values()->all();
+        // Duplicate phone ids, ignoring formatting (+, spaces…) — limit 200 per lead.
+        $digitsList = $collection->map(fn ($l) => Lead::phoneDigits($l->work_phone))
+            ->filter()->unique()->values()->all();
         $idsByPhone = [];
-        if ($phones !== []) {
+        if ($digitsList !== []) {
             $rows = Lead::query()
-                ->whereIn('work_phone', $phones)
-                ->whereNotNull('work_phone')
-                ->get(['id', 'work_phone']);
+                ->whereIn('work_phone_digits', $digitsList)
+                ->get(['id', 'work_phone_digits']);
 
             foreach ($rows as $row) {
-                $idsByPhone[$row->work_phone][] = (int) $row->id;
+                $idsByPhone[$row->work_phone_digits][] = (int) $row->id;
             }
         }
         foreach ($collection as $lead) {
-            $phone = $lead->work_phone;
-            if (! $phone || empty($idsByPhone[$phone])) {
+            $phone = Lead::phoneDigits($lead->work_phone);
+            if ($phone === '' || empty($idsByPhone[$phone])) {
                 static::$duplicateIdsByLeadId[(int) $lead->id] = [];
                 continue;
             }
@@ -656,19 +656,14 @@ protected function resolveOriginalBranch(): ?string
                 return static::$duplicateIdsByLeadId[$leadId];
             }
 
-            if (empty($this->work_phone)) {
-                return [];
-            }
-
-            $normalized = preg_replace('/\D+/', '', $this->work_phone);
-            if ($normalized === '') {
+            $digits = Lead::phoneDigits($this->work_phone);
+            if ($digits === '') {
                 return [];
             }
 
             return Lead::query()
                 ->where('id', '!=', $this->id)
-                ->whereNotNull('work_phone')
-                ->whereRaw('REGEXP_REPLACE(work_phone, "[^0-9]", "") = ?', [$normalized])
+                ->where('work_phone_digits', $digits)
                 ->limit(200)
                 ->pluck('id')
                 ->all();

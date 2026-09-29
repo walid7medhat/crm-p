@@ -393,11 +393,25 @@ public function activitiesWithTrashed()
         })->where('last_stage_change_at', '<=', Carbon::now()->subHours($revertHours));
     }
      
+    /**
+     * Phone with formatting stripped — must match the work_phone_digits generated column
+     * (see migration add_work_phone_digits_to_leads_table): +, spaces, -, (, ), ., /.
+     */
+    public static function phoneDigits(?string $phone): string
+    {
+        return str_replace(['+', ' ', '-', '(', ')', '.', '/'], '', (string) $phone);
+    }
+
+    /** Duplicates = other leads with the same phone, ignoring formatting (+971…, spaces…). */
      public function getDuplicateLeadsAttribute()
         {
+            $digits = static::phoneDigits($this->work_phone);
+            if ($digits === '') {
+                return collect();
+            }
+
             return Lead::where('id', '!=', $this->id)
-            ->whereNotNull('work_phone')
-               ->where('work_phone', $this->work_phone)
+                ->where('work_phone_digits', $digits)
                 ->get();
         }
 

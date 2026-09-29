@@ -57,23 +57,25 @@ class KanbanLeadCardResource extends JsonResource
     public static function duplicateIdsByLeadId($leads): array
     {
         $leads = collect($leads);
-        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
-        if ($phones === []) {
+        $digitsList = $leads->map(fn ($l) => Lead::phoneDigits($l->work_phone))
+            ->filter()->unique()->values()->all();
+        if ($digitsList === []) {
             return [];
         }
 
-        $idsByPhone = Lead::query()
-            ->whereIn('work_phone', $phones)
-            ->get(['id', 'work_phone'])
-            ->groupBy('work_phone')
+        $idsByDigits = Lead::query()
+            ->whereIn('work_phone_digits', $digitsList)
+            ->get(['id', 'work_phone_digits'])
+            ->groupBy('work_phone_digits')
             ->map(fn ($rows) => $rows->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         $map = [];
         foreach ($leads as $lead) {
-            if (! $lead->work_phone) {
+            $digits = Lead::phoneDigits($lead->work_phone);
+            if ($digits === '') {
                 continue;
             }
-            $others = array_values(array_diff($idsByPhone->get($lead->work_phone, []), [(int) $lead->id]));
+            $others = array_values(array_diff($idsByDigits->get($digits, []), [(int) $lead->id]));
             if ($others) {
                 $map[(int) $lead->id] = $others;
             }
@@ -210,20 +212,15 @@ class KanbanLeadCardResource extends JsonResource
         }
 
         // Fallback: no bulk meta was set (e.g. resource used outside the kanban board),
-        // so fall back to a per-lead query as before.
-        if (empty($this->work_phone)) {
-            return [];
-        }
-
-        $normalized = preg_replace('/\D+/', '', $this->work_phone);
-        if ($normalized === '') {
+        // so fall back to a per-lead query (indexed work_phone_digits column).
+        $digits = Lead::phoneDigits($this->work_phone);
+        if ($digits === '') {
             return [];
         }
 
         return Lead::query()
             ->where('id', '!=', $this->id)
-            ->whereNotNull('work_phone')
-            ->whereRaw('REGEXP_REPLACE(work_phone, "[^0-9]", "") = ?', [$normalized])
+            ->where('work_phone_digits', $digits)
             ->limit(200)
             ->pluck('id')
             ->all();
