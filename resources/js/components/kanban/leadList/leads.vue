@@ -500,7 +500,7 @@
 
             <div v-else-if="kanbanIsMobile || listIsCompact" class="lead-list-cards" :class="{ 'lead-list-cards--grid': listIsCompact && !kanbanIsMobile }">
                 <article
-                    v-for="row in pagedListRows"
+                    v-for="(row, index) in pagedListRows"
                     :key="'m-' + row.task.id"
                     class="lead-list-card"
                     :class="{ 'is-selected': isLeadSelected(row.task.id) }"
@@ -508,6 +508,7 @@
                     @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
                 >
                     <div class="lead-list-card__top">
+                        <span class="lead-list-num">{{ listRangeStart + index }}</span>
                         <button
                             v-if="isAdminOrSuperAdmin && leadSelectionActive"
                             type="button"
@@ -584,6 +585,7 @@
                     <thead>
                         <tr>
                             <th v-if="isAdminOrSuperAdmin && leadSelectionActive" class="lead-list-table__check" scope="col" aria-label="Select"></th>
+                            <th class="lead-list-col-num" scope="col">#</th>
                             <th class="lead-list-col-lead" scope="col">Lead</th>
                             <th class="lead-list-col-stage" scope="col">Stage</th>
                             <th class="lead-list-col-optional" scope="col">Activity</th>
@@ -595,7 +597,7 @@
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in pagedListRows"
+                            v-for="(row, index) in pagedListRows"
                             :key="'r-' + row.task.id"
                             :class="{ 'is-selected': isLeadSelected(row.task.id) }"
                             @click="onLeadCardClick(row.task, row.column, $event)"
@@ -613,6 +615,7 @@
                                     <iconify-icon :icon="isLeadSelected(row.task.id) ? 'lucide:check' : 'lucide:square'" />
                                 </button>
                             </td>
+                            <td class="lead-list-col-num">{{ listRangeStart + index }}</td>
                             <td class="lead-list-col-lead">
                                 <div class="lead-list-name">
                                     <div class="lead-list-name__row">
@@ -4139,7 +4142,7 @@ function setBoardView(view) {
     }
 }
 
-const LIST_PAGE_SIZE = 20
+const LIST_PAGE_SIZE = 10
 const listPage = ref(1)
 
 const listRows = computed(() => {
@@ -7476,8 +7479,23 @@ const fetchRevertNotifications = async () => {
     white-space: nowrap;
 }
 
+.lead-list-col-num,
+.lead-list-num {
+    width: 36px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.lead-list-num {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 18px;
+}
+
 .lead-list-table td {
-    padding: 14px;
+    padding: 10px 14px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     background: transparent;
