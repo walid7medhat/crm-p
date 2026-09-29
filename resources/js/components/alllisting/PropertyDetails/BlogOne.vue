@@ -7286,11 +7286,12 @@ const createPaymentDetailsSlide = () => {
 
   const handoverStatus = isPaid(p.handover_date) ? 'Paid' : 'Upcoming';
   const handoverBadge = makeBadge(handoverStatus, handoverStatus);
+  const handoverIsFull = handoverPct >= 100;
   const handoverRow = hasHandoverRow
     ? `<tr>
         <td align="center" valign="middle" style="${tdCell}">${cellInner(`Handover (${handoverPct.toFixed(0)}%)`)}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverPct.toFixed(2) + '%')}</td>
-        <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtAed(handoverAmount))}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverIsFull ? '—' : handoverPct.toFixed(2) + '%')}</td>
+        <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverIsFull ? '—' : fmtAed(handoverAmount))}</td>
         <td align="center" valign="middle" style="${tdCell}">${cellInner(fmtDate(p.handover_date))}</td>
         <td align="center" valign="middle" style="${tdCell}">${cellInner(handoverBadge)}</td>
       </tr>`
@@ -7466,7 +7467,13 @@ const createPaymentDetailsSlide = () => {
       ...(hasPremiumRow ? [{ cells: ['Premium', '—', fmtAed(premium), '—', ''], status: premiumStatus, negative: premium < 0 }] : []),
       ...unpaidModels,
       ...(hasHandoverRow ? [{
-        cells: [`Handover (${handoverPct.toFixed(0)}%)`, `${handoverPct.toFixed(2)}%`, fmtAed(handoverAmount), fmtDate(p.handover_date), ''],
+        cells: [
+          `Handover (${handoverPct.toFixed(0)}%)`,
+          handoverIsFull ? '—' : `${handoverPct.toFixed(2)}%`,
+          handoverIsFull ? '—' : fmtAed(handoverAmount),
+          fmtDate(p.handover_date),
+          '',
+        ],
         status: handoverStatus,
       }] : []),
     ],

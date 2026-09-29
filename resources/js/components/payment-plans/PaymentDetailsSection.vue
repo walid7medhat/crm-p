@@ -80,7 +80,7 @@
               <td>{{ row.type }}</td>
               <td>{{ formatRowPercentage(row) }}</td>
               <td :class="{ 'pd-text-danger': row.type === 'Premium' && row.amount < 0 }">
-                {{ formatAed(row.amount) }}
+                {{ formatRowAmount(row) }}
               </td>
               <td>{{ formatDateDisplay(row.date) }}</td>
               <td>
@@ -344,6 +344,7 @@ const breakdownRows = computed(() => {
 
   if (Math.abs(handoverAmountAed.value) > 0.01) {
     const handoverPaid = isDatePaid(props.listing?.handover_date);
+    const handoverIsFull = handoverPercent.value >= 100;
     rows.push({
       id: 'handover-row',
       type: `Handover (${handoverPercent.value.toFixed(0)}%)`,
@@ -351,6 +352,7 @@ const breakdownRows = computed(() => {
       amount: handoverAmountAed.value,
       date: handoverPaid ? '' : (props.listing?.handover_date || ''),
       status: handoverPaid ? 'Paid' : 'Upcoming',
+      dashOut: handoverIsFull,
     });
   }
 
@@ -453,11 +455,13 @@ const formatDateDisplay = (dateLike) => {
 };
 
 const formatRowPercentage = (row) => {
-  if (row.type === 'Premium') return '—';
+  if (row.type === 'Premium' || row.dashOut) return '—';
   const p = row.percentage;
   if (p === '' || p === null || p === undefined) return '—';
   return `${p}%`;
 };
+
+const formatRowAmount = (row) => (row.dashOut ? '—' : formatAed(row.amount));
 
 const badgeClass = (status) => {
   if (status === 'Paid') return 'pd-badge--paid';
