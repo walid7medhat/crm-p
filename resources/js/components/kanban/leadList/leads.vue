@@ -480,8 +480,8 @@
         <div v-else-if="columns.length > 0 && boardView === 'list'" class="lead-list">
             <div class="lead-list__bar">
                 <p class="lead-list__count">
-                    {{ listRows.length }} shown
-                    <template v-if="totalLeadsCount > listRows.length"> of {{ totalLeadsCount }}</template>
+                    <template v-if="listRows.length">{{ listRangeStart }}–{{ listRangeEnd }} of {{ listTotalLabel }}</template>
+                    <template v-else>0 leads</template>
                 </p>
             </div>
 
@@ -491,7 +491,7 @@
 
             <div v-else-if="kanbanIsMobile || listIsCompact" class="lead-list-cards" :class="{ 'lead-list-cards--grid': listIsCompact && !kanbanIsMobile }">
                 <article
-                    v-for="row in listRows"
+                    v-for="row in pagedListRows"
                     :key="'m-' + row.task.id"
                     class="lead-list-card"
                     :class="{ 'is-selected': isLeadSelected(row.task.id) }"
@@ -586,7 +586,7 @@
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in listRows"
+                            v-for="row in pagedListRows"
                             :key="'r-' + row.task.id"
                             :class="{ 'is-selected': isLeadSelected(row.task.id) }"
                             @click="onLeadCardClick(row.task, row.column, $event)"
@@ -668,15 +668,15 @@
                 </table>
             </div>
 
-            <button
-                v-if="listHasMore"
-                type="button"
-                class="lead-list-more"
-                :disabled="listMoreLoading"
-                @click="loadNextListPage"
-            >
-                {{ listMoreLoading ? 'Loading…' : 'Load more leads' }}
-            </button>
+            <footer v-if="showListPager" class="lead-list-pager">
+                <button type="button" class="lead-list-pager__btn" :disabled="listPage <= 1 || listMoreLoading" @click="goListPrev">
+                    Previous
+                </button>
+                <span class="lead-list-pager__status">Page {{ listPage }}<template v-if="!listHasMore"> of {{ listPageCount }}</template></span>
+                <button type="button" class="lead-list-pager__btn" :disabled="!canListNext || listMoreLoading" @click="goListNext">
+                    {{ listMoreLoading ? 'Loading…' : 'Next' }}
+                </button>
+            </footer>
         </div>
         </div>
         <template v-if="!loading && !error && columns.length > 0 && boardView === 'kanban'">
@@ -4139,6 +4139,9 @@ function setBoardView(view) {
     }
 }
 
+const LIST_PAGE_SIZE = 20
+const listPage = ref(1)
+
 const listRows = computed(() => {
     const rows = []
     for (const column of columns.value) {
@@ -4149,6 +4152,23 @@ const listRows = computed(() => {
         }
     }
     return rows
+})
+
+const listPageCount = computed(() => Math.max(1, Math.ceil(listRows.value.length / LIST_PAGE_SIZE)))
+
+const pagedListRows = computed(() => {
+    const start = (listPage.value - 1) * LIST_PAGE_SIZE
+    return listRows.value.slice(start, start + LIST_PAGE_SIZE)
+})
+
+const listRangeStart = computed(() => (listRows.value.length ? (listPage.value - 1) * LIST_PAGE_SIZE + 1 : 0))
+const listRangeEnd = computed(() => Math.min(listPage.value * LIST_PAGE_SIZE, listRows.value.length))
+const listTotalLabel = computed(() => Math.max(totalLeadsCount.value || 0, listRows.value.length))
+const showListPager = computed(() => listRows.value.length > LIST_PAGE_SIZE || listHasMore.value)
+const canListNext = computed(() => listPage.value < listPageCount.value || listHasMore.value)
+
+watch(listPageCount, (count) => {
+    if (listPage.value > count) listPage.value = count
 })
 
 const listHasMore = computed(() =>
@@ -4164,25 +4184,43 @@ const listMoreLoading = computed(() =>
 
 let listLoadLock = false
 function loadNextListPage() {
-    if (listLoadLock || boardView.value !== 'list') return
+    if (listLoadLock || boardView.value !== 'list') return Promise.resolve()
     const column = columns.value.find((col) => {
         if (!isColumnVisibleOnMobile(col)) return false
         return stagePagination.value[col.status]?.hasMorePages && !loadingMoreLeads.value[col.status]
     })
-    if (!column) return
+    if (!column) return Promise.resolve()
     listLoadLock = true
-    Promise.resolve(fetchMoreLeadsFromApi(column.status)).finally(() => {
+    return Promise.resolve(fetchMoreLeadsFromApi(column.status)).finally(() => {
         listLoadLock = false
     })
 }
 
-function onKanbanContainerScroll(event) {
+function goListPrev() {
+    if (listPage.value <= 1) return
+    listPage.value -= 1
+}
+
+async function goListNext() {
+    if (listMoreLoading.value) return
+    if (listPage.value < listPageCount.value) {
+        listPage.value += 1
+        return
+    }
+    if (!listHasMore.value) return
+    const needed = listPage.value * LIST_PAGE_SIZE + 1
+    let guard = 0
+    while (listRows.value.length < needed && listHasMore.value && guard < 20) {
+        guard += 1
+        const before = listRows.value.length
+        await loadNextListPage()
+        if (listRows.value.length <= before) break
+    }
+    if (listPage.value < listPageCount.value) listPage.value += 1
+}
+
+function onKanbanContainerScroll() {
     updateScrollArrows()
-    if (boardView.value !== 'list') return
-    const el = event?.target
-    if (!el) return
-    if (el.scrollTop + el.clientHeight < el.scrollHeight - 160) return
-    loadNextListPage()
 }
 
 function listStageIndex(column) {
@@ -7592,15 +7630,25 @@ const fetchRevertNotifications = async () => {
     color: #4f46e5;
 }
 
-.lead-list-more {
+.lead-list-pager {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: calc(100% - 32px);
+    justify-content: flex-end;
+    gap: 10px;
     margin: 8px 16px 16px;
-    height: 42px;
+}
+
+.lead-list-pager__status {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.lead-list-pager__btn {
+    height: 40px;
+    padding: 0 14px;
     border: 1px solid #e2e8f0;
-    border-radius: 999px;
+    border-radius: 10px;
     background: #fff;
     color: #0f172a;
     font-size: 13px;
@@ -7608,9 +7656,9 @@ const fetchRevertNotifications = async () => {
     cursor: pointer;
 }
 
-.lead-list-more:disabled {
-    opacity: 0.55;
-    cursor: wait;
+.lead-list-pager__btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .lead-list-cards {
