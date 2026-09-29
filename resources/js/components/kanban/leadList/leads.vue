@@ -7723,12 +7723,6 @@ const fetchRevertNotifications = async () => {
     align-items: stretch;
 }
 
-@media (min-width: 1100px) {
-    .lead-list-cards--grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
 .lead-list-card {
     border: 1px solid #eef2f7;
     border-radius: 16px;
