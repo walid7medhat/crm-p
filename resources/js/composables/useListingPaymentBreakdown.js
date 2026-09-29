@@ -45,7 +45,6 @@ export function useListingPaymentBreakdown({
   breakdownInstallments,
   installmentDraft,
   isUnderConstruction,
-  breakdownPaidOnLoadIds = null,
 }) {
   const selectedPaymentPlanOption = computed(() => resolvePaymentPlanOption(form.value.payment_plans));
 

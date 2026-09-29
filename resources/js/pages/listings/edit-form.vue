@@ -472,16 +472,12 @@
                   :block-future-dates="false"
                   placeholder="Select installment date"
                   class="payment-breakdown-date-picker"
-                  :invalid="!!paymentBreakdownInstallmentDateError"
                 />
               </div>
               <div class="col-md-3">
                 <button type="button" class="btn btn-primary w-100" @click="addBreakdownInstallment">
                   + Add installment
                 </button>
-              </div>
-              <div v-if="paymentBreakdownInstallmentDateError" class="col-12">
-                <div class="text-danger small" role="alert">{{ paymentBreakdownInstallmentDateError }}</div>
               </div>
               <div v-if="paymentBreakdownPercentageCapError" class="col-12">
                 <div class="text-danger small" role="alert">{{ paymentBreakdownPercentageCapError }}</div>
@@ -1988,8 +1984,6 @@ const isUnderConstruction = computed(() => {
 });
 
 const breakdownInstallments = ref([]);
-/** Installment row ids that were already due/paid when the listing was loaded (edit only); may keep past dates. */
-const breakdownPaidOnLoadIds = ref(new Set());
 const installmentDraft = ref({
   type: 'percentage',
   value: null,
@@ -2041,8 +2035,6 @@ const {
   breakdownInstallments,
   installmentDraft,
   isUnderConstruction,
-  breakdownPaidOnLoadIds,
-  
 });
 
 const dealCostSettingsComputed = computed(() => dealCostSettings.value);
@@ -2213,50 +2205,6 @@ const startOfDay = (value) => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
-const isDatePaid = (dateLike) => {
-  if (!dateLike) return false;
-  const paymentDate = startOfDay(dateLike);
-  if (Number.isNaN(paymentDate.getTime())) return false;
-  return paymentDate.getTime() <= startOfDay(new Date()).getTime();
-};
-
-const INSTALLMENT_DATE_PAST_MSG = 'Installment date cannot be in the past.';
-
-const captureBreakdownPaidOnLoadIds = (entries) => {
-  const s = new Set();
-  const today = startOfDay(new Date());
-  for (const e of entries) {
-    const d = startOfDay(e.date);
-    if (!Number.isNaN(d.getTime()) && d.getTime() <= today.getTime()) {
-      s.add(String(e.id));
-    }
-  }
-  breakdownPaidOnLoadIds.value = s;
-};
-
-/** Edit: past dates allowed only for rows that were paid/due on load; new draft rows must be today or later. */
-const getBreakdownInstallmentDateError = () => {
-  if (!isUnderConstruction.value) return '';
-  const today = startOfDay(new Date());
-  for (const entry of breakdownInstallments.value) {
-    if (!entry?.date) continue;
-    const d = startOfDay(entry.date);
-    if (Number.isNaN(d.getTime())) continue;
-    if (d.getTime() < today.getTime()) {
-      if (breakdownPaidOnLoadIds.value.has(String(entry.id))) continue;
-      return INSTALLMENT_DATE_PAST_MSG;
-    }
-  }
-  const draftDate = installmentDraft.value?.date;
-  if (draftDate) {
-    const d = startOfDay(draftDate);
-    if (!Number.isNaN(d.getTime()) && d.getTime() < today.getTime()) return INSTALLMENT_DATE_PAST_MSG;
-  }
-  return '';
-};
-
-const paymentBreakdownInstallmentDateError = computed(() => getBreakdownInstallmentDateError());
-
 const DUPLICATE_INSTALLMENT_DATE_MSG = 'Multiple installments share the same due date.';
 /** Warning only (does not block submit). Compares due dates via `startOfDay`. Future: optional auto-merge of same-date rows. */
 const getBreakdownDuplicateInstallmentDateWarning = () => {
@@ -2346,12 +2294,6 @@ const addBreakdownInstallment = () => {
   }
   if (!installmentDraft.value.date) {
     proxy.$showNotification('Please select installment date', 'error');
-    return;
-  }
-  const draftDay = startOfDay(installmentDraft.value.date);
-  const today = startOfDay(new Date());
-  if (!Number.isNaN(draftDay.getTime()) && draftDay.getTime() < today.getTime()) {
-    proxy.$showNotification(INSTALLMENT_DATE_PAST_MSG, 'error');
     return;
   }
   const newEntry = {
@@ -2492,7 +2434,6 @@ watch(() => form.value.completionStatus, (newStatus) => {
     form.value.payment_plans = null;
     form.value.payment_plan = null;
     breakdownInstallments.value = [];
-    breakdownPaidOnLoadIds.value = new Set();
     // assignmentExpenseLines.value = [];
     form.value.handover_date = '';
     form.value.noc_percentage = 0;
@@ -2712,7 +2653,6 @@ const fetchPropertyData = async (id) => {
       }
     }
     breakdownInstallments.value = loadedBreakdown;
-    captureBreakdownPaidOnLoadIds(loadedBreakdown);
       // In fetchPropertyData function, when loading property data:
      if (propertyData.assignment_expense_lines) {
         loadAssignmentExpenseLines(propertyData.assignment_expense_lines);
