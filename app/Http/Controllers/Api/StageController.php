@@ -266,6 +266,15 @@ class StageController extends Controller
             $visibleStageIds = Stage::where('stage_type', 'lead')->pluck('id')->toArray();
         }
 
+        // Listing-team managers always see the first stage (New Lead) — their team creates
+        // leads straight into it — even when stage visibility hides it for the manager role.
+        if ($user->hasRole('manager') && $user->is_listing_team) {
+            $newLeadStageId = Stage::where('stage_type', 'lead')->orderBy('order')->value('id');
+            if ($newLeadStageId && !in_array($newLeadStageId, $visibleStageIds)) {
+                $visibleStageIds[] = $newLeadStageId;
+            }
+        }
+
         // ================= stages =================
         $stagesQuery = Stage::where('stage_type', 'lead')
             ->where('name', '!=', 'lead pool')
