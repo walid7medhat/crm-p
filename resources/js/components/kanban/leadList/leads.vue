@@ -1,5 +1,5 @@
 <template>
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': showKanbanSearchOverlay }">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': showKanbanSearchOverlay, 'kanban-outer--list': boardView === 'list' }">
         <div
             v-if="showKanbanSearchOverlay"
             class="kanban-search-overlay"
@@ -26,24 +26,6 @@
         >
             <p class="kanban-no-results-overlay__text">There are currently no data on this page</p>
         </div>
-        <!-- Mobile: pipeline filter (matches design — Current Stage) -->
-        <div
-            v-if="kanbanIsMobile"
-            class="mobile-current-stage-bar"
-            role="button"
-            tabindex="0"
-            @click="openMobileListFilterSheet"
-            @keydown.enter.prevent="openMobileListFilterSheet"
-        >
-            <span class="mobile-current-stage-bar__icon" aria-hidden="true">
-                <iconify-icon icon="lucide:git-branch" />
-            </span>
-            <div class="mobile-current-stage-bar__text">
-                <span class="mobile-current-stage-bar__label">Current Stage</span>
-                <span class="mobile-current-stage-bar__value">{{ mobileListFilterLabel }}</span>
-            </div>
-        </div>
-
         <div 
             v-if="showRevertAlert" 
             class="revert-alert-wrapper"
@@ -76,11 +58,55 @@
                 <div class="revert-alert-progress"></div>
             </div>
         </div>
-        <LeadAnalyticsShortcuts
-            :metrics="leadAnalyticsMetrics"
-            :active-filter="activeShortcutFilter"
-            @toggle-filter="onShortcutFilterToggle"
-        />
+        <div class="board-head">
+            <div
+                v-if="kanbanIsMobile"
+                class="mobile-current-stage-bar"
+                role="button"
+                tabindex="0"
+                @click="openMobileListFilterSheet"
+                @keydown.enter.prevent="openMobileListFilterSheet"
+            >
+                <span class="mobile-current-stage-bar__icon" aria-hidden="true">
+                    <iconify-icon icon="lucide:git-branch" />
+                </span>
+                <div class="mobile-current-stage-bar__text">
+                    <span class="mobile-current-stage-bar__label">Current Stage</span>
+                    <span class="mobile-current-stage-bar__value">{{ mobileListFilterLabel }}</span>
+                </div>
+            </div>
+
+            <LeadAnalyticsShortcuts
+                :metrics="leadAnalyticsMetrics"
+                :active-filter="activeShortcutFilter"
+                @toggle-filter="onShortcutFilterToggle"
+            />
+
+            <div class="board-view-switch" role="tablist" aria-label="Lead layout">
+                <button
+                    type="button"
+                    class="board-view-switch__btn"
+                    role="tab"
+                    :aria-selected="boardView === 'kanban'"
+                    :class="{ 'is-active': boardView === 'kanban' }"
+                    @click="setBoardView('kanban')"
+                >
+                    <iconify-icon icon="lucide:columns-3" aria-hidden="true" />
+                    <span class="board-view-switch__label">Kanban</span>
+                </button>
+                <button
+                    type="button"
+                    class="board-view-switch__btn"
+                    role="tab"
+                    :aria-selected="boardView === 'list'"
+                    :class="{ 'is-active': boardView === 'list' }"
+                    @click="setBoardView('list')"
+                >
+                    <iconify-icon icon="lucide:list" aria-hidden="true" />
+                    <span class="board-view-switch__label">List</span>
+                </button>
+            </div>
+        </div>
 
         <Transition name="lead-select-bar">
             <div
@@ -115,7 +141,8 @@
         <div
             ref="kanbanContainerRef"
             class="kanban-container"
-            @scroll="updateScrollArrows"
+            :class="{ 'kanban-container--list': boardView === 'list' }"
+            @scroll="onKanbanContainerScroll"
             @dragover.prevent="onContainerDragOver"
         >
         <!-- Error state -->
@@ -140,7 +167,7 @@
             <p class="kanban-empty-text">Use the menu above to add a new stage and start organizing your leads.</p>
         </div>
         <!-- Draggable Columns -->
-        <draggable v-else-if="columns.length > 0" v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
+        <draggable v-else-if="columns.length > 0 && boardView === 'kanban'" v-model="columns" item-key="status" class="kanban-wrapper kanban-wrapper-tight d-flex h-100" :group="'columns'"
             handle=".column-header"
             :disabled="kanbanIsMobile"
             :delay="200"
@@ -183,6 +210,7 @@
 
                             <div
                                 class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column"
+                                :ref="(el) => setColumnScrollEl(column.status, el)"
                                 @scroll="(e) => onColumnScroll(column, e)"
                             >
                                 <!-- Tasks -->
@@ -449,8 +477,209 @@
                 </div>
             </template>
         </draggable>
+        <div v-else-if="columns.length > 0 && boardView === 'list'" class="lead-list">
+            <div class="lead-list__bar">
+                <p class="lead-list__count">
+                    <template v-if="listRows.length">{{ listRangeStart }}–{{ listRangeEnd }} of {{ listTotalLabel }}</template>
+                    <template v-else>0 leads</template>
+                </p>
+                <div v-if="showListPager" class="lead-list-pager">
+                    <button type="button" class="lead-list-pager__btn" :disabled="listPage <= 1 || listMoreLoading" @click="goListPrev">
+                        Previous
+                    </button>
+                    <span class="lead-list-pager__status">Page {{ listPage }}<template v-if="!listHasMore"> of {{ listPageCount }}</template></span>
+                    <button type="button" class="lead-list-pager__btn" :disabled="!canListNext || listMoreLoading" @click="goListNext">
+                        {{ listMoreLoading ? 'Loading…' : 'Next' }}
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="listRows.length === 0" class="lead-list-empty">
+                No leads match this view.
+            </div>
+
+            <div v-else-if="kanbanIsMobile || listIsCompact" class="lead-list-cards" :class="{ 'lead-list-cards--grid': listIsCompact && !kanbanIsMobile }">
+                <article
+                    v-for="row in pagedListRows"
+                    :key="'m-' + row.task.id"
+                    class="lead-list-card"
+                    :class="{ 'is-selected': isLeadSelected(row.task.id) }"
+                    @click="onLeadCardClick(row.task, row.column, $event)"
+                    @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
+                >
+                    <div class="lead-list-card__top">
+                        <button
+                            v-if="isAdminOrSuperAdmin && leadSelectionActive"
+                            type="button"
+                            class="lead-list-check"
+                            :class="{ 'is-on': isLeadSelected(row.task.id) }"
+                            :aria-pressed="isLeadSelected(row.task.id)"
+                            aria-label="Select lead"
+                            @click.stop="toggleLeadSelection(row.task)"
+                        >
+                            <iconify-icon :icon="isLeadSelected(row.task.id) ? 'lucide:check' : 'lucide:square'" />
+                        </button>
+                        <div class="lead-list-name">
+                            <div class="lead-list-name__row">
+                                <span class="lead-list-name__title">{{ row.task.lead_name || 'Untitled' }}</span>
+                                <span v-if="row.task.has_service_duplicate" class="lead-list-chip lead-list-chip--alert">Blacklisted</span>
+                                <button
+                                    v-if="canSeeDuplicates && row.task.duplicate_no > 0"
+                                    type="button"
+                                    class="lead-list-chip lead-list-chip--dup"
+                                    @click.stop="openDuplicateLeadsModal(row.task.id, $event)"
+                                >
+                                    {{ row.task.duplicate_no }} dup
+                                </button>
+                            </div>
+                            <span v-if="row.task.lead_source || row.task.lead_branch_source" class="lead-list-name__source">
+                                {{ row.task.lead_source || row.task.lead_branch_source }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="lead-list-stage">
+                        <div class="lead-list-stage__track" aria-hidden="true">
+                            <span
+                                v-for="(col, segIndex) in columns"
+                                :key="'seg-m-' + row.task.id + '-' + col.status"
+                                class="lead-list-stage__seg"
+                                :style="{ background: segIndex <= listStageIndex(row.column) ? (row.column.color || '#64748b') : '#e8eef6' }"
+                            />
+                        </div>
+                        <span class="lead-list-stage__name">{{ row.column.title }}</span>
+                    </div>
+                    <div class="lead-list-card__meta">
+                        <div>
+                            <span class="lead-list-kicker">Activity</span>
+                            <span class="lead-list-value">{{ listActivityLabel(row.task) || 'No activities' }}</span>
+                        </div>
+                        <div>
+                            <span class="lead-list-kicker">Created</span>
+                            <span class="lead-list-value" :title="formatDate(row.task.created_at)">{{ formatListCreated(row.task.created_at) }}</span>
+                        </div>
+                        <div>
+                            <span class="lead-list-kicker">Phone</span>
+                            <span class="lead-list-value">{{ listPhone(row.task) || '—' }}</span>
+                        </div>
+                        <div>
+                            <span class="lead-list-kicker">Name</span>
+                            <span class="lead-list-value">{{ listLeadFullName(row.task) }}</span>
+                        </div>
+                    </div>
+                    <div
+                        v-if="hasResponsiblePerson(row.task)"
+                        class="lead-list-person"
+                        @click.stop="openPersonProfile(row.task, 'responsible', $event)"
+                        @mouseenter.stop="showPersonHoverCard(row.task, 'responsible', $event)"
+                        @mouseleave.stop="hidePersonHoverCard"
+                    >
+                        <img :src="responsiblePersonAvatar(row.task)" alt="" />
+                        <span>{{ row.task.responsible_person?.name }}</span>
+                    </div>
+                </article>
+            </div>
+
+            <div v-else class="lead-list-table-wrap">
+                <table class="lead-list-table">
+                    <thead>
+                        <tr>
+                            <th v-if="isAdminOrSuperAdmin && leadSelectionActive" class="lead-list-table__check" scope="col" aria-label="Select"></th>
+                            <th class="lead-list-col-lead" scope="col">Lead</th>
+                            <th class="lead-list-col-stage" scope="col">Stage</th>
+                            <th class="lead-list-col-optional" scope="col">Activity</th>
+                            <th class="lead-list-col-optional" scope="col">Name</th>
+                            <th class="lead-list-col-created" scope="col">Created</th>
+                            <th class="lead-list-col-person" scope="col">Responsible</th>
+                            <th class="lead-list-col-phone" scope="col">Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="row in pagedListRows"
+                            :key="'r-' + row.task.id"
+                            :class="{ 'is-selected': isLeadSelected(row.task.id) }"
+                            @click="onLeadCardClick(row.task, row.column, $event)"
+                            @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
+                        >
+                            <td v-if="isAdminOrSuperAdmin && leadSelectionActive" class="lead-list-table__check" @click.stop>
+                                <button
+                                    type="button"
+                                    class="lead-list-check"
+                                    :class="{ 'is-on': isLeadSelected(row.task.id) }"
+                                    :aria-pressed="isLeadSelected(row.task.id)"
+                                    aria-label="Select lead"
+                                    @click.stop="toggleLeadSelection(row.task)"
+                                >
+                                    <iconify-icon :icon="isLeadSelected(row.task.id) ? 'lucide:check' : 'lucide:square'" />
+                                </button>
+                            </td>
+                            <td class="lead-list-col-lead">
+                                <div class="lead-list-name">
+                                    <div class="lead-list-name__row">
+                                        <span class="lead-list-name__title" :title="row.task.lead_name">{{ row.task.lead_name || 'Untitled' }}</span>
+                                        <span v-if="row.task.has_service_duplicate" class="lead-list-chip lead-list-chip--alert">Blacklisted</span>
+                                        <button
+                                            v-if="canSeeDuplicates && row.task.duplicate_no > 0"
+                                            type="button"
+                                            class="lead-list-chip lead-list-chip--dup"
+                                            @click.stop="openDuplicateLeadsModal(row.task.id, $event)"
+                                        >
+                                            {{ row.task.duplicate_no }}
+                                        </button>
+                                    </div>
+                                    <span v-if="row.task.lead_source || row.task.lead_branch_source" class="lead-list-name__source">
+                                        {{ row.task.lead_source || row.task.lead_branch_source }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="lead-list-col-stage">
+                                <div class="lead-list-stage">
+                                    <div class="lead-list-stage__track" aria-hidden="true">
+                                        <span
+                                            v-for="(col, segIndex) in columns"
+                                            :key="'seg-' + row.task.id + '-' + col.status"
+                                            class="lead-list-stage__seg"
+                                            :style="{ background: segIndex <= listStageIndex(row.column) ? (row.column.color || '#64748b') : '#e8eef6' }"
+                                        />
+                                    </div>
+                                    <span class="lead-list-stage__name">{{ row.column.title }}</span>
+                                </div>
+                            </td>
+                            <td class="lead-list-col-optional">
+                                <span class="lead-list-clip" :class="listActivityLabel(row.task) ? 'lead-list-value' : 'lead-list-muted'" :title="formatDate(activityDisplayAt(row.task))">
+                                    {{ listActivityLabel(row.task) || 'No activities' }}
+                                </span>
+                            </td>
+                            <td class="lead-list-col-optional">
+                                <span class="lead-list-clip lead-list-value" :title="listLeadFullName(row.task)">{{ listLeadFullName(row.task) }}</span>
+                            </td>
+                            <td class="lead-list-col-created">
+                                <span class="lead-list-clip lead-list-value" :title="formatDate(row.task.created_at)">{{ formatListCreated(row.task.created_at) }}</span>
+                            </td>
+                            <td class="lead-list-col-person">
+                                <div
+                                    v-if="hasResponsiblePerson(row.task)"
+                                    class="lead-list-person"
+                                    @click.stop="openPersonProfile(row.task, 'responsible', $event)"
+                                    @mouseenter.stop="showPersonHoverCard(row.task, 'responsible', $event)"
+                                    @mouseleave.stop="hidePersonHoverCard"
+                                >
+                                    <img :src="responsiblePersonAvatar(row.task)" alt="" />
+                                    <span>{{ row.task.responsible_person?.name }}</span>
+                                </div>
+                                <span v-else class="lead-list-muted">—</span>
+                            </td>
+                            <td class="lead-list-col-phone">
+                                <span class="lead-list-clip lead-list-value lead-list-value--phone">{{ listPhone(row.task) || '—' }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
         </div>
-        <template v-if="!loading && !error && columns.length > 0">
+        </div>
+        <template v-if="!loading && !error && columns.length > 0 && boardView === 'kanban'">
             <!-- Left: hide when at start -->
             <div
                 v-show="showLeftZone"
@@ -2935,6 +3164,12 @@ watch(cardFields, () => {
 }, { deep: true })
 let unsubscribeLeadViewUpdated = null
 
+const listCompactQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 1440px)') : null
+const listIsCompact = ref(!!listCompactQuery?.matches)
+function syncListCompact() {
+    listIsCompact.value = !!listCompactQuery?.matches
+}
+
 onMounted(async () => {
     unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
     markKanbanReady()
@@ -2960,6 +3195,7 @@ onMounted(async () => {
     fetchRevertNotifications();
     
     nextTick(() => updateScrollArrows())
+    listCompactQuery?.addEventListener('change', syncListCompact)
     window.addEventListener('resize', updateScrollArrows)
     window.addEventListener('echo-ready', onEchoReady)
     initializeLeadUpdates()
@@ -2981,6 +3217,7 @@ onUnmounted(() => {
     onLeadDragEnd()
     stopScroll()
     cancelPersonHoverHide()
+    listCompactQuery?.removeEventListener('change', syncListCompact)
     window.removeEventListener('resize', updateScrollArrows)
     window.removeEventListener('echo-ready', onEchoReady)
     cleanup()
@@ -3295,6 +3532,54 @@ const handleLeadUpdatedFromModal = (updatedLead) => {
     }
 }
 
+const columnScrollEls = new Map()
+function setColumnScrollEl(status, el) {
+    if (el) columnScrollEls.set(status, el)
+    else columnScrollEls.delete(status)
+}
+
+function columnStageKind(column) {
+    const order = Number(column?.order)
+    const title = String(column?.title || '').trim().toLowerCase()
+    if (order === 10 || title.includes('unqualified')) return 'unqualified'
+    if (order === 4 || title === 'qualified' || title === 'qualified leads') return 'qualified'
+    return null
+}
+
+function captureQualifiedListScroll(stageStatus) {
+    const columnEl = columnScrollEls.get(stageStatus)
+    return {
+        stageStatus,
+        columnTop: columnEl ? columnEl.scrollTop : null,
+        boardTop: kanbanContainerRef.value ? kanbanContainerRef.value.scrollTop : null,
+        boardLeft: kanbanContainerRef.value ? kanbanContainerRef.value.scrollLeft : null,
+        pageTop: window.scrollY || document.documentElement.scrollTop || 0,
+    }
+}
+
+function restoreQualifiedListScroll(state) {
+    if (!state) return
+    const apply = () => {
+        const columnEl = columnScrollEls.get(state.stageStatus)
+        if (columnEl && state.columnTop != null) columnEl.scrollTop = state.columnTop
+        const board = kanbanContainerRef.value
+        if (board) {
+            if (state.boardTop != null) board.scrollTop = state.boardTop
+            if (state.boardLeft != null) board.scrollLeft = state.boardLeft
+        }
+        const pageNow = window.scrollY || document.documentElement.scrollTop || 0
+        if (Math.abs(pageNow - state.pageTop) > 1) window.scrollTo(0, state.pageTop)
+    }
+    apply()
+    nextTick(() => {
+        apply()
+        requestAnimationFrame(() => {
+            apply()
+            requestAnimationFrame(apply)
+        })
+    })
+}
+
 const handleUpdatedLead = (lead, updateType = 'updated') => {
     if (!lead || !lead.id) {
         return
@@ -3332,6 +3617,9 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
 
                 if (column.status !== stageId) {
                     // Lead moved to different stage
+                    const keepQualifiedPlace = columnStageKind(column) === 'qualified'
+                        && columnStageKind(columns.value.find((col) => col.status === stageId)) === 'unqualified'
+                    const qualifiedScroll = keepQualifiedPlace ? captureQualifiedListScroll(column.status) : null
                     column.leads.splice(index, 1)
                     
                     const newColumnIndex = columns.value.findIndex(c => c.status === stageId)
@@ -3349,6 +3637,7 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                         }
                         sortColumnLeadsByUpdatedAt(newColumnIndex)
                     }
+                    if (qualifiedScroll) restoreQualifiedListScroll(qualifiedScroll)
                 } else {
                     column.leads[index] = lead
                     sortColumnLeadsByUpdatedAt(i)
@@ -3428,6 +3717,9 @@ const handleStageChanged = (lead, changes) => {
             const index = column.leads.findIndex(l => l && l.id === leadId)
             if (index !== -1) {
                 if (column.status !== leadStageId) {
+                    const keepQualifiedPlace = columnStageKind(column) === 'qualified'
+                        && columnStageKind(columns.value.find((col) => col.status === leadStageId)) === 'unqualified'
+                    const qualifiedScroll = keepQualifiedPlace ? captureQualifiedListScroll(column.status) : null
                     column.leads.splice(index, 1)
                     
                     const newColumnIndex = columns.value.findIndex(c => c.status === leadStageId)
@@ -3440,6 +3732,7 @@ const handleStageChanged = (lead, changes) => {
                         columns.value[newColumnIndex].leads.unshift(leadToAdd)
                         sortColumnLeadsByUpdatedAt(newColumnIndex)
                     }
+                    if (qualifiedScroll) restoreQualifiedListScroll(qualifiedScroll)
                 }
                 break
             }
@@ -3826,6 +4119,156 @@ function isColumnVisibleOnMobile(column) {
     if (!kanbanIsMobile.value) return true
     if (mobileListFilterStageId.value === MOBILE_FILTER_ALL) return true
     return String(column.status) === String(mobileListFilterStageId.value)
+}
+
+const BOARD_VIEW_KEY = 'kanban_leads_board_view'
+const boardView = ref((() => {
+    try {
+        return localStorage.getItem(BOARD_VIEW_KEY) === 'list' ? 'list' : 'kanban'
+    } catch (e) {
+        return 'kanban'
+    }
+})())
+
+function setBoardView(view) {
+    boardView.value = view === 'list' ? 'list' : 'kanban'
+    try {
+        localStorage.setItem(BOARD_VIEW_KEY, boardView.value)
+    } catch (e) {
+        // ignore private-mode storage failures
+    }
+}
+
+const LIST_PAGE_SIZE = 20
+const listPage = ref(1)
+
+const listRows = computed(() => {
+    const rows = []
+    for (const column of columns.value) {
+        if (!isColumnVisibleOnMobile(column)) continue
+        for (const task of column.leads || []) {
+            if (!task || !leadMatchesShortcutFilter(task)) continue
+            rows.push({ task, column })
+        }
+    }
+    return rows
+})
+
+const listPageCount = computed(() => Math.max(1, Math.ceil(listRows.value.length / LIST_PAGE_SIZE)))
+
+const pagedListRows = computed(() => {
+    const start = (listPage.value - 1) * LIST_PAGE_SIZE
+    return listRows.value.slice(start, start + LIST_PAGE_SIZE)
+})
+
+const listRangeStart = computed(() => (listRows.value.length ? (listPage.value - 1) * LIST_PAGE_SIZE + 1 : 0))
+const listRangeEnd = computed(() => Math.min(listPage.value * LIST_PAGE_SIZE, listRows.value.length))
+const listTotalLabel = computed(() => Math.max(totalLeadsCount.value || 0, listRows.value.length))
+const showListPager = computed(() => listTotalLabel.value > LIST_PAGE_SIZE || listRows.value.length > LIST_PAGE_SIZE || listHasMore.value)
+const canListNext = computed(() => listPage.value < listPageCount.value || listHasMore.value)
+
+watch(listPageCount, (count) => {
+    if (listPage.value > count) listPage.value = count
+})
+
+const listHasMore = computed(() =>
+    columns.value.some((column) => {
+        if (!isColumnVisibleOnMobile(column)) return false
+        return !!stagePagination.value[column.status]?.hasMorePages
+    })
+)
+
+const listMoreLoading = computed(() =>
+    columns.value.some((column) => !!loadingMoreLeads.value[column.status])
+)
+
+let listLoadLock = false
+function loadNextListPage() {
+    if (listLoadLock || boardView.value !== 'list') return Promise.resolve()
+    const column = columns.value.find((col) => {
+        if (!isColumnVisibleOnMobile(col)) return false
+        return stagePagination.value[col.status]?.hasMorePages && !loadingMoreLeads.value[col.status]
+    })
+    if (!column) return Promise.resolve()
+    listLoadLock = true
+    return Promise.resolve(fetchMoreLeadsFromApi(column.status)).finally(() => {
+        listLoadLock = false
+    })
+}
+
+function goListPrev() {
+    if (listPage.value <= 1) return
+    listPage.value -= 1
+}
+
+async function goListNext() {
+    if (listMoreLoading.value) return
+    if (listPage.value < listPageCount.value) {
+        listPage.value += 1
+        return
+    }
+    if (!listHasMore.value) return
+    const needed = listPage.value * LIST_PAGE_SIZE + 1
+    let guard = 0
+    while (listRows.value.length < needed && listHasMore.value && guard < 20) {
+        guard += 1
+        const before = listRows.value.length
+        await loadNextListPage()
+        if (listRows.value.length <= before) break
+    }
+    if (listPage.value < listPageCount.value) listPage.value += 1
+}
+
+function onKanbanContainerScroll() {
+    updateScrollArrows()
+}
+
+function listStageIndex(column) {
+    const index = columns.value.findIndex((col) => String(col.status) === String(column?.status))
+    return index < 0 ? 0 : index
+}
+
+function listLeadFullName(task) {
+    const parts = [task?.salutation, task?.first_name, task?.last_name].filter((part) => part && String(part).trim())
+    return parts.length ? parts.join(' ') : '—'
+}
+
+function listPhone(task) {
+    const phone = task?.work_phone
+    if (!phone) return ''
+    const value = String(phone)
+    return value.length > 8 ? `${value.slice(0, 8)}…` : value
+}
+
+function formatListStamp(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return ''
+    const now = new Date()
+    const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    if (date.toDateString() === now.toDateString()) return time
+    const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (date.getFullYear() !== now.getFullYear()) return `${day}, ${date.getFullYear()}`
+    return `${day} · ${time}`
+}
+
+function listActivityLabel(task) {
+    if (!hasAssignedBy(task)) return ''
+    return formatListStamp(activityDisplayAt(task))
+}
+
+function formatListCreated(dateString) {
+    if (!dateString) return '—'
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return '—'
+    const minutes = Math.round((Date.now() - date.getTime()) / 60000)
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.round(minutes / 60)
+    if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`
+    const days = Math.round(hours / 24)
+    if (days < 14) return days === 1 ? '1 day ago' : `${days} days ago`
+    return formatListStamp(dateString) || '—'
 }
 
 function onLeadCardClick(task, column, event) {
@@ -6880,6 +7323,527 @@ const fetchRevertNotifications = async () => {
     
     .revert-alert-message {
         font-size: 12px;
+    }
+}
+
+.board-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 0 8px;
+}
+
+.board-head > :deep(.lead-analytics-row) {
+    flex: 1 1 auto;
+    width: auto !important;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.board-view-switch {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    align-self: center;
+    gap: 4px;
+    margin: 0 0 8px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.board-view-switch__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+}
+
+.board-view-switch__btn iconify-icon {
+    font-size: 15px;
+}
+
+.board-view-switch__btn.is-active {
+    background: #0f172a;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.kanban-outer--list {
+    overflow: hidden;
+}
+
+.kanban-outer--list .board-head,
+.kanban-outer--list .lead-select-bar {
+    flex-shrink: 0;
+}
+
+.kanban-container.kanban-container--list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 0;
+    overflow: hidden !important;
+    padding: 0 8px 8px;
+}
+
+.kanban-outer--mobile.kanban-outer--list .kanban-container {
+    overflow: hidden !important;
+    height: auto !important;
+    min-height: 0;
+}
+
+.lead-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.lead-list__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.lead-list__count {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.01em;
+}
+
+.lead-list-empty {
+    padding: 48px 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.lead-list-table-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.lead-list-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 760px;
+}
+
+.lead-list-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 12px 14px;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    border-bottom: 1px solid #eef2f7;
+    white-space: nowrap;
+}
+
+.lead-list-table td {
+    padding: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    background: transparent;
+    overflow: hidden;
+}
+
+.lead-list-clip {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lead-list-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.lead-list-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+.lead-list-table tbody tr.is-selected td {
+    background: #eef2ff;
+}
+
+.lead-list-table__check {
+    width: 42px;
+    padding-right: 0 !important;
+}
+
+.lead-list-name {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    max-width: 320px;
+}
+
+.lead-list-name__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.lead-list-name__title {
+    font-size: 14px;
+    font-weight: 650;
+    color: #3730a3;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lead-list-name__source {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lead-list-chip {
+    flex-shrink: 0;
+    border: none;
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.lead-list-chip--alert {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.lead-list-chip--dup {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.lead-list-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 128px;
+    max-width: 180px;
+}
+
+.lead-list-stage__track {
+    display: flex;
+    gap: 3px;
+    height: 6px;
+}
+
+.lead-list-stage__seg {
+    flex: 1;
+    border-radius: 99px;
+    min-width: 4px;
+}
+
+.lead-list-stage__name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    line-height: 1.2;
+}
+
+.lead-list-value {
+    font-size: 13px;
+    font-weight: 550;
+    color: #334155;
+}
+
+.lead-list-value--phone {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.lead-list-muted {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+.lead-list-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 180px;
+    min-width: 0;
+    color: #1e293b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.lead-list-person img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #e2e8f0;
+}
+
+.lead-list-person span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lead-list-check {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.lead-list-check.is-on {
+    color: #4f46e5;
+}
+
+.lead-list-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    gap: 10px;
+    margin: 0;
+}
+
+.lead-list-pager__status {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.lead-list-pager__btn {
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.lead-list-pager__btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.lead-list-cards {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 10px;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px 4px;
+}
+
+.lead-list-cards--grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+    align-items: stretch;
+}
+
+@media (min-width: 1100px) {
+    .lead-list-cards--grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.lead-list-card {
+    border: 1px solid #eef2f7;
+    border-radius: 16px;
+    background: #fff;
+    padding: 14px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+}
+
+.lead-list-card.is-selected {
+    border-color: #c7d2fe;
+    background: #f5f7ff;
+}
+
+.lead-list-card__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.lead-list-card .lead-list-name {
+    max-width: none;
+    flex: 1;
+}
+
+.lead-list-card .lead-list-name__title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.lead-list-card .lead-list-stage {
+    max-width: none;
+    margin-top: 12px;
+}
+
+.lead-list-card__meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    margin-top: 12px;
+}
+
+.lead-list-kicker {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.lead-list-card .lead-list-person {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    max-width: none;
+}
+
+@media (max-width: 1680px) {
+    .lead-list-col-optional {
+        display: none;
+    }
+
+    .lead-list-table {
+        table-layout: fixed;
+        min-width: 0;
+    }
+
+    .lead-list-col-lead { width: 30%; }
+    .lead-list-col-stage { width: 16%; }
+    .lead-list-col-created { width: 16%; }
+    .lead-list-col-person { width: 22%; }
+    .lead-list-col-phone { width: 16%; }
+
+    .lead-list-name,
+    .lead-list-stage,
+    .lead-list-person {
+        max-width: 100%;
+    }
+
+    .lead-list-stage {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .board-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 8px;
+        row-gap: 0;
+        padding: 0 8px;
+    }
+
+    .board-head .mobile-current-stage-bar {
+        grid-column: 1;
+        grid-row: 1;
+        margin: 6px 0 8px;
+    }
+
+    .board-head .board-view-switch {
+        grid-column: 2;
+        grid-row: 1;
+        margin: 0;
+        padding: 3px;
+    }
+
+    .board-head > :deep(.lead-analytics-row) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .board-view-switch__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .board-view-switch__btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        justify-content: center;
     }
 }
 </style>
