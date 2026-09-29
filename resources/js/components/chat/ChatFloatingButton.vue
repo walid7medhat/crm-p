@@ -37,6 +37,8 @@ import {
   claimIncomingSoundAcrossTabs,
   playIncomingChatSound,
   releaseIncomingChatSound,
+  prepareIncomingChatSound,
+  whenEchoReady,
 } from './incomingChatAlert'
 
 const props = defineProps({
@@ -207,9 +209,9 @@ function notifyIncomingMessage(eventPayload, key, viewingThisThread) {
     }
   }
 
-  claimIncomingSoundAcrossTabs(key).then((claimed) => {
-    if (claimed) playIncomingChatSound()
-  }).catch(() => {})
+  if (claimIncomingSoundAcrossTabs(key)) {
+    playIncomingChatSound()
+  }
 }
 
 function unsubscribeEcho() {
@@ -231,18 +233,25 @@ function checkVisible() {
 }
 
 let pollInterval = null
+let stopEchoWait = null
 
 onMounted(() => {
   checkVisible()
+  prepareIncomingChatSound()
   document.addEventListener('visibilitychange', onVisibilityChange)
+  stopEchoWait = whenEchoReady(() => {
+    if (!localStorage.getItem('token')) return
+    subscribeToNewMessages()
+  })
   if (visible.value) {
     fetchUnreadCount()
-    subscribeToNewMessages()
     pollInterval = setInterval(fetchUnreadCount, 60000)
   }
 })
 
 onUnmounted(() => {
+  if (stopEchoWait) stopEchoWait()
+  stopEchoWait = null
   unsubscribeEcho()
   document.removeEventListener('visibilitychange', onVisibilityChange)
   restoreTabTitle()

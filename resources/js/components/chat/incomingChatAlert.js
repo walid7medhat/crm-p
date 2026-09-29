@@ -8,8 +8,8 @@ let unlockBound = false
 let lastSoundAt = 0
 
 const SOUND_URL = '/assets/notification-sound.mp3?v=3'
-const SOUND_VOLUME = 0.48
-const SOUND_GAP_MS = 1200
+const SOUND_VOLUME = 0.85
+const SOUND_GAP_MS = 900
 
 export function messageAlertKey(event) {
   if (event?.id != null && event.id !== '') return `id:${event.id}`
@@ -78,95 +78,97 @@ function claimIncomingSound(key) {
   return true
 }
 
-function soundLockName(key) {
-  let hash = 0
-  const value = String(key)
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) >>> 0
-  }
-  return `crm-chat-sound-${hash}`
-}
-
 /**
  * Returns true for the single tab that should play the sound for this message.
- * A background tab waits briefly so a visible CRM tab can claim it first.
+ * Synchronous so the audible alert is not deferred behind a lock or timer.
  */
-export async function claimIncomingSoundAcrossTabs(key) {
+export function claimIncomingSoundAcrossTabs(key) {
   if (!key || claimedKeys.has(key)) return false
-
-  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-    await new Promise((resolve) => setTimeout(resolve, 220))
-    if (claimedKeys.has(key)) return false
-  }
-
-  try {
-    if (typeof navigator !== 'undefined' && navigator.locks?.request) {
-      let won = false
-      await navigator.locks.request(soundLockName(key), { ifAvailable: true }, (lock) => {
-        if (!lock) {
-          rememberClaim(key)
-          won = false
-          return
-        }
-        won = claimIncomingSound(key)
-      })
-      return won
-    }
-  } catch (_) {}
-
   return claimIncomingSound(key)
 }
 
-function playFallbackTone() {
+/** Run callback once Laravel Echo has been created. Echo starts after idle time. */
+export function whenEchoReady(callback) {
+  if (typeof window === 'undefined') return () => {}
+  if (window.Echo) {
+    callback()
+    return () => {}
+  }
+  const handler = () => {
+    window.removeEventListener('echo-ready', handler)
+    callback()
+  }
+  window.addEventListener('echo-ready', handler)
+  return () => window.removeEventListener('echo-ready', handler)
+}
+
+function getAudioElement() {
+  if (!audioElement) {
+    audioElement = new Audio(SOUND_URL)
+    audioElement.preload = 'auto'
+    audioElement.volume = SOUND_VOLUME
+  }
+  return audioElement
+}
+
+function playFallbackTone(retried = false) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext
     if (!AudioCtx) return
     if (!audioContext) audioContext = new AudioCtx()
     if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {})
+      if (retried) return
+      audioContext.resume().then(() => playFallbackTone(true)).catch(() => {})
+      return
     }
     const now = audioContext.currentTime
     const osc = audioContext.createOscillator()
     const gain = audioContext.createGain()
     osc.type = 'sine'
     osc.frequency.setValueAtTime(880, now)
-    osc.frequency.exponentialRampToValueAtTime(660, now + 0.12)
+    osc.frequency.exponentialRampToValueAtTime(660, now + 0.18)
     gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(0.07, now + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2)
+    gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28)
     osc.connect(gain)
     gain.connect(audioContext.destination)
     osc.start(now)
-    osc.stop(now + 0.22)
+    osc.stop(now + 0.3)
   } catch (_) {}
 }
 
-function ensureUnlockOnGesture() {
+/** Unlock audio on the first click or keypress, before a message arrives. */
+export function prepareIncomingChatSound() {
   if (unlockBound || typeof window === 'undefined') return
   unlockBound = true
-  window.addEventListener('pointerdown', () => {
+  const unlock = () => {
     try {
-      if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume().catch(() => {})
+      const el = getAudioElement()
+      el.volume = 0
+      const pending = el.play()
+      const restore = () => {
+        try {
+          el.pause()
+          el.currentTime = 0
+        } catch (_) {}
+        el.volume = SOUND_VOLUME
       }
-      if (!audioElement) {
-        audioElement = new Audio(SOUND_URL)
-        audioElement.preload = 'auto'
-      }
-      const previous = audioElement.volume
-      audioElement.volume = 0
-      const pending = audioElement.play()
       if (pending && typeof pending.then === 'function') {
-        pending.then(() => {
-          audioElement.pause()
-          audioElement.currentTime = 0
-          audioElement.volume = SOUND_VOLUME || previous
-        }).catch(() => {
-          if (audioElement) audioElement.volume = SOUND_VOLUME
+        pending.then(restore).catch(() => {
+          el.volume = SOUND_VOLUME
         })
+      } else {
+        restore()
+      }
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (AudioCtx) {
+        if (!audioContext) audioContext = new AudioCtx()
+        if (audioContext.state === 'suspended') audioContext.resume().catch(() => {})
       }
     } catch (_) {}
-  }, { once: true, passive: true })
+  }
+  window.addEventListener('pointerdown', unlock, { once: true, capture: true })
+  window.addEventListener('keydown', unlock, { once: true, capture: true })
 }
 
 export function playIncomingChatSound() {
@@ -175,19 +177,19 @@ export function playIncomingChatSound() {
     const now = Date.now()
     if (now - lastSoundAt < SOUND_GAP_MS) return
     lastSoundAt = now
-    ensureUnlockOnGesture()
-    if (!audioElement) {
-      audioElement = new Audio(SOUND_URL)
-      audioElement.preload = 'auto'
-      audioElement.volume = SOUND_VOLUME
-    }
-    audioElement.volume = SOUND_VOLUME
-    audioElement.currentTime = 0
-    const pending = audioElement.play()
+    prepareIncomingChatSound()
+    const el = getAudioElement()
+    el.volume = SOUND_VOLUME
+    try { el.currentTime = 0 } catch (_) {}
+    const pending = el.play()
     if (pending && typeof pending.catch === 'function') {
       pending.catch(() => playFallbackTone())
     }
   } catch (_) {}
+}
+
+if (typeof window !== 'undefined') {
+  prepareIncomingChatSound()
 }
 
 export function releaseIncomingChatSound() {

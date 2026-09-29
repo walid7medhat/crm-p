@@ -90,7 +90,7 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import ConversationList from './ConversationList.vue'
 import ChatWindow from './ChatWindow.vue'
-import { messageAlertKey, setViewedChatConversation } from './incomingChatAlert'
+import { messageAlertKey, setViewedChatConversation, whenEchoReady } from './incomingChatAlert'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -130,12 +130,15 @@ const inboxSeenIds = new Set()
 let inboxMessageHandler = null
 let conversationMessageHandler = null
 let inboxPulseTimer = null
+let stopEchoWait = null
 
 watch([() => props.show, activeConversationId], ([visible, id]) => {
   setViewedChatConversation(visible ? id : null)
 }, { immediate: true })
 
 onUnmounted(() => {
+  if (stopEchoWait) stopEchoWait()
+  stopEchoWait = null
   setViewedChatConversation(null)
 })
 
@@ -258,10 +261,14 @@ function rememberInboxMessage(key) {
 }
 
 function subscribeInboxNotifications() {
-  if (!window.Echo) return
   if (!currentUserId.value) return
   if (activeConversationId.value) return
   if (inboxEchoChannel.value) return
+  if (!window.Echo) {
+    if (stopEchoWait) stopEchoWait()
+    stopEchoWait = whenEchoReady(() => subscribeInboxNotifications())
+    return
+  }
 
   try {
     const channel = window.Echo.private(`user.${currentUserId.value}`)
@@ -704,7 +711,16 @@ function emitTyping() {
 
 function subscribeConversation(conversationId) {
   unsubscribeEcho()
-  if (!window.Echo || !currentUserId.value) return
+  if (!currentUserId.value) return
+  if (!window.Echo) {
+    if (stopEchoWait) stopEchoWait()
+    stopEchoWait = whenEchoReady(() => {
+      if (Number(activeConversationId.value) === Number(conversationId)) {
+        subscribeConversation(conversationId)
+      }
+    })
+    return
+  }
   try {
     const channel = window.Echo.private(`user.${currentUserId.value}`)
     conversationMessageHandler = (e) => {
