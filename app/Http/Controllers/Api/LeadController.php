@@ -980,9 +980,10 @@ class LeadController extends Controller
         if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
             $base->role(['team_lead', 'sales', 'manager', 'admin'])
                 ->whereNotNull('users.parent_id');
-        } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin')) {
+        } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin') || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
             // branch_admin / show-branch-leads → agents across the whole branch (all
-            // offices). Branch admins also get user #33.
+            // offices). Branch admins also get user #33, and user #33 gets the same
+            // branch-wide visibility here in return.
             $scopeIds = $user->getBranchUserIds();
             $roles = $user->hasBranchLeadsPermission()
                 ? ['team_lead', 'sales', 'manager']
