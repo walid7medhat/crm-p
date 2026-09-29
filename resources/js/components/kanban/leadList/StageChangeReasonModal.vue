@@ -786,7 +786,8 @@ const unqualifiedStatusOptions = [
         { value: 'registered_by_mistake', text: 'Registered by Mistake' },
         { value: 'spam_leads', text: 'Spam Leads' },
         { value: 'blacklist', text: 'Black Lists' },
-    
+        { value: 'duplication', text: 'Duplication' },
+
 ]
 
 const defaultLeadStatusOptions = [

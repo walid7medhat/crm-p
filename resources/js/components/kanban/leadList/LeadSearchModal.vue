@@ -3314,7 +3314,7 @@ function mapApiStatusToFormValue(apiValue, stageId) {
 
             'not_interested', 'wrong_contact_details','service_provider', 'no_answer_multiple_calls',
 
-            'job_seeker', 'broker', 'registered_by_mistake', 'blacklist'
+            'job_seeker', 'broker', 'registered_by_mistake', 'blacklist', 'duplication'
 
         ]
 
@@ -3404,6 +3404,8 @@ const qualityStatusOptions = computed(() => {
             { value: 'spam_leads', text: 'Spam Leads' },
 
             { value: 'blacklist', text: 'Black Lists' },
+
+            { value: 'duplication', text: 'Duplication' },
 
         ]
 
@@ -6360,7 +6362,7 @@ watch(() => form.value.stageId, (newVal) => {
 
                 'wrong_contact_details', 'no_answer_multiple_calls','service_provider',
 
-            'job_seeker', 'broker', 'registered_by_mistake','spam_leads', 'blacklist'
+            'job_seeker', 'broker', 'registered_by_mistake','spam_leads', 'blacklist', 'duplication'
 
             ].includes(currentQuality)
 

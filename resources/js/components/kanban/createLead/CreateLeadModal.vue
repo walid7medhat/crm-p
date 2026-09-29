@@ -857,6 +857,7 @@
                 { value: 'registered_by_mistake', text: 'Registered by Mistake' },
               { value: 'spam_leads', text: 'Spam Leads' },
                   { value: 'blacklist', text: 'Black List' },
+                  { value: 'duplication', text: 'Duplication' },
 
             ]
         }

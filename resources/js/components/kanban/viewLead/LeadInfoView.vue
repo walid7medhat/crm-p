@@ -1139,6 +1139,7 @@ const formatLeadStatus = (status, stageOrder = null) => {
             'registered_by_mistake': 'Registered by Mistake',
             'spam_leads':'Spam Leads',
             'blacklist':'Black Lists',
+            'duplication':'Duplication',
         }
         return unqualifiedMapping[status] || formatText(status)
     }
@@ -1159,6 +1160,7 @@ const formatLeadStatus = (status, stageOrder = null) => {
         'broker': 'Broker',
         'registered_by_mistake': 'Registered by Mistake',
         'spam_leads': 'Spam Leads',
+        'duplication': 'Duplication',
         'already_assigned_to_another_agent': 'Already Assigned to Another Agent',
         'client_was_just_searching_online': 'Client Was Just Searching Online',
         'number_does_not_exist': 'Number Does Not Exist'
@@ -1569,7 +1571,8 @@ const clientReqQualityStatusOptions = computed(() => {
             { value: 'spam_leads', text: 'Spam Leads' },
             { value: 'already_assigned_to_another_agent', text: 'Already Assigned to Another Agent' },
             { value: 'client_was_just_searching_online', text: 'Client Was Just Searching Online' },
-            { value: 'number_does_not_exist', text: 'Number Does Not Exist' }
+            { value: 'number_does_not_exist', text: 'Number Does Not Exist' },
+            { value: 'duplication', text: 'Duplication' }
         ]
     }
     
