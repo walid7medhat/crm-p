@@ -348,6 +348,7 @@ export default {
             meta: { total: 0, last_page: 1, current_page: 1, per_page: 10 },
             statusLoading: null,
             searchDebounceTimer: null,
+            fetchAbortController: null,
             defaultAvatar: '/assets/images/user.png'
 
         };
@@ -588,6 +589,14 @@ export default {
         // (passing page/per_page opts the backend into `paginate()` instead of it
         // returning every user), so this only ever fetches the one page being viewed.
         async fetchUsers() {
+            // Cancel any still-in-flight request so a slow earlier response (e.g. from a
+            // previous search keystroke) can't land after and overwrite newer results.
+            if (this.fetchAbortController) {
+                this.fetchAbortController.abort();
+            }
+            const abortController = new AbortController();
+            this.fetchAbortController = abortController;
+
             try {
                 this.loading = true;
 
@@ -608,7 +617,8 @@ export default {
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
-                    }
+                    },
+                    signal: abortController.signal
                 });
 
                 if (!response.ok) {
@@ -626,12 +636,18 @@ export default {
                 };
 
             } catch (error) {
+                if (error?.name === 'AbortError') {
+                    // Superseded by a newer request — its result will take over.
+                    return;
+                }
                 console.error('Error fetching users:', error);
                 this.users = [];
                 this.meta = { total: 0, last_page: 1, current_page: 1, per_page: this.entriesPerPage };
                 this.showNotification('Failed to load users. Please try again.', 'error');
             } finally {
-                this.loading = false;
+                if (this.fetchAbortController === abortController) {
+                    this.loading = false;
+                }
             }
         },
 
