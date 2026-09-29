@@ -19,10 +19,24 @@ export function normalizeLeadRealtimeEvent(event) {
     return event
 }
 
+/** Super admins see every lead, so live lead toasts would never stop for them. */
+function isSuperAdmin() {
+    try {
+        return JSON.parse(localStorage.getItem('user') || '{}')?.roles?.includes('super_admin') ?? false
+    } catch {
+        return false
+    }
+}
+
 /**
- * Skip user-facing toasts for Bitrix sync; always show CRM-originated updates.
+ * Skip user-facing toasts for Bitrix sync and for super admins; otherwise always
+ * show CRM-originated updates.
  */
 export function shouldSuppressLeadUpdateNotification(event) {
+    if (isSuperAdmin()) {
+        return true
+    }
+
     const payload = normalizeLeadRealtimeEvent(event)
 
     if (payload?.source === 'crm' || payload?.user_id) {

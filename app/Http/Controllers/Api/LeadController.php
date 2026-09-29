@@ -36,6 +36,9 @@ use Maatwebsite\Excel\Excel as ExcelFormat;
 use App\Services\LeadPoolAssignmentService;
 class LeadController extends Controller
 {
+    /** Branch admins can also assign leads to this user, on top of their own branch. */
+    private const BRANCH_ADMIN_EXTRA_ASSIGNEE_ID = 33;
+
     public function __construct()
     {
         $this->middleware('permission:leads-list', ['only' => ['index', 'show', 'export']]);
@@ -791,7 +794,7 @@ class LeadController extends Controller
 
         if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
             $subordinatesIds = $user->hasRole('branch_admin')
-                ? $user->getBranchAdminSubordinateIds()
+                ? [...$user->getBranchAdminSubordinateIds(), self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID]
                 : $user->getAllSubordinatesIds();
             if (!in_array($request->responsible_person_id, $subordinatesIds)) {
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
@@ -967,11 +970,17 @@ class LeadController extends Controller
         if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
             $base->role(['team_lead', 'sales', 'manager', 'admin'])
                 ->whereNotNull('users.parent_id');
+        } elseif ($user->hasRole('branch_admin')) {
+            // Branch sales/team leads, plus user #33 (whatever their role).
+            $base->where(function ($q) use ($user) {
+                $q->where(function ($q) use ($user) {
+                    $q->role(['team_lead', 'sales'])
+                        ->whereIn('users.id', $user->getBranchAdminSubordinateIds());
+                })->orWhere('users.id', self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID);
+            });
         } else {
             $base->role(['team_lead', 'sales'])
-                ->whereIn('users.id', $user->hasRole('branch_admin')
-                    ? $user->getBranchAdminSubordinateIds()
-                    : $user->getAllSubordinatesIds());
+                ->whereIn('users.id', $user->getAllSubordinatesIds());
         }
         if (!empty($officeAndDescendants)) {
             $base->whereIn('users.id', $officeAndDescendants);
