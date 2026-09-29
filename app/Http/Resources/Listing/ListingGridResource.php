@@ -236,6 +236,7 @@ class ListingGridResource extends JsonResource
             'canShowOwner' => $canSeeOwnerData,
             'canShowUnitNumber' => $canSeeUnitNumber,
             'created_at' => $this->created_at?->format('M d, Y'),
+            'updated_at' => $this->updated_at?->format('M d, Y'),
             'project' => $this->resolveProjectSummary(),
         ];
     }

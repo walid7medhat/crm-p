@@ -1498,7 +1498,8 @@ const decodeFiltersFromQuery = async (query) => {
 .property-listed-date-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
+  text-align: left;
   gap: 2px;
 }
 .justify-between{
