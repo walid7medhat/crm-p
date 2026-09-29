@@ -2687,8 +2687,12 @@ public function toggleStatus($id)
 {
     try {
         $property = Listing::findOrFail($id);
-        
-        if (Auth::user()->hasRole('super_admin') || (Auth::user()->hasRole('sales') && $property->agent_id !== Auth::id())) {
+
+        $user = Auth::user();
+        $isAdmin = $user->hasRole('super_admin') || $user->hasRole('admin');
+        $isAssignedAgent = (int) $property->agent_id === (int) $user->id;
+
+        if (! $isAdmin && ! $isAssignedAgent) {
             return ApiResponse::error('Access denied', 403);
         }
 

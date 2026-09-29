@@ -229,7 +229,7 @@
         </div>
         <div class="card-body payment-breakdown-card-body">
           <div class="row gy-3 payment-breakdown-prices">
-            <div class="col-md-4">
+            <div v-if="!isRentListing" class="col-md-4">
               <label class="form-label">Original price (OP) <span class="text-muted fw-normal small">(developer / contract)</span></label>
               <input
                 :value="formatPriceInputDisplay(form.original_price)"
@@ -251,7 +251,7 @@
                 @input="form.price = parsePriceInputDigits($event.target.value)"
               />
             </div>
-            <div v-if="form.completionStatus !== 'Completed'" class="col-md-4">
+            <div v-if="form.completionStatus !== 'Completed' && !isRentListing" class="col-md-4">
               <label class="form-label">Payment plan</label>
               <v-select
                 v-model="form.payment_plans"
@@ -287,8 +287,8 @@
             </p>
           </div> -->
 
-          <div class="row gy-3 mt-1">
-            <div  v-if="isUnderConstruction" class="col-12">
+          <div class="row gy-3 mt-1" v-if="showBreakdownFeatures">
+            <div class="col-12">
               <div class="payment-calc-summary border rounded-3 p-3 bg-light">
                 <div class="row g-3 small">
                   <div class="col-md-4">
@@ -313,22 +313,22 @@
               </div>
             </div>
 
-            <div v-if="breakdownSellingPriceMismatchActive && isUnderConstruction" class="col-12">
+            <div v-if="breakdownSellingPriceMismatchActive && showBreakdownFeatures" class="col-12">
               <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">
                 <strong>Payment breakdown total does not match selling price.</strong>
                 <span v-if="breakdownSellingDeltaMessage" class="d-block mt-1">{{ breakdownSellingDeltaMessage }}</span>
               </div>
             </div>
 
-            <div v-if="mixedInstallmentTypesError && isUnderConstruction" class="col-12">
+            <div v-if="mixedInstallmentTypesError && showBreakdownFeatures" class="col-12">
               <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ mixedInstallmentTypesError }}</div>
             </div>
 
-            <div v-if="percentageInstallmentPlanMismatchError && isUnderConstruction" class="col-12">
+            <div v-if="percentageInstallmentPlanMismatchError && showBreakdownFeatures" class="col-12">
               <div class="alert alert-danger py-2 px-3 mb-0 small" role="alert">{{ percentageInstallmentPlanMismatchError }}</div>
             </div>
 
-            <div class="col-md-4" v-if="isUnderConstruction">
+            <div class="col-md-4" v-if="showBreakdownFeatures">
               <label class="form-label">Handover date</label>
               <AdvancedDatePicker
                 v-model="form.handover_date"
@@ -343,7 +343,7 @@
               <div v-if="paymentHandoverDateError" class="text-danger small mt-1" role="alert">{{ paymentHandoverDateError }}</div>
             </div>
 
-            <div class="col-md-4" v-if="isUnderConstruction">
+            <div class="col-md-4" v-if="showBreakdownFeatures">
               <label class="form-label">Total paid (installments with past due date)</label>
               <input
                 :value="`${formatAed(paidAmountForm)} (${paidPercentOfOp.toFixed(2)}% of OP)`"
@@ -352,7 +352,7 @@
                 readonly
               />
             </div>
-            <div class="col-md-4" v-if="isUnderConstruction">
+            <div class="col-md-4" v-if="showBreakdownFeatures">
               <label class="form-label">NOC <span class="text-muted fw-normal small">(% of original price)</span></label>
               <v-select
                 v-model="form.noc_percentage"
@@ -436,9 +436,9 @@
             </div>
           </div>
 
-          <hr class="my-3">
+          <hr v-if="showBreakdownFeatures" class="my-3">
 
-          <div class="row gy-3 align-items-end" v-if="isUnderConstruction">
+          <div class="row gy-3 align-items-end" v-if="showBreakdownFeatures">
             <div class="col-md-3">
               <label class="form-label">Installment type</label>
               <v-select
@@ -495,7 +495,7 @@
             </div>
           </div>
 
-          <div class="table-responsive mt-3" v-if="isUnderConstruction">
+          <div class="table-responsive mt-3" v-if="showBreakdownFeatures">
             <table class="table table-sm align-middle">
               <thead>
                 <tr>
@@ -540,7 +540,7 @@
           </div>
 
 
-          <section class="assignment-expenses-panel mt-4" aria-labelledby="assignment-expenses-heading">
+          <section v-if="!isRentListing" class="assignment-expenses-panel mt-4" aria-labelledby="assignment-expenses-heading">
             <div class="assignment-expenses-panel__head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <div>
                 <h6 id="assignment-expenses-heading" class="assignment-expenses-panel__title mb-0">Assignment deal costs</h6>
@@ -731,7 +731,7 @@
             </div>
           </section>
 
-          <div class="payment-validation-summary border rounded-3 p-3 mt-3 bg-white" v-if="isUnderConstruction">
+          <div class="payment-validation-summary border rounded-3 p-3 mt-3 bg-white" v-if="showBreakdownFeatures">
             <div class="fw-semibold small text-uppercase text-muted mb-2">Validation summary</div>
             <ul class="list-unstyled small mb-0 payment-validation-summary-list">
               <li
@@ -746,7 +746,7 @@
             </ul>
           </div>
 
-          <div class="payment-breakdown-actions d-flex flex-wrap gap-2 justify-content-end mt-3 pt-3 border-top">
+          <div v-if="showBreakdownFeatures" class="payment-breakdown-actions d-flex flex-wrap gap-2 justify-content-end mt-3 pt-3 border-top">
             <button
               type="button"
               class="btn btn-outline-primary"
@@ -789,7 +789,7 @@
         :noc-type="currentNocType"
         :noc-percentage="form.noc_percentage"
         :breakdown-rows="paymentBreakdownRows"
-        :is-under-construction="isUnderConstruction"
+        :is-under-construction="showBreakdownFeatures"
         :assignment-expense-rows="assignmentExpenseLines"
         :assignment-expenses-subtotal="assignmentExpensesSubtotal"
         :assignment-expenses-total-vat="assignmentExpensesTotalVat"
@@ -2095,6 +2095,10 @@ const isUnderConstruction = computed(() => {
   return s === 'under construction' || s === 'off plan';
 });
 
+const isRentListing = computed(() => String(form.value.saleOrRent ?? '').trim().toLowerCase() === 'rent');
+/** Rent listings never need the developer/contract payment breakdown or NOC schedule. */
+const showBreakdownFeatures = computed(() => isUnderConstruction.value && !isRentListing.value);
+
 const breakdownInstallments = ref([]);
 const installmentDraft = ref({
   type: 'percentage',
@@ -2347,7 +2351,7 @@ const PAYMENT_PLAN_PARSE_ERROR =
 
 const paymentPlanFieldInvalid = computed(
   () =>
-    isUnderConstruction.value &&
+    showBreakdownFeatures.value &&
     form.value.payment_plans != null &&
     form.value.payment_plans !== '' &&
     !isPaymentPlanSelectionParseValid.value,
@@ -2356,7 +2360,7 @@ const paymentPlanFieldInvalid = computed(
 const paymentPlanFieldError = computed(() => (paymentPlanFieldInvalid.value ? PAYMENT_PLAN_PARSE_ERROR : ''));
 
 const paymentPlanMissingForPublish = computed(
-  () => isUnderConstruction.value && (form.value.payment_plans == null || form.value.payment_plans === ''),
+  () => showBreakdownFeatures.value && (form.value.payment_plans == null || form.value.payment_plans === ''),
 );
 
 /** v-model: preset object, legacy string, or legacy { label, value }. */
@@ -2452,7 +2456,7 @@ const isDatePaid = (dateLike) => {
 /** Past dates are intentional — they mean the installment was already paid.
  *  The only error still raised here is a missing date on the draft row. */
 const getBreakdownInstallmentDateError = () => {
-  if (!isUnderConstruction.value) return '';
+  if (!showBreakdownFeatures.value) return '';
   const draftDate = installmentDraft.value?.date;
   if (!draftDate) return '';
   const d = startOfDay(draftDate);
@@ -2465,7 +2469,7 @@ const paymentBreakdownInstallmentDateError = computed(() => getBreakdownInstallm
 const DUPLICATE_INSTALLMENT_DATE_MSG = 'Multiple installments share the same due date.';
 /** Warning only (does not block submit). Compares due dates via `startOfDay`. Future: optional auto-merge of same-date rows. */
 const getBreakdownDuplicateInstallmentDateWarning = () => {
-  if (!isUnderConstruction.value) return '';
+  if (!showBreakdownFeatures.value) return '';
   const dayCounts = new Map();
   for (const entry of breakdownInstallments.value) {
     if (!entry?.date) continue;
@@ -2491,7 +2495,7 @@ const MS_PER_YEAR_APPROX = 86400000 * 365.25;
 
 /** Warning only. Flags schedules longer than `PAYMENT_PLAN_DURATION_WARN_YEARS` or latest due beyond that horizon from today. */
 const getPaymentPlanDurationWarning = () => {
-  if (!isUnderConstruction.value) return '';
+  if (!showBreakdownFeatures.value) return '';
   const rawDates = [];
   for (const entry of breakdownInstallments.value) {
     if (entry?.date) rawDates.push(entry.date);
@@ -2524,7 +2528,7 @@ const PERCENTAGE_EXCEEDS_CAP_MSG = 'Percentage cannot exceed 100%.';
 const isBreakdownPercentageType = (t) => String(t || '') === 'percentage';
 
 const getBreakdownPercentageCapError = () => {
-  if (!isUnderConstruction.value) return '';
+  if (!showBreakdownFeatures.value) return '';
   for (const entry of breakdownInstallments.value) {
     if (!isBreakdownPercentageType(entry?.type)) continue;
     const v = Number(entry.value);
@@ -2543,7 +2547,7 @@ const HANDOVER_AFTER_INSTALLMENTS_MSG = 'Handover date must be after all install
 const HANDOVER_IN_PAST_MSG = 'Handover date cannot be in the past.';
 
 const getHandoverDateError = () => {
-  if (!isUnderConstruction.value) return '';
+  if (!showBreakdownFeatures.value) return '';
   const raw = form.value.handover_date;
   if (!raw) return '';
   const handoverDay = startOfDay(raw);
@@ -2626,7 +2630,7 @@ const nocRequirementMet = computed(() => {
 const NOC_PAID_BELOW_REQUIRED_MSG = 'Paid installments (past due dates) do not meet the required NOC amount.';
 
 const nocRequirementWarningActive = computed(
-  () => isUnderConstruction.value && nocRequiredAed.value > 0 && !nocRequirementMet.value,
+  () => showBreakdownFeatures.value && nocRequiredAed.value > 0 && !nocRequirementMet.value,
 );
 
 
@@ -2665,7 +2669,7 @@ const breakdownGrandTotal = computed(
 );
 
 const breakdownMatchesSelling = computed(() => {
-  if (!isUnderConstruction.value) return true;
+  if (!showBreakdownFeatures.value) return true;
   const sp = sellingPriceNum.value;
   if (!(sp > 0)) return false;
   return Math.abs(breakdownGrandTotal.value - sp) < BREAKDOWN_SELLING_TOLERANCE_AED;
@@ -2674,7 +2678,7 @@ const breakdownMatchesSelling = computed(() => {
 const breakdownSellingDelta = computed(() => breakdownGrandTotal.value - sellingPriceNum.value);
 
 const breakdownSellingDeltaMessage = computed(() => {
-  if (!isUnderConstruction.value) return '';
+  if (!showBreakdownFeatures.value) return '';
   if (!(sellingPriceNum.value > 0)) return '';
   const d = breakdownSellingDelta.value;
   if (Math.abs(d) < BREAKDOWN_SELLING_TOLERANCE_AED) return '';
@@ -2687,7 +2691,7 @@ const breakdownSellingDeltaMessage = computed(() => {
 });
 
 const breakdownSellingPriceMismatchActive = computed(
-  () => isUnderConstruction.value && sellingPriceNum.value > 0 && !breakdownMatchesSelling.value,
+  () => showBreakdownFeatures.value && sellingPriceNum.value > 0 && !breakdownMatchesSelling.value,
 );
 
 const hasMixedInstallmentTypes = computed(() => {
@@ -2722,7 +2726,7 @@ const installmentPercentMatchesPlan = computed(() => {
 });
 
 const percentageInstallmentPlanMismatchError = computed(() => {
-  if (!isUnderConstruction.value || !usesOnlyPercentageInstallments.value) return '';
+  if (!showBreakdownFeatures.value || !usesOnlyPercentageInstallments.value) return '';
   if (!breakdownInstallments.value.length) return '';
   if (!installmentPercentMatchesPlan.value) {
     return `Installment percentages must total ${initialPercentForm.value.toFixed(0)}% to match the payment plan (currently ${totalInstallmentPercent.value.toFixed(2)}%).`;
@@ -2739,11 +2743,11 @@ const sellingBelowOriginalPriceError = computed(() => {
 });
 
 const handoverAmountNegativeBlock = computed(
-  () => isUnderConstruction.value && (!Number.isFinite(handoverAmountForm.value) || handoverAmountForm.value < 0),
+  () => showBreakdownFeatures.value && (!Number.isFinite(handoverAmountForm.value) || handoverAmountForm.value < 0),
 );
 
 const publishPaymentBreakdownBlocked = computed(() => {
-  if (!isUnderConstruction.value) return false;
+  if (!showBreakdownFeatures.value) return false;
   if (paymentPlanMissingForPublish.value) return true;
   if (form.value.payment_plans != null && form.value.payment_plans !== '' && !isPaymentPlanSelectionParseValid.value) return true;
   if (hasMixedInstallmentTypes.value) return true;
@@ -2773,7 +2777,7 @@ const publishPaymentBreakdownBlockTitle = computed(() => {
 });
 
 const paymentBreakdownValidationSummary = computed(() => {
-  if (!isUnderConstruction.value) return [];
+  if (!showBreakdownFeatures.value) return [];
 
   const rows = [];
 
@@ -4299,7 +4303,7 @@ const handleSubmit = async (action = 'draft') => {
       }
     }
 
-    if (isUnderConstruction.value && action === 'publish') {
+    if (showBreakdownFeatures.value && action === 'publish') {
       if (publishPaymentBreakdownBlocked.value) {
         proxy.$showNotification(
           publishPaymentBreakdownBlockTitle.value || 'Fix payment breakdown before publishing.',
@@ -4325,8 +4329,8 @@ const handleSubmit = async (action = 'draft') => {
     }
 
     if (action !== 'draft') {
-      if (isUnderConstruction.value) {
-              // ✅ للـ Under Construction: original_price مطلوب
+      if (showBreakdownFeatures.value) {
+              // ✅ للـ Under Construction (ليس للإيجار): original_price مطلوب
               if (!form.value.original_price || parsePriceInputDigits(form.value.original_price) <= 0) {
                 proxy.$showNotification("❌ Please enter original price for under construction properties!", "error");
                 isSubmitting.value = false;
@@ -4427,7 +4431,7 @@ const handleSubmit = async (action = 'draft') => {
       if (value !== null && value !== undefined && value !== '') formData.append(key, value);
     });
 
-    if (form.value.original_price !== '' && form.value.original_price != null) {
+    if (!isRentListing.value && form.value.original_price !== '' && form.value.original_price != null) {
       const opDigits = parsePriceInputDigits(form.value.original_price);
       if (opDigits !== '') formData.append('original_price', opDigits);
     }
@@ -4448,8 +4452,8 @@ const handleSubmit = async (action = 'draft') => {
           }
           formData.append('noc_percentage',  String(form.value.noc_percentage || 0));
     
-          // ✅ Payment Breakdown - يرسل فقط عند Under Construction
-          if (isUnderConstruction.value) {
+          // ✅ Payment Breakdown - يرسل فقط عند Under Construction (وليس للإيجار)
+          if (showBreakdownFeatures.value) {
             formData.append('payment_breakdown', JSON.stringify(breakdownInstallments.value));
             if (form.value.handover_date) formData.append('handover_date', form.value.handover_date);
           }

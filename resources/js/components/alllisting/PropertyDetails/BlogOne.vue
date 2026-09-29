@@ -2665,7 +2665,8 @@ const hasAdditionalFeatures = computed(() => {
 
     const hasPaymentDetails = computed(() => {
       if (!property.value) return false;
-      
+      if (String(property.value.listing_status ?? '').trim().toLowerCase() === 'rent') return false;
+
       const completionStr = String(property.value.completion_status ?? '')
         .trim().toLowerCase().replace(/_/g, ' ');
       const isUnderConstruction = completionStr === 'under construction' || completionStr === 'off plan';
@@ -7108,6 +7109,11 @@ const paintPaymentDetailsPage = async (pdf, container) => {
 
 const createPaymentDetailsSlide = () => {
   const p = property.value || {};
+
+  if (String(p.listing_status ?? '').trim().toLowerCase() === 'rent') {
+    paymentSlideModel = null;
+    return '';
+  }
 
   const parseList = (raw) => {
     if (Array.isArray(raw)) return raw;

@@ -27,9 +27,11 @@ export function listingHasPaymentBreakdown(property) {
   return parsePaymentBreakdown(property?.payment_breakdown).length > 0;
 }
 
-/** Off-plan listing with no installment breakdown rows yet. */
+/** Off-plan SALE listing with no installment breakdown rows yet. Rent listings never need one. */
 export function listingNeedsPaymentBreakdownHighlight(property) {
-  return  !listingHasPaymentBreakdown(property);
+  if (String(property?.listing_status ?? '').trim().toLowerCase() === 'rent') return false;
+  if (!isUnderConstructionListing(property)) return false;
+  return !listingHasPaymentBreakdown(property);
 }
 
 export function getStoredAuthUser() {
