@@ -1483,7 +1483,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         return $trimmed === '' ? null : $trimmed;
     }
 
-    private function mapBitrixUser($b24UserId): ?int
+    /** Bitrix24 user id → local user id (users.bitrix24_id, then email via user.get). */
+    public function mapBitrixUser($b24UserId): ?int
     {
         if (!$b24UserId) {
             return null;

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Events\LeadUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
+use App\Models\User;
 use App\Services\Bitrix24\Bitrix24Client;
 use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Illuminate\Http\JsonResponse;
@@ -84,8 +85,8 @@ class Bitrix24WebhookController extends Controller
             return;
         }
         // Abu Dhabi leads are managed in the CRM only — ignore Bitrix24 updates for
-        // them so a Bitrix edit can't move the lead back (e.g. Contacted → New).
-        // New leads created in Bitrix24 still come through.
+        // them so a Bitrix edit can't move the lead back (e.g. Contacted → New),
+        // and don't create new Abu Dhabi leads from Bitrix24 either (see below).
         $existing = Lead::with('responsiblePerson')->where('bitrix24_id', $leadId)->first();
         if ($existing && $this->isAbuDhabiLead($existing)) {
             Log::channel('bitrix_leads')->info('Bitrix24 webhook skipped (Abu Dhabi lead)', [
@@ -97,6 +98,16 @@ class Bitrix24WebhookController extends Controller
 
         $b24 = $client->getLead($leadId);
         if (! $b24) {
+            return;
+        }
+
+        // New lead: its branch comes from the Bitrix24 responsible person (ASSIGNED_BY_ID
+        // mapped to a local user). Abu Dhabi → don't create it in the CRM.
+        if (! $existing && $this->isAbuDhabiBitrixLead($importer, $b24)) {
+            Log::channel('bitrix_leads')->info('Bitrix24 webhook: new lead not created (Abu Dhabi)', [
+                'bitrix24_id'    => $leadId,
+                'assigned_by_id' => $b24['ASSIGNED_BY_ID'] ?? null,
+            ]);
             return;
         }
 
@@ -132,6 +143,23 @@ class Bitrix24WebhookController extends Controller
         }
 
         return (int) ($lead->responsiblePerson?->admin_parent?->id ?? 0) === 25;
+    }
+
+    /**
+     * A not-yet-imported Bitrix24 lead belongs to Abu Dhabi when its Bitrix responsible
+     * person maps to a local user in the Abu Dhabi branch (User::getBranchNode(), id 25).
+     * Unmapped responsible → unknown branch → still imported, as before.
+     */
+    private function isAbuDhabiBitrixLead(Bitrix24LeadImporter $importer, array $b24): bool
+    {
+        $localUserId = $importer->mapBitrixUser($b24['ASSIGNED_BY_ID'] ?? null);
+        if (! $localUserId) {
+            return false;
+        }
+
+        $branch = User::find($localUserId)?->getBranchNode();
+
+        return $branch && ((int) $branch->id === 25 || strtolower(trim((string) $branch->name)) === 'abu dhabi');
     }
 
     /** Resolve the owning lead id from an activity (OWNER_TYPE_ID 1 = lead). */
