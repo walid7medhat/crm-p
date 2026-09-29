@@ -45,6 +45,43 @@ class KanbanLeadCardResource extends JsonResource
         static::$collectionPrimed = true;
     }
 
+    /**
+     * leadId => [ids of other leads with the same work_phone] for a whole page in ONE
+     * query — pass as setKanbanMeta()'s 3rd argument. Same exact-phone rule as
+     * Lead::getDuplicateLeadsAttribute(), which the duplicates modal lists, so the badge
+     * count always matches the modal.
+     *
+     * @param  iterable<int, \App\Models\Lead>  $leads
+     * @return array<int, array<int>>
+     */
+    public static function duplicateIdsByLeadId($leads): array
+    {
+        $leads = collect($leads);
+        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
+        if ($phones === []) {
+            return [];
+        }
+
+        $idsByPhone = Lead::query()
+            ->whereIn('work_phone', $phones)
+            ->get(['id', 'work_phone'])
+            ->groupBy('work_phone')
+            ->map(fn ($rows) => $rows->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        $map = [];
+        foreach ($leads as $lead) {
+            if (! $lead->work_phone) {
+                continue;
+            }
+            $others = array_values(array_diff($idsByPhone->get($lead->work_phone, []), [(int) $lead->id]));
+            if ($others) {
+                $map[(int) $lead->id] = $others;
+            }
+        }
+
+        return $map;
+    }
+
     public static function clearKanbanMeta(): void
     {
         static::$duplicateCountsByPhone = [];

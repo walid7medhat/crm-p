@@ -349,7 +349,11 @@ class LeadController extends Controller
 
                         $duplicateCounts = $this->leadPoolDuplicateCountsByWorkPhone($items);
                         $serviceDupFlags = $this->leadPoolServiceDuplicateFlags($items);
-                        KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+                        KanbanLeadCardResource::setKanbanMeta(
+                            $duplicateCounts,
+                            $serviceDupFlags,
+                            KanbanLeadCardResource::duplicateIdsByLeadId($items)
+                        );
                         KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
                             $this->leadPoolActivityUsersForLeads($items)
                         );

@@ -565,8 +565,9 @@ class StageController extends Controller
             }
         }
 
-        // Skip duplicate/activity meta on board load — these add large extra scans for little UI value on first paint.
-        KanbanLeadCardResource::setKanbanMeta([], []);
+        // Duplicate badge: one exact-phone lookup for all leads on the board (cheap, indexed).
+        // Service-duplicate / activity meta stay skipped on first paint.
+        KanbanLeadCardResource::setKanbanMeta([], [], KanbanLeadCardResource::duplicateIdsByLeadId($allLeadsForMeta));
         $activityMap = [];
         foreach ($allLeadsForMeta as $lead) {
             if (! empty($lead->bitrix24_last_activity_by_id)) {
@@ -1123,7 +1124,11 @@ class StageController extends Controller
 
             $duplicateCounts = $this->kanbanDuplicateCountsByWorkPhone($leadsCollection);
             $serviceDupFlags = $this->kanbanServiceDuplicateFlags($leadsCollection);
-            KanbanLeadCardResource::setKanbanMeta($duplicateCounts, $serviceDupFlags);
+            KanbanLeadCardResource::setKanbanMeta(
+                $duplicateCounts,
+                $serviceDupFlags,
+                KanbanLeadCardResource::duplicateIdsByLeadId($leadsCollection)
+            );
             KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
                 $this->kanbanActivityUsersForLeads($leadsCollection)
             );
