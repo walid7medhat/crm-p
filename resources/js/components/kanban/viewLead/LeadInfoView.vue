@@ -941,7 +941,7 @@ const showPersonCard = ref(false)
 // Computed property for permission
 const canView = computed(() => {
     if (!user.value?.roles) return false
-    const isAdmin = user.value.roles.includes('super_admin') || user.value.roles.includes('admin')
+    const isAdmin = user.value.roles.includes('super_admin') || user.value.roles.includes('admin') || user.value.roles.includes('branch_admin')
     const isResponsible = props.lead?.responsible_person_id === user.value.id
     return isAdmin || isResponsible
 })
