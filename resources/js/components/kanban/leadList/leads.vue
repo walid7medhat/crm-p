@@ -243,7 +243,7 @@
                                                            Blacklisted
                                                         </span>
                                                         <div
-                                                            v-if="isAdminOrSuperAdmin && task.duplicate_no > 0"
+                                                            v-if="canSeeDuplicates && task.duplicate_no > 0"
                                                             class="duplicate-badge position-relative cursor-pointer"
                                                             @click.stop="openDuplicateLeadsModal(task.id, $event)"
                                                         >
@@ -1225,6 +1225,15 @@ const appliedSearchParams = ref(null)
 const isAdminOrSuperAdmin = computed(() => {
     if (!user.value) return false
     return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin') || user.value.roles?.includes('branch_admin')
+})
+
+// Duplicate badge: super_admin, admin, branch_admin.
+const canSeeDuplicates = computed(() => {
+    if (!user.value) return false
+    const roles = user.value.roles || []
+    return roles.includes('super_admin')
+        || roles.includes('admin')
+        || roles.includes('branch_admin')
 })
 
 // Deleting leads is super_admin/admin only — branch_admin keeps the other bulk tools.

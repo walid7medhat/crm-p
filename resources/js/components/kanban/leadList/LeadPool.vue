@@ -85,7 +85,7 @@
                             Blacklisted
                         </span>
                         <div 
-                            v-if="isAdminOrSuper &&  lead.duplicate_no > 0"
+                            v-if="canSeeDuplicates && lead.duplicate_no > 0"
                             class="duplicate-badge position-relative cursor-pointer"
                             @click.stop="openDuplicateLeadsModal(lead.id, $event)"
                         >
@@ -372,6 +372,9 @@ const currentUserRoles = (() => {
 })()
 const isSuperAdmin = currentUserRoles.includes('super_admin')
 const isAdminOrSuper = isSuperAdmin || currentUserRoles.includes('admin')
+
+// Duplicate badge: super_admin, admin, branch_admin.
+const canSeeDuplicates = isAdminOrSuper || currentUserRoles.includes('branch_admin')
 
 function enterSelectMode() {
   selectMode.value = true

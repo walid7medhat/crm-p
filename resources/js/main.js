@@ -71,9 +71,10 @@ function getStoredUserId() {
   }
 }
 
-function isStoredSuperAdmin() {
+function isStoredAdminOrSuperAdmin() {
   try {
-    return JSON.parse(localStorage.getItem('user') || '{}')?.roles?.includes('super_admin') ?? false
+    const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
+    return roles.includes('super_admin') || roles.includes('admin')
   } catch (_) {
     return false
   }
@@ -345,9 +346,9 @@ function scheduleEchoInit() {
             const type = String(notification.type || '').includes('status')
               ? (notification.status === 'approved' ? 'success' : 'error')
               : 'info'
-            // Super admins see every lead, so lead pop-ups would never stop for them.
+            // Super admins / admins see every lead, so lead pop-ups would never stop for them.
             // They still land in the bell via the 'app-notification' event below.
-            if (!(isLeadNotification(notification) && isStoredSuperAdmin())) {
+            if (!(isLeadNotification(notification) && isStoredAdminOrSuperAdmin())) {
               showNotificationDeferred(notification.message || 'New notification', type)
             }
 
