@@ -35,10 +35,8 @@ class Stage extends Model
              $user=auth()->user();
              if ($user->hasAnyRole([ 'super_admin']) || $user->id==33 || $user->id ==30) {
              }
-            elseif ($user->hasAnyRole(['manager', 'team_lead','admin', 'branch_admin'])) {
-                $subordinatesIds = $user->hasRole('branch_admin')
-                    ? $user->getBranchAdminSubordinateIds()
-                    : $user->getAllSubordinatesIds();
+            elseif ($user->hasAnyRole(['manager', 'team_lead','admin', 'branch_admin']) || $user->seesBranchLeads()) {
+                $subordinatesIds = $user->leadScopeUserIds();
 
                 $leads = $leads->where(function($query) use ($subordinatesIds, $user) {
                     $query->whereIn('responsible_person_id',array_merge( $subordinatesIds,[$user->id]))

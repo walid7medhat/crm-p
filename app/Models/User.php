@@ -239,6 +239,49 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $officeAdmin ? $officeAdmin->getAllSubordinatesIds() : [$this->id];
     }
 
+    /**
+     * `show-branch-leads`: see every lead in the user's whole BRANCH (Abu Dhabi /
+     * Dubai — the admin right under super_admin, i.e. admin_parent), across all of
+     * its offices. Wider than branch_admin, which only sees their own office.
+     */
+    public function hasBranchLeadsPermission(): bool
+    {
+        // checkPermissionTo (not hasPermissionTo): returns false instead of throwing
+        // when the permission row doesn't exist yet.
+        return $this->checkPermissionTo('show-branch-leads');
+    }
+
+    /** Every user under this user's branch (admin_parent), all offices included. */
+    public function getBranchUserIds(): array
+    {
+        $branch = $this->admin_parent;
+
+        return $branch ? $branch->getAllSubordinatesIds() : [$this->id];
+    }
+
+    /** Sees leads beyond their own hierarchy: branch_admin (office) or show-branch-leads (branch). */
+    public function seesBranchLeads(): bool
+    {
+        return $this->hasRole('branch_admin') || $this->hasBranchLeadsPermission();
+    }
+
+    /**
+     * User ids whose leads this user sees:
+     *  - show-branch-leads → whole branch (all offices)
+     *  - branch_admin      → their office
+     *  - otherwise         → their own hierarchy
+     */
+    public function leadScopeUserIds(): array
+    {
+        if ($this->hasBranchLeadsPermission()) {
+            return $this->getBranchUserIds();
+        }
+
+        return $this->hasRole('branch_admin')
+            ? $this->getBranchAdminSubordinateIds()
+            : $this->getAllSubordinatesIds();
+    }
+
     public function canViewLead(Lead $lead): bool
     {
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
@@ -277,19 +320,14 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             return false;
         }
 
-        if ($this->hasRole('sales')) {
+        if ($this->hasRole('sales') && ! $this->seesBranchLeads()) {
             // Current responsible person only — matches LeadController::index()'s
             // "reassigned leads no longer belong to whoever merely added them" rule.
             return $lead->responsible_person_id === $this->id;
         }
 
-        // branch_admin: peer user inside an office, scoped to that office's subordinates
-        // rather than their own (see getBranchAdminSubordinateIds()).
-        $subordinatesIds = $this->hasRole('branch_admin')
-            ? $this->getBranchAdminSubordinateIds()
-            : $this->getAllSubordinatesIds();
-
-        return in_array($lead->responsible_person_id, $subordinatesIds);
+        // branch_admin / show-branch-leads: whole branch (see getBranchAdminSubordinateIds()).
+        return in_array($lead->responsible_person_id, $this->leadScopeUserIds());
     }
 
     /** Deal equivalent of canViewLead() — matches DealController::authorizeAccess(). */

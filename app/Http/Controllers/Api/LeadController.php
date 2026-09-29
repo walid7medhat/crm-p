@@ -314,10 +314,8 @@ class LeadController extends Controller
                             $leadsQuery->whereRaw('1 = 0');
                         }
 
-                    }  elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
-                    $subordinatesIds = $user->hasRole('branch_admin')
-                        ? $user->getBranchAdminSubordinateIds()
-                        : $user->getAllSubordinatesIds();
+                    }  elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) || $user->seesBranchLeads()) {
+                    $subordinatesIds = $user->leadScopeUserIds();
                     // Current responsible person only — a lead reassigned outside the
                     // team must stop showing up here just because someone on the team added it.
                     $leadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
@@ -415,10 +413,8 @@ class LeadController extends Controller
 
             if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
                 // super_admin sees everything — no extra constraint
-            } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
-                $subordinatesIds = $user->hasRole('branch_admin')
-                    ? $user->getBranchAdminSubordinateIds()
-                    : $user->getAllSubordinatesIds();
+            } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) || $user->seesBranchLeads()) {
+                $subordinatesIds = $user->leadScopeUserIds();
                 // Current responsible person only — a lead reassigned outside the
                 // team must stop showing up here just because someone on the team added it.
                 $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
@@ -1722,8 +1718,12 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             $isAdmin = $user->hasAnyRole(['admin', 'super_admin']) || $isBranchAdminForLead;
             $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
             $isManager = $lead->isManagedBy($user);
+            // show-branch-leads: may open history of any lead in their branch (non-admin view).
+            $isBranchViewer = $user->hasBranchLeadsPermission()
+                && $lead->responsible_person_id
+                && in_array($lead->responsible_person_id, $user->getBranchUserIds());
 
-            if (! $isAdmin && ! $isResponsible && ! $isManager) {
+            if (! $isAdmin && ! $isResponsible && ! $isManager && ! $isBranchViewer) {
                 abort(403);
             }
 

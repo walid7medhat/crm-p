@@ -258,8 +258,8 @@ public function visibleEngagement(string $model, string $ownerColumn = 'user_id'
     // own), so static::subordinateIds() below would wrongly return just themselves —
     // use the same office-wide scope as everywhere else instead of the admin/super_admin
     // company-wide bypass above (this stays branch-scoped, not unrestricted).
-    $allowed = $user->hasRole('branch_admin')
-        ? array_values(array_unique(array_map('intval', $user->getBranchAdminSubordinateIds())))
+    $allowed = $user->seesBranchLeads()   // branch_admin (office) or show-branch-leads (branch)
+        ? array_values(array_unique(array_map('intval', $user->leadScopeUserIds())))
         : array_values(array_unique(array_map(
             'intval',
             static::subordinateIds($user)
