@@ -55,6 +55,8 @@ class LeadTextSearch
         $includeRelations = (bool) ($options['relations'] ?? true);
         $isAdmin = (bool) ($options['admin'] ?? true);
         $lean = (bool) ($options['lean'] ?? false);
+        // false → never match on lead_name (e.g. sales searching the Lead Pool).
+        $matchLeadName = (bool) ($options['lead_name'] ?? true);
 
         // Phone-like terms: scan contact/number columns only (much faster than full OR + whereHas).
         $digits = preg_replace('/\D+/', '', $term) ?? '';
@@ -91,9 +93,11 @@ class LeadTextSearch
         $like = '%'.$term.'%';
 
         if (! $isAdmin) {
-            return $query->where(function (Builder $s) use ($like, $includeComments, $lean) {
-                $s->where('lead_name', 'like', $like)
-                    ->orWhere('first_name', 'like', $like)
+            return $query->where(function (Builder $s) use ($like, $includeComments, $lean, $matchLeadName) {
+                if ($matchLeadName) {
+                    $s->orWhere('lead_name', 'like', $like);
+                }
+                $s->orWhere('first_name', 'like', $like)
                     ->orWhere('lead_source', 'like', $like);
 
                 if (! $lean) {

@@ -137,7 +137,13 @@ class LeadController extends Controller
                         $leadsQuery->where('stage_id', $closed->id);
                     }
                 }
-                if ($request->filled('lead_name')) {
+                // Lead Pool: sales may not search by lead_name (filter or free text).
+                $blockPoolLeadNameSearch = (int) $request->stage_id === 10
+                    && $user->hasRole('sales')
+                    && !$user->hasAnyRole(['admin', 'super_admin'])
+                    && !in_array((int) $user->id, [30, 33], true);
+
+                if ($request->filled('lead_name') && !$blockPoolLeadNameSearch) {
                     $leadsQuery->where('lead_name', 'like', "%{$request->lead_name}%");
                 }
                 if ($request->filled('first_name')) {
@@ -257,6 +263,7 @@ class LeadController extends Controller
                         'relations' => true,
                         'admin' => $isAdminSearch,
                         'lean' => true,
+                        'lead_name' => !$blockPoolLeadNameSearch,
                     ]);
                 }
         
