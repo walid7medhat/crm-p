@@ -395,6 +395,22 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     ];
   }
 
+   // branch_admin: only the All Listings tab — no My Listing / Notify Me / Requests /
+   // Hot Deals / Need Approval / Viewings.
+   if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing && user?.roles?.includes('branch_admin')) {
+    const { listingTabCounts = {} } = ctx;
+    return [
+      {
+        id: 'listings',
+        label: 'Listings',
+        type: 'route',
+        path: '/alllisting',
+        matchPaths: LISTINGS_INVENTORY_PATHS,
+        count: listingTabCounts.listings || 0,
+      },
+    ];
+  }
+
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
     const canList = !hasPermission || hasPermission('listings-list');
     const { listingTabCounts = {} } = ctx;
