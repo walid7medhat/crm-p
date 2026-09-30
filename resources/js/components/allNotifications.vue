@@ -181,6 +181,7 @@
 
 <script>
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
+import { openDealFromNotification } from '@/composables/useDealViewModal.js'
 
 export default {
   name: 'AllNotifications',
@@ -408,7 +409,7 @@ export default {
     handleNotificationClick(notification) {
       if (!notification.read_at) this.markAsRead(notification.id)
 
-      if (openLeadFromNotification(notification)) {
+      if (openLeadFromNotification(notification) || openDealFromNotification(notification)) {
         return
       }
 

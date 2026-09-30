@@ -56,6 +56,7 @@
 <script>
 import api from '@/plugins/axios'
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
+import { openDealFromNotification } from '@/composables/useDealViewModal.js'
 
 function getApiBaseUrl() {
   const base =
@@ -169,7 +170,7 @@ export default {
       if (!notification.read_at) this.markAsRead(notification.id)
       this.showDropdown = false
 
-      if (openLeadFromNotification(notification)) {
+      if (openLeadFromNotification(notification) || openDealFromNotification(notification)) {
         return
       }
 

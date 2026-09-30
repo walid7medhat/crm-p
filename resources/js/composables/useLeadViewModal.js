@@ -117,8 +117,18 @@ export function notifyLeadViewUpdated(updatedLead) {
   })
 }
 
+/** Lead id from a notification — DB shape (data.lead_id) or live broadcast shape (lead.id). */
+export function leadIdFromNotification(notification) {
+  const id = notification?.data?.lead_id
+    ?? notification?.data?.lead?.id
+    ?? notification?.lead_id
+    ?? notification?.lead?.id
+  const n = Number(id)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 export function openLeadFromNotification(notification) {
-  const leadId = notification?.data?.lead_id
+  const leadId = leadIdFromNotification(notification)
   if (!leadId) return false
   openLeadView(leadId)
   return true

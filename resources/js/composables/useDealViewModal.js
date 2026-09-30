@@ -16,6 +16,8 @@ export function useDealViewModal() {
 }
 
 function resolveAutoEditSection(deal, requested) {
+  // false → open in plain view mode (e.g. from a notification), no edit panel.
+  if (requested === false) return null
   if (requested) return requested
   const dealType = deal?.deal_type || deal?.type
   if (dealType === 'rental') return 'tenant_details'
@@ -69,4 +71,35 @@ export async function openDealView(dealOrId, options = {}) {
 export function closeDealView() {
   showDealViewModal.value = false
   dealViewAutoEditSection.value = null
+}
+
+/** Deal id from a notification — DB shape (data.deal_id) or live broadcast shape (deal.id). */
+export function dealIdFromNotification(notification) {
+  const id = notification?.data?.deal_id
+    ?? notification?.data?.deal?.id
+    ?? notification?.deal_id
+    ?? notification?.deal?.id
+  const n = Number(id)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/**
+ * Open the deal a notification is about. ViewDealModal only lives on the Kanban page,
+ * so go there first when needed; the shared modal state opens it once the page mounts.
+ * Returns false when the notification isn't about a deal.
+ */
+export function openDealFromNotification(notification) {
+  const dealId = dealIdFromNotification(notification)
+  if (!dealId) return false
+
+  const open = () => openDealView(dealId, { autoEditSection: false })
+  import('@/router').then(({ default: router }) => {
+    if (router.currentRoute.value.path !== '/kanban') {
+      router.push('/kanban').then(open).catch(open)
+    } else {
+      open()
+    }
+  }).catch(open)
+
+  return true
 }

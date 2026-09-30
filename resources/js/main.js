@@ -41,7 +41,8 @@ import '../css/project-page.css'
 import '../css/auth-landing.css'
 import './components/Authentication/auth-glass-shared.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
-import { initLeadViewModal } from '@/composables/useLeadViewModal.js'
+import { initLeadViewModal, leadIdFromNotification, openLeadFromNotification } from '@/composables/useLeadViewModal.js'
+import { dealIdFromNotification, openDealFromNotification } from '@/composables/useDealViewModal.js'
 
 syncMobileViewport()
 initLeadViewModal(router, router.currentRoute)
@@ -71,10 +72,11 @@ function getStoredUserId() {
   }
 }
 
+// super_admin / admin / branch_admin: lead pop-ups hidden (they still go to the bell).
 function isStoredAdminOrSuperAdmin() {
   try {
     const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
-    return roles.includes('super_admin') || roles.includes('admin')
+    return roles.includes('super_admin') || roles.includes('admin') || roles.includes('branch_admin')
   } catch (_) {
     return false
   }
@@ -213,7 +215,8 @@ function closeGlassToast() {
   )
 }
 
-function fireGlassToast(message, type = 'info') {
+/** @param {Function|null} onClick  optional — makes the toast clickable (e.g. open the lead/deal). */
+function fireGlassToast(message, type = 'info', onClick = null) {
   const toastType = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'
   const iconHtml = CRM_TOAST_ICONS[toastType] || CRM_TOAST_ICONS.info
   const filledIcon = toastType === 'warning' || toastType === 'error'
@@ -271,6 +274,21 @@ function fireGlassToast(message, type = 'info') {
         closeBtn.addEventListener('click', forceClose, true)
       }
 
+      // Clickable toast (lead / deal notifications): clicking anywhere but ✕ opens it.
+      if (typeof onClick === 'function') {
+        popup.style.cursor = 'pointer'
+        popup.title = 'Click to open'
+        popup.addEventListener('click', (event) => {
+          if (closeBtn && closeBtn.contains(event.target)) return
+          forceClose(event)
+          try {
+            onClick()
+          } catch (e) {
+            console.warn('Toast click handler failed:', e)
+          }
+        })
+      }
+
       // Hard auto-dismiss fallback if SweetAlert's timer is paused/stuck
       fallbackTimer = window.setTimeout(() => {
         closeGlassToast()
@@ -286,12 +304,12 @@ function fireGlassToast(message, type = 'info') {
 }
 
 // Global notification – always defer so SweetAlert2 never runs in same turn as a closing Bootstrap modal (avoids focus-trap stack overflow)
-function showNotificationDeferred(message, type = 'info') {
+function showNotificationDeferred(message, type = 'info', onClick = null) {
   const msg = typeof message === 'string' ? message : String(message)
   const delay = 80
   setTimeout(() => {
     try {
-      fireGlassToast(msg, type)
+      fireGlassToast(msg, type, onClick)
     } catch (e) {
       console.warn('Toast fire failed:', e)
       try {
@@ -349,7 +367,14 @@ function scheduleEchoInit() {
             // Super admins / admins see every lead, so lead pop-ups would never stop for them.
             // They still land in the bell via the 'app-notification' event below.
             if (!(isLeadNotification(notification) && isStoredAdminOrSuperAdmin())) {
-              showNotificationDeferred(notification.message || 'New notification', type)
+              // Lead / deal notifications: clicking the pop-up opens that lead / deal.
+              let onClick = null
+              if (leadIdFromNotification(notification)) {
+                onClick = () => openLeadFromNotification(notification)
+              } else if (dealIdFromNotification(notification)) {
+                onClick = () => openDealFromNotification(notification)
+              }
+              showNotificationDeferred(notification.message || 'New notification', type, onClick)
             }
 
             if (notification.type === 'leave_request_parent_status') {
