@@ -526,6 +526,8 @@ class LeadController extends Controller
             );
         $this->broadcastLeadUpdated($lead, 'created');
 
+            $this->sendLeadAssignmentTestNotification(null, $lead->responsible_person_id, $lead->id);
+
             // Lightweight kanban card payload so the frontend can insert the new lead
             // into the board locally instead of refetching the whole list.
             $lead->loadMissing([
