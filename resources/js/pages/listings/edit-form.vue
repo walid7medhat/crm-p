@@ -2311,7 +2311,7 @@ const addBreakdownInstallment = () => {
     (sum, entry) => sum + installmentToAmount(entry),
     0,
   );
-  if (currentInstallmentTotal + newAmount > initialPaymentTarget.value) {
+  if (currentInstallmentTotal + newAmount > initialPaymentTarget.value + 0.01) {
     proxy.$showNotification('Installment exceeds under-construction amount', 'error');
     return;
   }
