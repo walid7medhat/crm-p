@@ -263,13 +263,39 @@ class Area extends Model
     }
 
     /**
-     * Determine if this area should use ADGM Admin Fee
-     * Returns true for Maryah Island, Reem Island, or any of their children
+     * Determine if this area should use ADGM Admin Fee.
+     * Returns true only when the area itself is Maryah/Reem Island, or is nested
+     * *within* one (checks self + ancestors only — never descendants, otherwise an
+     * unrelated area picks up ADGM just because one of its many children/sub-
+     * communities happens to share the term, e.g. "Al Reeman" via matchesAreaTerms()).
      */
     public function isAdgmArea(): bool
     {
-        $adgmTerms = ['maryah island', 'reem island'];
-        return $this->matchesAreaTerms($adgmTerms);
+        $adgmTerms = ['al maryah island', 'al reem island'];
+
+        $names = [];
+        if ($this->name) $names[] = $this->name;
+        if ($this->area_title) $names[] = $this->area_title;
+        if ($this->title) $names[] = $this->title;
+
+        $parent = $this->parent;
+        while ($parent) {
+            if ($parent->name) $names[] = $parent->name;
+            if ($parent->area_title) $names[] = $parent->area_title;
+            if ($parent->title) $names[] = $parent->title;
+            $parent = $parent->parent;
+        }
+
+        foreach ($adgmTerms as $term) {
+            $term = strtolower(trim($term));
+            foreach ($names as $name) {
+                if (strpos(strtolower($name), $term) !== false) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

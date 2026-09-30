@@ -2308,8 +2308,8 @@ const getAdminFeeTypeFromArea = (areaData) => {
   
   // استخدام all_names
   if (areaData.all_names && Array.isArray(areaData.all_names)) {
-    const adgmTerms = ['maryah island', 'reem island'];
-    const isAdgm = areaData.all_names.some(name => 
+    const adgmTerms = ['al maryah island', 'al reem island'];
+    const isAdgm = areaData.all_names.some(name =>
       adgmTerms.some(term => 
         String(name).toLowerCase().includes(term.toLowerCase().trim())
       )
@@ -2319,8 +2319,8 @@ const getAdminFeeTypeFromArea = (areaData) => {
   
   // استخدام hierarchy
   if (areaData.hierarchy && Array.isArray(areaData.hierarchy)) {
-    const adgmTerms = ['maryah island', 'reem island'];
-    const isAdgm = areaData.hierarchy.some(h => 
+    const adgmTerms = ['al maryah island', 'al reem island'];
+    const isAdgm = areaData.hierarchy.some(h =>
       adgmTerms.some(term => 
         String(h.name || '').toLowerCase().includes(term.toLowerCase().trim())
       )
@@ -2328,12 +2328,11 @@ const getAdminFeeTypeFromArea = (areaData) => {
     return isAdgm ? 'adgm' : 'dari';
   }
   
-  // Fallback
-  const areaName = String(areaData.name || areaData.area_title || areaData.title || '').toLowerCase();
-  if (areaName.includes('maryah') || areaName.includes('reem')) {
-    return 'adgm';
-  }
-  
+  // No all_names/hierarchy to walk ancestors with — checking the area's own name
+  // alone would miss a sub-community *within* Reem/Maryah Island (whose own name
+  // doesn't contain "reem island"/"maryah island") while still risking a false
+  // match on an unrelated area (e.g. "Alreeman"). Default to ADM, the stated rule
+  // for anything that isn't confirmed Reem/Maryah Island.
   return 'dari';
 };
 const selectedPaymentPlanOption = computed(() => resolvePaymentPlanOption(form.value.payment_plans));
