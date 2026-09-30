@@ -144,7 +144,9 @@ class KanbanLeadCardResource extends JsonResource
             'last_activity_user' => $this->formatActivityUser($lastActivityUser),
             'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
             'bitrix24_last_activity_by_id' => $this->bitrix24_last_activity_by_id,
-            'api_first_question' => null,
+            // "More Information" line on the card — first extra Facebook/Bitrix answer.
+            // Pure PHP over raw_meta_data (already loaded), no extra query.
+            'api_first_question' => $this->getFirstApiQuestion(),
             'has_service_duplicate' => $this->hasServiceDuplicate(),
             'score' => $this->score,
             'priority' => $this->priority,
@@ -198,6 +200,37 @@ class KanbanLeadCardResource extends JsonResource
         }
 
         return $payload;
+    }
+
+    /**
+     * First non-basic Facebook / Bitrix form answer ("Question : Answer") — same logic as
+     * LeadResource::getFirstApiQuestion(), shown as "More Information" on the card.
+     */
+    protected function getFirstApiQuestion(): ?string
+    {
+        $rawMetaData = is_string($this->raw_meta_data)
+            ? json_decode($this->raw_meta_data, true)
+            : $this->raw_meta_data;
+
+        if (empty($rawMetaData['field_data']) || ! is_array($rawMetaData['field_data'])) {
+            return null;
+        }
+
+        $basicFields = ['email', 'phone', 'full_name', 'name', 'work_phone', 'work_phone_number', 'phone_number', 'full name', 'first_name', 'last_name', 'Date', 'Time', 'inbox_url', 'Page_Name', 'form_name', 'form_id', 'No_Label_name', 'No_Label_email', 'No_Label_phone'];
+
+        foreach ($rawMetaData['field_data'] as $field) {
+            if (! isset($field['name']) || ! isset($field['values'][0])) {
+                continue;
+            }
+            if (in_array($field['name'], $basicFields, true)) {
+                continue;
+            }
+            $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
+
+            return $label.' : '.$field['values'][0];
+        }
+
+        return null;
     }
 
     /**

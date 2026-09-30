@@ -567,29 +567,62 @@ class LeadController extends Controller
             //     ['action' => 'view']
             // );
 
-            return ApiResponse::success(
-                new LeadResource($lead->load([
-                    'stage',
-                    'addedBy.roles:id,name',
-                    'addedBy.parent:id,name,display_name,avatar',
-                    'addedBy.employeeProfile.companyBranch:id,name',
-                    'addedBy.employeeProfile.designation:id,name',
-                    'responsiblePerson.roles:id,name',
-                    'responsiblePerson.parent.parent.parent.parent:id,name,display_name,avatar,parent_id',
-                    'responsiblePerson.employeeProfile.companyBranch:id,name',
-                    'responsiblePerson.employeeProfile.designation:id,name',
-                    'participants',
-                    'observers.user:id,name,display_name,avatar,email',
-                    'integration:id,project_id',
-                    'propertyType:id,name',
-                    'area' => fn ($q) => $q->with(['parent.parent.parent.parent']),
-                    'createdHistory',
-                ])),
-                'Lead retrieved successfully'
-            );
+            $data = (new LeadResource($lead->load([
+                'stage',
+                'addedBy.roles:id,name',
+                'addedBy.parent:id,name,display_name,avatar',
+                'addedBy.employeeProfile.companyBranch:id,name',
+                'addedBy.employeeProfile.designation:id,name',
+                'responsiblePerson.roles:id,name',
+                'responsiblePerson.parent.parent.parent.parent:id,name,display_name,avatar,parent_id',
+                'responsiblePerson.employeeProfile.companyBranch:id,name',
+                'responsiblePerson.employeeProfile.designation:id,name',
+                'participants',
+                'observers.user:id,name,display_name,avatar,email',
+                'integration:id,project_id',
+                'propertyType:id,name',
+                'area' => fn ($q) => $q->with(['parent.parent.parent.parent']),
+                'createdHistory',
+            ])))->resolve();
+
+            $data['comment_portal_links'] = $this->commentPortalLinks($lead);
+
+            return ApiResponse::success($data, 'Lead retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Property Finder / Bayut URLs found in ANY of the lead's comments. Comment visibility
+     * (Lead::visibleEngagement) hides some comments from sales — e.g. ones imported from
+     * Bitrix before the lead was theirs — which also hid the portal link inside them.
+     * Only the URLs are returned, never the comment text, so comment privacy is kept.
+     *
+     * @return array<int, string>
+     */
+    private function commentPortalLinks(Lead $lead): array
+    {
+        $comments = LeadComment::query()
+            ->where('lead_id', $lead->id)
+            ->where(function ($q) {
+                $q->where('comment', 'like', '%propertyfinder%')
+                    ->orWhere('comment', 'like', '%property-finder%')
+                    ->orWhere('comment', 'like', '%bayut%');
+            })
+            ->limit(50)
+            ->pluck('comment');
+
+        $urls = [];
+        foreach ($comments as $comment) {
+            if (preg_match_all('~https?://[^\s"\'<>\]\[)]*(?:propertyfinder|property-finder|bayut)[^\s"\'<>\]\[)]*~i', (string) $comment, $m)) {
+                foreach ($m[0] as $url) {
+                    $urls[] = rtrim(html_entity_decode($url), '.,;');
+                }
+            }
+        }
+
+        return array_values(array_unique($urls));
     }
 
     /**

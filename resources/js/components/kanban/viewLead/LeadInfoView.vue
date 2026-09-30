@@ -879,6 +879,9 @@ const portalLinks = computed(() => {
   pushChunk(props.lead?.meta)
   pushChunk(props.lead?.raw_meta_data)
   pushChunk(props.lead?.field_mappings_data)
+  // Portal URLs from ALL the lead's comments (server-side, GET /leads/{id}) — sales may
+  // not be allowed to see some of those comments, but must still see the portal link.
+  pushChunk(props.lead?.comment_portal_links)
 
   const merged = []
   const seen = new Set()
