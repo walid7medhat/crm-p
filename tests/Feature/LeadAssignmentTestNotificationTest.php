@@ -78,8 +78,8 @@ class LeadAssignmentTestNotificationTest extends TestCase
             }
         );
         Notification::assertCount(1);
-        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId) {
-            return $job->userId === $testUserId;
+        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId, $lead) {
+            return $job->userId === $testUserId && $job->leadId === (int) $lead->id;
         });
     }
 
@@ -134,8 +134,8 @@ class LeadAssignmentTestNotificationTest extends TestCase
         $lead->update(['responsible_person_id' => $testUserId]);
 
         Notification::assertSentTo($recipient, AssignmentPocNotification::class);
-        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId) {
-            return $job->userId === $testUserId;
+        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId, $lead) {
+            return $job->userId === $testUserId && $job->leadId === (int) $lead->id;
         });
     }
 
@@ -170,8 +170,8 @@ class LeadAssignmentTestNotificationTest extends TestCase
         $response->assertJsonPath('status', true);
         $response->assertJsonPath('message', 'Responsible person assigned successfully');
         $this->assertSame($testUserId, (int) $lead->fresh()->responsible_person_id);
-        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId) {
-            return $job->userId === $testUserId;
+        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId, $lead) {
+            return $job->userId === $testUserId && $job->leadId === (int) $lead->id;
         });
     }
 

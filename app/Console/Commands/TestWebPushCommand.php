@@ -10,7 +10,7 @@ use Minishlink\WebPush\WebPush;
 
 class TestWebPushCommand extends Command
 {
-    protected $signature = 'push:test {user_id? : Defaults to PUSHER_LEAD_ASSIGNMENT_TEST_USER_ID}';
+    protected $signature = 'push:test {user_id? : Defaults to PUSHER_LEAD_ASSIGNMENT_TEST_USER_ID} {--lead=0 : Lead id used only to open that lead view}';
 
     protected $description = 'Send a test lead-assignment Web Push right now (no queue) and print each step';
 
@@ -52,7 +52,7 @@ class TestWebPushCommand extends Command
             ],
         ]);
 
-        $payload = json_encode($sender->payload(), JSON_THROW_ON_ERROR);
+        $payload = json_encode($sender->payload((int) $this->option('lead')), JSON_THROW_ON_ERROR);
         foreach ($subscriptions as $subscription) {
             $webPush->queueNotification(
                 Subscription::create([

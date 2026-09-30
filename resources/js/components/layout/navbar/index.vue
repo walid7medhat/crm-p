@@ -497,6 +497,7 @@
           <iconify-icon icon="lucide:settings" style="font-size: 18px;" />
         </button>
         <SystemOverviewLangToggle />
+        <MobilePushToggle compact />
         <NotificationBell 
           ref="notificationBell"
           :sound-enabled="soundEnabled"
@@ -3164,18 +3165,6 @@ const showBackButton = computed(() => {
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-@media (max-width: 768px) {
-  .profile-panel-backdrop {
-    justify-content: center;
-    padding: 0 12px;
-  }
-
-  .profile-panel {
-    width: 100%;
-    max-width: 100%;
-  }
-}
-
 .profile-panel {
   width: 713px;
   max-width: 95vw;
@@ -3482,12 +3471,12 @@ const showBackButton = computed(() => {
 
 .profile-contact-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 18px 32px;
 }
 
 .profile-contact-two-cols {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 18px 32px;
 }
 
@@ -3515,6 +3504,7 @@ const showBackButton = computed(() => {
   color: #111827;
   font-weight: 500;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .profile-contact-input {
@@ -3588,7 +3578,7 @@ const showBackButton = computed(() => {
 /* Your Team – 3-column grid, oval pill cards, avatar + name + role, status dot */
 .profile-team-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px 12px;
   margin-bottom: 20px;
 }
@@ -3801,6 +3791,148 @@ const showBackButton = computed(() => {
 .profile-panel-enter-from .profile-panel,
 .profile-panel-leave-to .profile-panel {
   transform: translateX(100%);
+}
+
+/* Mobile profile sheet — must follow the base panel rules so it wins on small screens */
+@media (max-width: 768px) {
+  .profile-panel-backdrop {
+    justify-content: stretch;
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .profile-panel {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .profile-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+  }
+
+  .profile-panel-body {
+    padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+  }
+
+  .profile-summary-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 12px;
+    align-items: center;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .profile-summary-left {
+    display: contents;
+  }
+
+  .profile-avatar-wrap {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .profile-summary-info {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .profile-summary-name,
+  .profile-summary-email,
+  .profile-summary-role {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-summary-right {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    width: 100%;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .profile-last-active {
+    margin-left: auto;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .profile-section-head {
+    gap: 8px;
+  }
+
+  .profile-section-badge {
+    flex-shrink: 0;
+  }
+
+  .profile-section-contact {
+    margin-bottom: 16px;
+    padding: 16px;
+  }
+
+  .profile-section-team {
+    padding: 16px;
+  }
+
+  .profile-contact-grid,
+  .profile-contact-two-cols {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .profile-contact-label {
+    font-size: 11px;
+    letter-spacing: 0.03em;
+  }
+
+  .profile-contact-value,
+  .profile-contact-input {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-team-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .profile-team-pill {
+    border-radius: 14px;
+    padding: 8px 12px 8px 8px;
+    background: #f9fafb;
+  }
+
+  .profile-quick-menu {
+    margin-top: 16px;
+  }
+
+  .profile-quick-menu-item {
+    min-height: 48px;
+    padding: 12px 14px;
+  }
+
+  .profile-quick-menu-label {
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 768px) {
