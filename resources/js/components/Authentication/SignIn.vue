@@ -78,6 +78,7 @@
 
 <script>
 import api, { setAuthToken, clearAuthToken } from '@/plugins/axios';
+import { askLeadPushPermission, subscribeLeadPush } from '@/services/offerLeadPush';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 
@@ -258,8 +259,11 @@ export default {
         });
 
         const token = response.data?.data?.token;
+        const webPush = response.data?.data?.web_push;
 
         if (token) {
+          const notificationPermission = await askLeadPushPermission(webPush);
+
           setAuthToken(token);
 
           const userData = response.data.data.user;
@@ -283,6 +287,14 @@ export default {
           // Don't let a previous user's saved listing filters leak into this session
           // (shared computer / switched account without a clean logout).
           localStorage.removeItem('listingSearchFilters');
+
+          if (notificationPermission === 'granted' && webPush?.public_key) {
+            try {
+              await subscribeLeadPush(webPush.public_key);
+            } catch (_) {
+              /* Login still continues. The bell can retry the subscription. */
+            }
+          }
 
           const isAdminUser = userData.roles?.includes('only show listings');
           if (!isAdminUser) {
