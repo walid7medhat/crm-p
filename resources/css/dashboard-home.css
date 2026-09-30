@@ -1888,6 +1888,12 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
     color: #fff;
   }
 
+  .dh-mob-push :deep(.mobile-push__icon) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: transparent;
+    color: #fff;
+  }
+
   .dh-mob-avatar-link {
     flex-shrink: 0;
   }

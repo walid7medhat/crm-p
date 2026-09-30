@@ -1,24 +1,37 @@
 <template>
-  <div v-if="visible" class="mobile-push">
-    <p v-if="status === 'enabled'" class="mobile-push__status">Mobile Notifications Enabled</p>
-    <p v-else-if="status === 'denied'" class="mobile-push__status">
-      Notifications are blocked in this browser. Allow them in the browser settings, then try again.
-    </p>
-    <p v-else-if="status === 'ios'" class="mobile-push__status">
-      On iPhone, add Alt CRM to your Home Screen, open it from that icon, then enable notifications.
-    </p>
-    <p v-else-if="status === 'unconfigured'" class="mobile-push__status">
-      Mobile notifications are not configured on the server yet.
-    </p>
+  <div v-if="visible" class="mobile-push" :class="{ 'mobile-push--compact': compact }">
     <button
-      v-else
+      v-if="compact"
       type="button"
-      class="mobile-push__button"
+      class="mobile-push__icon"
       :disabled="busy"
+      :aria-label="iconLabel"
+      :title="iconLabel"
       @click="enable"
     >
-      {{ busy ? 'Enabling…' : 'Enable Mobile Notifications' }}
+      <iconify-icon :icon="iconName" />
     </button>
+    <template v-else>
+      <p v-if="status === 'enabled'" class="mobile-push__status">Mobile Notifications Enabled</p>
+      <p v-else-if="status === 'denied'" class="mobile-push__status">
+        Notifications are blocked in this browser. Allow them in the browser settings, then try again.
+      </p>
+      <p v-else-if="status === 'ios'" class="mobile-push__status">
+        On iPhone, add Alt CRM to your Home Screen, open it from that icon, then enable notifications.
+      </p>
+      <p v-else-if="status === 'unconfigured'" class="mobile-push__status">
+        Mobile notifications are not configured on the server yet.
+      </p>
+      <button
+        v-else
+        type="button"
+        class="mobile-push__button"
+        :disabled="busy"
+        @click="enable"
+      >
+        {{ busy ? 'Enabling…' : 'Enable Mobile Notifications' }}
+      </button>
+    </template>
   </div>
 </template>
 
@@ -45,6 +58,9 @@ function isStandalone() {
 
 export default {
   name: 'MobilePushToggle',
+  props: {
+    compact: { type: Boolean, default: false },
+  },
   data() {
     return {
       visible: false,
@@ -52,6 +68,19 @@ export default {
       status: 'idle',
       publicKey: null,
     }
+  },
+  computed: {
+    iconName() {
+      return this.status === 'enabled' ? 'lucide:bell-ring' : 'lucide:bell-plus'
+    },
+    iconLabel() {
+      if (this.busy) return 'Enabling mobile notifications'
+      if (this.status === 'enabled') return 'Mobile Notifications Enabled'
+      if (this.status === 'denied') return 'Notifications are blocked in this browser. Allow them in the browser settings, then try again.'
+      if (this.status === 'ios') return 'On iPhone, add Alt CRM to your Home Screen, open it from that icon, then enable notifications.'
+      if (this.status === 'unconfigured') return 'Mobile notifications are not configured on the server yet.'
+      return 'Enable Mobile Notifications'
+    },
   },
   mounted() {
     this.load()
@@ -145,5 +174,31 @@ export default {
   font-size: 11px;
   line-height: 1.4;
   color: #475569;
+}
+
+.mobile-push--compact {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.mobile-push__icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  border: 1px solid #e8eaef;
+  background: #f4f5f7;
+  color: #1a1528;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.mobile-push__icon:disabled {
+  opacity: 0.7;
 }
 </style>

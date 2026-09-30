@@ -55,6 +55,7 @@
             >
               <iconify-icon icon="lucide:settings" width="20" height="20" />
             </button>
+            <MobilePushToggle compact class="dh-mob-push" />
             <NotificationBell class="dh-mob-notification" :sound-enabled="true" :browser-notifications-enabled="true" />
             <router-link to="/view-profile" class="dh-mob-avatar-link" aria-label="Profile">
               <img :src="userAvatar" alt="" class="dh-mob-avatar" />
@@ -322,6 +323,7 @@ import { useRouter } from 'vue-router'
 import ApexCharts from 'apexcharts'
 import DashboardDateRangePicker from '@/components/dashboard/home/DashboardDateRangePicker.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
+import MobilePushToggle from '@/components/layout/MobilePushToggle.vue'
 import userAvatarPlaceholder from '@/assets/images/users/user1.png'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js'
 import { useDashboardHome } from '@/composables/useDashboardHome.js'

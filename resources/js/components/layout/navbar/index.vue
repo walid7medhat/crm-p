@@ -73,6 +73,7 @@
             >
               <iconify-icon icon="lucide:settings" />
             </button>
+            <MobilePushToggle compact />
             <NotificationBell
               ref="notificationBellMob"
               class="kanban-mob-notification"
@@ -777,6 +778,7 @@ import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import NotificationBell from '@/components/NotificationBell.vue';
+import MobilePushToggle from '@/components/layout/MobilePushToggle.vue';
 import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue';
 import SystemOverviewLangToggle from '@/components/system-overview/SystemOverviewLangToggle.vue';
 import userAvatarPlaceholder from '@/assets/images/users/user1.png';
