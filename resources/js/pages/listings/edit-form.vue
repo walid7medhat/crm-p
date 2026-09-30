@@ -3168,7 +3168,10 @@ const fetchAreas = async () => {
     areas.value = areasData.map(area => ({
       id: area.id,
       name: area.area_parents_title || area.name || area.title,
-      children_count: area.children_count ?? 0
+      children_count: area.children_count ?? 0,
+      is_adgm: area.is_adgm,
+      admin_fee_type: area.admin_fee_type,
+      all_names: area.all_names
     }));
     
   } catch (error) {
