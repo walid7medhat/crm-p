@@ -1514,8 +1514,8 @@ watch(selectedExistingClient, (client) => {
         const first = dup.leads?.[0]
         const details = first
             ? ` — latest: "${first.lead_name || 'Lead #' + first.id}"${first.stage ? ` (${first.stage}` : ''}${first.responsible_person ? `, ${first.responsible_person}` : ''}${first.stage ? ')' : ''}`
-            : ''
-        return `This phone already exists in ${dup.count} lead${dup.count > 1 ? 's' : ''}${details}`
+            // : ''${details}
+        return `This phone already exists in ${dup.count} lead${dup.count > 1 ? 's' : ''}`
     }
 
     watch(() => form.value.work_phone, () => checkPhoneDuplicates('work_phone'))
