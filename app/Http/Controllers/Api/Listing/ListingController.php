@@ -1385,8 +1385,23 @@ public function getMatchingListings(Request $request)
             throw new \Exception('Listing Not found');
         }
 
+        // Published, converted (sold), or rented — all still approved — are open to
+        // everyone. Anything else (draft, pending approval, etc.) is private to its
+        // owner, same exception list as the browse grid (getListingsData()) so a
+        // listing that's already hidden from the list can't be opened anyway just by
+        // knowing/guessing its URL.
+        $isPubliclyVisible = in_array($listing->status, ['published', 'converted', 'rented'], true)
+            && (bool) $listing->approved;
+        if (!$isPubliclyVisible) {
+            $isOwner = $user && ((int) $user->id === (int) $listing->agent_id || (int) $user->id === (int) $listing->added_by);
+            $isPrivileged = $user && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager'));
+            if (!$isOwner && !$isPrivileged) {
+                throw new \Exception('Listing Not found');
+            }
+        }
+
         $listing->load(['area.parentRecursive'],'area');
-        
+
         $canEdit = $user ? $user->can('update', $listing) : false;
         $canDelete = $user ? $user->can('delete', $listing) : false;
         

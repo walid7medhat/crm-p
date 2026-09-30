@@ -2567,10 +2567,11 @@ const formatRejectionDate = (dateString) => {
         return false;
       }
     
-      const hasAccess = 
-        isPropertyOwner.value ||         
-        canApproveListings.value ; 
-      if (!hasAccess && !property.value.approved) {
+      const hasAccess =
+        isPropertyOwner.value ||
+        canApproveListings.value ;
+      const isPubliclyVisible = ['published', 'converted', 'rented'].includes(property.value.status) && !!property.value.approved;
+      if (!hasAccess && !isPubliclyVisible) {
         console.warn('Access denied for user:', currentUser?.id);
         
         proxy.$showNotification('You do not have permission to view this property.', 'error');
