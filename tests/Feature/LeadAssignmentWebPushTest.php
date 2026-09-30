@@ -105,15 +105,22 @@ class LeadAssignmentWebPushTest extends TestCase
             ->assertJsonPath('data.public_key', 'test-public');
     }
 
-    public function test_payload_has_no_lead_data(): void
+    public function test_payload_opens_the_lead_view_without_customer_data(): void
     {
-        $payload = app(LeadAssignmentWebPushSender::class)->payload();
+        $sender = app(LeadAssignmentWebPushSender::class);
+        $payload = $sender->payload(55);
 
         $this->assertSame([
+            'type' => 'lead_assignment',
             'title' => 'New Lead Assigned',
-            'body' => 'You have a new lead assigned to you.',
-            'url' => '/',
+            'body' => 'A new lead has been assigned to you.',
+            'lead_id' => 55,
+            'url' => '/?lead=55',
         ], $payload);
+        $this->assertSame('/?lead=55', $sender->leadViewUrl(55));
+        foreach (['phone', 'email', 'lead_name', 'client', 'work_phone'] as $key) {
+            $this->assertArrayNotHasKey($key, $payload);
+        }
     }
 
     public function test_expired_subscription_is_removed_without_touching_other_devices(): void

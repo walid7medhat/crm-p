@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="mobile-push" :class="{ 'mobile-push--compact': compact }">
+  <div v-if="visible && !autoOnly" class="mobile-push" :class="{ 'mobile-push--compact': compact }">
     <button
       v-if="compact"
       type="button"
@@ -59,10 +59,26 @@ function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 }
 
+function canAutoOffer() {
+  if (typeof Notification === 'undefined') return false
+  if (Notification.permission === 'denied') return false
+  if (isIos() && !isStandalone()) return false
+  return true
+}
+
+let autoOfferClaimed = false
+
+function claimAutoOffer() {
+  if (autoOfferClaimed) return false
+  autoOfferClaimed = true
+  return true
+}
+
 export default {
   name: 'MobilePushToggle',
   props: {
     compact: { type: Boolean, default: false },
+    autoOnly: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -109,11 +125,12 @@ export default {
           this.status = 'denied'
           return
         }
-        if (data.subscribed && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          this.status = 'enabled'
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          if (claimAutoOffer()) await this.enable('auto')
+          else if (data.subscribed) this.status = 'enabled'
           return
         }
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        if (canAutoOffer() && claimAutoOffer()) {
           await this.enable('auto')
         }
       } catch (_) {
@@ -136,8 +153,12 @@ export default {
         const permission = Notification.permission === 'granted'
           ? 'granted'
           : await Notification.requestPermission()
-        if (permission !== 'granted') {
+        if (permission === 'denied') {
           this.status = 'denied'
+          return
+        }
+        if (permission !== 'granted') {
+          this.status = 'idle'
           return
         }
         const registration = await navigator.serviceWorker.register('/sw.js')

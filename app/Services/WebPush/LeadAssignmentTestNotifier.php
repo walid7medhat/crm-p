@@ -35,7 +35,7 @@ class LeadAssignmentTestNotifier
             }
 
             try {
-                SendLeadAssignmentWebPush::dispatchSync($testUserId);
+                SendLeadAssignmentWebPush::dispatchSync($testUserId, $leadId);
             } catch (\Throwable $e) {
                 Log::warning('lead_assignment.test_web_push_dispatch_failed', [
                     'lead_id' => $leadId,

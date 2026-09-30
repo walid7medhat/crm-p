@@ -14,6 +14,7 @@
     <AppLoader :show="isAppLoading" label="Loading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
     <SystemCampaignPopup v-if="showLayout" />
+    <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
       <Navbar v-if="showLayout" />
@@ -66,6 +67,7 @@ import AppLoader from './components/layout/AppLoader.vue'
 import BrandLoader from './components/layout/BrandLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
+import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
 loadViewLeadModal().catch(() => {})
 const LeadOpeningLoader = {
@@ -94,6 +96,7 @@ export default {
     NavProgressBar,
     BirthdayCelebrationLayer,
     SystemCampaignPopup,
+    MobilePushToggle,
     Header,
     Navbar,
     Footer,
@@ -185,6 +188,14 @@ export default {
       // Done once here (page-agnostic) instead of per-page, so tabs like
       // Lead Pool that never duplicated this check get it too.
       checkUrlForLead()
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          const leadId = Number(event.data?.lead_id)
+          if (event.data?.type === 'lead_assignment' && leadId > 0) {
+            openLeadView(leadId)
+          }
+        })
+      }
     })
     onUnmounted(() => {
       window.__openPropertyChat = null

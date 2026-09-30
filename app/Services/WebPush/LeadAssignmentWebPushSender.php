@@ -11,7 +11,7 @@ use Minishlink\WebPush\WebPush;
 
 class LeadAssignmentWebPushSender
 {
-    public function sendToUser(int $userId): void
+    public function sendToUser(int $userId, int $leadId): void
     {
         if (! $this->isTestRecipient($userId)) {
             return;
@@ -41,7 +41,7 @@ class LeadAssignmentWebPushSender
         ]);
         $webPush->setReuseVAPIDHeaders(true);
 
-        $payload = json_encode($this->payload(), JSON_THROW_ON_ERROR);
+        $payload = json_encode($this->payload($leadId), JSON_THROW_ON_ERROR);
         foreach ($subscriptions as $subscription) {
             $webPush->queueNotification(
                 Subscription::create([
@@ -60,15 +60,29 @@ class LeadAssignmentWebPushSender
     }
 
     /**
-     * @return array{title: string, body: string, url: string}
+     * Routing only. No customer name, phone, or email.
+     *
+     * @return array{type: string, title: string, body: string, lead_id?: int, url?: string}
      */
-    public function payload(): array
+    public function payload(int $leadId): array
     {
-        return [
+        $payload = [
+            'type' => 'lead_assignment',
             'title' => 'New Lead Assigned',
-            'body' => 'You have a new lead assigned to you.',
-            'url' => '/',
+            'body' => 'A new lead has been assigned to you.',
         ];
+
+        if ($leadId > 0) {
+            $payload['lead_id'] = $leadId;
+            $payload['url'] = $this->leadViewUrl($leadId);
+        }
+
+        return $payload;
+    }
+
+    public function leadViewUrl(int $leadId): string
+    {
+        return '/?lead='.$leadId;
     }
 
     public function isTestRecipient(int $userId): bool
