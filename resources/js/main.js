@@ -89,6 +89,38 @@ function isLeadNotification(notification) {
   return /\\Lead\w*Notification$/.test(String(notification?.type || ''))
 }
 
+function isAssignmentAlert(notification) {
+  return String(notification?.type || '').includes('AssignmentPocNotification')
+}
+
+async function raiseHomeIconAlert(notification) {
+  if (!isAssignmentAlert(notification)) return
+  try {
+    if (typeof navigator.setAppBadge === 'function') {
+      await navigator.setAppBadge(1)
+    }
+  } catch (_) {
+    /* Badge is unsupported on this browser. */
+  }
+  const mobile = window.matchMedia('(max-width: 768px)').matches
+  if (!mobile && !document.hidden) return
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration?.()
+    if (!registration) return
+    await registration.showNotification('New Lead Assigned', {
+      body: 'You have a new lead assigned to you.',
+      icon: '/assets/images/altcrm-logo.png',
+      badge: '/assets/images/altcrm-logo.png',
+      tag: 'lead-assignment',
+      renotify: true,
+      data: { url: '/' },
+    })
+  } catch (_) {
+    /* The in-app toast still shows when the system banner cannot. */
+  }
+}
+
 const app = createApp(App)
 app.component('SearchableSelect', SearchableSelect)
 app.config.devtools = true
@@ -328,6 +360,12 @@ window.$showNotification = showNotificationDeferred
 app.config.globalProperties.$hideNotification = closeGlassToast
 window.$hideNotification = closeGlassToast
 
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return
+  if (typeof navigator.clearAppBadge !== 'function') return
+  navigator.clearAppBadge().catch(() => {})
+})
+
 function scheduleEchoInit() {
   if (!initialToken || !import.meta.env.VITE_PUSHER_APP_KEY) return
 
@@ -360,6 +398,7 @@ function scheduleEchoInit() {
         window.Echo.private(`user.${currentUserId}`)
           .notification((notification) => {
             console.log('[Notification]', notification)
+            raiseHomeIconAlert(notification)
 
             const type = String(notification.type || '').includes('status')
               ? (notification.status === 'approved' ? 'success' : 'error')

@@ -7,7 +7,7 @@
       :disabled="busy"
       :aria-label="iconLabel"
       :title="iconLabel"
-      @click="enable"
+      @click="enable('user')"
     >
       <iconify-icon :icon="iconName" />
     </button>
@@ -30,7 +30,7 @@
         type="button"
         class="mobile-push__button"
         :disabled="busy"
-        @click="enable"
+        @click="enable('user')"
       >
         {{ busy ? 'Enabling…' : 'Enable Mobile Notifications' }}
       </button>
@@ -111,12 +111,17 @@ export default {
         }
         if (data.subscribed && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           this.status = 'enabled'
+          return
+        }
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          await this.enable('auto')
         }
       } catch (_) {
         this.visible = false
       }
     },
-    async enable() {
+    async enable(source) {
+      const fromUser = source !== 'auto'
       if (this.busy || this.status === 'denied' || this.status === 'ios' || this.status === 'unconfigured') return
       if (!('serviceWorker' in navigator) || !('PushManager' in window) || !this.publicKey) {
         this.status = 'unconfigured'
@@ -143,8 +148,12 @@ export default {
         })
         await api.post('/push-subscriptions', subscription.toJSON())
         this.status = 'enabled'
-      } catch (_) {
-        this.status = 'failed'
+        if (typeof navigator.setAppBadge === 'function') {
+          await navigator.setAppBadge(0).catch(() => {})
+        }
+      } catch (error) {
+        const blocked = error?.name === 'NotAllowedError' || error?.name === 'InvalidStateError'
+        this.status = !fromUser && blocked ? 'idle' : 'failed'
       } finally {
         this.busy = false
       }

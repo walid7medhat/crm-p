@@ -20,11 +20,20 @@ self.addEventListener('push', (event) => {
     payload = fallback
   }
 
-  event.waitUntil(self.registration.showNotification(payload.title, {
-    body: payload.body,
-    icon: '/assets/images/altcrm-logo.png',
-    data: { url: payload.url },
-  }))
+  event.waitUntil((async () => {
+    const existing = await self.registration.getNotifications()
+    const count = existing.length + 1
+    await self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/assets/images/altcrm-logo.png',
+      badge: '/assets/images/altcrm-logo.png',
+      tag: `lead-assignment-${Date.now()}`,
+      data: { url: payload.url, count },
+    })
+    if (typeof navigator.setAppBadge === 'function') {
+      await navigator.setAppBadge(count)
+    }
+  })())
 })
 
 self.addEventListener('notificationclick', (event) => {
@@ -33,6 +42,9 @@ self.addEventListener('notificationclick', (event) => {
   const target = new URL(path, self.location.origin).href
 
   event.waitUntil((async () => {
+    if (typeof navigator.clearAppBadge === 'function') {
+      await navigator.clearAppBadge()
+    }
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     for (const client of windows) {
       if (client.url.startsWith(self.location.origin) && 'focus' in client) {
