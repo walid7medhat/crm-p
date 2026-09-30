@@ -777,7 +777,7 @@ const leadPoolStatusOptions = [
 ]
 
 const unqualifiedStatusOptions = [
-
+      { value: 'not_interested', text: 'Not Interested' },
       { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
      { value: 'service_provider', text: 'Service Provider' },
         { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },

@@ -3390,6 +3390,7 @@ const qualityStatusOptions = computed(() => {
 
         return [
 
+            { value: 'not_interested', text: 'Not Interested' },
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
             { value: 'service_provider', text: 'Service Provider' },
 
@@ -6360,7 +6361,7 @@ watch(() => form.value.stageId, (newVal) => {
 
             isValidForStage = [
 
-                'wrong_contact_details', 'no_answer_multiple_calls','service_provider',
+                'not_interested', 'wrong_contact_details', 'no_answer_multiple_calls','service_provider',
 
             'job_seeker', 'broker', 'registered_by_mistake','spam_leads', 'blacklist', 'duplication'
 

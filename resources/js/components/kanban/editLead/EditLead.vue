@@ -702,7 +702,7 @@ const leadStatusOptions = computed(() => {
     // Stage 10: Unqualified
     if (stageOrder === 10) {
         return [
-            // { value: 'not_interested', text: 'Not Interested' },
+            { value: 'not_interested', text: 'Not Interested' },
             { value: 'wrong_contact_details', text: 'Wrong Contact Details' },
             { value: 'service_provider', text: 'Service Provider' },
             { value: 'no_answer_multiple_calls', text: 'No Answer — Multiple Calls' },

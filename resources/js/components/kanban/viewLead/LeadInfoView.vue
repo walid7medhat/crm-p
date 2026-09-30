@@ -1130,7 +1130,7 @@ const formatLeadStatus = (status, stageOrder = null) => {
     // Stage 10: Unqualified
     if (order === 10) {
         const unqualifiedMapping = {
-            // 'not_interested': 'Not Interested',
+            'not_interested': 'Not Interested',
             'wrong_contact_details': 'Wrong Contact Details',
              'service_provider': 'Service Provider' ,
 
