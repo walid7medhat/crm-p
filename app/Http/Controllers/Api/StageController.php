@@ -1506,62 +1506,15 @@ public function getOffices()
               ->orWhere('budget_to', '<=', $max);
         });
     }
+    /** Source filter (one or several values) — shared rule, see App\Support\LeadSourceFilter. */
     private function applyLeadSourceFilter($query, Request $request): void
-{
-    if (! $request->filled('source') ) {
-        return;
-    }
-
-    $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
-    $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
-
-    $expand = function ($value) use ($websitePartials, $portalPartials) {
-        if ($value === 'website') return $websitePartials;
-        if ($value === 'portal')  return $portalPartials;
-        return [$value];
-    };
-
-    $src = $request->source;
-
-    if (is_array($src)) {
-        $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
-
-        if (count($src) === 0) {
+    {
+        if (! $request->filled('source')) {
             return;
         }
 
-        $expanded = [];
-        foreach ($src as $v) {
-            foreach ($expand($v) as $entry) {
-                $expanded[] = $entry;
-            }
-        }
-
-        $expanded = array_values(array_unique($expanded));
-
-        $query->where(function ($q) use ($expanded) {
-            $q->whereIn('lead_source', $expanded)
-              ->orWhere(function ($q2) use ($expanded) {
-                  foreach ($expanded as $term) {
-                      $q2->orWhere('more_information', 'LIKE', "%{$term}%");
-                  }
-              });
-        });
-
-        return;
+        \App\Support\LeadSourceFilter::apply($query, $request->source);
     }
-
-    $expanded = $expand($src);
-
-    $query->where(function ($q) use ($expanded) {
-        $q->whereIn('lead_source', $expanded)
-          ->orWhere(function ($q2) use ($expanded) {
-              foreach ($expanded as $term) {
-                  $q2->orWhere('more_information', 'LIKE', "%{$term}%");
-              }
-          });
-    });
-}
 
     /**
      * Preload local users referenced in Bitrix24 LAST_ACTIVITY_BY metadata (one query).

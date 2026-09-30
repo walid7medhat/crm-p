@@ -668,7 +668,53 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source'"
+                                v-else-if="field.type === 'select' && field.id === 'source'"
+
+                                v-model="form.source"
+
+                                :options="sourceSelectOptions"
+
+                                :reduce="opt => opt.value"
+
+                                label="text"
+
+                                placeholder="Search & select sources"
+
+                                :clearable="hasValue(form.source)"
+
+                                :filter-by="sourceFilterBy"
+
+                                multiple
+
+                                :close-on-select="false"
+
+                                append-to-body
+
+                                class="custom-v-select office-multi-select"
+
+                            >
+
+                                <template #open-indicator="{ attributes }">
+
+                                    <span v-bind="attributes">
+
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+
+                                    </span>
+
+                                </template>
+
+                                <template #option="option">
+
+                                    <span :class="option.isChild ? 'source-opt source-opt--child' : 'source-opt source-opt--parent'">{{ option.text }}</span>
+
+                                </template>
+
+                            </v-select>
+
+                            <v-select
+
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -700,101 +746,8 @@
 
                             </v-select>
 
-                            <v-select
 
-                                v-if="field.id === 'source' && form.source === 'website'"
 
-                                v-model="form.sourceWebsite"
-
-                                :options="websiteSourceOptionsForMulti"
-
-                                :reduce="opt => opt.value"
-
-                                label="text"
-
-                                placeholder="Select websites"
-
-                                :clearable="form.sourceWebsite && form.sourceWebsite.length > 0"
-
-                                multiple
-
-                                filterable
-
-                                append-to-body
-
-                                class="custom-v-select mt-2 office-multi-select"
-
-                            >
-
-                                <template #open-indicator="{ attributes }">
-
-                                    <span v-bind="attributes">
-
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-
-                                    </span>
-
-                                </template>
-
-                            </v-select>
-
-                            <v-select
-
-                                v-if="field.id === 'source' && form.source === 'portal'"
-
-                                v-model="form.sourcePortal"
-
-                                :options="portalSourceOptions"
-
-                                :reduce="opt => opt.value"
-
-                                label="text"
-
-                                placeholder="Select Portals"
-
-                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
-
-                                multiple
-
-                                filterable
-
-                                append-to-body
-
-                                class="custom-v-select mt-2 office-multi-select"
-
-                            >
-
-                                <template #open-indicator="{ attributes }">
-
-                                    <span v-bind="attributes">
-
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-
-                                    </span>
-
-                                </template>
-
-                            </v-select>
-
-                            <v-select
-                                v-if="field.id === 'source' && form.source === 'whatsapp'"
-                                v-model="form.sourceWhatsapp"
-                                :options="whatsappSourceOptionsForMulti"
-                                :reduce="opt => opt.value"
-                                label="text"
-                                placeholder="Select WhatsApp sources"
-                                :clearable="form.sourceWhatsapp && form.sourceWhatsapp.length > 0"
-                                multiple
-                                filterable
-                                append-to-body
-                                class="custom-v-select mt-2 office-multi-select"
-                            >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                            </v-select>
 
                         </div>
 
@@ -1479,7 +1432,53 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source'"
+                                v-else-if="field.type === 'select' && field.id === 'source'"
+
+                                v-model="form.source"
+
+                                :options="sourceSelectOptions"
+
+                                :reduce="opt => opt.value"
+
+                                label="text"
+
+                                placeholder="Search & select sources"
+
+                                :clearable="hasValue(form.source)"
+
+                                :filter-by="sourceFilterBy"
+
+                                multiple
+
+                                :close-on-select="false"
+
+                                append-to-body
+
+                                class="custom-v-select office-multi-select"
+
+                            >
+
+                                <template #open-indicator="{ attributes }">
+
+                                    <span v-bind="attributes">
+
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+
+                                    </span>
+
+                                </template>
+
+                                <template #option="option">
+
+                                    <span :class="option.isChild ? 'source-opt source-opt--child' : 'source-opt source-opt--parent'">{{ option.text }}</span>
+
+                                </template>
+
+                            </v-select>
+
+                            <v-select
+
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -1511,100 +1510,7 @@
 
                             </v-select>
 
-                            <v-select
 
-                                v-if="field.id === 'source' && form.source === 'website'"
-
-                                v-model="form.sourceWebsite"
-
-                                :options="websiteSourceOptionsForMulti"
-
-                                :reduce="opt => opt.value"
-
-                                label="text"
-
-                                placeholder="Select websites"
-
-                                :clearable="form.sourceWebsite && form.sourceWebsite.length > 0"
-
-                                multiple
-
-                                filterable
-
-                                append-to-body
-
-                                class="custom-v-select mt-2 office-multi-select"
-
-                            >
-
-                                <template #open-indicator="{ attributes }">
-
-                                    <span v-bind="attributes">
-
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-
-                                    </span>
-
-                                </template>
-
-                            </v-select>
-
-                               <v-select
-
-                                v-if="field.id === 'source' && form.source === 'portal'"
-
-                                v-model="form.sourcePortal"
-
-                                :options="portalSourceOptions"
-
-                                :reduce="opt => opt.value"
-
-                                label="text"
-
-                                placeholder="Select Portals"
-
-                                :clearable="form.sourcePortal && form.sourcePortal.length > 0"
-
-                                multiple
-
-                                filterable
-
-                                append-to-body
-
-                                class="custom-v-select mt-2 office-multi-select"
-
-                            >
-
-                                <template #open-indicator="{ attributes }">
-
-                                    <span v-bind="attributes">
-
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-
-                                    </span>
-
-                                </template>
-
-                            </v-select>
-                            <v-select
-                                v-if="field.id === 'source' && form.source === 'whatsapp'"
-                                v-model="form.sourceWhatsapp"
-                                :options="whatsappSourceOptionsForMulti"
-                                :reduce="opt => opt.value"
-                                label="text"
-                                placeholder="Select WhatsApp sources"
-                                :clearable="form.sourceWhatsapp && form.sourceWhatsapp.length > 0"
-                                multiple
-                                filterable
-                                append-to-body
-                                class="custom-v-select mt-2 office-multi-select"
-                            >
-                                <template #open-indicator="{ attributes }">
-                                    <span v-bind="attributes">
-                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
-                                    </span>
-                                </template>
-                            </v-select>
 
                         </div>
 
@@ -2406,92 +2312,33 @@ const queryToFormKeys = {
 
 
 
+/**
+ * Rebuild the one Source multi-select from a saved query. `source` may be one value or
+ * several, parents or children; older queries also kept children under source_website /
+ * source_portal / source_whatsapp — fold them all into form.source.
+ */
 function normalizeSourceWebsiteForm(next) {
-
-    const siteValues = websiteSourceOptions.value.map(o => o.value).filter(v => v != null)
-
-    const portalValues = portalSourceOptions.value.map(o => o.value).filter(v => v != null)
-
-    
-
-    if (Array.isArray(next.source) && next.source.length) {
-
-        next.sourceWebsite = next.source.filter(Boolean)
-
-        next.source = 'website'
-
-        return
-
+    // Map any saved spelling to the option's exact value (case-insensitive), plus the
+    // legacy website keys from older saved searches.
+    const canonical = (value) => {
+        const v = String(value).toLowerCase()
+        if (v === 'allproperties') return 'Allproperties.ae'
+        if (v === 'oiaproperties') return 'Oiaproperties.com'
+        const match = sourceSelectOptions.value.find(o => String(o.value).toLowerCase() === v)
+        return match ? match.value : value
     }
 
-    if (typeof next.source === 'string' && siteValues.includes(next.source)) {
+    const values = [
+        ...toCleanArray(next.source),
+        ...toCleanArray(next.sourceWebsite),
+        ...toCleanArray(next.sourcePortal),
+        ...toCleanArray(next.sourceWhatsapp),
+    ].map(canonical)
 
-        next.sourceWebsite = [next.source]
-
-        next.source = 'website'
-
-        return
-
-    }
-
-    if (next.source === 'allproperties' || next.source === 'oiaproperties') {
-
-        next.sourceWebsite = next.source ? [next.source] : []
-
-        next.source = 'website'
-
-        return
-
-    }
-
-    if (next.source === 'website') {
-
-        if (Array.isArray(next.sourceWebsite)) {
-
-            next.sourceWebsite = next.sourceWebsite.filter(v => v != null && v !== '')
-
-        } else if (next.sourceWebsite) {
-
-            next.sourceWebsite = [next.sourceWebsite]
-
-        } else {
-
-            next.sourceWebsite = []
-
-        }
-
-    }
-
-    
-
-    if (next.source === 'portal') {
-
-        if (Array.isArray(next.sourcePortal)) {
-
-            next.sourcePortal = next.sourcePortal.filter(v => v != null && v !== '')
-
-        } else if (next.sourcePortal) {
-
-            next.sourcePortal = [next.sourcePortal]
-
-        } else {
-
-            next.sourcePortal = []
-
-        }
-
-    }
-
-     if (next.source === 'whatsapp') {
-        if (Array.isArray(next.sourceWhatsapp)) {
-            next.sourceWhatsapp = next.sourceWhatsapp.filter(v => v != null && v !== '')
-        } else if (next.sourceWhatsapp) {
-            next.sourceWhatsapp = [next.sourceWhatsapp]
-        } else {
-            next.sourceWhatsapp = []
-        }
-    }
-
+    next.source = [...new Set(values)]
+    next.sourceWebsite = []
+    next.sourcePortal = []
+    next.sourceWhatsapp = []
 }
 
 async function loadAllSelectDataForCurrentForm() {
@@ -2549,7 +2396,7 @@ function syncFormFromQuery(query) {
         email: '',
         bedrooms: '',
         leadName: '',
-        source: '',
+        source: [],
         sourceWebsite: [],
         sourcePortal:[],
          sourceWhatsapp: [],  
@@ -2584,29 +2431,8 @@ function syncFormFromQuery(query) {
         next.qualityStatus = mapApiStatusToFormValue(query.status_lead, next.stageId)
     }
 
-    if ((!next.source || next.source === '') && query.source_website) {
-        const sw = query.source_website
-        next.sourceWebsite = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
-        next.source = 'website'
-    }
-    
-    if (next.source === 'portal' && query.source_portal) {
-        const sp = query.source_portal
-        next.sourcePortal = Array.isArray(sp) ? sp.filter(Boolean) : [sp].filter(Boolean)
-    }
-       if (query.source_whatsapp) {
-        const sw = query.source_whatsapp
-        next.sourceWhatsapp = Array.isArray(sw) ? sw.filter(Boolean) : [sw].filter(Boolean)
-        if (next.sourceWhatsapp.length > 0) {
-            next.source = 'whatsapp'
-        }
-    }
-    
-    // ✅ تأكد من معالجة source إذا كانت whatsapp
-    if (query.source === 'whatsapp') {
-        next.source = 'whatsapp'
-    }
-    
+    // source / source_website / source_portal / source_whatsapp were copied above via
+    // queryToFormKeys — rebuild the multi-select parents + children from all of them.
     normalizeSourceWebsiteForm(next)
     
     if (next.createdFrom || next.createdTo) {
@@ -2879,7 +2705,7 @@ const form = ref({
 
     leadName: '',
 
-    source: '',
+    source: [],
 
     sourceWebsite: [],
 
@@ -3269,6 +3095,63 @@ const websiteSourceOptionsForMulti = computed(() =>
     websiteSourceOptions.value.filter(o => o.value != null)
 
 )
+
+// ================= Source: ONE multi-select with parents + their children =================
+// form.source is a single list that can mix parents ("website" = every website) and
+// children ("Allproperties.ae"). It's sent as-is; the backend expands parents
+// (App\Support\LeadSourceFilter).
+const SOURCE_CHILD_GROUPS = {
+    website: { label: 'Website', options: websiteSourceOptions },
+    portal: { label: 'Portal', options: portalSourceOptions },
+    whatsapp: { label: 'Whatsapp', options: whatsappSourceOptions },
+}
+
+const toCleanArray = (value) =>
+    (Array.isArray(value) ? value : (value == null || value === '' ? [] : [value]))
+        .filter(v => v != null && v !== '')
+
+/**
+ * Flat option list for the one Source select: each parent, then its children indented
+ * under it. `group` lets typing a parent name ("portal") also show its children.
+ */
+const sourceSelectOptions = computed(() => {
+    const list = []
+    sourceOptions.value.forEach((opt) => {
+        const group = SOURCE_CHILD_GROUPS[opt.value]
+        if (!group) {
+            list.push({ value: opt.value, text: opt.text, group: opt.text, isChild: false })
+            return
+        }
+        list.push({ value: opt.value, text: `${group.label} (all)`, group: group.label, isChild: false })
+        group.options.value
+            .filter(child => child.value != null)
+            .forEach((child) => {
+                list.push({ value: child.value, text: child.text, group: group.label, isChild: true })
+            })
+    })
+    return list
+})
+
+/** Type-to-filter matches the option's own text or its group ("port" → Portal, Bayut, …). */
+function sourceFilterBy(option, label, search) {
+    const term = String(search || '').toLowerCase()
+    return String(option.text || '').toLowerCase().includes(term)
+        || String(option.group || '').toLowerCase().includes(term)
+}
+
+/** Value sent as `source`: one value → string, several → array, none → undefined. */
+function buildSourceParam() {
+    const unique = [...new Set(toCleanArray(form.value.source))]
+    if (!unique.length) return undefined
+    return unique.length === 1 ? unique[0] : unique
+}
+
+/** Search-bar text, e.g. "Website (all), Bayut, Meta". */
+function sourceDisplayText() {
+    return toCleanArray(form.value.source)
+        .map(v => sourceSelectOptions.value.find(o => o.value === v)?.text || String(v))
+        .join(', ')
+}
 
 
 
@@ -4300,77 +4183,9 @@ function getDisplayValue(field, rawValue) {
 
     }
 
-    if (field.formKey === 'source' && rawValue === 'website') {
-
-        const sites = Array.isArray(form.value.sourceWebsite)
-
-            ? form.value.sourceWebsite.filter(v => v != null && v !== '')
-
-            : (form.value.sourceWebsite ? [form.value.sourceWebsite] : [])
-
-        if (sites.length) {
-
-            const opts = websiteSourceOptions.value
-
-            const names = sites.map(val => {
-
-                const opt = opts.find(o => o.value === val)
-
-                return opt ? opt.text : String(val)
-
-            })
-
-            return `Website (${names.join(', ')})`
-
-        }
-
-        return 'Website'
-
-    }
-
-      if (field.formKey === 'source' && rawValue === 'portal') {
-
-        const portals = Array.isArray(form.value.sourcePortal) 
-
-            ? form.value.sourcePortal.filter(v => v != null && v !== '')
-
-            : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
-
-        
-
-        if (portals.length) {
-
-            const opts = portalSourceOptions.value
-
-            const names = portals.map(val => {
-
-                const opt = opts.find(o => o.value === val)
-
-                return opt ? opt.text : String(val)
-
-            })
-
-            return `Portal (${names.join(', ')})`
-
-        }
-
-        return 'Portal'
-
-    }
-     if (field.formKey === 'source' && rawValue === 'whatsapp') {
-        const whatsapps = Array.isArray(form.value.sourceWhatsapp) 
-            ? form.value.sourceWhatsapp.filter(v => v != null && v !== '')
-            : (form.value.sourceWhatsapp ? [form.value.sourceWhatsapp] : [])
-        
-        if (whatsapps.length) {
-            const opts = whatsappSourceOptions.value
-            const names = whatsapps.map(val => {
-                const opt = opts.find(o => o.value === val)
-                return opt ? opt.text : String(val)
-            })
-            return `Whatsapp (${names.join(', ')})`
-        }
-        return 'Whatsapp'
+    // Multi-select source: every picked parent, with its picked children in brackets.
+    if (field.formKey === 'source') {
+        return sourceDisplayText() || null
     }
 
     if (Array.isArray(rawValue)) {
@@ -5076,68 +4891,8 @@ async function applySearch(options = {}) {
 
 
 
-    let sourceParam = undefined
-
-    if (form.value.source === 'website') {
-
-        const sites = Array.isArray(form.value.sourceWebsite)
-
-            ? form.value.sourceWebsite.filter(v => v != null && v !== '')
-
-            : (form.value.sourceWebsite ? [form.value.sourceWebsite] : [])
-
-        if (sites.length > 1) {
-
-            sourceParam = sites
-
-        } else if (sites.length === 1) {
-
-            sourceParam = sites[0]
-
-        } else {
-
-            sourceParam = 'website'
-
-        }
-
-        }else if (form.value.source === 'portal') {
-
-            const portals = Array.isArray(form.value.sourcePortal)
-
-                ? form.value.sourcePortal.filter(v => v != null && v !== '')
-
-                : (form.value.sourcePortal ? [form.value.sourcePortal] : [])
-
-            if (portals.length > 1) {
-
-                sourceParam = portals
-
-            } else if (portals.length === 1) {
-
-                sourceParam = portals[0]
-
-            } else {
-
-                sourceParam = 'portal'
-
-            }
-
-        } else if (form.value.source === 'whatsapp') {
-                const whatsapps = Array.isArray(form.value.sourceWhatsapp)
-                    ? form.value.sourceWhatsapp.filter(v => v != null && v !== '')
-                    : (form.value.sourceWhatsapp ? [form.value.sourceWhatsapp] : [])
-                if (whatsapps.length > 1) {
-                    sourceParam = whatsapps
-                } else if (whatsapps.length === 1) {
-                    sourceParam = whatsapps[0]
-                } else {
-                    sourceParam = 'whatsapp'
-                }
-            }  else if (form.value.source) {
-
-            sourceParam = form.value.source
-
-        }
+    // Several parent sources at once; each parent's picked children replace it.
+    const sourceParam = buildSourceParam()
 
 
 
@@ -5781,7 +5536,7 @@ function resetFormValues() {
 
         bedrooms: '',
 
-        source: '',
+        source: [],
 
         sourceWebsite: [],
          sourcePortal: [],
@@ -6303,29 +6058,6 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 
 
 
-watch(() => form.value.source, (newVal) => {
-
-    if (hydratingFromQuery.value) return
-
-    if (newVal === 'website') {
-
-        form.value.sourceWebsite = []
-
-    } else if (newVal === 'portal') {
-
-        form.value.sourceWebsite = []
-
-    } else if (newVal === 'whatsapp') {
-        form.value.sourceWhatsapp = []
-    } else {
-
-        form.value.sourceWebsite = []
-
-        form.value.sourcePortal = []
-        form.value.sourceWhatsapp = []
-    }
-
-})
 
 
 
@@ -6627,6 +6359,30 @@ onBeforeUnmount(() => {
 })
 
 </script>
+
+<style>
+/* Source select options — global because the dropdown is appended to <body>. */
+.source-opt--parent {
+    font-weight: 600;
+    color: #0b0736;
+}
+
+.source-opt--child {
+    display: inline-block;
+    padding-left: 16px;
+    position: relative;
+    color: #475569;
+}
+
+.source-opt--child::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 7px;
+    border-top: 1px solid #cbd5e1;
+}
+</style>
 
 <style scoped>
 /* Add selected indicator style */

@@ -2118,49 +2118,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
      * Expand "website" / "portal" parent source picks into all their known partial values
      * (mirrors StageController::applyLeadSourceFilter so lead-pool search behaves identically).
      */
+    /** Source filter (one or several values) — shared rule, see App\Support\LeadSourceFilter. */
     private function applyLeadSourceFilter($query, Request $request): void
     {
         if (! $request->filled('source')) {
             return;
         }
 
-        $websitePartials = ['website', 'Allproperties.ae', 'Oiaproperties.com'];
-        $portalPartials  = ['portal', 'propertyfinder', 'bayut'];
-
-        $expand = function ($value) use ($websitePartials, $portalPartials) {
-            if ($value === 'website') return $websitePartials;
-            if ($value === 'portal')  return $portalPartials;
-            return [$value];
-        };
-
-        $src = $request->source;
-
-        if (is_array($src)) {
-            $src = array_values(array_filter($src, fn ($v) => $v !== null && $v !== ''));
-            if (count($src) === 0) {
-                return;
-            }
-            $expanded = [];
-            foreach ($src as $v) {
-                foreach ($expand($v) as $entry) {
-                    $expanded[] = $entry;
-                }
-            }
-            $expanded = array_values(array_unique($expanded));
-            if (count($expanded) === 1) {
-                $query->where('lead_source', $expanded[0]);
-            } else {
-                $query->whereIn('lead_source', $expanded);
-            }
-            return;
-        }
-
-        $expanded = $expand($src);
-        if (count($expanded) === 1) {
-            $query->where('lead_source', $expanded[0]);
-        } else {
-            $query->whereIn('lead_source', $expanded);
-        }
+        \App\Support\LeadSourceFilter::apply($query, $request->source);
     }
 
     /**
