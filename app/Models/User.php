@@ -522,21 +522,24 @@ function getOfficeAttribute()
      */
     public function getIsListingTeamAttribute(): bool
     {
+        // Check the user's own flag first — a manager with no parent_id (a top-level
+        // manager, nobody above them) never entered the while loop below, so their own
+        // listing_team=1 was silently ignored and this always returned false for them.
+        if ($this->listing_team == 1) {
+            return true;
+        }
+
         $current = $this;
-         
+
         while ($current->parent_id) {
-            if( $current->listing_team == 1){
-                return true;
-            }else{
-            $current = $current->parent; 
+            $current = $current->parent;
 
             if ($current && $current->hasRole('manager')) {
-                return $current->listing_team == 1; 
-            }
+                return $current->listing_team == 1;
             }
         }
 
-        return false; 
+        return false;
     }
 
     /**
