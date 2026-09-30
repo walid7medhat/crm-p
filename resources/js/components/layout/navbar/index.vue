@@ -2620,15 +2620,35 @@ const showBackButton = computed(() => {
   cursor: not-allowed;
 }
 
-@media (max-width: 360px) {
+@media (max-width: 768px) {
+  .announcement-popup-overlay {
+    padding: 16px;
+    align-items: flex-end;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
   .announcement-popup {
+    width: 100%;
+    max-height: calc(100vh - 32px);
     padding: 22px 16px 18px;
-    border-radius: 14px;
+    border-radius: 16px;
   }
   .announcement-popup__icon {
     width: 44px;
     height: 44px;
+    margin-bottom: 12px;
     font-size: 20px;
+  }
+  .announcement-popup__title {
+    font-size: 15px;
+  }
+  .announcement-popup__desc {
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .announcement-popup__btn {
+    width: 100%;
+    max-width: none;
+    height: 44px;
   }
 }
 
