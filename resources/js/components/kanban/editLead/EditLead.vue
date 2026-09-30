@@ -71,7 +71,7 @@
                 :auto-format="false"
                 :invalid="!!validationErrors.work_phone"
                 :show-errors="showPhoneFieldErrors"
-                  :disabled="useSecondaryEmail || !canEditPhoneEmail"
+                  :disabled="useSecondaryEmail || !canEditPrimaryPhone"
             />
             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
                 {{ validationErrors.work_phone[0] }}
@@ -100,7 +100,7 @@
                         type="checkbox" 
                         class="form-check-input"
                         v-model="useSecondaryPhone"
-                        :disabled="!form.work_phone_2"
+                        :disabled="!form.work_phone_2 || !canEditPrimaryPhone"
                             @change="swapPhones"
 
                     >
@@ -1080,6 +1080,11 @@ const initializeForm = () => {
 }
 const canEditPhoneEmail = computed(() => {
     return props.lead?.can_edit_phone_email ?? false
+})
+// Primary phone: admin / super_admin only (branch_admin can edit the rest of the lead).
+// Older payloads without the flag fall back to can_edit_phone_email.
+const canEditPrimaryPhone = computed(() => {
+    return props.lead?.can_edit_primary_phone ?? canEditPhoneEmail.value
 })
 // Watch for stageId changes from parent
 watch(() => props.stageId, (newStageId) => {

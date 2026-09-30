@@ -676,6 +676,9 @@ class LeadController extends Controller
                         unset($leadData['secondary_email']);
                         unset($leadData['work_phone']);
                         unset($leadData['work_phone_2']);
+                    } elseif (!auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+                        // branch_admin can edit the lead but never its primary phone.
+                        unset($leadData['work_phone']);
                     }
                 
                 $participants = $request->input('participants', []);

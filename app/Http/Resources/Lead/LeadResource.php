@@ -382,8 +382,11 @@ $branchName =
             'duplicate_no' => count($duplicateIds),
             'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
-            'can_edit' => auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin') || $this->responsible_person_id == auth()->user()->id),
-            'can_edit_phone_email' => auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin')),
+            // branch_admin may edit any lead they can see (their branch) — except the
+            // primary phone (can_edit_primary_phone; also stripped in LeadController::update).
+            'can_edit' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || $this->responsible_person_id == auth()->user()->id),
+            'can_edit_phone_email' => auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']),
+            'can_edit_primary_phone' => auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin']),
             'can_delete' => auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin')),
             'raw_meta_data' => $rawMetaData,
             'facebook_questions_answers' => $facebookFields,
