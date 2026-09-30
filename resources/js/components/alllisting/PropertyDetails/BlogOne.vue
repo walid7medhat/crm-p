@@ -147,6 +147,11 @@
                   <button class="btn btn-primary" >
                  {{ property.listing_status || "Not specified" }}
                 </button>
+                  <!-- Only present for the owner/super_admin/admin/manager(listing team) — see
+                       ListingResource's $canSeeStatus; null for everyone else. -->
+                  <button class="btn btn-secondary" v-if="property.status" >
+                 {{ property.status }}
+                </button>
                   <!-- <button class="btn btn-success" @click="openFloorPlanSlider(0)" v-if="property?.floor_plans?.length > 0">
                     <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
                     VIEW FLOOR PLAN

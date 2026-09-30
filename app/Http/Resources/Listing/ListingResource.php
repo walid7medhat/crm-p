@@ -131,6 +131,17 @@ public const FEATURE_LABELS = [
         $canSeeOwnerData = $isPrivilegedViewer
             || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_OWNER_DATA));
 
+        // Internal status (draft/published/converted/rented/etc.) — only the listing's
+        // own agent/owner, super_admin, admin, or a manager with listing_team=1 need to
+        // see it; other viewers only ever see approved+published listings anyway.
+        $canSeeStatus = $user && (
+            $user->hasRole('super_admin')
+            || $user->hasRole('admin')
+            || $this->agent_id == $user->id
+            || $this->added_by == $user->id
+            || ($user->hasRole('manager') && $user->listing_team == 1)
+        );
+
         // Manual permission check
         $canEdit = false;
         $canDelete = false;
@@ -196,7 +207,11 @@ $allowedAgentIds = [];
             'rejected_at'=>$this->rejected_at,
                 'is_archived' => (bool)$this->is_archived,
             'title' => $this->area?->name,
-            'status' => $this->status, // draft, published, etc.
+            // draft/published/converted/rented/etc. — only the owner/super_admin/admin/
+            // manager(listing team) see the raw status on the details page; other
+            // viewers only ever receive published/converted/rented+approved listings
+            // here anyway (see getListingData()'s visibility gate).
+            'status' => $canSeeStatus ? $this->status : null,
             'unit_number' => $canSeeUnitNumber ? $this->unit_number : null,
             'size_sqft' => $this->size_sqft,
             'size_sqmt' => $this->size_sqmt,
