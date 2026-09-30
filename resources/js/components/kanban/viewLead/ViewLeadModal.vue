@@ -201,6 +201,8 @@ const showStageChangeModal = ref(false)
 const pendingStageChange = ref(null)
 const missingFieldsForLead = ref([])
 const stageOrderMap = ref({})
+const leadPoolStageId = ref(null)
+const leadPoolStage = ref(null)
 const selectedLeadForConversion = ref(null)
 const selectedLeadData = ref(null)
 const convertModalRef = ref(null)
@@ -434,24 +436,36 @@ const fetchStageOrders = async () => {
     try {
         const response = await api.get('/stages')
         let stages = []
-        
-        if (response.data && response.data.data) {
-            stages = response.data.data
-        } else if (response.data && Array.isArray(response.data)) {
+        const payload = response.data?.data
+
+        if (payload?.data && Array.isArray(payload.data)) {
+            stages = payload.data
+        } else if (Array.isArray(payload)) {
+            stages = payload
+        } else if (Array.isArray(response.data)) {
             stages = response.data
         }
-        
+
         if (!Array.isArray(stages)) {
             stages = []
         }
-        
+
         const map = {}
+        const poolsByName = []
+        const poolsByOrder = []
         stages.forEach(stage => {
             if (stage && stage.id) {
                 map[stage.id] = stage.order || 0
+                const name = String(stage.name || '').toLowerCase().replace(/[\s_-]+/g, '')
+                if (name === 'leadpool') poolsByName.push(stage)
+                if (Number(stage.order) === 9) poolsByOrder.push(stage)
             }
         })
+        const preferOriginal = (list) =>
+            [...list].sort((a, b) => Number(a.id) - Number(b.id))[0] || null
         stageOrderMap.value = map
+        leadPoolStage.value = preferOriginal(poolsByName) || preferOriginal(poolsByOrder)
+        leadPoolStageId.value = leadPoolStage.value?.id || null
         console.log('Stage order map loaded:', stageOrderMap.value)
     } catch (error) {
         console.error('Error fetching stage orders:', error)
@@ -723,11 +737,54 @@ const saveQualifiedClientRequirement = async (form) => {
     }
 }
 
+const moveQualifiedLeadToPool = async (additionalData) => {
+    const stageId = leadPoolStageId.value
+    if (!stageId || !lead.value?.id) {
+        $showNotification('Lead Pool stage was not found', 'error')
+        return false
+    }
+    try {
+        const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
+            stage_id: stageId,
+            reason: additionalData.reason,
+            status_lead_pool: additionalData.lead_status,
+        })
+        const savedLead = response.data?.data || response.data
+        const poolStage = leadPoolStage.value
+        if (savedLead && typeof savedLead === 'object') {
+            lead.value = {
+                ...lead.value,
+                ...savedLead,
+                stage_id: poolStage?.id || savedLead.stage_id,
+                stage: poolStage
+                    ? {
+                        ...(lead.value?.stage || {}),
+                        id: poolStage.id,
+                        name: poolStage.name,
+                        order: poolStage.order,
+                        color: poolStage.color,
+                    }
+                    : lead.value?.stage,
+            }
+            if (lead.value.stage_id) leadStageId.value = lead.value.stage_id
+        }
+        emit('lead-updated', lead.value)
+        $showNotification('Lead moved to Lead Pool', 'success')
+        return true
+    } catch (error) {
+        const message = error.response?.data?.message || 'Failed to move lead to Lead Pool'
+        $showNotification(message, 'error')
+        return false
+    }
+}
+
 // Handle stage change with reason from modal (نفس الـ Kanban بالضبط)
 const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...additionalData }) => {
     if (pendingStageChange.value?.requirementOnly) {
         const finish = additionalData.__requirementSaved
-        const saved = await saveQualifiedClientRequirement(additionalData)
+        const saved = additionalData.moveToLeadPool
+            ? await moveQualifiedLeadToPool(additionalData)
+            : await saveQualifiedClientRequirement(additionalData)
         if (typeof finish === 'function') finish(saved)
         return saved
     }

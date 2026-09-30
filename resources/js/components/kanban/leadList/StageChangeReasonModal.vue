@@ -524,6 +524,50 @@
 
                     </div>
             </div>
+
+            <div v-if="mandatory" class="lead-pool-move-section">
+                <div class="lead-pool-move-card">
+                    <h5 class="lead-pool-move-title">Lead Pool</h5>
+                    <div class="lead-pool-move-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="lead-pool-reason">Reason <span class="text-danger">*</span></label>
+                            <input
+                                id="lead-pool-reason"
+                                v-model="leadPoolReason"
+                                type="text"
+                                maxlength="255"
+                                class="form-control"
+                                :class="{ 'is-invalid': leadPoolReasonError }"
+                                placeholder="Why is this lead moving to Lead Pool?"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Lead Pool Status <span class="text-danger">*</span></label>
+                            <v-select
+                                append-to-body
+                                v-model="leadPoolStatus"
+                                :options="leadPoolStatusOptions"
+                                :reduce="opt => opt.value"
+                                label="text"
+                                placeholder="Select status"
+                                :searchable="false"
+                                :clearable="false"
+                                class="custom-v-select searchable-select"
+                                :class="{ 'is-invalid': leadPoolStatusError }"
+                            >
+                                <template #open-indicator="{ attributes }">
+                                    <span v-bind="attributes">
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                                    </span>
+                                </template>
+                            </v-select>
+                        </div>
+                        <button type="button" class="lead-pool-move-btn" @click="handleMoveToLeadPool" :disabled="isSubmitting">
+                            Move to Lead Pool
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <div class="modal-footer">
                 <button v-if="!mandatory" type="button" class="btn btn-light" @click="closeModal">Cancel</button>
@@ -682,6 +726,10 @@ const visible = computed({
 })
 
 const isSubmitting = ref(false)
+const leadPoolReason = ref('')
+const leadPoolStatus = ref('')
+const leadPoolReasonError = ref(false)
+const leadPoolStatusError = ref(false)
 const areas = ref([])
 const propertyTypes = ref([])
 
@@ -1305,6 +1353,49 @@ const resetForm = () => {
     removeReminderDropdownListeners()
     isSubmitting.value = false
     fieldErrors.value = {}
+    leadPoolReason.value = ''
+    leadPoolStatus.value = ''
+    leadPoolReasonError.value = false
+    leadPoolStatusError.value = false
+}
+
+const handleMoveToLeadPool = async () => {
+    const reason = leadPoolReason.value.trim()
+    leadPoolReasonError.value = !reason
+    leadPoolStatusError.value = !leadPoolStatus.value
+    if (!reason) {
+        $showNotification('Please provide a reason', 'warning')
+        return
+    }
+    if (reason.length > 255) {
+        leadPoolReasonError.value = true
+        $showNotification('Reason must be 255 characters or less', 'warning')
+        return
+    }
+    if (!leadPoolStatus.value) {
+        $showNotification('Please select lead pool status', 'warning')
+        return
+    }
+
+    isSubmitting.value = true
+    try {
+        const saved = await new Promise((resolve) => {
+            emit('submit', {
+                leadId: props.leadId,
+                moveToLeadPool: true,
+                reason,
+                lead_status: leadPoolStatus.value,
+                __requirementSaved: resolve,
+            })
+        })
+        if (saved === false) return
+        closeModal({ force: true })
+    } catch (error) {
+        console.error('Error moving lead to Lead Pool:', error)
+        $showNotification('An error occurred while moving the lead', 'error')
+    } finally {
+        isSubmitting.value = false
+    }
 }
 
 // Validation for budget range
@@ -1688,6 +1779,82 @@ defineExpose({
     background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+}
+
+.lead-pool-move-section {
+    flex-shrink: 0;
+    padding: 0 1.35rem 0.85rem;
+    background: #ffffff;
+}
+
+.lead-pool-move-card {
+    background: #faf9fc;
+    border: 1px solid #e8e4f2;
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+
+.lead-pool-move-title {
+    margin: 0 0 10px;
+    font-size: 13px !important;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.lead-pool-move-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(160px, 0.9fr) auto;
+    gap: 10px 12px;
+    align-items: end;
+}
+
+.lead-pool-move-grid .form-group {
+    margin-bottom: 0;
+}
+
+.lead-pool-move-grid .form-label {
+    margin-bottom: 0.35rem;
+}
+
+.lead-pool-move-grid .form-control {
+    height: 42px;
+    min-height: 42px;
+    border-radius: 10px;
+    border-color: #E2E8F0;
+    font-size: 13px;
+}
+
+.lead-pool-move-btn {
+    height: 42px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: #733E87;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.lead-pool-move-btn:hover:not(:disabled) {
+    filter: brightness(1.06);
+}
+
+.lead-pool-move-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .lead-pool-move-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .lead-pool-move-btn {
+        width: 100%;
+    }
 }
 
 .stage-change-modal {
