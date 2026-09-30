@@ -1122,7 +1122,15 @@ class LeadController extends Controller
         };
 
         $base = User::query()->where('users.status', 'active');
-        if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin')) {
+            // Super admins may also pick themselves (they have no parent and no assignable role).
+            $base->where(function ($q) use ($user) {
+                $q->where(function ($q) {
+                    $q->role(['team_lead', 'sales', 'manager', 'admin'])
+                        ->whereNotNull('users.parent_id');
+                })->orWhere('users.id', $user->id);
+            });
+        } elseif ($user->hasRole('admin')) {
             $base->role(['team_lead', 'sales', 'manager', 'admin'])
                 ->whereNotNull('users.parent_id');
         } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin') || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
@@ -1171,6 +1179,11 @@ class LeadController extends Controller
             ->get($columns)
             ->map($present)
             ->values();
+
+        // Keep the super admin's own row reachable even when it falls past the page limit.
+        if ($user->hasRole('super_admin') && $search === '' && !in_array((int) $user->id, $selectedIds, true)) {
+            $selectedIds[] = (int) $user->id;
+        }
 
         foreach (array_slice($selectedIds, 0, 10) as $selectedId) {
             if ($responsiblePersons->contains(fn ($row) => (int) ($row['id'] ?? 0) === $selectedId)) {
