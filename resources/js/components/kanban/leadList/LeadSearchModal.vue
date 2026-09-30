@@ -6382,6 +6382,17 @@ onBeforeUnmount(() => {
     width: 7px;
     border-top: 1px solid #cbd5e1;
 }
+
+/* Hovered / keyboard-highlighted / already-selected option → white text on the dark row */
+.vs__dropdown-option--highlight .source-opt,
+.vs__dropdown-option--selected .source-opt {
+    color: #fff;
+}
+
+.vs__dropdown-option--highlight .source-opt--child::before,
+.vs__dropdown-option--selected .source-opt--child::before {
+    border-top-color: rgba(255, 255, 255, 0.7);
+}
 </style>
 
 <style scoped>
