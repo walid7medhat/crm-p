@@ -109,6 +109,10 @@
                                             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone[0] }}
                                             </div>
+                                            <div v-if="phoneDuplicateNote('work_phone')" class="phone-dup-note" role="status">
+                                                <iconify-icon icon="lucide:copy" class="phone-dup-note__icon" />
+                                                <span>{{ phoneDuplicateNote('work_phone') }}</span>
+                                            </div>
                                         </div>
                                         <div class="col">
                                             <label class="form-label-custom">Primary Email</label>
@@ -134,6 +138,10 @@
                                             />
                                             <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone_2[0] }}
+                                            </div>
+                                            <div v-if="phoneDuplicateNote('work_phone_2')" class="phone-dup-note" role="status">
+                                                <iconify-icon icon="lucide:copy" class="phone-dup-note__icon" />
+                                                <span>{{ phoneDuplicateNote('work_phone_2') }}</span>
                                             </div>
                                         </div>
                                         <div class="col">
@@ -1464,6 +1472,57 @@ watch(selectedExistingClient, (client) => {
             clearErrorMessageIfNeeded()
         }
     })
+
+    // ================= Duplicate-phone note (super_admin / admin / branch_admin) =================
+    const canSeePhoneDuplicates = (() => {
+        try {
+            const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
+            return ['super_admin', 'admin', 'branch_admin'].some((r) => roles.includes(r))
+        } catch {
+            return false
+        }
+    })()
+
+    const phoneDuplicates = ref({ work_phone: null, work_phone_2: null })
+    const phoneDuplicateTimers = {}
+
+    const checkPhoneDuplicates = (field) => {
+        if (!canSeePhoneDuplicates) return
+        clearTimeout(phoneDuplicateTimers[field])
+        const phone = String(form.value[field] || '').trim()
+        if (phone.replace(/\D/g, '').length < 7) {
+            phoneDuplicates.value[field] = null
+            return
+        }
+        // Debounce: check once the user pauses typing.
+        phoneDuplicateTimers[field] = setTimeout(async () => {
+            try {
+                const res = await api.get('/leads/phone-duplicates', { params: { phone } })
+                // Ignore a stale answer if the phone changed while this request was in flight.
+                if (String(form.value[field] || '').trim() !== phone) return
+                const data = res.data?.data || {}
+                phoneDuplicates.value[field] = data.count > 0 ? data : null
+            } catch {
+                phoneDuplicates.value[field] = null
+            }
+        }, 500)
+    }
+
+    const phoneDuplicateNote = (field) => {
+        const dup = phoneDuplicates.value[field]
+        if (!dup?.count) return ''
+        const first = dup.leads?.[0]
+        const details = first
+            ? ` — latest: "${first.lead_name || 'Lead #' + first.id}"${first.stage ? ` (${first.stage}` : ''}${first.responsible_person ? `, ${first.responsible_person}` : ''}${first.stage ? ')' : ''}`
+            : ''
+        return `This phone already exists in ${dup.count} lead${dup.count > 1 ? 's' : ''}${details}`
+    }
+
+    watch(() => form.value.work_phone, () => checkPhoneDuplicates('work_phone'))
+    watch(() => form.value.work_phone_2, () => checkPhoneDuplicates('work_phone_2'))
+    watch(show, (open) => {
+        if (!open) phoneDuplicates.value = { work_phone: null, work_phone_2: null }
+    })
     
     watch(() => form.value.comment, () => {
         if (validationErrors.value.comment) {
@@ -1740,6 +1799,27 @@ watch(selectedExistingClient, (client) => {
     .create-lead-modal-content {
         background: #fff;
         border-radius: 12px;
+    }
+
+    /* Duplicate-phone note under the phone fields (admins only) */
+    .phone-dup-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 6px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid #fcd34d;
+        background: #fffbeb;
+        color: #92400e;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .phone-dup-note__icon {
+        flex-shrink: 0;
+        margin-top: 2px;
+        font-size: 13px;
     }
     
     .modal-title {

@@ -703,6 +703,8 @@ Route::middleware('role:super_admin|admin')->group(function () {
     Route::delete('/leads/archived/{id}/force', [LeadController::class, 'forceDeleteArchived']);
 });
 
+// Before apiResource so "phone-duplicates" isn't taken as a {lead} id.
+Route::get('/leads/phone-duplicates', [LeadController::class, 'phoneDuplicates']);
 Route::apiResource('leads', LeadController::class);
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);

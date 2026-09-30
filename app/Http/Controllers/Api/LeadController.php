@@ -787,6 +787,50 @@ class LeadController extends Controller
         }
 
     /**
+     * Create-lead form: tell super_admin / admin / branch_admin when the phone they
+     * typed already belongs to other leads. Same formatting-insensitive rule as the
+     * duplicate badge (work_phone_digits), checked against work_phone and work_phone_2.
+     */
+    public function phoneDuplicates(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $raw = trim((string) $request->query('phone', ''));
+        $digits = Lead::phoneDigits($raw);
+        // Too short to mean anything (e.g. only a country code typed so far).
+        if (strlen(preg_replace('/\D+/', '', $digits)) < 7) {
+            return ApiResponse::success(['count' => 0, 'leads' => []], 'No phone to check');
+        }
+
+        // work_phone: indexed, formatting-insensitive column. work_phone_2 has no such
+        // column, so match the usual ways the same number is written.
+        $secondaryVariants = array_values(array_unique(array_filter([$raw, $digits, '+' . $digits])));
+
+        $query = Lead::query()->where(function ($q) use ($digits, $secondaryVariants) {
+            $q->where('work_phone_digits', $digits)
+                ->orWhereIn('work_phone_2', $secondaryVariants);
+        });
+
+        $count = (clone $query)->count();
+        $leads = $query->with(['stage:id,name', 'responsiblePerson:id,name,display_name'])
+            ->latest('id')
+            ->limit(5)
+            ->get(['id', 'lead_name', 'first_name', 'stage_id', 'responsible_person_id', 'created_at'])
+            ->map(fn (Lead $l) => [
+                'id' => $l->id,
+                'lead_name' => $l->lead_name ?: $l->first_name,
+                'stage' => $l->stage?->name,
+                'responsible_person' => User::resolveDisplayName($l->responsiblePerson),
+                'created_at' => $l->created_at?->toDateString(),
+            ]);
+
+        return ApiResponse::success(['count' => $count, 'leads' => $leads], 'Phone duplicates checked');
+    }
+
+    /**
      * Rename a lead from the view-lead header (inline edit, like the deal title).
      * update() above validates the whole form, so the name gets its own endpoint.
      * Logged to history in the same shape update() uses: action 'updated' + fields.
