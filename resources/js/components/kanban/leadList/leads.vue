@@ -233,7 +233,7 @@
                                     @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)"
                                 >
-                                    <template #item="{ element: task, index }">
+                                    <template #item="{ element: task }">
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 cursor-pointer"
@@ -241,7 +241,7 @@
                                                     'kanban-card--mobile': kanbanIsMobile,
                                                     'kanban-card--selected': isLeadSelected(task.id),
                                                 }"
-                                                v-show="leadMatchesShortcutFilter(task) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
+                                                v-show="leadMatchesShortcutFilter(task)"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
@@ -454,23 +454,6 @@
                                             </div>
                                         </template>
                                 </draggable>
-                                <div
-                                    v-if="kanbanIsMobile && mobileListFilterStageId === MOBILE_FILTER_ALL && column.leads.length > 1"
-                                    class="mobile-stage-carousel-controls"
-                                >
-                                    <div class="mobile-stage-carousel-dots">
-                                        <button
-                                            v-for="(leadItem, dotIndex) in column.leads"
-                                            :key="`dot-${column.status}-${leadItem.id}`"
-                                            type="button"
-                                            class="mobile-stage-carousel-dot"
-                                            :class="{ 'is-active': dotIndex === getMobileCardIndex(column) }"
-                                            :aria-label="`Go to card ${dotIndex + 1}`"
-                                            @click.stop="setMobileCardIndex(column, dotIndex)"
-                                        />
-                                    </div>
-                                </div>
-                                
                             </div>
                         </div>
                     </div>
@@ -1390,7 +1373,6 @@ const showMobileListFilterSheet = ref(false)
 const mobileQuickLead = ref(null)
 const mobileQuickSourceColumn = ref(null)
 const mobilePickStageId = ref(null)
-const mobileStageCardIndex = ref({})
 const mobileTouchStartX = ref({})
 const mobileTouchStartY = ref({})
 const mobileTouchLastX = ref({})
@@ -2643,12 +2625,6 @@ function handleLeadConverted(deal) {
 
 watch(() => columns.value?.length, () => {
     nextTick(() => updateScrollArrows())
-    columns.value.forEach((column) => {
-        const key = String(column.status)
-        const max = Math.max((column.leads?.length || 1) - 1, 0)
-        const current = mobileStageCardIndex.value[key] ?? 0
-        mobileStageCardIndex.value[key] = Math.min(current, max)
-    })
 })
 const enabledFields = computed(() => {
     return cardFields.value
@@ -4006,27 +3982,6 @@ function formatDate(dateString) {
 /** Activity tile: Bitrix24 LAST_ACTIVITY_TIME (last_activity_at / bitrix24_last_activity_at). */
 function formatActivityDate(task) {
     return formatDate(activityDisplayAt(task))
-}
-
-function getMobileCardIndex(column) {
-    const key = String(column.status)
-    const current = mobileStageCardIndex.value[key] ?? 0
-    const max = Math.max((column.leads?.length || 1) - 1, 0)
-    if (current > max) {
-        mobileStageCardIndex.value[key] = max
-        return max
-    }
-    if (current < 0) {
-        mobileStageCardIndex.value[key] = 0
-        return 0
-    }
-    return current
-}
-
-function setMobileCardIndex(column, index) {
-    const key = String(column.status)
-    const max = Math.max((column.leads?.length || 1) - 1, 0)
-    mobileStageCardIndex.value[key] = Math.min(Math.max(index, 0), max)
 }
 
 function onMobileCardTouchStart(column, event) {
@@ -6653,11 +6608,16 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .column-content-scrollable {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 0 !important;
     height: auto !important;
-    max-height: none;
-    overflow: visible;
+    /* Stage header stays put; finger-scroll the leads inside this stage. */
+    max-height: min(68dvh, 640px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: auto;
 }
 
 .kanban-outer--mobile .tasks-list {
@@ -7050,39 +7010,6 @@ const fetchRevertNotifications = async () => {
 .mobile-kanban-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    margin-top: 6px;
-    margin-bottom: 2px;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-dots {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex: 1;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-dot {
-    width: 8px;
-    height: 8px;
-    border: none;
-    border-radius: 50%;
-    background: #d1d5db;
-    cursor: pointer;
-    padding: 0;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-dot.is-active {
-    width: 20px;
-    border-radius: 999px;
-    background: #f59e0b;
 }
 
 .mobile-create-new-fixed {
