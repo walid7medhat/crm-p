@@ -2564,29 +2564,15 @@ const formatRejectionDate = (dateString) => {
     minute: '2-digit'
   });
 };
+    // The backend (getListingData()'s visibility gate) is the actual authority — if the
+    // API returned this listing at all, the caller is already allowed to see it (either
+    // it's published/converted/rented+approved, or they're the owner/privileged). `status`
+    // is only exposed to the owner/privileged roles now, so a client-side re-check can no
+    // longer reliably re-derive "publicly visible" from it without false-blocking everyone
+    // else who legitimately can view it.
     const checkAccessAndRedirect = () => {
       if (!property.value) return false;
-    
-      const currentUser = getCurrentUser();
-      if (!currentUser) {
-        return false;
-      }
-    
-      const hasAccess =
-        isPropertyOwner.value ||
-        canApproveListings.value ;
-      const isPubliclyVisible = ['published', 'converted', 'rented'].includes(property.value.status) && !!property.value.approved;
-      if (!hasAccess && !isPubliclyVisible) {
-        console.warn('Access denied for user:', currentUser?.id);
-        
-        proxy.$showNotification('You do not have permission to view this property.', 'error');
-        
-        router.push('/alllisting');
-        
-        return false;
-      }
-    
-      return true;
+      return !!getCurrentUser();
     };
     const isPropertyOwner = computed(() => {
       return property.value?.is_owner || false;
