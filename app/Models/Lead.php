@@ -10,6 +10,7 @@ use App\Events\LeadUpdated;
 use App\Models\KanbanSetting;
 use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
+use App\Services\WebPush\LeadAssignmentTestNotifier;
 use App\Models\LeadScoringSetting;
 use App\Traits\AltCRMLeadTrait;
 use DB;
@@ -83,6 +84,11 @@ protected const NON_ENGAGEMENT_FIELDS = [
                 }
 
                 ProcessLeadAutoAssignmentJob::dispatch($lead->id)->afterCommit();
+                app(LeadAssignmentTestNotifier::class)->notifyIfChanged(
+                    null,
+                    $lead->responsible_person_id,
+                    (int) $lead->id
+                );
             //       if ($lead->shouldSyncToAltCRM()) {
             //     $lead->sendToAltCRM();
             // }
@@ -115,6 +121,14 @@ protected const NON_ENGAGEMENT_FIELDS = [
                     $lead->setAttribute('last_engagement_at', now());
                 }
                     \Log::info('HOOK_FIRED', ['id' => $lead->id, 'changes' => array_keys($lead->getChanges())]);
+
+                if ($lead->wasChanged('responsible_person_id')) {
+                    app(LeadAssignmentTestNotifier::class)->notifyIfChanged(
+                        $lead->getOriginal('responsible_person_id'),
+                        $lead->responsible_person_id,
+                        (int) $lead->id
+                    );
+                }
 
             });
             static::updating(function ($lead) {

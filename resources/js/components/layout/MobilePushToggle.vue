@@ -22,6 +22,9 @@
       <p v-else-if="status === 'unconfigured'" class="mobile-push__status">
         Mobile notifications are not configured on the server yet.
       </p>
+      <p v-else-if="status === 'failed'" class="mobile-push__status">
+        Could not enable mobile notifications. Tap again.
+      </p>
       <button
         v-else
         type="button"
@@ -79,6 +82,7 @@ export default {
       if (this.status === 'denied') return 'Notifications are blocked in this browser. Allow them in the browser settings, then try again.'
       if (this.status === 'ios') return 'On iPhone, add Alt CRM to your Home Screen, open it from that icon, then enable notifications.'
       if (this.status === 'unconfigured') return 'Mobile notifications are not configured on the server yet.'
+      if (this.status === 'failed') return 'Could not enable mobile notifications. Tap again.'
       return 'Enable Mobile Notifications'
     },
   },
@@ -140,7 +144,7 @@ export default {
         await api.post('/push-subscriptions', subscription.toJSON())
         this.status = 'enabled'
       } catch (_) {
-        this.status = 'idle'
+        this.status = 'failed'
       } finally {
         this.busy = false
       }

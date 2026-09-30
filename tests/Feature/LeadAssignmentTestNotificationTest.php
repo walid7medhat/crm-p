@@ -114,11 +114,29 @@ class LeadAssignmentTestNotificationTest extends TestCase
         }
 
         $lead->update(['responsible_person_id' => $testUserId]);
+        Notification::fake();
+        Bus::fake();
         $response = $this->assignLead($lead->fresh(), $testUserId);
 
         $response->assertOk();
         Notification::assertNothingSent();
         Bus::assertNotDispatched(SendLeadAssignmentWebPush::class);
+    }
+
+    public function test_changing_the_assignee_on_the_lead_notifies_without_the_assign_endpoint(): void
+    {
+        Notification::fake();
+
+        $testUserId = $this->testUserId();
+        $lead = $this->leadAssignedToSomeoneElse($testUserId);
+        $recipient = User::query()->find($testUserId);
+
+        $lead->update(['responsible_person_id' => $testUserId]);
+
+        Notification::assertSentTo($recipient, AssignmentPocNotification::class);
+        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId) {
+            return $job->userId === $testUserId;
+        });
     }
 
     public function test_disabled_test_mode_sends_nothing_and_still_assigns(): void

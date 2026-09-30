@@ -18,10 +18,10 @@ class AssignmentPocNotification extends Notification
 
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
-        return new BroadcastMessage([
+        return (new BroadcastMessage([
             'title' => 'New Lead Assigned',
             // Existing Echo listener renders `message` as the single toast line.
             'message' => 'New Lead Assigned — You have a new lead assigned to you.',
-        ]);
+        ]))->onConnection('sync');
     }
 }
