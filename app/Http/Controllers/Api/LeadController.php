@@ -671,6 +671,14 @@ class LeadController extends Controller
                 }
 
                 $leadData = $request->validated();
+
+                // An edit form that couldn't see the responsible person (hidden by
+                // LeadResource visibility rules) sends it back empty — never blank the
+                // column on save; changing the owner goes through a real value only.
+                if (array_key_exists('responsible_person_id', $leadData) && empty($leadData['responsible_person_id'])) {
+                    unset($leadData['responsible_person_id']);
+                }
+
                 if (!auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
                         unset($leadData['email']);
                         unset($leadData['secondary_email']);

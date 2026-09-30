@@ -444,6 +444,21 @@ protected function resolveOriginalBranch(): ?string
 
     return $this->responsiblePerson?->admin_parent?->name;
 }
+    /** @var array<int, array<int>> user id => branch user ids (per request) */
+    protected static array $branchScopeCache = [];
+
+    /** Whole-branch user ids for branch_admin / show-branch-leads; [] for everyone else. */
+    protected function branchScopeUserIds(User $user): array
+    {
+        if (! array_key_exists($user->id, static::$branchScopeCache)) {
+            static::$branchScopeCache[$user->id] = $user->seesBranchLeads()
+                ? array_map('intval', $user->leadScopeUserIds())
+                : [];
+        }
+
+        return static::$branchScopeCache[$user->id];
+    }
+
     protected function applyVisibilityRules(array $data, ?LeadHistory $assignmentHistory): array
 {
     $user = auth()->user();
@@ -458,7 +473,12 @@ protected function resolveOriginalBranch(): ?string
     }
 
     $isResponsible = (int) $this->responsible_person_id === (int) $user->id;
-    $isManager = $this->resource->isManagedBy($user);
+    // branch_admin / show-branch-leads see the lead's owner like a manager does for any
+    // lead in their branch (they have no subordinates of their own, so isManagedBy()
+    // alone hid the responsible person and the edit form then saved it back as null).
+    $isManager = $this->resource->isManagedBy($user)
+        || ($this->responsible_person_id
+            && in_array((int) $this->responsible_person_id, $this->branchScopeUserIds($user), true));
     $data['can_view_history'] = $isResponsible || $isManager;
 
     // Lead Pool (stage id = 10): الكروت مخفية عن أي حد غير الأدمن
