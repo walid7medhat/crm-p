@@ -2552,23 +2552,6 @@ watch(() => props.currentQuery, (query) => {
 
 }, { deep: true })
 
-// Deselecting every Source option drops the Source filter from the active search right
-// away (no extra "Search" click), keeping the panel open for further edits.
-watch(() => toCleanArray(form.value.source).length, (len, prevLen) => {
-    if (hydratingFromQuery.value || len > 0 || !prevLen) return
-
-    const activeSource = props.currentQuery?.source
-    const searchHasSource = toCleanArray(activeSource).length > 0
-    if (!searchHasSource) return
-
-    if (isFormEmpty()) {
-        // Source was the only filter → clear the search entirely.
-        emit('search', { query: null, activePill: null, activeFilters: [], keepOpen: true })
-    } else {
-        applySearch({ keepOpen: true })
-    }
-})
-
 
 
 const displaySavedFieldValues = () => {
@@ -3193,6 +3176,23 @@ function sourceDisplayText() {
         .map(v => sourceSelectOptions.value.find(o => o.value === v)?.text || String(v))
         .join(', ')
 }
+
+// Deselecting every Source option drops the Source filter from the active search right
+// away (no extra "Search" click), keeping the panel open for further edits.
+// (Placed after `form` / `toCleanArray` — the getter runs immediately at setup.)
+watch(() => toCleanArray(form.value.source).length, (len, prevLen) => {
+    if (hydratingFromQuery.value || len > 0 || !prevLen) return
+
+    const searchHasSource = toCleanArray(props.currentQuery?.source).length > 0
+    if (!searchHasSource) return
+
+    if (isFormEmpty()) {
+        // Source was the only filter → clear the search entirely.
+        emit('search', { query: null, activePill: null, activeFilters: [], keepOpen: true })
+    } else {
+        applySearch({ keepOpen: true })
+    }
+})
 
 
 
