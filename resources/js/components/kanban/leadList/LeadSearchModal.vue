@@ -388,6 +388,10 @@
 
                                 class="custom-v-select lead-search-rp-select lead-rp-multi"
 
+                                @click.stop
+
+                                @mousedown.stop
+
                                 @open="loadResponsiblePersons"
 
                                 @search="onResponsiblePersonSearch"
@@ -497,6 +501,10 @@
                                 append-to-body
 
                                 class="custom-v-select lead-search-rp-select lead-rp-multi"
+
+                                @click.stop
+
+                                @mousedown.stop
 
                                 @open="loadTeams"
 
@@ -691,6 +699,10 @@
                                 append-to-body
 
                                 class="custom-v-select office-multi-select"
+
+                                @click.stop
+
+                                @mousedown.stop
 
                             >
 
@@ -1152,6 +1164,10 @@
 
                                 class="custom-v-select lead-search-rp-select lead-rp-multi"
 
+                                @click.stop
+
+                                @mousedown.stop
+
                                 @open="loadResponsiblePersons"
 
                                 @search="onResponsiblePersonSearch"
@@ -1261,6 +1277,10 @@
                                 append-to-body
 
                                 class="custom-v-select lead-search-rp-select lead-rp-multi"
+
+                                @click.stop
+
+                                @mousedown.stop
 
                                 @open="loadTeams"
 
@@ -1455,6 +1475,10 @@
                                 append-to-body
 
                                 class="custom-v-select office-multi-select"
+
+                                @click.stop
+
+                                @mousedown.stop
 
                             >
 
