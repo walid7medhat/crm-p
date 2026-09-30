@@ -233,7 +233,7 @@
                                     @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)"
                                 >
-                                    <template #item="{ element: task, index }">
+                                    <template #item="{ element: task }">
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 cursor-pointer"
@@ -241,7 +241,7 @@
                                                     'kanban-card--mobile': kanbanIsMobile,
                                                     'kanban-card--selected': isLeadSelected(task.id),
                                                 }"
-                                                v-show="leadMatchesShortcutFilter(task) && (!kanbanIsMobile || mobileListFilterStageId !== MOBILE_FILTER_ALL || index === getMobileCardIndex(column))"
+                                                v-show="leadMatchesShortcutFilter(task)"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
@@ -454,23 +454,6 @@
                                             </div>
                                         </template>
                                 </draggable>
-                                <div
-                                    v-if="kanbanIsMobile && mobileListFilterStageId === MOBILE_FILTER_ALL && column.leads.length > 1"
-                                    class="mobile-stage-carousel-controls"
-                                >
-                                    <div class="mobile-stage-carousel-dots">
-                                        <button
-                                            v-for="(leadItem, dotIndex) in column.leads"
-                                            :key="`dot-${column.status}-${leadItem.id}`"
-                                            type="button"
-                                            class="mobile-stage-carousel-dot"
-                                            :class="{ 'is-active': dotIndex === getMobileCardIndex(column) }"
-                                            :aria-label="`Go to card ${dotIndex + 1}`"
-                                            @click.stop="setMobileCardIndex(column, dotIndex)"
-                                        />
-                                    </div>
-                                </div>
-                                
                             </div>
                         </div>
                     </div>
@@ -498,92 +481,17 @@
                 No leads match this view.
             </div>
 
-            <div v-else-if="kanbanIsMobile || listIsCompact" class="lead-list-cards" :class="{ 'lead-list-cards--grid': listIsCompact && !kanbanIsMobile }">
-                <article
-                    v-for="row in pagedListRows"
-                    :key="'m-' + row.task.id"
-                    class="lead-list-card"
-                    :class="{ 'is-selected': isLeadSelected(row.task.id) }"
-                    @click="onLeadCardClick(row.task, row.column, $event)"
-                    @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
-                >
-                    <div class="lead-list-card__top">
-                        <button
-                            v-if="isAdminOrSuperAdmin && leadSelectionActive"
-                            type="button"
-                            class="lead-list-check"
-                            :class="{ 'is-on': isLeadSelected(row.task.id) }"
-                            :aria-pressed="isLeadSelected(row.task.id)"
-                            aria-label="Select lead"
-                            @click.stop="toggleLeadSelection(row.task)"
-                        >
-                            <iconify-icon :icon="isLeadSelected(row.task.id) ? 'lucide:check' : 'lucide:square'" />
-                        </button>
-                        <div class="lead-list-name">
-                            <div class="lead-list-name__row">
-                                <span class="lead-list-name__title">{{ row.task.lead_name || 'Untitled' }}</span>
-                                <span v-if="row.task.has_service_duplicate" class="lead-list-chip lead-list-chip--alert">Blacklisted</span>
-                                <button
-                                    v-if="canSeeDuplicates && row.task.duplicate_no > 0"
-                                    type="button"
-                                    class="lead-list-chip lead-list-chip--dup"
-                                    @click.stop="openDuplicateLeadsModal(row.task.id, $event)"
-                                >
-                                    {{ row.task.duplicate_no }} dup
-                                </button>
-                            </div>
-                            <span v-if="row.task.lead_source || row.task.lead_branch_source" class="lead-list-name__source">
-                                {{ row.task.lead_source || row.task.lead_branch_source }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="lead-list-stage">
-                        <div class="lead-list-stage__track" aria-hidden="true">
-                            <span
-                                v-for="(col, segIndex) in columns"
-                                :key="'seg-m-' + row.task.id + '-' + col.status"
-                                class="lead-list-stage__seg"
-                                :style="{ background: segIndex <= listStageIndex(row.column) ? (row.column.color || '#64748b') : '#e8eef6' }"
-                            />
-                        </div>
-                        <span class="lead-list-stage__name">{{ row.column.title }}</span>
-                    </div>
-                    <div class="lead-list-card__meta">
-                        <div>
-                            <span class="lead-list-kicker">Activity</span>
-                            <span class="lead-list-value">{{ listActivityLabel(row.task) || 'No activities' }}</span>
-                        </div>
-                        <div>
-                            <span class="lead-list-kicker">Created</span>
-                            <span class="lead-list-value" :title="formatDate(row.task.created_at)">{{ formatListCreated(row.task.created_at) }}</span>
-                        </div>
-                        <div>
-                            <span class="lead-list-kicker">Phone</span>
-                            <span class="lead-list-value">{{ listPhone(row.task) || '—' }}</span>
-                        </div>
-                        <div>
-                            <span class="lead-list-kicker">Name</span>
-                            <span class="lead-list-value">{{ listLeadFullName(row.task) }}</span>
-                        </div>
-                    </div>
-                    <div
-                        v-if="hasResponsiblePerson(row.task)"
-                        class="lead-list-person"
-                        @click.stop="openPersonProfile(row.task, 'responsible', $event)"
-                        @mouseenter.stop="showPersonHoverCard(row.task, 'responsible', $event)"
-                        @mouseleave.stop="hidePersonHoverCard"
-                    >
-                        <img :src="responsiblePersonAvatar(row.task)" alt="" />
-                        <span>{{ row.task.responsible_person?.name }}</span>
-                    </div>
-                </article>
-            </div>
-
-            <div v-else class="lead-list-table-wrap">
+            <div v-else class="lead-list-table-shell">
+            <div
+                ref="listTableWrapRef"
+                class="lead-list-table-wrap"
+                @scroll="updateListScrollArrows"
+            >
                 <table class="lead-list-table">
                     <thead>
                         <tr>
                             <th v-if="isAdminOrSuperAdmin && leadSelectionActive" class="lead-list-table__check" scope="col" aria-label="Select"></th>
+                            <th class="lead-list-col-num" scope="col">#</th>
                             <th class="lead-list-col-lead" scope="col">Lead</th>
                             <th class="lead-list-col-stage" scope="col">Stage</th>
                             <th class="lead-list-col-optional" scope="col">Activity</th>
@@ -595,7 +503,7 @@
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in pagedListRows"
+                            v-for="(row, index) in pagedListRows"
                             :key="'r-' + row.task.id"
                             :class="{ 'is-selected': isLeadSelected(row.task.id) }"
                             @click="onLeadCardClick(row.task, row.column, $event)"
@@ -613,6 +521,7 @@
                                     <iconify-icon :icon="isLeadSelected(row.task.id) ? 'lucide:check' : 'lucide:square'" />
                                 </button>
                             </td>
+                            <td class="lead-list-col-num">{{ listRangeStart + index }}</td>
                             <td class="lead-list-col-lead">
                                 <div class="lead-list-name">
                                     <div class="lead-list-name__row">
@@ -675,6 +584,31 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <div
+                v-show="showListLeftZone"
+                class="lead-list-nav lead-list-nav--left"
+                title="Move left"
+                aria-label="Move left"
+                @mouseenter="startListScrollLeft"
+                @mouseleave="stopListScroll"
+            >
+                <span class="kanban-nav-arrow kanban-nav-arrow-left">
+                    <iconify-icon icon="lucide:chevron-left" class="kanban-nav-arrow-icon" />
+                </span>
+            </div>
+            <div
+                v-show="showListRightZone"
+                class="lead-list-nav lead-list-nav--right"
+                title="Move right"
+                aria-label="Move right"
+                @mouseenter="startListScrollRight"
+                @mouseleave="stopListScroll"
+            >
+                <span class="kanban-nav-arrow kanban-nav-arrow-right">
+                    <iconify-icon icon="lucide:chevron-right" class="kanban-nav-arrow-icon" />
+                </span>
+            </div>
             </div>
 
         </div>
@@ -1439,7 +1373,6 @@ const showMobileListFilterSheet = ref(false)
 const mobileQuickLead = ref(null)
 const mobileQuickSourceColumn = ref(null)
 const mobilePickStageId = ref(null)
-const mobileStageCardIndex = ref({})
 const mobileTouchStartX = ref({})
 const mobileTouchStartY = ref({})
 const mobileTouchLastX = ref({})
@@ -1981,6 +1914,50 @@ function stopScroll() {
     if (scrollInterval.value) {
         clearInterval(scrollInterval.value)
         scrollInterval.value = null
+    }
+}
+
+const listTableWrapRef = ref(null)
+const showListLeftZone = ref(false)
+const showListRightZone = ref(false)
+let listScrollInterval = null
+
+function updateListScrollArrows() {
+    const el = listTableWrapRef.value
+    if (!el) {
+        showListLeftZone.value = false
+        showListRightZone.value = false
+        return
+    }
+    const canScroll = el.scrollWidth - el.clientWidth > 2
+    showListLeftZone.value = canScroll && el.scrollLeft > 2
+    showListRightZone.value = canScroll && el.scrollWidth - el.clientWidth > el.scrollLeft + 2
+}
+
+function startListScrollLeft() {
+    stopListScroll()
+    listScrollInterval = setInterval(() => {
+        const el = listTableWrapRef.value
+        if (!el) return
+        el.scrollLeft -= SCROLL_SPEED
+        updateListScrollArrows()
+    }, SCROLL_TICK_MS)
+}
+
+function startListScrollRight() {
+    stopListScroll()
+    listScrollInterval = setInterval(() => {
+        const el = listTableWrapRef.value
+        if (!el) return
+        el.scrollLeft += SCROLL_SPEED
+        updateListScrollArrows()
+    }, SCROLL_TICK_MS)
+}
+
+function stopListScroll() {
+    if (listScrollInterval) {
+        clearInterval(listScrollInterval)
+        listScrollInterval = null
     }
 }
 
@@ -2648,12 +2625,6 @@ function handleLeadConverted(deal) {
 
 watch(() => columns.value?.length, () => {
     nextTick(() => updateScrollArrows())
-    columns.value.forEach((column) => {
-        const key = String(column.status)
-        const max = Math.max((column.leads?.length || 1) - 1, 0)
-        const current = mobileStageCardIndex.value[key] ?? 0
-        mobileStageCardIndex.value[key] = Math.min(current, max)
-    })
 })
 const enabledFields = computed(() => {
     return cardFields.value
@@ -3164,12 +3135,6 @@ watch(cardFields, () => {
 }, { deep: true })
 let unsubscribeLeadViewUpdated = null
 
-const listCompactQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 1440px)') : null
-const listIsCompact = ref(!!listCompactQuery?.matches)
-function syncListCompact() {
-    listIsCompact.value = !!listCompactQuery?.matches
-}
-
 onMounted(async () => {
     unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
     markKanbanReady()
@@ -3194,9 +3159,12 @@ onMounted(async () => {
   setupRevertAlertListener();
     fetchRevertNotifications();
     
-    nextTick(() => updateScrollArrows())
-    listCompactQuery?.addEventListener('change', syncListCompact)
+    nextTick(() => {
+        updateScrollArrows()
+        updateListScrollArrows()
+    })
     window.addEventListener('resize', updateScrollArrows)
+    window.addEventListener('resize', updateListScrollArrows)
     window.addEventListener('echo-ready', onEchoReady)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
@@ -3216,9 +3184,10 @@ onUnmounted(() => {
     }
     onLeadDragEnd()
     stopScroll()
+    stopListScroll()
     cancelPersonHoverHide()
-    listCompactQuery?.removeEventListener('change', syncListCompact)
     window.removeEventListener('resize', updateScrollArrows)
+    window.removeEventListener('resize', updateListScrollArrows)
     window.removeEventListener('echo-ready', onEchoReady)
     cleanup()
 })
@@ -4015,27 +3984,6 @@ function formatActivityDate(task) {
     return formatDate(activityDisplayAt(task))
 }
 
-function getMobileCardIndex(column) {
-    const key = String(column.status)
-    const current = mobileStageCardIndex.value[key] ?? 0
-    const max = Math.max((column.leads?.length || 1) - 1, 0)
-    if (current > max) {
-        mobileStageCardIndex.value[key] = max
-        return max
-    }
-    if (current < 0) {
-        mobileStageCardIndex.value[key] = 0
-        return 0
-    }
-    return current
-}
-
-function setMobileCardIndex(column, index) {
-    const key = String(column.status)
-    const max = Math.max((column.leads?.length || 1) - 1, 0)
-    mobileStageCardIndex.value[key] = Math.min(Math.max(index, 0), max)
-}
-
 function onMobileCardTouchStart(column, event) {
     if (!kanbanIsMobile.value) return
     const key = String(column.status)
@@ -4137,9 +4085,10 @@ function setBoardView(view) {
     } catch (e) {
         // ignore private-mode storage failures
     }
+    nextTick(() => updateListScrollArrows())
 }
 
-const LIST_PAGE_SIZE = 20
+const LIST_PAGE_SIZE = 10
 const listPage = ref(1)
 
 const listRows = computed(() => {
@@ -4159,6 +4108,10 @@ const listPageCount = computed(() => Math.max(1, Math.ceil(listRows.value.length
 const pagedListRows = computed(() => {
     const start = (listPage.value - 1) * LIST_PAGE_SIZE
     return listRows.value.slice(start, start + LIST_PAGE_SIZE)
+})
+
+watch(pagedListRows, () => {
+    nextTick(() => updateListScrollArrows())
 })
 
 const listRangeStart = computed(() => (listRows.value.length ? (listPage.value - 1) * LIST_PAGE_SIZE + 1 : 0))
@@ -6655,11 +6608,16 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .column-content-scrollable {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 0 !important;
     height: auto !important;
-    max-height: none;
-    overflow: visible;
+    /* Stage header stays put; finger-scroll the leads inside this stage. */
+    max-height: min(68dvh, 640px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: auto;
 }
 
 .kanban-outer--mobile .tasks-list {
@@ -7054,39 +7012,6 @@ const fetchRevertNotifications = async () => {
     cursor: not-allowed;
 }
 
-.kanban-outer--mobile .mobile-stage-carousel-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    margin-top: 6px;
-    margin-bottom: 2px;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-dots {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex: 1;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-dot {
-    width: 8px;
-    height: 8px;
-    border: none;
-    border-radius: 50%;
-    background: #d1d5db;
-    cursor: pointer;
-    padding: 0;
-}
-
-.kanban-outer--mobile .mobile-stage-carousel-dot.is-active {
-    width: 20px;
-    border-radius: 999px;
-    background: #f59e0b;
-}
-
 .mobile-create-new-fixed {
     position: fixed;
     left: 50%;
@@ -7390,12 +7315,12 @@ const fetchRevertNotifications = async () => {
     flex-shrink: 0;
 }
 
-.kanban-container.kanban-container--list {
+.kanban-outer--list:not(.kanban-outer--mobile) .kanban-container.kanban-container--list {
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    flex: 1 1 0 !important;
     height: auto !important;
-    min-height: 0;
+    min-height: 0 !important;
     overflow: hidden !important;
     padding: 0 8px 8px;
 }
@@ -7445,6 +7370,15 @@ const fetchRevertNotifications = async () => {
     font-size: 14px;
 }
 
+.lead-list-table-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
 .lead-list-table-wrap {
     flex: 1 1 auto;
     width: 100%;
@@ -7453,11 +7387,31 @@ const fetchRevertNotifications = async () => {
     -webkit-overflow-scrolling: touch;
 }
 
+.lead-list-nav {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    cursor: pointer;
+}
+
+.lead-list-nav--left {
+    left: 14px;
+}
+
+.lead-list-nav--right {
+    right: 14px;
+}
+
 .lead-list-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 760px;
+    min-width: 1120px;
 }
 
 .lead-list-table th {
@@ -7476,8 +7430,23 @@ const fetchRevertNotifications = async () => {
     white-space: nowrap;
 }
 
+.lead-list-col-num,
+.lead-list-num {
+    width: 36px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.lead-list-num {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 18px;
+}
+
 .lead-list-table td {
-    padding: 14px;
+    padding: 10px 14px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     background: transparent;
@@ -7692,23 +7661,38 @@ const fetchRevertNotifications = async () => {
     flex: 1 1 auto;
     gap: 10px;
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding: 10px 12px 4px;
+    scrollbar-width: thin;
+    padding: 10px 12px 16px;
+}
+
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list-cards,
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list-table-shell {
+    flex: 1 1 0;
+    height: 0;
+    min-height: 0;
+}
+
+.kanban-outer--list:not(.kanban-outer--mobile) .lead-list-table-wrap {
+    overflow-y: auto;
 }
 
 .lead-list-cards--grid {
     display: grid;
     grid-template-columns: 1fr;
+    grid-auto-rows: max-content;
+    align-content: start;
     gap: 12px;
-    padding: 12px;
+    padding: 12px 12px 16px;
     align-items: stretch;
-}
-
-@media (min-width: 1100px) {
-    .lead-list-cards--grid {
-        grid-template-columns: 1fr 1fr;
-    }
 }
 
 .lead-list-card {
@@ -7770,33 +7754,6 @@ const fetchRevertNotifications = async () => {
     padding-top: 10px;
     border-top: 1px solid #f1f5f9;
     max-width: none;
-}
-
-@media (max-width: 1680px) {
-    .lead-list-col-optional {
-        display: none;
-    }
-
-    .lead-list-table {
-        table-layout: fixed;
-        min-width: 0;
-    }
-
-    .lead-list-col-lead { width: 30%; }
-    .lead-list-col-stage { width: 16%; }
-    .lead-list-col-created { width: 16%; }
-    .lead-list-col-person { width: 22%; }
-    .lead-list-col-phone { width: 16%; }
-
-    .lead-list-name,
-    .lead-list-stage,
-    .lead-list-person {
-        max-width: 100%;
-    }
-
-    .lead-list-stage {
-        min-width: 0;
-    }
 }
 
 @media (max-width: 768px) {
