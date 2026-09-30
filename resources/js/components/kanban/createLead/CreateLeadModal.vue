@@ -1505,7 +1505,7 @@ watch(selectedExistingClient, (client) => {
             } catch {
                 phoneDuplicates.value[field] = null
             }
-        }, 500)
+        }, 250)
     }
 
     const phoneDuplicateNote = (field) => {

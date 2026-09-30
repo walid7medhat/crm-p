@@ -842,15 +842,20 @@ class LeadController extends Controller
         // column, so match the usual ways the same number is written.
         $secondaryVariants = array_values(array_unique(array_filter([$raw, $digits, '+' . $digits])));
 
-        $query = Lead::query()->where(function ($q) use ($digits, $secondaryVariants) {
-            $q->where('work_phone_digits', $digits)
-                ->orWhereIn('work_phone_2', $secondaryVariants);
-        });
+        // Two single-column lookups, each on its own index (work_phone_digits,
+        // work_phone_2), merged in PHP. One query with OR across both columns can't use
+        // either index and scans the whole leads table.
+        $ids = Lead::query()->where('work_phone_digits', $digits)->pluck('id')
+            ->merge(Lead::query()->whereIn('work_phone_2', $secondaryVariants)->pluck('id'))
+            ->unique()
+            ->sortDesc()
+            ->values();
 
-        $count = (clone $query)->count();
-        $leads = $query->with(['stage:id,name', 'responsiblePerson:id,name,display_name'])
+        $count = $ids->count();
+        $leads = Lead::query()
+            ->whereIn('id', $ids->take(5)->all())
+            ->with(['stage:id,name', 'responsiblePerson:id,name,display_name'])
             ->latest('id')
-            ->limit(5)
             ->get(['id', 'lead_name', 'first_name', 'stage_id', 'responsible_person_id', 'created_at'])
             ->map(fn (Lead $l) => [
                 'id' => $l->id,
