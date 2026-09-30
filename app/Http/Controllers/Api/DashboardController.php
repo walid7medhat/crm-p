@@ -1226,9 +1226,29 @@ public function getPropertyTypesWithListings(Request $request)
         try {
             [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin] = $this->analyticsContext($request);
 
+            // Short-lived cache per date range: super_admin has its own entry, admin its
+            // own, and everyone else caches per user (their own hierarchy).
+            $cacheScope = match (true) {
+                $currentUser->hasRole('super_admin') => 'super_admin',
+                $currentUser->hasRole('admin') => 'admin',
+                default => 'user' . $currentUser->id,
+            };
+            $cacheKey = sprintf(
+                'analytics:crm:%s:%s:%s',
+                $cacheScope,
+                $rangeFrom?->toDateTimeString() ?? '-',
+                $rangeTo?->toDateTimeString() ?? '-'
+            );
+
+            $crm = \Illuminate\Support\Facades\Cache::remember(
+                $cacheKey,
+                now()->addMinutes(2),
+                fn () => $this->buildCrmAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo)
+            );
+
             return response()->json([
                 'success' => true,
-                'crm' => $this->buildCrmAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo),
+                'crm' => $crm,
             ]);
         } catch (\Throwable $e) {
             report($e);
@@ -1320,8 +1340,27 @@ public function getPropertyTypesWithListings(Request $request)
         };
 
         $leadBase = $scopeLeads(Lead::query());
-        $totalLeads = (clone $leadBase)->count();
-        $newLeads = (clone $leadBase)->where('created_at', '>=', now()->subDays(7))->count();
+
+        // ONE pass for every plain counter (was ~10 separate COUNT/SUM queries — each a
+        // full scan of the leads table for super admin / admin, whose scope is everyone).
+        $agg = (clone $leadBase)
+            ->toBase()
+            ->selectRaw(
+                'COUNT(*) AS total_leads,
+                 SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS new_leads,
+                 SUM(CASE WHEN converted_at IS NOT NULL THEN 1 ELSE 0 END) AS converted,
+                 SUM(CASE WHEN interaction_result = \'no_answer\' THEN 1 ELSE 0 END) AS no_answer,
+                 SUM(CASE WHEN interaction_result = \'answered\' THEN 1 ELSE 0 END) AS answered,
+                 SUM(CASE WHEN LOWER(priority) = \'cold\' OR LOWER(status_lead) = \'cold\' THEN 1 ELSE 0 END) AS cold,
+                 SUM(CASE WHEN LOWER(priority) = \'warm\' OR LOWER(status_lead) = \'warm\' THEN 1 ELSE 0 END) AS warm,
+                 SUM(CASE WHEN LOWER(priority) = \'hot\' OR LOWER(status_lead) = \'hot\' THEN 1 ELSE 0 END) AS hot,
+                 SUM(CASE WHEN converted_at IS NOT NULL THEN COALESCE(budget_to, 0) ELSE 0 END) AS revenue_from_leads',
+                [now()->subDays(7)]
+            )
+            ->first();
+
+        $totalLeads = (int) ($agg->total_leads ?? 0);
+        $newLeads = (int) ($agg->new_leads ?? 0);
 
         $stageCountsById = (clone $leadBase)
             ->select('stage_id', DB::raw('count(*) as total'))
@@ -1354,21 +1393,14 @@ public function getPropertyTypesWithListings(Request $request)
             return $total;
         };
 
-        $heatCount = function (array $values) use ($leadBase) {
-            return (clone $leadBase)->where(function ($q) use ($values) {
-                $q->whereIn('priority', $values)
-                    ->orWhereIn('status_lead', $values);
-            })->count();
-        };
-
-        $converted = (clone $leadBase)->whereNotNull('converted_at')->count();
+        $converted = (int) ($agg->converted ?? 0);
         $lost = $pickStage(['lost', 'unqualified', 'junk', 'closed lost']);
         $negotiation = $pickStage(['negotiat', 'proposal', 'offer']);
         $qualified = $pickStage(['qualified', 'hot', 'warm']);
         $followUp = $pickStage(['follow', 'callback', 'scheduled']);
         $contacted = $pickStage(['contacted', 'assigned', 'in progress']);
-        $noAnswer = (clone $leadBase)->where('interaction_result', 'no_answer')->count();
-        $answered = (clone $leadBase)->where('interaction_result', 'answered')->count();
+        $noAnswer = (int) ($agg->no_answer ?? 0);
+        $answered = (int) ($agg->answered ?? 0);
 
         $conversionRate = $totalLeads > 0 ? round(($converted / $totalLeads) * 100, 1) : 0;
 
@@ -1424,7 +1456,7 @@ public function getPropertyTypesWithListings(Request $request)
         $days = min(14, max(7, ($rangeFrom && $rangeTo) ? $rangeFrom->diffInDays($rangeTo) + 1 : 14));
         $trendSeries = $this->buildDailyTrend($leadBase, $days, 'M j');
 
-        $revenueFromLeads = (clone $leadBase)->whereNotNull('converted_at')->sum('budget_to') ?: 0;
+        $revenueFromLeads = (float) ($agg->revenue_from_leads ?? 0);
 
         $salesMetrics ??= $this->computeConvertedSalesMetrics($currentUser, $isAdmin, $rangeFrom, $rangeTo);
 
@@ -1435,9 +1467,9 @@ public function getPropertyTypesWithListings(Request $request)
             'no_answer' => $noAnswer,
             'follow_up' => $followUp,
             'qualified' => $qualified,
-            'cold' => $heatCount(['cold', 'Cold']),
-            'warm' => $heatCount(['warm', 'Warm']),
-            'hot' => $heatCount(['hot', 'Hot']),
+            'cold' => (int) ($agg->cold ?? 0),
+            'warm' => (int) ($agg->warm ?? 0),
+            'hot' => (int) ($agg->hot ?? 0),
             'negotiation' => $negotiation,
             'converted' => $converted,
             'lost' => $lost,
