@@ -44,6 +44,7 @@
         </div>
 
         <footer class="dropdown-foot">
+          <MobilePushToggle />
           <router-link to="/notifications" class="foot-link" @click="showDropdown = false">
             Open notifications page
           </router-link>
@@ -57,6 +58,7 @@
 import api from '@/plugins/axios'
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
+import MobilePushToggle from '@/components/layout/MobilePushToggle.vue'
 
 function getApiBaseUrl() {
   const base =
@@ -70,6 +72,7 @@ function getApiBaseUrl() {
 
 export default {
   name: 'NotificationBell',
+  components: { MobilePushToggle },
   data() {
     return {
       notifications: [],

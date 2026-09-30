@@ -71,4 +71,23 @@ return [
         'secret' => env('WORDPRESS_LEAD_SECRET'),
     ],
 
+    /*
+    | Proof-of-concept only. A successful manual assignment notifies this one
+    | user on the existing private user channel. Everyone else receives nothing.
+    */
+    'lead_assignment_test' => [
+        'enabled' => filter_var(env('PUSHER_LEAD_ASSIGNMENT_TEST_MODE', false), FILTER_VALIDATE_BOOLEAN),
+        'user_id' => env('PUSHER_LEAD_ASSIGNMENT_TEST_USER_ID'),
+    ],
+
+    /*
+    | Web Push proof-of-concept. The private key stays server-side.
+    | Sending still requires lead_assignment_test to be enabled for one user.
+    */
+    'web_push' => [
+        'subject' => env('WEB_PUSH_VAPID_SUBJECT', 'mailto:admin@oiaproperties.com'),
+        'public_key' => env('WEB_PUSH_VAPID_PUBLIC_KEY'),
+        'private_key' => env('WEB_PUSH_VAPID_PRIVATE_KEY'),
+    ],
+
 ];

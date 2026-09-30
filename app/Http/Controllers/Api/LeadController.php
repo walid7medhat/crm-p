@@ -34,6 +34,9 @@ use App\Services\LeadTextSearch;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use App\Services\LeadPoolAssignmentService;
+use App\Notifications\AssignmentPocNotification;
+use App\Jobs\SendLeadAssignmentWebPush;
+use Illuminate\Support\Facades\Log;
 class LeadController extends Controller
 {
     /** Branch admins can also assign leads to this user, on top of their own branch. */
@@ -953,12 +956,20 @@ class LeadController extends Controller
             }
         }
         $oldPerson = User::find($lead->responsible_person_id);
+        $previousResponsibleId = $lead->responsible_person_id;
 
         $lead->update([
             'responsible_person_id' => $request->responsible_person_id,
             'last_stage_change_at' => now(),
             'revert'=>null,
         ]);
+
+        $this->sendLeadAssignmentTestNotification(
+            $previousResponsibleId,
+            $request->responsible_person_id,
+            $lead->id
+        );
+
                 $changes = [
                     'old_person_id'=>$oldPerson?->id,
             'old_person' => $oldPerson?->name,
@@ -2296,6 +2307,58 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     private function broadcastLeadUpdated(Lead $lead, string $actionType, ?array $changes = null): void
     {
         broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
+    }
+
+    /**
+     * Proof-of-concept only. Never affects assignment success.
+     */
+    private function sendLeadAssignmentTestNotification(mixed $previousResponsibleId, mixed $newResponsibleId, int $leadId): void
+    {
+        $testUserId = $this->assignmentTestRecipientId($previousResponsibleId, $newResponsibleId);
+        if ($testUserId === null) {
+            return;
+        }
+
+        $recipient = User::query()->find($testUserId);
+        if (! $recipient) {
+            return;
+        }
+
+        try {
+            $recipient->notify(new AssignmentPocNotification());
+        } catch (\Throwable $e) {
+            Log::warning('lead_assignment.test_notification_failed', [
+                'lead_id' => $leadId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            SendLeadAssignmentWebPush::dispatch($testUserId);
+        } catch (\Throwable $e) {
+            Log::warning('lead_assignment.test_web_push_dispatch_failed', [
+                'lead_id' => $leadId,
+                'error' => $e::class,
+            ]);
+        }
+    }
+
+    private function assignmentTestRecipientId(mixed $previousResponsibleId, mixed $newResponsibleId): ?int
+    {
+        if ((int) $previousResponsibleId === (int) $newResponsibleId) {
+            return null;
+        }
+
+        if (! config('services.lead_assignment_test.enabled')) {
+            return null;
+        }
+
+        $testUserId = (int) config('services.lead_assignment_test.user_id');
+        if ($testUserId < 1 || (int) $newResponsibleId !== $testUserId) {
+            return null;
+        }
+
+        return $testUserId;
     }
 
     /**

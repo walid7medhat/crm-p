@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\KanbanSettingsController;
 use App\Http\Controllers\Api\LeadScoringSettingController;
 use App\Http\Controllers\Api\LeadAssignmentController;
+use App\Http\Controllers\Api\PushSubscriptionController;
 use App\Http\Controllers\Api\InvestmentController;
 use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
@@ -710,6 +711,8 @@ Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate'
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);
 Route::patch('/leads/{lead}/name', [LeadController::class, 'updateName']);
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
+Route::get('/push-subscriptions/config', [PushSubscriptionController::class, 'config']);
+Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
 Route::put('/leads/{lead}/extra-client-requirements', [LeadController::class, 'updateExtraClientRequirements']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
 // Auto-revert disabled for now.
