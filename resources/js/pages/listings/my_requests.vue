@@ -799,6 +799,18 @@ function closeProfilePopup() {
     showProfilePopup.value = false
     profileUserId.value = null
 }
+function viewProperty(propertyId) {
+    if (propertyId) {
+        router.push(`/property-details/${propertyId}`)
+    } else {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Property not found',
+            icon: 'error',
+            confirmButtonColor: '#0B0736'
+        })
+    }
+}
 watch(searchText, () => {
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
     searchDebounceTimer = setTimeout(() => {
