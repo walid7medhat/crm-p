@@ -477,7 +477,7 @@ SQL;
                    
                 }
 
-        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager'))){
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin'))){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
@@ -1394,7 +1394,7 @@ public function getMatchingListings(Request $request)
             && (bool) $listing->approved;
         if (!$isPubliclyVisible) {
             $isOwner = $user && ((int) $user->id === (int) $listing->agent_id || (int) $user->id === (int) $listing->added_by);
-            $isPrivileged = $user && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager'));
+            $isPrivileged = $user && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin'));
             if (!$isOwner && !$isPrivileged) {
                 throw new \Exception('Listing Not found');
             }

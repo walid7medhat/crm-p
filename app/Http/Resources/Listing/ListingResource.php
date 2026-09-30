@@ -137,6 +137,7 @@ public const FEATURE_LABELS = [
         $canSeeStatus = $user && (
             $user->hasRole('super_admin')
             || $user->hasRole('admin')
+            || $user->hasRole('branch_admin')
             || $this->agent_id == $user->id
             || $this->added_by == $user->id
             || ($user->hasRole('manager') && $user->listing_team == 1)

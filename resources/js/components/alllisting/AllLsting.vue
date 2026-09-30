@@ -457,6 +457,8 @@ export default {
             userRole.value = 'super_admin';
           } else if (userRoles.includes('admin') || roleName === 'admin') {
             userRole.value = 'admin';
+          } else if (userRoles.includes('branch_admin') || roleName === 'branch_admin') {
+            userRole.value = 'admin';
           } else {
             userRole.value = 'user';
           }
