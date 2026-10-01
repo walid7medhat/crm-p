@@ -6993,14 +6993,12 @@ const paintPaymentDetailsPage = async (pdf, container) => {
   const cards = model.cards;
   const gap = 2;
   // Keep each card at its "4-up" width even when fewer cards render (e.g. Original
-  // price / Premium hidden for completed listings), and right-align the group instead
-  // of stretching the remaining cards to fill the full row.
+  // price / Premium hidden for completed listings), instead of stretching the
+  // remaining cards to fill the full row.
   const cardW = (innerW - gap * 3) / 4;
   const cardH = 12;
-  const groupW = cardW * cards.length + gap * (cards.length - 1);
-  const groupStartX = margin + innerW - groupW;
   cards.forEach((card, i) => {
-    const x = groupStartX + i * (cardW + gap);
+    const x = margin + i * (cardW + gap);
     if (card.hero) pdf.setFillColor(...navy);
     else pdf.setFillColor(232, 236, 242);
     pdf.roundedRect(x, y, cardW, cardH, 1.6, 1.6, 'F');
