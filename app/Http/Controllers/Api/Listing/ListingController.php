@@ -1395,7 +1395,23 @@ public function getMatchingListings(Request $request)
         if (!$isPubliclyVisible) {
             $isOwner = $user && ((int) $user->id === (int) $listing->agent_id || (int) $user->id === (int) $listing->added_by);
             $isPrivileged = $user && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin'));
-            if (!$isOwner && !$isPrivileged) {
+
+            // Team lead: same team-scoped exception getPendingApprovals() already grants
+            // for the list view — without this, a team lead could see their subordinate's
+            // pending listing in "Need Approval Listings" but not open/approve it.
+            $isTeamLeadOverTheirTeam = false;
+            if (!$isOwner && !$isPrivileged && $user && $user->hasRole('team_lead') && $user->is_listing_team) {
+                $teamIds = User::where(function ($q) use ($user) {
+                    $q->where('id', $user->id)
+                        ->orWhere('parent_id', $user->id)
+                        ->orWhereHas('parent', function ($parentQuery) use ($user) {
+                            $parentQuery->where('parent_id', $user->id);
+                        });
+                })->pluck('id')->toArray();
+                $isTeamLeadOverTheirTeam = in_array((int) $listing->agent_id, $teamIds, true);
+            }
+
+            if (!$isOwner && !$isPrivileged && !$isTeamLeadOverTheirTeam) {
                 throw new \Exception('Listing Not found');
             }
         }
