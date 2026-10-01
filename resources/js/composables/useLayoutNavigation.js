@@ -455,6 +455,8 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       });
     }
 
+    const canListOwners = !hasPermission || hasPermission('owners-list');
+
     if (isAdmin) {
       tabs.push({
         id: 'requests',
@@ -464,7 +466,18 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         matchPaths: REQUESTS_ADMIN_PATHS,
         count: listingTabCounts.requests || 0,
       });
-      
+
+      if (canListOwners) {
+        tabs.push({
+          id: 'owners',
+          label: 'Owners',
+          type: 'route',
+          path: '/owners',
+          matchPaths: ['/owners', '/add-owner'],
+          count: 0,
+        });
+      }
+
       if (user?.is_listing_team && 
           (user.roles?.includes('super_admin') || 
            user.roles?.includes('admin') || 
@@ -522,6 +535,17 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         matchPaths: ['/my-orders'],
         count: listingTabCounts.orders || 0,
       });
+
+      if (canListOwners) {
+        tabs.push({
+          id: 'owners',
+          label: 'Owners',
+          type: 'route',
+          path: '/owners',
+          matchPaths: ['/owners', '/add-owner'],
+          count: 0,
+        });
+      }
 
       if (user?.is_listing_team &&
           (user.roles?.includes('super_admin') || 
