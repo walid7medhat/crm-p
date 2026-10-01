@@ -477,7 +477,7 @@ SQL;
                    
                 }
 
-        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin'))){
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin') || ($user->hasRole('team_lead') && $user->is_listing_team))){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
