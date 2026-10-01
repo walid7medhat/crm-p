@@ -7469,7 +7469,7 @@ const createPaymentDetailsSlide = () => {
       { label: 'Selling price', value: fmtAed(sellingPrice), hero: true },
       ...(isUnderConstruction ? [{ label: 'Original price', value: fmtAed(originalPrice) }] : []),
       ...(planLabel ? [{ label: 'Payment plan', value: planLabel }] : []),
-      { label: 'Premium', value: fmtAed(premium), negative: premium < 0 },
+      ...(isUnderConstruction ? [{ label: 'Premium', value: fmtAed(premium), negative: premium < 0 }] : []),
     ],
     showInstallments: Boolean(installmentTable),
     installments: [

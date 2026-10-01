@@ -26,7 +26,7 @@
           <div class="pd-cell-label">Payment plan</div>
           <div class="pd-cell-value pd-cell-value--dark">{{ paymentPlanLabel || '—' }}</div>
         </div>
-        <div class="pd-cell pd-cell--muted">
+        <div class="pd-cell pd-cell--muted" v-if="isUnderConstruction">
           <div class="pd-cell-label">Premium </div>
           <div class="pd-cell-value pd-cell-value--dark" :class="{ 'pd-text-danger': premiumAmount < 0 }">
             {{ formatAed(premiumAmount) }}
