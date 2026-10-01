@@ -771,7 +771,6 @@ import {
   CRM_SECTIONS,
   resolveCrmSection,
   rememberCrmSection,
-  getListingsEntryPath,
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
@@ -802,7 +801,9 @@ function goBack() {
 }
 
 function goBackToListings() {
-  router.push(getListingsEntryPath('/alllisting'));
+  // Always the real All Listing page — never the cached/remembered last-visited
+  // listings path.
+  router.push('/alllisting');
 }
 
 function goBackToAgentsList() {

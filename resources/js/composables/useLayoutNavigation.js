@@ -168,10 +168,11 @@ export function isListingsRememberablePath(path) {
   if (LISTINGS_FORM_PATHS.includes(path)) return false;
   if (path.endsWith('/edit')) return false;
   if (LISTINGS_REQUEST_PATHS.includes(path)) return false;
-  // Projects is its own section reachable from the Listings dropdown, not the Listings
-  // table itself — visiting it must not hijack the top-level "Listings" sidebar link into
-  // always reopening Projects afterward. That link should always land on All Listing.
+  // Projects and Owners are their own sections reachable from the Listings dropdown, not
+  // the Listings table itself — visiting either must not hijack the top-level "Listings"
+  // sidebar link into reopening them afterward. That link should always land on All Listing.
   if (path === '/projects' || path.startsWith('/projects/')) return false;
+  if (path === '/owners' || path.startsWith('/owners/') || path === '/add-owner') return false;
   return true;
 }
 
@@ -422,21 +423,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     // Agents get their own My Listing tab; admins / super admins see All Listings only.
     const showMyListings = !isAdmin && !isSuperAdmin;
 
-    // '/my-listing' and '/owners' must leave the Listings tab's match set once they have
-    // their own tab, otherwise isTabActive lights up both at once on that route.
-    const listingsExcludedPaths = showMyListings ? ['/my-listing', '/owners'] : ['/owners'];
-    const listingsMatchPaths = LISTINGS_INVENTORY_PATHS.filter((p) => !listingsExcludedPaths.includes(p));
-
-    const tabs = [
-      // {
-      //   id: 'listings',
-      //   label: 'Listings',
-      //   type: 'route',
-      //   path: '/alllisting',
-      //   matchPaths: listingsMatchPaths,
-      //   count: listingTabCounts.listings || 0,
-      // },
-    ];
+    const tabs = [];
 
     if (showMyListings) {
       tabs.push({

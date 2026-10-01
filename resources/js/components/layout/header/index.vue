@@ -525,7 +525,6 @@ import {
   buildListingsSidebarSections,
   buildSettingsSidebarSections,
   CRM_SECTIONS,
-  getListingsEntryPath,
   resolveCrmSection,
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
@@ -897,7 +896,9 @@ const showCrmListingsFlat = computed(() =>
 );
 
 
-const crmListingsFlatPath = computed(() => getListingsEntryPath('/alllisting'));
+// Always the real All Listing page — never the cached/remembered last-visited listings
+// path, so the sidebar "Listings" link is predictable regardless of what was last viewed.
+const crmListingsFlatPath = computed(() => '/alllisting');
 const mainMenuItems = computed(() => {
   const items = [];
 
@@ -1050,7 +1051,7 @@ const mobileDockItems = computed(() => {
 
   if (isAdmin.value || isShowOnlyListing.value) {
     items.push({
-      path: isShowOnlyListing.value ? '/alllisting' : getListingsEntryPath(),
+      path: '/alllisting',
       label: 'Listings',
       iconSrc: listingsIcon.value,
     });
