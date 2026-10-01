@@ -110,8 +110,8 @@ async function raiseHomeIconAlert(notification) {
     if (!registration) return
     await registration.showNotification('New Lead Assigned', {
       body: 'You have a new lead assigned to you.',
-      icon: '/assets/images/altcrm-logo.png',
-      badge: '/assets/images/altcrm-logo.png',
+      icon: '/assets/images/pwa/icon-192.png',
+      badge: '/assets/images/pwa/icon-192.png',
       tag: 'lead-assignment',
       renotify: true,
       data: { url: '/' },
@@ -574,4 +574,11 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 // Mount app
 app.mount('#app')
+const bootSplash = document.getElementById('boot-splash')
+if (bootSplash) {
+  requestAnimationFrame(() => {
+    bootSplash.classList.add('is-done')
+    window.setTimeout(() => bootSplash.remove(), 400)
+  })
+}
 scheduleEchoInit()
