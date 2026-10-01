@@ -571,6 +571,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/properties/map', [ListingController::class, 'map']);
     Route::get('/suggestions', [SuggestionController::class, 'index']);
     Route::post('/suggestions', [SuggestionController::class, 'store']);
+    Route::post('/suggestions/{suggestion}/replies', [SuggestionController::class, 'reply']);
     Route::get('dashboard/stats',[DashboardController::class,'getStats']);
     Route::get('/dashboard/listings-statistics', [DashboardController::class, 'getListingsStatistics']);
     Route::get('/dashboard/active-agents', [DashboardController::class, 'getActiveAgents']);
