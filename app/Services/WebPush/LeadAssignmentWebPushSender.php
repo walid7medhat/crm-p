@@ -3,6 +3,7 @@
 namespace App\Services\WebPush;
 
 use App\Models\PushSubscription;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\MessageSentReport;
@@ -13,7 +14,7 @@ class LeadAssignmentWebPushSender
 {
     public function sendToUser(int $userId, int $leadId): void
     {
-        if (! $this->isTestRecipient($userId)) {
+        if (! $this->isEligibleUser($userId)) {
             return;
         }
 
@@ -85,15 +86,16 @@ class LeadAssignmentWebPushSender
         return '/?lead='.$leadId;
     }
 
-    public function isTestRecipient(int $userId): bool
+    /**
+     * Any active CRM account. Role is not checked. The old test-user flag is ignored.
+     */
+    public function isEligibleUser(int $userId): bool
     {
-        if (! config('services.lead_assignment_test.enabled')) {
+        if ($userId < 1) {
             return false;
         }
 
-        $testUserId = (int) config('services.lead_assignment_test.user_id');
-
-        return $testUserId > 0 && $userId === $testUserId;
+        return User::query()->whereKey($userId)->where('status', 'active')->exists();
     }
 
     /**

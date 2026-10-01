@@ -52,7 +52,7 @@ class LeadAssignmentTestNotificationTest extends TestCase
         );
     }
 
-    public function test_only_the_configured_user_is_notified_when_they_become_the_assignee(): void
+    public function test_only_the_new_assignee_is_notified_when_the_responsible_person_changes(): void
     {
         Notification::fake();
 
@@ -83,14 +83,13 @@ class LeadAssignmentTestNotificationTest extends TestCase
         });
     }
 
-    public function test_other_assignees_receive_nothing(): void
+    public function test_another_assignee_receives_the_same_notification(): void
     {
         Notification::fake();
 
-        $testUserId = $this->testUserId();
-        $otherUserId = (int) User::query()->where('id', '!=', $testUserId)->value('id');
+        $otherUserId = (int) User::query()->where('id', '!=', 1)->where('status', 'active')->value('id');
         if ($otherUserId < 1) {
-            $this->markTestSkipped('No second user available.');
+            $this->markTestSkipped('No second active user.');
         }
 
         $lead = $this->leadAssignedToSomeoneElse($otherUserId);
@@ -99,8 +98,11 @@ class LeadAssignmentTestNotificationTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('status', true);
         $this->assertSame($otherUserId, (int) $lead->fresh()->responsible_person_id);
-        Notification::assertNothingSent();
-        Bus::assertNotDispatched(SendLeadAssignmentWebPush::class);
+        Notification::assertSentTo(User::query()->find($otherUserId), AssignmentPocNotification::class);
+        Bus::assertDispatchedTimes(SendLeadAssignmentWebPush::class, 1);
+        Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($otherUserId, $lead) {
+            return $job->userId === $otherUserId && $job->leadId === (int) $lead->id;
+        });
     }
 
     public function test_reassigning_the_same_user_sends_nothing(): void
@@ -137,22 +139,49 @@ class LeadAssignmentTestNotificationTest extends TestCase
         Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($testUserId, $lead) {
             return $job->userId === $testUserId && $job->leadId === (int) $lead->id;
         });
+        Bus::assertDispatchedTimes(SendLeadAssignmentWebPush::class, 1);
     }
 
-    public function test_disabled_test_mode_sends_nothing_and_still_assigns(): void
+    public function test_sales_admin_and_super_admin_assignees_each_receive_one_push(): void
+    {
+        foreach (['sales', 'admin', 'super_admin'] as $role) {
+            Notification::fake();
+            Bus::fake();
+
+            $assignee = User::role($role)->where('status', 'active')->first();
+            if (! $assignee) {
+                $this->markTestSkipped('No active '.$role.' user.');
+            }
+
+            $lead = $this->leadAssignedToSomeoneElse((int) $assignee->id);
+            $lead->update(['responsible_person_id' => $assignee->id]);
+
+            Notification::assertSentTo($assignee, AssignmentPocNotification::class);
+            Bus::assertDispatchedTimes(SendLeadAssignmentWebPush::class, 1);
+            Bus::assertDispatched(SendLeadAssignmentWebPush::class, function (SendLeadAssignmentWebPush $job) use ($assignee, $lead) {
+                return $job->userId === (int) $assignee->id && $job->leadId === (int) $lead->id;
+            });
+        }
+    }
+
+    public function test_test_mode_off_still_notifies_the_new_assignee(): void
     {
         Notification::fake();
+        $assigneeId = (int) User::query()->where('status', 'active')->orderBy('id')->value('id');
+        if ($assigneeId < 1) {
+            $this->markTestSkipped('No active user.');
+        }
         Config::set('services.lead_assignment_test.enabled', false);
+        Config::set('services.lead_assignment_test.user_id', null);
 
-        $testUserId = $this->testUserId();
-        $lead = $this->leadAssignedToSomeoneElse($testUserId);
-        $response = $this->assignLead($lead, $testUserId);
+        $lead = $this->leadAssignedToSomeoneElse($assigneeId);
+        $response = $this->assignLead($lead, $assigneeId);
 
         $response->assertOk();
         $response->assertJsonPath('status', true);
-        $this->assertSame($testUserId, (int) $lead->fresh()->responsible_person_id);
-        Notification::assertNothingSent();
-        Bus::assertNotDispatched(SendLeadAssignmentWebPush::class);
+        $this->assertSame($assigneeId, (int) $lead->fresh()->responsible_person_id);
+        Notification::assertSentTo(User::query()->find($assigneeId), AssignmentPocNotification::class);
+        Bus::assertDispatchedTimes(SendLeadAssignmentWebPush::class, 1);
     }
 
     public function test_pusher_failure_does_not_fail_the_assignment(): void

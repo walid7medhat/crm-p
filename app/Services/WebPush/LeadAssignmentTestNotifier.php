@@ -10,18 +10,19 @@ use Illuminate\Support\Facades\Log;
 class LeadAssignmentTestNotifier
 {
     /**
-     * Proof-of-concept only. Never throws, so a failed toast or push cannot undo the assignment.
+     * Never throws, so a failed toast or push cannot undo the assignment.
+     * Pusher and Web Push are separate; either one can fail on its own.
      */
     public function notifyIfChanged(mixed $previousResponsibleId, mixed $newResponsibleId, int $leadId): void
     {
         try {
-            $testUserId = $this->recipientId($previousResponsibleId, $newResponsibleId);
-            if ($testUserId === null) {
+            $recipientId = $this->recipientId($previousResponsibleId, $newResponsibleId);
+            if ($recipientId === null) {
                 return;
             }
 
-            $recipient = User::query()->find($testUserId);
-            if (! $recipient) {
+            $recipient = User::query()->find($recipientId);
+            if (! $recipient || $recipient->status !== 'active') {
                 return;
             }
 
@@ -35,7 +36,7 @@ class LeadAssignmentTestNotifier
             }
 
             try {
-                SendLeadAssignmentWebPush::dispatchSync($testUserId, $leadId);
+                SendLeadAssignmentWebPush::dispatchSync($recipientId, $leadId);
             } catch (\Throwable $e) {
                 Log::warning('lead_assignment.test_web_push_dispatch_failed', [
                     'lead_id' => $leadId,
@@ -52,19 +53,11 @@ class LeadAssignmentTestNotifier
 
     public function recipientId(mixed $previousResponsibleId, mixed $newResponsibleId): ?int
     {
-        if ((int) $previousResponsibleId === (int) $newResponsibleId) {
+        $next = (int) $newResponsibleId;
+        if ($next < 1 || (int) $previousResponsibleId === $next) {
             return null;
         }
 
-        if (! config('services.lead_assignment_test.enabled')) {
-            return null;
-        }
-
-        $testUserId = (int) config('services.lead_assignment_test.user_id');
-        if ($testUserId < 1 || (int) $newResponsibleId !== $testUserId) {
-            return null;
-        }
-
-        return $testUserId;
+        return $next;
     }
 }

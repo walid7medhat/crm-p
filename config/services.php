@@ -72,8 +72,8 @@ return [
     ],
 
     /*
-    | Proof-of-concept only. A successful manual assignment notifies this one
-    | user on the existing private user channel. Everyone else receives nothing.
+    | Kept so existing servers do not break. Assignment Web Push no longer
+    | reads these values; any active CRM user can subscribe and be notified.
     */
     'lead_assignment_test' => [
         'enabled' => filter_var(env('PUSHER_LEAD_ASSIGNMENT_TEST_MODE', false), FILTER_VALIDATE_BOOLEAN),
@@ -81,8 +81,7 @@ return [
     ],
 
     /*
-    | Web Push proof-of-concept. The private key stays server-side.
-    | Sending still requires lead_assignment_test to be enabled for one user.
+    | Web Push. The private key stays server-side. Any active user is eligible.
     */
     'web_push' => [
         'subject' => env('WEB_PUSH_VAPID_SUBJECT', 'mailto:admin@oiaproperties.com'),

@@ -70,24 +70,51 @@ class LeadAssignmentWebPushTest extends TestCase
         $response->assertJsonMissing(['auth-secret']);
     }
 
-    public function test_another_user_cannot_register_during_test_mode(): void
+    public function test_another_user_can_register_and_a_spoofed_user_id_is_ignored(): void
     {
         $other = User::query()->where('id', '!=', 1)->where('status', 'active')->first();
         if (! $other) {
             $this->markTestSkipped('No second active user.');
         }
 
+        $endpoint = 'https://push.example.test/other-'.uniqid();
         $response = $this->asUser($other)->postJson('/api/push-subscriptions', [
-            'endpoint' => 'https://push.example.test/other-'.uniqid(),
+            'endpoint' => $endpoint,
             'keys' => ['p256dh' => 'public-key', 'auth' => 'auth-secret'],
             'user_id' => 1,
         ]);
 
-        $response->assertStatus(403);
-        $this->assertSame(0, PushSubscription::query()->where('user_id', $other->id)->count());
+        $response->assertOk();
+        $this->assertDatabaseHas('push_subscriptions', [
+            'user_id' => $other->id,
+            'endpoint_hash' => hash('sha256', $endpoint),
+        ]);
+        $this->assertDatabaseMissing('push_subscriptions', [
+            'user_id' => 1,
+            'endpoint_hash' => hash('sha256', $endpoint),
+        ]);
     }
 
-    public function test_config_hides_the_public_key_from_other_users(): void
+    public function test_sales_user_can_subscribe(): void
+    {
+        $sales = User::role('sales')->where('status', 'active')->first();
+        if (! $sales) {
+            $this->markTestSkipped('No active sales user.');
+        }
+
+        $endpoint = 'https://push.example.test/sales-'.uniqid();
+        $this->asUser($sales)->postJson('/api/push-subscriptions', [
+            'endpoint' => $endpoint,
+            'keys' => ['p256dh' => 'public-key', 'auth' => 'auth-secret'],
+        ])->assertOk()->assertJsonPath('data.subscribed', true);
+
+        $this->assertDatabaseHas('push_subscriptions', [
+            'user_id' => $sales->id,
+            'endpoint_hash' => hash('sha256', $endpoint),
+        ]);
+    }
+
+    public function test_config_gives_every_active_user_the_public_key(): void
     {
         $other = User::query()->where('id', '!=', 1)->where('status', 'active')->first();
         if (! $other) {
@@ -96,8 +123,8 @@ class LeadAssignmentWebPushTest extends TestCase
 
         $this->asUser($other)->getJson('/api/push-subscriptions/config')
             ->assertOk()
-            ->assertJsonPath('data.eligible', false)
-            ->assertJsonPath('data.public_key', null);
+            ->assertJsonPath('data.eligible', true)
+            ->assertJsonPath('data.public_key', 'test-public');
 
         $this->asUser($this->activeUser(1))->getJson('/api/push-subscriptions/config')
             ->assertOk()
@@ -144,15 +171,29 @@ class LeadAssignmentWebPushTest extends TestCase
         $this->assertDatabaseHas('push_subscriptions', ['id' => $kept->id]);
     }
 
-    public function test_sender_refuses_users_other_than_the_test_recipient(): void
+    public function test_any_active_user_is_eligible_even_when_test_mode_is_off(): void
     {
         $sender = app(LeadAssignmentWebPushSender::class);
 
-        $this->assertTrue($sender->isTestRecipient(1));
-        $this->assertFalse($sender->isTestRecipient(2));
+        $this->assertTrue($sender->isEligibleUser(1));
+        $second = User::query()->where('id', '!=', 1)->where('status', 'active')->first();
+        if ($second) {
+            $this->assertTrue($sender->isEligibleUser((int) $second->id));
+        }
+        $this->assertFalse($sender->isEligibleUser(0));
 
         Config::set('services.lead_assignment_test.enabled', false);
-        $this->assertFalse($sender->isTestRecipient(1));
+        Config::set('services.lead_assignment_test.user_id', null);
+        $this->assertTrue($sender->isEligibleUser(1));
+    }
+
+    public function test_two_devices_for_one_user_stay_separate(): void
+    {
+        $phone = $this->makeSubscription(1, 'https://push.example.test/phone-'.uniqid());
+        $desktop = $this->makeSubscription(1, 'https://push.example.test/desktop-'.uniqid());
+
+        $this->assertNotSame($phone->endpoint_hash, $desktop->endpoint_hash);
+        $this->assertSame(2, PushSubscription::query()->whereIn('id', [$phone->id, $desktop->id])->count());
     }
 
     public function test_web_push_failure_does_not_fail_assignment_and_pusher_still_sends(): void

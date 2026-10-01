@@ -14,13 +14,14 @@ class PushSubscriptionController extends Controller
     public function config(LeadAssignmentWebPushSender $sender): JsonResponse
     {
         $user = auth()->user();
-        $eligible = $sender->isTestRecipient((int) $user->id);
+        $eligible = $sender->isEligibleUser((int) $user->id);
         $publicKey = (string) config('services.web_push.public_key');
+        $configured = $publicKey !== '' && (string) config('services.web_push.private_key') !== '';
 
         return ApiResponse::success([
             'eligible' => $eligible,
-            'configured' => $publicKey !== '' && (string) config('services.web_push.private_key') !== '',
-            'public_key' => $eligible ? ($publicKey !== '' ? $publicKey : null) : null,
+            'configured' => $configured,
+            'public_key' => $eligible && $configured ? $publicKey : null,
             'subscribed' => PushSubscription::query()->where('user_id', $user->id)->exists(),
         ]);
     }
@@ -28,7 +29,7 @@ class PushSubscriptionController extends Controller
     public function store(Request $request, LeadAssignmentWebPushSender $sender): JsonResponse
     {
         $user = auth()->user();
-        if (! $sender->isTestRecipient((int) $user->id)) {
+        if (! $sender->isEligibleUser((int) $user->id)) {
             return ApiResponse::error('Mobile notifications are not enabled for this account', 403);
         }
 

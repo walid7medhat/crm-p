@@ -18,12 +18,10 @@ class TestWebPushCommand extends Command
     {
         $userId = (int) ($this->argument('user_id') ?: config('services.lead_assignment_test.user_id'));
 
-        $this->line('Test mode enabled: '.(config('services.lead_assignment_test.enabled') ? 'yes' : 'NO'));
-        $this->line('Test user id: '.(config('services.lead_assignment_test.user_id') ?: 'NOT SET'));
         $this->line('Target user id: '.$userId);
 
-        if (! $sender->isTestRecipient($userId)) {
-            $this->error('User is not the test recipient. Check PUSHER_LEAD_ASSIGNMENT_TEST_MODE / _USER_ID, then php artisan config:clear.');
+        if ($userId < 1 || ! $sender->isEligibleUser($userId)) {
+            $this->error('User '.$userId.' is not an active CRM account.');
 
             return self::FAILURE;
         }

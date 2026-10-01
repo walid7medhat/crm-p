@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
-use App\Services\WebPush\LeadAssignmentWebPushSender;
 use App\Http\Resources\User\NotificationResource;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\BirthdaySelfNotification;
@@ -188,11 +187,7 @@ public function resetPassword(Request $request): JsonResponse
 
         $publicKey = (string) config('services.web_push.public_key');
         $privateKey = (string) config('services.web_push.private_key');
-        if (
-            app(LeadAssignmentWebPushSender::class)->isTestRecipient((int) $user->id)
-            && $publicKey !== ''
-            && $privateKey !== ''
-        ) {
+        if ($publicKey !== '' && $privateKey !== '') {
             $payload['web_push'] = [
                 'prompt' => true,
                 'public_key' => $publicKey,
