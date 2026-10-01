@@ -1377,9 +1377,20 @@ const hasAnySearchCriteria = computed(() => {
 
 // Lead Pool advanced search (filter modal) is admin/super_admin-only — other users
 // get plain text search via the input field only.
+// Lead Pool: the advanced search popup is for super_admin / admin only — by role, so a
+// manager / team_lead holding the generic 'admin' permission still gets text search only.
 const canUseLeadSearchModal = computed(() => {
     if (activeKanbanTab.value !== 'lead-pool') return true;
-    return isAdmin.value;
+    const roles = user.value?.roles || [];
+    return roles.includes('super_admin') || roles.includes('admin');
+});
+
+// Switching to the Lead Pool while the popup is open (opened on the Leads tab) — close it
+// for users who can't use it there.
+watch(canUseLeadSearchModal, (allowed) => {
+    if (!allowed && showSearchModal.value) {
+        closeSearchModal();
+    }
 });
 
 function onSearchInputUpdate(val) {
