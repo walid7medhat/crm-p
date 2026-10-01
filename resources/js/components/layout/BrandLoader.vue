@@ -46,7 +46,7 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000000;
+  background: #ffffff;
 }
 
 .brand-loader--inline {
@@ -54,7 +54,7 @@ defineProps({
   align-items: center;
   justify-content: center;
   min-height: 220px;
-  background: #000000;
+  background: #ffffff;
 }
 
 .brand-loader__card {
@@ -87,7 +87,7 @@ defineProps({
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #d4d4d8;
+  color: #111111;
 }
 
 @keyframes brand-loader-spin {

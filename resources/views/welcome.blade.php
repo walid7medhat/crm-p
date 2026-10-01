@@ -7,11 +7,11 @@
 
         <title>Alt CRM</title>
         <link rel="manifest" href="/manifest.webmanifest">
-        <meta name="theme-color" content="#000000">
+        <meta name="theme-color" content="#ffffff">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Alt CRM">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/pwa/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/pwa/icon-192.png">
         <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)" href="/assets/images/pwa/splash-1320x2868.png">
@@ -81,7 +81,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: #000000;
+                background: #ffffff;
                 transition: opacity 0.35s ease;
             }
 
