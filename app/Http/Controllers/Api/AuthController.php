@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
+use App\Services\WebPush\LeadAssignmentWebPushSender;
 use App\Http\Resources\User\NotificationResource;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\BirthdaySelfNotification;
@@ -180,10 +181,25 @@ public function resetPassword(Request $request): JsonResponse
 
         $user->load('roles', 'permissions');
 
-        return ApiResponse::success([
+        $payload = [
             'user' => new UserResource($user),
             'token' => $token,
-        ], 'Login successful');
+        ];
+
+        $publicKey = (string) config('services.web_push.public_key');
+        $privateKey = (string) config('services.web_push.private_key');
+        if (
+            app(LeadAssignmentWebPushSender::class)->isTestRecipient((int) $user->id)
+            && $publicKey !== ''
+            && $privateKey !== ''
+        ) {
+            $payload['web_push'] = [
+                'prompt' => true,
+                'public_key' => $publicKey,
+            ];
+        }
+
+        return ApiResponse::success($payload, 'Login successful');
 
     } catch (\Exception $e) {
         return ApiResponse::error('Login failed: ' . $e->getMessage());
