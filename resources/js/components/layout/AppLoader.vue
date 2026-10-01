@@ -128,7 +128,7 @@ function onAfterLeave() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000000;
+  background: #ffffff;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -262,7 +262,7 @@ function onAfterLeave() {
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #f4f4f5;
+  color: #111111;
   opacity: 0.92;
   animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
@@ -271,7 +271,7 @@ function onAfterLeave() {
   margin: 0 0 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #a1a1aa;
+  color: #52525b;
   letter-spacing: 0.02em;
   animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
 }
