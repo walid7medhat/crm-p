@@ -395,20 +395,24 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     ];
   }
 
-   // branch_admin: only the All Listings tab — no My Listing / Notify Me / Requests /
+   // branch_admin: All Listings + Owners only — no My Listing / Notify Me / Requests /
    // Hot Deals / Need Approval / Viewings.
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing && user?.roles?.includes('branch_admin')) {
     const { listingTabCounts = {} } = ctx;
-    return [
+    const tabs = [
       {
         id: 'listings',
         label: 'Listings',
         type: 'route',
         path: '/alllisting',
-        matchPaths: LISTINGS_INVENTORY_PATHS,
+        // '/owners' gets its own tab below — leave it out here, otherwise isTabActive
+        // lights up both tabs at once on that route.
+        matchPaths: LISTINGS_INVENTORY_PATHS.filter((p) => p !== '/owners'),
         count: listingTabCounts.listings || 0,
       },
     ];
+    
+    return tabs;
   }
 
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
@@ -418,21 +422,20 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     // Agents get their own My Listing tab; admins / super admins see All Listings only.
     const showMyListings = !isAdmin && !isSuperAdmin;
 
-    // '/my-listing' must leave the Listings tab's match set when it has its own tab,
-    // otherwise isTabActive lights up both at once on that route.
-    const listingsMatchPaths = showMyListings
-      ? LISTINGS_INVENTORY_PATHS.filter((p) => p !== '/my-listing')
-      : LISTINGS_INVENTORY_PATHS;
+    // '/my-listing' and '/owners' must leave the Listings tab's match set once they have
+    // their own tab, otherwise isTabActive lights up both at once on that route.
+    const listingsExcludedPaths = showMyListings ? ['/my-listing', '/owners'] : ['/owners'];
+    const listingsMatchPaths = LISTINGS_INVENTORY_PATHS.filter((p) => !listingsExcludedPaths.includes(p));
 
     const tabs = [
-      {
-        id: 'listings',
-        label: 'Listings',
-        type: 'route',
-        path: '/alllisting',
-        matchPaths: listingsMatchPaths,
-        count: listingTabCounts.listings || 0,
-      },
+      // {
+      //   id: 'listings',
+      //   label: 'Listings',
+      //   type: 'route',
+      //   path: '/alllisting',
+      //   matchPaths: listingsMatchPaths,
+      //   count: listingTabCounts.listings || 0,
+      // },
     ];
 
     if (showMyListings) {
