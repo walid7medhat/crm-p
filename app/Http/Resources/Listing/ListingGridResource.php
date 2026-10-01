@@ -232,6 +232,13 @@ class ListingGridResource extends JsonResource
                     'avatar' => $this->avatar ?: null,
                 ];
             }),
+            'added_by' => $this->whenLoaded('addedBy', function () {
+                return [
+                    'id' => $this->addedBy->id,
+                    'name' => User::resolveDisplayName($this->addedBy),
+                    'email' => $this->addedBy->email,
+                ];
+            }),
             'owner' => $this->whenLoaded('owner', fn () => $canSeeOwnerData ? new OwnerResource($this->owner) : null),
             'canShowOwner' => $canSeeOwnerData,
             'canShowUnitNumber' => $canSeeUnitNumber,

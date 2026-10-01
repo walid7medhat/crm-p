@@ -720,6 +720,7 @@ class LeadController extends Controller
                         $allowedIds = $user->leadScopeUserIds();
                         if ($user->hasRole('branch_admin')) {
                             $allowedIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
+                            $allowedIds[] = (int) $user->id; // assign to themselves
                         }
                         if (!in_array((int) $leadData['responsible_person_id'], array_map('intval', $allowedIds), true)) {
                             return ApiResponse::error('You can only assign responsible person from your team', 403);
@@ -959,6 +960,7 @@ class LeadController extends Controller
             $subordinatesIds = $user->leadScopeUserIds();
             if ($user->hasRole('branch_admin')) {
                 $subordinatesIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
+                $subordinatesIds[] = (int) $user->id; // assign to themselves
             }
             if (!in_array($request->responsible_person_id, $subordinatesIds)) {
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
@@ -1150,7 +1152,8 @@ class LeadController extends Controller
             $scopeIds = $user->getBranchUserIds();
             // Managers are assignable too (e.g. a listing-team manager in the branch).
             $roles = ['team_lead', 'sales', 'manager'];
-            $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID] : [];
+            // Branch admins also get user #33 — and themselves (assign a lead to me).
+            $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID, (int) $user->id] : [];
 
             $base->where(function ($q) use ($scopeIds, $roles, $extraIds) {
                 $q->where(function ($q) use ($scopeIds, $roles) {
