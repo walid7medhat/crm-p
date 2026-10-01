@@ -24,7 +24,7 @@
 <script setup>
 defineOptions({ name: 'BrandLoader' })
 
-const logoSrc = '/assets/images/altcrm-logo.png'
+const logoSrc = '/assets/images/pwa/icon-512.png'
 
 defineProps({
   label: {
@@ -46,8 +46,7 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(243, 242, 246, 0.55);
-  backdrop-filter: blur(8px);
+  background: #000000;
 }
 
 .brand-loader--inline {
@@ -55,6 +54,7 @@ defineProps({
   align-items: center;
   justify-content: center;
   min-height: 220px;
+  background: #000000;
 }
 
 .brand-loader__card {
@@ -62,41 +62,32 @@ defineProps({
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 28px 36px 22px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(107, 33, 168, 0.12);
-  box-shadow: 0 18px 48px rgba(30, 27, 46, 0.12);
+  gap: 18px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .brand-loader__ring {
-  position: absolute;
-  top: 22px;
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  border: 2px solid rgba(107, 33, 168, 0.15);
-  border-top-color: #7c3aed;
-  animation: brand-loader-spin 0.8s linear infinite;
+  display: none;
 }
 
 .brand-loader__logo {
   position: relative;
   z-index: 1;
-  width: 64px;
-  height: 64px;
+  width: min(64vw, 240px);
+  height: auto;
   object-fit: contain;
-  animation: brand-loader-pulse 1.4s ease-in-out infinite;
 }
 
 .brand-loader__label {
-  margin: 8px 0 0;
-  font-size: 13px;
+  margin: 0;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #4c1d95;
+  color: #d4d4d8;
 }
 
 @keyframes brand-loader-spin {

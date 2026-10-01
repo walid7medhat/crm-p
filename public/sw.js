@@ -1,6 +1,6 @@
 /* Push-only service worker. No fetch handler, so it does not cache or change CRM assets. */
 const LEAD_VIEW_URL = /^\/\?lead=(\d+)$/
-const ALT_CRM_ICON = '/assets/images/altcrm-logo.png'
+const ALT_CRM_ICON = '/assets/images/pwa/icon-192.png'
 
 function leadViewPath(data) {
   const url = data && typeof data.url === 'string' ? data.url : ''

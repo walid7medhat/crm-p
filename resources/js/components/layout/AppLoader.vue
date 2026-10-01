@@ -75,7 +75,7 @@ const props = defineProps({
 
 const emit = defineEmits(['hidden'])
 
-const logoSrc = '/assets/images/altcrm-logo.png'
+const logoSrc = '/assets/images/pwa/icon-512.png'
 
 /** Lightweight CSS-only particles — no canvas / GSAP */
 const particles = computed(() =>
@@ -128,7 +128,7 @@ function onAfterLeave() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(243, 242, 246, 0.72);
+  background: #000000;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -136,12 +136,7 @@ function onAfterLeave() {
 }
 
 .app-loader__bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0.6;
-  background: #f3f2f6;
+  display: none;
 }
 
 .app-loader__gradient {
@@ -206,17 +201,11 @@ function onAfterLeave() {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  padding: 2.5rem 2.75rem 2.25rem;
-  border-radius: 28px;
-  background: var(--loader-glass);
-  border: 1px solid var(--loader-border);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  box-shadow:
-    0 0 0 1px rgba(107, 33, 168, 0.08) inset,
-    0 18px 48px rgba(30, 27, 46, 0.12),
-    0 0 40px rgba(167, 139, 250, 0.15);
-  animation: loader-panel-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  animation: loader-panel-in 0.5s ease both;
   max-width: calc(100vw - 2rem);
 }
 
@@ -231,9 +220,7 @@ function onAfterLeave() {
 }
 
 .app-loader__glow {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
+  display: none;
 }
 
 .app-loader__glow--outer {
@@ -264,10 +251,9 @@ function onAfterLeave() {
 }
 
 .app-loader__logo {
-  width: clamp(72px, 18vw, 108px);
+  width: min(72vw, 320px);
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 8px 24px rgba(115, 62, 135, 0.5));
 }
 
 .app-loader__brand {
@@ -276,7 +262,7 @@ function onAfterLeave() {
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--loader-white);
+  color: #f4f4f5;
   opacity: 0.92;
   animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
@@ -285,7 +271,7 @@ function onAfterLeave() {
   margin: 0 0 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #6b7280;
+  color: #a1a1aa;
   letter-spacing: 0.02em;
   animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
 }
