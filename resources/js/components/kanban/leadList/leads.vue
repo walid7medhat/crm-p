@@ -490,7 +490,7 @@
                 <table class="lead-list-table">
                     <thead>
                         <tr>
-                            <th v-if="isAdminOrSuperAdmin && leadSelectionActive" class="lead-list-table__check" scope="col" aria-label="Select"></th>
+                            <th v-if="showListCheckColumn" class="lead-list-table__check" scope="col" aria-label="Highlight"></th>
                             <th class="lead-list-col-num" scope="col">#</th>
                             <th class="lead-list-col-lead" scope="col">Lead</th>
                             <th class="lead-list-col-stage" scope="col">Stage</th>
@@ -505,12 +505,27 @@
                         <tr
                             v-for="(row, index) in pagedListRows"
                             :key="'r-' + row.task.id"
-                            :class="{ 'is-selected': isLeadSelected(row.task.id) }"
+                            :class="{
+                                'is-selected': isLeadSelected(row.task.id),
+                                'is-highlighted': isLeadHighlighted(row.task.id),
+                            }"
                             @click="onLeadCardClick(row.task, row.column, $event)"
                             @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
                         >
-                            <td v-if="isAdminOrSuperAdmin && leadSelectionActive" class="lead-list-table__check" @click.stop>
+                            <td v-if="showListCheckColumn" class="lead-list-table__check" @click.stop>
                                 <button
+                                    v-if="canHighlightLeads"
+                                    type="button"
+                                    class="lead-list-check lead-list-check--highlight"
+                                    :class="{ 'is-on': isLeadHighlighted(row.task.id) }"
+                                    :aria-pressed="isLeadHighlighted(row.task.id)"
+                                    aria-label="Highlight lead"
+                                    @click.stop="toggleLeadHighlight(row.task)"
+                                >
+                                    <iconify-icon :icon="isLeadHighlighted(row.task.id) ? 'lucide:check' : 'lucide:square'" />
+                                </button>
+                                <button
+                                    v-else
                                     type="button"
                                     class="lead-list-check"
                                     :class="{ 'is-on': isLeadSelected(row.task.id) }"
@@ -1406,6 +1421,57 @@ const canDeleteLeads = computed(() => {
 
 const leadSelectionActive = ref(false)
 const selectedLeadIds = ref([])
+
+// Visual mark on the list for every signed-in user. Stored on this browser.
+// It does not change the lead and does not open the bulk-action bar.
+const LEAD_HIGHLIGHT_KEY = 'lead_list_highlights_v1'
+const canHighlightLeads = computed(() => !!user.value)
+
+function highlightStorageKey() {
+    const uid = user.value?.id ?? getUserFromStorage()?.id ?? 'anon'
+    return `${LEAD_HIGHLIGHT_KEY}:${uid}`
+}
+
+function loadHighlightedLeadIds() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(highlightStorageKey()) || '[]')
+        if (!Array.isArray(raw)) return []
+        return raw.map(Number).filter((id) => Number.isFinite(id) && id > 0).slice(0, 500)
+    } catch {
+        return []
+    }
+}
+
+const highlightedLeadIds = ref(loadHighlightedLeadIds())
+
+const showListCheckColumn = computed(() => {
+    if (canHighlightLeads.value) return true
+    return isAdminOrSuperAdmin.value && leadSelectionActive.value
+})
+
+function persistHighlightedLeadIds() {
+    try {
+        localStorage.setItem(highlightStorageKey(), JSON.stringify(highlightedLeadIds.value.slice(0, 500)))
+    } catch {
+        // Highlighting stays in memory if storage is unavailable.
+    }
+}
+
+function isLeadHighlighted(id) {
+    return highlightedLeadIds.value.includes(Number(id))
+}
+
+function toggleLeadHighlight(task) {
+    const id = Number(task?.id)
+    if (!id || !canHighlightLeads.value) return
+    if (isLeadHighlighted(id)) {
+        highlightedLeadIds.value = highlightedLeadIds.value.filter((item) => item !== id)
+    } else {
+        highlightedLeadIds.value = [id, ...highlightedLeadIds.value].slice(0, 500)
+    }
+    persistHighlightedLeadIds()
+}
+
 const bulkActionBusy = ref(false)
 const showBulkStagePicker = ref(false)
 const showBulkAssignPicker = ref(false)
@@ -7470,8 +7536,14 @@ const fetchRevertNotifications = async () => {
     background: #f8fafc;
 }
 
-.lead-list-table tbody tr.is-selected td {
+.lead-list-table tbody tr.is-selected td,
+.lead-list-table tbody tr.is-selected:hover td {
     background: #eef2ff;
+}
+
+.lead-list-table tbody tr.is-highlighted td,
+.lead-list-table tbody tr.is-highlighted:hover td {
+    background: #fce4c8;
 }
 
 .lead-list-table__check {
@@ -7621,6 +7693,22 @@ const fetchRevertNotifications = async () => {
 
 .lead-list-check.is-on {
     color: #4f46e5;
+}
+
+.lead-list-check--highlight {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: transparent;
+    font-size: 14px;
+}
+
+.lead-list-check--highlight.is-on {
+    border-color: #3f2d7a;
+    background: #3f2d7a;
+    color: #fff;
 }
 
 .lead-list-pager {
