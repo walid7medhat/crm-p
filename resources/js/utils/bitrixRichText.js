@@ -55,6 +55,8 @@ export function formatBitrixRichText(raw, { omitUrls } = {}) {
 
   let text = String(raw)
   text = text.replace(/&nbsp;/gi, ' ')
+  // Bitrix sends links HTML-escaped; decode so escapeHtml below doesn't double it.
+  text = text.replace(/&amp;/gi, '&')
   text = text.replace(/<br\s*\/?>/gi, '\n')
 
   // Placeholder tokens so we can escape the rest safely
@@ -64,6 +66,13 @@ export function formatBitrixRichText(raw, { omitUrls } = {}) {
     links.push(html)
     return token
   }
+
+  // <a href="...">label</a>
+  text = text.replace(/<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
+    if (isOmitted(href)) { omittedAny = true; return '' }
+    const cleanLabel = String(label).replace(/<[^>]+>/g, '').trim()
+    return stash(linkHtml(href, cleanLabel || href))
+  })
 
   // [url=href]label[/url]
   text = text.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, (_, href, label) => {
@@ -85,19 +94,21 @@ export function formatBitrixRichText(raw, { omitUrls } = {}) {
   text = escapeHtml(text)
 
   // Linkify bare URLs that were not already wrapped
+  // (text is escaped here, so a query-string '&' reads '&amp;'; links glued together
+  // without a space are split so each is its own link)
   text = text.replace(
-    /(https?:\/\/[^\s<&]+)|(www\.[^\s<&]+)/gi,
-    (match) => {
+    /(https?:\/\/(?:[^\s<&]|&amp;)+)|(www\.(?:[^\s<&]|&amp;)+)/gi,
+    (match) => match.split(/(?=https?:\/\/)/i).map((part) => {
       // Trim common trailing punctuation from auto-detected URLs
-      let url = match
+      let url = part.replace(/&amp;/g, '&')
       let trailing = ''
       while (/[.,);:!?]$/.test(url)) {
         trailing = url.slice(-1) + trailing
         url = url.slice(0, -1)
       }
-      if (isOmitted(url)) { omittedAny = true; return trailing }
-      return stash(linkHtml(url, url)) + trailing
-    }
+      if (isOmitted(url)) { omittedAny = true; return escapeHtml(trailing) }
+      return stash(linkHtml(url, url)) + escapeHtml(trailing)
+    }).join('')
   )
 
   // Restore link HTML
@@ -149,9 +160,23 @@ export function extractPortalLinks(raw) {
       portal = 'propertyfinder'
       label = 'Property Finder'
     }
+    // Tell a project page apart from a single listing (a lead can have both).
+    if (portal !== 'other' && /new-projects|\/projects?\//.test(lower)) {
+      label += ' · Project'
+    }
 
     found.push({ url: safe, label, portal })
   }
+
+  // Bitrix sends links HTML-escaped (&amp; in query strings).
+  text = text.replace(/&amp;/gi, '&')
+
+  // <a href="...">label</a> — take the href, drop the rest of the HTML
+  text = text.replace(/<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*>[\s\S]*?<\/a>/gi, (_, href) => {
+    push(href)
+    return ' '
+  })
+  text = text.replace(/<[^>]+>/g, ' ')
 
   // [url=href]label[/url] — extract then remove so bare-URL scan does not double-match
   text = text.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, (_, href) => {
@@ -168,11 +193,14 @@ export function extractPortalLinks(raw) {
   // Strip remaining simple BBCode wrappers
   text = text.replace(/\[(\/)?(p|b|i|u|s|code|quote|list|\*|size|color|font)(=[^\]]*)?\]/gi, ' ')
 
-  // Bare URLs (exclude '[' so BBCode fragments cannot attach)
-  text.replace(/(https?:\/\/[^\s<&\[\]]+)|(www\.[^\s<&\[\]]+)/gi, (match) => {
-    let url = match
-    while (/[.,);:!?]$/.test(url)) url = url.slice(0, -1)
-    push(url)
+  // Bare URLs (exclude '[' so BBCode fragments cannot attach). Links glued together
+  // without a space ("...a.htmlhttps://...b.html") are split so each one shows.
+  text.replace(/(https?:\/\/[^\s<>"'\[\]]+)|(www\.[^\s<>"'\[\]]+)/gi, (match) => {
+    match.split(/(?=https?:\/\/)/i).forEach((part) => {
+      let url = part
+      while (/[.,);:!?]$/.test(url)) url = url.slice(0, -1)
+      push(url)
+    })
     return ''
   })
 
