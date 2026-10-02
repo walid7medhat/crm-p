@@ -137,9 +137,9 @@ class LeadController extends Controller
                         $leadsQuery->where('stage_id', $closed->id);
                     }
                 }
-                // Lead Pool: sales may not search by lead_name (filter or free text).
+                // Lead Pool: sales, team_lead and manager may not search by lead_name (filter or free text).
                 $blockPoolLeadNameSearch = (int) $request->stage_id === 10
-                    && $user->hasRole('sales')
+                    && $user->hasAnyRole(['sales', 'team_lead', 'manager'])
                     && !$user->hasAnyRole(['admin', 'super_admin'])
                     && !in_array((int) $user->id, [30, 33], true);
 

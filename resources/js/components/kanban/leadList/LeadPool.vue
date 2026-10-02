@@ -407,6 +407,26 @@ async function handleBulkAssignToMe() {
         return
     }
 
+  // 5 leads per rolling hour: the requests below run in parallel, so check the
+  // remaining slots up front (otherwise each request sees the same count).
+  await fetchAssignmentStatus()
+  const remainingInHour = assignmentStatus.value?.remaining_in_hour
+  if (typeof remainingInHour === 'number' && ids.length > remainingInHour) {
+    const status = assignmentStatus.value
+    let msg
+    if (remainingInHour > 0) {
+      msg = `You can assign only ${remainingInHour} more lead(s) before the one-hour break.`
+    } else {
+      const at = status?.next_available_at ? new Date(status.next_available_at) : null
+      const minutes = at ? Math.max(1, Math.ceil((at.getTime() - Date.now()) / 60000)) : null
+      msg = at
+        ? `You have assigned 5 leads. You can assign more leads at ${at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} (in ${minutes} minutes).`
+        : 'You have assigned 5 leads. Please wait one hour.'
+    }
+    window.$showNotification?.(msg, 'warning')
+    return
+  }
+
   // Hide any open toast while assignment is in progress
   window.$hideNotification?.()
 
@@ -440,6 +460,7 @@ async function handleBulkAssignToMe() {
         const isCooldown =
             /assign more leads at/i.test(msg) ||
             /maximum of \d+ leads/i.test(msg) ||
+            /before the one-hour break/i.test(msg) ||
             /daily limit/i.test(msg)
 
         window.$showNotification?.(

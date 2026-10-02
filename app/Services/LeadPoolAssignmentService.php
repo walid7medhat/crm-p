@@ -49,23 +49,6 @@ class LeadPoolAssignmentService
 
         /*
         |--------------------------------------------------------------------------
-        | If this lead belongs to an already started batch,
-        | don't check cooldown again.
-        |--------------------------------------------------------------------------
-        */
-
-        if ($batchId) {
-            $existingBatch = LeadPoolAssignment::where('user_id', $userId)
-                ->where('batch_id', $batchId)
-                ->exists();
-
-            if ($existingBatch) {
-                return;
-            }
-        }
-
-        /*
-        |--------------------------------------------------------------------------
         | Daily limit
         |--------------------------------------------------------------------------
         */
@@ -91,30 +74,68 @@ class LeadPoolAssignmentService
 
         /*
         |--------------------------------------------------------------------------
-        | One hour cooldown
+        | Rounds of 5 — the user can take leads one by one (or together) until
+        | 5, then is stopped for a full hour counted from the 5th lead.
         |--------------------------------------------------------------------------
         */
 
-        $lastAssignment = $this->getLastAssignment($userId);
+        $round = $this->getRoundState($userId);
 
-        if ($lastAssignment) {
-            $nextAvailableAt = $lastAssignment->assigned_at
-                ->copy()
-                ->addMinutes(self::COOLDOWN_MINUTES);
+        if ($round['locked_until']) {
+            $nextAvailableAt = $round['locked_until'];
+            $minutes = max(
+                1,
+                (int) ceil(now()->diffInSeconds($nextAvailableAt) / 60)
+            );
+            $time = $nextAvailableAt->format('g:i A');
 
-            if (now()->lt($nextAvailableAt)) {
-                $minutes =max(
-                        1,
-                        (int) ceil(now()->diffInSeconds($nextAvailableAt) / 60)
-                    );
+            throw new \RuntimeException(
+                "You have assigned 5 leads. You can assign more leads at {$time} (in {$minutes} minutes)."
+            );
+        }
 
-                $time = $nextAvailableAt->format('g:i A');
+        if ($count > $round['remaining']) {
+            throw new \RuntimeException(
+                "You can assign only {$round['remaining']} more lead(s) before the one-hour break."
+            );
+        }
+    }
 
-                throw new \RuntimeException(
-                    "You can assign more leads at {$time} (in {$minutes} minutes)."
-                );
+    /**
+     * Walks today's assignments in order: every 5th one starts a COOLDOWN_MINUTES lock;
+     * assignments after a lock ends start a new round.
+     *
+     * @return array{remaining: int, locked_until: ?\Illuminate\Support\Carbon}
+     */
+    public function getRoundState(int $userId): array
+    {
+        $times = LeadPoolAssignment::where('user_id', $userId)
+            ->where('assigned_at', '>=', now()->startOfDay())
+            ->orderBy('assigned_at')
+            ->pluck('assigned_at');
+
+        $inRound = 0;
+        $lockedUntil = null;
+
+        foreach ($times as $at) {
+            if ($lockedUntil && $at->gte($lockedUntil)) {
+                $lockedUntil = null;
+            }
+            $inRound++;
+            if ($inRound >= self::BATCH_LIMIT) {
+                $lockedUntil = $at->copy()->addMinutes(self::COOLDOWN_MINUTES);
+                $inRound = 0;
             }
         }
+
+        if ($lockedUntil && now()->gte($lockedUntil)) {
+            $lockedUntil = null;
+        }
+
+        return [
+            'remaining' => $lockedUntil ? 0 : self::BATCH_LIMIT - $inRound,
+            'locked_until' => $lockedUntil,
+        ];
     }
 
     public function createAssignment(
@@ -139,20 +160,14 @@ class LeadPoolAssignmentService
             self::DAILY_LIMIT - $todayCount
         );
 
-        $lastAssignment = $this->getLastAssignment($userId);
-
-        $nextAvailableAt = null;
-        $cooldownActive = false;
-
-        if ($lastAssignment) {
-            $nextAvailableAt = $lastAssignment->assigned_at
-                ->copy()
-                ->addMinutes(self::COOLDOWN_MINUTES);
-
-            $cooldownActive = now()->lt($nextAvailableAt);
-        }
+        $round = $this->getRoundState($userId);
+        $cooldownActive = $round['locked_until'] !== null;
+        $nextAvailableAt = $round['locked_until'];
 
         return [
+            // Leads left in the current round of 5 (0 while the one-hour break runs).
+            'remaining_in_hour' => $round['remaining'],
+
             'today_count' => $todayCount,
             'daily_limit' => self::DAILY_LIMIT,
 
