@@ -101,33 +101,26 @@
                 </div>
             </div> -->
             
-            <div class="info-group" v-if="lead?.more_information">
+            <!-- Hidden when it only held links already shown above as portal chips. -->
+            <div class="info-group" v-if="lead?.more_information && formattedMoreInformation">
                 <label class="form-label-custom">Comments</label>
                 <div class="info-value info-value-block">
                     <span
-                        v-if="formattedMoreInformation"
                         class="bitrix-rich-text"
                         v-html="formattedMoreInformation"
                     ></span>
-                    <span v-else>—</span>
                 </div>
             </div>
-            
-            <template v-if="hasAdditionalQuestions">
-                <div class="info-group" v-for="(answer, question) in facebookQuestions" :key="question">
-                    <label class="form-label-custom">{{ formatQuestion(question) }}</label>
+
+            <template v-if="questionRows.length">
+                <div class="info-group" v-for="row in questionRows" :key="row.key">
+                    <label class="form-label-custom">{{ formatQuestion(row.question) }}</label>
                     <div class="info-value">
-                        <span class="bitrix-rich-text" v-html="formatAnswerValue(answer)"></span>
-                    </div>
-                </div>
-                <div class="info-group" v-for="(answer, question) in metaQuestions" :key="`meta-${question}`">
-                    <label class="form-label-custom">{{ formatQuestion(question) }}</label>
-                    <div class="info-value ">
-                        <span class="bitrix-rich-text" v-html="formatAnswerValue(answer)"></span>
+                        <span class="bitrix-rich-text" v-html="row.html"></span>
                     </div>
                 </div>
             </template>
-            <div v-else-if="!lead?.more_information && !portalLinks.length" class="info-empty">
+            <div v-else-if="!formattedMoreInformation && !portalLinks.length" class="info-empty">
                 No additional information
             </div>
         </div>
@@ -805,7 +798,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import { formatLeadBudgetRange, formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
-import { formatBitrixRichText, extractPortalLinks } from '@/utils/bitrixRichText'
+import { formatBitrixRichText, extractPortalLinks, portalLinkKey } from '@/utils/bitrixRichText'
 import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
 
 const props = defineProps({
@@ -829,13 +822,33 @@ const emit = defineEmits(['person-updated', 'edit-request', 'edit-section', 'lea
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const showMatchingProperties = ref(false)
 
+// Links already shown as Property Portal Links chips are left out of Comments and the
+// question answers so they don't appear twice.
+const portalLinkKeys = computed(() =>
+  new Set(portalLinks.value.map((link) => portalLinkKey(link.url)).filter(Boolean))
+)
+
 const formattedMoreInformation = computed(() =>
-  formatBitrixRichText(props.lead?.more_information)
+  formatBitrixRichText(props.lead?.more_information, { omitUrls: portalLinkKeys.value })
 )
 
 // Any question answer that contains a URL (not just the known link/Page_URL/
 // inbox_url keys) renders as a clickable link — same rich-text handling as Comments.
-const formatAnswerValue = (value) => formatBitrixRichText(value)
+const formatAnswerValue = (value) => formatBitrixRichText(value, { omitUrls: portalLinkKeys.value })
+
+// Question rows with something left to show (an answer that was only a portal link is dropped).
+const questionRows = computed(() => {
+  const rows = []
+  Object.entries(facebookQuestions.value).forEach(([question, answer]) => {
+    const html = formatAnswerValue(answer)
+    if (html) rows.push({ key: question, question, html })
+  })
+  Object.entries(metaQuestions.value).forEach(([question, answer]) => {
+    const html = formatAnswerValue(answer)
+    if (html) rows.push({ key: `meta-${question}`, question, html })
+  })
+  return rows
+})
 
 const commentPortalLinks = ref([])
 

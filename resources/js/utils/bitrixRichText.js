@@ -29,11 +29,29 @@ function linkHtml(href, label) {
 }
 
 /**
+ * Normalized key for comparing URLs (same normalization extractPortalLinks dedupes by).
+ * @param {string} url
+ * @returns {string} '' when the URL is not usable
+ */
+export function portalLinkKey(url) {
+  let safe = sanitizeHref(url)
+  if (!safe) return ''
+  safe = safe.replace(/\[\/?url[^\]]*\]/gi, '').replace(/\[\/?[a-z0-9=]+\]/gi, '')
+  safe = sanitizeHref(safe)
+  return safe ? safe.toLowerCase().replace(/\/+$/, '') : ''
+}
+
+/**
  * @param {string|null|undefined} raw
+ * @param {{ omitUrls?: Set<string> }} [options] omitUrls: portalLinkKey()s of links to leave
+ *   out (e.g. already shown as Property Portal Links chips).
  * @returns {string} Safe HTML string (empty string when nothing to show)
  */
-export function formatBitrixRichText(raw) {
+export function formatBitrixRichText(raw, { omitUrls } = {}) {
   if (raw == null || raw === '') return ''
+
+  const isOmitted = (url) => !!omitUrls?.size && omitUrls.has(portalLinkKey(url))
+  let omittedAny = false
 
   let text = String(raw)
   text = text.replace(/&nbsp;/gi, ' ')
@@ -49,12 +67,14 @@ export function formatBitrixRichText(raw) {
 
   // [url=href]label[/url]
   text = text.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, (_, href, label) => {
+    if (isOmitted(href)) { omittedAny = true; return '' }
     return stash(linkHtml(href, String(label).trim() || href))
   })
 
   // [url]href[/url]
   text = text.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, (_, href) => {
     const clean = String(href).trim()
+    if (isOmitted(clean)) { omittedAny = true; return '' }
     return stash(linkHtml(clean, clean))
   })
 
@@ -75,12 +95,19 @@ export function formatBitrixRichText(raw) {
         trailing = url.slice(-1) + trailing
         url = url.slice(0, -1)
       }
+      if (isOmitted(url)) { omittedAny = true; return trailing }
       return stash(linkHtml(url, url)) + trailing
     }
   )
 
   // Restore link HTML
   text = text.replace(/\u0000LINK(\d+)\u0000/g, (_, idx) => links[Number(idx)] || '')
+
+  if (omittedAny) {
+    // Tidy the gaps left by removed links; nothing meaningful left -> nothing to show.
+    text = text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+    if (!/[\p{L}\p{N}]/u.test(text.replace(/<[^>]*>/g, ''))) return ''
+  }
 
   // Preserve line breaks
   text = text.replace(/\n/g, '<br>')
