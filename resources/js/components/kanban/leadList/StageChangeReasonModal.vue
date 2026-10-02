@@ -1175,7 +1175,7 @@ const lostReasonOptions = [
     // { value: 'bought_direct_from_developer', text: 'Bought Direct from Developer' },
     // { value: 'changed_decision', text: 'Changed Decision' },
     // { value: 'clients_budget_is_too_low', text: "Client's Budget Is Too Low" }
-    { value: 'already bought', text: "Already bought" }
+    { value: 'already_bought', text: "Already bought" }
   
 ]
 

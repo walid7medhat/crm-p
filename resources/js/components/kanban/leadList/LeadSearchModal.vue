@@ -3226,7 +3226,7 @@ function mapApiStatusToFormValue(apiValue, stageId) {
 
     } else if (stageOrder === 8) {
 
-        options = ['lost_by_other_company', 'lost_by_our_company']
+        options = ['already_bought', 'lost_by_other_company', 'lost_by_our_company']
 
     } else if (stageOrder === 9) {
 
@@ -6124,7 +6124,7 @@ watch(() => form.value.stageId, (newVal) => {
 
         } else if (stageOrder === 8) {
 
-            isValidForStage = ['lost_by_other_company', 'lost_by_our_company'].includes(currentQuality)
+            isValidForStage = ['already_bought', 'lost_by_other_company', 'lost_by_our_company'].includes(currentQuality)
 
         } else if (stageOrder === 9) {
 

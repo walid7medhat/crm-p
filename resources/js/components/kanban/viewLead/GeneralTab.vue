@@ -360,6 +360,9 @@ const qualityStatusBadge = computed(() => {
     if (status === 'lost_by_our_company') {
         return { label: 'Lost by Our Company', tone: 'lost' }
     }
+    if (status === 'already_bought') {
+        return { label: 'Already Bought', tone: 'lost' }
+    }
     return { label: status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), tone: 'neutral' }
 })
 

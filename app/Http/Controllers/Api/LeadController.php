@@ -622,9 +622,12 @@ class LeadController extends Controller
 
         $urls = [];
         foreach ($comments as $comment) {
-            if (preg_match_all('~https?://[^\s"\'<>\]\[)]*(?:propertyfinder|property-finder|bayut)[^\s"\'<>\]\[)]*~i', (string) $comment, $m)) {
+            // Split links glued together without a space so a listing link and a project
+            // link in the same comment both come back.
+            $text = preg_replace('~(?<!^)(?<!\s)(https?://)~i', ' $1', html_entity_decode((string) $comment));
+            if (preg_match_all('~https?://[^\s"\'<>\]\[)]*(?:propertyfinder|property-finder|bayut)[^\s"\'<>\]\[)]*~i', $text, $m)) {
                 foreach ($m[0] as $url) {
-                    $urls[] = rtrim(html_entity_decode($url), '.,;');
+                    $urls[] = rtrim($url, '.,;');
                 }
             }
         }
@@ -1487,7 +1490,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             'branch' => 'nullable|string|max:100|in:Abu Dhabi,Dubai,Sharjah',
             
             // Stage 8: Lost - استخدام why_lost_lead
-            'why_lost_lead' => 'nullable|string|max:255|in:lost_by_other_company,lost_by_our_company',
+            // already_bought is the current option; the other two are kept for older leads.
+            'why_lost_lead' => 'nullable|string|max:255|in:already_bought,lost_by_other_company,lost_by_our_company',
             
             // Stage 9: Lead Pool - استخدام status_lead
             'status_lead_pool' => 'nullable|string|max:100|in:no_answer,canceled,wrong_person,contacted',
