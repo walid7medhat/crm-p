@@ -549,19 +549,22 @@ class LeadActivityController extends Controller
     }
     
     public function get_mentions(Request $request){
-        $query = User::query()->role(['admin', 'super_admin']);
-          if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
-                });
-            }
-                        $users = $query->orderBy('created_at','desc')->where('id','!=',auth()->user()->id)->get();
+        $user = auth()->user();
+
+        // Same list as the "available responsible persons" picker — reuses
+        // LeadController::getAvailableResponsiblePersons as is (it reads ?search= and
+        // ?limit= from this same request). Minus the user themselves and super admins.
+        $response = app(LeadController::class)->getAvailableResponsiblePersons();
+        $persons = collect($response->getData(true)['data'] ?? []);
+
+        $superAdminIds = User::role('super_admin')->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $users = $persons
+            ->reject(fn ($p) => (int) $p['id'] === (int) $user->id || in_array((int) $p['id'], $superAdminIds, true))
+            ->values();
 
          return ApiResponse::success(
-                MentionAgentResource::collection($users),
+                $users,
                 'Users retrieved successfully'
             );
     }
