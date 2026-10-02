@@ -449,7 +449,13 @@ class LeadController extends Controller
         try {
             $user = auth()->user();
             $leadData = $request->validated();
-            
+
+            // first_name is NOT NULL in the DB; branch_admin / listing-team sales may now
+            // create a lead without it (LeadRequest) — store an empty string then.
+            if (! isset($leadData['first_name']) || $leadData['first_name'] === null) {
+                $leadData['first_name'] = '';
+            }
+
             $participants = $request->input('participants', []);
             $observers = $request->input('observers', []);
              $initialComment = $request->input('comment');
@@ -676,6 +682,12 @@ class LeadController extends Controller
                 // column on save; changing the owner goes through a real value only.
                 if (array_key_exists('responsible_person_id', $leadData) && empty($leadData['responsible_person_id'])) {
                     unset($leadData['responsible_person_id']);
+                }
+
+                // first_name is NOT NULL in the DB; branch_admin / listing-team sales may
+                // leave it empty (LeadRequest) and the request turns "" into null.
+                if (array_key_exists('first_name', $leadData) && $leadData['first_name'] === null) {
+                    $leadData['first_name'] = '';
                 }
 
                 if (!auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {

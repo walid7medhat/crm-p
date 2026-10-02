@@ -112,7 +112,27 @@ class LeadRequest extends FormRequest
             $rules['lead_number'] = 'string|unique:leads,lead_number,' . $this->route('lead')->id;
         }
 
+        // branch_admin and listing-team sales may leave the client's first name and
+        // primary phone empty — when creating AND editing (otherwise a lead they created
+        // without them could never be saved again). LeadController::store/update save ''
+        // for the NOT NULL first_name column. Everyone else keeps both required.
+        if ($this->mayCreateWithoutNameAndPhone()) {
+            $rules['first_name'] = 'nullable|string|max:255';
+            $rules['work_phone'] = ['nullable', 'max:20'];
+        }
+
         return $rules;
+    }
+
+    private function mayCreateWithoutNameAndPhone(): bool
+    {
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasRole('branch_admin')
+            || ($user->hasRole('sales') && $user->is_listing_team);
     }
 
     protected function withValidator($validator): void

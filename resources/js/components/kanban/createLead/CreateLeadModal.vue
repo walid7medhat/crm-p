@@ -73,8 +73,8 @@
                                         <div class="col">
                                             <label class="form-label-custom">First Name</label>
                                             <b-form-input 
-                                                v-model="form.first_name" 
-                                                placeholder="Enter Your First Name *" 
+                                                v-model="form.first_name"
+                                                :placeholder="nameAndPhoneOptional ? 'Enter Your First Name' : 'Enter Your First Name *'"
                                                 class="custom-input"
                                                 :class="{ 'is-invalid': validationErrors.first_name }"
                                             />
@@ -1039,6 +1039,17 @@ watch(selectedExistingClient, (client) => {
         // source_relation: '',
            referral_type: null,
     })
+    // branch_admin and listing-team sales may create a lead without first name / phone
+    // (mirrors LeadRequest::mayCreateWithoutNameAndPhone on the server).
+    const nameAndPhoneOptional = computed(() => {
+        try {
+            const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
+            return roles.includes('branch_admin') || (isSalesUser.value && isListingTeamUser.value)
+        } catch {
+            return false
+        }
+    })
+
     const fetchCurrentUserRole = () => {
         try {
             const userData = localStorage.getItem('user')
