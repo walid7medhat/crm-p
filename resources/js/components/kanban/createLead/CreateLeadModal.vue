@@ -17,6 +17,7 @@
                         class="px-1"
                         v-model="form.stage_id"
                         :require-validation="false"
+                        disable-lead-pool
                         @stage-change-request="handleStageChangeRequest"
                     />
                     <div v-if="validationErrors.stage_id" class="invalid-feedback d-block px-1 mb-0">

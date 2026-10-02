@@ -11,7 +11,8 @@
                 <template v-for="(stage, index) in stages" :key="stage.id">
                     <div
                         class="stage-pill"
-                        :class="{ active: index <= selectedStageIndex }"
+                        :class="{ active: index <= selectedStageIndex, 'stage-pill--blocked': isStageBlocked(stage) }"
+                        :title="isStageBlocked(stage) ? 'Leads cannot be created in Lead Pool' : undefined"
                         :style="{
                             backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
                             borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
@@ -71,8 +72,21 @@ const props = defineProps({
     disabled: {
         type: Boolean,
         default: false
+    },
+    // Create form: the Lead Pool stage can't be picked (LeadController::store rejects it).
+    disableLeadPool: {
+        type: Boolean,
+        default: false
     }
 })
+
+// Same rule as LeadController::isLeadPoolStage.
+const isLeadPoolStage = (stage) => {
+    const name = String(stage?.name || '').trim().toLowerCase()
+    return name === 'lead pool' || name === 'leadpool' || Number(stage?.order) === 9
+}
+
+const isStageBlocked = (stage) => props.disableLeadPool && isLeadPoolStage(stage)
 
 const emit = defineEmits(['update:modelValue', 'stage-change-request'])
 
@@ -304,6 +318,7 @@ const selectedStageIndex = computed(() => {
 
 const selectStage = (index) => {
     if (props.disabled) return
+    if (stages.value[index] && isStageBlocked(stages.value[index])) return
     if (stages.value[index]) {
         const selectedStage = stages.value[index]
         const newStageId = selectedStage.id
@@ -375,6 +390,11 @@ onUnmounted(() => {
     cursor: not-allowed;
     opacity: 0.6;
     pointer-events: none;
+}
+
+.stage-pill.stage-pill--blocked {
+    cursor: not-allowed;
+    opacity: 0.45;
 }
 
 .stage-selector-track {

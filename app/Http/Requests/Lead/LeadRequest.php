@@ -143,6 +143,16 @@ class LeadRequest extends FormRequest
             if ($from !== null && $from !== '' && $to !== null && $to !== '' && (float) $to < (float) $from) {
                 $validator->errors()->add('budget_to', 'The budget to must be greater than or equal to budget from.');
             }
+
+            // New leads can't be created straight into the Lead Pool (same rule as
+            // LeadController::isLeadPoolStage). Editing is unaffected.
+            if ($this->isMethod('POST') && $this->filled('stage_id')) {
+                $stage = \App\Models\Stage::find($this->input('stage_id'));
+                $name = strtolower(trim((string) $stage?->name));
+                if ($stage && ($name === 'lead pool' || $name === 'leadpool' || (int) $stage->order === 9)) {
+                    $validator->errors()->add('stage_id', 'Leads cannot be created in the Lead Pool stage.');
+                }
+            }
         });
     }
 

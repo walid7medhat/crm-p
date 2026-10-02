@@ -111,9 +111,7 @@
             class="search-area-column kanban-mob-toolbar__search-col"
             ref="searchDropdownAnchorRef"
           >
-              <!-- No search on the Lead Pool tab. -->
               <div
-                v-if="activeKanbanTab !== 'lead-pool'"
                 class="search-wrapper kanban-mob-toolbar__search-bar d-flex align-items-center"
                 :class="{
                   'search-wrapper-expanded': hasAnySearchCriteria,
@@ -352,9 +350,7 @@
       <template v-if="isKanbanRoute">
               <!-- في navbar-header-right، استبدلي الـ kanban-search-wrapper بالكود ده -->
         <div class="search-area-column d-flex flex-column align-items-end position-relative" ref="searchDropdownAnchorRef" v-if="isKanbanRoute">
-            <!-- No search on the Lead Pool tab. -->
             <div
-                v-if="activeKanbanTab !== 'lead-pool'"
                 class="search-wrapper d-flex align-items-center"
                 :class="{
                     'search-wrapper-expanded': hasAnySearchCriteria,
@@ -1384,8 +1380,11 @@ const hasAnySearchCriteria = computed(() => {
 // get plain text search via the input field only.
 // Lead Pool: the advanced search popup is for super_admin / admin only — by role, so a
 // manager / team_lead holding the generic 'admin' permission still gets text search only.
-// Lead Pool now has no navbar search at all (input hidden in the template) — for every role.
-const canUseLeadSearchModal = computed(() => activeKanbanTab.value !== 'lead-pool');
+const canUseLeadSearchModal = computed(() => {
+    if (activeKanbanTab.value !== 'lead-pool') return true;
+    const roles = user.value?.roles || [];
+    return roles.includes('super_admin') || roles.includes('admin');
+});
 
 // Switching to the Lead Pool while the popup is open (opened on the Leads tab) — close it
 // for users who can't use it there.
