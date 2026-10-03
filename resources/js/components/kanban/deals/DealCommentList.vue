@@ -44,6 +44,21 @@
                         <div class="comment-card-header">
                             <span class="comment-label">Comment</span>
                             <div class="comment-header-right">
+                                <button
+                                    v-if="hasArabic(comment.comment)"
+                                    type="button"
+                                    class="comment-translate-btn"
+                                    :class="{ active: stateFor(comment)?.visible && stateFor(comment)?.text }"
+                                    :title="stateFor(comment)?.visible && stateFor(comment)?.text ? 'Hide translation' : 'Translate to English'"
+                                    :disabled="stateFor(comment)?.loading"
+                                    @click="toggleTranslation(comment)"
+                                >
+                                    <iconify-icon
+                                        :icon="stateFor(comment)?.loading ? 'lucide:loader-2' : 'lucide:languages'"
+                                        class="comment-translate-icon"
+                                        :class="{ spinning: stateFor(comment)?.loading }"
+                                    ></iconify-icon>
+                                </button>
                                 <span class="comment-time">{{ comment.time }}</span>
                                 <div
                                     class="comment-avatar-hover-anchor"
@@ -102,6 +117,19 @@
                                     ></iconify-icon>
                                 </div>
                                 <div class="comment-text">{{ comment.comment }}</div>
+                            </div>
+
+                            <!-- English translation -->
+                            <div
+                                v-if="stateFor(comment)?.visible && (stateFor(comment).text || stateFor(comment).error)"
+                                class="comment-translation"
+                            >
+                                <div class="comment-translation-label">
+                                    <iconify-icon icon="lucide:languages"></iconify-icon>
+                                    Translated to English
+                                </div>
+                                <div v-if="stateFor(comment).text" class="comment-translation-text" dir="ltr">{{ stateFor(comment).text }}</div>
+                                <div v-else class="comment-translation-error">{{ stateFor(comment).error }}</div>
                             </div>
 
                             <!-- Attachments Section -->
@@ -180,6 +208,9 @@ import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import ProfilePopup from '../shared/ProfilePopup.vue'
+import { useCommentTranslation } from '@/composables/useCommentTranslation'
+
+const { stateFor, toggleTranslation, hasArabic } = useCommentTranslation()
 
 const instance = getCurrentInstance()
 const $showNotification = (message, type = 'info') => {
@@ -992,6 +1023,74 @@ defineExpose({
 }
 
 .kebab-icon.delete-icon {
+    color: #DC2626;
+}
+
+.comment-translate-btn {
+    background: transparent;
+    border: none;
+    padding: 3px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.comment-translate-btn:hover:not(:disabled),
+.comment-translate-btn.active {
+    background: #F3EAF7;
+}
+
+.comment-translate-btn:disabled {
+    cursor: wait;
+}
+
+.comment-translate-icon {
+    font-size: 15px;
+    color: #733E87;
+}
+
+.comment-translate-icon.spinning {
+    animation: comment-translate-spin 0.9s linear infinite;
+}
+
+@keyframes comment-translate-spin {
+    to { transform: rotate(360deg); }
+}
+
+.comment-translation {
+    margin: 10px 0 0 44px;
+    padding: 8px 10px;
+    border-left: 3px solid #733E87;
+    border-radius: 6px;
+    background: #FAF7FC;
+}
+
+.comment-translation-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #733E87;
+    margin-bottom: 4px;
+}
+
+.comment-translation-text {
+    font-size: 13px;
+    color: #333333;
+    line-height: 1.5;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
+}
+
+.comment-translation-error {
+    font-size: 12px;
     color: #DC2626;
 }
 

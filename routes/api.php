@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceCheckinController;
 use App\Http\Controllers\Api\DocumentExpirySettingsController;
 use App\Http\Controllers\Api\SuggestionController;
+use App\Http\Controllers\Api\TranslationController;
 use App\Http\Controllers\Api\Deal\DealActivityController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ChatController;
@@ -573,6 +574,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/suggestions', [SuggestionController::class, 'index']);
     Route::post('/suggestions', [SuggestionController::class, 'store']);
     Route::post('/suggestions/{suggestion}/replies', [SuggestionController::class, 'reply']);
+    Route::post('/translate', [TranslationController::class, 'translate'])->middleware('throttle:60,1');
     Route::get('dashboard/stats',[DashboardController::class,'getStats']);
     Route::get('/dashboard/listings-statistics', [DashboardController::class, 'getListingsStatistics']);
     Route::get('/dashboard/active-agents', [DashboardController::class, 'getActiveAgents']);
