@@ -103,6 +103,38 @@ async function handleUnauthorized(error) {
   return Promise.reject(error)
 }
 
+let handlingInactive = false
+
+/**
+ * The account was set inactive / blocked: log out now. Used by the live
+ * `.account.deactivated` event (main.js) and by the API's 403 "Account inactive".
+ */
+export async function forceInactiveLogout(message) {
+  if (handlingInactive || isPublicAuthPage()) return
+  handlingInactive = true
+  // Drop the token first so nothing else keeps calling the API behind the popup.
+  clearAuthToken()
+  try {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Account Inactive',
+      text: message || 'Your account has been deactivated. Please contact your administrator.',
+      confirmButtonText: 'OK',
+      allowOutsideClick: false,
+    })
+  } finally {
+    try {
+      const { resetSidebarLayout } = await import('../composables/useSidebar.js')
+      resetSidebarLayout()
+    } catch {
+      // ignore
+    }
+    localStorage.clear()
+    sessionStorage.clear()
+    window.location.href = '/sign-in'
+  }
+}
+
 const INTERCEPTOR_FLAG = '__crmAuthInterceptorsAttached'
 
 function attachAuthInterceptor(client) {
@@ -123,6 +155,12 @@ function attachAuthInterceptor(client) {
     (error) => {
       const status = error.response?.status
       const url = error.config?.url || ''
+
+      // JwtAuthMiddleware: account was set inactive while logged in.
+      if (status === 403 && String(error?.response?.data?.message || '') === 'Account inactive') {
+        forceInactiveLogout()
+        return Promise.reject(error)
+      }
 
       if (status === 401 && !isAuthEndpoint(url) && !isPublicAuthPage()) {
         const sentToken = requestHadAuthHeader(error.config)

@@ -5309,7 +5309,9 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
 
     try {
 
-        const params = { limit: 30 }
+        // include_inactive: inactive members still show here so their team lead / manager
+        // can filter by them and see their leads (assign pickers stay active-only).
+        const params = { limit: 30, include_inactive: 1 }
 
         const term = String(search || '').trim()
 

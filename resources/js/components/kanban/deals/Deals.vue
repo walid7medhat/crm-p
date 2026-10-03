@@ -2811,18 +2811,22 @@ font-weight: 700;
   border-color: rgba(255, 255, 255, 0.6);
 }
 
-/* Kanban card — Figma deal card */
+/* Kanban card — font, colors, border and shadow match the lead card (leads.vue .kanban-card). */
 .kanban-card-figma {
-  padding: 10px 12px !important;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  margin-bottom: 0;
+  /* Spacing matches the lead card too: p-12, title mb-12, rows mb-8, cards mb-10. */
+  padding: 12px !important;
+  font-family: Montserrat, ui-sans-serif, sans-serif;
+  color: #1e293b;
+  border: 1px solid rgba(30, 27, 46, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(30, 27, 46, 0.08);
+  background: #ffffff;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  margin-bottom: 10px;
 }
 
 .kanban-card-top {
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
 .kanban-card-divider {
@@ -2835,32 +2839,33 @@ font-weight: 700;
 .task-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .date-created-line {
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  font-size: 12px;
+  font-family: Montserrat, ui-sans-serif, sans-serif;
+  font-size: 10px;
   line-height: 1.3;
-  color: #475569;
+  color: #8b8798;
 }
 
 .date-created-label {
   font-weight: 500;
   margin-right: 6px;
-  color: #475569;
+  color: #8b8798;
 }
 
 .date-created-value {
   font-weight: 500;
-  color: #0f172a;
+  font-size: 11px;
+  color: #353535;
 }
 
 .assigned-by-line {
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  font-size: 12px;
+  font-family: Montserrat, ui-sans-serif, sans-serif;
+  font-size: 11px;
   font-weight: 500;
-  color: #334155;
+  color: #353535;
 }
 
 .kanban-card-footer-avatar {
@@ -2870,12 +2875,12 @@ font-weight: 700;
 
 /* Kanban Card */
 .task-title {
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-family: Montserrat, ui-sans-serif, sans-serif;
   font-weight: 700;
-  font-size: 14px;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  color: #0B0736;
+  font-size: 13px;
+  line-height: 19px;
+  letter-spacing: -0.2px;
+  color: #1a1528;
 }
 
 .task-header {
@@ -2883,50 +2888,52 @@ font-weight: 700;
 }
 
 .info-label {
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
-  color: #475569;
+  font-family: Montserrat, ui-sans-serif, sans-serif;
+  color: #8b8798;
   font-weight: 500;
-  font-size: 12px !important;
-  margin-bottom: 1px;
-  line-height: 1.25;
+  font-size: 10px !important;
 }
 
 .info-value {
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-family: Montserrat, ui-sans-serif, sans-serif;
   font-weight: 500;
-  font-size: 12px;
-  line-height: 1.3;
-  color: #0f172a;
+  font-size: 11px;
+  line-height: 12px;
+  color: #353535;
 }
 
+/* Buyer name: same as the lead card's "Name" value (a plain info-value). */
 .info-value--primary {
-  font-weight: 700 !important;
-  font-size: 14px !important;
-  line-height: 1.25 !important;
-  color: #0B0736 !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  line-height: 12px !important;
+  color: #353535 !important;
 }
 
 .date-info {
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  font-family: Montserrat, ui-sans-serif, sans-serif;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1.25;
-  color: #475569;
+  color: #8b8798;
 }
 
 .kanban-card .info-label,
 .kanban-card .date-created-label {
-  color: #475569 !important;
+  color: #8b8798 !important;
 }
 
 .kanban-card .info-value,
 .kanban-card .date-created-value {
-  color: #0f172a !important;
+  color: #353535 !important;
 }
 
-.kanban-card .task-title,
+.kanban-card .task-title {
+  color: #1a1528 !important;
+}
+
 .kanban-card .info-value--primary {
-  color: #0B0736 !important;
+  color: #353535 !important;
 }
 
 [data-theme=dark] .kanban-card-figma,
@@ -2935,12 +2942,12 @@ font-weight: 700;
   border-color: #334155 !important;
 }
 
-[data-theme=dark] .kanban-card .task-title,
-[data-theme=dark] .kanban-card .info-value--primary {
+[data-theme=dark] .kanban-card .task-title {
   color: #f8fafc !important;
 }
 
 [data-theme=dark] .kanban-card .info-value,
+[data-theme=dark] .kanban-card .info-value--primary,
 [data-theme=dark] .kanban-card .date-created-value {
   color: #e2e8f0 !important;
 }
@@ -2959,8 +2966,9 @@ font-weight: 700;
 }
 
 .kanban-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.08);
+  transform: none;
+  border-color: rgba(30, 27, 46, 0.22);
+  box-shadow: 0 4px 14px rgba(30, 27, 46, 0.12);
 }
 
 .mobile-pressing {
@@ -2990,8 +2998,8 @@ font-weight: 700;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
+  gap: 8px;
+  font-family: Montserrat, ui-sans-serif, sans-serif;
 }
 
 .min-height-cards {

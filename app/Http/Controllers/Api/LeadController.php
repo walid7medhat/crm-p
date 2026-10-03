@@ -1126,11 +1126,16 @@ class LeadController extends Controller
         $teamId = request()->input('team_id');
         $selectedIds = $this->requestedIdList(request()->input('selected_id', request()->input('selected_ids')));
 
-        $columns = ['id', 'name', 'display_name', 'email', 'avatar', 'parent_id'];
+        $columns = ['id', 'name', 'display_name', 'email', 'avatar', 'parent_id', 'status'];
         $present = function ($person) {
+            $name = User::resolveDisplayName($person);
+            if ($person->status !== 'active') {
+                $name .= ' (Inactive)';
+            }
+
             return [
                 'id' => $person->id,
-                'name' => User::resolveDisplayName($person),
+                'name' => $name,
                 'email' => $person->email,
                 'avatar' => $person->avatar ? asset('storage/' . $person->avatar) : null,
                 'role_name' => $person->roles->first()?->name,
@@ -1141,7 +1146,14 @@ class LeadController extends Controller
             ];
         };
 
-        $base = User::query()->where('users.status', 'active');
+        // ?include_inactive=1 — lead search only: a team lead / manager can still filter by
+        // an inactive member to see that member's leads. Assign pickers don't send it, so
+        // leads can't be assigned to an inactive user.
+        $includeInactive = request()->boolean('include_inactive');
+        $base = User::query();
+        if (! $includeInactive) {
+            $base->where('users.status', 'active');
+        }
         if ($user->hasRole('super_admin')) {
             // Super admins may also pick themselves (they have no parent and no assignable role).
             $base->where(function ($q) use ($user) {

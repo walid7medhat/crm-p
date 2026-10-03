@@ -5,7 +5,7 @@ import SearchableSelect from './components/ui/SearchableSelect.vue'
 import 'vue-select/dist/vue-select.css'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
-import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken } from './plugins/axios.js'
+import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken, forceInactiveLogout } from './plugins/axios.js'
 
 // CSS imports
 import '../css/app.css'
@@ -395,6 +395,12 @@ function scheduleEchoInit() {
 
       const currentUserId = getStoredUserId()
       if (currentUserId) {
+        // Account set inactive by an admin → log out now (UserDeactivated event).
+        window.Echo.private(`user.${currentUserId}`)
+          .listen('.account.deactivated', (e) => {
+            forceInactiveLogout(e?.message)
+          })
+
         window.Echo.private(`user.${currentUserId}`)
           .notification((notification) => {
             console.log('[Notification]', notification)

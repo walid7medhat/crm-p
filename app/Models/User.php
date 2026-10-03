@@ -126,6 +126,26 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             ->whereDay('birth_date', $date->day);
     }
 
+    protected static function booted(): void
+    {
+        // Made inactive / blocked → log out any open session right away. Fired here so
+        // every path that changes status (status toggle, edit user form, ...) is covered.
+        static::updated(function (User $user) {
+            if ($user->wasChanged('status') && $user->status !== 'active') {
+                try {
+                    event(new \App\Events\UserDeactivated((int) $user->id, (string) $user->status));
+                } catch (\Throwable $e) {
+                    // Broadcasting down must not block the status change; JwtAuthMiddleware
+                    // still rejects the account's next request.
+                    \Illuminate\Support\Facades\Log::warning('UserDeactivated broadcast failed', [
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        });
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();
