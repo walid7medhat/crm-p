@@ -1394,24 +1394,13 @@ public function getMatchingListings(Request $request)
             && (bool) $listing->approved;
         if (!$isPubliclyVisible) {
             $isOwner = $user && ((int) $user->id === (int) $listing->agent_id || (int) $user->id === (int) $listing->added_by);
-            $isPrivileged = $user && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin'));
+            // A team lead with is_listing_team is treated the same as a manager with
+            // listing_team here — full org-wide visibility, not scoped to their own
+            // subtree — so they can open (and then approve) any pending listing, same
+            // as that manager can. branch_admin is privileged separately/unconditionally.
+            $isPrivileged = $user && ($user->hasRole('super_admin') || $user->hasRole('admin') ||  ($user->hasRole('manager') && $user->listing_team == 1) || ($user->hasRole('team_lead') && $user->is_listing_team));
 
-            // Team lead: same team-scoped exception getPendingApprovals() already grants
-            // for the list view — without this, a team lead could see their subordinate's
-            // pending listing in "Need Approval Listings" but not open/approve it.
-            $isTeamLeadOverTheirTeam = false;
-            if (!$isOwner && !$isPrivileged && $user && $user->hasRole('team_lead') && $user->is_listing_team) {
-                $teamIds = User::where(function ($q) use ($user) {
-                    $q->where('id', $user->id)
-                        ->orWhere('parent_id', $user->id)
-                        ->orWhereHas('parent', function ($parentQuery) use ($user) {
-                            $parentQuery->where('parent_id', $user->id);
-                        });
-                })->pluck('id')->toArray();
-                $isTeamLeadOverTheirTeam = in_array((int) $listing->agent_id, $teamIds, true);
-            }
-
-            if (!$isOwner && !$isPrivileged && !$isTeamLeadOverTheirTeam) {
+            if (!$isOwner && !$isPrivileged) {
                 throw new \Exception('Listing Not found');
             }
         }
@@ -3549,20 +3538,10 @@ public function getPendingApprovals(Request $request): JsonResponse
         ->where('is_archived', false)
         ->orderBy('created_at', 'desc');
 
-        // 👇 Team Lead restriction
-        if ($user->hasRole('team_lead')) {
+        // Team lead with is_listing_team sees every pending listing, same as manager —
+        // no subtree restriction (removed so a team lead works exactly like a manager
+        // here, per request).
 
-            $allIds = User::where(function($q) use ($user) {
-                $q->where('id', $user->id)
-                  ->orWhere('parent_id', $user->id)
-                  ->orWhereHas('parent', function($parentQuery) use ($user) {
-                      $parentQuery->where('parent_id', $user->id);
-                  });
-            })->pluck('id')->toArray();
-
-            $query->whereIn('agent_id', $allIds);
-        }
-        
         // filters
         if ($request->has('search') && $request->search) {
             $search = $request->search;
