@@ -30,8 +30,9 @@ class TranslationController extends Controller
         $translated = Cache::get($cacheKey);
 
         if ($translated === null) {
-            $translated = $this->translateWithGoogle($text, $target)
-                ?? $this->translateWithOpenAi($text, $target);
+            $translated = config('services.google_translate.driver') === 'mymemory'
+                ? $this->translateWithMyMemory($text, $target)
+                : $this->translateWithGoogle($text, $target) ?? $this->translateWithOpenAi($text, $target);
 
             if ($translated === null) {
                 return response()->json(['message' => 'Translation service is unavailable. Please try again later.'], 503);
@@ -74,6 +75,33 @@ class TranslationController extends Controller
             return $response->successful() && $result !== '' ? $result : null;
         } catch (\Throwable $e) {
             Log::warning('OpenAI translation failed', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Free keyless API, for local testing only (~5,000 chars/day, max 500 chars per request).
+     */
+    private function translateWithMyMemory(string $text, string $target): ?string
+    {
+        $source = $target === 'en' ? 'ar' : 'en';
+
+        try {
+            $response = Http::timeout(15)->get('https://api.mymemory.translated.net/get', [
+                'q' => mb_substr($text, 0, 500),
+                'langpair' => "{$source}|{$target}",
+            ]);
+
+            if (!$response->successful() || (int) data_get($response->json(), 'responseStatus') !== 200) {
+                Log::warning('MyMemory translation failed', ['error' => data_get($response->json(), 'responseDetails')]);
+                return null;
+            }
+
+            $result = (string) data_get($response->json(), 'responseData.translatedText', '');
+
+            return trim($result) !== '' ? $result : null;
+        } catch (\Throwable $e) {
+            Log::warning('MyMemory translation failed', ['error' => $e->getMessage()]);
             return null;
         }
     }
