@@ -1,42 +1,37 @@
 <template>
-  <div class="ps-agent-bar" role="region" aria-label="Contact agent">
+  <div class="ps-agent-bar" role="region" aria-label="Property actions">
     <div class="ps-agent-bar__sheet">
-      <div class="ps-agent-bar__profile" @click="emit('profile')">
-        <div class="ps-agent-bar__avatar-wrap">
-          <img
-            :src="agent.avatar || defaultAvatar"
-            :alt="agentName"
-            class="ps-agent-bar__avatar"
-            @error="onAvatarError"
-          />
-        </div>
-        <div class="ps-agent-bar__info">
-          <p class="ps-agent-bar__name">{{ agentName }}</p>
-          <span class="ps-agent-bar__link">View agent profile <i class="ri-arrow-right-s-line"></i></span>
-        </div>
-      </div>
-
-      <div class="ps-agent-bar__actions">
-        <button
-          v-if="canChat"
-          type="button"
-          class="ps-agent-bar__btn ps-agent-bar__btn--chat"
-          @click="emit('chat')"
-        >
-          <i class="ri-chat-3-line"></i>
-          <span>Chat</span>
-        </button>
-        <button
-          v-if="showActions"
-          type="button"
-          class="ps-agent-bar__btn ps-agent-bar__btn--actions"
-          :class="{ 'ps-agent-bar__btn--solo': !canChat }"
-          @click="emit('actions')"
-        >
-          <i class="ri-more-2-line"></i>
-          <span>Actions</span>
-        </button>
-      </div>
+      <button
+        type="button"
+        class="ps-agent-bar__avatar-btn"
+        :aria-label="`View ${agentName}`"
+        @click="emit('profile')"
+      >
+        <img
+          :src="agent.avatar || defaultAvatar"
+          :alt="agentName"
+          class="ps-agent-bar__avatar"
+          @error="onAvatarError"
+        />
+      </button>
+      <button
+        v-if="showActions"
+        type="button"
+        class="ps-agent-bar__action"
+        @click="emit('actions')"
+      >
+        Property Action
+        <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+      </button>
+      <button
+        v-if="canChat"
+        type="button"
+        class="ps-agent-bar__chat"
+        aria-label="Chat with agent"
+        @click="emit('chat')"
+      >
+        <i class="ri-chat-3-line"></i>
+      </button>
     </div>
   </div>
 </template>

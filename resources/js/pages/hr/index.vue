@@ -7315,7 +7315,7 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 .hr-generate-btn--navy {
-  background: #0b0736;
+  background: #6b21a8;
 }
 .hr-generate-btn--navy iconify-icon {
   color: #f99f1c;
@@ -9010,7 +9010,7 @@ onBeforeUnmount(() => {
   color: #9ca3af;
 }
 .attendance-create-modal .add-employee-save-btn {
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
 }
 .attendance-create-modal .add-employee-clear-btn {

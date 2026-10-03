@@ -1818,7 +1818,7 @@ onMounted(async () => {
     border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
+    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
     padding: 0;
     transition: filter .2s;
 }
@@ -1852,8 +1852,8 @@ onMounted(async () => {
 }
 
 .deal-pill-btn.active {
-  background: #0B0736;
-  border-color: #0B0736;
+  background: #6b21a8;
+  border-color: #6b21a8;
   color: #fff;
 }
 
@@ -2494,8 +2494,8 @@ onMounted(async () => {
 }
 
 .lr-date-preset.active {
-    background: #0B0736;
-    border-color: #0B0736;
+    background: #6b21a8;
+    border-color: #6b21a8;
     color: #fff;
 }
 
@@ -2588,8 +2588,8 @@ onMounted(async () => {
 }
 
 .lr-day.selected {
-    background: #0B0736;
-    border-color: #0B0736;
+    background: #6b21a8;
+    border-color: #6b21a8;
     color: #fff;
 }
 

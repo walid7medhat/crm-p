@@ -59,28 +59,32 @@
             </div>
         </div>
         <div class="board-head">
-            <div
-                v-if="kanbanIsMobile"
-                class="mobile-current-stage-bar"
-                role="button"
-                tabindex="0"
-                @click="openMobileListFilterSheet"
-                @keydown.enter.prevent="openMobileListFilterSheet"
-            >
-                <span class="mobile-current-stage-bar__icon" aria-hidden="true">
-                    <iconify-icon icon="lucide:git-branch" />
-                </span>
-                <div class="mobile-current-stage-bar__text">
-                    <span class="mobile-current-stage-bar__label">Current Stage</span>
-                    <span class="mobile-current-stage-bar__value">{{ mobileListFilterLabel }}</span>
-                </div>
+            <div v-if="kanbanIsMobile" class="mobile-stage-nav">
+                <button type="button" class="mobile-stage-nav__arrow" aria-label="Previous stage" @click.stop="shiftMobileStage(-1)">
+                    <iconify-icon icon="lucide:chevron-left" />
+                </button>
+                <button type="button" class="mobile-stage-nav__pill" :style="mobileStageBarStyle" @click="openMobileListFilterSheet">
+                    <iconify-icon :icon="mobileStageIcon(mobileActiveStageColumn?.title)" />
+                    <span>{{ mobileListFilterLabel }}</span>
+                </button>
+                <button type="button" class="mobile-stage-nav__arrow" aria-label="Next stage" @click.stop="shiftMobileStage(1)">
+                    <iconify-icon icon="lucide:chevron-right" />
+                </button>
             </div>
 
             <LeadAnalyticsShortcuts
+                v-if="!kanbanIsMobile"
                 :metrics="leadAnalyticsMetrics"
                 :active-filter="activeShortcutFilter"
                 @toggle-filter="onShortcutFilterToggle"
             />
+            <Teleport v-else-if="mobileSearchChipsHost" to="#lead-search-mobile-chips">
+                <LeadAnalyticsShortcuts
+                    :metrics="leadAnalyticsMetrics"
+                    :active-filter="activeShortcutFilter"
+                    @toggle-filter="onShortcutFilterToggle"
+                />
+            </Teleport>
 
             <div class="board-view-switch" role="tablist" aria-label="Lead layout">
                 <button
@@ -802,51 +806,38 @@
         >
             <div class="mobile-kanban-sheet mobile-kanban-sheet--pick" @click.stop>
                 <div class="mobile-kanban-sheet__head">
-                    <h6 class="mobile-kanban-sheet__title">Current Stage</h6>
+                    <h6 class="mobile-kanban-sheet__title">Select Stage</h6>
                     <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobileListFilterSheet">
                         <iconify-icon icon="lucide:x" />
                     </button>
                 </div>
-                <div class="mobile-kanban-stage-list">
-                    <label class="mobile-kanban-stage-row">
-                        <input
-                            v-model="mobileListFilterStageId"
-                            name="mobile-stage-filter"
-                            type="radio"
-                            class="mobile-kanban-stage-row__radio"
-                            :value="MOBILE_FILTER_ALL"
-                            @change="selectMobileListFilter(MOBILE_FILTER_ALL)"
-                        />
-                        <span class="mobile-kanban-stage-row__pill mobile-kanban-stage-row__pill--all">
-                            <span class="mobile-kanban-stage-row__pill-dot" aria-hidden="true" />
-                            <span class="mobile-kanban-stage-row__pill-text">All Stages ({{ totalLeadsCount }})</span>
-                        </span>
-                    </label>
-                    <label
+                <div class="mobile-stage-picker">
+                    <button
+                        type="button"
+                        class="mobile-stage-chip"
+                        :class="{ 'is-selected': mobileListFilterDraft === MOBILE_FILTER_ALL }"
+                        @click="mobileListFilterDraft = MOBILE_FILTER_ALL"
+                    >
+                        <iconify-icon icon="lucide:layers" />
+                        <span>All Stages</span>
+                        <iconify-icon v-if="mobileListFilterDraft === MOBILE_FILTER_ALL" icon="lucide:check" class="mobile-stage-chip__check" />
+                    </button>
+                    <button
                         v-for="col in columns"
                         :key="'filter-' + col.status"
-                        class="mobile-kanban-stage-row"
+                        type="button"
+                        class="mobile-stage-chip"
+                        :class="{ 'is-selected': String(mobileListFilterDraft) === String(col.status) }"
+                        @click="mobileListFilterDraft = String(col.status)"
                     >
-                        <input
-                            v-model="mobileListFilterStageId"
-                            name="mobile-stage-filter"
-                            type="radio"
-                            class="mobile-kanban-stage-row__radio"
-                            :value="String(col.status)"
-                            @change="selectMobileListFilter(col.status)"
-                        />
-                        <span
-                            class="mobile-kanban-stage-row__pill"
-                            :style="{ backgroundColor: col.color }"
-                        >
-                            <span class="mobile-kanban-stage-row__pill-dot" aria-hidden="true" />
-                            <span class="mobile-kanban-stage-row__pill-text">{{ col.title }} ({{ stageCountForColumn(col) }})</span>
-                        </span>
-                    </label>
+                        <iconify-icon :icon="mobileStageIcon(col.title)" :style="{ color: stageTextOn(col.color) === '#1c1730' ? '#1c1730' : (col.color || '#6b21a8') }" />
+                        <span class="mobile-stage-chip__label">{{ col.title }}</span>
+                        <iconify-icon v-if="String(mobileListFilterDraft) === String(col.status)" icon="lucide:check" class="mobile-stage-chip__check" />
+                    </button>
                 </div>
                 <div class="mobile-kanban-sheet__footer">
-                    <button type="button" class="mobile-kanban-btn mobile-kanban-btn--dark w-100" @click="closeMobileListFilterSheet">
-                        Done
+                    <button type="button" class="mobile-stage-confirm" @click="confirmMobileListFilter">
+                        Confirm
                     </button>
                 </div>
             </div>
@@ -1377,11 +1368,31 @@ const getUserFromStorage = () => {
 const user = ref(getUserFromStorage())
 
 const kanbanIsMobile = inject('kanbanIsMobile', ref(false))
+const mobileSearchChipsHost = ref(false)
+
+function onLeadSearchMobileSheet(event) {
+    const open = !!event?.detail?.open && kanbanIsMobile.value
+    if (!open) {
+        mobileSearchChipsHost.value = false
+        return
+    }
+    nextTick(() => {
+        const host = document.getElementById('lead-search-mobile-chips')
+        if (host) {
+            mobileSearchChipsHost.value = true
+            return
+        }
+        requestAnimationFrame(() => {
+            mobileSearchChipsHost.value = !!document.getElementById('lead-search-mobile-chips')
+        })
+    })
+}
 const kanbanOpenCreateLead = inject('kanbanOpenCreateLead', null)
 
 /** Mobile list filter: show all stacked stages or focus one column */
 const MOBILE_FILTER_ALL = 'all'
 const mobileListFilterStageId = ref(MOBILE_FILTER_ALL)
+const mobileListFilterDraft = ref(MOBILE_FILTER_ALL)
 const showMobileQuickSheet = ref(false)
 const showMobilePickStageSheet = ref(false)
 const showMobileListFilterSheet = ref(false)
@@ -3234,6 +3245,7 @@ onMounted(async () => {
     window.addEventListener('resize', updateScrollArrows)
     window.addEventListener('resize', updateListScrollArrows)
     window.addEventListener('echo-ready', onEchoReady)
+    window.addEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
     if (leadIdFromUrl) {
@@ -3257,6 +3269,7 @@ onUnmounted(() => {
     window.removeEventListener('resize', updateScrollArrows)
     window.removeEventListener('resize', updateListScrollArrows)
     window.removeEventListener('echo-ready', onEchoReady)
+    window.removeEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     cleanup()
 })
 
@@ -4328,6 +4341,7 @@ function closeMobilePickStageSheet() {
 }
 
 function openMobileListFilterSheet() {
+    mobileListFilterDraft.value = mobileListFilterStageId.value
     showMobileListFilterSheet.value = true
 }
 
@@ -4338,6 +4352,70 @@ function closeMobileListFilterSheet() {
 function selectMobileListFilter(stageId) {
     mobileListFilterStageId.value = stageId === MOBILE_FILTER_ALL ? MOBILE_FILTER_ALL : String(stageId)
     closeMobileListFilterSheet()
+}
+
+function confirmMobileListFilter() {
+    selectMobileListFilter(mobileListFilterDraft.value)
+}
+
+function mobileStageIcon(title) {
+    const name = String(title || '').toLowerCase()
+    if (name.includes('new')) return 'lucide:filter'
+    if (name.includes('assign')) return 'lucide:user-round'
+    if (name.includes('follow')) return 'lucide:message-circle'
+    if (name.includes('unqual')) return 'lucide:badge-x'
+    if (name.includes('qualif')) return 'lucide:badge-check'
+    if (name.includes('convert')) return 'lucide:refresh-cw'
+    if (name.includes('share')) return 'lucide:send'
+    if (name.includes('lost')) return 'lucide:user-x'
+    return 'lucide:layers'
+}
+
+function stageRgb(hex) {
+    const raw = String(hex || '').trim().replace('#', '')
+    const full = raw.length === 3 ? raw.split('').map((part) => part + part).join('') : raw
+    if (!/^[0-9a-fA-F]{6}$/.test(full)) return null
+    return {
+        r: parseInt(full.slice(0, 2), 16),
+        g: parseInt(full.slice(2, 4), 16),
+        b: parseInt(full.slice(4, 6), 16),
+    }
+}
+
+function stageIsLight(hex) {
+    const rgb = stageRgb(hex)
+    if (!rgb) return false
+    return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255 > 0.62
+}
+
+function stageTextOn(hex) {
+    return stageIsLight(hex) ? '#1c1730' : '#ffffff'
+}
+
+const mobileActiveStageColumn = computed(() => {
+    if (mobileListFilterStageId.value === MOBILE_FILTER_ALL) return null
+    return columns.value.find(c => String(c.status) === String(mobileListFilterStageId.value)) || null
+})
+
+const mobileStageBarStyle = computed(() => {
+    const color = mobileActiveStageColumn.value?.color || '#14b8a6'
+    return {
+        background: color,
+        '--stage-label': stageTextOn(color),
+        color: stageTextOn(color),
+    }
+})
+
+function shiftMobileStage(direction) {
+    const cols = columns.value
+    if (!cols.length) return
+    const current = mobileListFilterStageId.value
+    let index = cols.findIndex(c => String(c.status) === String(current))
+    if (current === MOBILE_FILTER_ALL || index < 0) {
+        index = direction > 0 ? -1 : 0
+    }
+    const nextIndex = (index + direction + cols.length) % cols.length
+    selectMobileListFilter(cols[nextIndex].status)
 }
 
 
@@ -5951,7 +6029,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .lead-bulk-search:focus-within {
-    border-color: #0B0736;
+    border-color: #6b21a8;
     background: #fff;
 }
 
@@ -6002,7 +6080,7 @@ const fetchRevertNotifications = async () => {
     width: 32px;
     height: 32px;
     border-radius: 999px;
-    background: #0B0736;
+    background: #6b21a8;
     color: #fff;
     font-size: 13px;
     font-weight: 700;
@@ -6740,12 +6818,180 @@ const fetchRevertNotifications = async () => {
     padding: 0;
 }
 
+.kanban-outer--mobile .column-header--mobile {
+    display: none;
+}
+
 .kanban-outer--mobile .kanban-card--mobile {
-    border-radius: 14px !important;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+    border: 1px solid #f3f1f6 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 8px 22px rgba(30, 27, 46, 0.05) !important;
+    padding: 14px 14px 12px !important;
     touch-action: pan-y;
     -webkit-user-select: none;
     user-select: none;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .task-header {
+    margin-bottom: 6px !important;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .task-title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .task-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .info-item,
+.kanban-outer--mobile .kanban-card--mobile .date-info {
+    margin-bottom: 0 !important;
+    min-width: 0;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .date-info {
+    grid-column: 1 / -1;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .info-label,
+.kanban-outer--mobile .kanban-card--mobile .text-secondary-light {
+    font-size: 11px !important;
+    color: #9aa0ad !important;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .info-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1c1730;
+}
+
+.mobile-stage-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 4px 0 10px;
+}
+
+.mobile-stage-nav__arrow,
+.mobile-stage-nav__pill {
+    border: none;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-stage-nav__arrow {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    color: #3f3a4d;
+    box-shadow: 0 4px 12px rgba(30, 27, 46, 0.08);
+}
+
+.mobile-stage-nav__pill {
+    flex: 1;
+    min-width: 0;
+    height: 42px;
+    gap: 8px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(20, 184, 166, 0.22);
+    text-shadow: none;
+}
+
+.mobile-stage-nav__pill,
+.mobile-stage-nav__pill span,
+.mobile-stage-nav__pill iconify-icon {
+    color: var(--stage-label, #1c1730) !important;
+}
+
+.mobile-stage-nav__pill span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mobile-stage-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    max-height: min(52dvh, 420px);
+    overflow-y: auto;
+    padding: 4px 2px 8px;
+}
+
+.mobile-stage-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 8px 28px 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #ece8f2;
+    background: #fff;
+    color: #2a2438;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.mobile-stage-chip__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1c1730 !important;
+}
+
+.mobile-stage-chip.is-selected {
+    border-color: #f0b429;
+    box-shadow: 0 0 0 1px #f0b429;
+}
+
+.mobile-stage-chip__check {
+    position: absolute;
+    top: -4px;
+    right: 8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #f0b429;
+    color: #fff;
+    font-size: 11px;
+}
+
+.mobile-stage-confirm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    flex: 1 1 auto;
+    height: 48px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 999px;
+    background: #6b21a8;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
 }
 
 .mobile-current-stage-bar {
@@ -7856,17 +8102,14 @@ const fetchRevertNotifications = async () => {
         padding: 0 8px;
     }
 
-    .board-head .mobile-current-stage-bar {
-        grid-column: 1;
+    .board-head .mobile-stage-nav {
+        grid-column: 1 / -1;
         grid-row: 1;
         margin: 6px 0 8px;
     }
 
     .board-head .board-view-switch {
-        grid-column: 2;
-        grid-row: 1;
-        margin: 0;
-        padding: 3px;
+        display: none;
     }
 
     .board-head > :deep(.lead-analytics-row) {

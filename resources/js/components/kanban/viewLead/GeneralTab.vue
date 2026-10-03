@@ -732,7 +732,7 @@ watch(
 }
 
 .btn-toggle.active {
-    background: #0B0736;
+    background: #6b21a8;
     color: #fff;
     font-weight: 400;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
@@ -782,7 +782,7 @@ watch(
 }
 
 .edit-bar-save {
-    background: #0B0736;
+    background: #6b21a8;
     color: #fff;
 }
 

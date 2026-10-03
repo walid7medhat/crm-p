@@ -254,7 +254,7 @@ export default {
   --app-topbar-height: 2.75rem;
   --app-header-below-gap: 0.5rem;
   overflow-x: hidden;
-  max-width: 100vw;
+  max-width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -273,7 +273,7 @@ export default {
   padding: 10px 16px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #0b0736 0%, #733e87 100%);
+  background: linear-gradient(135deg, #6b21a8 0%, #733e87 100%);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -368,6 +368,9 @@ html:has(#app main.auth-page-main) #app {
 html:has(#app main.auth-page-main) .sidebar,
 html:has(#app main.auth-page-main) .mobile-sidebar-dock,
 html:has(#app main.auth-page-main) .mobile-core-dock,
+html:has(#app main.auth-page-main) .mobile-tab-bar,
+html:has(#app main.auth-page-main) .mobile-create-sheet,
+html:has(#app main.auth-page-main) .mobile-more-sheet,
 html:has(#app main.auth-page-main) .mobile-dock-sheet-overlay,
 html:has(#app main.auth-page-main) .mobile-sidebar-overlay {
   display: none !important;
@@ -389,7 +392,7 @@ html:has(#app main.auth-page-main) .dashboard-main.active {
   min-height: 100vh;
   padding-top: 0 !important;
   overflow-x: hidden;
-  max-width: 100vw;
+  max-width: 100%;
 }
 
 #app main.dashboard-main > .dashboard-main-router {

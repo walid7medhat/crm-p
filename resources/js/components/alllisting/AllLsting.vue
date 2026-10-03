@@ -1478,7 +1478,7 @@ const decodeFiltersFromQuery = async (query) => {
 
 
 .status-badge {
-   background: #0B0736 ;
+   background: #6b21a8 ;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;

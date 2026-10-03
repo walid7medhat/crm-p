@@ -831,9 +831,9 @@ export default {
 }
 
 .owner-tabs .nav-link.active {
-    background-color: #0B0736;
+    background-color: #6b21a8;
     color: white;
-    border-color: #0B0736;
+    border-color: #6b21a8;
 }
 
 /* ============ INFO GRID ============ */
@@ -876,7 +876,7 @@ export default {
 .document-item:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    border-color: #0B0736;
+    border-color: #6b21a8;
 }
 
 .document-icon {

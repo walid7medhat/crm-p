@@ -1753,7 +1753,7 @@ onBeforeUnmount(() => {
 }
 
 .property-card-edit-bottom-bar .edit-bar-save {
-  background: #0B0736;
+  background: #6b21a8;
   color: #fff;
 }
 

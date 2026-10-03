@@ -898,9 +898,19 @@
 
     <!-- Dropdown mode: panel under search input -->
 
-    <div v-else class="lead-search-dropdown-panel">
+    <div v-else class="lead-search-dropdown-panel" :class="{ 'lead-search-dropdown-panel--sheet': isMobileSheet }">
 
-        <div class="lead-search-container d-flex">
+        <header v-if="isMobileSheet" class="lead-search-sheet-header">
+            <button type="button" class="lead-search-sheet-back" aria-label="Close filters" @click="emit('update:modelValue', false)">
+                <iconify-icon icon="lucide:chevron-left"></iconify-icon>
+            </button>
+            <p class="lead-search-sheet-title">Search Filter</p>
+            <button type="button" class="lead-search-sheet-clear" :disabled="searching" @click="resetForm">Clear</button>
+        </header>
+
+        <div v-if="isMobileSheet" id="lead-search-mobile-chips" class="lead-search-sheet-chips"></div>
+
+        <div class="lead-search-container d-flex" :class="{ 'lead-search-container--sheet': isMobileSheet }">
 
             <div class="sidebar-pills p-4 d-flex flex-column gap-3 border-end">
 
@@ -972,7 +982,7 @@
 
             <div class="form-content-wrapper flex-grow-1 position-relative">
 
-                <button class="close-btn" @click="emit('update:modelValue', false)">
+                <button v-if="!isMobileSheet" class="close-btn" @click="emit('update:modelValue', false)">
 
                     <iconify-icon icon="lucide:x"></iconify-icon>
 
@@ -1751,7 +1761,7 @@
 
                             <iconify-icon v-if="searching" icon="lucide:loader-2" class="btn-search-spinner" />
 
-                            <span>{{ searching ? 'Searching…' : 'Search' }}</span>
+                            <span>{{ searching ? 'Searching…' : (isMobileSheet ? 'Apply Filter' : 'Search') }}</span>
 
                         </button>
 
@@ -2012,6 +2022,51 @@ const emit = defineEmits(['update:modelValue', 'search'])
 
 
 const show = ref(props.modelValue)
+
+const isMobileSheet = ref(
+    props.asDropdown && typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+)
+let mobileSheetMedia = null
+
+function syncMobileSheetFlag() {
+    isMobileSheet.value = props.asDropdown && window.matchMedia('(max-width: 768px)').matches
+}
+
+function onMobileSheetTouchMove(event) {
+    const el = event.target
+    if (el?.closest?.('.search-sections-wrap, .sidebar-pills, .vs__dropdown-menu, .lead-search-date-backdrop, .budget-dropdown, .lr-date-modal, .modal')) {
+        return
+    }
+    event.preventDefault()
+}
+
+function setMobileSheetLock(locked) {
+    const root = document.documentElement
+    const currently = root.classList.contains('lead-search-sheet-lock')
+    if (currently === locked) return
+    root.classList.toggle('lead-search-sheet-lock', locked)
+    if (locked) {
+        document.addEventListener('touchmove', onMobileSheetTouchMove, { passive: false })
+    } else {
+        document.removeEventListener('touchmove', onMobileSheetTouchMove)
+    }
+    window.dispatchEvent(new CustomEvent('lead-search-mobile-sheet', { detail: { open: locked } }))
+}
+
+function syncMobileSheetLock() {
+    syncMobileSheetFlag()
+    const locked = props.asDropdown && props.modelValue && isMobileSheet.value
+    setMobileSheetLock(locked)
+    if (locked) {
+        nextTick(() => {
+            window.dispatchEvent(new CustomEvent('lead-search-mobile-sheet', { detail: { open: true } }))
+        })
+    }
+}
+
+function onMobileSheetMediaChange() {
+    syncMobileSheetLock()
+}
 
 const showFilterSettings = ref(false)
 
@@ -6614,7 +6669,16 @@ function restoreDefaultFields() {
 
 
 
+watch(() => props.modelValue, () => {
+    syncMobileSheetLock()
+})
+
 onMounted(async () => {
+    syncMobileSheetFlag()
+    mobileSheetMedia = window.matchMedia('(max-width: 768px)')
+    mobileSheetMedia.addEventListener('change', onMobileSheetMediaChange)
+    if (props.modelValue) syncMobileSheetLock()
+
     // Capture phase: several triggers in this form (budget trigger, date-range
     // trigger, the office multi-select) use @click.stop / @mousedown.stop, which
     // would otherwise stop the click before it ever reaches this document
@@ -6652,6 +6716,9 @@ onMounted(async () => {
 
 
 onBeforeUnmount(() => {
+
+    mobileSheetMedia?.removeEventListener('change', onMobileSheetMediaChange)
+    setMobileSheetLock(false)
 
     document.removeEventListener('click', onDocumentClick, true)
 
@@ -6791,9 +6858,9 @@ onBeforeUnmount(() => {
 }
 
 .pill-btn.active {
-    background: #0B0736;
+    background: #6b21a8;
     color: #fff;
-    border-color: #0B0736;
+    border-color: #6b21a8;
 }
 
 .pill-count {
@@ -7038,7 +7105,7 @@ onBeforeUnmount(() => {
     border-color: rgba(115, 62, 135, 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
+    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
     padding: 0px;
     transition: filter 0.2s;
 }
@@ -7225,8 +7292,8 @@ onBeforeUnmount(() => {
 }
 
 .lr-date-preset.active {
-    background: #0B0736;
-    border-color: #0B0736;
+    background: #6b21a8;
+    border-color: #6b21a8;
     color: #fff;
 }
 
@@ -7300,8 +7367,8 @@ onBeforeUnmount(() => {
 }
 
 .lr-day.selected {
-    background: #0B0736;
-    border-color: #0B0736;
+    background: #6b21a8;
+    border-color: #6b21a8;
     color: #fff;
 }
 
@@ -7691,6 +7758,299 @@ onBeforeUnmount(() => {
     color: rgba(255, 255, 255, 0.6) !important;
 }
 
+.lead-search-dropdown-panel--sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: 100%;
+    max-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow: hidden;
+    background: #f7f6f9;
+}
+
+.lead-search-sheet-header {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px;
+    background: #fff;
+    border-bottom: none;
+}
+
+.lead-search-sheet-title {
+    margin: 0;
+    font-family: inherit;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-align: center;
+    color: #1c1730;
+}
+
+.lead-search-sheet-back,
+.lead-search-sheet-clear {
+    border: none;
+    background: transparent;
+    color: #6b21a8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lead-search-sheet-back {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f4f2f7;
+    color: #1c1730;
+    font-size: 18px;
+}
+
+.lead-search-sheet-clear {
+    min-width: 44px;
+    height: 36px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.lead-search-sheet-clear:disabled {
+    opacity: 0.5;
+}
+
+.lead-search-sheet-chips {
+    flex-shrink: 0;
+    background: #fff;
+    border: none;
+    border-radius: 16px;
+    margin: 8px 12px 0;
+    padding: 8px 10px 4px;
+    overflow: hidden;
+}
+
+.lead-search-sheet-chips :deep(.lfs) {
+    margin-bottom: 0;
+    padding: 0;
+}
+
+.lead-search-sheet-chips :deep(.lfs-bar) {
+    gap: 4px 8px;
+    padding: 0;
+    flex-wrap: wrap;
+    overflow: hidden;
+}
+
+.lead-search-sheet-chips :deep(.lfs-segment) {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.lead-search-sheet-chips :deep(.lfs-segment__label) {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+}
+
+.lead-search-sheet-chips :deep(.lfs-pills) {
+    gap: 4px;
+}
+
+.lead-search-sheet-chips :deep(.lfs-pill) {
+    min-height: 26px;
+    padding: 2px 8px;
+    gap: 4px;
+    font-size: 11px;
+    box-shadow: none;
+}
+
+.lead-search-sheet-chips :deep(.lfs-pill__icon) {
+    width: 12px;
+    height: 12px;
+}
+
+.lead-search-sheet-chips :deep(.lfs-pill__count) {
+    font-size: 11px;
+}
+
+.lead-search-container--sheet {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    border-radius: 0;
+    background: transparent;
+    overflow: hidden;
+    flex-direction: column !important;
+    padding: 8px 12px 0;
+    gap: 8px;
+}
+
+.lead-search-dropdown-panel--sheet .sidebar-pills {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    border: none !important;
+    border-radius: 16px;
+    background: #fff;
+    padding: 12px !important;
+    gap: 8px !important;
+    margin: 0;
+    max-height: none;
+    overflow: visible;
+    flex-shrink: 0;
+}
+
+.lead-search-dropdown-panel--sheet .pill-btn {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+    background: #f4f2f7;
+    border: none;
+    color: #3f3a4d;
+    touch-action: manipulation;
+}
+
+.lead-search-dropdown-panel--sheet .pill-btn.active {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.lead-search-dropdown-panel--sheet .city-children-wrap {
+    width: 100%;
+}
+
+.lead-search-dropdown-panel--sheet .city-child-btn {
+    min-height: 40px;
+}
+
+.lead-search-dropdown-panel--sheet .form-content-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 !important;
+    background: transparent;
+}
+
+.lead-search-dropdown-panel--sheet .search-sections-wrap {
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 4px 2px 16px;
+    gap: 12px;
+    background: transparent;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-card {
+    border-radius: 16px;
+    padding: 14px 12px 10px;
+    margin: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-card .row {
+    --bs-gutter-x: 0;
+    --bs-gutter-y: 12px;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-card .col-md-6 {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+    padding-left: 0;
+    padding-right: 0;
+    min-width: 0;
+}
+
+.lead-search-dropdown-panel--sheet .form-label-custom {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e1b2e;
+    margin-bottom: 6px;
+}
+
+.lead-search-dropdown-panel--sheet .custom-input,
+.lead-search-dropdown-panel--sheet .custom-date-trigger,
+.lead-search-dropdown-panel--sheet :deep(.vs__dropdown-toggle) {
+    min-height: 44px;
+    height: 44px !important;
+    font-size: 16px !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.lead-search-dropdown-panel--sheet :deep(.vs__search),
+.lead-search-dropdown-panel--sheet :deep(.vs__selected) {
+    font-size: 16px !important;
+}
+
+.lead-search-dropdown-panel--sheet .custom-v-select,
+.lead-search-dropdown-panel--sheet .budget-field-wrap,
+.lead-search-dropdown-panel--sheet :deep(.crm-phone-input) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.lead-search-dropdown-panel--sheet .search-modal-footer {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: 2;
+    flex-shrink: 0;
+    margin: 0 !important;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    background: #f7f6f9;
+    border-top: none;
+    box-shadow: none;
+}
+
+.lead-search-dropdown-panel--sheet .search-modal-footer__actions {
+    width: 100%;
+    display: flex;
+    gap: 10px !important;
+    justify-content: stretch;
+}
+
+.lead-search-dropdown-panel--sheet .search-modal-footer__actions .btn-reset {
+    display: none;
+}
+
+.lead-search-dropdown-panel--sheet .search-modal-footer__actions .btn-search {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+    background: #6b21a8;
+    touch-action: manipulation;
+}
+
+.lead-search-dropdown-panel--sheet .close-btn {
+    display: none;
+}
+
 </style>
 <style>
     /* Global: teleported date picker must sit above search dropdown (z-index 15000+) */
@@ -7773,5 +8133,29 @@ onBeforeUnmount(() => {
         background: rgba(255, 255, 255, 0.15) !important;
         border-color: rgba(255, 255, 255, 0.4) !important;
         color: #fff !important;
+    }
+
+    html.lead-search-sheet-lock,
+    html.lead-search-sheet-lock body {
+        overflow: hidden !important;
+        overscroll-behavior: none;
+    }
+
+    html.lead-search-sheet-lock #app main.dashboard-main,
+    html.lead-search-sheet-lock #app main.dashboard-main > .dashboard-main-router,
+    html.lead-search-sheet-lock .dashboard-main-body,
+    html.lead-search-sheet-lock .dashboard-main-body-inner {
+        overflow: hidden !important;
+    }
+
+    html.lead-search-sheet-lock .chat-floating-btn,
+    html.lead-search-sheet-lock .mobile-tab-bar {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    html.lead-search-sheet-lock .vs__dropdown-menu {
+        z-index: 100010 !important;
+        max-height: min(240px, 40dvh);
     }
 </style>

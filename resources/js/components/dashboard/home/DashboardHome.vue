@@ -24,14 +24,6 @@
       <template v-else>
         <div class="dh-mob-top">
           <div class="dh-mob-top__lead">
-            <button
-              type="button"
-              class="dh-mob-menu"
-              aria-label="Open navigation menu"
-              @click="toggleMobileMenu"
-            >
-              <iconify-icon icon="heroicons:bars-3-solid" width="22" height="22" />
-            </button>
             <div class="dh-mob-greeting">
               <p class="dh-greeting">Hello, {{ greetingName }} 👋</p>
               <p class="dh-greeting-sub">Here's your activity today,</p>
@@ -329,7 +321,7 @@ import { useMobileNavigation } from '@/composables/useMobileNavigation.js'
 import { useDashboardHome } from '@/composables/useDashboardHome.js'
 
 const router = useRouter()
-const { isMobileViewport, toggleMobileMenu } = useMobileNavigation()
+const { isMobileViewport } = useMobileNavigation()
 
 const {
   loading,

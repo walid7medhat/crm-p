@@ -3412,7 +3412,7 @@ const openLeaveDetail = (lv) => {
   border: 1px solid #e5e7eb; background: #fff; border-radius: 999px;
   padding: 5px 12px; font-size: 12px; color: #6b7280; cursor: pointer;
 }
-.vp-chip.is-active { background: #0b0736; border-color: #0b0736; color: #fff; }
+.vp-chip.is-active { background: #6b21a8; border-color: #6b21a8; color: #fff; }
 
 .vp-announcement-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .vp-announcement-card {
@@ -3420,7 +3420,7 @@ const openLeaveDetail = (lv) => {
   background: #fff; cursor: pointer; transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .vp-announcement-card:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.08); }
-.vp-announcement-card.is-unread { border-color: #0b0736; background: #f8f7ff; }
+.vp-announcement-card.is-unread { border-color: #6b21a8; background: #f8f7ff; }
 .vp-announcement-card__top {
   display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
 }

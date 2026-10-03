@@ -5,54 +5,68 @@
       class="ml-card__link"
       @click="openPropertyDetailsFromClick($event, property.id)"
     >
-      <div class="ml-card__image-wrap">
-        <img
-          :src="imageUrl"
-          :alt="property.title || 'Property'"
-          class="ml-card__image"
-          loading="lazy"
-          @error="onImageError"
-        />
-        <div class="ml-card__badges">
-          <span v-if="property.listing_status" class="ml-card__badge" :class="purposeClass">
-            {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
-          </span>
-          <span v-if="property.completion_status === 'Under Construction'" class="ml-card__badge ml-card__badge--offplan">
-            Off Plan
-          </span>
-          <span v-else-if="property.completion_status === 'Completed'" class="ml-card__badge ml-card__badge--ready">
-            Ready
-          </span>
-          <span v-if="property.status === 'converted'" class="ml-card__badge ml-card__badge--sold">Sold</span>
-          <span v-if="property.status === 'rented'" class="ml-card__badge ml-card__badge--sold">Rented</span>
-          <span v-if="property.is_hot_deal === 'Yes'" class="ml-card__badge ml-card__badge--hot">Hot Deal</span>
+      <div class="ml-card__top">
+        <div class="ml-card__image-wrap">
+          <img
+            :src="imageUrl"
+            :alt="property.title || 'Property'"
+            class="ml-card__image"
+            loading="lazy"
+            @error="onImageError"
+          />
         </div>
-        <span v-if="photoCount > 0" class="ml-card__photos">
-          <i class="ri-image-line"></i>{{ photoCount }}
-        </span>
+        <div class="ml-card__body">
+          <div class="ml-card__badges">
+            <span v-if="property.listing_status" class="ml-card__badge" :class="purposeClass">
+              {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
+            </span>
+            <span v-if="property.completion_status === 'Under Construction'" class="ml-card__badge ml-card__badge--offplan">
+              Off Plan
+            </span>
+            <span v-else-if="property.completion_status === 'Completed'" class="ml-card__badge ml-card__badge--ready">
+              Ready
+            </span>
+            <span
+              v-if="property.occupancy_status && property.completion_status !== 'Under Construction'"
+              class="ml-card__badge ml-card__badge--occupancy"
+            >
+              {{ property.occupancy_status }}
+            </span>
+            <span v-if="property.status === 'converted'" class="ml-card__badge ml-card__badge--sold">Sold</span>
+            <span v-if="property.status === 'rented'" class="ml-card__badge ml-card__badge--sold">Rented</span>
+            <span v-if="property.is_hot_deal === 'Yes'" class="ml-card__badge ml-card__badge--hot">Hot Deal</span>
+          </div>
+          <p class="ml-card__price">
+            {{ formattedPrice }} AED
+            <span v-if="property.listing_status === 'rent'" class="ml-card__price-unit">/ year</span>
+          </p>
+          <p class="ml-card__title">{{ property.title || 'Untitled property' }}</p>
+          <p v-if="locationLabel" class="ml-card__location">
+            <i class="ri-map-pin-line" aria-hidden="true"></i>
+            <span>{{ locationLabel }}</span>
+          </p>
+          <div v-if="showSpecs" class="ml-card__specs">
+            <span v-if="typeLabel" class="ml-card__spec">
+              <i class="ri-building-4-line"></i>{{ typeLabel }}
+            </span>
+            <span v-if="bedsLabel" class="ml-card__spec">
+              <i class="ri-hotel-bed-line"></i>{{ bedsLabel }}
+            </span>
+            <span v-if="bathsLabel" class="ml-card__spec">
+              <i class="ri-drop-line"></i>{{ bathsLabel }}
+            </span>
+            <span v-if="sizeLabel" class="ml-card__spec">
+              <i class="ri-ruler-line"></i>{{ sizeLabel }}
+            </span>
+          </div>
+        </div>
       </div>
-      <div class="ml-card__body">
-        <p class="ml-card__price">
-          AED {{ formattedPrice }}
-          <span v-if="property.listing_status === 'rent'" class="ml-card__price-unit">/ year</span>
-        </p>
-        <div v-if="showSpecs" class="ml-card__specs">
-          <span v-if="bedsLabel" class="ml-card__spec">
-            <i class="ri-hotel-bed-line"></i>{{ bedsLabel }}
-          </span>
-          <span v-if="bathsLabel" class="ml-card__spec">
-            <i class="ri-drop-line"></i>{{ bathsLabel }}
-          </span>
-          <span v-if="sizeLabel" class="ml-card__spec">
-            <i class="ri-ruler-line"></i>{{ sizeLabel }}
-          </span>
-        </div>
-        <h6 class="ml-card__title">{{ property.title || 'Untitled property' }}</h6>
-        <p v-if="property.area" class="ml-card__location">{{ property.area }}</p>
-        <div class="ml-card__meta">
-          <span v-if="property.agent" class="ml-card__agent">{{ agentName }}</span>
-          <span v-if="property.created_at">{{ listedDate }}</span>
-        </div>
+      <div v-if="property.agent || property.created_at" class="ml-card__meta">
+        <span v-if="property.created_at">
+          <i class="ri-calendar-line" aria-hidden="true"></i>
+          Listed By : {{ listedDate }}
+        </span>
+        <span v-if="property.agent" class="ml-card__agent">Listed by : {{ agentName }}</span>
       </div>
     </a>
   </article>
@@ -81,18 +95,16 @@ const imageUrl = computed(() => {
   return props.fallbackImage
 })
 
-const photoCount = computed(() => {
-  const total = props.property.total_images
-  if (total) return Number(total)
-  return props.property.gallery_images?.length || 0
-})
-
 const formattedPrice = computed(() => {
   const price = Number(props.property.price) || 0
   return new Intl.NumberFormat().format(price)
 })
 
-const typeName = computed(() => (props.property.property_type || '').toLowerCase())
+const typeLabel = computed(() => props.property.property_type || '')
+
+const typeName = computed(() => typeLabel.value.toLowerCase())
+
+const locationLabel = computed(() => props.property.area || '')
 
 const isLand = computed(() => typeName.value.includes('plot') || typeName.value.includes('land'))
 
@@ -113,12 +125,12 @@ const bathsLabel = computed(() => {
 const sizeLabel = computed(() => {
   const sqft = props.property.size_sqft
   const sqmt = props.property.size_sqmt
-  if (sqft) return `${sqft} sqft`
+  if (sqft) return `${sqft} Sqft`
   if (sqmt) return `${sqmt} sqm`
   return null
 })
 
-const showSpecs = computed(() => bedsLabel.value || bathsLabel.value || sizeLabel.value)
+const showSpecs = computed(() => typeLabel.value || bedsLabel.value || bathsLabel.value || sizeLabel.value)
 
 const purposeClass = computed(() =>
   props.property.listing_status === 'rent' ? 'ml-card__badge--rent' : 'ml-card__badge--sale',
@@ -135,7 +147,7 @@ const listedDate = computed(() => {
   if (!props.property.created_at) return ''
   try {
     return new Date(props.property.created_at).toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short', year: 'numeric',
+      day: '2-digit', month: 'short', year: 'numeric',
     })
   } catch {
     return ''

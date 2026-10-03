@@ -456,7 +456,7 @@ const $showNotification = (message, type = 'info') => {
 }
 
 .btn-save {
-    background: #0B0736;
+    background: #6b21a8;
     border: none;
     padding: 10px 20px;
     border-radius: 100px;

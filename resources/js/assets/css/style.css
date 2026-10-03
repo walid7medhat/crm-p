@@ -158,7 +158,7 @@
   --font-sm: 0.875rem;
   --font-xs: 0.75rem;
   --font-xxs: 0.625rem;
-  --crm-primary: #0B0736;
+  --crm-primary: #6b21a8;
   --crm-secondary: #733E87;
   --gradient-crm: linear-gradient(135deg, var(--crm-primary) 0%, var(--crm-secondary) 100%);
   --gradient-crm-vertical: linear-gradient(180deg, var(--crm-primary) 0%, var(--crm-secondary) 100%);
@@ -290,7 +290,7 @@
   --purple-light-white: rgba(132, 90, 223, 0.25);
   --pink-light-white: rgba(250, 54, 230, 0.25);
   --base: #fff;
-  --brand: var(--crm-primary);
+  --brand: #0B0736;
   --button-secondary: var(--primary-50);
   --black: var(--dark-2);
   --white: var(--base);

@@ -857,7 +857,7 @@ function saveCareerDefaults() {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  background: #0b0736;
+  background: #6b21a8;
   color: #ffffff;
 }
 .hr-set-top__copy {
@@ -934,7 +934,7 @@ function saveCareerDefaults() {
   flex-shrink: 0;
 }
 .hr-set-nav__item.is-active .hr-set-nav__icon {
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
 }
 .hr-set-nav__item strong,
@@ -969,8 +969,8 @@ function saveCareerDefaults() {
   font-weight: 600;
 }
 .hr-set-subnav button.is-active {
-  background: #0b0736;
-  border-color: #0b0736;
+  background: #6b21a8;
+  border-color: #6b21a8;
   color: #fff;
 }
 .hr-set-panel,
@@ -1037,8 +1037,8 @@ function saveCareerDefaults() {
 }
 .hr-set-btn--primary,
 :deep(.hr-set-btn--primary) {
-  background: #0b0736;
-  border-color: #0b0736;
+  background: #6b21a8;
+  border-color: #6b21a8;
   color: #fff;
 }
 .hr-set-form,
@@ -1181,7 +1181,7 @@ function saveCareerDefaults() {
   transition: transform 0.15s ease;
 }
 :deep(.hr-set-switch input:checked + .hr-set-switch__track) {
-  background: #0b0736;
+  background: #6b21a8;
 }
 :deep(.hr-set-switch input:checked + .hr-set-switch__track::after) {
   transform: translateX(20px);

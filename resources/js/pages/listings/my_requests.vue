@@ -611,7 +611,7 @@ async function cancelRequest(id, requestType) {
         text: "Do you really want to cancel this request?",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#0B0736',
+        confirmButtonColor: '#6b21a8',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, cancel it',
         cancelButtonText: 'No'
@@ -629,7 +629,7 @@ async function cancelRequest(id, requestType) {
                 title: 'Success!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: '#0B0736'
+                confirmButtonColor: '#6b21a8'
             })
 
             await fetchMyRequests()
@@ -642,7 +642,7 @@ async function cancelRequest(id, requestType) {
             title: 'Error!',
             text: err.response?.data?.message || 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: '#0B0736'
+            confirmButtonColor: '#6b21a8'
         })
     }
 }
@@ -669,7 +669,7 @@ async function saveTimeEdit() {
                 title: 'Success!',
                 text: 'Viewing time updated successfully',
                 icon: 'success',
-                confirmButtonColor: '#0B0736'
+                confirmButtonColor: '#6b21a8'
             })
            
             await fetchMyRequests()
@@ -683,7 +683,7 @@ async function saveTimeEdit() {
             title: 'Error!',
             text: 'Failed to update viewing time',
             icon: 'error',
-            confirmButtonColor: '#0B0736'
+            confirmButtonColor: '#6b21a8'
         })
     }
 }
@@ -808,7 +808,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#0B0736'
+            confirmButtonColor: '#6b21a8'
         })
     }
 }
@@ -878,7 +878,7 @@ async function fetchMyRequests() {
             title: 'Error!',
             text: 'Failed to load requests',
             icon: 'error',
-            confirmButtonColor: '#0B0736'
+            confirmButtonColor: '#6b21a8'
         })
     } finally {
         loading.value = false
@@ -937,7 +937,7 @@ async function confirmResponse() {
                 title: 'Success!',
                 text: `Request ${currentResponseType.value} successfully`,
                 icon: 'success',
-                confirmButtonColor: '#0B0736'
+                confirmButtonColor: '#6b21a8'
             })
             showResponseModal.value = false
             await fetchMyRequests()
@@ -961,7 +961,7 @@ async function confirmResponse() {
             title: 'Error!',
             text: errorMessage,
             icon: 'error',
-            confirmButtonColor: '#0B0736'
+            confirmButtonColor: '#6b21a8'
         })
     }
 }
@@ -986,7 +986,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: '#0B0736'
+                confirmButtonColor: '#6b21a8'
             })
             showConvertModal.value = false
             await fetchMyRequests()
@@ -999,7 +999,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: '#0B0736'
+            confirmButtonColor: '#6b21a8'
         })
     }
 }
@@ -1213,7 +1213,7 @@ onUnmounted(() => {
 }
 
 .stat-card.active {
-    border-color: #0B0736;
+    border-color: #6b21a8;
     background: #f8f9ff;
 }
 
@@ -1255,9 +1255,9 @@ onUnmounted(() => {
 }
 
 .tab-btn.active {
-    background: #0B0736;
+    background: #6b21a8;
     color: white;
-    border-color: #0B0736;
+    border-color: #6b21a8;
 }
 
 .tab-btn:hover:not(.active) {
@@ -1351,7 +1351,7 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-    background: #0B0736;
+    background: #6b21a8;
     color: white;
 }
 
@@ -1409,7 +1409,7 @@ onUnmounted(() => {
 
 .form-control:focus {
     outline: none;
-    border-color: #0B0736;
+    border-color: #6b21a8;
     box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.1);
 }
 
@@ -1450,13 +1450,13 @@ onUnmounted(() => {
 
 /* Refresh button styles */
 .btn-outline-primary {
-    border: 1px solid #0B0736;
+    border: 1px solid #6b21a8;
     color: #0B0736;
     background: transparent;
 }
 
 .btn-outline-primary:hover:not(:disabled) {
-    background: #0B0736;
+    background: #6b21a8;
     color: white;
     transform: translateY(-1px);
 }

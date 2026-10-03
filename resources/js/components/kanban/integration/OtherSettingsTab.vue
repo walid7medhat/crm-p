@@ -224,7 +224,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 
 .form-input:focus {
     outline: none;
-    border-color: #0B0736;
+    border-color: #6b21a8;
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
 }
 
@@ -266,7 +266,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .toggle-switch.active {
-    background-color: #0B0736;
+    background-color: #6b21a8;
 }
 
 .toggle-slider {
@@ -331,7 +331,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 
 .keyword-input {
     padding-right: 40px;
-    border-color: #0B0736;
+    border-color: #6b21a8;
     background-color: #FFFFFF;
 }
 

@@ -1401,7 +1401,7 @@ defineExpose({
     height: 49px;
     border: 1px solid rgba(115, 62, 135, 0.75);
     border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
+    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
     color: #ffffff;
     font-size: 18px;
     line-height: 1;
@@ -1521,7 +1521,7 @@ defineExpose({
 }
 
 .btn-toggle.active {
-    background: #0B0736;
+    background: #6b21a8;
     color: #fff;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
 }
@@ -1532,7 +1532,7 @@ defineExpose({
 }
 
 .btn-primary {
-    background: #0B0736;
+    background: #6b21a8;
     border: none;
     font-weight: 500;
 }
@@ -1658,7 +1658,7 @@ textarea, input, select {
         box-shadow: 0 2px 8px rgba(11, 7, 54, 0.15);
         border-radius: 999px;
         border: none;
-        background: linear-gradient(135deg, #0b0736 0%, #733e87 100%);
+        background: linear-gradient(135deg, #6b21a8 0%, #733e87 100%);
         color: #ffffff !important;
         z-index: 10 !important;
     }
@@ -1871,7 +1871,7 @@ textarea, input, select {
         justify-content: center !important;
         border: none !important;
         border-radius: 999px !important;
-        background: linear-gradient(135deg, #0b0736 0%, #733e87 100%) !important;
+        background: linear-gradient(135deg, #6b21a8 0%, #733e87 100%) !important;
         color: #fff !important;
         box-shadow: 0 2px 10px rgba(11, 7, 54, 0.25) !important;
     }

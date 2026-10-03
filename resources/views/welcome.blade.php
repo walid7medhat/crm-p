@@ -81,19 +81,100 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: #ffffff;
-                transition: opacity 0.35s ease;
+                background: #f7f4fb;
+                transition: opacity 0.22s ease;
             }
 
-            #boot-splash img {
-                width: min(72vw, 320px);
-                height: auto;
+            .alt-boot {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .alt-boot__mark {
+                position: relative;
+                width: 64px;
+                height: 64px;
+                display: grid;
+                place-items: center;
+            }
+
+            .alt-boot__ring {
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background: conic-gradient(from 0deg, rgba(115, 62, 135, 0.08), #733e87 40%, rgba(115, 62, 135, 0));
+                -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+                mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+                animation: alt-boot-spin 0.7s linear infinite;
+            }
+
+            .alt-boot__core {
+                width: 46px;
+                height: 46px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                background: #fff;
+                color: #733e87;
+                font-family: Inter, Montserrat, system-ui, sans-serif;
+                font-size: 20px !important;
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                box-shadow: 0 8px 24px rgba(115, 62, 135, 0.16);
+            }
+
+            .alt-boot__name {
+                margin: 0;
+                font-family: Inter, Montserrat, system-ui, sans-serif;
+                font-size: 15px !important;
+                font-weight: 800;
+                letter-spacing: 0.22em;
+                color: #1a1528;
+                line-height: 1;
+            }
+
+            .alt-boot__name span {
+                color: #733e87;
+            }
+
+            .alt-boot__bar {
+                width: 92px;
+                height: 3px;
+                border-radius: 999px;
+                background: rgba(115, 62, 135, 0.12);
+                overflow: hidden;
+            }
+
+            .alt-boot__bar i {
                 display: block;
+                width: 40%;
+                height: 100%;
+                border-radius: inherit;
+                background: #733e87;
+                animation: alt-boot-bar 0.7s ease-in-out infinite;
             }
 
             #boot-splash.is-done {
                 opacity: 0;
                 pointer-events: none;
+            }
+
+            @keyframes alt-boot-spin {
+                to { transform: rotate(360deg); }
+            }
+
+            @keyframes alt-boot-bar {
+                0% { transform: translateX(-120%); }
+                100% { transform: translateX(280%); }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .alt-boot__ring,
+                .alt-boot__bar i {
+                    animation: none;
+                }
             }
 
             @media (max-width: 768px) {
@@ -104,7 +185,14 @@
         </style>
 
         <div id="boot-splash" aria-hidden="true">
-            <img src="/assets/images/pwa/icon-512.png" alt="">
+            <div class="alt-boot">
+                <div class="alt-boot__mark">
+                    <span class="alt-boot__ring"></span>
+                    <span class="alt-boot__core">A</span>
+                </div>
+                <p class="alt-boot__name"><span>ALT</span> CRM</p>
+                <span class="alt-boot__bar" aria-hidden="true"><i></i></span>
+            </div>
         </div>
         <div id="app"></div>
         <script>

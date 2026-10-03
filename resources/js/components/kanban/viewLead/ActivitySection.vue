@@ -515,7 +515,7 @@ onUnmounted(() => {
 }
 
 .btn-save {
-    background: #0B0736;
+    background: #6b21a8;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;

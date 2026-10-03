@@ -2521,7 +2521,7 @@ export default {
     position: absolute;
     top: 8px;
     left: 8px;
-    background: #0B0736;
+    background: #6b21a8;
     color: #fff;
     font-size: 0.72rem;
     font-weight: 700;

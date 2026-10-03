@@ -13,68 +13,32 @@
       class="navbar-header-toolbar"
     >
       <div v-if="showMobileCompactHeader" class="mob-module-toolbar">
-        <div class="kanban-mob-toolbar__main">
+        <div class="kanban-mob-toolbar__main kanban-mob-toolbar__main--board">
           <button
-            v-if="!showMobileHeaderBack"
-            type="button"
-            class="mob-header-menu"
-            aria-label="Open navigation menu"
-            @click="toggleMobileMenu"
-          >
-            <iconify-icon icon="heroicons:bars-3-solid" />
-          </button>
-          <button
-            v-if="showMobileHeaderBack"
+            v-if="!isDashboardHome"
             type="button"
             class="mob-header-back"
-            :aria-label="mobileHeaderBackLabel"
-            @click="onMobileHeaderBack"
+            :aria-label="showMobileHeaderBack ? mobileHeaderBackLabel : 'Go back'"
+            @click="showMobileHeaderBack ? onMobileHeaderBack() : goBack()"
           >
-            <iconify-icon icon="lucide:chevron-left" />
+            <iconify-icon icon="lucide:arrow-left" />
           </button>
-          <div
-            class="kanban-mob-lead-select-wrap"
-            :class="{ 'kanban-mob-lead-select-wrap--detail': showMobileHeaderBack }"
-          >
-            <span v-if="showMobileHeaderBack" class="mob-module-title mob-module-title--detail">{{ mobileDetailTitle }}</span>
-            <select
-              v-else-if="moduleHeaderTabs.length"
-              class="kanban-mob-lead-select"
-              :value="mobileHeaderTabValue"
-              aria-label="Switch section view"
-              @change="onMobileModuleTabChange"
+          <div class="kanban-mob-lead-select-wrap kanban-mob-lead-select-wrap--title">
+            <button
+              v-if="!showMobileHeaderBack && moduleHeaderTabs.length > 1"
+              type="button"
+              class="kanban-mob-title-btn"
+              :aria-expanded="kanbanSwitchOpen ? 'true' : 'false'"
+              aria-haspopup="menu"
+              @click="toggleKanbanSwitch"
             >
-              <option
-                v-for="tab in moduleHeaderTabs"
-                :key="tab.id"
-                :value="tab.id"
-              >
-                {{ tab.label }}
-              </option>
-            </select>
-            <span v-else class="mob-module-title">{{ mobileModuleLabel }}</span>
+              {{ kanbanMobileTitle }}
+            </button>
+            <span v-else class="kanban-mob-title-btn kanban-mob-title-btn--static">
+              {{ showMobileHeaderBack ? mobileDetailTitle : kanbanMobileTitle }}
+            </span>
           </div>
           <div class="kanban-mob-toolbar__actions">
-            <!-- No create on the Lead Pool tab (leads can't be created in the Lead Pool). -->
-            <button
-              v-if="isKanbanRoute && activeKanbanTab !== 'lead-pool'"
-              type="button"
-              class="kanban-mob-create"
-              aria-label="Create new"
-              @click="handleKanbanCreateNew"
-            >
-              <iconify-icon icon="lucide:plus" />
-            </button>
-            <button
-              v-if="isKanbanRoute && isCustomAdmin"
-              type="button"
-              class="kanban-mob-icon-btn"
-              aria-label="Settings"
-              @click="openSettingsHub"
-            >
-              <iconify-icon icon="lucide:settings" />
-            </button>
-            <MobilePushToggle compact />
             <NotificationBell
               ref="notificationBellMob"
               class="kanban-mob-notification"
@@ -107,11 +71,41 @@
           </div>
         </div>
 
+        <Teleport to="body">
+          <div v-if="kanbanSwitchOpen && isMobileViewport && moduleHeaderTabs.length > 1" class="kanban-switch-root">
+            <button type="button" class="kanban-switch-backdrop" aria-label="Close" @click="kanbanSwitchOpen = false" />
+            <div class="kanban-switch-card" role="menu" aria-label="Choose view">
+              <button
+                v-for="tab in moduleHeaderTabs"
+                :key="tab.id"
+                type="button"
+                class="kanban-switch-option"
+                :class="{ 'is-active': tab.id === mobileHeaderTabValue }"
+                role="menuitemradio"
+                :aria-checked="tab.id === mobileHeaderTabValue ? 'true' : 'false'"
+                @click="chooseKanbanSwitch(tab)"
+              >
+                <span class="kanban-switch-option__icon" aria-hidden="true">
+                  <iconify-icon :icon="kanbanSwitchIcon(tab)" />
+                </span>
+                <span class="kanban-switch-option__label">{{ tab.label }}</span>
+                <iconify-icon
+                  v-if="tab.id === mobileHeaderTabValue"
+                  icon="lucide:check"
+                  class="kanban-switch-option__check"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </div>
+        </Teleport>
+
         <div v-if="isKanbanRoute" class="kanban-mob-toolbar__search">
           <div
             class="search-area-column kanban-mob-toolbar__search-col"
             ref="searchDropdownAnchorRef"
           >
+            <div class="kanban-mob-search-row">
               <div
                 class="search-wrapper kanban-mob-toolbar__search-bar d-flex align-items-center"
                 :class="{
@@ -149,7 +143,7 @@
                 </div>
               </div>
               <div
-                class="search-input-container flex-grow-1"
+                class="search-input-container flex-grow-1 kanban-mob-search-field"
                 @click.stop="canUseLeadSearchModal && openSearchModal()"
               >
                 <b-form-input
@@ -170,18 +164,10 @@
                   role="status"
                   aria-label="Searching"
                 />
+                <span v-else class="kanban-mob-search-glyph" aria-hidden="true">
+                  <iconify-icon icon="lucide:search" />
+                </span>
               </div>
-              <button
-                v-if="canUseLeadSearchModal"
-                type="button"
-                class="search-filter-btn"
-                title="Advanced search"
-                aria-label="Open search filters"
-                @mousedown.prevent.stop="openSearchModal"
-                @click.prevent.stop="openSearchModal"
-              >
-                <iconify-icon icon="lucide:list-filter" />
-              </button>
               <button
                 v-if="hasAnySearchCriteria"
                 type="button"
@@ -192,13 +178,26 @@
                 <iconify-icon icon="lucide:x" />
               </button>
             </div>
+              <button
+                v-if="canUseLeadSearchModal"
+                type="button"
+                class="search-filter-btn kanban-mob-filter-btn"
+                title="Advanced search"
+                aria-label="Open search filters"
+                @mousedown.prevent.stop="openSearchModal"
+                @click.prevent.stop="openSearchModal"
+              >
+                <iconify-icon icon="lucide:sliders-horizontal" />
+              </button>
+            </div>
             <Teleport to="body">
               <div
                 v-if="searchModalMounted"
                 v-show="showSearchModal"
                 ref="searchDropdownPanelRef"
                 class="lead-search-dropdown-outer lead-search-dropdown-outer--teleport"
-                :style="searchDropdownStyle"
+                :class="{ 'lead-search-dropdown-outer--mobile-sheet': isMobileLeadSearchSheet }"
+                :style="isMobileLeadSearchSheet ? undefined : searchDropdownStyle"
                 @mousedown.stop
                 @click.stop
               >
@@ -967,6 +966,7 @@ const activeFilters = ref([]);
 const lastQuery = ref(null);
 const activeFilter = ref(null);
 const showSearchModal = ref(false);
+const isMobileLeadSearchSheet = computed(() => isMobileViewport.value && activeKanbanTab.value !== 'deals');
 const searchInputFocused = ref(false);
 const searchDropdownAnchorRef = ref(null);
 const searchDropdownPanelRef = ref(null);
@@ -1129,6 +1129,34 @@ const mobileHeaderTabValue = computed(() => {
   return active?.id ?? moduleHeaderTabs.value[0]?.id ?? '';
 });
 
+const kanbanSwitchOpen = ref(false);
+
+const kanbanMobileTitle = computed(() => {
+  if (isLeadRoute.value) {
+    return activeKanbanTab.value === 'lead-pool' ? 'Lead Pool' : 'Leads';
+  }
+  const tab = moduleHeaderTabs.value.find((item) => item.id === mobileHeaderTabValue.value);
+  return tab?.label || mobileModuleLabel.value;
+});
+
+function kanbanSwitchIcon(tab) {
+  if (tab?.id === 'lead-pool') return 'lucide:layers';
+  if (tab?.id === 'leads' || tab?.id === 'list') return 'lucide:users';
+  if (tab?.id === 'create') return 'lucide:user-plus';
+  if (tab?.type === 'deal-type') return 'lucide:briefcase';
+  return 'lucide:layout-grid';
+}
+
+function toggleKanbanSwitch() {
+  kanbanSwitchOpen.value = !kanbanSwitchOpen.value;
+}
+
+function chooseKanbanSwitch(tab) {
+  kanbanSwitchOpen.value = false;
+  if (!tab?.id || tab.id === mobileHeaderTabValue.value) return;
+  onMobileModuleTabChange({ target: { value: tab.id } });
+}
+
 // وظائف الكانبان
 const setActiveKanbanTab = (tabId) => {
   activeKanbanTab.value = tabId
@@ -1235,10 +1263,7 @@ const searchInputPlaceholder = computed(() => {
     if (isDealRoute.value || activeKanbanTab.value === 'deals') {
         return 'Search deals, client, phone…';
     }
-    if (activeKanbanTab.value === 'lead-pool') {
-        return 'Search name, phone, email…';
-    }
-    return 'Search leads, phone, email…';
+    return 'Search Leads';
 });
 
 const visibleFilterPills = computed(() => {
@@ -2624,7 +2649,7 @@ const showBackButton = computed(() => {
   padding: 0 20px;
   border: none;
   border-radius: 10px;
-  background: #0B0736;
+  background: #6b21a8;
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -2683,7 +2708,7 @@ const showBackButton = computed(() => {
 }
 .birthday-popup {
   width: min(400px, 92vw);
-  background: linear-gradient(160deg, #0B0736 0%, #733E87 100%);
+  background: linear-gradient(160deg, #6b21a8 0%, #733E87 100%);
   border-radius: 20px;
   padding: 32px 28px 26px;
   text-align: center;
@@ -4420,6 +4445,40 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
         width: calc(100vw - 24px) !important;
         max-width: calc(100vw - 24px) !important;
     }
+
+    .lead-search-dropdown-outer--teleport.lead-search-dropdown-outer--mobile-sheet {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        z-index: 15000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .lead-search-dropdown-outer--mobile-sheet {
+        animation: lead-search-sheet-in 0.22s ease;
+    }
+}
+
+@keyframes lead-search-sheet-in {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 .action-icon-btn {
  background: #f4f5f7;
@@ -4622,9 +4681,9 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   }
 
   .navbar-header.navbar-header--mobile-compact:not(.navbar-header--kanban-mobile) {
-    --app-topbar-height: 3.25rem;
+    --app-topbar-height: 4rem;
     min-height: var(--app-topbar-height);
-    padding: 8px 10px;
+    padding: 8px 12px;
     border-radius: 0;
     left: 0;
     right: 0;
@@ -4745,7 +4804,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     position: relative;
   }
 
-  .kanban-mob-lead-select-wrap::after {
+  .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::after {
     content: '';
     position: absolute;
     right: 14px;
@@ -4913,6 +4972,206 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 
   .navbar-header.navbar-header--kanban-mobile :deep(.notification-bell-wrap) {
     flex-shrink: 0;
+  }
+
+  .kanban-mob-toolbar__main--board {
+    position: relative;
+    min-height: 44px;
+  }
+
+  .kanban-mob-toolbar__main--board .mob-header-back {
+    position: relative;
+    z-index: 2;
+  }
+
+  .kanban-mob-toolbar__main--board .kanban-mob-toolbar__actions {
+    margin-left: auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .kanban-mob-lead-select-wrap--title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: auto;
+    flex: none;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .kanban-mob-lead-select-wrap--title::before,
+  .kanban-mob-lead-select-wrap--title::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  .kanban-mob-title-btn {
+    pointer-events: auto;
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    margin: 0;
+    max-width: min(48vw, 210px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #1a1528;
+    font-family: Inter, Montserrat, system-ui, sans-serif;
+    cursor: pointer;
+  }
+
+  .kanban-mob-title-btn:active {
+    opacity: 0.7;
+  }
+
+  .kanban-mob-title-btn--static {
+    display: inline-flex;
+    align-items: center;
+    pointer-events: none;
+    max-width: min(52vw, 220px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kanban-mob-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .kanban-mob-search-row .search-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .kanban-mob-search-field {
+    position: relative;
+  }
+
+  .kanban-mob-search-glyph {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: #f5a524;
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  .kanban-mob-filter-btn {
+    flex-shrink: 0;
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px;
+    min-height: 46px;
+    border-radius: 50% !important;
+    border: 1px solid #efe6f6 !important;
+    background: #f6f1fb !important;
+    color: #7c3aed !important;
+    font-size: 18px;
+    box-shadow: none;
+  }
+
+  .kanban-switch-root {
+    position: fixed;
+    inset: 0;
+    z-index: 12080;
+  }
+
+  .kanban-switch-backdrop {
+    position: absolute;
+    inset: 0;
+    border: none;
+    padding: 0;
+    background: rgba(26, 21, 40, 0.08);
+  }
+
+  .kanban-switch-card {
+    position: absolute;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(240px, calc(100vw - 48px));
+    padding: 6px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #f0eaf6;
+    box-shadow: 0 18px 40px rgba(42, 16, 72, 0.16);
+    animation: kanban-switch-in 0.18s ease;
+  }
+
+  .kanban-switch-option {
+    width: 100%;
+    min-height: 46px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    color: #2a2140;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .kanban-switch-option.is-active {
+    background: #f6f1fb;
+    color: #6b21a8;
+  }
+
+  .kanban-switch-option__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    background: #f6f1fa;
+    color: #733e87;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .kanban-switch-option.is-active .kanban-switch-option__icon {
+    background: #efe4f8;
+  }
+
+  .kanban-switch-option__label {
+    flex: 1 1 auto;
+    text-align: left;
+  }
+
+  .kanban-switch-option__check {
+    color: #6b21a8;
+    font-size: 16px;
+  }
+}
+
+@keyframes kanban-switch-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
   }
 }
 

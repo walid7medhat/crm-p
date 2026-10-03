@@ -1206,7 +1206,7 @@ onUnmounted(() => {
 }
 
 .btn-complete {
-    background: #0B0736;
+    background: #6b21a8;
     border: none;
     border-radius: 8px;
     padding: 5px 14px;
@@ -1506,7 +1506,7 @@ onUnmounted(() => {
 }
 
 .btn-save-edit {
-    background: #0B0736;
+    background: #6b21a8;
     border: none;
     border-radius: 8px;
     padding: 5px 14px;
