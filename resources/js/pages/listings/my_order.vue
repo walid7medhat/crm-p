@@ -43,6 +43,8 @@
                         </span>
                     </button>
                 </div>
+                <!-- Mobile: status bottom-sheet picker instead of the wrapping tabs -->
+                <MobileStatusFilter v-model="activeFilter" :options="statusOptions" class="filter-mobile mb-3" />
 
                 <div class="overflow-x-auto">
                     <table class="table bordered-table mb-0 mx-0">
@@ -224,7 +226,7 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-24" v-if="!loading && filteredOrders.length > 0">
+                    <div class="requests-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-24" v-if="!loading && filteredOrders.length > 0">
                         <span>
                             Showing {{ paginationMeta.total ? startIndex + 1 : 0 }} to {{ endIndex }} of {{ paginationMeta.total }} entries
                         </span>
@@ -245,8 +247,9 @@
                                 </a>
                             </li>
 
-                            <li v-for="page in totalPages" :key="page" class="page-item">
-                                <a href="javascript:void(0)"
+                            <li v-for="(page, i) in visiblePages" :key="`p-${i}-${page}`" class="page-item">
+                                <span v-if="page === '…'" class="page-gap">…</span>
+                                <a v-else href="javascript:void(0)"
                                     class="page-link fw-medium radius-4 border-0 px-10 py-10 d-flex align-items-center justify-content-center h-32-px w-32-px"
                                     :class="{
                                         'bg-primary-600 text-white': currentPage === page,
@@ -565,6 +568,8 @@ import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
 import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
+import MobileStatusFilter from '@/components/shared/MobileStatusFilter.vue'
+import { pageWindow } from '@/utils/pageWindow'
 
 const defaultAvatar = '/assets/images/user.png'
 const filtericon = '/assets/images/filter.png'
@@ -708,6 +713,9 @@ const totalPages = computed(() =>
     Math.max(1, paginationMeta.value.last_page || 1)
 )
 
+// Compact page list (first, last, current ±1 with gaps) so it fits on mobile.
+const visiblePages = computed(() => pageWindow(currentPage.value, totalPages.value))
+
 const startIndex = computed(() => {
     if (!paginationMeta.value.total) return 0
     return (paginationMeta.value.from ? paginationMeta.value.from - 1 : 0)
@@ -786,6 +794,10 @@ function getTabCount(status) {
     if (status === 'all') return statusCounts.value.all || 0
     return statusCounts.value[status] || 0
 }
+
+const statusOptions = computed(() =>
+    filterTabs.value.map((tab) => ({ ...tab, count: getTabCount(tab.value) }))
+)
 
 function getRequesterName(order) {
     return order.requested_by?.name || 'You'
@@ -1499,6 +1511,67 @@ onUnmounted(() => {
 
 .tab-btn:hover:not(.active) {
     background: #f8f9fa;
+}
+
+/* Pagination: compact page list; on mobile one swipeable row, clear of the bottom tab bar */
+.page-gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 32px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .requests-pagination {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .requests-pagination > span {
+        text-align: center;
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .requests-pagination .pagination {
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        width: fit-content;
+        margin: 0 auto;
+        max-width: 100%;
+        padding: 2px 4px 6px;
+    }
+
+    .requests-pagination .pagination::-webkit-scrollbar {
+        display: none;
+    }
+
+    .requests-pagination .page-item {
+        flex-shrink: 0;
+    }
+}
+
+/* Status filter: tabs on desktop, bottom-sheet picker on mobile */
+.filter-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .filter-tabs {
+        display: none;
+    }
+
+    .filter-mobile {
+        display: block;
+    }
 }
 
 /* Refresh button styles */
