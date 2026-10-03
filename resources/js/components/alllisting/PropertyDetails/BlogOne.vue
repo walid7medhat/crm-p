@@ -127,12 +127,6 @@
                 </div>
               </section>
 
-              <section v-if="property.comment && property.comment.trim()" class="pf-card">
-                <h3 class="pf-card__title">Description</h3>
-                <p class="pf-clamp">{{ property.comment }}</p>
-                <button type="button" class="pf-more" @click="openPfSheet('description')">See full description</button>
-              </section>
-
               <section v-if="hasAdditionalFeatures" class="pf-card">
                 <h3 class="pf-card__title">Amenities</h3>
                 <div class="pf-amenities">
@@ -499,16 +493,7 @@
               </div>
             </div>
 
-            <!-- Notes Section -->
-            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && property.comment && property.comment.trim()">
-              <div class="info-section">
-                <h3 class="section-title mb-20">Notes</h3>
-                <div class="description-content">
-                  <p class="description-text">{{ property.comment }}</p>
-                </div>
-              </div>
-            </div>
-  <!-- Property Documents -->
+            <!-- Property Documents -->
             <div class="detailed-info-section mb-16" v-if="property.additional_documents && property.additional_documents.length > 0 && property.user_permissions?.showDocuments">
               <div class="info-section">
                 <h3 class="section-title mb-20">
@@ -522,6 +507,21 @@
                     <span class="document-name text-truncate">{{ doc.name || 'Document' }}</span>
                     <i class="ri-external-link-line document-action"></i>
                   </a>
+                </div>
+              </div>
+            </div>
+
+            <section v-if="isMobileViewport && property.comment && property.comment.trim()" class="pf-card">
+              <h3 class="pf-card__title">Notes</h3>
+              <p class="pf-clamp">{{ property.comment }}</p>
+              <button type="button" class="pf-more" @click="openPfSheet('description')">See full notes</button>
+            </section>
+
+            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && property.comment && property.comment.trim()">
+              <div class="info-section">
+                <h3 class="section-title mb-20">Notes</h3>
+                <div class="description-content">
+                  <p class="description-text">{{ property.comment }}</p>
                 </div>
               </div>
             </div>
@@ -3226,7 +3226,7 @@ const projectDeveloperLogo = computed(() => {
 const pfSheet = ref(null);
 const pfSheetTitle = computed(() => {
   if (pfSheet.value === 'details') return 'Property Details';
-  if (pfSheet.value === 'description') return 'Description';
+  if (pfSheet.value === 'description') return 'Notes';
   if (pfSheet.value === 'amenities') return 'Amenities';
   return '';
 });
