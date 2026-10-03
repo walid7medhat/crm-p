@@ -137,24 +137,43 @@ function playFallbackTone(retried = false) {
   } catch (_) {}
 }
 
+function isLoggedIn() {
+  try {
+    // Same token sources as plugins/axios.js (cleared together on logout).
+    return !!(localStorage.getItem('token') || sessionStorage.getItem('token'))
+  } catch (_) {
+    return false
+  }
+}
+
 /** Unlock audio on the first click or keypress, before a message arrives. */
 export function prepareIncomingChatSound() {
   if (unlockBound || typeof window === 'undefined') return
   unlockBound = true
   const unlock = () => {
+    // Logged out (login page): nothing will ever alert, so don't touch audio at all.
+    if (!isLoggedIn()) {
+      unlockBound = false
+      prepareIncomingChatSound()
+      return
+    }
     try {
       const el = getAudioElement()
-      el.volume = 0
+      // `muted`, not `volume = 0`: iOS Safari ignores volume (read-only, always 1),
+      // which made this silent unlock play the full notification sound on the first tap.
+      el.muted = true
       const pending = el.play()
       const restore = () => {
         try {
           el.pause()
           el.currentTime = 0
         } catch (_) {}
+        el.muted = false
         el.volume = SOUND_VOLUME
       }
       if (pending && typeof pending.then === 'function') {
         pending.then(restore).catch(() => {
+          el.muted = false
           el.volume = SOUND_VOLUME
         })
       } else {
@@ -177,8 +196,10 @@ export function playIncomingChatSound() {
     const now = Date.now()
     if (now - lastSoundAt < SOUND_GAP_MS) return
     lastSoundAt = now
+    if (!isLoggedIn()) return
     prepareIncomingChatSound()
     const el = getAudioElement()
+    el.muted = false
     el.volume = SOUND_VOLUME
     try { el.currentTime = 0 } catch (_) {}
     const pending = el.play()

@@ -141,6 +141,11 @@ return [
         'path' => storage_path('logs/bitrix-leads.log'),
         'level' => 'debug',
     ],
+    'propertyfinder' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/propertyfinder.log'),
+        'level' => 'debug',
+    ],
     'sync_responsible' => [
         'driver' => 'single',
         'path' => storage_path('logs/sync-responsible.log'),

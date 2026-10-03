@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
 use App\Http\Controllers\Api\Bitrix24SyncController;
 use App\Http\Controllers\Api\Bitrix24WebhookController;
+use App\Http\Controllers\Api\PropertyFinderWebhookController;
 use App\Http\Controllers\Api\SalesIntelligence\SalesIntelligenceController;
 use App\Http\Controllers\Api\AiSalesIntelligence\AiSalesIntelligenceController;
 use App\Http\Controllers\Api\Mobile\MobileKanbanController;
@@ -121,6 +122,8 @@ Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
     // Property Finder Enterprise lead events. Public + HMAC (X-Signature) verified inside.
+    Route::post('/propertyfinder/webhook', [PropertyFinderWebhookController::class, 'handle'])
+        ->middleware('throttle:600,1');
         // ,'block.bots'
 Route::middleware(['throttle:300,1'])->group(function () {
 Route::middleware(['jwt.auth'])->prefix('settings')->group(function () {

@@ -7048,7 +7048,9 @@ const paintPaymentDetailsPage = async (pdf, container) => {
     pdf.setFont('helvetica', opts.bold ? 'bold' : 'normal');
     pdf.setFontSize(opts.size || 7);
     pdf.setTextColor(...(opts.color || ink));
-    pdf.text(value, x + w / 2, y + h / 2, { align: 'center', baseline: 'middle' });
+    const align = opts.align || 'center';
+    const textX = align === 'left' ? x : x + w / 2;
+    pdf.text(value, textX, y + h / 2, { align, baseline: 'middle' });
   };
   const badgeFill = (status) => {
     if (status === 'Paid') return { bg: [34, 197, 94], fg: [255, 255, 255] };
@@ -7074,7 +7076,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
   const innerW = 210 - margin * 2;
   let y = 15;
 
-  write('SUMMARY', margin, y, innerW, 4, { size: 7, bold: true, color: muted });
+  write('SUMMARY', margin, y, innerW, 4, { size: 7, bold: true, color: muted, align: 'left' });
   y += 5;
 
   const cards = model.cards;
@@ -7103,7 +7105,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
   y += cardH + 3;
 
   const drawTable = (title, headers, rows, totalCells) => {
-    write(title, margin, y, innerW, 4, { size: 7, bold: true, color: muted });
+    write(title, margin, y, innerW, 4, { size: 7, bold: true, color: muted, align: 'left' });
     y += 4.5;
     const weights = headers.map((h) => h.w);
     const weightSum = weights.reduce((s, n) => s + n, 0);
@@ -7125,11 +7127,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
     });
     y += headH;
 
-    const paintRow = (cells, status, alt, bold) => {
-      if (alt) {
-        pdf.setFillColor(241, 245, 249);
-        pdf.rect(margin + 0.4, y, innerW - 0.8, rowH, 'F');
-      }
+    const paintRow = (cells, status, bold) => {
       let cx = margin + 1.5;
       cells.forEach((cell, i) => {
         if (i === cells.length - 1 && status) {
@@ -7150,8 +7148,8 @@ const paintPaymentDetailsPage = async (pdf, container) => {
       y += rowH;
     };
 
-    rows.forEach((row, index) => paintRow(row.cells, row.status, index % 2 === 1, false));
-    if (totalCells) paintRow(totalCells, null, true, true);
+    rows.forEach((row) => paintRow(row.cells, row.status, false));
+    if (totalCells) paintRow(totalCells, null, true);
     y += 3;
   };
 

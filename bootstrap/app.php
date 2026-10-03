@@ -92,6 +92,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground()
             ->appendOutputTo(storage_path('logs/lead-realtime-assign.log'));
+        // Property Finder: catch leads whose webhook never arrived (no-op until PF_API_KEY is set).
+        // $schedule->command('propertyfinder:sync-leads --minutes=60')
+        //     ->everyTenMinutes()
+        //     ->withoutOverlapping()
+        //     ->runInBackground()
+        //     ->appendOutputTo(storage_path('logs/propertyfinder-sync.log'));
         $schedule->command('leads:recover-stuck --sync')
             ->everyFiveMinutes()
             ->withoutOverlapping();
