@@ -21,6 +21,36 @@ namespace App\Support;
  */
 class LeadSourceFilter
 {
+    /**
+     * Micro (project) websites — "Micro Websites" in the search UI. Each domain matches by
+     * pattern (they show up as a bare domain, a full URL with www / https / a path, or a
+     * page URL in more_information). `not` keeps a domain from also matching another one
+     * on the list that contains it (ohana-projects.ae ⊂ form.ohana-projects.ae, ...).
+     */
+    private const MICRO_WEBSITES = [
+        'alrahabeachprojects.ae'       => [],
+        'projects-dubai.ae'            => [],
+        'athlonbyaldar.ae'             => ['not' => '%rise.athlonbyaldar.ae%'],
+        'rise.athlonbyaldar.ae'        => [],
+        'beyondprojects.ae'            => [],
+        'emiratesdevelopments.ae'      => [],
+        'fahidislandprojects.ae'       => [],
+        'form.ohana-projects.ae'       => [],
+        'ohana-projects.ae'            => ['not' => '%form.ohana-projects.ae%'],
+        'ghantootprojects.ae'          => [],
+        'hudayriyatprojects.ae'        => [],
+        'manchesteryasresidences.ae'   => [],
+        'saadiyat-culturaldistrict.ae' => [],
+        'yasresidencesbyohana.ae'      => [],
+        'burtvilleprojects.ae'         => [],
+        'hq-by-rove.ae'                => [],
+        'masdarcityprojects.ae'        => [],
+        'yascanalbyohana.ae'           => [],
+    ];
+
+    /** Columns a micro website can show up in. */
+    private const MICRO_WEBSITE_COLUMNS = ['lead_source', 'source_information', 'more_information'];
+
     private const GROUPS = [
         'website'   => ['website', 'Oiaproperties.com', 'Allproperties.ae'],
         'portal'    => ['portal', 'propertyfinder', 'bayut'],
@@ -50,13 +80,27 @@ class LeadSourceFilter
         }
 
         $exact = [];
+        $microSites = [];
         foreach ($values as $value) {
             $key = strtolower((string) $value);
+            // "Micro Websites (all)" → every micro website; a single domain → just that one.
+            // "Website (all)" covers the micro websites too (they sit under Website).
+            if ($key === 'micro_websites' || $key === 'website') {
+                $microSites = array_merge($microSites, array_keys(self::MICRO_WEBSITES));
+                if ($key === 'micro_websites') {
+                    continue;
+                }
+            }
+            if (array_key_exists($key, self::MICRO_WEBSITES)) {
+                $microSites[] = $key;
+                continue;
+            }
             foreach (self::GROUPS[$key] ?? [$value] as $entry) {
                 $exact[] = $entry;
             }
         }
         $exact = array_values(array_unique($exact));
+        $microSites = array_values(array_unique($microSites));
 
         $patterns = [];
         foreach ($exact as $entry) {
@@ -66,11 +110,25 @@ class LeadSourceFilter
         }
         $patterns = array_values(array_unique($patterns));
 
-        $query->where(function ($q) use ($exact, $patterns) {
-            $q->whereIn('lead_source', $exact);
+        $query->where(function ($q) use ($exact, $patterns, $microSites) {
+            if ($exact) {
+                $q->whereIn('lead_source', $exact);
+            }
             foreach ($patterns as $pattern) {
                 $q->orWhere('lead_source', 'like', $pattern)
                     ->orWhere('more_information', 'like', $pattern);
+            }
+            foreach ($microSites as $site) {
+                $like = '%' . $site . '%';
+                $not = self::MICRO_WEBSITES[$site]['not'] ?? null;
+                foreach (self::MICRO_WEBSITE_COLUMNS as $column) {
+                    $q->orWhere(function ($w) use ($column, $like, $not) {
+                        $w->where($column, 'like', $like);
+                        if ($not) {
+                            $w->where($column, 'not like', $not);
+                        }
+                    });
+                }
             }
         });
     }

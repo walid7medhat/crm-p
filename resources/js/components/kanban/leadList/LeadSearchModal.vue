@@ -816,7 +816,7 @@
 
                                 <template #option="option">
 
-                                    <span :class="option.isChild ? 'source-opt source-opt--child' : 'source-opt source-opt--parent'">{{ option.text }}</span>
+                                    <span :class="option.isChild ? ['source-opt', 'source-opt--child', { 'source-opt--grandchild': option.isGrandChild }] : 'source-opt source-opt--parent'">{{ option.text }}</span>
 
                                 </template>
 
@@ -1700,7 +1700,7 @@
 
                                 <template #option="option">
 
-                                    <span :class="option.isChild ? 'source-opt source-opt--child' : 'source-opt source-opt--parent'">{{ option.text }}</span>
+                                    <span :class="option.isChild ? ['source-opt', 'source-opt--child', { 'source-opt--grandchild': option.isGrandChild }] : 'source-opt source-opt--parent'">{{ option.text }}</span>
 
                                 </template>
 
@@ -3366,6 +3366,29 @@ const websiteSourceOptions = ref([
 
 
 
+// Micro (project) websites — values are matched by domain on the API side
+// (App\Support\LeadSourceFilter::MICRO_WEBSITES; keep the two lists in sync).
+const microWebsiteSourceOptions = ref([
+    'alrahabeachprojects.ae',
+    'projects-dubai.ae',
+    'athlonbyaldar.ae',
+    'rise.athlonbyaldar.ae',
+    'beyondprojects.ae',
+    'emiratesdevelopments.ae',
+    'fahidislandprojects.ae',
+    'form.ohana-projects.ae',
+    'ohana-projects.ae',
+    'ghantootprojects.ae',
+    'hudayriyatprojects.ae',
+    'manchesteryasresidences.ae',
+    'saadiyat-culturaldistrict.ae',
+    'yasresidencesbyohana.ae',
+    'burtvilleprojects.ae',
+    'hq-by-rove.ae',
+    'masdarcityprojects.ae',
+    'yascanalbyohana.ae',
+].map(domain => ({ value: domain, text: domain })))
+
 const portalSourceOptions = ref([
 
     { value: 'propertyfinder', text: 'Property Finder' },
@@ -3387,7 +3410,9 @@ const websiteSourceOptionsForMulti = computed(() =>
 // children ("Allproperties.ae"). It's sent as-is; the backend expands parents
 // (App\Support\LeadSourceFilter).
 const SOURCE_CHILD_GROUPS = {
-    website: { label: 'Website', options: websiteSourceOptions },
+    // Website also holds "Micro Websites (all)" + each micro site one level deeper
+    // (sourceSelectOptions); "Website (all)" covers them on the API side too.
+    website: { label: 'Website', options: websiteSourceOptions, sub: { value: 'micro_websites', label: 'Micro Websites', options: microWebsiteSourceOptions } },
     portal: { label: 'Portal', options: portalSourceOptions },
     whatsapp: { label: 'Whatsapp', options: whatsappSourceOptions },
 }
@@ -3414,6 +3439,14 @@ const sourceSelectOptions = computed(() => {
             .forEach((child) => {
                 list.push({ value: child.value, text: child.text, group: group.label, isChild: true })
             })
+        // Nested sub-group (Website → Micro Websites → each micro site).
+        if (group.sub) {
+            const subGroup = `${group.label} ${group.sub.label}`
+            list.push({ value: group.sub.value, text: `${group.sub.label} (all)`, group: subGroup, isChild: true })
+            group.sub.options.value.forEach((child) => {
+                list.push({ value: child.value, text: child.text, group: subGroup, isChild: true, isGrandChild: true })
+            })
+        }
     })
     return list
 })
@@ -5366,7 +5399,7 @@ async function applySearch(options = {}) {
 
                     field.formKey === 'branchSource' ? branchSourceOptions.value :
 
-                    field.formKey === 'source' ? sourceOptions.value :
+                    field.formKey === 'source' ? [...sourceOptions.value, { value: 'micro_websites', text: 'Micro Websites' }] :
 
                     field.formKey === 'team' ? computedTeamOptions.value :
 
@@ -6762,6 +6795,15 @@ onBeforeUnmount(() => {
 .vs__dropdown-option--highlight .source-opt--child::before,
 .vs__dropdown-option--selected .source-opt--child::before {
     border-top-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Website → Micro Websites → each micro site: one level deeper. */
+.source-opt--grandchild {
+    padding-left: 32px;
+}
+
+.source-opt--grandchild::before {
+    left: 20px;
 }
 </style>
 

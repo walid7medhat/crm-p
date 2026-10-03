@@ -1,21 +1,24 @@
 <template>
     <Teleport to="body">
         <!-- Backdrop -->
-        <div 
-            v-if="show" 
-            class="duplicate-leads-backdrop" 
+        <div
+            v-if="show"
+            class="duplicate-leads-backdrop"
+            :class="{ 'duplicate-leads-backdrop--sheet': isSheet }"
             @click.stop="show = false"
         ></div>
-        
-        <!-- Dropdown Popup -->
-        <div 
-            v-if="show" 
+
+        <!-- Dropdown Popup (bottom sheet on mobile) -->
+        <div
+            v-if="show"
             ref="popupRef"
             class="duplicate-leads-dropdown"
-            :style="popupStyle"
+            :class="{ 'duplicate-leads-dropdown--sheet': isSheet }"
+            :style="isSheet ? null : popupStyle"
             @click.stop
         >
             <div class="duplicate-leads-modal-content">
+                <div v-if="isSheet" class="sheet-handle" aria-hidden="true"></div>
                 <!-- Header -->
                 <div class="modal-header-custom d-flex justify-content-between align-items-center py-3 border-bottom">
                     <picture class="modal-title mb-0">Duplicate Leads ({{ duplicateLeads.length }})</picture>
@@ -109,7 +112,15 @@ const error = ref(null)
 const popupRef = ref(null)
 const popupStyle = ref({})
 
+// Phones: a positioned dropdown doesn't fit (it was placed as if 500px wide and ended up
+// off-screen), so show a full-width bottom sheet instead.
+const MOBILE_MAX = 768
+const isSheet = ref(typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX)
+
 const calculatePosition = async () => {
+    isSheet.value = window.innerWidth <= MOBILE_MAX
+    if (isSheet.value) return
+
     if (!props.triggerElement) {
         // Fallback: center on screen if no trigger element
         popupStyle.value = {
@@ -140,7 +151,8 @@ const calculatePosition = async () => {
         const spaceBelow = viewportHeight - rect.bottom
         const spaceAbove = rect.top
         
-        const popupWidth = 500 // Fixed width
+        // Real panel width (content is 416px), never wider than the viewport.
+        const popupWidth = Math.min(416, viewportWidth - 32)
         const estimatedHeight = Math.min(400, duplicateLeads.value.length * 120 + 100) // Estimate height
         
         let top = 0
@@ -163,7 +175,8 @@ const calculatePosition = async () => {
         } else {
             left = preferredLeft
         }
-        
+        left = Math.max(16, left)
+
         // Position vertically - prefer below, but show above if not enough space
         if (spaceBelow >= estimatedHeight + 8 || spaceBelow >= spaceAbove) {
             top = rect.bottom + 8 // 8px gap below trigger
@@ -180,7 +193,7 @@ const calculatePosition = async () => {
             position: 'fixed',
             top: `${top}px`,
             left: `${left}px`,
-            width: '500px',
+            width: `${popupWidth}px`,
             maxWidth: 'calc(100vw - 32px)',
             zIndex: 1050
         }
@@ -445,6 +458,53 @@ onUnmounted(() => {
 
 .cursor-pointer {
     cursor: pointer;
+}
+
+/* ---- Mobile bottom sheet (above the mobile tab bar, z-index 12060) ---- */
+.duplicate-leads-backdrop--sheet {
+    z-index: 12090;
+    background-color: rgba(15, 23, 42, 0.45);
+}
+
+.duplicate-leads-dropdown--sheet {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    z-index: 12100;
+    animation: sheetUp 0.25s ease-out;
+}
+
+.duplicate-leads-dropdown--sheet .duplicate-leads-modal-content {
+    width: 100%;
+    height: auto;
+    max-height: 75dvh;
+    border-radius: 20px 20px 0 0;
+    padding: 0 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.15);
+}
+
+.duplicate-leads-dropdown--sheet .modal-body-custom {
+    -webkit-overflow-scrolling: touch;
+}
+
+.sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: #d1d5db;
+    margin: 8px auto 0;
+    flex-shrink: 0;
+}
+
+@keyframes sheetUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
 }
 
 /* Scrollbar styling */
