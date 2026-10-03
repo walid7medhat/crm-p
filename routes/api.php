@@ -119,6 +119,8 @@ Route::post('auth/register', [AuthController::class, 'register']);
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
+    // Property Finder Enterprise lead events. Public + HMAC (X-Signature) verified inside.
+   
         // ,'block.bots'
 Route::middleware(['throttle:300,1'])->group(function () {
 Route::middleware(['jwt.auth'])->prefix('settings')->group(function () {
@@ -646,13 +648,14 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/{campaign}/shown', [SystemCampaignController::class, 'shown'])->whereNumber('campaign');
         Route::post('/{campaign}/dismiss', [SystemCampaignController::class, 'dismiss'])->whereNumber('campaign');
 
-        Route::middleware('role:super_admin')->group(function () {
-            Route::get('/', [SystemCampaignController::class, 'index']);
-            Route::post('/', [SystemCampaignController::class, 'store']);
-            Route::post('/{campaign}', [SystemCampaignController::class, 'update'])->whereNumber('campaign');
-            Route::patch('/{campaign}/active', [SystemCampaignController::class, 'updateActive'])->whereNumber('campaign');
-            Route::delete('/{campaign}', [SystemCampaignController::class, 'destroy'])->whereNumber('campaign');
-        });
+        // Manage endpoints check super_admin (or user 33) inside the controller
+        // instead of route middleware, since Spatie's role: middleware can't
+        // express a user-id exception.
+        Route::get('/', [SystemCampaignController::class, 'index']);
+        Route::post('/', [SystemCampaignController::class, 'store']);
+        Route::post('/{campaign}', [SystemCampaignController::class, 'update'])->whereNumber('campaign');
+        Route::patch('/{campaign}/active', [SystemCampaignController::class, 'updateActive'])->whereNumber('campaign');
+        Route::delete('/{campaign}', [SystemCampaignController::class, 'destroy'])->whereNumber('campaign');
     });
 
 

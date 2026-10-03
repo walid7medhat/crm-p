@@ -13,8 +13,23 @@ use Illuminate\Support\Facades\Validator;
 
 class SystemCampaignController extends Controller
 {
+    /** super_admin or user 33 (same exception used elsewhere for user 33). */
+    private function assertCanManage(Request $request): ?\Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('super_admin') && (int) $user->id !== 33)) {
+            return ApiResponse::error('Unauthorized access.', 403);
+        }
+
+        return null;
+    }
+
     public function index(Request $request)
     {
+        if ($denied = $this->assertCanManage($request)) {
+            return $denied;
+        }
+
         $campaigns = SystemCampaign::query()
             ->orderByDesc('id')
             ->get()
@@ -30,6 +45,10 @@ class SystemCampaignController extends Controller
 
     public function store(Request $request)
     {
+        if ($denied = $this->assertCanManage($request)) {
+            return $denied;
+        }
+
         $validator = $this->validator($request, true);
         if ($validator->fails()) {
             return ApiResponse::error('Validation error', 422, $validator->errors());
@@ -62,6 +81,10 @@ class SystemCampaignController extends Controller
 
     public function update(Request $request, SystemCampaign $campaign)
     {
+        if ($denied = $this->assertCanManage($request)) {
+            return $denied;
+        }
+
         $validator = $this->validator($request, false);
         if ($validator->fails()) {
             return ApiResponse::error('Validation error', 422, $validator->errors());
@@ -106,6 +129,10 @@ class SystemCampaignController extends Controller
 
     public function updateActive(Request $request, SystemCampaign $campaign)
     {
+        if ($denied = $this->assertCanManage($request)) {
+            return $denied;
+        }
+
         $validator = Validator::make($request->all(), [
             'is_active' => 'required|boolean',
         ]);
@@ -119,8 +146,12 @@ class SystemCampaignController extends Controller
         return ApiResponse::success($this->present($campaign->fresh()), 'Announcement updated successfully');
     }
 
-    public function destroy(SystemCampaign $campaign)
+    public function destroy(Request $request, SystemCampaign $campaign)
     {
+        if ($denied = $this->assertCanManage($request)) {
+            return $denied;
+        }
+
         $campaign->deleteStoredImages();
         $campaign->delete();
 
