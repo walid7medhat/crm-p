@@ -141,6 +141,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import api from '@/plugins/axios'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -794,7 +795,7 @@ const renderMarkers = (items, { fitToMarkers = true } = {}) => {
       if (btn) {
         btn.onclick = (ev) => {
           ev.preventDefault()
-          router.push(`/property-details/${property.id}`)
+          openPropertyDetails(property.id)
         }
       }
     })

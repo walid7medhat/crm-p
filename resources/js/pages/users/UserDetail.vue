@@ -192,9 +192,10 @@
                                                 :key="property.id" 
                                                 class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
                                             >
-                                                <router-link
-                                                    :to="`/property-details/${property.id}`"
+                                                <a
+                                                    :href="`/property-details/${property.id}`"
                                                     class="property-card-link"
+                                                    @click="openPropertyDetailsFromClick($event, property.id)"
                                                 >
                                                     <div class="property-card h-100">
                                                         <!-- Image -->
@@ -299,7 +300,7 @@
                                                                     </span>
                                                         </div>
                                                     </div>
-                                                </router-link>
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -527,6 +528,7 @@ import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
 import api from '@/plugins/axios';
 import apexchart from 'vue3-apexcharts';
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
 
 export default {
     name: 'ViewUser',
@@ -738,6 +740,7 @@ export default {
         this.fetchUser();
     },
     methods: {
+        openPropertyDetailsFromClick,
         async fetchUser() {
             try {
                 this.loading = true;

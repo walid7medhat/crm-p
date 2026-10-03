@@ -2136,6 +2136,12 @@
         />
       </MobilePropertyActionsSheet>
     </Teleport>
+
+    <ProfilePopup
+      v-if="agentProfileOpen && agentProfileId"
+      v-model="agentProfileOpen"
+      :user-id="agentProfileId"
+    />
 </template>
 
 <script>
@@ -2148,6 +2154,7 @@ import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActi
 import PropertyActionsMenuContent from '@/components/listings/PropertyActionsMenuContent.vue';
 import PropertyAgentUpdatesPanel from '@/components/alllisting/PropertyDetails/PropertyAgentUpdatesPanel.vue';
 import PropertyApprovedViewingsPanel from '@/components/alllisting/PropertyDetails/PropertyApprovedViewingsPanel.vue';
+import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
@@ -2174,11 +2181,18 @@ export default {
     PropertyActionsMenuContent,
     PropertyAgentUpdatesPanel,
     PropertyApprovedViewingsPanel,
+    ProfilePopup,
   },
+  props: {
+    // When set, the component is rendered inside a popup (PropertyDetailsModal)
+    // instead of the /property-details/:id route.
+    listingId: { type: [Number, String], default: null },
+  },
+  emits: ['deleted'],
   data() {
     return {};
   },
-  setup() {
+  setup(props, { emit }) {
 
         const propertyIcon = '/assets/icons/property-icon.svg';
   const bedIcon = '/assets/icons/bedroom-icon.svg';
@@ -2231,7 +2245,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
       const spacer = propertySidebarSpacerRef.value;
       if (!col || !sticky) return;
 
-      if (window.innerWidth < 992) {
+      if (window.innerWidth < 992 || isEmbedded.value) {
         resetPropertySidebarStyles(sticky, spacer);
         return;
       }
@@ -2298,6 +2312,8 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     const route = useRoute();
     const router = useRouter();
     const { proxy } = getCurrentInstance();
+    const isEmbedded = computed(() => props.listingId !== null && props.listingId !== undefined && props.listingId !== '');
+    const currentListingId = computed(() => (isEmbedded.value ? props.listingId : route.params?.id));
     
 
     
@@ -2800,7 +2816,7 @@ const cancelViewingRequest = async () => {
 
   const fetchRequestStatus = async () => {
       try {
-        const response = await api.get(`/listings/access-requests/status/${route.params.id}`);
+        const response = await api.get(`/listings/access-requests/status/${currentListingId.value}`);
         if (response.data.status) {
           requestStatus.value = {
             ...response.data.data,
@@ -4347,8 +4363,16 @@ const revertFromConverted = async () => {
   }
 };
 
- const goToAgentDetails = (agentId) => {
+ const agentProfileOpen = ref(false);
+ const agentProfileId = ref(null);
 
+ const goToAgentDetails = (agentId) => {
+  // Inside the property popup, show the agent in the profile popup instead of leaving the page.
+  if (isEmbedded.value) {
+    agentProfileId.value = agentId;
+    agentProfileOpen.value = true;
+    return;
+  }
   router.push(`/users/${agentId}`);
 
 };
@@ -4382,12 +4406,12 @@ const revertFromConverted = async () => {
       const userChannel = window.Echo.private(`user.${user.id}`);
       userChannel.listen('.access.request.updated', (event) => {
         console.log('🎉 PropertyDetails: Received user update:', event);
-        if (event.listing_id == route.params.id) {
+        if (event.listing_id == currentListingId.value) {
           handleAccessRequestUpdate(event);
         }
       });
 
-      const listingChannel = window.Echo.private(`listing.${route.params.id}`);
+      const listingChannel = window.Echo.private(`listing.${currentListingId.value}`);
       listingChannel.listen('.access.request.updated', (event) => {
         console.log('🎉 PropertyDetails: Received listing update:', event);
         handleAccessRequestUpdate(event);
@@ -4463,7 +4487,7 @@ const revertFromConverted = async () => {
       try {
         loading.value = true;
         error.value = null;
-        const propertyId = route.params.id;
+        const propertyId = currentListingId.value;
         
         const response = await api.get(`/listings/properties/${propertyId}`);
         
@@ -4539,7 +4563,7 @@ const revertFromConverted = async () => {
     const fetchComments = async () => {
       try {
         loadingComments.value = true;
-        const response = await api.get(`/listings/${route.params.id}/comments`);
+        const response = await api.get(`/listings/${currentListingId.value}/comments`);
         
         if (response.data.status) {
           comments.value = response.data.data;
@@ -4554,7 +4578,7 @@ const revertFromConverted = async () => {
 
     const fetchCommentsStats = async () => {
       try {
-        const response = await api.get(`/listings/${route.params.id}/comments/stats`);
+        const response = await api.get(`/listings/${currentListingId.value}/comments/stats`);
         
         if (response.data.status) {
           commentsStats.value = response.data.data;
@@ -4586,7 +4610,7 @@ const revertFromConverted = async () => {
       try {
         submittingComment.value = true;
         
-        const response = await api.post(`/listings/${route.params.id}/comments`, {
+        const response = await api.post(`/listings/${currentListingId.value}/comments`, {
           comment: newComment.value.text,
           rating: newComment.value.rating || null
         });
@@ -4618,7 +4642,7 @@ const revertFromConverted = async () => {
       if (!replyText.value.trim()) return;
       
       try {
-        const response = await api.post(`/listings/${route.params.id}/comments`, {
+        const response = await api.post(`/listings/${currentListingId.value}/comments`, {
           comment: replyText.value,
           parent_id: parentId
         });
@@ -5004,7 +5028,11 @@ const closeCancelReasonModal = () => {
             timer: 2000,
             showConfirmButton: false
           });
-          router.push('/my-listing');
+          if (isEmbedded.value) {
+            emit('deleted', property.value.id);
+          } else {
+            router.push('/my-listing');
+          }
         } else {
           throw new Error(response.data.message || 'Failed to delete property');
         }
@@ -5175,7 +5203,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
       proxy.$showNotification(errorMessage, 'error');
       error.value = errorMessage;
       
-      if (error.response?.status === 404) {
+      if (error.response?.status === 404 && !isEmbedded.value) {
         setTimeout(() => {
           router.push('/listings/properties');
         }, 3000);
@@ -8107,6 +8135,8 @@ const getHistoryIcon = (event) => {
       getLevelType,
       // New method
       goToAgentDetails,
+      agentProfileOpen,
+      agentProfileId,
       openChatWithAgent,
       showChatPopup,
       chatAgent,

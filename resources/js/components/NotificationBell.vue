@@ -58,6 +58,7 @@
 import api from '@/plugins/axios'
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import MobilePushToggle from '@/components/layout/MobilePushToggle.vue'
 
 function getApiBaseUrl() {
@@ -206,9 +207,9 @@ export default {
       if (['request', 'approved', 'rejected'].includes(type)) {
         this.$router.push('/my-requests')
       } else if (notification?.data?.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`)
+        openPropertyDetails(notification.data.property_id)
       } else if (notification?.data?.listing_id) {
-        this.$router.push(`/property-details/${notification.data.listing_id}`)
+        openPropertyDetails(notification.data.listing_id)
       } else if (type === 'App\\Notifications\\HotDealRequestNotification') {
         this.$router.push('/hotDeal-requests')
       }

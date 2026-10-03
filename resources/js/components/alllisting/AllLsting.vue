@@ -53,10 +53,11 @@
             class="property-listing-card"
             :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
           >
-       <router-link
-            :to="`/property-details/${property.id}`"
+       <a
+            :href="`/property-details/${property.id}`"
             class="property-card-link"
             :class="{ 'converted-card': property.status === 'converted' }"
+            @click="openDetailsModal($event, property)"
           >
             <div class="property-card">
               <!-- Image -->
@@ -186,7 +187,7 @@
                 </span>
               </div>
             </div>
-          </router-link>
+          </a>
           <button
             v-if="listingNeedsPaymentBreakdownHighlight(property) && canQuickEditPaymentBreakdown(property)"
             type="button"
@@ -207,7 +208,6 @@
       :listing-preview="breakdownModalPreview"
       @saved="onBreakdownSaved"
     />
-
     <!-- Pagination -->
     <div v-if="pagination && pagination.total > pagination.per_page" class="row mt-4">
       <div class="col-12">
@@ -271,6 +271,7 @@ import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
 import {
   listingNeedsPaymentBreakdownHighlight,
   canQuickEditPaymentBreakdown,
@@ -310,7 +311,7 @@ export default {
     const breakdownModalOpen = ref(false);
     const breakdownModalListingId = ref(null);
     const breakdownModalPreview = ref(null);
-    
+
     const isAdmin = computed(() => {
       return userRole.value === 'super_admin' || userRole.value === 'admin';
     });
@@ -1033,6 +1034,12 @@ const decodeFiltersFromQuery = async (query) => {
       }
     };
 
+    const openDetailsModal = (event, property) => {
+      openPropertyDetailsFromClick(event, property.id, {
+        onDeleted: () => fetchProperties({}, pagination.value?.current_page || 1),
+      });
+    };
+
     // Fetch initial properties on component mount
     onMounted(async () => {
       await fetchUserInfo();
@@ -1106,6 +1113,7 @@ const decodeFiltersFromQuery = async (query) => {
       breakdownModalPreview,
       openBreakdownModal,
       onBreakdownSaved,
+      openDetailsModal,
       listingNeedsPaymentBreakdownHighlight,
       canQuickEditPaymentBreakdown,
     };

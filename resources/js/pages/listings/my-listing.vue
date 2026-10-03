@@ -51,10 +51,11 @@
           class="property-listing-card"
           :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
         >
-       <router-link
-            :to="`/property-details/${property.id}`"
+       <a
+            :href="`/property-details/${property.id}`"
             class="property-card-link"
             :class="{ 'converted-card': property.status === 'converted' }"
+            @click="openDetailsModal($event, property)"
           >
           <div class="property-card" :class="{ 
             // 'converted-card': property.status === 'converted',
@@ -189,7 +190,7 @@
               </div>
             </div>
           </div>
-       </router-link>
+       </a>
           <button
             v-if="listingNeedsPaymentBreakdownHighlight(property) && canQuickEditPaymentBreakdown(property)"
             type="button"
@@ -209,7 +210,6 @@
       :listing-preview="breakdownModalPreview"
       @saved="onBreakdownSaved"
     />
-
     <!-- Pagination -->
        <div v-if="pagination && pagination.total > pagination.per_page" class="row mt-4">
       <div class="col-12">
@@ -272,6 +272,7 @@ import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
 import {
   listingNeedsPaymentBreakdownHighlight,
   canQuickEditPaymentBreakdown,
@@ -1095,6 +1096,12 @@ const LISTING_QUERY_KEYS = [
       }
     };
 
+    const openDetailsModal = (event, property) => {
+      openPropertyDetailsFromClick(event, property.id, {
+        onDeleted: () => fetchProperties(convertFiltersToAPI(currentFilters.value || {}), pagination.value?.current_page || 1),
+      });
+    };
+
     // Fetch initial properties on component mount
     onMounted(() => {
       const hasQuery = Object.keys(route.query).length > 0;
@@ -1181,6 +1188,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
       breakdownModalPreview,
       openBreakdownModal,
       onBreakdownSaved,
+      openDetailsModal,
       listingNeedsPaymentBreakdownHighlight,
       canQuickEditPaymentBreakdown,
     };

@@ -28,11 +28,12 @@
                     class="matching-scroll"
                     @scroll="onMatchingScroll"
                 >
-                    <router-link
+                    <a
                         v-for="item in listings"
                         :key="item.id"
-                        :to="`/property-details/${item.id}`"
+                        :href="`/property-details/${item.id}`"
                         class="matching-card matching-card-link"
+                        @click="openPropertyDetailsFromClick($event, item.id)"
                     >
                         <div class="matching-card-media">
                             <img
@@ -80,7 +81,7 @@
                                 </span>
                             </div>
                         </div>
-                    </router-link>
+                    </a>
                 </div>
                 <button
                     type="button"
@@ -117,6 +118,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal'
 
 const matchingScrollEl = ref(null)
 const canScrollPrev = ref(false)

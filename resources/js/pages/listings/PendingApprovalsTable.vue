@@ -212,11 +212,9 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
-
-const router = useRouter();
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal';
 
 // State
 const listings = ref([]);
@@ -459,7 +457,8 @@ const toggleSelectAll = () => {
 };
 
 const viewListing = (listingId) => {
-  router.push(`/property-details/${listingId}`);
+  // Listing may have been approved / rejected from inside the popup.
+  openPropertyDetails(listingId, { onClose: fetchPendingApprovals });
 };
 
 const changePage = (page) => {

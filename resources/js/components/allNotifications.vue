@@ -182,6 +182,7 @@
 <script>
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 
 export default {
   name: 'AllNotifications',
@@ -420,17 +421,17 @@ export default {
       } else if (type === 'new_sales_agent') {
         this.$router.push('/users')
       } else if (type === 'request_cancelled' && notification.data?.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`)
+        openPropertyDetails(notification.data.property_id)
       } else if (['property_assigned', 'property_unassigned'].includes(type) && notification.data?.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`)
+        openPropertyDetails(notification.data.property_id)
       } else if (notification.data?.listing_id && type !== 'App\\Notifications\\HotDealRequestNotification') {
-        this.$router.push(`/property-details/${notification.data.listing_id}`)
+        openPropertyDetails(notification.data.listing_id)
       } else if (notification.data?.property_id) {
-        this.$router.push(`/property-details/${notification.data.property_id}`)
+        openPropertyDetails(notification.data.property_id)
       } else if (type === 'App\\Notifications\\DealUpdatedNotificatio') {
         this.$router.push('/kanban')
       } else if (type === 'App\\Notifications\\NewListingMatchedNotification') {
-        this.$router.push(`/property-details/${notification.data.listing_id}`)
+        openPropertyDetails(notification.data.listing_id)
       } else if (type === 'App\\Notifications\\HotDealRequestNotification') {
         this.$router.push('/hotDeal-requests')
       }

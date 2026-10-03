@@ -399,6 +399,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
@@ -598,7 +599,7 @@ function getRequesterAvatar(order) {
 
 function viewProperty(propertyId) {
     if (propertyId) {
-        router.push(`/property-details/${propertyId}`)
+        openPropertyDetails(propertyId)
     } else {
         Swal.fire({
             title: 'Error!',
@@ -612,7 +613,7 @@ function viewProperty(propertyId) {
 function viewPropertyFromModal(propertyId) {
     if (propertyId) {
         showDetailsModal.value = false
-        router.push(`/property-details/${propertyId}`)
+        openPropertyDetails(propertyId)
     } else {
         Swal.fire({
             title: 'Error!',

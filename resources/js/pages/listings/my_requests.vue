@@ -529,6 +529,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import { useRouter } from 'vue-router'
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
 import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
 
@@ -801,7 +802,7 @@ function closeProfilePopup() {
 }
 function viewProperty(propertyId) {
     if (propertyId) {
-        router.push(`/property-details/${propertyId}`)
+        openPropertyDetails(propertyId)
     } else {
         Swal.fire({
             title: 'Error!',

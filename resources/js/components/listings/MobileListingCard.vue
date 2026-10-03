@@ -1,6 +1,10 @@
 <template>
   <article class="ml-card">
-    <router-link :to="`/property-details/${property.id}`" class="ml-card__link">
+    <a
+      :href="`/property-details/${property.id}`"
+      class="ml-card__link"
+      @click="openPropertyDetailsFromClick($event, property.id)"
+    >
       <div class="ml-card__image-wrap">
         <img
           :src="imageUrl"
@@ -50,12 +54,13 @@
           <span v-if="property.created_at">{{ listedDate }}</span>
         </div>
       </div>
-    </router-link>
+    </a>
   </article>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal'
 
 const props = defineProps({
   property: { type: Object, required: true },

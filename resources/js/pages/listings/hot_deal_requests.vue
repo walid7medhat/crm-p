@@ -174,6 +174,7 @@ import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import PersonHoverCard from '@/components/shared/PersonHoverCard.vue'
 import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue'
+import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 
 const showProfilePopup = ref(false)
 const profileUserId = ref(null)
@@ -206,7 +207,7 @@ onMounted(() => {
 })
 function viewProperty(id) {
     if (!id) return
-    window.open(`/property-details/${id}`, '_blank')
+    openPropertyDetails(id, { onClose: () => fetchRequests(pagination.value.current_page) })
 }
 function formatPrice(price) {
     return price ? new Intl.NumberFormat().format(price) + ' AED' : '-'

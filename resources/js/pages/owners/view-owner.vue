@@ -198,9 +198,10 @@
                                         :key="property.id" 
                                         class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
                                     >
-                                           <router-link
-                                        :to="`/property-details/${property.id}`"
+                                           <a
+                                        :href="`/property-details/${property.id}`"
                                         class="property-card-link"
+                                        @click="openPropertyDetailsFromClick($event, property.id)"
                                         :class="{ 'converted-card': property.status === 'converted' }"
                                       >
                                         <div class="property-card">
@@ -290,7 +291,7 @@
                                             </span>
                                           </div>
                                         </div>
-                                      </router-link>
+                                      </a>
                                     </div>
                                 </div>
 
@@ -333,6 +334,7 @@
 import { API_ENDPOINTS } from '@/config/api';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import userPlaceholder from '@/assets/images/avatar/avatar1.png';
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
 
 export default {
     name: 'ViewOwner',
@@ -443,6 +445,7 @@ export default {
         this.fetchOwner();
     },
     methods: {
+        openPropertyDetailsFromClick,
         async fetchOwner() {
             console.log('🔄 [1] Starting fetchOwner...');
             try {

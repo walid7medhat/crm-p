@@ -87,13 +87,14 @@
 
             <!-- Action Buttons -->
             <div class="d-flex gap-2">
-              <router-link
+              <a
                 v-if="property.status !== 'converted'"
-                :to="`/property-details/${property.id}`"
+                :href="`/property-details/${property.id}`"
                 class="view-more-btn flex-grow-1"
+                @click="openPropertyDetailsFromClick($event, property.id)"
               >
                 View Details
-              </router-link>
+              </a>
               
               <!-- Status Toggle Button -->
               <!-- <button
@@ -179,6 +180,7 @@ import { ref, onMounted, computed } from 'vue';
 import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
+import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
 
 // Default images
 import property1 from "@/assets/images/a.jpeg";
@@ -465,6 +467,7 @@ export default {
     });
 
     return {
+      openPropertyDetailsFromClick,
       properties,
       filteredProperties,
       isLoading,
