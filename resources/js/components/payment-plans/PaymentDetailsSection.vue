@@ -659,10 +659,10 @@ const badgeClass = (status) => {
   font-size: 12px;
 }
 
-.pd-row-alt td { background: #f1f5f9; }
+.pd-row-alt td { background: #fff; }
 
 .pd-total-row td {
-  background: #f1f5f9 !important;
+  background: #fff !important;
   border-top: 2px solid #e2e8f0;
   font-size: 12px;
 }
