@@ -1178,7 +1178,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 
 .btn-add-property {
   background: transparent;
-  border: 1px solid #0B0736;
+  border: 1px solid #6b21a8;
   border-radius: 100px;
   padding: 8px 20px;
   font-size: 13px;
@@ -1191,7 +1191,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 }
 
 .btn-add-property:hover {
-  background: #0B0736;
+  background: #6b21a8;
   color: #fff;
 }
 /* Budget Dropdown Styles - نفس نظام Lead Search */

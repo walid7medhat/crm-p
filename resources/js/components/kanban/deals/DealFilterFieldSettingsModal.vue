@@ -160,7 +160,7 @@ const apply = () => {
   color: #666;
   position: relative;
 }
-.tab-btn.active { background: #0B0736; color: #fff; border-color: #0B0736; }
+.tab-btn.active { background: #6b21a8; color: #fff; border-color: #6b21a8; }
 .check-badge {
   position: absolute;
   top: -6px;

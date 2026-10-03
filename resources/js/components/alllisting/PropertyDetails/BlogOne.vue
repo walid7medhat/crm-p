@@ -3,7 +3,7 @@
     class="dashboard-main-body-inner property-show-inner"
     :class="{
       'property-show-inner--mobile': isMobileViewport,
-      'has-mobile-agent-bar': isMobileViewport && property?.agent && !onlyShow,
+      'has-mobile-action-dock': isMobileViewport && !onlyShow,
     }"
   >
     <div class="row gy-4 property-show-row">
@@ -63,7 +63,6 @@
               <MobilePropertyGallery
                 :images="property.gallery_images"
                 :get-image-url="getImageUrl"
-                :badges="mobileGalleryBadges"
                 @open="openLightbox"
               />
               <div v-if="(property.floor_plans && property.floor_plans.length) || property.drive_link" class="ps-mobile-hero__quick">
@@ -87,17 +86,41 @@
                 </button>
               </div>
               <div class="ps-mobile-hero__body">
-                <p class="ps-mobile-hero__price">
-                  AED {{ formatPrice(property.price) }}
-                  <span v-if="property.listing_status === 'rent'" class="ps-mobile-hero__price-unit">/ year</span>
+                <div class="ps-mobile-hero__head">
+                  <h6 v-if="mobileListingTitle" class="ps-mobile-hero__title">{{ mobileListingTitle }}</h6>
+                  <span v-if="mobilePurposeLabel" class="ps-mobile-hero__purpose">{{ mobilePurposeLabel }}</span>
+                </div>
+                <p v-if="mobileLocationLabel" class="ps-mobile-hero__location">
+                  <i class="ri-map-pin-line" aria-hidden="true"></i>
+                  {{ mobileLocationLabel }}
                 </p>
                 <div v-if="mobileSpecs.length" class="ps-mobile-hero__specs">
                   <span v-for="spec in mobileSpecs" :key="spec.key" class="ps-mobile-hero__spec">
-                    <i :class="spec.icon"></i>{{ spec.value }}
+                    <i :class="spec.icon"></i>
+                    <span>{{ spec.value }}</span>
                   </span>
                 </div>
-                <h6 v-if="mobileListingTitle" class="ps-mobile-hero__title">{{ mobileListingTitle }}</h6>
-                <p v-if="mobileLocationLabel" class="ps-mobile-hero__location">{{ mobileLocationLabel }}</p>
+                <div class="ps-mobile-hero__price-row">
+                  <div class="ps-mobile-hero__price-block">
+                    <span class="ps-mobile-hero__price-label">Price</span>
+                    <p class="ps-mobile-hero__price">
+                      {{ formatPrice(property.price) }} AED
+                      <span v-if="property.listing_status === 'rent'" class="ps-mobile-hero__price-unit">/ year</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  v-if="property.agent && !onlyShow"
+                  type="button"
+                  class="ps-mobile-hero__agent"
+                  @click="goToAgentDetails(property.agent.id)"
+                >
+                  <img
+                    :src="property.agent.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                    alt=""
+                  />
+                  <span>{{ property.agent.name || 'View agent' }}</span>
+                </button>
                 <div v-if="mobileHeroChips.length" class="ps-mobile-hero__chips">
                   <span v-for="chip in mobileHeroChips" :key="chip.label" class="ps-mobile-hero__chip">
                     {{ chip.label }}: <strong>{{ chip.value }}</strong>
@@ -213,12 +236,12 @@
               <div class="info-section">
                 <h3 class="section-title mb-20">Property Details</h3>
                 <div class="info-grid">
-                  <div class="info-item" v-if="!isMobileViewport">
+                  <div class="info-item">
                     <span class="info-label">Sale/Rent</span>
                     <span class="info-value">{{ property.listing_status || "Not specified" }}</span>
                   </div>
                   
-                  <div class="info-item" v-if="!isMobileViewport">
+                  <div class="info-item">
                     <span class="info-label">Price</span>
                     <span class="info-value">AED {{ formatPrice(property.price) }}</span>
                   </div>
@@ -2097,15 +2120,15 @@
     </div>
 </div>
     <Teleport to="body">
-      <MobilePropertyAgentBar
-        v-if="isMobileViewport && property?.agent && !onlyShow"
-        :agent="property.agent"
-        :can-chat="canUsePropertyChat"
-        :show-actions="!onlyShow"
-        @chat="handleChatWithAgentClick"
-        @profile="goToAgentDetails(property.agent.id)"
-        @actions="openMobilePropertyActions"
-      />
+      <div
+        v-if="isMobileViewport && property && !onlyShow"
+        class="ps-action-dock"
+      >
+        <button type="button" class="ps-action-dock__btn" @click="openMobilePropertyActions">
+          Property Action
+          <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+        </button>
+      </div>
     </Teleport>
 
     <Teleport to="body">
@@ -2149,7 +2172,6 @@ import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextT
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.vue';
-import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
 import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActionsSheet.vue';
 import PropertyActionsMenuContent from '@/components/listings/PropertyActionsMenuContent.vue';
 import PropertyAgentUpdatesPanel from '@/components/alllisting/PropertyDetails/PropertyAgentUpdatesPanel.vue';
@@ -2176,7 +2198,6 @@ export default {
     vSelect,
     PaymentDetailsSection,
     MobilePropertyGallery,
-    MobilePropertyAgentBar,
     MobilePropertyActionsSheet,
     PropertyActionsMenuContent,
     PropertyAgentUpdatesPanel,
@@ -2927,7 +2948,7 @@ const openFloorPlanSlider = (index) => {
       title: 'No Floor Plans',
       text: 'No floor plans available for this property.',
       icon: 'warning',
-      confirmButtonColor: '#0B0736'
+      confirmButtonColor: '#6b21a8'
     });
     return;
   }
@@ -3038,6 +3059,9 @@ const mobileSpecs = computed(() => {
   const typeName = (p.property_type?.name || '').toLowerCase();
   const isLand = typeName.includes('plot') || typeName.includes('land');
   const specs = [];
+  if (p.property_type?.name) {
+    specs.push({ key: 'type', icon: 'ri-building-4-line', value: p.property_type.name });
+  }
   if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
     specs.push({
       key: 'beds',
@@ -3045,25 +3069,21 @@ const mobileSpecs = computed(() => {
       value: p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : String(p.number_of_bedrooms),
     });
   }
-  if (!isLand && p.number_of_bathrooms) {
-    specs.push({ key: 'baths', icon: 'ri-drop-line', value: String(p.number_of_bathrooms) });
-  }
   if (p.size_sqft) {
-    specs.push({ key: 'size', icon: 'ri-ruler-line', value: `${p.size_sqft} sqft` });
+    specs.push({ key: 'size', icon: 'ri-building-line', value: `${p.size_sqft} Sqft` });
   } else if (p.size_sqmt) {
-    specs.push({ key: 'size', icon: 'ri-ruler-line', value: `${p.size_sqmt} sqm` });
+    specs.push({ key: 'size', icon: 'ri-building-line', value: `${p.size_sqmt} Sqm` });
+  }
+  if (!isLand && p.number_of_bathrooms) {
+    specs.push({ key: 'baths', icon: 'ri-drop-line', value: 'Bathroom' });
   }
   return specs;
 });
 
 watch(
   [isMobileViewport, () => property.value?.agent, onlyShow],
-  ([mobile, agent, only]) => {
-    if (mobile && agent && !only) {
-      document.body.classList.add('ps-mobile-agent-bar-open');
-    } else {
-      document.body.classList.remove('ps-mobile-agent-bar-open');
-    }
+  () => {
+    document.body.classList.remove('ps-mobile-agent-bar-open');
   },
   { immediate: true },
 );
@@ -3217,7 +3237,7 @@ const runPropertyMenuAction = (action) => {
           : 'This property will be hidden from listings.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#0B0736',
+        confirmButtonColor: '#6b21a8',
         cancelButtonColor: '#6c757d',
         confirmButtonText: property.value.is_archived ? 'Yes, Unarchive' : 'Yes, Archive',
         cancelButtonText: 'Cancel'
@@ -3249,7 +3269,7 @@ const runPropertyMenuAction = (action) => {
           : 'This property will be marked as active.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#0B0736',
+        confirmButtonColor: '#6b21a8',
         cancelButtonColor: '#6c757d',
         confirmButtonText: property.value.is_active ? 'Yes, Deactivate' : 'Yes, Activate',
         cancelButtonText: 'Cancel'
@@ -5064,7 +5084,7 @@ const closeCancelReasonModal = () => {
             title: 'Deleted!',
             text: 'Property has been deleted successfully.',
             icon: 'success',
-            confirmButtonColor: '#0B0736',
+            confirmButtonColor: '#6b21a8',
             timer: 2000,
             showConfirmButton: false
           });
@@ -5129,7 +5149,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Phone Not Available',
           text: 'Phone number is not available for this owner.',
           icon: 'warning',
-          confirmButtonColor: '#0B0736'
+          confirmButtonColor: '#6b21a8'
         });
         return;
       }
@@ -5142,7 +5162,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Email Not Available',
           text: 'Email address is not available for this owner.',
           icon: 'warning',
-          confirmButtonColor: '#0B0736'
+          confirmButtonColor: '#6b21a8'
         });
         return;
       }
@@ -5155,7 +5175,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Phone Not Available',
           text: 'Phone number is not available for WhatsApp.',
           icon: 'warning',
-          confirmButtonColor: '#0B0736'
+          confirmButtonColor: '#6b21a8'
         });
         return;
       }
@@ -5202,7 +5222,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'No Images',
           text: 'No gallery images available for this property.',
           icon: 'warning',
-          confirmButtonColor: '#0B0736'
+          confirmButtonColor: '#6b21a8'
         });
         return;
       }
@@ -6062,7 +6082,7 @@ const mobileOfferButtonStyle = (filled) => [
   'appearance:none',
   '-webkit-appearance:none',
   filled
-    ? 'border:0;background:#0B0736;color:#fff;'
+    ? 'border:0;background:#6b21a8;color:#fff;'
     : 'margin-top:10px;border:1px solid #d5dbe6;background:#fff;color:#0B0736;',
 ].join(';');
 
@@ -6221,7 +6241,7 @@ const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }
         <p style="margin-top: 12px;">Tap Download PDF. On iPhone, choose Save to Files from the share sheet.</p>
       </div>
       <button type="button" id="offer-pdf-download"
-        style="display:inline-block;margin-top:16px;background:#0B0736;color:#fff;padding:12px 22px;border-radius:8px;border:0;font-weight:600;">
+        style="display:inline-block;margin-top:16px;background:#6b21a8;color:#fff;padding:12px 22px;border-radius:8px;border:0;font-weight:600;">
         Download PDF
       </button>
     `,
@@ -6381,7 +6401,7 @@ const generatePDF = async () => {
             <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
           </div>
         `,
-        confirmButtonColor: '#0B0736'
+        confirmButtonColor: '#6b21a8'
       });
     }
 
@@ -6407,7 +6427,7 @@ const showOfferHistory = async () => {
           title: 'No Offers',
           text: 'No offers have been generated for this property yet.',
           icon: 'info',
-          confirmButtonColor: '#0B0736'
+          confirmButtonColor: '#6b21a8'
         });
         return;
       }
@@ -6438,7 +6458,7 @@ const showOfferHistory = async () => {
         title: 'Offer History',
         html: html,
         width: '600px',
-        confirmButtonColor: '#0B0736',
+        confirmButtonColor: '#6b21a8',
         confirmButtonText: 'Close'
       });
     }
@@ -6686,7 +6706,7 @@ const createSlide3 = () => {
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
     const icon = imageUrl
       ? `<img src="${imageUrl}" width="13" height="13" style="width:13px !important; height:13px !important; max-width:13px !important; max-height:13px !important; display:block !important;" />`
-      : `<span style="display:block !important; width:6px !important; height:6px !important; margin:3px !important; border-radius:50% !important; background:#0B0736 !important;"></span>`;
+      : `<span style="display:block !important; width:6px !important; height:6px !important; margin:3px !important; border-radius:50% !important; background:#6b21a8 !important;"></span>`;
     return `
       <td style="display:table-cell !important; width:18px !important; vertical-align:middle !important; padding:5px 6px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; line-height:0 !important;">${icon}</td>
       <td style="display:table-cell !important; vertical-align:middle !important; padding:5px 10px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:11px !important; line-height:14px !important; color:#1e293b !important; white-space:nowrap !important;">${feature.name}</td>
@@ -7571,7 +7591,7 @@ const createPaymentDetailsSlide = () => {
 
 const createFooter = () => {
   return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#6b21a8 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
     <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
   </div>
   `;
@@ -8563,7 +8583,7 @@ const getHistoryIcon = (event) => {
 .form-select:focus,
 .form-control:focus {
   outline: none;
-  border-color: #0B0736;
+  border-color: #6b21a8;
   box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.1);
 }
 
@@ -8839,7 +8859,7 @@ margin-bottom: 20px;
 }
 
 .side-image.active {
-  border-color: #0B0736;
+  border-color: #6b21a8;
 }
 
 .side-image img {
@@ -8985,7 +9005,7 @@ margin-bottom: 20px;
 }
 
 .lightbox-nav:hover:not(:disabled) {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
 }
 
@@ -9161,7 +9181,7 @@ margin-bottom: 20px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
 }
 
@@ -9263,7 +9283,7 @@ margin-top: 20px;
   color: #0B0736;
   /* margin-bottom: 12px; */
   padding: 10px 12px;
-  /* background: #0B0736; */
+  /* background: #6b21a8; */
   /* border-radius: 8px; */
 }
 
@@ -9484,7 +9504,7 @@ margin-top: 20px;
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #0B0736;
+  border: 2px solid #6b21a8;
 }
 
 .agent-sidebar-info {
@@ -9669,7 +9689,7 @@ margin-top: 20px;
 .btn-show-owner-modal {
   width: 100%;
   padding: 8px;
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
   border: none;
   border-radius: 6px;
@@ -9707,7 +9727,7 @@ margin-top: 20px;
 }
 
 .btn-request-unit {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
 }
 
@@ -10151,7 +10171,7 @@ margin-top: 20px;
 }
 
 .badge-primary {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
 }
 
@@ -10212,7 +10232,7 @@ margin-top: 20px;
 }
 
 .modal-info-item:hover {
-  border-color: #0B0736;
+  border-color: #6b21a8;
   background: white;
 }
 
@@ -10308,14 +10328,14 @@ margin-top: 20px;
 }
 
 .document-item:hover {
-  border-color: #0B0736;
+  border-color: #6b21a8;
   transform: translateY(-1px);
 }
 
 .document-icon {
   width: 36px;
   height: 36px;
-  background: #0B0736;
+  background: #6b21a8;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -10338,7 +10358,7 @@ margin-top: 20px;
 }
 
 .btn-view-document {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
   border: none;
   padding: 4px 8px;
@@ -10395,7 +10415,7 @@ margin-top: 20px;
 }
 
 .btn-modal-primary {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
   display: flex;
   align-items: center;
@@ -10438,7 +10458,7 @@ margin-top: 20px;
 }
 
 .btn-edit {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
 }
 
@@ -10639,7 +10659,7 @@ margin-top: 20px;
 }
 
 .btn-reply:hover {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
 }
 
@@ -11220,7 +11240,7 @@ margin-top: 20px;
 
 @media print {
   .pdf-header {
-    background: #0B0736 !important;
+    background: #6b21a8 !important;
     color: white !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -11328,7 +11348,7 @@ display: flex;
     align-items: center;
     gap: 6px;
     padding: 8px;
-    background: #0B0736;
+    background: #6b21a8;
     color: white;
     border: none;
     border-radius: 8px;
@@ -11435,7 +11455,7 @@ ease;
 }
 
 .btn-view-small {
-  background: #0B0736;
+  background: #6b21a8;
   color: white;
   border: none;
   border-radius: 4px;
@@ -11481,8 +11501,8 @@ ease;
   float: right;
 }
 .btn-success{
-  background-color: #0B0736;
-  border-color: #0B0736;
+  background-color: #6b21a8;
+  border-color: #6b21a8;
 }
 .btn-success:hover,.btn-success:active,.btn-success:focus{
   background-color: #733E87 !important;
@@ -11563,7 +11583,7 @@ ease;
   }
 }
 .bg-primary{
-    background-color:#0B0736 !important;
+    background-color:#6b21a8 !important;
 }
 
 @media (max-width: 580px) {
@@ -11949,7 +11969,7 @@ body.property-actions-open .sidebar-approved-viewings {
     height: 28px;
     border-radius: 50%;
     background: #f8f9fa;
-    border: 2px solid #0B0736;
+    border: 2px solid #6b21a8;
     display: flex;
     align-items: center;
     justify-content: center;

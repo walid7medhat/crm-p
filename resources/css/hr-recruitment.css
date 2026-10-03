@@ -934,8 +934,8 @@
 }
 
 .rec-search-popup .emp-search-popup__chip.is-active {
-  background: #0b0736;
-  border-color: #0b0736;
+  background: #6b21a8;
+  border-color: #6b21a8;
   color: #fff;
 }
 
@@ -1228,8 +1228,8 @@
 }
 
 .rec-option-pill.is-active {
-  background: #0b0736;
-  border-color: #0b0736;
+  background: #6b21a8;
+  border-color: #6b21a8;
   color: #fff;
 }
 
@@ -1259,7 +1259,7 @@
 }
 
 .rec-create-job-confirm {
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
 }
 
@@ -1444,7 +1444,7 @@
 }
 
 .hr-range-picker__preset:last-child {
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
   margin-top: 8px;
   text-align: center;
@@ -1544,7 +1544,7 @@
 }
 
 .hr-range-picker__apply {
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
 }
 
@@ -1585,7 +1585,7 @@
 .rec-interviews-empty__cta {
   border: none;
   border-radius: 999px;
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
   font-size: 12px;
   font-weight: 600;

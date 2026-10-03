@@ -1945,8 +1945,8 @@ export default {
   pointer-events: none; /* لمنع النقر على الزر نفسه بشكل منفصل */
 }
 .btn-success{
-    background-color: #0B0736 !important;
-    border: 1px solid #0B0736 !important ;
+    background-color: #6b21a8 !important;
+    border: 1px solid #6b21a8 !important ;
     border-radius: 5px !important;
 }
 .btn-outline-secondary{
@@ -2008,7 +2008,7 @@ export default {
 
 
 .status-badge {
-   background: #0B0736 ;
+   background: #6b21a8 ;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;

@@ -1,6 +1,6 @@
 <template>
     <div class="card basic-data-table users-list">
-        <div class="card-header">
+        <div v-if="!isMobileViewport" class="card-header">
             <div class="row">
                 <div class="col-md-6 text-start">
                     <h5 class="card-title mb-0">Users List</h5>
@@ -15,7 +15,9 @@
         </div>
                
         <div class="card">
-            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3"
+            <div
+                v-if="!isMobileViewport"
+                class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3"
                 style="border-bottom: none; padding-bottom: 0px;">
 
                 <div class="d-flex flex-wrap align-items-center gap-3">
@@ -51,9 +53,109 @@
                 </div>
             </div>
 
+            <div v-else class="agents-mobile__bar">
+                <label class="users-search agents-mobile__search">
+                    <input
+                        type="text"
+                        v-model="searchText"
+                        placeholder="Search name, email..."
+                        aria-label="Search users"
+                    />
+                    <iconify-icon icon="lucide:search" class="users-search__icon"></iconify-icon>
+                </label>
+                <div class="agents-mobile__tools">
+                    <router-link to="/team-tree" class="agents-mobile__tool">
+                        <iconify-icon icon="lucide:network"></iconify-icon>
+                        <span>Team Tree</span>
+                    </router-link>
+                    <button
+                        v-if="this.$hasPermission('users-create')"
+                        type="button"
+                        class="agents-mobile__tool agents-mobile__tool--add"
+                        @click="addUser"
+                    >
+                        <iconify-icon icon="lucide:plus"></iconify-icon>
+                        <span>Add</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Table -->
             <div class="card-body">
-                <div class="table-responsive">
+                <div v-if="isMobileViewport" class="agents-mobile__list">
+                    <article
+                        v-for="user in paginatedUsers"
+                        :key="'m-' + user.id"
+                        class="agents-mobile__card"
+                        @click="viewUser(user.id)"
+                    >
+                        <span class="agents-mobile__avatar">
+                            <img
+                                :src="avatarUrl(user)"
+                                :alt="user.name || ''"
+                                width="44"
+                                height="44"
+                                @error="handleImageError"
+                            />
+                            <span v-if="isUserOnline(user)" class="agents-mobile__online"></span>
+                        </span>
+                        <div class="agents-mobile__body">
+                            <div class="agents-mobile__name">{{ user.name }}</div>
+                            <div class="agents-mobile__email">{{ user.email }}</div>
+                            <div class="agents-mobile__meta">
+                                <span v-if="user.role_name" class="agents-mobile__role">{{ user.role_name.replace(/_/g, ' ') }}</span>
+                                <span class="agents-mobile__branch">{{ user.branch || user.department || user.office_name || '—' }}</span>
+                            </div>
+                        </div>
+                        <div class="agents-mobile__side" @click.stop>
+                            <div
+                                v-if="(hasAdminRole() || hasSuperAdminRole()) && user.id != 1"
+                                class="status-toggle"
+                            >
+                                <label class="toggle-switch">
+                                    <input
+                                        type="checkbox"
+                                        :checked="user.status === 'active'"
+                                        class="toggle-input"
+                                        :disabled="statusLoading === user.id"
+                                        @change="confirmStatusChange(user, user.status === 'active' ? 'in_active' : 'active')"
+                                    >
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <span v-else class="agents-mobile__status" :class="user.status === 'active' ? 'is-active' : 'is-inactive'">
+                                {{ user.status === 'active' ? 'Active' : 'Inactive' }}
+                            </span>
+                            <div class="dropdown">
+                                <button
+                                    class="agents-mobile__more"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-label="Agent actions"
+                                    :disabled="!hasAnyUserPermission() && !hasSuperAdminRole()"
+                                    @click.stop
+                                >
+                                    <iconify-icon icon="lucide:ellipsis"></iconify-icon>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li v-if="this.$hasPermission('users-list')">
+                                        <a class="dropdown-item" href="javascript:void(0)" @click="viewUser(user.id)">View</a>
+                                    </li>
+                                    <li v-if="this.$hasPermission('users-edit') && user.id != 1">
+                                        <a class="dropdown-item" href="javascript:void(0)" @click="editUser(user.id)">Edit</a>
+                                    </li>
+                                    <li v-if="hasSuperAdminRole() && user.id !== currentUserId() && user.status === 'active'">
+                                        <a class="dropdown-item" href="javascript:void(0)" @click="switchToUser(user)">Switch account</a>
+                                    </li>
+                                    <li v-if="this.$hasPermission('users-delete') && user.id != 1">
+                                        <a class="dropdown-item text-danger" href="javascript:void(0)" @click="deleteUser(user)">Delete</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div v-else class="table-responsive">
                     <table class="table bordered-table mb-0">
                         <thead>
                             <tr>
@@ -330,11 +432,13 @@ import { API_ENDPOINTS } from '../../config/api';
 import api from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import { useImpersonation } from '@/composables/useImpersonation.js';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 export default {
     name: 'UsersTable',
     setup() {
         const { switchToUser: rawSwitchToUser } = useImpersonation();
-        return { rawSwitchToUser };
+        const { isMobileViewport } = useMobileNavigation();
+        return { rawSwitchToUser, isMobileViewport };
     },
     data() {
         return {
@@ -1115,6 +1219,189 @@ export default {
     font-size: 14px;
 }
 
+.agents-mobile__bar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 12px 0;
+}
+
+.agents-mobile__search {
+    width: 100%;
+    min-width: 0;
+    height: 46px;
+    border-radius: 999px;
+    border: 1px solid #ece7f2;
+    padding: 0 14px 0 16px;
+    background: #fff;
+}
+
+.agents-mobile__search input {
+    width: 100%;
+    flex: 1 1 auto;
+    font-size: 16px;
+}
+
+.agents-mobile__search .users-search__icon {
+    color: #f5a524;
+    font-size: 18px;
+    margin-left: 8px;
+}
+
+.agents-mobile__tools {
+    display: flex;
+    gap: 8px;
+}
+
+.agents-mobile__tool {
+    flex: 1 1 0;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #efe6f6;
+    background: #f6f1fb;
+    color: #6b21a8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.agents-mobile__tool--add {
+    background: #6b21a8;
+    border-color: #6b21a8;
+    color: #fff;
+}
+
+.agents-mobile__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.agents-mobile__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid #f0eaf6;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(30, 27, 46, 0.05);
+    cursor: pointer;
+}
+
+.agents-mobile__avatar {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+}
+
+.agents-mobile__avatar img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: #f3f4f6;
+}
+
+.agents-mobile__online {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid #fff;
+}
+
+.agents-mobile__body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.agents-mobile__name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1528;
+    line-height: 1.25;
+}
+
+.agents-mobile__email {
+    margin-top: 2px;
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.agents-mobile__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.agents-mobile__role,
+.agents-mobile__branch {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f6f1fb;
+    color: #6b21a8;
+}
+
+.agents-mobile__branch {
+    background: #f4f5f7;
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.agents-mobile__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.agents-mobile__status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.agents-mobile__status.is-active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.agents-mobile__status.is-inactive {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.agents-mobile__more {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 10px;
+    background: #f6f1fb;
+    color: #6b21a8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
 .status-toggle {
     position: relative;
     display: inline-block;
@@ -1154,15 +1441,15 @@ export default {
     width: 14px;
     left: 2px;
     bottom: 4px;
-    background-color: #0B0736;
+    background-color: #6b21a8;
     transition: .4s;
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .toggle-input:checked + .toggle-slider {
-    background-color: #0B0736;
-    border-color: #0B0736;
+    background-color: #6b21a8;
+    border-color: #6b21a8;
 }
 
 .toggle-input:checked + .toggle-slider:before {

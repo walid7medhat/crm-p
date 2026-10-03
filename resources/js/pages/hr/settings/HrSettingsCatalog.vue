@@ -287,7 +287,7 @@ defineExpose({ closeForm })
   cursor: pointer;
 }
 .hr-set-item.is-selected {
-  border-color: #0b0736 !important;
+  border-color: #6b21a8 !important;
   background: #f4f2f8;
   box-shadow: inset 3px 0 0 #0b0736;
 }
@@ -337,7 +337,7 @@ defineExpose({ closeForm })
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -448,7 +448,7 @@ defineExpose({ closeForm })
 .hr-set-form-dialog__body .hr-set-field select:focus,
 .hr-set-form-dialog__body .hr-set-field textarea:focus {
   outline: none;
-  border-color: #0b0736;
+  border-color: #6b21a8;
   box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.1);
 }
 
@@ -504,7 +504,7 @@ defineExpose({ closeForm })
 }
 
 .hr-set-form-dialog__body .hr-set-switch input:checked + .hr-set-switch__track {
-  background: #0b0736;
+  background: #6b21a8;
 }
 
 .hr-set-form-dialog__body .hr-set-switch input:checked + .hr-set-switch__track::after {
@@ -541,8 +541,8 @@ defineExpose({ closeForm })
 }
 
 .hr-set-form-dialog__foot .hr-set-btn--primary {
-  background: #0b0736;
-  border-color: #0b0736;
+  background: #6b21a8;
+  border-color: #6b21a8;
   color: #fff;
 }
 

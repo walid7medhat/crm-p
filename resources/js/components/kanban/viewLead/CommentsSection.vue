@@ -678,7 +678,7 @@ const handleCancelFileModal = () => {
 }
 
 .btn-save {
-    background: #0B0736;
+    background: #6b21a8;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;
@@ -757,12 +757,12 @@ const handleCancelFileModal = () => {
 }
 
 .file-dropzone:hover {
-    border-color: #0B0736;
+    border-color: #6b21a8;
     background: #F1F5F9;
 }
 
 .file-dropzone.dragover {
-    border-color: #0B0736;
+    border-color: #6b21a8;
     background: #E2E8F0;
     border-style: solid;
 }

@@ -47,7 +47,7 @@
       </button>
       <div class="ps-gallery__dots" aria-hidden="true">
         <span
-          v-for="(_, index) in slides"
+          v-for="index in visibleDotIndexes"
           :key="index"
           class="ps-gallery__dot"
           :class="{ 'ps-gallery__dot--active': index === activeIndex }"
@@ -64,7 +64,7 @@
     </div>
 
     <span v-if="slides.length > 1" class="ps-gallery__counter">
-      {{ activeIndex + 1 }} / {{ slides.length }}
+      {{ activeIndex + 1 }}/{{ slides.length }}
     </span>
   </div>
 </template>
@@ -95,6 +95,13 @@ const slides = computed(() =>
       : props.getImageUrl(image.image_url_final),
   })),
 )
+
+const visibleDotIndexes = computed(() => {
+  const total = slides.value.length
+  if (total <= 5) return slides.value.map((_, index) => index)
+  const start = Math.min(Math.max(activeIndex.value - 2, 0), total - 5)
+  return Array.from({ length: 5 }, (_, index) => start + index)
+})
 
 const trackStyle = computed(() => {
   const offset = isDragging.value ? touchDeltaX.value : 0

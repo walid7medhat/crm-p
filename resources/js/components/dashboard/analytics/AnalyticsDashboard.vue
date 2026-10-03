@@ -5,15 +5,6 @@
   >
     <header class="adx-header">
       <div class="adx-header__brand">
-        <button
-          v-if="isMobileViewport"
-          type="button"
-          class="adx-header__menu"
-          aria-label="Open navigation menu"
-          @click="toggleMobileMenu"
-        >
-          <iconify-icon icon="heroicons:bars-3-solid" width="20" height="20" />
-        </button>
         <div>
           <h1 class="adx-header__title">Hello, {{ greetingName }} 👋</h1>
           <p class="adx-header__sub">Company analytics — leads, deals, listings &amp; HR</p>
@@ -595,7 +586,7 @@ const CHART_GRID = '#f1f5f9'
 const FUNNEL_COLORS = ['#60a5fa', '#eab308', '#f97316', '#86efac', '#16a34a', '#ea580c']
 const SOURCE_COLORS = [PURPLE_MID, GREEN, GOLD, ORANGE, '#a78bfa', SLATE]
 
-const { isMobileViewport, toggleMobileMenu } = useMobileNavigation()
+const { isMobileViewport } = useMobileNavigation()
 const { canViewModule } = useDashboardPermissions()
 
 const showLeads = computed(() => canViewModule('crm'))

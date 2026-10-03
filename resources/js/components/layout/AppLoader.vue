@@ -9,47 +9,15 @@
         aria-busy="true"
         aria-label="Loading Alt CRM"
       >
-        <div class="app-loader__bg" aria-hidden="true">
-          <div class="app-loader__gradient app-loader__gradient--a" />
-          <div class="app-loader__gradient app-loader__gradient--b" />
-          <div class="app-loader__gradient app-loader__gradient--c" />
-          <div class="app-loader__grid" />
-          <span
-            v-for="particle in particles"
-            :key="particle.id"
-            class="app-loader__particle"
-            :style="particle.style"
-          />
-        </div>
-
         <div class="app-loader__panel">
-          <div class="app-loader__logo-stage">
-            <div class="app-loader__glow app-loader__glow--outer" aria-hidden="true" />
-            <div class="app-loader__glow app-loader__glow--inner" aria-hidden="true" />
-            <div class="app-loader__logo-wrap">
-              <img
-                :src="logoSrc"
-                alt="Alt CRM"
-                class="app-loader__logo"
-                width="120"
-                height="120"
-                decoding="async"
-                fetchpriority="high"
-              />
-            </div>
+          <div class="alt-boot__mark" aria-hidden="true">
+            <span class="alt-boot__ring" />
+            <span class="alt-boot__core">A</span>
           </div>
-
-          <p class="app-loader__brand">Alt CRM</p>
+          <p class="app-loader__brand"><span>ALT</span> CRM</p>
           <p class="app-loader__text">{{ label }}</p>
-
           <div class="app-loader__progress" aria-hidden="true">
             <span class="app-loader__progress-line" />
-          </div>
-
-          <div class="app-loader__dots" aria-hidden="true">
-            <span class="app-loader__dot" />
-            <span class="app-loader__dot" />
-            <span class="app-loader__dot" />
           </div>
         </div>
       </div>
@@ -58,11 +26,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-
 defineOptions({ name: 'AppLoader' })
 
-const props = defineProps({
+defineProps({
   show: {
     type: Boolean,
     default: true,
@@ -74,31 +40,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['hidden'])
-
-const logoSrc = '/assets/images/pwa/icon-512.png'
-
-/** Lightweight CSS-only particles — no canvas / GSAP */
-const particles = computed(() =>
-  Array.from({ length: 18 }, (_, i) => {
-    const left = 8 + ((i * 17) % 84)
-    const delay = (i * 0.35) % 4
-    const duration = 6 + (i % 5)
-    const size = 2 + (i % 3)
-    const opacity = 0.25 + (i % 4) * 0.12
-    return {
-      id: i,
-      style: {
-        left: `${left}%`,
-        top: `${12 + ((i * 23) % 76)}%`,
-        width: `${size}px`,
-        height: `${size}px`,
-        opacity,
-        animationDuration: `${duration}s`,
-        animationDelay: `${delay}s`,
-      },
-    }
-  })
-)
 
 function onAfterLeave() {
   emit('hidden')
@@ -128,7 +69,7 @@ function onAfterLeave() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: #f7f4fb;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -256,15 +197,56 @@ function onAfterLeave() {
   object-fit: contain;
 }
 
+.alt-boot__mark {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.alt-boot__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(115, 62, 135, 0.08), #733e87 40%, rgba(115, 62, 135, 0));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: alt-boot-spin 0.7s linear infinite;
+}
+
+.alt-boot__core {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #733e87;
+  font-size: 20px !important;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  box-shadow: 0 8px 24px rgba(115, 62, 135, 0.16);
+}
+
 .app-loader__brand {
   margin: 0 0 0.25rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #111111;
-  opacity: 0.92;
-  animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  color: #1a1528;
+  line-height: 1.2;
+  animation: loader-text-in 0.28s ease both;
+}
+
+.app-loader__brand span {
+  color: #733e87;
+}
+
+@keyframes alt-boot-spin {
+  to { transform: rotate(360deg); }
 }
 
 .app-loader__text {

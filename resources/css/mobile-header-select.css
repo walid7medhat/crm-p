@@ -8,7 +8,7 @@
     position: relative;
   }
 
-  .kanban-mob-lead-select-wrap::before {
+  .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -22,7 +22,7 @@
     z-index: 0;
   }
 
-  .kanban-mob-lead-select-wrap::after {
+  .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::after {
     content: '';
     position: absolute;
     right: 14px;

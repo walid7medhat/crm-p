@@ -220,7 +220,7 @@ onUnmounted(() => {
   aspect-ratio: 3 / 2;
   border-radius: 22px;
   overflow: hidden;
-  background: #0b0736;
+  background: #6b21a8;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.22),
     0 28px 70px rgba(8, 6, 24, 0.45),
@@ -404,7 +404,10 @@ body.system-campaign-open {
   overflow: hidden !important;
 }
 
-body.system-campaign-open .mobile-core-dock {
+body.system-campaign-open .mobile-core-dock,
+body.system-campaign-open .mobile-tab-bar,
+body.system-campaign-open .mobile-create-sheet,
+body.system-campaign-open .mobile-more-sheet {
   display: none !important;
 }
 </style>

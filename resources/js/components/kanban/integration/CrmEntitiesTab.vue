@@ -183,8 +183,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .entity-card.selected {
-    border-color: #0B0736;
-    background: #0B0736;
+    border-color: #6b21a8;
+    background: #6b21a8;
     box-shadow: 0px 2px 8px rgba(1, 6, 44, 0.15);
 }
 

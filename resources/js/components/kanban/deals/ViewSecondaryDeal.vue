@@ -906,7 +906,7 @@ h6.section-title {
 
 .btn-add-property-sm {
   background: transparent;
-  border: 1px solid #0B0736;
+  border: 1px solid #6b21a8;
   border-radius: 100px;
   padding: 4px 12px;
   font-size: 11px;
@@ -919,7 +919,7 @@ h6.section-title {
   transition: all 0.2s;
 }
 .btn-add-property-sm:hover {
-  background: #0B0736;
+  background: #6b21a8;
   color: #fff;
 }
 /* ✅ Stage Dates Display */

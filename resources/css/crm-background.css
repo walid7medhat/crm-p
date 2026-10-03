@@ -391,6 +391,38 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
     background-position: center top;
   }
 
+  /* Phone: content fills the screen. The floating shell margin is desktop/tablet only. */
+  body.app-has-video-bg #app main.dashboard-main,
+  body.app-has-video-bg #app main.dashboard-main:not(.active),
+  body.app-has-video-bg #app main.dashboard-main.active {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .navbar-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #efeaf4 !important;
+    box-shadow: none !important;
+  }
+
+  body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #f6f4f8 !important;
+  }
+
   body.app-has-video-bg .property-show-page,
   body.app-has-video-bg .property-show-inner,
   body.app-has-video-bg .dashboard-main-body.property-show-page,

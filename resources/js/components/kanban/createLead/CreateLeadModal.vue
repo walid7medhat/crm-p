@@ -2379,7 +2379,7 @@ watch(selectedExistingClient, (client) => {
     }
     
     .additional-chip.active {
-        border-color: #0B0736;
+        border-color: #6b21a8;
     }
     
     .additional-chip .chip-label {
@@ -2523,7 +2523,7 @@ watch(selectedExistingClient, (client) => {
     
     /* Footer Buttons */
     .btn-prev {
-        background: #0B0736;
+        background: #6b21a8;
         border: none;
         padding: 10px 20px;
         border-radius: 100px;
@@ -2557,7 +2557,7 @@ watch(selectedExistingClient, (client) => {
     }
     
     .btn-next-step {
-        background: #0B0736;
+        background: #6b21a8;
         border: none;
         padding: 10px 20px;
         border-radius: 100px;

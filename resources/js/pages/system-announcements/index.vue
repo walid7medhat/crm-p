@@ -564,7 +564,7 @@ onUnmounted(clearLocalPreviews)
 }
 
 .sa-btn--primary {
-  background: #0b0736;
+  background: #6b21a8;
   color: #fff;
 }
 

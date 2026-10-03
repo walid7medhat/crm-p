@@ -1671,7 +1671,7 @@ function close() {
   color: #fff;
 }
 .btn-primary {
-  background: #0B0736;
+  background: #6b21a8;
   border: none;
   font-weight: 500;
 }
@@ -1862,7 +1862,7 @@ function close() {
   height: 49px;
   border: 1px solid rgba(115, 62, 135, 0.75);
   border-radius: 999px;
-  background: var(--gradient-crm, linear-gradient(135deg, #0b0736 0%, #733e87 100%));
+  background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
   color: #ffffff;
   font-size: 18px;
   line-height: 1;
@@ -1929,7 +1929,7 @@ function close() {
 }
 
 .edit-bar-save {
-  background: #0B0736;
+  background: #6b21a8;
   color: #fff;
 }
 

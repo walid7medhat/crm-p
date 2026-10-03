@@ -494,7 +494,7 @@ body.voice-search-open {
   height: 72px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(145deg, #733e87 0%, #0b0736 100%);
+  background: linear-gradient(145deg, #733e87 0%, #6b21a8 100%);
   color: #fff;
   font-size: 28px;
   display: inline-flex;

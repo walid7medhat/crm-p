@@ -7,30 +7,29 @@
       </div>
 
       <div v-if="isMobileViewport" class="bayut-mobile-search">
-        <div class="bayut-search-bar">
-          <button type="button" class="bayut-purpose-btn" @click.stop="openMobileChipSheet('purpose')">
-            {{ mobilePurposeLabel }}
-          </button>
+        <div class="bayut-search-row">
           <div class="bayut-search-field" @click="openMobileSearchOverlay">
-            <i class="ri-search-line bayut-search-field__icon" aria-hidden="true"></i>
             <span v-if="mobileSearchDisplay" class="bayut-search-value">{{ mobileSearchDisplay }}</span>
             <span v-else class="bayut-search-placeholder">Search city, area or building</span>
+            <i class="ri-search-line bayut-search-field__icon" aria-hidden="true"></i>
           </div>
           <VoiceSearchButton
-            :visible="canUseVoiceSearch"
+            :visible="false"
             :active="showVoiceSearchModal"
             variant="mobile"
             @click="openVoiceSearch"
           />
-          <button type="button" class="bayut-location-btn" aria-label="Search location" @click="openMobileSearchOverlay">
-            <i class="ri-map-pin-line"></i>
-          </button>
         </div>
 
         <div class="bayut-filter-chips">
-          <button type="button" class="bayut-chip bayut-chip--filters" @click="showMobileFilterSheet = true">
-            <i class="ri-equalizer-line"></i>
-            <span v-if="mobileActiveFilterCount > 0" class="bayut-filter-count">{{ mobileActiveFilterCount }}</span>
+          <button
+            type="button"
+            class="bayut-chip"
+            :class="{ active: selectedSaleRent !== 'All' }"
+            @click="openMobileChipSheet('purpose')"
+          >
+            {{ mobilePurposeLabel }}
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
           </button>
           <button
             type="button"
@@ -39,29 +38,52 @@
             @click="openMobileChipSheet('type')"
           >
             {{ mobilePropertyTypeChipLabel }}
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
           </button>
-          <button
-            type="button"
-            class="bayut-chip"
-            :class="{ active: selectedBeds.length > 0 || selectedBaths.length > 0 }"
-            @click="openMobileChipSheet('beds')"
-          >
-            {{ mobileBedsChipLabel }}
+          <button type="button" class="bayut-chip" :class="{ active: mobileActiveFilterCount > 0 }" @click="showMobileFilterSheet = true">
+            Advanced Filter
+            <i class="ri-equalizer-line" aria-hidden="true"></i>
+            <span v-if="mobileActiveFilterCount > 0" class="bayut-filter-count">{{ mobileActiveFilterCount }}</span>
           </button>
-          <button
-            type="button"
-            class="bayut-chip"
-            :class="{ active: hasActivePriceFilter }"
-            @click="openMobileChipSheet('price')"
-          >
-            {{ mobilePriceChipLabel }}
+        </div>
+
+        <div v-if="showStatusTabs" class="bayut-status-tabs">
+          <button type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'all' }" @click="emitStatusChange('all')">
+            <i class="ri-list-check"></i>
+            <span>All</span>
+            <em v-if="activeStatus === 'all'">{{ formattedResultCount }}</em>
+          </button>
+          <button type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'active' }" @click="emitStatusChange('active')">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>Active</span>
+            <em v-if="activeStatus === 'active'">{{ formattedResultCount }}</em>
+          </button>
+          <button type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'inactive' }" @click="emitStatusChange('inactive')">
+            <i class="ri-close-circle-line"></i>
+            <span>Inactive</span>
+            <em v-if="activeStatus === 'inactive'">{{ formattedResultCount }}</em>
+          </button>
+          <button type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'sold' }" @click="emitStatusChange('sold')">
+            <i class="ri-checkbox-circle-fill"></i>
+            <span>Sold</span>
+            <em v-if="activeStatus === 'sold'">{{ formattedResultCount }}</em>
+          </button>
+          <button type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'rented' }" @click="emitStatusChange('rented')">
+            <i class="ri-home-gear-line"></i>
+            <span>Rented</span>
+            <em v-if="activeStatus === 'rented'">{{ formattedResultCount }}</em>
+          </button>
+          <button type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
+            <i class="fa fa-pencil-alt"></i>
+            <span>Draft</span>
+            <em v-if="activeStatus === 'draft'">{{ formattedResultCount }}</em>
           </button>
         </div>
 
         <div class="bayut-results-header">
           <h6 class="listing-headline__title">{{ dynamicHeadline }}</h6>
-          <button type="button" class="bayut-sort-btn" @click="openMobileSortSheet">
-            {{ mobileSortLabel }}
+          <button type="button" class="bayut-sort-btn bayut-sort-btn--icon" aria-label="Sort listings" @click="openMobileSortSheet">
+            <i class="ri-list-unordered"></i>
           </button>
         </div>
       </div>
@@ -526,10 +548,13 @@
 
           <!-- Property Type -->
           <section class="bayut-filter-section">
-            <h6 class="bayut-filter-section__title">Property Type</h6>
-            <div class="bayut-type-grid">
+            <div class="bayut-filter-section__head">
+              <h6 class="bayut-filter-section__title">Property Type</h6>
+              <span v-if="selectedPropertyTypes.length" class="bayut-filter-count">{{ selectedPropertyTypes.length }}</span>
+            </div>
+            <div class="bayut-type-grid bayut-type-grid--compact">
               <button
-                v-for="type in visiblePropertyTypes"
+                v-for="type in mobileVisiblePropertyTypes"
                 :key="'mf-type-' + type.id"
                 type="button"
                 class="bayut-type-pill"
@@ -537,6 +562,12 @@
                 @click="togglePropertyTypeOption(type)"
               >{{ type.name }}</button>
             </div>
+            <button
+              v-if="hiddenPropertyTypeCount > 0"
+              type="button"
+              class="bayut-show-more"
+              @click="mobileTypeExpanded = !mobileTypeExpanded"
+            >{{ mobileTypeExpanded ? 'Show less' : 'Show all types (' + visiblePropertyTypes.length + ')' }}</button>
           </section>
 
           <!-- Beds -->
@@ -726,10 +757,33 @@
 
           <!-- Features -->
           <section v-if="listingFeatureOptions.length" class="bayut-filter-section">
-            <h6 class="bayut-filter-section__title">Features</h6>
-            <div class="bayut-type-grid">
+            <div class="bayut-filter-section__head">
+              <h6 class="bayut-filter-section__title">Features</h6>
+              <span v-if="selectedFeatureCount" class="bayut-filter-count">{{ selectedFeatureCount }}</span>
+            </div>
+            <label class="bayut-feature-search">
+              <i class="ri-search-line" aria-hidden="true"></i>
+              <input
+                v-model="featureSearchQuery"
+                type="search"
+                class="bayut-feature-search__input"
+                placeholder="Search features"
+                autocomplete="off"
+              />
+            </label>
+            <div class="bayut-pill-row bayut-feature-cats">
               <button
-                v-for="feature in listingFeatureOptions"
+                v-for="cat in featureCategories"
+                :key="'feat-cat-' + cat.id"
+                type="button"
+                class="bayut-pill bayut-pill--row"
+                :class="{ active: featureCategory === cat.id }"
+                @click="featureCategory = cat.id"
+              >{{ cat.label }}</button>
+            </div>
+            <div class="bayut-type-grid bayut-type-grid--compact">
+              <button
+                v-for="feature in mobileFeaturePills"
                 :key="feature.key"
                 type="button"
                 class="bayut-type-pill"
@@ -737,6 +791,13 @@
                 @click="toggleFeature(feature.key)"
               >{{ feature.label }}</button>
             </div>
+            <p v-if="!mobileFeaturePills.length" class="bayut-feature-empty">No features match that search</p>
+            <button
+              v-if="hiddenFeatureCount > 0"
+              type="button"
+              class="bayut-show-more"
+              @click="featuresExpanded = !featuresExpanded"
+            >{{ featuresExpanded ? 'Show less' : 'Show all features (' + filteredMobileFeatures.length + ')' }}</button>
           </section>
         </div>
 
@@ -795,7 +856,7 @@
               @keydown.esc="closeMobileSearchOverlay"
             />
             <VoiceSearchButton
-              :visible="canUseVoiceSearch"
+              :visible="false"
               :active="showVoiceSearchModal"
               variant="mobile"
               @click="openVoiceSearch"
@@ -1399,6 +1460,62 @@ const sortOptions = [
       
       return types;
     });
+
+    const mobileTypeExpanded = ref(false);
+    const MOBILE_TYPE_PREVIEW = 6;
+    const mobileVisiblePropertyTypes = computed(() => {
+      const all = visiblePropertyTypes.value;
+      if (mobileTypeExpanded.value) return all;
+      const preview = all.slice(0, MOBILE_TYPE_PREVIEW);
+      const previewIds = new Set(preview.map((type) => Number(type.id)));
+      const selectedHidden = selectedPropertyTypes.value.filter((type) => !previewIds.has(Number(type.id)));
+      return [...preview, ...selectedHidden];
+    });
+    const hiddenPropertyTypeCount = computed(() => (
+      Math.max(0, visiblePropertyTypes.value.length - MOBILE_TYPE_PREVIEW)
+    ));
+
+    const featureSearchQuery = ref('');
+    const featureCategory = ref('all');
+    const featuresExpanded = ref(false);
+    const featureCategories = [
+      { id: 'all', label: 'All' },
+      { id: 'view', label: 'Views' },
+      { id: 'rooms', label: 'Rooms' },
+      { id: 'layout', label: 'Layout' },
+      { id: 'floor', label: 'Floor' },
+      { id: 'spaces', label: 'Spaces' },
+      { id: 'kitchen', label: 'Kitchen' },
+      { id: 'furnishing', label: 'Furnishing' },
+      { id: 'extras', label: 'Extras' },
+    ];
+    const FEATURE_PREVIEW = 8;
+    const filteredMobileFeatures = computed(() => {
+      const query = featureSearchQuery.value.trim().toLowerCase();
+      return listingFeatureOptions.filter((feature) => {
+        const inCategory = featureCategory.value === 'all' || feature.category === featureCategory.value;
+        const matchesQuery = !query || feature.label.toLowerCase().includes(query);
+        return inCategory && matchesQuery;
+      });
+    });
+    const mobileFeaturePills = computed(() => {
+      const list = filteredMobileFeatures.value;
+      const browsingAll = featureCategory.value === 'all' && !featureSearchQuery.value.trim();
+      if (!browsingAll || featuresExpanded.value) return list;
+      const preview = list.slice(0, FEATURE_PREVIEW);
+      const previewKeys = new Set(preview.map((feature) => feature.key));
+      const selectedHidden = list.filter((feature) => selectedFeatures.value[feature.key] && !previewKeys.has(feature.key));
+      return [...preview, ...selectedHidden];
+    });
+    const hiddenFeatureCount = computed(() => {
+      const browsingAll = featureCategory.value === 'all' && !featureSearchQuery.value.trim();
+      if (!browsingAll || featuresExpanded.value) return 0;
+      return Math.max(0, filteredMobileFeatures.value.length - FEATURE_PREVIEW);
+    });
+    const selectedFeatureCount = computed(() => (
+      Object.values(selectedFeatures.value).filter(Boolean).length
+    ));
+
     const isPropertyTypeSelected = (type) => {
       return selectedPropertyTypes.value.some((item) => Number(item.id) === Number(type.id));
     };
@@ -1922,11 +2039,11 @@ const featuresButtonLabel = computed(() => {
     const mobilePurposeLabel = computed(() => {
       if (selectedSaleRent.value === 'Rent') return 'Rent';
       if (selectedSaleRent.value === 'Sale') return 'Buy';
-      return 'Buy';
+      return 'Purpose';
     });
 
     const mobilePropertyTypeChipLabel = computed(() => {
-      if (!selectedPropertyTypes.value.length) return 'Type';
+      if (!selectedPropertyTypes.value.length) return 'Property Type';
       if (selectedPropertyTypes.value.length === 1) return selectedPropertyTypes.value[0].name;
       return `Type (${selectedPropertyTypes.value.length})`;
     });
@@ -2687,6 +2804,17 @@ const featuresButtonLabel = computed(() => {
       isMyListingPage,
       isTeamLeadManager,
       visiblePropertyTypes,
+      mobileTypeExpanded,
+      mobileVisiblePropertyTypes,
+      hiddenPropertyTypeCount,
+      featureSearchQuery,
+      featureCategory,
+      featureCategories,
+      featuresExpanded,
+      filteredMobileFeatures,
+      mobileFeaturePills,
+      hiddenFeatureCount,
+      selectedFeatureCount,
       propertyTypeButtonLabel,
       bedsBathsButtonLabel,
       // Computed
@@ -3093,7 +3221,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .unified-input:focus {
-  border-color: #0B0736;
+  border-color: #6b21a8;
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1);
   outline: none;
 }
@@ -3114,7 +3242,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .unified-select .vs__dropdown-toggle:focus-within {
-  border-color: #0B0736 !important;
+  border-color: #6b21a8 !important;
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1) !important;
 }
 
@@ -3138,7 +3266,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .unified-btn:hover {
-  border-color: #0B0736;
+  border-color: #6b21a8;
 }
 
 .range-preview {
@@ -3228,7 +3356,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .range-input-side:focus {
-  border-color: #0B0736;
+  border-color: #6b21a8;
   outline: none;
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1);
 }
@@ -3248,7 +3376,7 @@ const featuresButtonLabel = computed(() => {
 .range-progress {
   position: absolute;
   height: 100%;
-  background: #0B0736;
+  background: #6b21a8;
   border-radius: 2px;
   top: 0;
   z-index: 1;
@@ -3282,7 +3410,7 @@ const featuresButtonLabel = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #0B0736;
+  background: #6b21a8;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -3294,7 +3422,7 @@ const featuresButtonLabel = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #0B0736;
+  background: #6b21a8;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -3304,7 +3432,7 @@ const featuresButtonLabel = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #0B0736;
+  background: #6b21a8;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -3393,14 +3521,14 @@ const featuresButtonLabel = computed(() => {
 }
 
 .status-tab:hover {
-  border-color: #0B0736;
+  border-color: #6b21a8;
   color: #0B0736;
 }
 
 .status-tab.active {
-  background: #0B0736;
+  background: #6b21a8;
   color: #fff;
-  border-color: #0B0736;
+  border-color: #6b21a8;
 }
 
 /* Active Filters */
@@ -5095,12 +5223,17 @@ const featuresButtonLabel = computed(() => {
     padding: 7px 10px calc(8px + env(safe-area-inset-bottom, 0px));
   }
   .mobile-filter-sticky-actions .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
     min-height: 34px;
     font-size: 11.5px;
     font-weight: 600;
     border-radius: 10px;
     padding-top: 4px;
     padding-bottom: 4px;
+    text-align: center;
   }
 
   .mobile-filter-sheet .listing-property-grid {

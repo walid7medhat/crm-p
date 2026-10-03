@@ -655,7 +655,7 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 .add-project-input:focus {
-    border-color: #0B0736;
+    border-color: #6b21a8;
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
     outline: none;
 }
@@ -791,7 +791,7 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 .add-project-modal-content .footer-btn.apply-btn {
-    background: #0B0736;
+    background: #6b21a8;
     color: #FFFFFF;
 }
 

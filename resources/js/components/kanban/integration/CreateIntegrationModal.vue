@@ -441,22 +441,22 @@ const resetModal = () => {
 }
 
 .tab-button.active {
-    background: #0B0736;
+    background: #6b21a8;
     color: #FFFFFF;
     font-weight: 600;
-    border-color: #0B0736;
+    border-color: #6b21a8;
 }
 
 .tab-button.active:hover {
-    background: #0B0736;
+    background: #6b21a8;
     color: #FFFFFF;
 }
 
 /* استايل جديد للتاب المكتمل */
 .tab-button.completed {
-    background: #0B0736;
+    background: #6b21a8;
     color: #FFFFFF;
-    border-color: #0B0736;
+    border-color: #6b21a8;
 }
 
 .tab-button.completed:hover {
@@ -511,7 +511,7 @@ const resetModal = () => {
 
 .custom-input-field:focus {
     outline: none;
-    border-color: #0B0736;
+    border-color: #6b21a8;
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
 }
 
@@ -603,7 +603,7 @@ const resetModal = () => {
 }
 
 .next-btn {
-    background: #0B0736;
+    background: #6b21a8;
     color: #FFFFFF;
 }
 

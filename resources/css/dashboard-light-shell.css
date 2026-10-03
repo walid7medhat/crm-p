@@ -271,15 +271,15 @@
     color: #1a1528 !important;
   }
 
-  .navbar-header.navbar-header--mobile-compact .kanban-mob-lead-select-wrap::before,
-  .navbar-header.navbar-header--kanban-mobile .kanban-mob-lead-select-wrap::before {
+  .navbar-header.navbar-header--mobile-compact .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::before,
+  .navbar-header.navbar-header--kanban-mobile .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::before {
     background: #ffffff !important;
     border: 1px solid #e8eaef !important;
     box-shadow: 0 1px 3px rgba(30, 27, 46, 0.06) !important;
   }
 
-  .navbar-header.navbar-header--mobile-compact .kanban-mob-lead-select-wrap::after,
-  .navbar-header.navbar-header--kanban-mobile .kanban-mob-lead-select-wrap::after {
+  .navbar-header.navbar-header--mobile-compact .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::after,
+  .navbar-header.navbar-header--kanban-mobile .kanban-mob-lead-select-wrap:not(.kanban-mob-lead-select-wrap--title)::after {
     border-right-color: #6b7280 !important;
     border-bottom-color: #6b7280 !important;
     border-top-color: transparent !important;

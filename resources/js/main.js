@@ -584,7 +584,7 @@ const bootSplash = document.getElementById('boot-splash')
 if (bootSplash) {
   requestAnimationFrame(() => {
     bootSplash.classList.add('is-done')
-    window.setTimeout(() => bootSplash.remove(), 400)
+    window.setTimeout(() => bootSplash.remove(), 240)
   })
 }
 scheduleEchoInit()

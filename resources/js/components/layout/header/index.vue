@@ -6,7 +6,8 @@
       active: isSidebarActive && !isMobileViewport,
       'sidebar--dashboard-home': isDashboardHome,
       'sidebar-open': isMobileMenuOpen,
-      'sidebar--mobile-drawer': isMobileViewport || isMobileMenuOpen,
+      'sidebar--mobile-drawer': isMobileViewport,
+      'sidebar--compact-nav': isCompactNav && !isMobileViewport,
       'mobile-drawer-flyout-open': isMobileViewport && crmListingsExpanded && showCrmListingsDropdown,
     }"
     @mouseenter="!isMobileViewport && (sidebarHover = true)"
@@ -353,36 +354,278 @@
 
   <Teleport to="body">
     <nav
-      v-if="showMobileCoreDock"
-      class="mobile-core-dock"
-      aria-label="Quick navigation"
+      v-if="isCompactNav"
+      class="mobile-tab-bar"
+      :class="{ 'mobile-tab-bar--no-create': !showCreateAction }"
+      aria-label="Primary"
     >
-      <router-link
-        v-if="showMobileQuickLeads"
-        to="/kanban"
-        class="mobile-core-dock__btn"
-        :class="{ 'is-active': isCoreDockLeadsActive }"
-        @click="onCoreDockLeadsClick"
+      <div class="mobile-tab-bar__group">
+        <router-link :to="compactHomePath" custom v-slot="{ href, navigate }">
+          <a
+            :href="href"
+            class="mobile-tab-bar__item"
+            :class="{ 'is-active': isHomeTabActive }"
+            @click="onTabHome(navigate, $event)"
+          >
+            <iconify-icon icon="lucide:house" class="mobile-tab-bar__icon" />
+            <span>Home</span>
+          </a>
+        </router-link>
+        <router-link v-if="showTabLeads" to="/kanban" custom v-slot="{ href, navigate }">
+          <a
+            :href="href"
+            class="mobile-tab-bar__item"
+            :class="{ 'is-active': isCoreDockLeadsActive && !isMobileMenuOpen }"
+            @click="onTabLeads(navigate, $event)"
+          >
+            <iconify-icon icon="lucide:contact" class="mobile-tab-bar__icon" />
+            <span>Leads</span>
+          </a>
+        </router-link>
+      </div>
+      <button
+        v-if="showCreateAction"
+        type="button"
+        class="mobile-tab-bar__create"
+        :class="{ 'is-open': showCreateSheet }"
+        :aria-expanded="showCreateSheet ? 'true' : 'false'"
+        aria-label="Create"
+        @click="toggleCreateSheet"
       >
-        <iconify-icon icon="lucide:contact" class="mobile-core-dock__icon" />
-        <span>Leads</span>
-      </router-link>
-      <span
-        v-if="showMobileQuickLeads && showMobileQuickListings"
-        class="mobile-core-dock__divider"
-        aria-hidden="true"
-      />
-      <router-link
-        v-if="showMobileQuickListings"
-        :to="crmListingsFlatPath"
-        class="mobile-core-dock__btn"
-        :class="{ 'is-active': isCoreDockListingsActive }"
-        @click="onCoreDockListingsClick"
-      >
-        <iconify-icon icon="lucide:building-2" class="mobile-core-dock__icon" />
-        <span>Listings</span>
-      </router-link>
+        <iconify-icon :icon="showCreateSheet ? 'lucide:x' : 'lucide:plus'" />
+      </button>
+      <div class="mobile-tab-bar__group">
+        <router-link v-if="showTabListings" :to="crmListingsFlatPath" custom v-slot="{ href, navigate }">
+          <a
+            :href="href"
+            class="mobile-tab-bar__item"
+            :class="{ 'is-active': isListingsTabActive && !isMobileMenuOpen }"
+            @click="onTabListings(navigate, $event)"
+          >
+            <iconify-icon icon="lucide:building-2" class="mobile-tab-bar__icon" />
+            <span>Listings</span>
+          </a>
+        </router-link>
+        <button
+          type="button"
+          class="mobile-tab-bar__item"
+          :class="{ 'is-active': isMobileViewport ? showMoreSheet : isMobileMenuOpen }"
+          :aria-expanded="(isMobileViewport ? showMoreSheet : isMobileMenuOpen) ? 'true' : 'false'"
+          @click="onTabMore"
+        >
+          <iconify-icon icon="lucide:ellipsis" class="mobile-tab-bar__icon" />
+          <span>More</span>
+        </button>
+      </div>
     </nav>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="isCompactNav && showCreateSheet"
+      class="mobile-create-sheet"
+      @click.self="closeCreateSheet"
+    >
+      <div class="mobile-create-sheet__panel" role="dialog" aria-modal="true" aria-label="Create">
+        <div class="mobile-create-sheet__choices">
+          <button
+            v-if="canCreateLead"
+            type="button"
+            class="mobile-create-card"
+            @click="onCreateLead"
+          >
+            <span class="mobile-create-card__icon mobile-create-card__icon--lead">
+              <iconify-icon icon="lucide:user-round-plus" />
+            </span>
+            <span class="mobile-create-card__copy">
+              <span class="mobile-create-card__label">Create Lead</span>
+              <span class="mobile-create-card__hint">Add a new lead to the board</span>
+            </span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-create-card__chevron" />
+          </button>
+          <button
+            v-if="canCreateListing"
+            type="button"
+            class="mobile-create-card"
+            @click="onCreateListing"
+          >
+            <span class="mobile-create-card__icon mobile-create-card__icon--listing">
+              <iconify-icon icon="lucide:building-2" />
+            </span>
+            <span class="mobile-create-card__copy">
+              <span class="mobile-create-card__label">New Listing</span>
+              <span class="mobile-create-card__hint">Publish a property listing</span>
+            </span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-create-card__chevron" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="isMobileViewport && showMoreSheet"
+      class="mobile-more-sheet"
+      @click.self="closeMoreSheet"
+    >
+      <div class="mobile-more-sheet__panel" role="dialog" aria-modal="true" aria-label="More">
+        <span class="mobile-more-sheet__grab" aria-hidden="true"></span>
+        <button type="button" class="mobile-more-sheet__close" aria-label="Close" @click="closeMoreSheet">
+          <iconify-icon icon="lucide:x" />
+        </button>
+        <div class="mobile-more-sheet__scroll">
+          <div class="mobile-more-card">
+            <button type="button" class="mobile-more-row" :class="{ 'is-active': isHomeTabActive }" @click="onMoreHome">
+              <span class="mobile-more-row__icon"><img :src="dashboardIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Dashboard</span>
+              <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+            </button>
+          </div>
+
+          <div v-if="!isHr" class="mobile-more-card">
+            <p class="mobile-more-sheet__section">CRM</p>
+            <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }" @click="onMoreLead">
+              <span class="mobile-more-row__icon"><img :src="leadsIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Leads</span>
+              <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+            </button>
+            <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }" @click="onMoreDeal">
+              <span class="mobile-more-row__icon"><img :src="dealsIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Deals</span>
+              <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+            </button>
+            <button
+              v-if="showCrmListingsDropdown"
+              type="button"
+              class="mobile-more-row"
+              :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.LISTINGS) }"
+              :aria-expanded="moreOpenGroup === 'listings' ? 'true' : 'false'"
+              @click="toggleMoreGroup('listings')"
+            >
+              <span class="mobile-more-row__icon"><img :src="listingsIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Listings</span>
+              <iconify-icon icon="lucide:chevron-down" class="mobile-more-row__chevron" :class="{ 'is-open': moreOpenGroup === 'listings' }" />
+            </button>
+            <div v-if="showCrmListingsDropdown && moreOpenGroup === 'listings'" class="mobile-more-nested">
+              <template v-for="section in listingsSidebarSections" :key="`more-${section.key}`">
+                <p v-if="section.key !== 'listings'" class="mobile-more-nested__heading">{{ section.title }}</p>
+                <button
+                  v-for="item in section.items"
+                  :key="`more-${section.key}-${item.path}`"
+                  type="button"
+                  class="mobile-more-row mobile-more-row--sub"
+                  :class="{ 'is-active': isSidebarSubItemActive(item.path) }"
+                  @click="onMoreListingItem(item.path)"
+                >
+                  <span class="mobile-more-row__label">{{ item.label }}</span>
+                  <span v-if="item.count > 0" class="mobile-more-row__count">{{ item.count }}</span>
+                </button>
+              </template>
+            </div>
+            <button
+              v-else-if="showCrmListingsFlat"
+              type="button"
+              class="mobile-more-row"
+              :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.LISTINGS) }"
+              @click="onMoreListingsFlat"
+            >
+              <span class="mobile-more-row__icon"><img :src="listingsIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Listings</span>
+              <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+            </button>
+
+            <button type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('calculator') }" :aria-expanded="moreOpenGroup === 'calculators' ? 'true' : 'false'" @click="toggleMoreGroup('calculators')">
+              <span class="mobile-more-row__icon"><img :src="calculatorIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Calculators</span>
+              <iconify-icon icon="lucide:chevron-down" class="mobile-more-row__chevron" :class="{ 'is-open': moreOpenGroup === 'calculators' }" />
+            </button>
+            <div v-if="moreOpenGroup === 'calculators'" class="mobile-more-nested">
+              <button
+                v-for="item in calculatorMenuItems"
+                :key="item.path"
+                type="button"
+                class="mobile-more-row mobile-more-row--sub"
+                :class="{ 'is-active': isSidebarSubItemActive(item.path) }"
+                @click="onMoreGo(item.path)"
+              >
+                <span class="mobile-more-row__label">{{ item.label }}</span>
+                <span class="mobile-more-row__hint">{{ item.name }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mobile-more-card">
+          <button v-if="isSuperAdmin || user?.id === 186 || isHr" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('hr') }" @click="onMoreGo('/hr')">
+            <span class="mobile-more-row__icon"><img :src="hrIcon" alt="" /></span>
+            <span class="mobile-more-row__label">HR</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
+          <template v-if="filteredUsersItems.length">
+            <button type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('agents') }" :aria-expanded="moreOpenGroup === 'agents' ? 'true' : 'false'" @click="toggleMoreGroup('agents')">
+              <span class="mobile-more-row__icon"><img :src="agentsIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Agents</span>
+              <iconify-icon icon="lucide:chevron-down" class="mobile-more-row__chevron" :class="{ 'is-open': moreOpenGroup === 'agents' }" />
+            </button>
+            <div v-if="moreOpenGroup === 'agents'" class="mobile-more-nested">
+              <button
+                v-for="item in filteredUsersItems"
+                :key="item.path"
+                type="button"
+                class="mobile-more-row mobile-more-row--sub"
+                :class="{ 'is-active': isSidebarSubItemActive(item.path) }"
+                @click="onMoreGo(item.path)"
+              >
+                <span class="mobile-more-row__label">{{ item.label }}</span>
+              </button>
+            </div>
+          </template>
+
+          <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/system-announcements') }" @click="onMoreGo('/system-announcements')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:megaphone" /></span>
+            <span class="mobile-more-row__label">Announcements</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
+          <button v-if="!isShowOnlyListing" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/suggestion') }" @click="onMoreGo('/suggestion')">
+            <span class="mobile-more-row__icon"><img :src="suggestionIcon" alt="" /></span>
+            <span class="mobile-more-row__label">Suggestions</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
+          <template v-if="settingsSidebarSections.length">
+            <button type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('settings') }" :aria-expanded="moreOpenGroup === 'settings' ? 'true' : 'false'" @click="toggleMoreGroup('settings')">
+              <span class="mobile-more-row__icon"><img :src="roleIcon" alt="" /></span>
+              <span class="mobile-more-row__label">Settings</span>
+              <iconify-icon icon="lucide:chevron-down" class="mobile-more-row__chevron" :class="{ 'is-open': moreOpenGroup === 'settings' }" />
+            </button>
+            <div v-if="moreOpenGroup === 'settings'" class="mobile-more-nested">
+              <template v-for="section in settingsSidebarSections" :key="`more-set-${section.key}`">
+                <p class="mobile-more-nested__heading">{{ section.title }}</p>
+                <button
+                  v-for="item in section.items"
+                  :key="`more-set-${section.key}-${item.path}`"
+                  type="button"
+                  class="mobile-more-row mobile-more-row--sub"
+                  :class="{ 'is-active': isSidebarSubItemActive(item.path) }"
+                  @click="onMoreGo(item.path)"
+                >
+                  <span class="mobile-more-row__label">{{ item.label }}</span>
+                </button>
+              </template>
+            </div>
+          </template>
+          </div>
+        </div>
+        <div class="mobile-more-sheet__footer">
+          <button type="button" class="mobile-more-logout" @click="logoutFromMore">
+            <iconify-icon icon="lucide:log-out" />
+            <span>Log out</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </Teleport>
 
   <Teleport to="body">
@@ -518,8 +761,8 @@
 import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch, nextTick } from 'vue';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import { useRoute, useRouter } from 'vue-router';
-import api from '@/plugins/axios';
-import { useSidebar } from '@/composables/useSidebar.js';
+import api, { clearAuthToken } from '@/plugins/axios';
+import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import {
   buildListingsSidebarSections,
@@ -571,6 +814,7 @@ const { proxy } = getCurrentInstance();
 const { isSidebarActive, toggleSidebarDesktop, expandSidebarDesktop } = useSidebar();
 const {
   isMobileViewport,
+  isCompactNav,
   isMobileMenuOpen,
   closeMobileMenu,
   toggleMobileMenu,
@@ -1285,7 +1529,7 @@ async function goToCrmSection(section) {
   activeDropdown.value = 'crm';
   localStorage.setItem('activeDropdown', 'crm');
   crmListingsExpanded.value = false;
-  if (isMobileViewport.value) closeMobileMenu();
+  if (isCompactNav.value) closeMobileMenu();
 
   if (section === CRM_SECTIONS.LEAD) {
     localStorage.setItem('kanban_active_tab', 'leads');
@@ -1317,7 +1561,7 @@ async function goToListingsItem(path) {
   rememberListingsPath(path);
   activeDropdown.value = 'crm';
   localStorage.setItem('activeDropdown', 'crm');
-  if (isMobileViewport.value) closeMobileMenu();
+  if (isCompactNav.value) closeMobileMenu();
   if (route.path !== path) {
     startNavProgress();
     router.push(path);
@@ -1336,11 +1580,27 @@ async function goToCrmListingsFlat() {
   }
 }
 
-const showMobileQuickLeads = computed(() => isAdmin.value && !isShowOnlyListing.value);
-const showMobileQuickListings = computed(() => isAdmin.value || isShowOnlyListing.value);
-const showMobileSidebarQuickbar = computed(() => showMobileQuickLeads.value || showMobileQuickListings.value);
-const isPropertyShowPage = computed(() => route.path.startsWith('/property-details'));
-const showMobileCoreDock = computed(() => showMobileSidebarQuickbar.value && !isPropertyShowPage.value);
+const showTabLeads = computed(() => canShowLeadsTab.value && !isShowOnlyListing.value && !isHr.value);
+const showTabListings = computed(() =>
+  !isHr.value && (showCrmListingsDropdown.value || showCrmListingsFlat.value || isShowOnlyListing.value),
+);
+const canCreateLead = computed(() => showTabLeads.value);
+const canCreateListing = computed(() => {
+  if (isShowOnlyListing.value) return false;
+  if (!proxy?.$hasPermission) return true;
+  return proxy.$hasPermission('listings-create');
+});
+const showCreateAction = computed(() => canCreateLead.value || canCreateListing.value);
+const compactHomePath = computed(() => (isShowOnlyListing.value ? '/alllisting' : '/'));
+const showCreateSheet = ref(false);
+const showMoreSheet = ref(false);
+const moreOpenGroup = ref(null);
+let pendingCreateLead = false;
+
+const isHomeTabActive = computed(() => {
+  if (isShowOnlyListing.value) return route.path === '/alllisting';
+  return isDashboardHome.value;
+});
 
 const isCoreDockLeadsActive = computed(() => {
   const p = route.path;
@@ -1350,6 +1610,11 @@ const isCoreDockLeadsActive = computed(() => {
 const isCoreDockListingsActive = computed(() => {
   if (route.path.startsWith('/property-details')) return true;
   return resolveCrmSection(route.path) === CRM_SECTIONS.LISTINGS;
+});
+
+const isListingsTabActive = computed(() => {
+  if (isShowOnlyListing.value && route.path === '/alllisting') return false;
+  return isCoreDockListingsActive.value;
 });
 
 function onCoreDockLeadsClick() {
@@ -1364,7 +1629,7 @@ function onCoreDockListingsClick() {
 }
 
 function onMobileSidebarNavClick(event) {
-  if (!isMobileViewport.value) return;
+  if (!isCompactNav.value) return;
   const link = event.target.closest('a.sidebar-nav-link, .sidebar-menu a[href]');
   if (!link) return;
   const href = link.getAttribute('href') || '';
@@ -1372,15 +1637,188 @@ function onMobileSidebarNavClick(event) {
   closeMobileMenu();
 }
 
-async function mobileQuickGoLeads() {
-  closeMobileMenu();
+function closeCreateSheet() {
+  showCreateSheet.value = false;
+}
+
+function closeMoreSheet() {
+  showMoreSheet.value = false;
+  moreOpenGroup.value = null;
+}
+
+function logoutFromMore() {
+  closeMoreSheet();
+  resetSidebarLayout();
+  clearAuthToken();
+  localStorage.removeItem('user');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('searchFilters');
+  localStorage.removeItem('listingSearchFilters');
+  localStorage.removeItem('impersonator_token');
+  localStorage.removeItem('impersonator_user');
+  document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+  document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith('kanban_leads_stages_cache_v2'))
+    .forEach((key) => localStorage.removeItem(key));
+  router.push('/sign-in');
+}
+
+function toggleMoreGroup(key) {
+  moreOpenGroup.value = moreOpenGroup.value === key ? null : key;
+}
+
+function toggleCreateSheet() {
+  if (isMobileMenuOpen.value) closeMobileMenu();
+  showMoreSheet.value = false;
+  showCreateSheet.value = !showCreateSheet.value;
+}
+
+function onTabNavigate(navigate, event) {
+  showCreateSheet.value = false;
+  if (isMobileMenuOpen.value) closeMobileMenu();
+  navigate(event);
+}
+
+function onTabHome(navigate, event) {
+  onTabNavigate(navigate, event);
+}
+
+function onTabLeads(navigate, event) {
+  onCoreDockLeadsClick();
+  onTabNavigate(navigate, event);
+}
+
+function onTabListings(navigate, event) {
+  onCoreDockListingsClick();
+  onTabNavigate(navigate, event);
+}
+
+function onTabMore() {
+  showCreateSheet.value = false;
+  if (isMobileViewport.value) {
+    if (isMobileMenuOpen.value) closeMobileMenu();
+    showMoreSheet.value = !showMoreSheet.value;
+    if (!showMoreSheet.value) moreOpenGroup.value = null;
+    return;
+  }
+  showMoreSheet.value = false;
+  toggleMobileMenu();
+}
+
+async function onMoreHome() {
+  closeMoreSheet();
+  const path = compactHomePath.value;
+  if (route.path !== path) {
+    startNavProgress();
+    await router.push(path);
+  }
+}
+
+async function onMoreLead() {
+  closeMoreSheet();
   await goToCrmSection(CRM_SECTIONS.LEAD);
 }
 
-async function mobileQuickGoListings() {
-  closeMobileMenu();
+async function onMoreDeal() {
+  closeMoreSheet();
+  await goToCrmSection(CRM_SECTIONS.DEAL);
+}
+
+async function onMoreListingsFlat() {
+  closeMoreSheet();
   await goToCrmListingsFlat();
 }
+
+async function onMoreListingItem(path) {
+  closeMoreSheet();
+  await goToListingsItem(path);
+}
+
+async function onMoreGo(path) {
+  closeMoreSheet();
+  closeMobileMenu();
+  if (route.path !== path) {
+    startNavProgress();
+    await router.push(path);
+  }
+}
+
+function dispatchCreateLead() {
+  window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }));
+  window.dispatchEvent(new CustomEvent('kanban-create-new', { detail: 'leads' }));
+}
+
+function scheduleCreateLeadModal() {
+  let tries = 0;
+  const tick = () => {
+    if (document.getElementById('create-lead-modal')) return;
+    dispatchCreateLead();
+    tries += 1;
+    if (tries < 10) window.setTimeout(tick, 100);
+  };
+  window.setTimeout(tick, 40);
+}
+
+async function onCreateLead() {
+  showCreateSheet.value = false;
+  closeMobileMenu();
+  rememberCrmSection(CRM_SECTIONS.LEAD);
+  localStorage.setItem('kanban_active_tab', 'leads');
+  if (route.path === '/kanban') {
+    dispatchCreateLead();
+    return;
+  }
+  pendingCreateLead = true;
+  startNavProgress();
+  try {
+    await router.push('/kanban');
+  } catch {
+    pendingCreateLead = false;
+  }
+}
+
+async function onCreateListing() {
+  showCreateSheet.value = false;
+  closeMobileMenu();
+  rememberCrmSection(CRM_SECTIONS.LISTINGS);
+  rememberListingsPath('/property-form');
+  if (route.path !== '/property-form') {
+    startNavProgress();
+    await router.push('/property-form');
+  }
+}
+
+function onCreateSheetKey(event) {
+  if (event.key !== 'Escape') return;
+  if (showMoreSheet.value) closeMoreSheet();
+  else closeCreateSheet();
+}
+
+watch([showCreateSheet, showMoreSheet], ([createOpen, moreOpen]) => {
+  if (createOpen || moreOpen) window.addEventListener('keydown', onCreateSheetKey);
+  else window.removeEventListener('keydown', onCreateSheetKey);
+});
+
+watch(isCompactNav, (compact) => {
+  if (!compact) showCreateSheet.value = false;
+});
+
+watch(isMobileViewport, (mobile) => {
+  if (!mobile) closeMoreSheet();
+});
+
+watch(() => route.path, (path) => {
+  showCreateSheet.value = false;
+  closeMoreSheet();
+  if (!pendingCreateLead) return;
+  if (path !== '/kanban') {
+    pendingCreateLead = false;
+    return;
+  }
+  pendingCreateLead = false;
+  scheduleCreateLeadModal();
+});
 
 const handleCrmClick = () => {
   expandSidebarDesktop();
@@ -1534,6 +1972,7 @@ onUnmounted(() => {
   stopPolling();
   window.removeEventListener('resize', syncViewport);
   window.removeEventListener('resize', updateDockCursor);
+  window.removeEventListener('keydown', onCreateSheetKey);
   detachDockObservers();
 });
 

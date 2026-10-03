@@ -1413,8 +1413,8 @@ defineExpose({
 }
 
 .lead-pool-pagination .page-btn.active {
-    background: #0B0736;
-    border-color: #0B0736;
+    background: #6b21a8;
+    border-color: #6b21a8;
     color: #fff;
 }
 

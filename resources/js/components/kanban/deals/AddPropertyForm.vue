@@ -694,7 +694,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .btn-save {
-  background: #0B0736;
+  background: #6b21a8;
   border: none;
   padding: 8px 24px;
   border-radius: 100px;
