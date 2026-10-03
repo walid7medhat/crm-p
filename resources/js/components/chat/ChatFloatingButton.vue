@@ -288,10 +288,10 @@ watch(() => props.chatOpen, (isOpen) => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+  background: linear-gradient(135deg, #733e87 0%, #6b21a8 100%);
   color: #fff;
   border: none;
-  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.4);
+  box-shadow: 0 4px 16px rgba(115, 62, 135, 0.4);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -301,7 +301,7 @@ watch(() => props.chatOpen, (isOpen) => {
 }
 .chat-floating-btn--unread {
   box-shadow:
-    0 4px 16px rgba(13, 110, 253, 0.4),
+    0 4px 16px rgba(115, 62, 135, 0.4),
     0 0 0 3px rgba(220, 53, 69, 0.55);
 }
 .chat-floating-btn--attention {
@@ -318,11 +318,11 @@ watch(() => props.chatOpen, (isOpen) => {
 }
 .chat-floating-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(13, 110, 253, 0.5);
+  box-shadow: 0 6px 20px rgba(115, 62, 135, 0.5);
 }
 .chat-floating-btn--unread:hover {
   box-shadow:
-    0 6px 20px rgba(13, 110, 253, 0.5),
+    0 6px 20px rgba(115, 62, 135, 0.5),
     0 0 0 3px rgba(220, 53, 69, 0.6);
 }
 .chat-floating-btn:active {
@@ -398,7 +398,7 @@ watch(() => props.chatOpen, (isOpen) => {
 @keyframes chat-btn-glow {
   0%, 100% {
     box-shadow:
-      0 4px 16px rgba(13, 110, 253, 0.4),
+      0 4px 16px rgba(115, 62, 135, 0.4),
       0 0 0 3px rgba(220, 53, 69, 0.4);
   }
   50% {

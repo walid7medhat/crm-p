@@ -63,70 +63,128 @@
               <MobilePropertyGallery
                 :images="property.gallery_images"
                 :get-image-url="getImageUrl"
+                :badges="mobileGalleryBadges"
                 @open="openLightbox"
               />
-              <div v-if="(property.floor_plans && property.floor_plans.length) || property.drive_link" class="ps-mobile-hero__quick">
-                <button
-                  v-if="property.floor_plans && property.floor_plans.length"
-                  type="button"
-                  class="ps-mobile-hero__quick-btn"
-                  @click="openFloorPlanSlider(0)"
-                >
-                  <i class="ri-layout-grid-line"></i>
-                  Floor plans
-                </button>
-                <button
-                  v-if="property.drive_link"
-                  type="button"
-                  class="ps-mobile-hero__quick-btn"
-                  @click="openDriveLink"
-                >
-                  <i class="fab fa-google-drive"></i>
-                  Drive
-                </button>
-              </div>
-              <div class="ps-mobile-hero__body">
-                <div class="ps-mobile-hero__head">
-                  <h6 v-if="mobileListingTitle" class="ps-mobile-hero__title">{{ mobileListingTitle }}</h6>
-                  <span v-if="mobilePurposeLabel" class="ps-mobile-hero__purpose">{{ mobilePurposeLabel }}</span>
-                </div>
-                <p v-if="mobileLocationLabel" class="ps-mobile-hero__location">
-                  <i class="ri-map-pin-line" aria-hidden="true"></i>
-                  {{ mobileLocationLabel }}
+            </div>
+
+            <div v-if="isMobileViewport && property" class="pf-page">
+              <section class="pf-card" :class="{ 'pf-card--overlap': property.gallery_images && property.gallery_images.length }">
+                <p class="pf-price">
+                  AED {{ formatPrice(property.price) }}
+                  <span v-if="property.listing_status === 'rent'">/year</span>
                 </p>
-                <div v-if="mobileSpecs.length" class="ps-mobile-hero__specs">
-                  <span v-for="spec in mobileSpecs" :key="spec.key" class="ps-mobile-hero__spec">
-                    <i :class="spec.icon"></i>
-                    <span>{{ spec.value }}</span>
-                  </span>
+                <h2 v-if="mobileListingTitle" class="pf-title">{{ mobileListingTitle }}</h2>
+                <p v-if="mobileLocationLabel" class="pf-location">{{ mobileLocationLabel }}</p>
+                <p v-if="mobileSpecSentence" class="pf-specs">{{ mobileSpecSentence }}</p>
+                <div v-if="(property.floor_plans && property.floor_plans.length) || property.drive_link" class="pf-quick">
+                  <button v-if="property.floor_plans && property.floor_plans.length" type="button" class="pf-quick__btn" @click="openFloorPlanSlider(0)">
+                    <i class="ri-layout-grid-line"></i>
+                    <span>Floor plans</span>
+                  </button>
+                  <button v-if="property.drive_link" type="button" class="pf-quick__btn" @click="openDriveLink">
+                    <i class="fab fa-google-drive"></i>
+                    <span>Drive</span>
+                  </button>
                 </div>
-                <div class="ps-mobile-hero__price-row">
-                  <div class="ps-mobile-hero__price-block">
-                    <span class="ps-mobile-hero__price-label">Price</span>
-                    <p class="ps-mobile-hero__price">
-                      {{ formatPrice(property.price) }} AED
-                      <span v-if="property.listing_status === 'rent'" class="ps-mobile-hero__price-unit">/ year</span>
-                    </p>
+              </section>
+
+              <section v-if="mobileDetailRows.length" class="pf-card">
+                <h3 class="pf-card__title">Property Details</h3>
+                <div class="pf-rows">
+                  <div v-for="row in mobileDetailPreview" :key="row.label" class="pf-row">
+                    <span class="pf-row__label"><i :class="row.icon"></i>{{ row.label }}</span>
+                    <span class="pf-row__value">{{ row.value }}</span>
                   </div>
                 </div>
-                <button
-                  v-if="property.agent && !onlyShow"
-                  type="button"
-                  class="ps-mobile-hero__agent"
-                  @click="goToAgentDetails(property.agent.id)"
-                >
-                  <img
-                    :src="property.agent.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
-                    alt=""
-                  />
-                  <span>{{ property.agent.name || 'View agent' }}</span>
+                <button v-if="mobileDetailRows.length > mobileDetailPreview.length" type="button" class="pf-more" @click="openPfSheet('details')">
+                  View all details
                 </button>
-                <div v-if="mobileHeroChips.length" class="ps-mobile-hero__chips">
-                  <span v-for="chip in mobileHeroChips" :key="chip.label" class="ps-mobile-hero__chip">
-                    {{ chip.label }}: <strong>{{ chip.value }}</strong>
+              </section>
+
+              <section v-if="property.project" class="pf-card">
+                <h3 class="pf-card__title">Project Details</h3>
+                <div v-if="property.gallery_images && property.gallery_images.length" class="pf-project-photo">
+                  <img :src="getImageUrl(property.gallery_images[0].image_url_final || property.gallery_images[0].image_url)" alt="" />
+                  <span v-if="property.completion_status" class="pf-project-photo__badge">{{ property.completion_status }}</span>
+                </div>
+                <h4 class="pf-project-name">{{ property.project.title }}</h4>
+                <p v-if="property.project.developer_name || property.developer?.name" class="pf-project-dev">
+                  {{ property.project.developer_name || property.developer?.name }}
+                </p>
+                <div class="pf-rows">
+                  <div v-if="property.completion_status" class="pf-row">
+                    <span class="pf-row__label"><i class="ri-calendar-check-line"></i>Completion</span>
+                    <span class="pf-row__value">{{ property.completion_status }}</span>
+                  </div>
+                  <div v-if="projectDeveloperLogo || property.project.developer_name || property.developer?.name" class="pf-row">
+                    <span class="pf-row__label"><i class="ri-building-line"></i>Developer</span>
+                    <span class="pf-row__value">
+                      <img v-if="projectDeveloperLogo" :src="projectDeveloperLogo" alt="" class="pf-dev-logo" />
+                      <template v-else>{{ property.project.developer_name || property.developer?.name }}</template>
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section v-if="property.comment && property.comment.trim()" class="pf-card">
+                <h3 class="pf-card__title">Description</h3>
+                <p class="pf-clamp">{{ property.comment }}</p>
+                <button type="button" class="pf-more" @click="openPfSheet('description')">See full description</button>
+              </section>
+
+              <section v-if="hasAdditionalFeatures" class="pf-card">
+                <h3 class="pf-card__title">Amenities</h3>
+                <div class="pf-amenities">
+                  <span v-for="feature in additionalFeaturesList.slice(0, 8)" :key="feature" class="pf-amenity">
+                    <i class="ri-checkbox-circle-line"></i>{{ feature }}
                   </span>
                 </div>
-              </div>
+                <button v-if="additionalFeaturesList.length > 8" type="button" class="pf-more" @click="openPfSheet('amenities')">
+                  Show more amenities
+                </button>
+              </section>
+
+              <section v-if="hasPaymentDetails" class="pf-card">
+                <h3 class="pf-card__title">Payment Details</h3>
+                <div class="pf-scroll">
+                  <PaymentDetailsSection :listing="property" />
+                </div>
+              </section>
+
+              <section v-if="property.floor_plans && property.floor_plans.length" class="pf-card">
+                <h3 class="pf-card__title">Floor Plans</h3>
+                <div class="pf-plans">
+                  <button
+                    v-for="(plan, idx) in property.floor_plans"
+                    :key="plan.id || idx"
+                    type="button"
+                    class="pf-plan"
+                    @click="openFloorPlanSlider(idx)"
+                  >
+                    <img v-if="plan.image_url" :src="plan.image_url" alt="" />
+                    <span>{{ plan.name || 'Floor plan ' + (idx + 1) }}</span>
+                  </button>
+                </div>
+              </section>
+
+              <section v-if="property.reference_number || property.created_at" class="pf-card">
+                <h3 class="pf-card__title">Regulatory information</h3>
+                <div class="pf-rows">
+                  <div v-if="property.reference_number" class="pf-row">
+                    <span class="pf-row__label">Reference</span>
+                    <span class="pf-row__value">{{ property.reference_number }}</span>
+                  </div>
+                  <div v-if="property.created_at" class="pf-row">
+                    <span class="pf-row__label">Listed</span>
+                    <span class="pf-row__value">{{ formatDate(property.created_at) }}</span>
+                  </div>
+                  <div v-if="property.agent?.name" class="pf-row">
+                    <span class="pf-row__label">Agent</span>
+                    <span class="pf-row__value">{{ property.agent.name }}</span>
+                  </div>
+                </div>
+              </section>
             </div>
 
            <div v-if="hasRejectionReason" class="rejection-alert-container mb-4">
@@ -232,7 +290,7 @@
               </div>
 
             <!-- Basic Information Section -->
-            <div class="detailed-info-section mb-16">
+            <div class="detailed-info-section mb-16" v-if="!isMobileViewport">
               <div class="info-section">
                 <h3 class="section-title mb-20">Property Details</h3>
                 <div class="info-grid">
@@ -399,7 +457,7 @@
             </div>
             
             <!-- Floor Plans Section -->
-            <div class="detailed-info-section mb-16" v-if="property.floor_plans && property.floor_plans.length > 0">
+            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && property.floor_plans && property.floor_plans.length > 0">
               <div class="info-section">
                 <h3 class="section-title mb-20">
                   <i class="ri-layout-grid-line me-2"></i>
@@ -434,7 +492,7 @@
             </div>
 
             <!-- Payment Details Section (breakdown + assignment costs) -->
-            <div class="detailed-info-section mb-16" v-if="hasPaymentDetails">
+            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && hasPaymentDetails">
               <div class="info-section">
                 <h3 class="section-title mb-20">Payment Details</h3>
                 <PaymentDetailsSection :listing="property" />
@@ -442,7 +500,7 @@
             </div>
 
             <!-- Notes Section -->
-            <div class="detailed-info-section mb-16" v-if="property.comment && property.comment.trim()">
+            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && property.comment && property.comment.trim()">
               <div class="info-section">
                 <h3 class="section-title mb-20">Notes</h3>
                 <div class="description-content">
@@ -481,7 +539,7 @@
                       <!-- Add Comment Form -->
                       <div class="add-comment-form mb-4" v-if="isAuthenticated">
                         <div class="form-header">
-                          <h5>Add Your Comment</h5>
+                          <p class="add-comment-label">Add Your Comment</p>
                         </div>
                         <div class="form-body">
                           <!-- Comment Input -->
@@ -2120,14 +2178,49 @@
     </div>
 </div>
     <Teleport to="body">
+      <MobilePropertyAgentBar
+        v-if="isMobileViewport && property && property.agent && !onlyShow"
+        :agent="property.agent"
+        :can-chat="canUsePropertyChat"
+        :show-actions="true"
+        @chat="openChatWithAgent"
+        @actions="openMobilePropertyActions"
+        @profile="goToAgentDetails(property.agent.id)"
+      />
       <div
-        v-if="isMobileViewport && property && !onlyShow"
+        v-else-if="isMobileViewport && property && !onlyShow"
         class="ps-action-dock"
       >
         <button type="button" class="ps-action-dock__btn" @click="openMobilePropertyActions">
-          Property Action
-          <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          Action
         </button>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="isMobileViewport && pfSheet" class="pf-sheet" @click.self="closePfSheet">
+        <div class="pf-sheet__panel" role="dialog" aria-modal="true">
+          <div class="pf-sheet__head">
+            <h3>{{ pfSheetTitle }}</h3>
+            <button type="button" class="pf-sheet__close" aria-label="Close" @click="closePfSheet">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+          <div class="pf-sheet__body">
+            <div v-if="pfSheet === 'details'" class="pf-rows">
+              <div v-for="row in mobileDetailRows" :key="'sheet-' + row.label" class="pf-row">
+                <span class="pf-row__label"><i :class="row.icon"></i>{{ row.label }}</span>
+                <span class="pf-row__value">{{ row.value }}</span>
+              </div>
+            </div>
+            <p v-else-if="pfSheet === 'description'" class="pf-sheet__text">{{ property.comment }}</p>
+            <div v-else-if="pfSheet === 'amenities'" class="pf-amenities pf-amenities--sheet">
+              <span v-for="feature in additionalFeaturesList" :key="'all-' + feature" class="pf-amenity">
+                <i class="ri-checkbox-circle-line"></i>{{ feature }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </Teleport>
 
@@ -2172,6 +2265,7 @@ import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextT
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.vue';
+import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
 import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActionsSheet.vue';
 import PropertyActionsMenuContent from '@/components/listings/PropertyActionsMenuContent.vue';
 import PropertyAgentUpdatesPanel from '@/components/alllisting/PropertyDetails/PropertyAgentUpdatesPanel.vue';
@@ -2198,6 +2292,7 @@ export default {
     vSelect,
     PaymentDetailsSection,
     MobilePropertyGallery,
+    MobilePropertyAgentBar,
     MobilePropertyActionsSheet,
     PropertyActionsMenuContent,
     PropertyAgentUpdatesPanel,
@@ -3079,6 +3174,64 @@ const mobileSpecs = computed(() => {
   }
   return specs;
 });
+
+const mobileSpecSentence = computed(() => {
+  const p = property.value;
+  if (!p) return '';
+  const typeName = (p.property_type?.name || '').toLowerCase();
+  const isLand = typeName.includes('plot') || typeName.includes('land');
+  const bits = [];
+  if (p.property_type?.name) bits.push(p.property_type.name);
+  if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
+    bits.push(p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : `${p.number_of_bedrooms} beds`);
+  }
+  if (!isLand && p.number_of_bathrooms) bits.push(`${p.number_of_bathrooms} baths`);
+  if (p.size_sqft) bits.push(`${p.size_sqft} Sqft`);
+  else if (p.size_sqmt) bits.push(`${p.size_sqmt} m²`);
+  return bits.join(' · ');
+});
+
+const mobileDetailRows = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const rows = [];
+  const add = (icon, label, value) => {
+    if (value === null || value === undefined || value === '') return;
+    rows.push({ icon, label, value: String(value) });
+  };
+  const typeName = (p.property_type?.name || '').toLowerCase();
+  const isLand = typeName.includes('plot') || typeName.includes('land');
+  add('ri-price-tag-3-line', 'Sale/Rent', p.listing_status);
+  add('ri-building-4-line', 'Property Type', p.property_type?.name);
+  if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
+    add('ri-hotel-bed-line', 'Bedrooms', p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : String(p.number_of_bedrooms));
+  }
+  if (!isLand && p.number_of_bathrooms) add('ri-drop-line', 'Bathrooms', p.number_of_bathrooms);
+  if (p.size_sqft) add('ri-ruler-line', 'Property Size', `${p.size_sqft} Sq Ft`);
+  else if (p.size_sqmt) add('ri-ruler-line', 'Property Size', `${p.size_sqmt} m²`);
+  add('ri-checkbox-circle-line', 'Completion', p.completion_status);
+  add('ri-home-smile-line', 'Occupancy', p.occupancy_status);
+  add('ri-community-line', 'Project', p.project?.title);
+  add('ri-building-line', 'Developer', p.project?.developer_name || p.developer?.name);
+  add('ri-hashtag', 'Reference', p.reference_number);
+  if (p.is_hot_deal === 'Yes') add('ri-fire-line', 'Hot Deal', 'Yes');
+  return rows;
+});
+
+const mobileDetailPreview = computed(() => mobileDetailRows.value.slice(0, 6));
+const projectDeveloperLogo = computed(() => {
+  const project = property.value?.project;
+  return project?.developerData?.avatar || project?.developer?.avatar || '';
+});
+const pfSheet = ref(null);
+const pfSheetTitle = computed(() => {
+  if (pfSheet.value === 'details') return 'Property Details';
+  if (pfSheet.value === 'description') return 'Description';
+  if (pfSheet.value === 'amenities') return 'Amenities';
+  return '';
+});
+function openPfSheet(kind) { pfSheet.value = kind; }
+function closePfSheet() { pfSheet.value = null; }
 
 watch(
   [isMobileViewport, () => property.value?.agent, onlyShow],
@@ -4442,14 +4595,32 @@ const revertFromConverted = async () => {
         Swal.fire({ title: 'Please log in', text: 'You need to be logged in to start a chat.', icon: 'info' });
         return;
       }
-      if (!property.value?.agent) return;
-      chatAgent.value = {
-        id: property.value.agent.id,
-        name: property.value.agent.name || property.value.agent.email,
-        email: property.value.agent.email,
-        avatar: property.value.agent.avatar_url || property.value.agent.avatar || null,
+      const p = property.value;
+      if (!p?.agent) {
+        Swal.fire({ title: 'No agent', text: 'This property has no agent assigned.', icon: 'info' });
+        return;
+      }
+      const agent = {
+        id: p.agent.id,
+        name: p.agent.name || p.agent.email,
+        email: p.agent.email,
+        avatar: p.agent.avatar_url || p.agent.avatar || null,
       };
-      chatListingId.value = property.value.id ?? null;
+      const context = {
+        propertyId: p.id ?? null,
+        title: p.title || p.name || p.reference_number || p.reference || `Property #${p.id ?? ''}`,
+        reference: p.reference_number || p.reference || p.ref_no || p.unit_ref || '',
+        location: [p?.project?.title || p?.project?.name, p?.area?.area_title || p?.area?.title || p?.area?.name].filter(Boolean).join(' - '),
+        price: p?.price !== undefined && p?.price !== null && p?.price !== ''
+          ? `${Number(String(p.price).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p?.currency || 'AED'}`
+          : '',
+      };
+      if (typeof window.__openPropertyChat === 'function') {
+        window.__openPropertyChat(agent, p.id ?? null, context);
+        return;
+      }
+      chatAgent.value = agent;
+      chatListingId.value = p.id ?? null;
       showChatPopup.value = true;
     };
 
@@ -8104,6 +8275,14 @@ const getHistoryIcon = (event) => {
       mobileListingTitle,
       mobileLocationLabel,
       mobileSpecs,
+      mobileSpecSentence,
+      mobileDetailRows,
+      mobileDetailPreview,
+      projectDeveloperLogo,
+      pfSheet,
+      pfSheetTitle,
+      openPfSheet,
+      closePfSheet,
       mobileHeroChips,
       property,
       logo,
@@ -10523,7 +10702,8 @@ margin-top: 20px;
   padding: 12px 16px;
 }
 
-.form-header h5 {
+.form-header h5,
+.add-comment-label {
   margin: 0;
   color: #0B0736;
   font-size: 16px;

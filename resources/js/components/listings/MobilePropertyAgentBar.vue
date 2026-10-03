@@ -1,37 +1,26 @@
 <template>
-  <div class="ps-agent-bar" role="region" aria-label="Property actions">
-    <div class="ps-agent-bar__sheet">
-      <button
-        type="button"
-        class="ps-agent-bar__avatar-btn"
-        :aria-label="`View ${agentName}`"
-        @click="emit('profile')"
-      >
+  <div class="pf-dock" role="region" aria-label="Agent">
+    <div class="pf-dock__card">
+      <button type="button" class="pf-dock__who" @click="emit('profile')">
         <img
-          :src="agent.avatar || defaultAvatar"
+          :src="avatarFailed ? defaultAvatar : (agent.avatar || defaultAvatar)"
           :alt="agentName"
-          class="ps-agent-bar__avatar"
-          @error="onAvatarError"
+          @error="avatarFailed = true"
         />
+        <span>
+          <strong>{{ agentName }}</strong>
+          <small>Property agent</small>
+        </span>
       </button>
-      <button
-        v-if="showActions"
-        type="button"
-        class="ps-agent-bar__action"
-        @click="emit('actions')"
-      >
-        Property Action
-        <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
-      </button>
-      <button
-        v-if="canChat"
-        type="button"
-        class="ps-agent-bar__chat"
-        aria-label="Chat with agent"
-        @click="emit('chat')"
-      >
-        <i class="ri-chat-3-line"></i>
-      </button>
+      <div class="pf-dock__actions">
+        <button v-if="canChat" type="button" class="pf-dock__btn" @click="emit('chat')">
+          <i class="ri-chat-3-line"></i>
+          Chat
+        </button>
+        <button v-if="showActions" type="button" class="pf-dock__btn pf-dock__btn--action" @click="emit('actions')">
+          Action
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -54,11 +43,4 @@ const agentName = computed(() => {
   const a = props.agent
   return a.name || [a.first_name, a.last_name].filter(Boolean).join(' ') || 'Agent'
 })
-
-function onAvatarError(event) {
-  if (!avatarFailed.value) {
-    avatarFailed.value = true
-    event.target.src = defaultAvatar
-  }
-}
 </script>
