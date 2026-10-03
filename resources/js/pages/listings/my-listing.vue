@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4">
+  <div class="container-fluid" :class="{ 'all-listings-mobile': isMobileViewport, 'mt-4': !isMobileViewport }">
 
     <div class="top-search-toolbar mb-3">
       <div class="top-search-col">
@@ -47,7 +47,13 @@
         :key="property.id || index"
         class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
       >
+        <MobileListingCard
+          v-if="isMobileViewport"
+          :property="property"
+          :fallback-image="defaultImages[0]"
+        />
         <div
+          v-else
           class="property-listing-card"
           :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
         >
@@ -273,6 +279,8 @@ import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
+import { useMobileNavigation } from '@/composables/useMobileNavigation';
+import MobileListingCard from '@/components/listings/MobileListingCard.vue';
 import {
   listingNeedsPaymentBreakdownHighlight,
   canQuickEditPaymentBreakdown,
@@ -286,8 +294,9 @@ import {
 
 export default {
   name: 'AllListings',
-  components: { SearchBar, Breadcrumb, ListingPaymentBreakdownQuickModal },
+  components: { SearchBar, Breadcrumb, ListingPaymentBreakdownQuickModal, MobileListingCard },
   setup() {
+    const { isMobileViewport } = useMobileNavigation();
       const property1 = "/assets/images/a.jpeg";
     const property2 = "/assets/images/b.jpeg";
     const property3 = "/assets/images/c.jpeg";
@@ -1157,6 +1166,8 @@ watch(() => route.query, (newQuery, oldQuery) => {
     return {
       properties,
       filteredProperties,
+      isMobileViewport,
+      defaultImages,
         propertyIcon,
       bedIcon,
       bathIcon,

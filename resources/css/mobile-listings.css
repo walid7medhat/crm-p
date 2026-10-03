@@ -916,23 +916,27 @@
 
   .ml-card__top {
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 12px;
     min-width: 0;
   }
 
   .ml-card__image-wrap {
     position: relative;
-    width: 104px;
-    min-width: 104px;
-    height: 104px;
-    border-radius: 12px;
+    width: 108px;
+    min-width: 108px;
+    min-height: 132px;
+    height: auto;
+    align-self: stretch;
+    border-radius: 14px;
     background: #e2e8f0;
     overflow: hidden;
     flex-shrink: 0;
   }
 
   .ml-card__image {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -1056,18 +1060,23 @@
 
   .ml-card__specs {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px 10px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
     margin-top: 8px;
-    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
     font-weight: 500;
     color: #64748b;
+    white-space: nowrap;
   }
 
   .ml-card__spec {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    flex: 0 0 auto;
     min-width: 0;
   }
 

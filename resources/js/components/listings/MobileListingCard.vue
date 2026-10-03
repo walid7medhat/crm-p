@@ -49,7 +49,10 @@
             <span v-if="typeLabel" class="ml-card__spec">
               <i class="ri-building-4-line"></i>{{ typeLabel }}
             </span>
-            <span v-if="bedsLabel" class="ml-card__spec">
+            <span v-if="isStudio" class="ml-card__spec">
+              <i class="ri-building-2-line"></i>Studio
+            </span>
+            <span v-else-if="bedsLabel" class="ml-card__spec">
               <i class="ri-hotel-bed-line"></i>{{ bedsLabel }}
             </span>
             <span v-if="bathsLabel" class="ml-card__spec">
@@ -108,11 +111,17 @@ const locationLabel = computed(() => props.property.area || '')
 
 const isLand = computed(() => typeName.value.includes('plot') || typeName.value.includes('land'))
 
-const bedsLabel = computed(() => {
-  if (isLand.value) return null
+const isStudio = computed(() => {
+  if (isLand.value) return false
   const n = props.property.number_of_bedrooms
-  if (n === null || n === undefined) return null
-  return n === 0 || n === '0' ? 'Studio' : String(n)
+  return n === 0 || n === '0'
+})
+
+const bedsLabel = computed(() => {
+  if (isLand.value || isStudio.value) return null
+  const n = props.property.number_of_bedrooms
+  if (n === null || n === undefined || n === '') return null
+  return String(n)
 })
 
 const bathsLabel = computed(() => {

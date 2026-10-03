@@ -26,7 +26,7 @@
           </button>
           <div class="kanban-mob-lead-select-wrap kanban-mob-lead-select-wrap--title">
             <button
-              v-if="!showMobileHeaderBack && moduleHeaderTabs.length > 1"
+              v-if="!showMobileHeaderBack && !isProjectsRoute && moduleHeaderTabs.length > 1"
               type="button"
               class="kanban-mob-title-btn"
               :aria-expanded="kanbanSwitchOpen ? 'true' : 'false'"
@@ -73,7 +73,7 @@
         </div>
 
         <Teleport to="body">
-          <div v-if="kanbanSwitchOpen && isMobileViewport && moduleHeaderTabs.length > 1" class="kanban-switch-root">
+          <div v-if="kanbanSwitchOpen && isMobileViewport && !isProjectsRoute && moduleHeaderTabs.length > 1" class="kanban-switch-root">
             <button type="button" class="kanban-switch-backdrop" aria-label="Close" @click="kanbanSwitchOpen = false" />
             <div class="kanban-switch-card" role="menu" aria-label="Choose view">
               <button
@@ -796,6 +796,11 @@ const isAgentDetailRoute = computed(
   () => /^\/users\/\d+$/.test(route.path),
 );
 
+const isProjectsRoute = computed(() => {
+  const path = route.path;
+  return path === '/projects' || path.startsWith('/projects/') || path === '/add-projects';
+});
+
 const showMobileHeaderBack = computed(
   () => isPropertyDetailRoute.value || isAgentDetailRoute.value,
 );
@@ -1110,6 +1115,7 @@ const mobileHeaderTabValue = computed(() => {
 const kanbanSwitchOpen = ref(false);
 
 const kanbanMobileTitle = computed(() => {
+  if (isProjectsRoute.value) return 'Projects';
   if (isLeadRoute.value) {
     return activeKanbanTab.value === 'lead-pool' ? 'Lead Pool' : 'Leads';
   }
