@@ -39,6 +39,12 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
 
+    'google_translate' => [
+        'api_key' => env('GOOGLE_TRANSLATE_API_KEY'),
+        // google = Google Cloud Translation (production), mymemory = free keyless API for local testing
+        'driver' => env('TRANSLATE_DRIVER', 'google'),
+    ],
+
     'nominatim' => [
         'base_url' => env('NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org/search'),
         'user_agent' => env('NOMINATIM_USER_AGENT', 'crm-property-map/1.0 (admin@example.com)'),
