@@ -55,8 +55,9 @@
             <span v-else class="mob-module-title">{{ mobileModuleLabel }}</span>
           </div>
           <div class="kanban-mob-toolbar__actions">
+            <!-- No create on the Lead Pool tab (leads can't be created in the Lead Pool). -->
             <button
-              v-if="isKanbanRoute"
+              v-if="isKanbanRoute && activeKanbanTab !== 'lead-pool'"
               type="button"
               class="kanban-mob-create"
               aria-label="Create new"
@@ -466,7 +467,7 @@
         </div>
 
         <!-- Create New Button -->
-        <button v-if="isLeadRoute" class="btn-create-new btn-primary d-flex align-items-center" @click="handleKanbanCreateNew">
+        <button v-if="isLeadRoute && activeKanbanTab !== 'lead-pool'" class="btn-create-new btn-primary d-flex align-items-center" @click="handleKanbanCreateNew">
             <span class="btn-create-new-text">Create New</span>
             <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
         </button>
@@ -1172,6 +1173,8 @@ const closeKanbanSearch = () => {
 }
 
 const handleKanbanCreateNew = () => {
+  // Leads can't be created in the Lead Pool (button is hidden there too).
+  if (activeKanbanTab.value === 'lead-pool') return
   // Don't leave the search popup floating (z-index 15000) on top of the create modal
   // that's about to open — it would keep intercepting clicks/keystrokes meant for it.
   closeSearchModal()
