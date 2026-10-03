@@ -461,7 +461,7 @@ SQL;
  $isManagerWithListingTeam = $user->hasRole('manager') && $user->listing_team;
     
    
-          if (!($user->hasRole('super_admin') || $user->hasRole('admin')) && $request->boolean('my_listings')) {
+          if (!($user->hasRole('super_admin') || $isManagerWithListingTeam) && $request->boolean('my_listings')) {
                     $currentUser = $user;
                     $allIds = User::where(function($q) use ($currentUser) {
                         $q->where('id', $currentUser->id)
@@ -477,36 +477,17 @@ SQL;
                    
                 }
 
-        $isTeamLeadListingTeam = $user->hasRole('team_lead') && $user->is_listing_team;
-
-        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('branch_admin') || $isTeamLeadListingTeam)){
+        // "All Listings" (not my_listings) must show the exact same active+approved
+        // pool to every viewer — team_lead included — so counts match across roles.
+        // Team lead's extra pending/draft visibility within their own hierarchy is
+        // only surfaced via "Need Approval Listings" (getPendingApprovals()) and the
+        // listing detail page (getListingData()), never mixed into this shared grid.
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') )){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
                 ->where('is_archived', false)->where('approved', true);
-        } elseif (!$request->boolean('my_listings') && !$request->sold_by_agent_id && $isTeamLeadListingTeam) {
-            // Team lead: full visibility (pending/draft included) only within their own
-            // hierarchy; everything else still only shows approved/published listings.
-            $teamIds = User::where(function ($q) use ($user) {
-                $q->where('id', $user->id)
-                    ->orWhere('parent_id', $user->id)
-                    ->orWhereHas('parent', function ($parentQuery) use ($user) {
-                        $parentQuery->where('parent_id', $user->id);
-                    });
-            })->pluck('id');
-
-            $query->where(function ($q) use ($teamIds) {
-                $q->whereIn('agent_id', $teamIds)
-                    ->orWhere(function ($q2) {
-                        $q2->where('is_active', true)
-                            ->where('status', '!=', 'converted')
-                            ->where('status', '!=', 'rented')
-                            ->where('status', '!=', 'draft')
-                            ->where('is_archived', false)
-                            ->where('approved', true);
-                    });
-            });
         }
 
         if($request->has('active') ){
