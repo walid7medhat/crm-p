@@ -333,9 +333,9 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 4px;
-    height: calc(62px + env(safe-area-inset-bottom, 0px));
-    min-height: calc(62px + env(safe-area-inset-bottom, 0px));
-    padding: 0 8px env(safe-area-inset-bottom, 0px);
+    height: calc(74px + env(safe-area-inset-bottom, 0px));
+    min-height: calc(74px + env(safe-area-inset-bottom, 0px));
+    padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px));
     overflow: visible;
     background: #ffffff;
     border-top: 1px solid #ece8f3;
