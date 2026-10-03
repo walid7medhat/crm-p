@@ -53,6 +53,7 @@
       @lead-updated="notifyLeadViewUpdated"
     />
     <PropertyDetailsModal v-if="showLayout" />
+    <ProjectDetailsModal v-if="showLayout" />
   </div>
 </template>
 
@@ -70,6 +71,7 @@ import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
 import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
+import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
 const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
 loadViewLeadModal().catch(() => {})
 const LeadOpeningLoader = {
@@ -100,6 +102,7 @@ export default {
     SystemCampaignPopup,
     MobilePushToggle,
     PropertyDetailsModal,
+    ProjectDetailsModal,
     Header,
     Navbar,
     Footer,

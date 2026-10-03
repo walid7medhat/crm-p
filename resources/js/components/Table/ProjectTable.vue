@@ -369,6 +369,7 @@
 
 <script>
 import { API_ENDPOINTS } from '../../config/api';
+import { openProjectDetails } from '@/composables/useProjectDetailsModal';
 
 export default {
     name: 'ProjectsTable',
@@ -722,7 +723,7 @@ export default {
                 this.$showNotification('You do not have permission to view projects', 'warning');
                 return;
             }
-            this.$router.push(`/projects/${id}`);
+            openProjectDetails(id, { onDeleted: () => this.fetchProjects() });
         },
 
         getProjectGalleryImages(project) {

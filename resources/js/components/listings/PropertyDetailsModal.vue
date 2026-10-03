@@ -77,6 +77,12 @@ onBeforeUnmount(() => lockBody(false));
 body.property-details-modal-open {
   overflow: hidden !important;
 }
+
+/* Mobile tab bar (z-index 12060) would sit on top of the popup — hide it while open. */
+body.property-details-modal-open .mobile-tab-bar {
+  visibility: hidden;
+  pointer-events: none;
+}
 </style>
 
 <style scoped>

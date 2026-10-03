@@ -19,7 +19,7 @@
 
     <div v-else-if="project" class="project-shell">
       <header class="project-hero">
-        <button class="hero-back-link" @click="router.push('/projects')">
+        <button v-if="!isEmbedded" class="hero-back-link" @click="router.push('/projects')">
           <i class="ri-arrow-left-s-line"></i>
           Back To Projects Lists
         </button>
@@ -51,7 +51,7 @@
         </div>
 
         <div class="hero-gallery-wrap" :class="{ 'hero-gallery-wrap--single': heroThumbTiles.length === 0 }">
-          <div class="hero-main-image" @click="openImageLightbox(0)">
+          <div class="hero-main-image" @click="openImageLightbox(activeHeroIndex)">
             <img :src="mainImage" alt="Project main image" @error="onImageError" />
             <button
               class="gallery-nav gallery-nav--prev"
@@ -74,8 +74,9 @@
               v-for="(tile, index) in heroThumbTiles"
               :key="`gallery-${index}`"
               class="hero-thumb"
-              :class="{ active: activeHeroIndex === tile.index }"
-              @click="setHeroImage(tile.index)"
+              :class="{ active: activeHeroIndex === tile.index, 'hero-thumb--more': tile.moreCount > 0 }"
+              :title="tile.moreCount > 0 ? `View all ${galleryImages.length} images` : null"
+              @click="tile.moreCount > 0 ? openImageLightbox(tile.index) : setHeroImage(tile.index)"
             >
               <img :src="tile.src" :alt="`Project image ${tile.index + 1}`" @error="onImageError" />
               <span v-if="tile.moreCount > 0" class="hero-thumb-more-overlay">+{{ tile.moreCount }}</span>
@@ -295,10 +296,18 @@ import { enablePageNaturalScroll, disablePageNaturalScroll } from '@/composables
 
 export default {
   name: "ProjectDetails",
-  setup() {
+  props: {
+    // When set, the page is rendered inside a popup (ProjectDetailsModal)
+    // instead of the /projects/:id route.
+    projectId: { type: [Number, String], default: null },
+  },
+  emits: ['deleted'],
+  setup(props, { emit }) {
     const route = useRoute();
     const router = useRouter();
-    
+    const isEmbedded = computed(() => props.projectId !== null && props.projectId !== undefined && props.projectId !== '');
+    const currentProjectId = computed(() => (isEmbedded.value ? props.projectId : route.params?.id));
+
     const project = ref(null);
     const loading = ref(true);
     const error = ref(null);
@@ -436,7 +445,7 @@ export default {
         loading.value = true;
         error.value = null;
 
-        const response = await api.get(`/listings/projects/${route.params.id}?include=area,developer,features`);
+        const response = await api.get(`/listings/projects/${currentProjectId.value}?include=area,developer,features`);
 
         if (response.data.status) {
           project.value = response.data.data;
@@ -572,7 +581,11 @@ export default {
             timer: 2000,
             showConfirmButton: false
           });
-          router.push('/projects');
+          if (isEmbedded.value) {
+            emit('deleted', project.value.id);
+          } else {
+            router.push('/projects');
+          }
         }
       } catch (err) {
         console.error('Error deleting project:', err);
@@ -586,7 +599,9 @@ export default {
     };
 
     const shareProject = async () => {
-      const url = window.location.href;
+      const url = isEmbedded.value
+        ? `${window.location.origin}/projects/${currentProjectId.value}`
+        : window.location.href;
       try {
         await navigator.clipboard.writeText(url);
         window.$showNotification?.('Project link copied', 'success');
@@ -639,7 +654,8 @@ export default {
 
    
   onMounted(() => {
-      enablePageNaturalScroll();
+      // The popup scrolls itself; natural page scroll is only for the /projects/:id route.
+      if (!isEmbedded.value) enablePageNaturalScroll();
       fetchProject().then(() => {
         if (areaTabs.value.length) {
           activeAreaTab.value = areaTabs.value[0].areaId;
@@ -654,7 +670,7 @@ export default {
 
     onBeforeUnmount(() => {
       cleanup();
-      disablePageNaturalScroll();
+      if (!isEmbedded.value) disablePageNaturalScroll();
     });
 
     return {
@@ -667,6 +683,8 @@ export default {
       canEditProject,
       canDeleteProject,
       router,
+      isEmbedded,
+      activeHeroIndex,
       mainImage,
       galleryImages,
       heroThumbTiles,
