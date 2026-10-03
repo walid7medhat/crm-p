@@ -220,7 +220,7 @@
                 @click="changePage(pagination.current_page - 1)"
                 :disabled="pagination.current_page === 1"
               >
-                <i class="ri-arrow-left-line"></i> Previous
+                <i class="ri-arrow-left-line"></i><span class="page-link__label"> Previous</span>
               </button>
             </li>
 
@@ -247,7 +247,7 @@
                 @click="changePage(pagination.current_page + 1)"
                 :disabled="pagination.current_page === pagination.last_page"
               >
-                Next <i class="ri-arrow-right-line"></i>
+                <span class="page-link__label">Next </span><i class="ri-arrow-right-line"></i>
               </button>
             </li>
           </ul>

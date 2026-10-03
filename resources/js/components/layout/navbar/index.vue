@@ -4,6 +4,7 @@
     :class="{
       'navbar-header--mobile-compact': isMobileViewport,
       'navbar-header--kanban-mobile': isKanbanRoute && isMobileViewport,
+      'navbar-header--search-chips': isKanbanRoute && isMobileViewport && resolvedActiveFilters.length > 0,
       'navbar-header--dashboard-home': isDashboardHome,
       'navbar-header--property-detail': isPropertyDetailRoute && isMobileViewport,
       'navbar-header--agent-detail': isAgentDetailRoute && isMobileViewport,
@@ -109,46 +110,17 @@
               <div
                 class="search-wrapper kanban-mob-toolbar__search-bar d-flex align-items-center"
                 :class="{
-                  'search-wrapper-expanded': hasAnySearchCriteria,
                   'search-wrapper-has-selection': hasAnySearchCriteria,
                 }"
                 @click="canUseLeadSearchModal && openSearchModal()"
               >
-              <!-- <button
-                type="button"
-                class="search-icon-btn"
-                aria-label="Search"
-                @click.stop="openSearchModal"
-              >
-                
-              </button> -->
-              <div
-                v-if="resolvedActiveFilters.length"
-                class="search-filters-pills d-flex align-items-center flex-shrink-1"
-                @click.stop
-              >
-                <div
-                  v-for="f in visibleFilterPillsResolved"
-                  :key="f.id"
-                  class="search-tag d-flex align-items-center gap-2"
-                >
-                  <span>{{ f.label }}: {{ f.value }}</span>
-                  <iconify-icon icon="lucide:x" class="close-tag-icon" @click.stop="removeFilter(f)" />
-                </div>
-                <div
-                  v-if="moreFiltersCountResolved > 0"
-                  class="search-tag search-tag-more d-flex align-items-center gap-2"
-                >
-                  <span class="search-tag-more-text" @click.stop="showSearchModal = true">+{{ moreFiltersCountResolved }} more</span>
-                </div>
-              </div>
               <div
                 class="search-input-container flex-grow-1 kanban-mob-search-field"
                 @click.stop="canUseLeadSearchModal && openSearchModal()"
               >
                 <b-form-input
                   :placeholder="searchInputPlaceholder"
-                  :model-value="searchInputDisplay"
+                  :model-value="resolvedActiveFilters.length ? '' : searchInputDisplay"
                   class="search-input"
                   :class="{ 'search-input--has-selection': hasAnySearchCriteria, 'search-input--loading': isSearchLoading }"
                   :readonly="!!resolvedActiveFilters.length"
@@ -164,7 +136,7 @@
                   role="status"
                   aria-label="Searching"
                 />
-                <span v-else class="kanban-mob-search-glyph" aria-hidden="true">
+                <span v-else-if="!hasAnySearchCriteria" class="kanban-mob-search-glyph" aria-hidden="true">
                   <iconify-icon icon="lucide:search" />
                 </span>
               </div>
@@ -178,16 +150,22 @@
                 <iconify-icon icon="lucide:x" />
               </button>
             </div>
+            </div>
+            <div
+              v-if="resolvedActiveFilters.length"
+              class="kanban-mob-search-chips"
+              @click.stop
+            >
               <button
-                v-if="canUseLeadSearchModal"
+                v-for="f in resolvedActiveFilters"
+                :key="'mob-chip-' + f.id"
                 type="button"
-                class="search-filter-btn kanban-mob-filter-btn"
-                title="Advanced search"
-                aria-label="Open search filters"
-                @mousedown.prevent.stop="openSearchModal"
-                @click.prevent.stop="openSearchModal"
+                class="kanban-mob-search-chip"
+                @click.stop="removeFilter(f)"
               >
-                <iconify-icon icon="lucide:sliders-horizontal" />
+                <span class="kanban-mob-search-chip__label">{{ f.label }}</span>
+                <span class="kanban-mob-search-chip__value">{{ f.value }}</span>
+                <iconify-icon icon="lucide:x" aria-hidden="true" />
               </button>
             </div>
             <Teleport to="body">
@@ -5073,18 +5051,59 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     pointer-events: none;
   }
 
-  .kanban-mob-filter-btn {
+  .kanban-mob-search-row .search-wrapper,
+  .kanban-mob-search-row .search-wrapper-expanded {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 auto;
+  }
+
+  .kanban-mob-search-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .kanban-mob-search-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    min-height: 26px;
+    margin: 0;
+    padding: 3px 8px 3px 10px;
+    border: 1px solid #f3e2b0;
+    border-radius: 999px;
+    background: #fff8e8;
+    color: #7a5b12;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .kanban-mob-search-chip__label {
+    color: #a16207;
+    font-weight: 700;
+  }
+
+  .kanban-mob-search-chip__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+    color: #3f3a2a;
+    font-weight: 600;
+  }
+
+  .kanban-mob-search-chip iconify-icon {
     flex-shrink: 0;
-    width: 46px !important;
-    height: 46px !important;
-    min-width: 46px;
-    min-height: 46px;
-    border-radius: 50% !important;
-    border: 1px solid #efe6f6 !important;
-    background: #f6f1fb !important;
-    color: #7c3aed !important;
-    font-size: 18px;
-    box-shadow: none;
+    font-size: 12px;
+    color: #b45309;
   }
 
   .kanban-switch-root {
