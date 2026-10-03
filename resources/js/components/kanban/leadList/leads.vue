@@ -415,7 +415,7 @@
                                                             </div>
                                                             
                                                             <!-- Activity: date + avatar of Bitrix24 LAST_ACTIVITY_BY user only -->
-                                                            <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)">
+                                                            <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)" class="lead-activity-row">
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
                                                                     <div class="info-item">
@@ -450,7 +450,7 @@
                                                         </template>
                                                         <div
                                                             v-if="task.lead_source && !cardShowsActivityRow(column, task)"
-                                                            class="d-flex justify-content-end"
+                                                            class="lead-source-mark-row d-flex justify-content-end"
                                                         >
                                                             <LeadSourceMark :source="task.lead_source" />
                                                         </div>
@@ -6860,6 +6860,17 @@ const fetchRevertNotifications = async () => {
 
 .kanban-outer--mobile .kanban-card--mobile .date-info {
     grid-column: 1 / -1;
+}
+
+/* Activity row (date left, avatar + source mark right) and the lone source mark take the
+   full card width instead of one half-width grid cell. */
+.kanban-outer--mobile .kanban-card--mobile .lead-activity-row,
+.kanban-outer--mobile .kanban-card--mobile .lead-source-mark-row {
+    grid-column: 1 / -1;
+}
+
+.kanban-outer--mobile .kanban-card--mobile .lead-activity-row hr {
+    margin-top: 2px;
 }
 
 .kanban-outer--mobile .kanban-card--mobile .info-label,
