@@ -18,7 +18,7 @@ const baseRoutes = [
     { path: '/sync-responsible', component: () => import('./components/kanban/leadList/SyncResponsible.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: () => import('./pages/areas/BulkAreaCoordinates.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
       { path: '/logs', component: () => import('./pages/logs/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-      { path: '/system-announcements', component: () => import('./pages/system-announcements/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+      { path: '/system-announcements', component: () => import('./pages/system-announcements/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true } },
       {
         path: '/system-overview',
         name: 'system-overview',
@@ -265,6 +265,17 @@ const isSuperAdminFromStorage = () => {
     return false
   }
 }
+/** User 33 gets a few specific super-admin-only pages (see route meta: allowUser33) without being granted every requiresSuperAdmin route. */
+const isUser33FromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Number(u?.id) === 33
+  } catch {
+    return false
+  }
+}
 const isAdminFromStorage = () => {
   try {
     const raw = localStorage.getItem('user')
@@ -328,7 +339,11 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.matched.some((r) => r.meta.requiresSuperAdmin) && !isSuperAdminFromStorage()) {
+  if (
+    to.matched.some((r) => r.meta.requiresSuperAdmin) &&
+    !isSuperAdminFromStorage() &&
+    !(to.matched.some((r) => r.meta.allowUser33) && isUser33FromStorage())
+  ) {
     next('/')
     return
   }

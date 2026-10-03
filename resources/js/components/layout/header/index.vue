@@ -232,7 +232,7 @@
           </transition>
         </li>
 
-        <li v-if="isSuperAdmin">
+        <li v-if="isSuperAdmin || Number(user?.id) === 33">
           <router-link to="/system-announcements" custom v-slot="{ navigate, href }">
             <a
               :href="href"
