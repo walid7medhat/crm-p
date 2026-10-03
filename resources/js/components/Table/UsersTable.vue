@@ -972,7 +972,7 @@ export default {
             const raw = String(timestamp).trim();
             let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
             if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) {
-                normalized += 'Z';
+                normalized += '+04:00';
             }
             const loginTime = new Date(normalized);
             return Number.isNaN(loginTime.getTime()) ? null : loginTime;
@@ -981,8 +981,10 @@ export default {
         formatLastLoginClock(timestamp) {
             const loginTime = this.parseLoginTime(timestamp);
             if (!loginTime) return 'Never';
-            const sameYear = loginTime.getFullYear() === new Date().getFullYear();
+            const yearFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Dubai', year: 'numeric' });
+            const sameYear = yearFormat.format(loginTime) === yearFormat.format(new Date());
             return loginTime.toLocaleString('en-US', {
+                timeZone: 'Asia/Dubai',
                 month: 'short',
                 day: 'numeric',
                 year: sameYear ? undefined : 'numeric',
@@ -1008,8 +1010,9 @@ export default {
             const diffDays = Math.floor(diffHours / 24);
             if (diffDays < 7) return `${diffDays}d ago`;
             
-            return loginTime.toLocaleDateString('en-US', { 
-                month: 'short', 
+            return loginTime.toLocaleDateString('en-US', {
+                timeZone: 'Asia/Dubai',
+                month: 'short',
                 day: 'numeric'
             });
         },
