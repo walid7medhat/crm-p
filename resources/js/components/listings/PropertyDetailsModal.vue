@@ -5,7 +5,7 @@
         <div class="pdm-header">
           <h5 class="pdm-title mb-0">Property Details</h5>
           <div class="pdm-header-actions">
-            <a
+            <!-- <a
               :href="`/property-details/${listingId}`"
               target="_blank"
               rel="noopener"
@@ -13,7 +13,7 @@
               title="Open in new tab"
             >
               <i class="ri-external-link-line"></i>
-            </a>
+            </a> -->
             <button type="button" class="pdm-header-btn" aria-label="Close" title="Close" @click="closePropertyDetails">
               <i class="ri-close-line"></i>
             </button>
