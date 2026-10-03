@@ -511,18 +511,55 @@
                   <tr v-for="(row, idx) in paymentBreakdownRows" :key="row.id">
                     <td>{{ idx + 1 }}</td>
                     <td>{{ row.type }}</td>
-                    <td>{{ row.type === 'Premium' ? '—' : `${row.percentage}%` }}</td>
-                    <td :class="{ 'text-danger': row.type === 'Premium' && row.amount < 0 }">{{ formatAed(row.amount) }}</td>
-                    <td>{{ row.type === 'Premium' ? '—' : formatDateShort(row.date) }}</td>
+                    <template v-if="row.entryId && editingInstallmentId === row.entryId">
+                      <td>
+                        <div class="d-flex align-items-center gap-1">
+                          <input
+                            v-model.number="getInstallmentEntry(row.entryId).value"
+                            type="number"
+                            min="0"
+                            class="form-control form-control-sm"
+                            style="max-width: 80px;"
+                            @keydown="preventNumberInvalidKeys"
+                          />
+                          <span class="text-muted small">{{ getInstallmentEntry(row.entryId).type === 'percentage' ? '%' : 'AED' }}</span>
+                        </div>
+                      </td>
+                      <td :class="{ 'text-danger': row.amount < 0 }">{{ formatAed(row.amount) }}</td>
+                      <td>
+                        <AdvancedDatePicker
+                          v-model="getInstallmentEntry(row.entryId).date"
+                          date-only
+                          dob-layout
+                          :block-future-dates="false"
+                          class="payment-breakdown-date-picker"
+                        />
+                      </td>
+                    </template>
+                    <template v-else>
+                      <td>{{ row.type === 'Premium' ? '—' : `${row.percentage}%` }}</td>
+                      <td :class="{ 'text-danger': row.type === 'Premium' && row.amount < 0 }">{{ formatAed(row.amount) }}</td>
+                      <td>{{ row.type === 'Premium' ? '—' : formatDateShort(row.date) }}</td>
+                    </template>
                     <td>
                       <span class="badge" :class="breakdownRowStatusClass(row.status)">
                         {{ row.status }}
                       </span>
                     </td>
                     <td class="text-end">
-                      <button v-if="row.entryId" type="button" class="btn btn-sm btn-outline-danger" @click="removeBreakdownInstallment(row.entryId)">
-                        Remove
-                      </button>
+                      <div v-if="row.entryId" class="d-flex gap-1 justify-content-end">
+                        <button
+                          type="button"
+                          class="btn btn-sm"
+                          :class="editingInstallmentId === row.entryId ? 'btn-success' : 'btn-outline-secondary'"
+                          @click="toggleEditInstallment(row.entryId)"
+                        >
+                          {{ editingInstallmentId === row.entryId ? 'Done' : 'Edit' }}
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" @click="removeBreakdownInstallment(row.entryId)">
+                          Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   <tr v-if="paymentBreakdownRows.length === 0">
@@ -2321,6 +2358,14 @@ const addBreakdownInstallment = () => {
 
 const removeBreakdownInstallment = (entryId) => {
   breakdownInstallments.value = breakdownInstallments.value.filter((entry) => entry.id !== entryId);
+};
+
+const editingInstallmentId = ref(null);
+
+const getInstallmentEntry = (entryId) => breakdownInstallments.value.find((entry) => entry.id === entryId);
+
+const toggleEditInstallment = (entryId) => {
+  editingInstallmentId.value = editingInstallmentId.value === entryId ? null : entryId;
 };
 
 // Computed Properties

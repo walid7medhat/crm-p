@@ -841,6 +841,60 @@ class LeadController extends Controller
         }
 
     /**
+     * Lead search "Inactive Sales" select: inactive sales users whose leads the viewer can
+     * see, so they can still search those leads (the Responsible Person list is
+     * active-only). For super_admin / admin / branch_admin / manager / team_lead.
+     */
+    public function inactiveSales(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead'])) {
+            return ApiResponse::success([], 'Inactive sales retrieved successfully');
+        }
+
+        $query = User::query()
+            ->where('users.status', '!=', 'active')
+            // Only people who still own leads — nothing to search for the others.
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('leads')
+                    ->whereColumn('leads.responsible_person_id', 'users.id')
+                    ->whereNull('leads.deleted_at');
+            })
+            ->with(['parent:id,name,display_name']);
+
+        // Same lead scope as the board: everyone for super_admin / admin, otherwise the
+        // viewer's hierarchy (whole branch for branch_admin / show-branch-leads).
+        if (! $user->hasAnyRole(['super_admin', 'admin'])) {
+            $query->whereIn('users.id', $user->leadScopeUserIds());
+        }
+
+        $search = mb_substr(trim((string) $request->input('search', '')), 0, 80);
+        if ($search !== '') {
+            $like = '%'.addcslashes($search, '%_\\').'%';
+            $query->where(function ($q) use ($like) {
+                $q->where('users.name', 'like', $like)
+                    ->orWhere('users.display_name', 'like', $like)
+                    ->orWhere('users.email', 'like', $like);
+            });
+        }
+
+        $rows = $query->orderBy('users.name')
+            ->limit(200)
+            ->get(['users.id', 'users.name', 'users.display_name', 'users.email', 'users.avatar', 'users.parent_id'])
+            ->map(fn ($person) => [
+                'id' => $person->id,
+                'name' => User::resolveDisplayName($person),
+                'email' => $person->email,
+                'avatar' => $person->avatar ? asset('storage/' . $person->avatar) : null,
+                'parent_name' => User::resolveDisplayName($person->parent),
+            ])
+            ->values();
+
+        return ApiResponse::success($rows, 'Inactive sales retrieved successfully');
+    }
+
+    /**
      * Create-lead form: tell super_admin / admin / branch_admin when the phone they
      * typed already belongs to other leads. Same formatting-insensitive rule as the
      * duplicate badge (work_phone_digits), checked against work_phone and work_phone_2.
@@ -1126,16 +1180,11 @@ class LeadController extends Controller
         $teamId = request()->input('team_id');
         $selectedIds = $this->requestedIdList(request()->input('selected_id', request()->input('selected_ids')));
 
-        $columns = ['id', 'name', 'display_name', 'email', 'avatar', 'parent_id', 'status'];
+        $columns = ['id', 'name', 'display_name', 'email', 'avatar', 'parent_id'];
         $present = function ($person) {
-            $name = User::resolveDisplayName($person);
-            if ($person->status !== 'active') {
-                $name .= ' (Inactive)';
-            }
-
             return [
                 'id' => $person->id,
-                'name' => $name,
+                'name' => User::resolveDisplayName($person),
                 'email' => $person->email,
                 'avatar' => $person->avatar ? asset('storage/' . $person->avatar) : null,
                 'role_name' => $person->roles->first()?->name,
@@ -1146,14 +1195,7 @@ class LeadController extends Controller
             ];
         };
 
-        // ?include_inactive=1 — lead search only: a team lead / manager can still filter by
-        // an inactive member to see that member's leads. Assign pickers don't send it, so
-        // leads can't be assigned to an inactive user.
-        $includeInactive = request()->boolean('include_inactive');
-        $base = User::query();
-        if (! $includeInactive) {
-            $base->where('users.status', 'active');
-        }
+        $base = User::query()->where('users.status', 'active');
         if ($user->hasRole('super_admin')) {
             // Super admins may also pick themselves (they have no parent and no assignable role).
             $base->where(function ($q) use ($user) {
@@ -1252,7 +1294,12 @@ class LeadController extends Controller
      */
     private function requestedResponsiblePersonIds(Request $request): array
     {
-        return $this->requestedIdList($request->input('responsible_person_id'));
+        // inactive_person_id: the search's "Inactive Sales" select — same filter, separate
+        // select (the Responsible Person list stays active-only).
+        return array_values(array_unique(array_merge(
+            $this->requestedIdList($request->input('responsible_person_id')),
+            $this->requestedIdList($request->input('inactive_person_id'))
+        )));
     }
 
     /**

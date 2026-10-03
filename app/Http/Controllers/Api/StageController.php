@@ -1649,7 +1649,12 @@ public function getOffices()
      */
     private function requestedResponsiblePersonIds(Request $request): array
     {
-        return $this->requestedIdList($request->input('responsible_person_id'));
+        // inactive_person_id: the search's "Inactive Sales" select — same filter, separate
+        // select (the Responsible Person list stays active-only).
+        return array_values(array_unique(array_merge(
+            $this->requestedIdList($request->input('responsible_person_id')),
+            $this->requestedIdList($request->input('inactive_person_id'))
+        )));
     }
 
     /**

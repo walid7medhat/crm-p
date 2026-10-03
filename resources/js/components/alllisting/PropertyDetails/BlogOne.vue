@@ -2214,7 +2214,8 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     const propertyActionsPanelRef = ref(null);
     const propertySidebarUpdatesRef = ref(null);
     const propertySidebarSpacerRef = ref(null);
-    let propertySidebarScrollRoot = null;
+    let propertySidebarScrollRoots = [];
+    let propertySidebarResizeObserver = null;
     let propertySidebarSyncRaf = null;
 
     const SIDEBAR_TOP_GAP = 10;
@@ -2222,7 +2223,10 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     const getSidebarTopOffset = () => {
       const nav = document.querySelector('#app main.dashboard-main > .navbar-header');
       if (nav) {
-        return nav.getBoundingClientRect().bottom + SIDEBAR_TOP_GAP;
+        // The navbar scrolls away with the page (position: relative inside the scrolling
+        // main), so once it's off-screen pin to the top of the viewport instead of
+        // following it (a negative offset pushed the box off-screen).
+        return Math.max(nav.getBoundingClientRect().bottom, 0) + SIDEBAR_TOP_GAP;
       }
       const root = document.documentElement;
       const topbar =
@@ -2245,6 +2249,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
       const spacer = propertySidebarSpacerRef.value;
       if (!col || !sticky) return;
 
+      // In the popup the section is pinned with CSS sticky (PropertyDetailsModal.vue).
       if (window.innerWidth < 992 || isEmbedded.value) {
         resetPropertySidebarStyles(sticky, spacer);
         return;
@@ -2252,30 +2257,41 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
 
       const topOffset = getSidebarTopOffset();
       const colRect = col.getBoundingClientRect();
-      const stickyHeight = sticky.offsetHeight;
+      // The spacer sits where the box would be in normal flow: same left/width as the
+      // content box (the column itself includes Bootstrap padding, which made the fixed
+      // box wider and changed its height).
+      const anchorRect = (spacer || col).getBoundingClientRect();
+      // Whole section pinned below the header; when it's taller than the space left it
+      // scrolls on its own (cards keep their natural height — see .is-sidebar-fixed CSS).
+      const fixedTop = topOffset;
+      const availableHeight = Math.max(window.innerHeight - fixedTop - SIDEBAR_TOP_GAP, 160);
+      const naturalHeight = sticky.scrollHeight;
+      const stickyHeight = Math.min(naturalHeight, availableHeight);
 
-      if (colRect.top >= topOffset) {
+      if (anchorRect.top >= fixedTop) {
         resetPropertySidebarStyles(sticky, spacer);
         return;
       }
 
+      sticky.style.setProperty('max-height', `${availableHeight}px`, 'important');
       if (spacer) spacer.style.height = `${stickyHeight}px`;
 
-      if (colRect.bottom <= topOffset + stickyHeight) {
+      if (colRect.bottom <= fixedTop + stickyHeight) {
         sticky.classList.add('is-sidebar-fixed', 'is-sidebar-at-bottom');
         sticky.style.top = 'auto';
         sticky.style.bottom = '0';
-        sticky.style.left = '0';
-        sticky.style.width = '100%';
+        sticky.style.setProperty('left', `${anchorRect.left - colRect.left}px`, 'important');
+        sticky.style.setProperty('width', `${anchorRect.width}px`, 'important');
         return;
       }
 
       sticky.classList.add('is-sidebar-fixed');
       sticky.classList.remove('is-sidebar-at-bottom');
-      sticky.style.top = `${topOffset}px !important`;
+      // `style.top = '..px !important'` is invalid and silently ignored — use setProperty.
+      sticky.style.setProperty('top', `${fixedTop}px`, 'important');
       sticky.style.bottom = 'auto';
-      sticky.style.left = `${colRect.left}px`;
-      sticky.style.width = `${colRect.width}px`;
+      sticky.style.left = `${anchorRect.left}px`;
+      sticky.style.width = `${anchorRect.width}px`;
     };
 
     const schedulePropertySidebarSync = () => {
@@ -2288,15 +2304,36 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
       });
     };
 
+    // Every scrollable ancestor of the sidebar (the page scrolls inside main.dashboard-main,
+    // the popup inside .pdm-body) — scroll events don't bubble, so listen on each one.
+    const findSidebarScrollRoots = () => {
+      const roots = [];
+      let el = propertySidebarColRef.value?.parentElement;
+      while (el && el !== document.body && el !== document.documentElement) {
+        const { overflowY } = getComputedStyle(el);
+        if (/(auto|scroll|overlay)/.test(overflowY)) roots.push(el);
+        el = el.parentElement;
+      }
+      const fallback = document.querySelector('#app main.dashboard-main');
+      if (!isEmbedded.value && fallback && !roots.includes(fallback)) roots.push(fallback);
+      return roots;
+    };
+
     const bindPropertySidebarScroll = () => {
       window.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
       window.addEventListener('resize', schedulePropertySidebarSync, { passive: true });
       window.addEventListener('orientationchange', schedulePropertySidebarSync, { passive: true });
-      propertySidebarScrollRoot = document.querySelector('.dashboard-main-router');
-      if (propertySidebarScrollRoot) {
-        propertySidebarScrollRoot.addEventListener('scroll', schedulePropertySidebarSync, {
-          passive: true,
-        });
+      propertySidebarScrollRoots = findSidebarScrollRoots();
+      propertySidebarScrollRoots.forEach((root) =>
+        root.addEventListener('scroll', schedulePropertySidebarSync, { passive: true })
+      );
+      // Catch-all: scroll events don't bubble but can be captured — covers whichever
+      // element ends up scrolling the page (main, body, html).
+      document.addEventListener('scroll', schedulePropertySidebarSync, { passive: true, capture: true });
+      // Re-position when the box grows/shrinks (actions opened, widgets loaded).
+      if (typeof ResizeObserver !== 'undefined' && propertySidebarStickyRef.value) {
+        propertySidebarResizeObserver = new ResizeObserver(schedulePropertySidebarSync);
+        propertySidebarResizeObserver.observe(propertySidebarStickyRef.value);
       }
     };
 
@@ -2304,10 +2341,13 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
       window.removeEventListener('scroll', schedulePropertySidebarSync);
       window.removeEventListener('resize', schedulePropertySidebarSync);
       window.removeEventListener('orientationchange', schedulePropertySidebarSync);
-      if (propertySidebarScrollRoot) {
-        propertySidebarScrollRoot.removeEventListener('scroll', schedulePropertySidebarSync);
-      }
-      propertySidebarScrollRoot = null;
+      propertySidebarScrollRoots.forEach((root) =>
+        root.removeEventListener('scroll', schedulePropertySidebarSync)
+      );
+      propertySidebarScrollRoots = [];
+      document.removeEventListener('scroll', schedulePropertySidebarSync, { capture: true });
+      propertySidebarResizeObserver?.disconnect();
+      propertySidebarResizeObserver = null;
     };
     const route = useRoute();
     const router = useRouter();
@@ -9339,14 +9379,20 @@ margin-top: 20px;
   flex-shrink: 0;
 }
 
+/* Pinned: the whole section scrolls on its own when taller than the screen (the JS sets
+   max-height to the space below the header). Cards don't shrink — the section scrolls. */
 .sidebar-sticky-container.is-sidebar-fixed {
   position: fixed !important;
   z-index: 45;
-  max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 transparent;
+  overscroll-behavior: contain;
+}
+
+.sidebar-sticky-container.is-sidebar-fixed > * {
+  flex-shrink: 0;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed::-webkit-scrollbar {
@@ -11080,7 +11126,7 @@ margin-top: 20px;
 
 @media (min-width: 992px) and (max-width: 1199px) {
   .sidebar-sticky-container.is-sidebar-fixed {
-    max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1rem);
+    max-height: none;
   }
 }
 

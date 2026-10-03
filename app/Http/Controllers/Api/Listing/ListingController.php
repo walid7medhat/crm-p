@@ -451,6 +451,7 @@ SQL;
                 'rejectedBy:id,name,display_name',
                 'project:id,title,about,area_id,developer_id',
                 'project.developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan',
+                'firstGalleryImage:id,imageable_id,imageable_type,image_path,order',
                 'accessRequests' => function ($q) use ($userId) {
                     $q->where('requested_by', $userId)
                         ->where('status', 'approved')
@@ -2532,20 +2533,23 @@ private function sendResubmissionNotification($listing, $user)
                 return ApiResponse::error('Listing or gallery image Not found', 404);
             }
             
-            if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
+            if ($user->hasRole('sales') && (int) $listing->agent_id !== (int) $user->id) {
                 return ApiResponse::error('Access denied', 403);
             }
-            
+
             // Check if gallery image belongs to listing
-            if ($galleryImage->imageable_id !== $listing->id || $galleryImage->imageable_type !== Listing::class) {
+            if ((int) $galleryImage->imageable_id !== (int) $listing->id || $galleryImage->imageable_type !== Listing::class) {
                 return ApiResponse::error('Gallery image Not found for this listing', 404);
             }
-            
+
             if ($galleryImage->image_path) {
                 ImageHelper::deleteImage($galleryImage->image_path);
             }
-            
+
             $galleryImage->delete();
+
+            $this->clearCache();
+            $this->clearSpecificCache($listing->id);
 
             return ApiResponse::success(null, 'Gallery image deleted successfully');
         } catch (\Exception $e) {
@@ -3102,7 +3106,9 @@ public function setHeroImage(Request $request, $listingId): JsonResponse
         $galleryImageId = $request->input('gallery_image_id');
 
         $user = Auth::user();
-        if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id) {
+        $isOwner = (int) $listing->added_by === (int) $user->id || (int) $listing->agent_id === (int) $user->id;
+        $isPrivileged = $user->hasRole('super_admin');
+        if (!$isOwner && !$isPrivileged) {
             return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
 
@@ -3111,6 +3117,9 @@ public function setHeroImage(Request $request, $listingId): JsonResponse
         $listing->update([
             'hero_image_path' => $galleryImage->image_path
         ]);
+
+        $this->clearCache();
+        $this->clearSpecificCache($listing->id);
 
         \Log::info('Hero image updated from gallery', [
             'listing_id' => $listingId,

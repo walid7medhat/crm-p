@@ -2199,6 +2199,8 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.lead_name && { lead_name: q.lead_name }),
         ...(q.first_name && { first_name: q.first_name }),
         ...(q.responsible_person_id != null && q.responsible_person_id !== '' && { responsible_person_id: q.responsible_person_id }),
+        // Search "Inactive Sales" select — same filter as responsible person on the API side.
+        ...(q.inactive_person_id != null && q.inactive_person_id !== '' && { inactive_person_id: q.inactive_person_id }),
         ...(q.created_at && { created_at: q.created_at }),
         ...(q.created_from && { created_from: q.created_from }),
         ...(q.created_to && { created_to: q.created_to }),

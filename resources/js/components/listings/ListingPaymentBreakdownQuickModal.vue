@@ -259,24 +259,58 @@
                       <tr v-for="(row, idx) in paymentBreakdownRows" :key="row.id">
                         <td>{{ idx + 1 }}</td>
                         <td>{{ row.type }}</td>
-                        <td :class="{ 'text-danger': row.type === 'Premium' && row.amount < 0 }">
-                          {{ formatAed(row.amount) }}
-                        </td>
-                        <td>{{ row.type === 'Premium' ? '—' : formatDateShort(row.date) }}</td>
+                        <template v-if="row.entryId && editingInstallmentId === row.entryId">
+                          <td>
+                            <div class="d-flex align-items-center gap-1">
+                              <input
+                                v-model.number="getInstallmentEntry(row.entryId).value"
+                                type="number"
+                                min="0"
+                                class="form-control lpb-control lpb-control--inline"
+                                style="max-width: 70px;"
+                              />
+                              <span class="text-muted" style="font-size: 9px;">{{ getInstallmentEntry(row.entryId).type === 'percentage' ? '%' : 'AED' }}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <AdvancedDatePicker
+                              v-model="getInstallmentEntry(row.entryId).date"
+                              date-only
+                              dob-layout
+                              compact
+                              :block-future-dates="false"
+                              class="lpb-date-picker"
+                            />
+                          </td>
+                        </template>
+                        <template v-else>
+                          <td :class="{ 'text-danger': row.type === 'Premium' && row.amount < 0 }">
+                            {{ formatAed(row.amount) }}
+                          </td>
+                          <td>{{ row.type === 'Premium' ? '—' : formatDateShort(row.date) }}</td>
+                        </template>
                         <td>
                           <span class="lpb-status-badge" :class="breakdownRowStatusClass(row.status)">
                             {{ row.status }}
                           </span>
                         </td>
                         <td class="text-end">
-                          <button
-                            v-if="row.entryId"
-                            type="button"
-                            class="btn btn-link lpb-btn-remove"
-                            @click="removeInstallment(row.entryId)"
-                          >
-                            Remove
-                          </button>
+                          <div v-if="row.entryId" class="d-flex gap-1 justify-content-end">
+                            <button
+                              type="button"
+                              class="btn btn-link lpb-btn-remove"
+                              @click="toggleEditInstallment(row.entryId)"
+                            >
+                              {{ editingInstallmentId === row.entryId ? 'Done' : 'Edit' }}
+                            </button>
+                            <button
+                              type="button"
+                              class="btn btn-link lpb-btn-remove"
+                              @click="removeInstallment(row.entryId)"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </td>
                       </tr>
                       <tr v-if="!paymentBreakdownRows.length">
@@ -978,6 +1012,14 @@ const addInstallment = () => {
 
 const removeInstallment = (entryId) => {
   breakdownInstallments.value = breakdownInstallments.value.filter((e) => e.id !== entryId);
+};
+
+const editingInstallmentId = ref(null);
+
+const getInstallmentEntry = (entryId) => breakdownInstallments.value.find((e) => e.id === entryId);
+
+const toggleEditInstallment = (entryId) => {
+  editingInstallmentId.value = editingInstallmentId.value === entryId ? null : entryId;
 };
 
 const addExpenseLine = () => {

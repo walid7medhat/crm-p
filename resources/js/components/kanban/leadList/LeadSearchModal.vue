@@ -480,6 +480,104 @@
 
                             <v-select
 
+                                v-else-if="field.type === 'select' && field.id === 'inactive_sales'"
+
+                                v-model="form.inactiveSales"
+
+                                :options="inactiveSalesOptions"
+
+                                :reduce="opt => opt.value"
+
+                                label="text"
+
+                                placeholder="Search inactive sales"
+
+                                multiple
+
+                                :close-on-select="false"
+
+                                :clearable="hasValue(form.inactiveSales)"
+
+                                append-to-body
+
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
+
+                                @click.stop
+
+                                @mousedown.stop
+
+                                @open="loadInactiveSales(true)"
+
+                                :loading="loadingInactiveSales"
+
+                            >
+
+                                <template #open-indicator="{ attributes }">
+
+                                    <span v-bind="attributes">
+
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+
+                                    </span>
+
+                                </template>
+
+                                <template #no-options>
+
+                                    No inactive sales
+
+                                </template>
+
+                                <template #option="option">
+
+                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
+
+                                        <img
+
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+
+                                            alt=""
+
+                                            class="lead-rp-opt-avatar"
+
+                                        />
+
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+
+                                                <span class="user-item-name">{{ option.text }}</span>
+
+                                            </div>
+
+                                            <div v-if="option.parent_name" class="user-item-meta-line">
+
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </template>
+
+                                <template #selected-option="option">
+
+                                    <span class="lead-rp-chip">
+
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+
+                                        <span>{{ option.text }}</span>
+
+                                    </span>
+
+                                </template>
+
+                            </v-select>
+
+                            <v-select
+
                                 v-else-if="field.type === 'select' && field.id === 'team'"
 
                                 v-model="form.team"
@@ -726,7 +824,7 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -1256,6 +1354,104 @@
 
                             <v-select
 
+                                v-else-if="field.type === 'select' && field.id === 'inactive_sales'"
+
+                                v-model="form.inactiveSales"
+
+                                :options="inactiveSalesOptions"
+
+                                :reduce="opt => opt.value"
+
+                                label="text"
+
+                                placeholder="Search inactive sales"
+
+                                multiple
+
+                                :close-on-select="false"
+
+                                :clearable="hasValue(form.inactiveSales)"
+
+                                append-to-body
+
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
+
+                                @click.stop
+
+                                @mousedown.stop
+
+                                @open="loadInactiveSales(true)"
+
+                                :loading="loadingInactiveSales"
+
+                            >
+
+                                <template #open-indicator="{ attributes }">
+
+                                    <span v-bind="attributes">
+
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+
+                                    </span>
+
+                                </template>
+
+                                <template #no-options>
+
+                                    No inactive sales
+
+                                </template>
+
+                                <template #option="option">
+
+                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
+
+                                        <img
+
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+
+                                            alt=""
+
+                                            class="lead-rp-opt-avatar"
+
+                                        />
+
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+
+                                                <span class="user-item-name">{{ option.text }}</span>
+
+                                            </div>
+
+                                            <div v-if="option.parent_name" class="user-item-meta-line">
+
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </template>
+
+                                <template #selected-option="option">
+
+                                    <span class="lead-rp-chip">
+
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+
+                                        <span>{{ option.text }}</span>
+
+                                    </span>
+
+                                </template>
+
+                            </v-select>
+
+                            <v-select
+
                                 v-else-if="field.type === 'select' && field.id === 'team'"
 
                                 v-model="form.team"
@@ -1502,7 +1698,7 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -2283,6 +2479,8 @@ const queryToFormKeys = {
 
     responsible_person_id: 'responsible',
 
+    inactive_person_id: 'inactiveSales',
+
     created_at: 'createdOn',
 
     created_from: 'createdFrom',    
@@ -2379,7 +2577,11 @@ async function loadAllSelectDataForCurrentForm() {
     if (hasValue(form.value.responsible)) {
         promises.push(loadResponsiblePersons(true))
     }
-    
+
+    if (hasValue(form.value.inactiveSales)) {
+        promises.push(loadInactiveSales())
+    }
+
     if (hasValue(form.value.team)) {
         promises.push(loadTeams(true))
     }
@@ -2408,8 +2610,9 @@ function syncFormFromQuery(query) {
         id: '',
         firstName: '',
         responsible: [],
+        inactiveSales: [],
         createdOn: '',
-        createdFrom: '',   
+        createdFrom: '',
         createdTo: '', 
         assignedOn: '',
         assignedFrom: '',
@@ -2481,7 +2684,9 @@ function syncFormFromQuery(query) {
     next.team = normalizeResponsibleIds(next.team)
 
     next.responsible = normalizeResponsibleIds(next.responsible)
-    
+
+    next.inactiveSales = normalizeResponsibleIds(next.inactiveSales)
+
     form.value = next
 
     nextTick(async () => {
@@ -2708,6 +2913,8 @@ const form = ref({
     firstName: '',
 
     responsible: [],
+
+    inactiveSales: [],
 
     createdOn: '',
 
@@ -3512,6 +3719,43 @@ const appliedSearchParams = ref(null)
 
 
 
+// "Inactive Sales" select — inactive sales users, so their leads can still be searched
+// (the Responsible Person list is active-only). GET /leads/inactive-sales.
+const INACTIVE_SALES_ROLES = ['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead']
+
+const canUseInactiveSales = computed(() =>
+    (user.value?.roles || []).some(role => INACTIVE_SALES_ROLES.includes(role))
+)
+
+const inactiveSalesList = ref([])
+
+const loadingInactiveSales = ref(false)
+
+let inactiveSalesLoaded = false
+
+const inactiveSalesOptions = computed(() => inactiveSalesList.value.map(person => ({
+    value: Number(person.id),
+    text: person.name,
+    avatar: person.avatar,
+    parent_name: person.parent_name,
+})))
+
+async function loadInactiveSales(force = false) {
+    if (!canUseInactiveSales.value) return
+    if (inactiveSalesLoaded && !force) return
+    loadingInactiveSales.value = true
+    try {
+        const res = await api.get('/leads/inactive-sales')
+        const rows = res?.data?.data ?? []
+        inactiveSalesList.value = Array.isArray(rows) ? rows : []
+        inactiveSalesLoaded = true
+    } catch (error) {
+        console.error('Error loading inactive sales:', error)
+    } finally {
+        loadingInactiveSales.value = false
+    }
+}
+
 const isAdminOrSuperAdmin = computed(() => {
 
     if (!user.value) return false
@@ -3609,6 +3853,12 @@ const searchFieldsConfig = computed(() => {
         { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] }
 
     ]
+
+    if (canUseInactiveSales.value) {
+
+        fields.push({ id: 'inactive_sales', label: 'Inactive Sales', formKey: 'inactiveSales', queryKey: 'inactive_person_id', type: 'select', options: [] })
+
+    }
 
 
 
@@ -3762,6 +4012,10 @@ const visibleSearchFields = computed(() => {
 
         .filter(f => {
 
+            // Inactive Sales isn't in the saved field settings (added later) — always show it
+            // to the roles that get it (searchFieldsConfig already checks the role).
+            if (f.id === 'inactive_sales') return true
+
             if (!selectedSet.has(f.id)) return false
 
             
@@ -3876,7 +4130,7 @@ const searchFieldSections = [
 
         title: 'Assignment',
 
-        fieldIds: ['responsible_person', 'team' , 'office']
+        fieldIds: ['responsible_person', 'inactive_sales', 'team' , 'office']
 
     },
 
@@ -4945,6 +5199,10 @@ async function applySearch(options = {}) {
 
         responsible_person_id: responsiblePersonId,
 
+        inactive_person_id: canUseInactiveSales.value && normalizeResponsibleIds(form.value.inactiveSales).length
+            ? normalizeResponsibleIds(form.value.inactiveSales)
+            : undefined,
+
         lead_branch_source: branchSource,
 
         work_phone: form.value.workPhone || undefined,
@@ -5023,7 +5281,7 @@ async function applySearch(options = {}) {
 
     const activeFilters = []
 
-    const visibleFields = searchFieldsConfig.value.filter(f => selectedLeadFieldIds.value.includes(f.id))
+    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || selectedLeadFieldIds.value.includes(f.id))
 
     
 
@@ -5047,17 +5305,19 @@ async function applySearch(options = {}) {
 
                 options: 
 
-                    field.formKey === 'responsible' ? personOptions.value : 
+                    field.formKey === 'responsible' ? personOptions.value :
 
-                    field.formKey === 'branchSource' ? branchSourceOptions.value : 
+                    field.formKey === 'inactiveSales' ? inactiveSalesOptions.value :
+
+                    field.formKey === 'branchSource' ? branchSourceOptions.value :
 
                     field.formKey === 'source' ? sourceOptions.value :
 
-                    field.formKey === 'team' ? computedTeamOptions.value : 
+                    field.formKey === 'team' ? computedTeamOptions.value :
 
                     field.formKey === 'office' ? branchSelectOptions.value :
 
-                    field.formKey === 'areaId' ? areaOptions.value : 
+                    field.formKey === 'areaId' ? areaOptions.value :
 
                     field.formKey === 'qualityStatus' ? qualityStatusOptions.value :
 
@@ -5309,9 +5569,7 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
 
     try {
 
-        // include_inactive: inactive members still show here so their team lead / manager
-        // can filter by them and see their leads (assign pickers stay active-only).
-        const params = { limit: 30, include_inactive: 1 }
+        const params = { limit: 30 }
 
         const term = String(search || '').trim()
 
@@ -5553,11 +5811,13 @@ function resetFormValues() {
 
         responsible: [],
 
+        inactiveSales: [],
+
         createdOn: '',
 
         assignedOn: '',
 
-        createdFrom: '',     
+        createdFrom: '',
 
         createdTo: '',  
 

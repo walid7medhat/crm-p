@@ -86,6 +86,20 @@ public const FEATURE_LABELS = [
     /** Per-request memo: "{listingId}:{userId}" => list of approved request_type strings. */
     protected static array $accessRequestCache = [];
 
+    /** hero_image_path, or the first gallery image (by display order) if no hero was ever set. */
+    protected function resolveMainImagePath(): ?string
+    {
+        if ($this->hero_image_path) {
+            return $this->hero_image_path;
+        }
+
+        if ($this->relationLoaded('galleryImages')) {
+            return $this->galleryImages->first()?->image_path;
+        }
+
+        return $this->galleryImages()->ordered()->first()?->image_path;
+    }
+
     /** True if the auth user has an approved access request of the given type for this listing. */
     protected function hasApprovedAccess(?int $userId, string $requestType): bool
     {
@@ -409,10 +423,7 @@ $allowedAgentIds = [];
                     'created_at' => $galleryImage->created_at,
                 ];
             }),
-            'main_image'=>$this->hero_image_path ? asset('storage/' . $this->hero_image_path) : null,
-            // 'main_image' =>$this->hero_image_path
-            //                     ? route('image.watermark', ['path' => $this->hero_image_path])
-            //                     : null,
+            'main_image' => $this->resolveMainImagePath() ? asset('storage/' . $this->resolveMainImagePath()) : null,
             // Relationships
             'property_type' => $this->whenLoaded('propertyType', function () {
                 return [

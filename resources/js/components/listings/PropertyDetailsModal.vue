@@ -32,9 +32,11 @@
 <script setup>
 // Mounted once in App.vue — open it from anywhere with openPropertyDetails(id)
 // from '@/composables/usePropertyDetailsModal'.
-import { watch, onBeforeUnmount } from 'vue';
+import { watch, onBeforeUnmount, defineAsyncComponent } from 'vue';
 import { useRoute } from 'vue-router';
-import BlogOne from '@/components/alllisting/PropertyDetails/BlogOne.vue';
+
+// Lazy: this modal is mounted in App.vue; a static import pulls BlogOne (+ html2pdf) into the main bundle.
+const BlogOne = defineAsyncComponent(() => import('@/components/alllisting/PropertyDetails/BlogOne.vue'));
 import { usePropertyDetailsModal } from '@/composables/usePropertyDetailsModal';
 
 const { isOpen, listingId, closePropertyDetails, notifyPropertyDeleted } = usePropertyDetailsModal();
@@ -109,6 +111,9 @@ body.property-details-modal-open {
   background: #fff;
   border-bottom: 1px solid #e9ecef;
   flex-shrink: 0;
+  /* Above BlogOne's pinned agent box (z-index 45) */
+  position: relative;
+  z-index: 50;
 }
 
 .pdm-title {
@@ -147,6 +152,53 @@ body.property-details-modal-open {
   overflow-x: hidden;
   padding: 1rem 1.25rem;
   flex: 1 1 auto;
+}
+
+/* Agent + actions box: start level with the left column and pin to the popup top
+   (BlogOne switches it to position:fixed while scrolling; the page version offsets it
+   below the app header, which doesn't exist here). */
+/* Popup (desktop): the whole right section (agent + actions, Viewings, Agent Updates) is
+   pinned at the top of the popup body and scrolls on its own when it's taller than the
+   popup. The column stretches to the full content height so it stays pinned all the way down. */
+@media (min-width: 992px) {
+  .pdm-body :deep(.property-show-row) {
+    align-items: stretch !important;
+  }
+
+  .pdm-body :deep(.property-show-sidebar-col) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-self: stretch !important;
+  }
+
+  .pdm-body :deep(.property-sidebar-spacer) {
+    display: none !important;
+  }
+
+  .pdm-body :deep(.property-show-sidebar-col .sidebar-sticky-container) {
+    position: sticky !important;
+    top: 0 !important;
+    flex: 0 0 auto !important;
+    align-self: stretch !important;
+    height: auto !important;
+    margin-top: 0 !important;
+    /* popup height − header − body padding */
+    max-height: calc(100dvh - 3rem - 60px - 2rem) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin;
+    overscroll-behavior: contain;
+  }
+
+  /* Cards keep their natural height — the section scrolls, not the cards. */
+  .pdm-body :deep(.property-show-sidebar-col .sidebar-sticky-container > *) {
+    flex-shrink: 0 !important;
+  }
+
+  .pdm-body :deep(.property-show-sidebar-col .agent-sidebar-card) {
+    max-height: none !important;
+    overflow: visible !important;
+  }
 }
 
 @media (max-width: 768px) {

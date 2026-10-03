@@ -1258,6 +1258,7 @@ const QUERY_FILTER_LABELS = {
     work_phone: 'Phone',
     search: 'Search',
     responsible_person_id: 'Responsible Person',
+    inactive_person_id: 'Inactive Sales',
     team_id: 'Team',
     lead_branch_source: 'Lead Branch Source',
     source: 'Source',

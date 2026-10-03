@@ -120,7 +120,6 @@ Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
     // Property Finder Enterprise lead events. Public + HMAC (X-Signature) verified inside.
-   
         // ,'block.bots'
 Route::middleware(['throttle:300,1'])->group(function () {
 Route::middleware(['jwt.auth'])->prefix('settings')->group(function () {
@@ -710,6 +709,7 @@ Route::middleware('role:super_admin|admin')->group(function () {
 
 // Before apiResource so "phone-duplicates" isn't taken as a {lead} id.
 Route::get('/leads/phone-duplicates', [LeadController::class, 'phoneDuplicates']);
+Route::get('/leads/inactive-sales', [LeadController::class, 'inactiveSales']);
 Route::apiResource('leads', LeadController::class);
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);

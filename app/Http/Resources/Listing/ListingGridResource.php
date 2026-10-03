@@ -97,6 +97,20 @@ class ListingGridResource extends JsonResource
         return $this->area?->title ?? $this->old_area?->title ?? null;
     }
 
+    /** hero_image_path, or the first gallery image if no hero was ever set. */
+    protected function resolveMainImagePath(): ?string
+    {
+        if ($this->hero_image_path) {
+            return $this->hero_image_path;
+        }
+
+        if ($this->relationLoaded('firstGalleryImage') && $this->firstGalleryImage) {
+            return $this->firstGalleryImage->image_path;
+        }
+
+        return null;
+    }
+
     protected function resolveTotalImages(): int
     {
         if (isset($this->gallery_images_count)) {
@@ -218,8 +232,8 @@ class ListingGridResource extends JsonResource
             'handover_date' => $this->handover_date?->format('Y-m-d'),
             'payment_plan' => $this->payment_plan,
             'can_edit_payment_breakdown' => $this->resolveCanEditPaymentBreakdown($request),
-            'main_image' => $this->hero_image_path
-                ? route('image.watermark', ['path' => $this->hero_image_path])
+            'main_image' => $this->resolveMainImagePath()
+                ? route('image.watermark', ['path' => $this->resolveMainImagePath()])
                 : null,
             'total_images' => $this->resolveTotalImages(),
             'property_type' => $this->propertyType?->name,

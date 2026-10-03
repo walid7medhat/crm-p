@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 
@@ -175,6 +176,12 @@ class Listing extends Model
     public function galleryImages(): MorphMany
     {
         return $this->morphMany(GalleryImage::class, 'imageable')->ordered();
+    }
+
+    /** First gallery image (by display order) — used as the hero fallback when hero_image_path isn't set. */
+    public function firstGalleryImage(): MorphOne
+    {
+        return $this->morphOne(GalleryImage::class, 'imageable')->ordered();
     }
     
     public function isOwner($user)

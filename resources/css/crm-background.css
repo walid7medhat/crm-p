@@ -367,10 +367,11 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
     width: 100% !important;
   }
 
+  /* Natural height — opening the actions grows the card instead of scrolling inside it
+     (BlogOne pins the card's bottom edge when it's taller than the screen). */
   body.app-has-video-bg .property-show-sidebar-col .agent-sidebar-card {
-    max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem) - 1.5rem) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 
