@@ -5948,7 +5948,6 @@ const buildMobileOfferPdf = async (currentUser) => {
     if (index > 0) pdf.addPage([210, 148], 'landscape');
     const page = pages[index];
     const kind = typeof page === 'string' ? page : page.type;
-    setMobileOfferBusyText(`Building page ${index + 1} of ${pages.length}`);
     const marker = document.createElement('div');
     if (kind === 'cover') marker.id = 'cover-slide';
     if (kind === 'payment') marker.id = 'payment-details-slide';
@@ -6218,6 +6217,7 @@ const generatePDF = async () => {
       title: 'Generating Sales Offer...',
       text: 'Please wait while we prepare your document',
       allowOutsideClick: false,
+      showConfirmButton: false,
       didOpen: () => {
         Swal.showLoading();
       }
@@ -6272,7 +6272,6 @@ const generatePDF = async () => {
     const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
 
     for (let i = 0; i < slideElements.length; i++) {
-      Swal.update({ text: `Building page ${i + 1} of ${slideElements.length}` });
       const slideCanvas = await withTimeout(
         html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
         25000,
