@@ -564,11 +564,16 @@ SQL;
 
         if($request->has('is_active')) {
             if($request->boolean('is_active')){
+                // Must match the frontend's "Active" definition exactly (it also
+                // requires approved) — otherwise the page returns N items per page
+                // but the frontend silently drops the unapproved ones, so fewer than
+                // per_page end up on screen despite pagination saying otherwise.
                 $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
                 ->where('status', '!=', 'draft')
-                ->where('is_archived', false);
+                ->where('is_archived', false)
+                ->where('approved', true);
             }else{
             $query->where('is_active', $request->boolean('is_active'));
             }
