@@ -3151,7 +3151,7 @@ defineExpose({
 
 /* append-to-body menus must sit above the stage-change overlay */
 body.stage-change-modal-open .vs__dropdown-menu {
-    z-index: 12100 !important;
+    z-index: 13000 !important;
 }
 body.stage-change-modal-open .vs__dropdown-menu .location-option-name,
 body.stage-change-modal-open .vs__dropdown-menu .location-option-subtitle,

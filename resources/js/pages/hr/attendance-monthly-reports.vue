@@ -1512,7 +1512,14 @@ tr.risk-medium { background: #fffdf7; }
   .ar-toolbar__dates,
   .ar-toolbar__actions { width: 100%; }
 }
-@media (max-width: 520px) {
+@media (max-width: 768px) {
+  .ar-page,
+  .ar-shell {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
   .ar-kpi { grid-template-columns: 1fr 1fr; }
 }
 

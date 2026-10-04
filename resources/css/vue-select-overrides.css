@@ -114,13 +114,18 @@ button.vs__clear {
 /* Any appendToBody vue-select dropdown, by default, must clear the mobile fixed bottom
    dock (z-index 9999) and sidebar drawer (z-index 12050) — otherwise, on a long mobile
    page, it opens but renders invisibly underneath them (looks like it "doesn't open"). */
+body > .vs__dropdown-menu {
+  position: fixed !important;
+  z-index: 13000;
+}
+
 body .vs__dropdown-menu {
-  z-index: 12100;
+  z-index: 13000;
 }
 
 /* Stage change (Move Lead) modal — v-select append-to-body must clear overlay */
 body.stage-change-modal-open .vs__dropdown-menu {
-  z-index: 12050 !important;
+  z-index: 13000 !important;
 }
 
 /* Stage completion modal is stacked above ViewDealModal; dropdown is append-to-body.

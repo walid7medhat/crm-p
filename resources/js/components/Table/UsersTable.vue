@@ -63,6 +63,32 @@
                     />
                     <iconify-icon icon="lucide:search" class="users-search__icon"></iconify-icon>
                 </label>
+                <div class="agents-mobile__chips">
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': statusFilter === 'active' }"
+                        @click="toggleStatusShortcut('active')"
+                    >Active</button>
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': statusFilter === 'in_active' }"
+                        @click="toggleStatusShortcut('in_active')"
+                    >Inactive</button>
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': onlineOnly }"
+                        @click="toggleOnlineShortcut"
+                    >Online</button>
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': sortKey === 'last_login_at' && !sortAsc }"
+                        @click="sortLatestLogin"
+                    >Last login</button>
+                </div>
                 <div class="agents-mobile__tools">
                     <router-link to="/team-tree" class="agents-mobile__tool">
                         <iconify-icon icon="lucide:network"></iconify-icon>
@@ -452,6 +478,8 @@ export default {
             currentPage: 1,
             sortKey: '',
             sortAsc: true,
+            statusFilter: '',
+            onlineOnly: false,
             users: [],
             meta: { total: 0, last_page: 1, current_page: 1, per_page: 10 },
             statusLoading: null,
@@ -718,6 +746,12 @@ export default {
                 if (this.searchText) {
                     params.set('search', this.searchText);
                 }
+                if (this.statusFilter) {
+                    params.set('status', this.statusFilter);
+                }
+                if (this.onlineOnly) {
+                    params.set('online', '1');
+                }
 
                 const response = await fetch(`${API_ENDPOINTS.USERS}?${params.toString()}`, {
                     method: 'GET',
@@ -932,6 +966,30 @@ export default {
                     resolve(false);
                 };
             });
+        },
+
+        toggleStatusShortcut(status) {
+            this.statusFilter = this.statusFilter === status ? '' : status;
+            this.currentPage = 1;
+            this.fetchUsers();
+        },
+
+        toggleOnlineShortcut() {
+            this.onlineOnly = !this.onlineOnly;
+            this.currentPage = 1;
+            this.fetchUsers();
+        },
+
+        sortLatestLogin() {
+            if (this.sortKey === 'last_login_at' && !this.sortAsc) {
+                this.sortKey = '';
+                this.sortAsc = true;
+            } else {
+                this.sortKey = 'last_login_at';
+                this.sortAsc = false;
+            }
+            this.currentPage = 1;
+            this.fetchUsers();
         },
 
         sortBy(key) {
@@ -1247,6 +1305,36 @@ export default {
 .users-list__pager {
     margin-top: 14px;
     font-size: 14px;
+}
+
+.agents-mobile__chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.agents-mobile__chips::-webkit-scrollbar {
+    display: none;
+}
+
+.agents-mobile__chip {
+    flex: 0 0 auto;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #efe6f6;
+    background: #fff;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.agents-mobile__chip.is-on {
+    background: #6b21a8;
+    border-color: #6b21a8;
+    color: #fff;
 }
 
 .agents-mobile__bar {
@@ -1693,7 +1781,18 @@ export default {
     }
     
     .pagination {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        max-width: 100%;
+        padding-bottom: 4px;
+    }
+
+    .users-list__pager {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+        padding-right: 56px;
     }
     
     .dropdown {
