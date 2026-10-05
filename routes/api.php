@@ -649,6 +649,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Create, edit, and delete stay Super Admin only.
     Route::prefix('system-campaigns')->group(function () {
         Route::get('/due', [SystemCampaignController::class, 'due']);
+        Route::get('/gallery', [SystemCampaignController::class, 'gallery']);
         Route::post('/{campaign}/shown', [SystemCampaignController::class, 'shown'])->whereNumber('campaign');
         Route::post('/{campaign}/dismiss', [SystemCampaignController::class, 'dismiss'])->whereNumber('campaign');
 

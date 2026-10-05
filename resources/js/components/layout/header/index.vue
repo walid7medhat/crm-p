@@ -248,6 +248,22 @@
           </router-link>
         </li>
 
+        <li v-if="canBrowseAnnouncements">
+          <router-link to="/announcements" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              title="Announcements"
+              :class="{ active: isSidebarSubItemActive('/announcements') }"
+              @mouseenter="prefetchRoute('/announcements')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:megaphone" class="menu-icon" />
+              <span>Announcements</span>
+            </a>
+          </router-link>
+        </li>
+
         <li v-if="!isShowOnlyListing">
           <router-link to="/suggestion" custom v-slot="{ navigate, href }">
             <a
@@ -588,6 +604,12 @@
             <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
           </button>
 
+          <button v-if="canBrowseAnnouncements" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/announcements') }" @click="onMoreGo('/announcements')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:megaphone" /></span>
+            <span class="mobile-more-row__label">Announcements</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
           <button v-if="!isShowOnlyListing" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/suggestion') }" @click="onMoreGo('/suggestion')">
             <span class="mobile-more-row__icon"><img :src="suggestionIcon" alt="" /></span>
             <span class="mobile-more-row__label">Suggestions</span>
@@ -893,6 +915,15 @@ const isSuperAdmin = computed(() => {
 });
 const isHr =computed(() => {
   return user.value?.roles?.includes('hr') ?? false;
+});
+
+const canManageAnnouncements = computed(() => {
+  return isSuperAdmin.value || Number(user.value?.id) === 33;
+});
+
+const canBrowseAnnouncements = computed(() => {
+  if (!user.value || canManageAnnouncements.value || isShowOnlyListing.value) return false;
+  return true;
 });
 const tableItems = computed(() => {
   const c = sidebarCounts.value;

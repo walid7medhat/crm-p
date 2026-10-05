@@ -4,6 +4,10 @@ export function fetchSystemCampaigns() {
   return api.get('/system-campaigns')
 }
 
+export function fetchAnnouncementGallery() {
+  return api.get('/system-campaigns/gallery')
+}
+
 export function createSystemCampaign(formData) {
   return api.post('/system-campaigns', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

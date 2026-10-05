@@ -19,6 +19,7 @@ const baseRoutes = [
     { path: '/area-coordinates', component: () => import('./pages/areas/BulkAreaCoordinates.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
       { path: '/logs', component: () => import('./pages/logs/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: '/system-announcements', component: () => import('./pages/system-announcements/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true } },
+      { path: '/announcements', component: () => import('./pages/announcements/index.vue'), meta: { requiresAuth: true } },
       {
         path: '/system-overview',
         name: 'system-overview',

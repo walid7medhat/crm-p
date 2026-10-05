@@ -188,6 +188,28 @@ class SystemCampaignController extends Controller
         return ApiResponse::success($due);
     }
 
+    /**
+     * Active announcement images anyone signed in can browse from the sidebar.
+     * The popup still follows audience and frequency; this list does not.
+     */
+    public function gallery(Request $request)
+    {
+        $campaigns = SystemCampaign::query()
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (SystemCampaign $campaign) => [
+                'id' => $campaign->id,
+                'title' => $campaign->title,
+                'desktop_image_url' => $campaign->desktop_image_url,
+                'mobile_image_url' => $campaign->mobile_image_url,
+                'created_at' => $campaign->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return ApiResponse::success($campaigns, 'Announcements retrieved successfully');
+    }
+
     public function shown(Request $request, SystemCampaign $campaign)
     {
         $user = $request->user();
