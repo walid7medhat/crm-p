@@ -33,15 +33,21 @@
 // Mounted once in App.vue — open it from anywhere with openPropertyDetails(id)
 // from '@/composables/usePropertyDetailsModal'.
 import { watch, onBeforeUnmount, defineAsyncComponent } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 // Lazy: this modal is mounted in App.vue; a static import pulls BlogOne (+ html2pdf) into the main bundle.
 const BlogOne = defineAsyncComponent(() => import('@/components/alllisting/PropertyDetails/BlogOne.vue'));
-import { usePropertyDetailsModal } from '@/composables/usePropertyDetailsModal';
+import {
+  usePropertyDetailsModal,
+  initPropertyDetailsModal,
+  syncPropertyDetailsWithUrl,
+  LISTING_QUERY_KEY,
+} from '@/composables/usePropertyDetailsModal';
 
 const { isOpen, listingId, closePropertyDetails, notifyPropertyDeleted } = usePropertyDetailsModal();
 
 const route = useRoute();
+initPropertyDetailsModal(useRouter(), route);
 
 const onDeleted = (id) => {
   notifyPropertyDeleted(id);
@@ -66,8 +72,13 @@ const lockBody = (locked) => {
 
 watch(() => isOpen.value && !!listingId.value, lockBody, { immediate: true });
 
-// Actions inside the details (edit, agent profile, ...) navigate away — close the popup.
-watch(() => route.fullPath, () => closePropertyDetails());
+// Actions inside the details (edit, agent profile, ...) navigate to another page — close
+// the popup. Only the path: query changes (filters, page, our own ?listing=) must not close it.
+// Defined before the ?listing= watcher so a new page that carries ?listing= reopens it.
+watch(() => route.path, () => closePropertyDetails({ syncUrl: false }));
+
+// ?listing=<id> in the URL ⇄ popup: shared link / refresh opens it, Back closes it.
+watch(() => route.query[LISTING_QUERY_KEY], (value) => syncPropertyDetailsWithUrl(value), { immediate: true });
 
 onBeforeUnmount(() => lockBody(false));
 </script>
