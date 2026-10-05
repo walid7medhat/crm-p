@@ -848,26 +848,13 @@ class LeadController extends Controller
     public function inactiveSales(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead'])) {
+        if (! \App\Support\InactiveSales::allowed($user)) {
             return ApiResponse::success([], 'Inactive sales retrieved successfully');
         }
 
-        $query = User::query()
-            ->where('users.status', '!=', 'active')
-            // Only people who still own leads — nothing to search for the others.
-            ->whereExists(function ($q) {
-                $q->selectRaw('1')
-                    ->from('leads')
-                    ->whereColumn('leads.responsible_person_id', 'users.id')
-                    ->whereNull('leads.deleted_at');
-            })
-            ->with(['parent:id,name,display_name']);
-
-        // Same lead scope as the board: everyone for super_admin / admin, otherwise the
-        // viewer's hierarchy (whole branch for branch_admin / show-branch-leads).
-        if (! $user->hasAnyRole(['super_admin', 'admin'])) {
-            $query->whereIn('users.id', $user->leadScopeUserIds());
-        }
+        // Inactive users who still own leads, in the viewer's scope — shared with the
+        // "All Inactive" option (App\Support\InactiveSales).
+        $query = \App\Support\InactiveSales::query($user)->with(['parent:id,name,display_name']);
 
         $search = mb_substr(trim((string) $request->input('search', '')), 0, 80);
         if ($search !== '') {
@@ -1295,10 +1282,17 @@ class LeadController extends Controller
     private function requestedResponsiblePersonIds(Request $request): array
     {
         // inactive_person_id: the search's "Inactive Sales" select — same filter, separate
-        // select (the Responsible Person list stays active-only).
+        // select (the Responsible Person list stays active-only). "all" = every inactive
+        // user the viewer can search; none at all → [0] so the search finds nothing
+        // instead of dropping the filter.
+        $raw = $request->input('inactive_person_id');
+        $inactiveIds = \App\Support\InactiveSales::requestsAll($raw)
+            ? (\App\Support\InactiveSales::ids(auth()->user()) ?: [0])
+            : $this->requestedIdList($raw);
+
         return array_values(array_unique(array_merge(
             $this->requestedIdList($request->input('responsible_person_id')),
-            $this->requestedIdList($request->input('inactive_person_id'))
+            $inactiveIds
         )));
     }
 

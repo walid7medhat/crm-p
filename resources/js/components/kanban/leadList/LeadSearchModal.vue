@@ -530,7 +530,15 @@
 
                                 <template #option="option">
 
-                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
+                                    <div v-if="option.isAll" class="lead-rp-opt d-flex align-items-center gap-2 fw-semibold">
+
+                                        <iconify-icon icon="lucide:users" class="lead-rp-opt-avatar d-inline-flex align-items-center justify-content-center"></iconify-icon>
+
+                                        <span class="user-item-name">{{ option.text }}</span>
+
+                                    </div>
+
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
 
                                         <img
 
@@ -566,9 +574,11 @@
 
                                     <span class="lead-rp-chip">
 
-                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+                                        <iconify-icon v-if="option.isAll || option.value === 'all'" icon="lucide:users"></iconify-icon>
 
-                                        <span>{{ option.text }}</span>
+                                        <img v-else :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+
+                                        <span>{{ option.isAll || option.value === 'all' ? 'All Inactive' : option.text }}</span>
 
                                     </span>
 
@@ -1414,7 +1424,15 @@
 
                                 <template #option="option">
 
-                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
+                                    <div v-if="option.isAll" class="lead-rp-opt d-flex align-items-center gap-2 fw-semibold">
+
+                                        <iconify-icon icon="lucide:users" class="lead-rp-opt-avatar d-inline-flex align-items-center justify-content-center"></iconify-icon>
+
+                                        <span class="user-item-name">{{ option.text }}</span>
+
+                                    </div>
+
+                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
 
                                         <img
 
@@ -1450,9 +1468,11 @@
 
                                     <span class="lead-rp-chip">
 
-                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+                                        <iconify-icon v-if="option.isAll || option.value === 'all'" icon="lucide:users"></iconify-icon>
 
-                                        <span>{{ option.text }}</span>
+                                        <img v-else :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+
+                                        <span>{{ option.isAll || option.value === 'all' ? 'All Inactive' : option.text }}</span>
 
                                     </span>
 
@@ -2740,7 +2760,7 @@ function syncFormFromQuery(query) {
 
     next.responsible = normalizeResponsibleIds(next.responsible)
 
-    next.inactiveSales = normalizeResponsibleIds(next.inactiveSales)
+    next.inactiveSales = normalizeInactiveSelection(next.inactiveSales)
 
     form.value = next
 
@@ -3821,12 +3841,39 @@ const loadingInactiveSales = ref(false)
 
 let inactiveSalesLoaded = false
 
-const inactiveSalesOptions = computed(() => inactiveSalesList.value.map(person => ({
-    value: Number(person.id),
-    text: person.name,
-    avatar: person.avatar,
-    parent_name: person.parent_name,
-})))
+// "All Inactive" — sent as inactive_person_id=all; the API expands it to every inactive
+// user the viewer can search (App\Support\InactiveSales).
+const INACTIVE_ALL = 'all'
+
+const inactiveSalesOptions = computed(() => {
+    const people = inactiveSalesList.value.map(person => ({
+        value: Number(person.id),
+        text: person.name,
+        avatar: person.avatar,
+        parent_name: person.parent_name,
+    }))
+    return people.length
+        ? [{ value: INACTIVE_ALL, text: 'All Inactive', isAll: true }, ...people]
+        : people
+})
+
+/** ['all'] when "All Inactive" is picked, otherwise the picked user ids. */
+function normalizeInactiveSelection(value) {
+    const list = Array.isArray(value) ? value : (value === '' || value == null ? [] : [value])
+    if (list.some(v => String(v).toLowerCase() === INACTIVE_ALL)) return [INACTIVE_ALL]
+    return normalizeResponsibleIds(list)
+}
+
+// "All Inactive" and single names don't mix: picking All clears the names, picking a
+// name clears All.
+watch(() => form.value.inactiveSales, (next, prev) => {
+    const list = Array.isArray(next) ? next : []
+    if (!list.includes(INACTIVE_ALL) || list.length === 1) return
+    const prevList = Array.isArray(prev) ? prev : []
+    form.value.inactiveSales = prevList.includes(INACTIVE_ALL)
+        ? list.filter(v => v !== INACTIVE_ALL)
+        : [INACTIVE_ALL]
+})
 
 async function loadInactiveSales(force = false) {
     if (!canUseInactiveSales.value) return
@@ -5287,8 +5334,8 @@ async function applySearch(options = {}) {
 
         responsible_person_id: responsiblePersonId,
 
-        inactive_person_id: canUseInactiveSales.value && normalizeResponsibleIds(form.value.inactiveSales).length
-            ? normalizeResponsibleIds(form.value.inactiveSales)
+        inactive_person_id: canUseInactiveSales.value && normalizeInactiveSelection(form.value.inactiveSales).length
+            ? normalizeInactiveSelection(form.value.inactiveSales)
             : undefined,
 
         lead_branch_source: branchSource,

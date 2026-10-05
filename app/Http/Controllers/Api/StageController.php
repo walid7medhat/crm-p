@@ -1650,10 +1650,17 @@ public function getOffices()
     private function requestedResponsiblePersonIds(Request $request): array
     {
         // inactive_person_id: the search's "Inactive Sales" select — same filter, separate
-        // select (the Responsible Person list stays active-only).
+        // select (the Responsible Person list stays active-only). "all" = every inactive
+        // user the viewer can search; none at all → [0] so the search finds nothing
+        // instead of dropping the filter.
+        $raw = $request->input('inactive_person_id');
+        $inactiveIds = \App\Support\InactiveSales::requestsAll($raw)
+            ? (\App\Support\InactiveSales::ids(auth()->user()) ?: [0])
+            : $this->requestedIdList($raw);
+
         return array_values(array_unique(array_merge(
             $this->requestedIdList($request->input('responsible_person_id')),
-            $this->requestedIdList($request->input('inactive_person_id'))
+            $inactiveIds
         )));
     }
 
