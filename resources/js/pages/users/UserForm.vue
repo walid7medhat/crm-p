@@ -1,5 +1,5 @@
 <template>
-    <div class="dashboard-main-body">
+    <div class="dashboard-main-body user-form-page">
         <Breadcrumb 
             :title="isEditMode ? 'Edit User' : 'Add New User'" 
             :breadcrumbs="[
@@ -266,7 +266,7 @@
                     <!-- Action Buttons -->
                     <div class="row mt-4">
                         <div class="col-12">
-                            <div class="d-flex gap-2 justify-content-end border-top pt-4">
+                            <div class="d-flex gap-2 justify-content-end border-top pt-4 user-form-actions">
                                 <button type="button" class="btn btn-outline-secondary" @click="$router.back()">
                                     <iconify-icon icon="lucide:x" class="me-2"></iconify-icon>
                                     Cancel
@@ -995,5 +995,36 @@ watch(roles, (newRoles) => {
     padding-right: calc(1.5em + 0.75rem);
 }
 
+@media (max-width: 1024px) {
+    .user-form-page {
+        padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    }
 
+    .user-form-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+        z-index: 1040;
+        margin: 0;
+        background: #ffffff;
+        border-top: 1px solid #e6e2ee !important;
+        box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.08);
+        padding: 10px 12px !important;
+        justify-content: stretch !important;
+    }
+
+    .user-form-actions .btn {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+}
+</style>
+
+<style>
+@media (max-width: 1024px) {
+    body:has(.user-form-page) .chat-floating-btn {
+        bottom: calc(156px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
 </style>

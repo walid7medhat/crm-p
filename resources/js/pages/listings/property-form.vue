@@ -1499,7 +1499,7 @@
           </div>
         </div>
         
-        <div class="card-footer text-center footer-pt">
+        <div class="card-footer text-center footer-pt property-form-actions">
           <div class="d-flex gap-2 justify-content-center">
             <button
               type="button"
@@ -6376,5 +6376,39 @@ body.swal2-toast-shown  {
   overflow-y: visible !important;
   overflow-x: hidden !important;
   flex: 0 0 auto !important;
+}
+
+/* Phones and iPad: owner fields stay above the actions, and the actions clear the tab bar */
+@media (max-width: 1024px) {
+  .property-form-page {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .property-form-page .property-form-actions {
+    position: static;
+    margin-top: 8px;
+    background: #ffffff;
+    border-top: 1px solid #e6e2ee;
+    padding: 12px 10px;
+  }
+
+  .property-form-page .property-form-actions .d-flex {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .property-form-page .property-form-actions .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    padding: 8px 4px;
+    font-size: 12px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .property-form-page .property-form-actions .btn i {
+    display: none;
+  }
 }
 </style>
