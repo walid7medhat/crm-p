@@ -5,6 +5,29 @@ const showDealViewModal = ref(false)
 const dealViewPayload = ref(null)
 const dealViewAutoEditSection = ref(null)
 
+// ================= Shareable deal links (?deal=ID), like leads' ?lead=ID =================
+// Any open deal popup writes ?deal=ID to the URL; closing it removes it. Opening a URL
+// with ?deal=ID opens that deal (kanban_deal.vue). `dealUrlSyncedId` is the id a popup
+// wrote itself, so that write isn't mistaken for a shared link and opened a 2nd time.
+export const dealUrlSyncedId = ref(null)
+
+export function setDealQuery(router, route, dealId) {
+  const id = Number(dealId)
+  if (!router || !route || !Number.isFinite(id) || id <= 0) return
+  dealUrlSyncedId.value = id
+  if (String(route.query.deal || '') !== String(id)) {
+    router.replace({ query: { ...route.query, deal: String(id) } }).catch(() => {})
+  }
+}
+
+export function clearDealQuery(router, route) {
+  dealUrlSyncedId.value = null
+  if (!router || !route?.query?.deal) return
+  const query = { ...route.query }
+  delete query.deal
+  router.replace({ query }).catch(() => {})
+}
+
 export function useDealViewModal() {
   return {
     showDealViewModal,
@@ -84,22 +107,22 @@ export function dealIdFromNotification(notification) {
 }
 
 /**
- * Open the deal a notification is about. ViewDealModal only lives on the Kanban page,
- * so go there first when needed; the shared modal state opens it once the page mounts.
- * Returns false when the notification isn't about a deal.
+ * Open the deal a notification is about. ViewDealModal only lives on the Kanban page —
+ * go to the deals board with ?deal=ID; kanban_deal.vue opens it from the URL (same as a
+ * shared deal link). Returns false when the notification isn't about a deal.
  */
 export function openDealFromNotification(notification) {
   const dealId = dealIdFromNotification(notification)
   if (!dealId) return false
 
-  const open = () => openDealView(dealId, { autoEditSection: false })
   import('@/router').then(({ default: router }) => {
-    if (router.currentRoute.value.path !== '/kanban') {
-      router.push('/kanban').then(open).catch(open)
+    const current = router.currentRoute.value
+    if (current.path === '/kanban_deal') {
+      router.replace({ query: { ...current.query, deal: String(dealId) } }).catch(() => {})
     } else {
-      open()
+      router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
     }
-  }).catch(open)
+  }).catch(() => openDealView(dealId, { autoEditSection: false }))
 
   return true
 }

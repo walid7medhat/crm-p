@@ -68,7 +68,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide, defineAsyncComponent } from 'vue'
-import { openDealView, useDealViewModal } from '@/composables/useDealViewModal.js'
+import { openDealView, useDealViewModal, dealUrlSyncedId, setDealQuery, clearDealQuery } from '@/composables/useDealViewModal.js'
 
 const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
@@ -226,6 +226,67 @@ async function onKanbanOpenConvertedDeal(event) {
     const autoEditSection = dealType === 'rental' ? 'tenant_details' : 'buyer_details'
     await openDealView(deal, { autoEditSection })
 }
+
+// ================= Shareable deal links (?deal=ID) =================
+// A URL with ?deal=ID (shared link, notification, page reload) opens that deal: switch to
+// the deals board on the deal's type tab, then open it in view mode. A ?deal the page
+// wrote itself when a popup opened (dealUrlSyncedId) is skipped.
+async function openDealFromUrl() {
+    const id = Number(route.query.deal)
+    if (!Number.isFinite(id) || id <= 0) return
+    if (id === dealUrlSyncedId.value) return
+    if (showDealViewModal.value) return
+    dealUrlSyncedId.value = id
+
+    let deal = { id }
+    try {
+        const res = await api.get(`/deals/${id}`)
+        const full = res.data?.data ?? res.data
+        if (full && typeof full === 'object') deal = { ...full, id }
+    } catch (error) {
+        clearDealQuery(router, route)
+        Swal.fire({
+            icon: 'warning',
+            title: 'Deal not available',
+            text: error?.response?.status === 403
+                ? 'You do not have access to this deal.'
+                : 'This deal could not be found.',
+        })
+        return
+    }
+
+    // Board on the right tab; keep ?deal in the URL while switching to /kanban_deal.
+    const dealType = resolveDealType(deal)
+    rememberCrmSection(CRM_SECTIONS.DEAL)
+    persistKanbanTab('deals')
+    try {
+        localStorage.setItem(DEAL_TYPE_KEY, dealType)
+    } catch {
+        /* ignore */
+    }
+    activeTab.value = 'deals'
+    if (route.path !== '/kanban_deal') {
+        await router.replace({ path: '/kanban_deal', query: { ...route.query, deal: String(id) } })
+    }
+    window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }))
+    window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: dealType }))
+
+    await nextTick()
+    await openDealView(deal, { autoEditSection: false })
+}
+
+watch(() => route.query.deal, () => {
+    openDealFromUrl()
+})
+
+// The shared popup (converted deals, links, notifications) keeps ?deal in step too.
+watch(showDealViewModal, (isOpen) => {
+    if (isOpen && dealViewPayload.value?.id) {
+        setDealQuery(router, route, dealViewPayload.value.id)
+    } else if (!isOpen) {
+        clearDealQuery(router, route)
+    }
+})
 provide('kanbanIsMobile', kanbanIsMobile)
 provide('kanbanOpenCreateLead', () => {
     activeTab.value = 'leads'
@@ -393,6 +454,8 @@ onMounted(() => {
         initializeStageUpdates()
     }, 1000)
     document.addEventListener('click', onDocumentClick)
+    // Opened straight from a shared deal link / reload with ?deal=ID.
+    openDealFromUrl()
    window.addEventListener('kanban-open-settings', onKanbanOpenSettings)
       // Refs declared on components inside a v-for are arrays in Vue 3 — unwrap so
       // external callers (navbar search handlers) get the actual component instance.

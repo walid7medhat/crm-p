@@ -1092,7 +1092,9 @@ watch(() => show.value, async (isOpen) => {
     // initial view, but kick them off now so they're warm by the time edit is used.
     ensureEditLookupsLoaded().catch(() => {})
   }
-})
+// immediate: the shared popup in kanban_deal.vue is mounted already open (v-if), so a
+// plain watcher never fires there and the deal's stages / details never loaded.
+}, { immediate: true })
 
 watch(() => props.deal?.id, async (newId, oldId) => {
   if (!show.value || !newId || newId === oldId) return

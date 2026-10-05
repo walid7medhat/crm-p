@@ -457,6 +457,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { setDealQuery, clearDealQuery } from '@/composables/useDealViewModal.js'
 import draggable from 'vuedraggable'
 import axios, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
@@ -2402,8 +2404,18 @@ function viewDeal(deal, column) {
   showViewDealModal.value = true
 }
 
+// Shareable link: an open deal puts ?deal=ID in the URL (like leads' ?lead=ID); closing
+// removes it. Opening such a link is handled by kanban_deal.vue.
+const dealRoute = useRoute()
+const dealRouter = useRouter()
+
 watch(showViewDealModal, (isOpen) => {
   if (!isOpen) autoEditSection.value = null
+  if (isOpen && selectedDeal.value?.id) {
+    setDealQuery(dealRouter, dealRoute, selectedDeal.value.id)
+  } else if (!isOpen) {
+    clearDealQuery(dealRouter, dealRoute)
+  }
 })
 
 // Notification helper
@@ -2434,6 +2446,10 @@ watch(() => columns.value, () => {
 
 // Lifecycle hooks
 onMounted(async () => {
+  // Listen before the first load: a shared deal link (?deal=ID) switches the deal type
+  // while this first fetch is still running — that switch must not be missed, or the
+  // board keeps the previous type's stages.
+  window.addEventListener('kanban-deal-type-change', onExternalDealTypeChange);
   try {
     await fetchDeals(true);
   } finally {
@@ -2444,7 +2460,6 @@ onMounted(async () => {
     setupInfiniteScroll();
   });
   window.addEventListener('resize', updateScrollArrows);
-  window.addEventListener('kanban-deal-type-change', onExternalDealTypeChange);
   setTimeout(() => {
     initializeDealUpdates();
   }, 1000);
