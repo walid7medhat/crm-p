@@ -135,7 +135,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
@@ -215,7 +215,14 @@ async function deleteAlert(alert) {
   }
 }
 
-onMounted(loadAlerts)
+onMounted(() => {
+  document.body.classList.add('notifyme-open')
+  loadAlerts()
+})
+
+onUnmounted(() => {
+  document.body.classList.remove('notifyme-open')
+})
 
 const defaultFilters = {
   saleRent: 'All',
@@ -681,12 +688,124 @@ async function submit() {
 :deep(.sort-select) {
   display: none !important;
 }
+
+@media (max-width: 768px) {
+  .notifyme-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .notifyme-modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .notifyme-header {
+    flex-shrink: 0;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px 12px;
+  }
+
+  .notifyme-body {
+    min-height: 0;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px;
+    overscroll-behavior: contain;
+  }
+
+  .notifyme-body > * {
+    min-width: 0;
+  }
+
+  .notifyme-card {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .notifyme-card :deep(.listing-search-shell) {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    border: 1px solid #edf2f7 !important;
+    box-shadow: none !important;
+    padding: 10px !important;
+    background: #f8f7fb !important;
+    box-sizing: border-box !important;
+  }
+
+  .notifyme-card :deep(.bayut-mobile-search) {
+    background: transparent;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .notifyme-card :deep(.bayut-results-header),
+  .notifyme-card :deep(.listing-headline) {
+    display: none !important;
+  }
+
+  .notifyme-card :deep(.bayut-search-row) {
+    margin-bottom: 10px;
+    min-width: 0;
+  }
+
+  .notifyme-card :deep(.bayut-filter-chips) {
+    flex-wrap: wrap;
+    overflow: visible;
+    padding-bottom: 0;
+    min-width: 0;
+  }
+
+  .notifyme-alert-head {
+    min-width: 0;
+  }
+
+  .notifyme-alert-date {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notifyme-detail-label {
+    flex-basis: 92px;
+  }
+
+  .notifyme-footer {
+    flex-shrink: 0;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .notifyme-cancel,
+  .notifyme-submit {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
 </style>
 
 <!-- Unscoped: SweetAlert is teleported to <body>, so it must sit above the notify-me modal (z-index 60000). -->
 <style>
 .notifyme-swal-top {
   z-index: 70000 !important;
+}
+
+body.notifyme-open {
+  overflow: hidden;
+}
+
+/* Filter sheets are teleported to body and must sit above this modal (z-index 60000). */
+body.notifyme-open .bayut-search-overlay,
+body.notifyme-open .bayut-sheet-overlay,
+body.notifyme-open .mobile-filter-sheet-overlay {
+  z-index: 65000 !important;
 }
 </style>
 

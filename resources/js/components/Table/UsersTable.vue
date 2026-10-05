@@ -63,6 +63,32 @@
                     />
                     <iconify-icon icon="lucide:search" class="users-search__icon"></iconify-icon>
                 </label>
+                <div class="agents-mobile__chips">
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': statusFilter === 'active' }"
+                        @click="toggleStatusShortcut('active')"
+                    >Active</button>
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': statusFilter === 'in_active' }"
+                        @click="toggleStatusShortcut('in_active')"
+                    >Inactive</button>
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': onlineOnly }"
+                        @click="toggleOnlineShortcut"
+                    >Online</button>
+                    <button
+                        type="button"
+                        class="agents-mobile__chip"
+                        :class="{ 'is-on': sortKey === 'last_login_at' && !sortAsc }"
+                        @click="sortLatestLogin"
+                    >Last login</button>
+                </div>
                 <div class="agents-mobile__tools">
                     <router-link to="/team-tree" class="agents-mobile__tool">
                         <iconify-icon icon="lucide:network"></iconify-icon>
@@ -105,6 +131,10 @@
                             <div class="agents-mobile__meta">
                                 <span v-if="user.role_name" class="agents-mobile__role">{{ user.role_name.replace(/_/g, ' ') }}</span>
                                 <span class="agents-mobile__branch">{{ user.branch || user.department || user.office_name || '—' }}</span>
+                            </div>
+                            <div class="agents-mobile__login" :class="{ 'is-online': isUserOnline(user) }">
+                                <span v-if="isUserOnline(user)" class="agents-mobile__login-dot" aria-hidden="true"></span>
+                                {{ isUserOnline(user) ? 'Online' : 'Last login ' + formatLastLoginClock(user.last_login_at) }}
                             </div>
                         </div>
                         <div class="agents-mobile__side" @click.stop>
@@ -448,6 +478,8 @@ export default {
             currentPage: 1,
             sortKey: '',
             sortAsc: true,
+            statusFilter: '',
+            onlineOnly: false,
             users: [],
             meta: { total: 0, last_page: 1, current_page: 1, per_page: 10 },
             statusLoading: null,
@@ -714,6 +746,12 @@ export default {
                 if (this.searchText) {
                     params.set('search', this.searchText);
                 }
+                if (this.statusFilter) {
+                    params.set('status', this.statusFilter);
+                }
+                if (this.onlineOnly) {
+                    params.set('online', '1');
+                }
 
                 const response = await fetch(`${API_ENDPOINTS.USERS}?${params.toString()}`, {
                     method: 'GET',
@@ -930,6 +968,30 @@ export default {
             });
         },
 
+        toggleStatusShortcut(status) {
+            this.statusFilter = this.statusFilter === status ? '' : status;
+            this.currentPage = 1;
+            this.fetchUsers();
+        },
+
+        toggleOnlineShortcut() {
+            this.onlineOnly = !this.onlineOnly;
+            this.currentPage = 1;
+            this.fetchUsers();
+        },
+
+        sortLatestLogin() {
+            if (this.sortKey === 'last_login_at' && !this.sortAsc) {
+                this.sortKey = '';
+                this.sortAsc = true;
+            } else {
+                this.sortKey = 'last_login_at';
+                this.sortAsc = false;
+            }
+            this.currentPage = 1;
+            this.fetchUsers();
+        },
+
         sortBy(key) {
             if (this.sortKey === key) {
                 this.sortAsc = !this.sortAsc;
@@ -963,11 +1025,37 @@ export default {
             return `https://www.google.com/maps/search/?api=1&query=${user.last_login_lat},${user.last_login_lng}`;
         },
 
+        parseLoginTime(timestamp) {
+            if (!timestamp) return null;
+            const raw = String(timestamp).trim();
+            let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+            if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) {
+                normalized += '+04:00';
+            }
+            const loginTime = new Date(normalized);
+            return Number.isNaN(loginTime.getTime()) ? null : loginTime;
+        },
+
+        formatLastLoginClock(timestamp) {
+            const loginTime = this.parseLoginTime(timestamp);
+            if (!loginTime) return 'Never';
+            const yearFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Dubai', year: 'numeric' });
+            const sameYear = yearFormat.format(loginTime) === yearFormat.format(new Date());
+            return loginTime.toLocaleString('en-US', {
+                timeZone: 'Asia/Dubai',
+                month: 'short',
+                day: 'numeric',
+                year: sameYear ? undefined : 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+            });
+        },
+
         formatLastLogin(timestamp) {
-            if (!timestamp) return 'Never';
+            const loginTime = this.parseLoginTime(timestamp);
+            if (!loginTime) return 'Never';
             
             const now = new Date();
-            const loginTime = new Date(timestamp);
             const diffMs = now - loginTime;
             const diffMins = Math.floor(diffMs / 60000);
             
@@ -980,18 +1068,18 @@ export default {
             const diffDays = Math.floor(diffHours / 24);
             if (diffDays < 7) return `${diffDays}d ago`;
             
-            return loginTime.toLocaleDateString('en-US', { 
-                month: 'short', 
+            return loginTime.toLocaleDateString('en-US', {
+                timeZone: 'Asia/Dubai',
+                month: 'short',
                 day: 'numeric'
             });
         },
 
         isUserOnline(user) {
-            if (!user.last_login_at) return false;
-            const lastLogin = new Date(user.last_login_at);
-            const now = new Date();
-            const diffMinutes = (now - lastLogin) / (1000 * 60);
-            return diffMinutes <= 15; // Online if logged in within last 15 minutes
+            const lastLogin = this.parseLoginTime(user.last_login_at);
+            if (!lastLogin) return false;
+            const diffMinutes = (Date.now() - lastLogin.getTime()) / (1000 * 60);
+            return diffMinutes >= 0 && diffMinutes <= 15;
         },
 
         /**
@@ -1219,6 +1307,36 @@ export default {
     font-size: 14px;
 }
 
+.agents-mobile__chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.agents-mobile__chips::-webkit-scrollbar {
+    display: none;
+}
+
+.agents-mobile__chip {
+    flex: 0 0 auto;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #efe6f6;
+    background: #fff;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.agents-mobile__chip.is-on {
+    background: #6b21a8;
+    border-color: #6b21a8;
+    color: #fff;
+}
+
 .agents-mobile__bar {
     display: flex;
     flex-direction: column;
@@ -1313,11 +1431,13 @@ export default {
     position: absolute;
     right: 0;
     bottom: 0;
-    width: 10px;
-    height: 10px;
+    z-index: 1;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: #22c55e;
     border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #bbf7d0;
 }
 
 .agents-mobile__body {
@@ -1362,6 +1482,31 @@ export default {
     background: #f4f5f7;
     color: #4b5563;
     font-weight: 500;
+}
+
+.agents-mobile__login {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    line-height: 1.3;
+}
+
+.agents-mobile__login.is-online {
+    color: #15803d;
+    font-weight: 700;
+}
+
+.agents-mobile__login-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 3px #dcfce7;
+    flex-shrink: 0;
 }
 
 .agents-mobile__side {
@@ -1636,7 +1781,18 @@ export default {
     }
     
     .pagination {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        max-width: 100%;
+        padding-bottom: 4px;
+    }
+
+    .users-list__pager {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+        padding-right: 56px;
     }
     
     .dropdown {

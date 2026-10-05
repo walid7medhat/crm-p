@@ -103,8 +103,13 @@ class UserController extends Controller
             }
             
             // Filter by status
-            if ($request->has('status')) {
+            if ($request->filled('status')) {
                 $query->where('status', $request->status);
+            }
+
+            if ($request->boolean('online')) {
+                $query->whereNotNull('last_login_at')
+                    ->where('last_login_at', '>=', now()->subMinutes(15));
             }
             
             // Filter by role

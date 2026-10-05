@@ -17,6 +17,7 @@ import 'vue-tel-input/vue-tel-input.css'
 import '../css/crm-phone-flags.css'
 
 import 'vue-select/dist/vue-select.css'
+import vSelect from 'vue-select'
 import '../css/vue-select-overrides.css'
 import '../css/form-placeholders.css'
 import '../css/kanban-layout.css'
@@ -519,16 +520,56 @@ app.mixin({
     }
   }
 })
-// vue-select (v-select, used with append-to-body across ~20 forms/modals) computes
-// its dropdown menu's position once when it opens and never re-tracks the trigger
-// afterwards, so scrolling any ancestor container (a modal body, the page, a
-// scrollable panel, ...) leaves the options list visually detached from its select.
-// There's no cheap way to keep every independent instance repositioned live, so
-// close the open dropdown instead — but ignore scrolls that happen *inside* the
-// dropdown's own option list, since scrolling through a long list is normal.
-// A tap near the bottom of a phone page focuses the vue-select search box, and
-// the browser scrolls that box into view. That scroll used to blur the field
-// immediately, so the menu looked like it never opened.
+// vue-select appends its menu to document.body and only measures the field once.
+// On a tablet the qualified-stage popup then shifts, so the options land below
+// the input. Keep the menu fixed to the field and raise it above the popup.
+function placeVueSelectMenu(dropdownList, component, width) {
+  const toggle = component?.$refs?.toggle
+  if (!toggle) return
+  const rect = toggle.getBoundingClientRect()
+  const viewport = window.visualViewport
+  const offsetTop = viewport ? viewport.offsetTop : 0
+  const offsetLeft = viewport ? viewport.offsetLeft : 0
+  const viewportHeight = viewport ? viewport.height : window.innerHeight
+  const spaceBelow = viewportHeight - rect.bottom
+  const openAbove = spaceBelow < 180 && rect.top > spaceBelow
+  dropdownList.style.position = 'fixed'
+  dropdownList.style.zIndex = '13000'
+  dropdownList.style.width = width
+  dropdownList.style.left = `${Math.max(8, rect.left + offsetLeft)}px`
+  dropdownList.style.right = 'auto'
+  dropdownList.style.margin = '0'
+  if (openAbove) {
+    dropdownList.style.top = 'auto'
+    dropdownList.style.bottom = `${Math.max(8, viewportHeight - rect.top + 4)}px`
+  } else {
+    dropdownList.style.bottom = 'auto'
+    dropdownList.style.top = `${rect.bottom + offsetTop}px`
+  }
+}
+
+vSelect.props.calculatePosition.default = function (dropdownList, component, { width }) {
+  const update = () => placeVueSelectMenu(dropdownList, component, width)
+  update()
+  requestAnimationFrame(update)
+  const onMove = () => update()
+  window.addEventListener('scroll', onMove, true)
+  window.addEventListener('resize', onMove)
+  const viewport = window.visualViewport
+  if (viewport) {
+    viewport.addEventListener('scroll', onMove)
+    viewport.addEventListener('resize', onMove)
+  }
+  return () => {
+    window.removeEventListener('scroll', onMove, true)
+    window.removeEventListener('resize', onMove)
+    if (viewport) {
+      viewport.removeEventListener('scroll', onMove)
+      viewport.removeEventListener('resize', onMove)
+    }
+  }
+}
+
 let ignoreSelectCloseUntil = 0
 document.addEventListener('pointerdown', (event) => {
   const target = event.target
@@ -543,6 +584,11 @@ window.addEventListener('scroll', (event) => {
   if (!openSelect) return
   const menu = document.querySelector('.vs__dropdown-menu')
   if (menu && (event.target === menu || menu.contains(event.target))) return
+  const toggle = openSelect.querySelector('.vs__dropdown-toggle')
+  if (!toggle) return
+  const rect = toggle.getBoundingClientRect()
+  const offScreen = rect.bottom < 8 || rect.top > window.innerHeight - 8
+  if (!offScreen) return
   const searchInput = openSelect.querySelector('.vs__search')
   if (searchInput) searchInput.blur()
 }, true)
