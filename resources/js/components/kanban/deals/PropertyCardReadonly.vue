@@ -936,7 +936,7 @@ async function deleteDocument(doc, type) {
       if (type === 'payment_proof') documentTypeForApi = 'payment_proof'
       if (type === 'spa_document') documentTypeForApi = 'spa_document'
 
-      await axios.delete('/api/deals/property-document', {
+      await axios.delete('/deals/property-document', {
         data: {
           deal_id: props.dealId,
           property_id: props.property?.id ?? null,
@@ -985,7 +985,7 @@ async function deleteDocument(doc, type) {
         }
       }
     } else if (doc.id && /^\d+$/.test(String(doc.id))) {
-      await axios.delete(`/api/deals/documents/${doc.id}`)
+      await axios.delete(`/deals/documents/${doc.id}`)
     } else {
       throw new Error('Missing identifier for delete')
     }
@@ -1127,7 +1127,7 @@ async function saveEdit() {
       }
     })
     
-    const response = await axios.post(`/api/deals/${props.dealId}/properties/${props.property.id}`, formData, {
+    const response = await axios.post(`/deals/${props.dealId}/properties/${props.property.id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     
