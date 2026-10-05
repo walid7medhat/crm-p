@@ -82,6 +82,7 @@
     <section class="sa-panel">
       <header class="sa-panel__head">
         <h6 class="sa-title">Announcements</h6>
+        <router-link to="/announcements" class="sa-btn sa-btn--ghost">Preview sales page</router-link>
       </header>
 
       <p v-if="loading" class="sa-empty">Loading announcements...</p>
@@ -548,6 +549,8 @@ onUnmounted(clearLocalPreviews)
 }
 
 .sa-btn {
+  display: inline-flex;
+  align-items: center;
   min-height: 40px;
   padding: 0 14px;
   border-radius: 10px;
@@ -555,6 +558,7 @@ onUnmounted(clearLocalPreviews)
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
   touch-action: manipulation;
 }
 
