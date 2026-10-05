@@ -1154,6 +1154,8 @@ const mainMenuItems = computed(() => {
     items.push({ path: '/sales-intelligence', label: 'AI Sales Intelligence', iconSrc: insightsIcon.value });
     items.push({ path: '/investment-analysis', label: 'Investment Analysis', iconSrc: insightsIcon.value });
     items.push({ path: '/settings/city-investments', label: 'City Investments', iconSrc: projectsIcon.value });
+   items.push({ path: '/lead-pool-report', label: 'Lead Pool Assignments', iconSrc: insightsIcon.value });
+
   }
 
   if (isAdmin.value) {

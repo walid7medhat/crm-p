@@ -119,6 +119,7 @@ const SETTINGS_PREFIXES = [
   '/add-role',
   '/lead-reports',
   '/lead-source-report',
+  '/lead-pool-report',
   '/agent-performance',
   '/sales-intelligence',
   '/investment-analysis',
@@ -336,6 +337,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
     const insightPaths = [
       '/lead-reports',
       '/lead-source-report',
+      '/lead-pool-report',
       '/sales-intelligence',
       '/investment-analysis',
       '/settings/city-investments',

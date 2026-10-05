@@ -778,6 +778,7 @@ Route::prefix('leads')->group(function(){
                 ->middleware('permission:view-team-performance');
             Route::get('/leads-by-source', [ReportController::class, 'leadsBySourceReport']);
             Route::get('/leads-by-source/export', [ReportController::class, 'leadsBySourceReportExport']);
+            Route::get('/lead-pool-assignments', [ReportController::class, 'leadPoolAssignmentsReport']);
         });
 });
   // =================sources=============

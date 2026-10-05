@@ -300,6 +300,105 @@ class ReportController extends Controller
     }
 
     /**
+     * Lead Pool self-assignments in a date range (by when the lead was taken —
+     * lead_pool_assignments.assigned_at): per user, how many leads they took from the
+     * Lead Pool and which stage each of those leads is in NOW, plus the leads themselves.
+     * super_admin only (for now).
+     */
+    public function leadPoolAssignmentsReport(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user->hasRole('super_admin')) {
+                return ApiResponse::error('Unauthorized - Only super admins can access this report', 403);
+            }
+
+            $from = $request->filled('date_from') ? Carbon::parse($request->date_from)->startOfDay() : null;
+            $to = $request->filled('date_to') ? Carbon::parse($request->date_to)->endOfDay() : null;
+
+            $rows = DB::table('lead_pool_assignments as a')
+                ->join('users as u', 'u.id', '=', 'a.user_id')
+                // Deleted (archived) leads still count — they were taken; shown as "Deleted".
+                ->leftJoin('leads as l', 'l.id', '=', 'a.lead_id')
+                ->leftJoin('stages as s', 's.id', '=', 'l.stage_id')
+                ->when($from, fn ($q) => $q->where('a.assigned_at', '>=', $from))
+                ->when($to, fn ($q) => $q->where('a.assigned_at', '<=', $to))
+                ->orderBy('a.assigned_at', 'desc')
+                ->get([
+                    'a.user_id', 'a.lead_id', 'a.assigned_at',
+                    'u.name as user_name', 'u.display_name as user_display_name', 'u.avatar as user_avatar', 'u.status as user_status',
+                    'l.lead_name', 'l.deleted_at as lead_deleted_at', 'l.responsible_person_id',
+                    's.id as stage_id', 's.name as stage_name', 's.color as stage_color', 's.order as stage_order',
+                ]);
+
+            $stageOf = function ($row) {
+                if (! $row->lead_name && ! $row->stage_id) {
+                    return ['id' => 'deleted', 'name' => 'Deleted', 'color' => '#94a3b8', 'order' => 999];
+                }
+                if ($row->lead_deleted_at) {
+                    return ['id' => 'deleted', 'name' => 'Deleted', 'color' => '#94a3b8', 'order' => 999];
+                }
+
+                return [
+                    'id' => $row->stage_id ?? 'none',
+                    'name' => $row->stage_name ?? 'No stage',
+                    'color' => $row->stage_color ?: '#cbd5e1',
+                    'order' => (int) ($row->stage_order ?? 998),
+                ];
+            };
+
+            $stages = [];
+            $users = [];
+            foreach ($rows as $row) {
+                $stage = $stageOf($row);
+                $stages[$stage['id']] = $stage;
+
+                $uid = (int) $row->user_id;
+                $users[$uid] ??= [
+                    'user_id' => $uid,
+                    'name' => $row->user_display_name ?: $row->user_name,
+                    'avatar' => $row->user_avatar ? asset('storage/' . $row->user_avatar) : null,
+                    'active' => $row->user_status === 'active',
+                    'total' => 0,
+                    'stages' => [],
+                    'leads' => [],
+                ];
+                $users[$uid]['total']++;
+                $users[$uid]['stages'][$stage['id']] = ($users[$uid]['stages'][$stage['id']] ?? 0) + 1;
+                $users[$uid]['leads'][] = [
+                    'id' => (int) $row->lead_id,
+                    'lead_name' => $row->lead_name,
+                    'assigned_at' => Carbon::parse($row->assigned_at)->toISOString(),
+                    'stage_id' => $stage['id'],
+                    'stage_name' => $stage['name'],
+                    'stage_color' => $stage['color'],
+                    // Lead may have moved on to someone else since it was taken.
+                    'still_with_user' => (int) $row->responsible_person_id === $uid,
+                ];
+            }
+
+            $stages = collect($stages)->sortBy('order')->values()->all();
+            $users = collect($users)->sortByDesc('total')->values()->all();
+
+            $totals = ['total' => count($rows), 'stages' => []];
+            foreach ($users as $u) {
+                foreach ($u['stages'] as $stageId => $count) {
+                    $totals['stages'][$stageId] = ($totals['stages'][$stageId] ?? 0) + $count;
+                }
+            }
+
+            return ApiResponse::success([
+                'stages' => $stages,
+                'users' => $users,
+                'totals' => $totals,
+                'filters' => ['date_from' => $request->date_from, 'date_to' => $request->date_to],
+            ], 'Lead pool assignments report retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to generate report: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * نفس تقرير المصادر لكن كملف اكسل قابل للتحميل.
      */
     public function leadsBySourceReportExport(Request $request)
