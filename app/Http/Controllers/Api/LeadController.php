@@ -318,7 +318,8 @@ class LeadController extends Controller
                     $subordinatesIds = $user->leadScopeUserIds();
                     // Current responsible person only — a lead reassigned outside the
                     // team must stop showing up here just because someone on the team added it.
-                    $leadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
+                    // (+ branch_admin: unassigned New Lead leads — User::applyLeadResponsibleScope.)
+                    $user->applyLeadResponsibleScope($leadsQuery, array_merge($subordinatesIds, [$user->id]));
                 } else {
                     // Once reassigned, a lead a sales agent merely added no longer belongs to
                     // them — visibility is by current responsible person only.

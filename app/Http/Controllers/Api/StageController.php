@@ -268,7 +268,8 @@ class StageController extends Controller
 
         // Listing-team managers and sales always see the first stage (New Lead) — they create
         // leads straight into it — even when stage visibility hides it for their role.
-        if ($user->hasAnyRole(['manager', 'sales']) && $user->is_listing_team) {
+        // branch_admin too: they see unassigned (#1) New Lead leads (User::unassignedNewLeadStageId).
+        if (($user->hasAnyRole(['manager', 'sales']) && $user->is_listing_team) || $user->hasRole('branch_admin')) {
             $newLeadStageId = Stage::where('stage_type', 'lead')->orderBy('order')->value('id');
             if ($newLeadStageId && !in_array($newLeadStageId, $visibleStageIds)) {
                 $visibleStageIds[] = $newLeadStageId;
@@ -666,7 +667,8 @@ class StageController extends Controller
             $subordinatesIds = $user->leadScopeUserIds();
             // Current responsible person only — a lead reassigned outside the team
             // must stop showing up here just because someone on the team added it.
-            $baseLeadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
+            // (+ branch_admin: unassigned New Lead leads — User::applyLeadResponsibleScope.)
+            $user->applyLeadResponsibleScope($baseLeadsQuery, array_merge($subordinatesIds, [$user->id]));
             // Reverted leads stay hidden from everyone below admin level (incl. sales with
             // show-branch-leads), same as before.
             if (! $user->hasAnyRole(['admin', 'branch_admin'])) {
@@ -878,7 +880,8 @@ class StageController extends Controller
                 $subordinatesIds = $user->leadScopeUserIds();
                 // Current responsible person only — a lead reassigned outside the team
                 // must stop showing up here just because someone on the team added it.
-                $leadsQuery->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
+                // (+ branch_admin: unassigned New Lead leads — User::applyLeadResponsibleScope.)
+                $user->applyLeadResponsibleScope($leadsQuery, array_merge($subordinatesIds, [$user->id]));
                 if (! $user->hasAnyRole(['admin', 'branch_admin'])) {
                     $leadsQuery->whereNull('revert');
                 }
@@ -1365,7 +1368,7 @@ public function getOffices()
                     // team must stop showing up here just because someone on the team
                     // added it.
                     $subordinatesIds = $user->leadScopeUserIds();
-                    $leadsQuery->whereIn('responsible_person_id', $subordinatesIds);
+                    $user->applyLeadResponsibleScope($leadsQuery, $subordinatesIds);
                 } else {
                     // Once reassigned, a lead a sales agent merely added no longer belongs to
                     // them — visibility is by current responsible person only.

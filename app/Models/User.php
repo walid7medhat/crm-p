@@ -328,6 +328,47 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             : $this->getAllSubordinatesIds();
     }
 
+    /**
+     * branch_admin also sees New Lead (first lead stage) leads whose responsible person is
+     * #1 (super admin = not handed out yet), on top of their branch's leads. Returns that
+     * stage id, or null when the extra doesn't apply to this user.
+     */
+    public function unassignedNewLeadStageId(): ?int
+    {
+        if (! $this->hasRole('branch_admin')) {
+            return null;
+        }
+
+        static $newLeadStageId = false;
+        if ($newLeadStageId === false) {
+            $newLeadStageId = Stage::where('stage_type', 'lead')->orderBy('order')->value('id');
+        }
+
+        return $newLeadStageId ? (int) $newLeadStageId : null;
+    }
+
+    /**
+     * Lead visibility by responsible person ($scopeIds), plus the branch_admin extra above.
+     * Use instead of a plain whereIn('responsible_person_id', $scopeIds).
+     */
+    public function applyLeadResponsibleScope($leadsQuery, array $scopeIds): void
+    {
+        $newLeadStageId = $this->unassignedNewLeadStageId();
+        if (! $newLeadStageId) {
+            $leadsQuery->whereIn('responsible_person_id', $scopeIds);
+
+            return;
+        }
+
+        $leadsQuery->where(function ($q) use ($scopeIds, $newLeadStageId) {
+            $q->whereIn('responsible_person_id', $scopeIds)
+                ->orWhere(function ($q) use ($newLeadStageId) {
+                    $q->where('responsible_person_id', 1)
+                        ->where('stage_id', $newLeadStageId);
+                });
+        });
+    }
+
     public function canViewLead(Lead $lead): bool
     {
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
@@ -370,6 +411,12 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             // Current responsible person only — matches LeadController::index()'s
             // "reassigned leads no longer belong to whoever merely added them" rule.
             return $lead->responsible_person_id === $this->id;
+        }
+
+        // branch_admin: also unassigned (#1) New Lead leads (applyLeadResponsibleScope()).
+        $newLeadStageId = $this->unassignedNewLeadStageId();
+        if ($newLeadStageId && (int) $lead->responsible_person_id === 1 && (int) $lead->stage_id === $newLeadStageId) {
+            return true;
         }
 
         // branch_admin / show-branch-leads: whole branch (see getBranchAdminSubordinateIds()).
