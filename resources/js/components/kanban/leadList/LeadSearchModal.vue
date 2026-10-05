@@ -126,7 +126,37 @@
 
                         <div class="col-md-6 mt-3">
 
-                            <label class="form-label-custom">{{ field.label }}</label>
+                            <label v-if="field.id === 'inactive_sales'" class="form-label-custom d-flex align-items-center gap-2">
+
+                                <span>{{ field.label }}</span>
+
+                                <button
+
+                                    type="button"
+
+                                    class="inactive-all-btn"
+
+                                    :class="{ 'inactive-all-btn--on': inactiveAllSelected }"
+
+                                    :aria-pressed="inactiveAllSelected"
+
+                                    title="Search the leads of every inactive user"
+
+                                    @click.stop.prevent="toggleInactiveAll"
+
+                                    @mousedown.stop
+
+                                >
+
+                                    <iconify-icon :icon="inactiveAllSelected ? 'lucide:check' : 'lucide:users'"></iconify-icon>
+
+                                    All Inactive
+
+                                </button>
+
+                            </label>
+
+                            <label v-else class="form-label-custom">{{ field.label }}</label>
 
                             <button
 
@@ -492,7 +522,13 @@
 
                                 v-else-if="field.type === 'select' && field.id === 'inactive_sales'"
 
-                                v-model="form.inactiveSales"
+                                :model-value="inactiveSalesPickedIds"
+
+                                @update:model-value="setInactiveSalesPicked"
+
+                                deselect-from-dropdown
+
+                                :placeholder="inactiveAllSelected ? 'All inactive selected' : 'Search inactive sales'"
 
                                 :options="inactiveSalesOptions"
 
@@ -500,13 +536,11 @@
 
                                 label="text"
 
-                                placeholder="Search inactive sales"
-
                                 multiple
 
                                 :close-on-select="false"
 
-                                :clearable="hasValue(form.inactiveSales)"
+                                :clearable="inactiveSalesPickedIds.length > 0"
 
                                 append-to-body
 
@@ -540,15 +574,7 @@
 
                                 <template #option="option">
 
-                                    <div v-if="option.isAll" class="lead-rp-opt d-flex align-items-center gap-2 fw-semibold">
-
-                                        <iconify-icon icon="lucide:users" class="lead-rp-opt-avatar d-inline-flex align-items-center justify-content-center"></iconify-icon>
-
-                                        <span class="user-item-name">{{ option.text }}</span>
-
-                                    </div>
-
-                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
 
                                         <img
 
@@ -576,6 +602,17 @@
 
                                         </div>
 
+                                        <!-- Picked: clicking it again removes it (deselect-from-dropdown). -->
+                                        <iconify-icon
+
+                                            v-if="inactiveSalesPickedIds.includes(option.value)"
+
+                                            icon="lucide:check"
+
+                                            class="inactive-picked-check flex-shrink-0"
+
+                                        ></iconify-icon>
+
                                     </div>
 
                                 </template>
@@ -584,11 +621,9 @@
 
                                     <span class="lead-rp-chip">
 
-                                        <iconify-icon v-if="option.isAll || option.value === 'all'" icon="lucide:users"></iconify-icon>
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
 
-                                        <img v-else :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
-
-                                        <span>{{ option.isAll || option.value === 'all' ? 'All Inactive' : option.text }}</span>
+                                        <span>{{ option.text }}</span>
 
                                     </span>
 
@@ -1030,7 +1065,37 @@
 
                         <div class="col-md-6 mt-3">
 
-                            <label class="form-label-custom">{{ field.label }}</label>
+                            <label v-if="field.id === 'inactive_sales'" class="form-label-custom d-flex align-items-center gap-2">
+
+                                <span>{{ field.label }}</span>
+
+                                <button
+
+                                    type="button"
+
+                                    class="inactive-all-btn"
+
+                                    :class="{ 'inactive-all-btn--on': inactiveAllSelected }"
+
+                                    :aria-pressed="inactiveAllSelected"
+
+                                    title="Search the leads of every inactive user"
+
+                                    @click.stop.prevent="toggleInactiveAll"
+
+                                    @mousedown.stop
+
+                                >
+
+                                    <iconify-icon :icon="inactiveAllSelected ? 'lucide:check' : 'lucide:users'"></iconify-icon>
+
+                                    All Inactive
+
+                                </button>
+
+                            </label>
+
+                            <label v-else class="form-label-custom">{{ field.label }}</label>
 
                             <button
 
@@ -1396,7 +1461,13 @@
 
                                 v-else-if="field.type === 'select' && field.id === 'inactive_sales'"
 
-                                v-model="form.inactiveSales"
+                                :model-value="inactiveSalesPickedIds"
+
+                                @update:model-value="setInactiveSalesPicked"
+
+                                deselect-from-dropdown
+
+                                :placeholder="inactiveAllSelected ? 'All inactive selected' : 'Search inactive sales'"
 
                                 :options="inactiveSalesOptions"
 
@@ -1404,13 +1475,11 @@
 
                                 label="text"
 
-                                placeholder="Search inactive sales"
-
                                 multiple
 
                                 :close-on-select="false"
 
-                                :clearable="hasValue(form.inactiveSales)"
+                                :clearable="inactiveSalesPickedIds.length > 0"
 
                                 append-to-body
 
@@ -1444,15 +1513,7 @@
 
                                 <template #option="option">
 
-                                    <div v-if="option.isAll" class="lead-rp-opt d-flex align-items-center gap-2 fw-semibold">
-
-                                        <iconify-icon icon="lucide:users" class="lead-rp-opt-avatar d-inline-flex align-items-center justify-content-center"></iconify-icon>
-
-                                        <span class="user-item-name">{{ option.text }}</span>
-
-                                    </div>
-
-                                    <div v-else class="lead-rp-opt d-flex align-items-center gap-2">
+                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
 
                                         <img
 
@@ -1480,6 +1541,17 @@
 
                                         </div>
 
+                                        <!-- Picked: clicking it again removes it (deselect-from-dropdown). -->
+                                        <iconify-icon
+
+                                            v-if="inactiveSalesPickedIds.includes(option.value)"
+
+                                            icon="lucide:check"
+
+                                            class="inactive-picked-check flex-shrink-0"
+
+                                        ></iconify-icon>
+
                                     </div>
 
                                 </template>
@@ -1488,11 +1560,9 @@
 
                                     <span class="lead-rp-chip">
 
-                                        <iconify-icon v-if="option.isAll || option.value === 'all'" icon="lucide:users"></iconify-icon>
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
 
-                                        <img v-else :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
-
-                                        <span>{{ option.isAll || option.value === 'all' ? 'All Inactive' : option.text }}</span>
+                                        <span>{{ option.text }}</span>
 
                                     </span>
 
@@ -3871,16 +3941,43 @@ let inactiveSalesLoaded = false
 // user the viewer can search (App\Support\InactiveSales).
 const INACTIVE_ALL = 'all'
 
-const inactiveSalesOptions = computed(() => {
-    const people = inactiveSalesList.value.map(person => ({
-        value: Number(person.id),
-        text: person.name,
-        avatar: person.avatar,
-        parent_name: person.parent_name,
-    }))
-    return people.length
-        ? [{ value: INACTIVE_ALL, text: 'All Inactive', isAll: true }, ...people]
-        : people
+const inactiveSalesOptions = computed(() => inactiveSalesList.value.map(person => ({
+    value: Number(person.id),
+    text: person.name,
+    avatar: person.avatar,
+    parent_name: person.parent_name,
+})))
+
+/** "All Inactive" is a small toggle next to the field title, not a select option. */
+const inactiveAllSelected = computed(() => normalizeInactiveSelection(form.value.inactiveSales)[0] === INACTIVE_ALL)
+
+/** The select shows picked people only ("all" lives in the toggle). */
+const inactiveSalesPickedIds = computed(() =>
+    inactiveAllSelected.value ? [] : normalizeResponsibleIds(form.value.inactiveSales)
+)
+
+function setInactiveSalesPicked(ids) {
+    form.value.inactiveSales = normalizeResponsibleIds(ids)
+}
+
+function toggleInactiveAll() {
+    form.value.inactiveSales = inactiveAllSelected.value ? [] : [INACTIVE_ALL]
+}
+
+// Unselecting every inactive user (or turning "All Inactive" off) drops that filter from
+// the active search right away, like Source — no extra "Search" click. When it was the
+// only filter, the search is cleared entirely.
+watch(() => normalizeInactiveSelection(form.value.inactiveSales).length, (len, prevLen) => {
+    if (hydratingFromQuery.value || len > 0 || !prevLen) return
+
+    const searchHasInactive = normalizeInactiveSelection(props.currentQuery?.inactive_person_id).length > 0
+    if (!searchHasInactive) return
+
+    if (isFormEmpty()) {
+        emit('search', { query: null, activePill: null, activeFilters: [], keepOpen: true })
+    } else {
+        applySearch({ keepOpen: true })
+    }
 })
 
 /** ['all'] when "All Inactive" is picked, otherwise the picked user ids. */
@@ -3890,16 +3987,6 @@ function normalizeInactiveSelection(value) {
     return normalizeResponsibleIds(list)
 }
 
-// "All Inactive" and single names don't mix: picking All clears the names, picking a
-// name clears All.
-watch(() => form.value.inactiveSales, (next, prev) => {
-    const list = Array.isArray(next) ? next : []
-    if (!list.includes(INACTIVE_ALL) || list.length === 1) return
-    const prevList = Array.isArray(prev) ? prev : []
-    form.value.inactiveSales = prevList.includes(INACTIVE_ALL)
-        ? list.filter(v => v !== INACTIVE_ALL)
-        : [INACTIVE_ALL]
-})
 
 async function loadInactiveSales(force = false) {
     if (!canUseInactiveSales.value) return
@@ -5468,7 +5555,7 @@ async function applySearch(options = {}) {
 
                     field.formKey === 'responsible' ? personOptions.value :
 
-                    field.formKey === 'inactiveSales' ? inactiveSalesOptions.value :
+                    field.formKey === 'inactiveSales' ? [{ value: 'all', text: 'All Inactive' }, ...inactiveSalesOptions.value] :
 
                     field.formKey === 'branchSource' ? branchSourceOptions.value :
 
@@ -6869,6 +6956,44 @@ onBeforeUnmount(() => {
 .vs__dropdown-option--highlight .source-opt--child::before,
 .vs__dropdown-option--selected .source-opt--child::before {
     border-top-color: rgba(255, 255, 255, 0.7);
+}
+
+/* "All Inactive" toggle next to the Inactive Sales title. */
+.inactive-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border: 1px solid #d6cfe0;
+    border-radius: 999px;
+    background: #fff;
+    color: #5b4f6e;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.inactive-all-btn:hover {
+    border-color: #733e87;
+    color: #733e87;
+}
+
+.inactive-all-btn--on,
+.inactive-all-btn--on:hover {
+    background: #733e87;
+    border-color: #733e87;
+    color: #fff;
+}
+
+.inactive-picked-check {
+    font-size: 16px;
+    color: #733e87;
+}
+
+.vs__dropdown-option--highlight .inactive-picked-check {
+    color: inherit;
 }
 
 /* Website → Micro Websites → each micro site: one level deeper. */
