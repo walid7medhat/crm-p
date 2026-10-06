@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserResource extends JsonResource
 {
-    protected static function formatRoleLabel(?string $role): ?string
+    public static function formatRoleLabel(?string $role): ?string
     {
         if ($role === null || $role === '') {
             return null;

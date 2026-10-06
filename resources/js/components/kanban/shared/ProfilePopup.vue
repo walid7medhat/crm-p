@@ -110,6 +110,21 @@
                     >
                     <span v-else class="profile-contact-value">{{ userData.phone || '—' }}</span>
                   </div>
+                  <!-- Reports To = direct parent; Manager = nearest user above with the
+                       manager role (both from GET /users/{id}). -->
+                  <div class="profile-contact-item">
+                    <span class="profile-contact-label">Reports To</span>
+                    <span class="profile-contact-value profile-contact-readonly">{{ userData.reports_to?.name || userData.parent_name || '—' }}</span>
+                  </div>
+                  <div class="profile-contact-item">
+                    <span class="profile-contact-label">Manager</span>
+                    <span class="profile-contact-value profile-contact-readonly">{{ userData.manager?.name || '—' }}</span>
+                  </div>
+                  <!-- Same rule as the navbar profile's Branch (userBranchName). -->
+                  <div class="profile-contact-item">
+                    <span class="profile-contact-label">Branch</span>
+                    <span class="profile-contact-value profile-contact-readonly">{{ userData.office_name || userData.admin_parent_name || userData.branch || '—' }}</span>
+                  </div>
                 </div>
               </section>
 

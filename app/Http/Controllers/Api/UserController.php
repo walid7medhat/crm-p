@@ -368,8 +368,35 @@ public function show(User $user): JsonResponse
             'employeeProfile.department',
         ], $ancestorChain));
 
+        // Profile popups: "Reports To" = direct parent, "Manager" = nearest user above
+        // with the manager role (walks the chain preloaded above — no extra queries).
+        // Only here, not in UserResource, which is also used for long user lists.
+        $manager = null;
+        $current = $user->parent;
+        for ($i = 0; $current && $i < 8; $i++) {
+            if ($current->roles->contains('name', 'manager')) {
+                $manager = $current;
+                break;
+            }
+            $current = $current->parent;
+        }
+        $parent = $user->parent;
+
         return ApiResponse::success(
-            new UserResource($user),
+            array_merge((new UserResource($user))->resolve(request()), [
+                'reports_to' => $parent ? [
+                    'id' => $parent->id,
+                    'name' => User::resolveDisplayName($parent),
+                    'role' => UserResource::formatRoleLabel($parent->roles->first()?->name),
+                    'avatar' => $parent->avatar ? asset('storage/' . $parent->avatar) : null,
+                ] : null,
+                'manager' => $manager ? [
+                    'id' => $manager->id,
+                    'name' => User::resolveDisplayName($manager),
+                    'role' => UserResource::formatRoleLabel($manager->roles->first()?->name),
+                    'avatar' => $manager->avatar ? asset('storage/' . $manager->avatar) : null,
+                ] : null,
+            ]),
             'User retrieved successfully'
         );
     } catch (\Exception $e) {

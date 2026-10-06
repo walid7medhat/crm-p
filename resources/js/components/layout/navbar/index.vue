@@ -625,7 +625,12 @@
                         </div>
                         <div class="profile-contact-item" v-if="!isShowOnlyListing">
                           <span class="profile-contact-label">Report To</span>
-                          <span class="profile-contact-value profile-contact-readonly">{{ user && user.parent_name ? user.parent_name : '—' }}</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ (user && (user.reports_to?.name || user.parent_name)) || '—' }}</span>
+                        </div>
+                        <!-- Manager: nearest user above with the manager role (GET /users/{id}). -->
+                        <div class="profile-contact-item" v-if="!isShowOnlyListing">
+                          <span class="profile-contact-label">Manager</span>
+                          <span class="profile-contact-value profile-contact-readonly">{{ (user && user.manager?.name) || '—' }}</span>
                         </div>
                         <div class="profile-contact-item" v-if="!isShowOnlyListing">
                           <span class="profile-contact-label">Branch</span>
