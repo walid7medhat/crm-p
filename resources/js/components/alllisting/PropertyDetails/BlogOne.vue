@@ -224,7 +224,7 @@
                 </button>
                   <!-- Only present for the owner/super_admin/admin/manager(listing team) — see
                        ListingResource's $canSeeStatus; null for everyone else. -->
-                  <button class="btn btn-secondary" v-if="property.status" >
+                  <button class="btn btn-secondary" v-if="property.status && !needsApproval" >
                  {{ property.status }}
                 </button>
                   <button class="btn btn-warning" v-if="needsApproval">
