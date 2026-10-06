@@ -500,38 +500,12 @@ class StageController extends Controller
                 ];
             }
         } else {
-            // One ranked pass for every stage. The old per-stage ORDER BY COALESCE
-            // could not use an index, so each stage re-sorted its own leads and the
-            // board waited on all of them before the first cards could paint.
-            $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
-            $orderOneList = implode(',', array_map('intval', $orderOneStageIds ?: [0]));
-            $rankedSql = "
-                ROW_NUMBER() OVER (
-                    PARTITION BY stage_id
-                    ORDER BY
-                        CASE WHEN stage_id IN ({$orderOneList}) THEN created_at END DESC,
-                        CASE WHEN stage_id IN ({$orderOneList}) THEN id END DESC,
-                        COALESCE(bitrix24_last_activity_at, created_at) DESC
-                ) as rn
-            ";
-
-            $rankedQuery = (clone $baseLeadsQuery)
-                ->whereIn('stage_id', $stageIds)
-                ->select('leads.id', 'leads.stage_id')
-                ->selectRaw($rankedSql);
-
-            $rankedRows = DB::query()->fromSub($rankedQuery, 'ranked_leads')
-                ->where('rn', '<=', $perPage + 1)
-                ->orderBy('rn')
-                ->get(['id', 'stage_id', 'rn']);
-
-            $idsByStage = [];
-            foreach ($stages as $stage) {
-                $idsByStage[$stage->id] = $rankedRows
-                    ->where('stage_id', $stage->id)
-                    ->pluck('id')
-                    ->all();
-            }
+            // First page only. A window over every lead sorts the whole table
+            // before any card can be returned. Each stage keeps the same order
+            // as getMoreStageLeads(); the sort index stops after perPage + 1 rows.
+            $idsByStage = $this->kanbanStageSortIndexExists()
+                ? $this->firstPageLeadIdsByStage($baseLeadsQuery, $stages, $perPage + 1)
+                : $this->firstPageLeadIdsByWindow($baseLeadsQuery, $stages, $stageOrderById, $perPage + 1);
 
             $allIds = collect($idsByStage)->flatten()->unique()->values()->all();
             $leadsById = empty($allIds)
@@ -661,6 +635,99 @@ class StageController extends Controller
         } catch (\Exception $e) {
             return ApiResponse::error($e->getMessage());
         }
+    }
+
+    /**
+     * True once the kanban sort index exists. Until then the board keeps the
+     * single window query, which is slower but does not scan each stage separately.
+     */
+    private function kanbanStageSortIndexExists(): bool
+    {
+        static $exists = null;
+        if ($exists === true) {
+            return true;
+        }
+
+        try {
+            $rows = DB::select("SHOW INDEX FROM leads WHERE Key_name = 'leads_stage_kanban_sort_idx'");
+            $exists = $rows !== [];
+        } catch (\Throwable $e) {
+            $exists = false;
+        }
+
+        return $exists;
+    }
+
+    /**
+     * Top ids per stage, same order as getMoreStageLeads().
+     * Order 1: created_at DESC, id DESC. Every other stage: COALESCE(activity, created_at) DESC.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $baseLeadsQuery
+     * @param  iterable<int, \App\Models\Stage>  $stages
+     * @return array<int, array<int>>
+     */
+    private function firstPageLeadIdsByStage($baseLeadsQuery, $stages, int $limit): array
+    {
+        $idsByStage = [];
+        foreach ($stages as $stage) {
+            $query = (clone $baseLeadsQuery)
+                ->where('leads.stage_id', $stage->id)
+                ->reorder()
+                ->select('leads.id');
+
+            if ((int) $stage->order === 1) {
+                $query->orderBy('leads.created_at', 'desc')->orderBy('leads.id', 'desc');
+            } else {
+                $query->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+            }
+
+            $idsByStage[$stage->id] = $query->limit($limit)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+
+        return $idsByStage;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder  $baseLeadsQuery
+     * @param  iterable<int, \App\Models\Stage>  $stages
+     * @param  \Illuminate\Support\Collection<int, mixed>  $stageOrderById
+     * @return array<int, array<int>>
+     */
+    private function firstPageLeadIdsByWindow($baseLeadsQuery, $stages, $stageOrderById, int $limit): array
+    {
+        $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
+        $orderOneList = implode(',', array_map('intval', $orderOneStageIds ?: [0]));
+        $stageIds = collect($stages)->pluck('id')->all();
+        $rankedSql = "
+            ROW_NUMBER() OVER (
+                PARTITION BY stage_id
+                ORDER BY
+                    CASE WHEN stage_id IN ({$orderOneList}) THEN created_at END DESC,
+                    CASE WHEN stage_id IN ({$orderOneList}) THEN id END DESC,
+                    COALESCE(bitrix24_last_activity_at, created_at) DESC
+            ) as rn
+        ";
+
+        $rankedQuery = (clone $baseLeadsQuery)
+            ->whereIn('stage_id', $stageIds)
+            ->select('leads.id', 'leads.stage_id')
+            ->selectRaw($rankedSql);
+
+        $rankedRows = DB::query()->fromSub($rankedQuery, 'ranked_leads')
+            ->where('rn', '<=', $limit)
+            ->orderBy('rn')
+            ->get(['id', 'stage_id', 'rn']);
+
+        $idsByStage = [];
+        foreach ($stages as $stage) {
+            $idsByStage[$stage->id] = $rankedRows
+                ->where('stage_id', $stage->id)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        return $idsByStage;
     }
 
     /**
