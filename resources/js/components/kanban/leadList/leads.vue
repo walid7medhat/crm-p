@@ -1136,25 +1136,25 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject, defineAsyncComponent } from 'vue'
 import draggable from 'vuedraggable'
 import { useRoute, useRouter } from 'vue-router'
 
 import avatar1 from '@/assets/images/users/user1.png'
 import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
-import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import LeadSourceMark from './LeadSourceMark.vue'
-import StageChangeReasonModal from './StageChangeReasonModal.vue'
-import ConvertLeadModal from './ConvertLeadModal.vue'
-import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 import BrandLoader from '@/components/layout/BrandLoader.vue'
+const DuplicateLeadsModal = defineAsyncComponent(() => import('./DuplicateLeadsModal.vue'))
+const StageChangeReasonModal = defineAsyncComponent(() => import('./StageChangeReasonModal.vue'))
+const ConvertLeadModal = defineAsyncComponent(() => import('./ConvertLeadModal.vue'))
+const ProfilePopup = defineAsyncComponent(() => import('../shared/ProfilePopup.vue'))
 
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
-import { peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
+import { peekLeadBoardPrefetchPromise, peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
@@ -2433,7 +2433,9 @@ const executeFetchLeads = async (options = {}) => {
 
         if (generation !== fetchGeneration) return
 
-        applyStagesWithLeadsResponse(response, params)
+        if (paintedPrefetchResponse !== response) {
+            applyStagesWithLeadsResponse(response, params)
+        }
         saveColumnsToCache()
         
     } catch (err) {
@@ -2527,19 +2529,31 @@ function loadCachedColumns() {
 // Paint a saved board on the first render. Reading it in onMounted is one
 // frame too late, so the loader flashes even when the cards are already here.
 const hadCachedBoard = loadCachedColumns()
-// Same for a prefetch that already resolved: onMounted is one frame too late.
-// Peek only — the request stays owned by the later fetchLeads() call.
+// A resolved prefetch is applied here, before the first render. An in-flight
+// one is applied on the microtask that delivers it, still owned by fetchLeads().
 let paintedSettledPrefetch = false
+let paintedPrefetchResponse = null
 if (!hadCachedBoard) {
     const earlyParams = {
         per_page: leadsPerPage.value,
         ...buildLeadSearchApiParams(effectiveSearchParams.value),
     }
-    const settled = peekSettledLeadBoardPrefetch(earlyParams)
-    if (settled) {
-        applyStagesWithLeadsResponse(settled, earlyParams)
+    const paintPrefetchedBoard = (response) => {
+        if (!response || paintedPrefetchResponse === response) return
+        if (hadCachedBoard || fetchGeneration !== 0) return
+        paintedPrefetchResponse = response
+        applyStagesWithLeadsResponse(response, earlyParams)
         loading.value = false
         paintedSettledPrefetch = true
+    }
+    const settled = peekSettledLeadBoardPrefetch(earlyParams)
+    if (settled) {
+        paintPrefetchedBoard(settled)
+    } else {
+        const inflight = peekLeadBoardPrefetchPromise(earlyParams)
+        if (inflight) {
+            inflight.then(paintPrefetchedBoard).catch(() => {})
+        }
     }
 }
 
@@ -2691,15 +2705,24 @@ async function fetchResponsiblePersons() {
     }
 }
 
+async function showConvertLeadModalWhenReady() {
+    if (!convertModalRef.value?.show) await nextTick()
+    if (!convertModalRef.value?.show) {
+        await new Promise((resolve) => {
+            const stop = watch(convertModalRef, (value) => {
+                if (!value?.show) return
+                stop()
+                resolve()
+            })
+        })
+    }
+    convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
+}
+
 function openConvertLeadModal(lead) {
     selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
     selectedLeadData.value = lead
-    
-    nextTick(() => {
-        if (convertModalRef.value) {
-            convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
-        }
-    })
+    showConvertLeadModalWhenReady()
 }
 
 function handleLeadConverted(deal) {
@@ -4818,10 +4841,7 @@ async function onLeadDragChange(evt, column) {
                     columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
             }
             
-            await nextTick()
-            if (convertModalRef.value) {
-                convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
-            }
+            await showConvertLeadModalWhenReady()
             return
         }
 
@@ -5032,11 +5052,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (isConversion && targetStageOrder === 6) {
             selectedLeadForConversion.value = lead?.id || lead?.lead_id || leadId
             selectedLeadData.value = lead
-            nextTick(() => {
-                if (convertModalRef.value) {
-                    convertModalRef.value.show(selectedLeadForConversion.value, selectedLeadData.value)
-                }
-            })
+            showConvertLeadModalWhenReady()
         }
 
         // Fire API in background; reconcile lightly / revert on failure.

@@ -1699,7 +1699,7 @@ watch(visible, (newVal) => {
             formData.value.lead_status = 'converted'
         }
     }
-})
+}, { immediate: true })
 onMounted(() => {
     console.log(props.targetStageOrder);
     // Capture phase: several triggers in this form (reminder, date-time, the budget

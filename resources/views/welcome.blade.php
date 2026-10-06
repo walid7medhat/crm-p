@@ -31,6 +31,43 @@
         <script>
             window.__API_BASE_URL__ = "{{ url('/api') }}";
             window.__APP_ORIGIN__ = "{{ url('') }}";
+            (function () {
+                try {
+                    if (window.location.pathname !== '/kanban') return;
+                    var params = new URLSearchParams(window.location.search);
+                    var hasBoardQuery = false;
+                    params.forEach(function (value, key) {
+                        if (key !== 'lead' && value) hasBoardQuery = true;
+                    });
+                    if (hasBoardQuery) return;
+                    var token = localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('token');
+                    if (!token && document.cookie) {
+                        var parts = document.cookie.split('; ');
+                        for (var i = 0; i < parts.length; i++) {
+                            if (parts[i].indexOf('token=') === 0 || parts[i].indexOf('access_token=') === 0) {
+                                token = decodeURIComponent(parts[i].split('=').slice(1).join('='));
+                                break;
+                            }
+                        }
+                    }
+                    if (!token || !String(token).trim()) return;
+                    var base = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
+                    window.__leadBoardEarlyPrefetch = fetch(base + '/stages/kanban/stages-with-leads?per_page=15', {
+                        headers: {
+                            Accept: 'application/json',
+                            Authorization: 'Bearer ' + String(token).trim()
+                        },
+                        credentials: 'same-origin'
+                    }).then(function (res) {
+                        if (!res.ok) throw new Error('Lead board prefetch failed');
+                        return res.json();
+                    }).then(function (body) {
+                        var response = { data: body };
+                        window.__leadBoardEarlyResponse = response;
+                        return response;
+                    });
+                } catch (e) {}
+            })();
         </script>
         @vite('resources/js/main.js')
     </head>
