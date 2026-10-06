@@ -64,6 +64,19 @@ window.axios = api
 
 const initialToken = resolveAuthToken()
 
+// Start the Lead board request and its chunk before the rest of startup.
+// The document head may already have fired the request; prefetchLeadBoard() adopts it.
+if (window.location.pathname === '/kanban' && initialToken) {
+  const params = new URLSearchParams(window.location.search)
+  const hasBoardQuery = [...params.keys()].some((key) => key !== 'lead' && params.get(key))
+  import('./pages/kanban.vue')
+  import('./components/kanban/leadList/leads.vue')
+  if (!hasBoardQuery) {
+    holdBackgroundApis(700)
+    prefetchLeadBoard().finally(() => releaseBackgroundApis())
+  }
+}
+
 function getStoredUserId() {
   try {
     const raw = localStorage.getItem('user')
@@ -626,18 +639,6 @@ window.addEventListener('unhandledrejection', (event) => {
     reloadOnceForStaleChunk()
   }
 })
-// The Lead board is the screen people open. Start it before the layout's
-// notification, birthday, and sidebar calls, or those fill the server first.
-if (window.location.pathname === '/kanban' && initialToken) {
-  const params = new URLSearchParams(window.location.search)
-  const hasBoardQuery = [...params.keys()].some((key) => key !== 'lead' && params.get(key))
-  import('./components/kanban/leadList/leads.vue')
-  if (!hasBoardQuery) {
-    holdBackgroundApis(700)
-    prefetchLeadBoard().finally(() => releaseBackgroundApis())
-  }
-}
-
 // Mount app
 app.mount('#app')
 const bootSplash = document.getElementById('boot-splash')

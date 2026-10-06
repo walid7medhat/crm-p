@@ -267,7 +267,7 @@ watch(() => props.modelValue, async (val) => {
         await nextTick()
         calculatePosition()
     }
-})
+}, { immediate: true })
 
 watch(show, (val) => {
     emit('update:modelValue', val)
