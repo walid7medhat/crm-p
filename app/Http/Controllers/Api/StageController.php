@@ -500,23 +500,35 @@ class StageController extends Controller
                 ];
             }
         } else {
-            // Fast board path: per-stage LIMIT (index-friendly) instead of ROW_NUMBER over the full table.
+            // One ranked pass for every stage. The old per-stage ORDER BY COALESCE
+            // could not use an index, so each stage re-sorted its own leads and the
+            // board waited on all of them before the first cards could paint.
             $orderOneStageIds = $stageOrderById->filter(fn ($o) => (int) $o === 1)->keys()->all();
+            $orderOneList = implode(',', array_map('intval', $orderOneStageIds ?: [0]));
+            $rankedSql = "
+                ROW_NUMBER() OVER (
+                    PARTITION BY stage_id
+                    ORDER BY
+                        CASE WHEN stage_id IN ({$orderOneList}) THEN created_at END DESC,
+                        CASE WHEN stage_id IN ({$orderOneList}) THEN id END DESC,
+                        COALESCE(bitrix24_last_activity_at, created_at) DESC
+                ) as rn
+            ";
+
+            $rankedQuery = (clone $baseLeadsQuery)
+                ->whereIn('stage_id', $stageIds)
+                ->select('leads.id', 'leads.stage_id')
+                ->selectRaw($rankedSql);
+
+            $rankedRows = DB::query()->fromSub($rankedQuery, 'ranked_leads')
+                ->where('rn', '<=', $perPage + 1)
+                ->orderBy('rn')
+                ->get(['id', 'stage_id', 'rn']);
+
             $idsByStage = [];
-
             foreach ($stages as $stage) {
-                $stageQuery = (clone $baseLeadsQuery)
+                $idsByStage[$stage->id] = $rankedRows
                     ->where('stage_id', $stage->id)
-                    ->select('leads.id');
-
-                if (in_array($stage->id, $orderOneStageIds, true)) {
-                    $stageQuery->orderByDesc('created_at')->orderByDesc('id');
-                } else {
-                    $stageQuery->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
-                }
-
-                $idsByStage[$stage->id] = $stageQuery
-                    ->limit($perPage + 1)
                     ->pluck('id')
                     ->all();
             }

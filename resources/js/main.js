@@ -12,8 +12,7 @@ import '../css/app.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
 
-/* Intl phone: coords from library; CDN sprite survives CSP / quirks vs data-uri in vue-tel build */
-import 'vue-tel-input/vue-tel-input.css'
+/* Phone widget CSS loads with CrmPhoneInput, not on the first board paint. */
 import '../css/crm-phone-flags.css'
 
 import 'vue-select/dist/vue-select.css'

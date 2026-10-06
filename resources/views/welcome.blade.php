@@ -3,7 +3,8 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+        <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
         <title>Alt CRM</title>
         <link rel="manifest" href="/manifest.webmanifest">
@@ -26,7 +27,32 @@
         <link rel="icon" type="image/x-icon" href="/assets/images/Fav icon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" media="print" onload="this.media='all'">
+        <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"></noscript>
+        @php
+            $kanbanPreload = [];
+            if (request()->is('kanban') && is_file(public_path('build/manifest.json'))) {
+                $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true) ?: [];
+                $seen = [];
+                $walk = function ($key) use (&$walk, &$kanbanPreload, &$seen, $manifest) {
+                    if (!$key || isset($seen[$key]) || $key === 'resources/js/main.js' || !isset($manifest[$key])) {
+                        return;
+                    }
+                    $seen[$key] = true;
+                    if (!empty($manifest[$key]['file'])) {
+                        $kanbanPreload[$manifest[$key]['file']] = true;
+                    }
+                    foreach ($manifest[$key]['imports'] ?? [] as $import) {
+                        $walk($import);
+                    }
+                };
+                $walk('resources/js/pages/kanban.vue');
+                $walk('resources/js/components/kanban/leadList/leads.vue');
+            }
+        @endphp
+        @foreach (array_keys($kanbanPreload) as $file)
+            <link rel="modulepreload" href="{{ asset('build/'.$file) }}" crossorigin>
+        @endforeach
         <link rel="preload" href="{{ asset('assets/images/crm-bg-light.jpg') }}?v=3" as="image" type="image/jpeg">
         <script>
             window.__API_BASE_URL__ = "{{ url('/api') }}";
