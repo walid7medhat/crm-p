@@ -1,6 +1,8 @@
 import api from '@/plugins/axios'
 
 let pending = null
+let settledResponse = null
+let requestId = 0
 
 function isPlainLeadBoardParams(params) {
   if (!params || typeof params !== 'object') return false
@@ -14,9 +16,24 @@ function isPlainLeadBoardParams(params) {
 /** Start the default Lead board request before the rest of the page. */
 export function prefetchLeadBoard() {
   if (!pending) {
+    const id = ++requestId
+    settledResponse = null
     pending = api.get('/stages/kanban/stages-with-leads', { params: { per_page: 15 } })
+      .then((response) => {
+        if (id === requestId) settledResponse = response
+        return response
+      })
   }
   return pending
+}
+
+/**
+ * Already-resolved default board response, still owned by the in-flight prefetch.
+ * Does not start or consume the request — takeLeadBoardPrefetch() still does that.
+ */
+export function peekSettledLeadBoardPrefetch(params) {
+  if (!pending || settledResponse == null) return null
+  return isPlainLeadBoardParams(params) ? settledResponse : null
 }
 
 /**
