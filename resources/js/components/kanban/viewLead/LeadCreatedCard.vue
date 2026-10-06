@@ -151,7 +151,11 @@ const timeLabel = computed(() => {
 })
 
 const leadName = computed(() => props.lead?.original_name || props.lead?.lead_name || '—')
-const branch = computed(() => props.lead?.original_branch ||  '—')
+const branch = computed(() => {
+    const value = props.lead?.original_branch
+    if (!value) return '—'
+    return String(value).replace(/\b\w/g, (c) => c.toUpperCase())
+})
 const branchOffice=computed(() => props.lead?.office_branch ||  '—')
 const source = computed(() => props.lead?.lead_source || null)
 const creatorName = computed(() => props.lead?.added_by_user?.name || '—')
