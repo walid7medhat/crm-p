@@ -29,7 +29,7 @@
 
       <!-- Empty State -->
       <div v-else-if="properties.length === 0" class="col-12 text-center py-5">
-        <i class="ri-home-4-line display-1 text-muted"></i>
+        <i class="ri-home-4-line display-1 text-muted d-flex justify-content-center"></i>
         <h6 class="mt-3 text-dark">No properties found</h6>
         <button @click="notifyMe" class="btn btn-primary">
         Get notified when matching properties become available
@@ -661,7 +661,14 @@ export default {
       'completion_status', 'occupancy_status', 'agent_id', 'agent_name','additional_features','page'
     ];
 
-    const LISTING_FILTERS_STORAGE_KEY = 'listingSearchFilters';
+    // v2: v1 entries were saved with old defaults (priceTo 5000000 / sizeTo 5000)
+    // that looked like real filters and leaked back into the URL on every visit.
+    const LISTING_FILTERS_STORAGE_KEY = 'listingSearchFilters_v2';
+    try {
+      localStorage.removeItem('listingSearchFilters');
+    } catch (error) {
+      // storage unavailable — nothing to clean
+    }
 
     const hasListingQueryParams = (query) =>
       LISTING_QUERY_KEYS.some((key) => {
@@ -735,7 +742,7 @@ export default {
         ? Object.keys(filters.selectedFeatures).filter(key => filters.selectedFeatures[key] === true)
         : [];
       return {
-        sale_rent: filters.saleRent || undefined,
+        sale_rent: filters.saleRent && filters.saleRent !== 'All' ? filters.saleRent : undefined,
         // area_id: filters.area?.id || undefined,
         area_ids: filters.area && filters.area.length > 0 
       ? filters.area.map(a => a.id).join(',')  // تحويل المصفوفة إلى سلسلة مفصولة بفواصل
@@ -753,7 +760,7 @@ export default {
         price_to: filters.priceTo < 10000000 ? filters.priceTo : undefined,
         size_from: filters.sizeFrom > 0 ? filters.sizeFrom : undefined,
         size_to: filters.sizeTo < 10000 ? filters.sizeTo : undefined,
-        sort: filters.sort || undefined,
+        sort: filters.sort && filters.sort !== 'created_at_desc' ? filters.sort : undefined,
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
         occupancy_status: filters.occupancyStatus?.value || undefined,
@@ -762,10 +769,12 @@ export default {
       };
     };
 
-    const replaceRouteWithListingFilters = (filters) => {
+    const replaceRouteWithListingFilters = (filters, { keepPage = false } = {}) => {
+      const page = route.query.page;
       const base = { ...route.query };
       LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
       const merged = { ...base, ...encodeFiltersToQuery(filters) };
+      if (keepPage && page) merged.page = page;
       router.replace({ query: pruneEmptyQueryValues(merged) });
     };
 
@@ -846,9 +855,26 @@ const decodeFiltersFromQuery = async (query) => {
     };
 
     // Handle filters from SearchBar
-    const handleFiltersChanged = (filters) => {
+    const handleFiltersChanged = (filters, meta = {}) => {
       console.log("🎯 Filters received from SearchBar:", filters);
-      
+
+      // Reset = behave like a first visit: no filters, no sort, no saved state.
+      if (meta.reset) {
+        currentFilters.value = {};
+        initialFilters.value = null;
+        activeStatus.value = 'all';
+        try {
+          localStorage.removeItem(LISTING_FILTERS_STORAGE_KEY);
+        } catch (error) {
+          console.warn('Failed to clear listing filters:', error);
+        }
+        const base = { ...route.query };
+        LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
+        router.replace({ query: pruneEmptyQueryValues(base) });
+        fetchProperties({}, 1);
+        return;
+      }
+
       currentFilters.value = convertFiltersToAPI(filters);
       initialFilters.value = filters;
       
@@ -1056,6 +1082,8 @@ const decodeFiltersFromQuery = async (query) => {
         try {
           const filters = await decodeFiltersFromQuery(route.query);
           await restoreAndFetch(filters);
+          // Drop default values like sale_rent=All / sort=created_at_desc from the URL.
+          replaceRouteWithListingFilters(filters, { keepPage: true });
         } catch (e) {
           console.error('Failed to restore listing filters from URL:', e);
           fetchProperties({},pageFromUrl);

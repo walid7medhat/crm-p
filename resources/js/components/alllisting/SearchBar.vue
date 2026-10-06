@@ -5,7 +5,7 @@
     :result-count="resultCount"
     :show-status-tabs="showStatusTabs"
     :active-status="activeStatus"
-    @filters-changed="$emit('filters-changed', $event)"
+    @filters-changed="(filters, meta) => $emit('filters-changed', filters, meta)"
     @status-changed="$emit('status-changed', $event)"
   />
 </template>

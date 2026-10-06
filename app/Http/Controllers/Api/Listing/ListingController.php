@@ -1870,6 +1870,15 @@ public function update(ListingRequest $request, $listingId): JsonResponse
 
         // ========== التحقق من أن القائمة كانت مرفوضة ويتم إعادة نشرها ==========
         $isResubmitting = ($wasRejected && $newStatus === 'published');
+
+        // Editing an approved listing sends it back for approval — unless the editor
+        // is an approver themselves (they could just approve it again anyway).
+        $needsReapproval = $listing->approved && ! $this->canApproveListings($user);
+        if ($needsReapproval) {
+            $data['approved'] = false;
+            $data['approved_by'] = null;
+            $data['approved_at'] = null;
+        }
         
         // if ($isResubmitting) {
         //     $data['rejection_reason'] = null;
@@ -2010,7 +2019,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         DB::commit();
 
         // ========== إرسال إشعار إذا تم إعادة إرسال القائمة بعد الرفض ==========
-        if ($isResubmitting) {
+        if ($isResubmitting || ($needsReapproval && $listing->status === 'published')) {
             $this->sendResubmissionNotification($listing, $user);
         }
 
@@ -2023,8 +2032,8 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         $successMessage = 'Listing updated successfully';
         if ($request->has('action')) {
             if ($request->action === 'publish') {
-                $successMessage = $isResubmitting 
-                    ? 'Listing has been resubmitted for approval successfully.' 
+                $successMessage = ($isResubmitting || $needsReapproval)
+                    ? 'Listing has been resubmitted for approval successfully.'
                     : 'Listing published successfully';
             } elseif ($request->action === 'draft') {
                 $successMessage = 'Listing saved as draft successfully';
@@ -2050,6 +2059,16 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         
         return ApiResponse::error('Failed to update listing: ' . $e->getMessage());
     }
+}
+
+/**
+ * Same rule approve()/reject() use to decide who may approve listings.
+ */
+private function canApproveListings($user): bool
+{
+    return $user->hasRole('super_admin') || $user->hasRole('admin')
+        || $user->hasRole('manager') || $user->listing_team
+        || ($user->hasRole('team_lead') && $user->is_listing_team);
 }
 
 /**

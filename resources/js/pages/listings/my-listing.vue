@@ -35,7 +35,7 @@
 
       <!-- Empty State -->
       <div v-else-if="filteredProperties.length === 0" class="col-12 text-center py-5">
-        <i class="ri-home-4-line display-1 text-muted"></i>
+        <i class="ri-home-4-line display-1 text-muted d-flex justify-content-center"></i>
         <h6 class="mt-3 text-muted">No properties found</h6>
         <p class="text-muted">Try adjusting your search filters or status</p>
       </div>
@@ -311,6 +311,7 @@ export default {
     const isExporting = ref(false);
     const activeStatus = ref('all'); // 'all', 'active', 'inactive'
     const initialFilters = ref(null);
+    let skipNextQueryWatch = false;
     const breakdownModalOpen = ref(false);
     const breakdownModalListingId = ref(null);
     const breakdownModalPreview = ref(null);
@@ -543,6 +544,11 @@ const pruneEmptyQueryValues = (obj) => {
   });
   return out;
 };
+const isSameQuery = (a, b) => {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  return aKeys.length === bKeys.length && aKeys.every((k) => String(a[k]) === String(b[k]));
+};
     // Change page
     const changePage = (page) => {
       if (page < 1 || page > pagination.value.last_page || page === '...') return;
@@ -571,7 +577,10 @@ const LISTING_QUERY_KEYS = [
         ? Object.keys(filters.selectedFeatures).filter(key => filters.selectedFeatures[key] === true)
         : [];
       return {
-        sale_rent: filters.saleRent || undefined,
+        // "All"/0/max-bound/default-sort all mean "no filter" — omit them so a
+        // reset clears the URL back to a clean path instead of writing back the
+        // defaults as if they were real filter selections.
+        sale_rent: filters.saleRent && filters.saleRent !== 'All' ? filters.saleRent : undefined,
         area_id: filters.area?.id || undefined,
         area_ids: Array.isArray(filters.area) && filters.area.length
           ? filters.area.map((a) => a?.id).filter(Boolean).join(',')
@@ -585,11 +594,11 @@ const LISTING_QUERY_KEYS = [
         beds_list: Array.isArray(filters.bedsList) && filters.bedsList.length ? filters.bedsList.join(',') : undefined,
         baths: filters.baths || undefined,
         baths_list: Array.isArray(filters.bathsList) && filters.bathsList.length ? filters.bathsList.join(',') : undefined,
-        price_from: filters.priceFrom,
-        price_to: filters.priceTo,
-        size_from: filters.sizeFrom,
-        size_to: filters.sizeTo,
-        sort: filters.sort || undefined,
+        price_from: filters.priceFrom > 0 ? filters.priceFrom : undefined,
+        price_to: filters.priceTo > 0 && filters.priceTo < 10000000 ? filters.priceTo : undefined,
+        size_from: filters.sizeFrom > 0 ? filters.sizeFrom : undefined,
+        size_to: filters.sizeTo > 0 && filters.sizeTo < 10000 ? filters.sizeTo : undefined,
+        sort: filters.sort && filters.sort !== 'created_at_desc' ? filters.sort : undefined,
         ref: filters.referenceNumber || undefined,
         completion_status: filters.completionStatus?.value || undefined,
         occupancy_status: filters.occupancyStatus?.value || undefined,
@@ -645,8 +654,27 @@ const LISTING_QUERY_KEYS = [
     };
 
     // Handle filters from SearchBar
-    const handleFiltersChanged = (filters) => {
+    const handleFiltersChanged = (filters, meta = {}) => {
       console.log("🎯 Filters received:", filters);
+
+      // Reset = behave like a first visit: no filters, no sort, "All" tab.
+      if (meta.reset) {
+        currentFilters.value = {};
+        initialFilters.value = null;
+        activeStatus.value = 'all';
+        fetchProperties({}, 1);
+
+        const base = { ...route.query };
+        LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
+        const nextQuery = pruneEmptyQueryValues(base);
+        if (!isSameQuery(nextQuery, route.query)) {
+          // Our own URL cleanup — don't let the query watcher refetch with defaults.
+          skipNextQueryWatch = true;
+          router.replace({ query: nextQuery });
+        }
+        return;
+      }
+
       currentFilters.value = filters;
       initialFilters.value = filters;
       
@@ -656,12 +684,15 @@ const LISTING_QUERY_KEYS = [
       // Fetch properties with new filters (reset to page 1)
       fetchProperties(apiFilters, 1);
 
-      // Persist filters in URL so Back restores them
+      // Persist filters in URL so Back restores them — drop stale keys first so a
+      // cleared/reset filter doesn't linger from the previous query string.
+      const base = { ...route.query };
+      LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
       router.replace({
-        query: {
-          ...route.query,
+        query: pruneEmptyQueryValues({
+          ...base,
           ...encodeFiltersToQuery(filters),
-        },
+        }),
       });
     };
 
@@ -1122,11 +1153,25 @@ const LISTING_QUERY_KEYS = [
         initialFilters.value = filters;
         const apiFilters = convertFiltersToAPI(filters);
         fetchProperties(apiFilters, pageFromUrl);
+
+        // Drop default values (sale_rent=All, sort=created_at_desc, …) from the URL.
+        const base = { ...route.query };
+        LISTING_QUERY_KEYS.forEach((k) => { delete base[k]; });
+        const cleanQuery = pruneEmptyQueryValues({
+          ...base,
+          ...encodeFiltersToQuery(filters),
+          page: route.query.page,
+        });
+        if (!isSameQuery(cleanQuery, route.query)) {
+          skipNextQueryWatch = true;
+          router.replace({ query: cleanQuery });
+        }
       } else {
         fetchProperties({},pageFromUrl);
       }
     });
 watch(() => route.query.page, (newPage, oldPage) => {
+  if (skipNextQueryWatch) return;
   if (newPage && newPage !== oldPage) {
     const page = parseInt(newPage);
     if (page !== pagination.value?.current_page) {
@@ -1138,6 +1183,10 @@ watch(() => route.query.page, (newPage, oldPage) => {
 
 // أضف watch للاستجابة لتغييرات route.query بالكامل (للتحديث عند الضغط على Back)
 watch(() => route.query, (newQuery, oldQuery) => {
+  if (skipNextQueryWatch) {
+    skipNextQueryWatch = false;
+    return;
+  }
   // تجاهل التغييرات الناتجة عن تحديث page فقط
   if (newQuery.page !== oldQuery.page) {
     const page = newQuery.page ? parseInt(newQuery.page) : 1;

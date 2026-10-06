@@ -472,6 +472,10 @@
           <i class="ri-search-line"></i>
           Search
         </button>
+        <button type="button" class="btn unified-reset-btn" @click="resetFilters" title="Reset all search filters">
+          <i class="ri-refresh-line"></i>
+          Reset
+        </button>
         <div  class="listing-status-row">
           <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'all' }" @click="emitStatusChange('all')">
             <i class="ri-list-check"></i> All
@@ -2506,23 +2510,29 @@ const featuresButtonLabel = computed(() => {
       selectedBaths.value = [];
       selectedSort.value = "created_at_desc";
       priceFrom.value = 0;
-      priceTo.value = 5000000;
+      priceTo.value = 10000000;
       sizeFrom.value = 0;
-      sizeTo.value = 5000;
-      performSearch(); 
+      sizeTo.value = 10000;
       searchReferenceNumber.value = "";
-       selectedFeatures.value = {};
+      selectedFeatures.value = {};
+      // Cancel any pending debounced search and tell the parent this is a full
+      // reset, so it can reload exactly like a fresh page visit (no params).
+      if (searchTimer.value) {
+        clearTimeout(searchTimer.value);
+        searchTimer.value = null;
+      }
+      emit('filters-changed', buildCurrentFilters(), { reset: true });
     };
 
     const resetPriceRange = () => {
       priceFrom.value = 0;
-      priceTo.value = 5000000;
+      priceTo.value = 10000000;
       performSearch();
     };
 
     const resetSizeRange = () => {
       sizeFrom.value = 0;
-      sizeTo.value = 5000;
+      sizeTo.value = 10000;
       performSearch();
     };
 
@@ -2600,7 +2610,7 @@ const featuresButtonLabel = computed(() => {
     };
 
     const validatePriceTo = () => {
-      priceTo.value = parseInt(priceTo.value) || 5000000;
+      priceTo.value = parseInt(priceTo.value) || 10000000;
       if (priceTo.value < 0) priceTo.value = 0;
       if (priceTo.value > 10000000) priceTo.value = 10000000;
       updatePriceTo();
@@ -2614,7 +2624,7 @@ const featuresButtonLabel = computed(() => {
     };
 
     const validateSizeTo = () => {
-      sizeTo.value = parseInt(sizeTo.value) || 5000;
+      sizeTo.value = parseInt(sizeTo.value) || 10000;
       if (sizeTo.value < 0) sizeTo.value = 0;
       if (sizeTo.value > 10000) sizeTo.value = 10000;
       updateSizeTo();
@@ -3466,6 +3476,28 @@ const featuresButtonLabel = computed(() => {
   transform: translateY(-1px);
 }
 
+.unified-reset-btn {
+  padding: 5px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  color: #733E87;
+  border: 1px solid #733E87;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.unified-reset-btn:hover {
+  background: #f5edf8;
+}
+
 /* Secondary Filters */
 .secondary-filters {
   display: flex;
@@ -3983,6 +4015,18 @@ const featuresButtonLabel = computed(() => {
   padding: 0 20px;
 }
 
+.unified-reset-btn {
+  min-height: 52px;
+  border-radius: 999px;
+  border: 1px solid #733E87;
+  background: #fff;
+  color: #733E87;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+}
+
 .listing-icon-circle {
   width: 52px;
   height: 52px;
@@ -4360,6 +4404,16 @@ const featuresButtonLabel = computed(() => {
   border-radius: 12px !important;
   background: #733E87 !important;
   color: #fff !important;
+}
+
+.unified-reset-btn {
+  min-height: 42px !important;
+  font-size: 13px !important;
+  padding: 0 16px !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: #733E87 !important;
+  border: 1px solid #733E87 !important;
 }
 
 .listing-notify-btn.listing-icon-circle {
@@ -4985,7 +5039,8 @@ const featuresButtonLabel = computed(() => {
   .listing-pill-row,
   .listing-status-row,
   .listing-notify-btn,
-  .unified-search-btn {
+  .unified-search-btn,
+  .unified-reset-btn {
     display: none !important;
   }
 
