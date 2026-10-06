@@ -156,8 +156,43 @@
             <p class="kanban-empty-text">{{ error }}</p>
             <button type="button" class="kanban-empty-btn" @click="fetchLeads(true)">Try again</button>
         </div>
-        <div v-else-if="loading && columns.length === 0" class="kanban-board-loading">
-            <BrandLoader variant="inline" label="Loading leads" />
+        <div
+            v-else-if="loading && columns.length === 0"
+            class="kanban-board-skeleton"
+            :class="boardView === 'list' ? 'kanban-board-skeleton--list' : 'kanban-wrapper kanban-wrapper-tight'"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading leads"
+        >
+            <template v-if="boardView === 'list'">
+                <div v-for="n in 8" :key="'sk-row-' + n" class="kanban-skeleton-row"></div>
+            </template>
+            <template v-else>
+                <div
+                    v-for="(col, index) in skeletonColumns"
+                    :key="'sk-col-' + index"
+                    class="kanban-column"
+                    :style="{ '--column-color': col.color }"
+                >
+                    <div class="p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
+                        <div class="card-body p-0 d-flex flex-column h-100">
+                            <div
+                                class="column-header d-flex align-items-center flex-shrink-0"
+                                :class="{ 'column-header--mobile': kanbanIsMobile }"
+                                :style="{ backgroundColor: col.color }"
+                            >
+                                <p v-if="col.title" class="header-title">{{ col.title }}</p>
+                                <span v-else class="kanban-skeleton-title"></span>
+                            </div>
+                            <div class="column-content column-content-scrollable p-8 flex-grow-1 d-flex flex-column">
+                                <div class="tasks-list flex-grow-1">
+                                    <div v-for="n in 4" :key="'sk-card-' + index + '-' + n" class="kanban-skeleton-card"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
         <!-- No stages yet -->
         <div v-else-if="!loading && columns.length === 0" class="kanban-empty-state">
@@ -1145,7 +1180,6 @@ import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
 import LeadSourceMark from './LeadSourceMark.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
-import BrandLoader from '@/components/layout/BrandLoader.vue'
 const DuplicateLeadsModal = defineAsyncComponent(() => import('./DuplicateLeadsModal.vue'))
 const StageChangeReasonModal = defineAsyncComponent(() => import('./StageChangeReasonModal.vue'))
 const ConvertLeadModal = defineAsyncComponent(() => import('./ConvertLeadModal.vue'))
@@ -2490,6 +2524,23 @@ function syncStageOrderMapFromColumns(cols) {
     stageOrderMap.value = map
 }
 
+function readCachedStageShells() {
+    try {
+        const raw = localStorage.getItem(getKanbanCacheKey())
+        if (!raw) return []
+        const parsed = JSON.parse(raw)
+        if (!parsed || !Array.isArray(parsed.columns)) return []
+        return parsed.columns
+            .filter((col) => col && col.title)
+            .map((col, index) => ({
+                title: col.title,
+                color: col.color || getColorByIndex(index),
+            }))
+    } catch (e) {
+        return []
+    }
+}
+
 function loadCachedColumns() {
     try {
         const raw = localStorage.getItem(getKanbanCacheKey())
@@ -2529,6 +2580,8 @@ function loadCachedColumns() {
 // Paint a saved board on the first render. Reading it in onMounted is one
 // frame too late, so the loader flashes even when the cards are already here.
 const hadCachedBoard = loadCachedColumns()
+// Stage names from an older visit. Cards stay placeholders until the real response.
+const pendingStageShells = ref(hadCachedBoard ? [] : readCachedStageShells())
 // A resolved prefetch is applied here, before the first render. An in-flight
 // one is applied on the microtask that delivers it, still owned by fetchLeads().
 let paintedSettledPrefetch = false
@@ -4203,6 +4256,14 @@ function isColumnVisibleOnMobile(column) {
     return String(column.status) === String(mobileListFilterStageId.value)
 }
 
+const skeletonColumns = computed(() => {
+    if (pendingStageShells.value.length) return pendingStageShells.value
+    return Array.from({ length: 6 }, (_, index) => ({
+        title: '',
+        color: getColorByIndex(index),
+    }))
+})
+
 const BOARD_VIEW_KEY = 'kanban_leads_board_view'
 const boardView = ref((() => {
     try {
@@ -5396,17 +5457,42 @@ const fetchRevertNotifications = async () => {
     padding-right: 0;
 }
 
-.kanban-board-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 420px;
+.kanban-board-skeleton {
+    min-height: calc(100dvh - 200px);
 }
-.kanban-board-loading :deep(.brand-loader--inline) {
-    background: transparent;
-    min-height: 280px;
+.kanban-skeleton-title {
+    display: block;
+    width: 46%;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(15, 15, 18, 0.18);
+}
+.kanban-skeleton-card,
+.kanban-skeleton-row {
+    border-radius: 14px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.92) 50%, rgba(255, 255, 255, 0.45) 100%);
+    background-size: 200% 100%;
+    animation: kanban-skeleton-shimmer 1.2s ease-in-out infinite;
+    border: 1px solid rgba(30, 27, 46, 0.08);
+}
+.kanban-skeleton-card {
+    height: 92px;
+    margin: 0 2px 10px;
+}
+.kanban-board-skeleton--list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     width: 100%;
+    padding: 8px;
+}
+.kanban-skeleton-row {
+    height: 52px;
+    border-radius: 10px;
+}
+@keyframes kanban-skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
 }
 
 /* Empty / loading / error states */
@@ -6748,6 +6834,10 @@ const fetchRevertNotifications = async () => {
     height: auto !important;
     min-height: 0 !important;
     gap: 12px;
+}
+
+.kanban-outer--mobile .kanban-board-skeleton {
+    min-height: 0;
 }
 
 .kanban-outer--mobile .kanban-column {
