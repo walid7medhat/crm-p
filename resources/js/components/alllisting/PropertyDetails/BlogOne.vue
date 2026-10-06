@@ -6518,6 +6518,19 @@ const generatePDF = async () => {
     pdfMobileMode = false;
     const pdfContent = createNewDesignContent(currentUser);
 
+    // Load every slide's images up front, in parallel, instead of letting each
+    // html2canvas pass block on network fetches one slide at a time — this is
+    // what was actually eating into the per-slide render timeout.
+    const imgs = [...pdfContent.querySelectorAll('img')];
+    await Promise.allSettled(imgs.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+        setTimeout(resolve, 10000);
+      });
+    }));
+
     const options = {
       html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
     };
@@ -6533,7 +6546,7 @@ const generatePDF = async () => {
     for (let i = 0; i < slideElements.length; i++) {
       const slideCanvas = await withTimeout(
         html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
-        25000,
+        60000,
         `Slide ${i + 1} of ${slideElements.length} timed out rendering`
       );
       const imgData = slideCanvas.toDataURL('image/jpeg', 0.98);
