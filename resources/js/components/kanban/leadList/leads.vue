@@ -156,13 +156,8 @@
             <p class="kanban-empty-text">{{ error }}</p>
             <button type="button" class="kanban-empty-btn" @click="fetchLeads(true)">Try again</button>
         </div>
-        <div v-else-if="loading && columns.length === 0" class="kanban-board-skeleton" aria-hidden="true">
-            <div v-for="n in 4" :key="n" class="kanban-board-skeleton__col">
-                <span class="kanban-board-skeleton__head"></span>
-                <span class="kanban-board-skeleton__card"></span>
-                <span class="kanban-board-skeleton__card"></span>
-                <span class="kanban-board-skeleton__card kanban-board-skeleton__card--short"></span>
-            </div>
+        <div v-else-if="loading && columns.length === 0" class="kanban-board-loading">
+            <BrandLoader variant="inline" label="Loading leads" />
         </div>
         <!-- No stages yet -->
         <div v-else-if="!loading && columns.length === 0" class="kanban-empty-state">
@@ -1154,6 +1149,7 @@ import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
+import BrandLoader from '@/components/layout/BrandLoader.vue'
 
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
@@ -5176,7 +5172,8 @@ const setupRevertAlertListener  = () => {
 const fetchRevertNotifications = async () => {
     try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/notifications?limit=5`, {
+        const revertType = encodeURIComponent('App\\Notifications\\LeadRevertWarningNotification')
+        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/notifications?type=${revertType}`, {
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         })
         if (!response.ok) return
@@ -5349,47 +5346,17 @@ const fetchRevertNotifications = async () => {
     padding-right: 0;
 }
 
-.kanban-board-skeleton {
+.kanban-board-loading {
     display: flex;
-    gap: 14px;
-    height: 100%;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
     min-height: 420px;
-    padding: 8px 4px 12px;
-    box-sizing: border-box;
 }
-.kanban-board-skeleton__col {
-    flex: 1 1 0;
-    min-width: 180px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.55);
-}
-.kanban-board-skeleton__head,
-.kanban-board-skeleton__card {
-    display: block;
-    border-radius: 12px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.85), rgba(255,255,255,0.35));
-    background-size: 200% 100%;
-    animation: kanban-skeleton-shimmer 1.1s ease-in-out infinite;
-}
-.kanban-board-skeleton__head {
-    height: 28px;
-    width: 55%;
-    border-radius: 999px;
-}
-.kanban-board-skeleton__card {
-    height: 92px;
-}
-.kanban-board-skeleton__card--short {
-    height: 64px;
-}
-@keyframes kanban-skeleton-shimmer {
-    0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
+.kanban-board-loading :deep(.brand-loader--inline) {
+    background: transparent;
+    min-height: 280px;
+    width: 100%;
 }
 
 /* Empty / loading / error states */
