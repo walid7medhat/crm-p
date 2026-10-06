@@ -261,10 +261,23 @@ public function resetPassword(Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
-        
-        $notifications = $user->notifications()
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $request = request();
+
+        // Badge only. Avoid loading every row on page open.
+        if ($request->boolean('unread_count')) {
+            return ApiResponse::success([
+                'unread_count' => $user->unreadNotifications()->count(),
+            ], 'Notifications retrieved successfully');
+        }
+
+        $notificationsQuery = $user->notifications()->orderBy('created_at', 'desc');
+
+        // Birthday popup asks for one type instead of the full history.
+        if ($request->filled('type')) {
+            $notificationsQuery->where('type', (string) $request->query('type'));
+        }
+
+        $notifications = $notificationsQuery->get();
 
         return ApiResponse::success(
             NotificationResource::collection($notifications), // هنا

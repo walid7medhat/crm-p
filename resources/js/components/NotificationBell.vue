@@ -107,7 +107,7 @@ export default {
   mounted() {
     const user = localStorage.getItem('user')
     this.userId = user ? JSON.parse(user).id : null
-    this.fetchNotifications()
+    this.fetchUnreadCount()
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside, true)
@@ -136,6 +136,20 @@ export default {
       const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target]
       if (path.includes(this.$refs.bellBtn) || path.includes(this.$refs.dropdownPortal)) return
       this.showDropdown = false
+    },
+    async fetchUnreadCount() {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+        const response = await fetch(`${getApiBaseUrl()}/auth/notifications?unread_count=1`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        const count = Number(data?.data?.unread_count)
+        if (!Number.isNaN(count)) this.unreadCount = count
+      } catch (e) {
+        console.error('Notification count failed', e)
+      }
     },
     async fetchNotifications() {
       try {
