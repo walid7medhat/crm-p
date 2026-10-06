@@ -8,9 +8,10 @@ return new class extends Migration
     public function up(): void
     {
         if (! $this->hasIndex('leads_stage_kanban_sort_idx')) {
-            // stage + not-deleted + activity sort, so the first page of a column
-            // is an index range instead of a sort of every lead.
-            DB::statement('ALTER TABLE leads ADD INDEX leads_stage_kanban_sort_idx (stage_id, deleted_at, (COALESCE(bitrix24_last_activity_at, created_at)), id)');
+            // MariaDB rejects a parenthesized expression in an index.
+            // These are the real columns inside COALESCE(bitrix24_last_activity_at, created_at),
+            // after the stage_id + deleted_at lookup, so that sort does not read the rest of the row.
+            DB::statement('ALTER TABLE leads ADD INDEX leads_stage_kanban_sort_idx (stage_id, deleted_at, bitrix24_last_activity_at, created_at, id)');
         }
 
         if (! $this->hasIndex('leads_stage_created_live_idx')) {
