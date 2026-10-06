@@ -2338,7 +2338,7 @@ async function loadBirthdayPopup() {
   if (activeBirthdayPopup.value || birthdayPopupDismissedToday()) return;
   try {
     const [notesRes, birthdayRes] = await Promise.all([
-      api.get('/auth/notifications'),
+      api.get('/auth/notifications', { params: { type: BIRTHDAY_SELF_NOTIFICATION_TYPE } }),
       api.get('/auth/birthdays/today'),
     ]);
     const items = Array.isArray(notesRes?.data?.data) ? notesRes.data.data : [];

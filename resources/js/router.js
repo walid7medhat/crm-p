@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { clearAuthToken } from './plugins/axios.js'
 import { installNavProgress } from './composables/useNavProgress.js'
+import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
+import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 
 /**
  * Route components are lazy-loaded so the initial main bundle no longer pulls
@@ -372,6 +374,16 @@ router.beforeEach((to, from, next) => {
     console.log('User authenticated, redirecting from auth pages to home')
     next('/')
   } else {
+    if (to.path === '/kanban' && isValidToken) {
+      const hasBoardQuery = Object.keys(to.query || {}).some((key) => key !== 'lead' && to.query[key])
+      import('./components/kanban/leadList/leads.vue')
+      if (!hasBoardQuery) {
+        holdBackgroundApis(700)
+        prefetchLeadBoard().finally(() => releaseBackgroundApis())
+      }
+    } else {
+      releaseBackgroundApis()
+    }
     console.log('Navigation allowed')
     next()
   }

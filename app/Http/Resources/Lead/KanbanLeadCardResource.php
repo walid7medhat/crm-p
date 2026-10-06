@@ -225,7 +225,7 @@ class KanbanLeadCardResource extends JsonResource
             if (in_array($field['name'], $basicFields, true)) {
                 continue;
             }
-            $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
+            $label = Bitrix24FieldLabels::resolveCached($field['name']) ?? $field['name'];
 
             return $label.' : '.$field['values'][0];
         }

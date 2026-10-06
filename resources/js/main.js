@@ -42,6 +42,8 @@ import '../css/project-page.css'
 import '../css/auth-landing.css'
 import './components/Authentication/auth-glass-shared.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
+import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
+import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 import { initLeadViewModal, leadIdFromNotification, openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { dealIdFromNotification, openDealFromNotification } from '@/composables/useDealViewModal.js'
 
@@ -624,6 +626,18 @@ window.addEventListener('unhandledrejection', (event) => {
     reloadOnceForStaleChunk()
   }
 })
+// The Lead board is the screen people open. Start it before the layout's
+// notification, birthday, and sidebar calls, or those fill the server first.
+if (window.location.pathname === '/kanban' && initialToken) {
+  const params = new URLSearchParams(window.location.search)
+  const hasBoardQuery = [...params.keys()].some((key) => key !== 'lead' && params.get(key))
+  import('./components/kanban/leadList/leads.vue')
+  if (!hasBoardQuery) {
+    holdBackgroundApis(700)
+    prefetchLeadBoard().finally(() => releaseBackgroundApis())
+  }
+}
+
 // Mount app
 app.mount('#app')
 const bootSplash = document.getElementById('boot-splash')

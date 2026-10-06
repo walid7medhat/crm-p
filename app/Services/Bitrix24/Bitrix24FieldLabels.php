@@ -87,6 +87,26 @@ class Bitrix24FieldLabels
         return self::map()[$fieldName] ?? null;
     }
 
+    /** Cache and manual labels only. Never calls Bitrix. */
+    public static function resolveCached(?string $fieldName): ?string
+    {
+        if (!$fieldName) {
+            return null;
+        }
+
+        if (isset(self::KNOWN_LABELS[$fieldName])) {
+            return self::KNOWN_LABELS[$fieldName];
+        }
+
+        $cached = Cache::get(self::CACHE_KEY);
+
+        if (!is_array($cached)) {
+            return null;
+        }
+
+        return $cached[$fieldName] ?? null;
+    }
+
     /**
      * Bitrix24 label fields come back per-language, e.g. {"en": "...", "1033": "..."}.
      * Prefer English, otherwise take whatever's first.

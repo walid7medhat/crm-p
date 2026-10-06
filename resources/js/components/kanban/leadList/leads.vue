@@ -156,13 +156,8 @@
             <p class="kanban-empty-text">{{ error }}</p>
             <button type="button" class="kanban-empty-btn" @click="fetchLeads(true)">Try again</button>
         </div>
-        <div v-else-if="loading && columns.length === 0" class="kanban-board-skeleton" aria-hidden="true">
-            <div v-for="n in 4" :key="n" class="kanban-board-skeleton__col">
-                <span class="kanban-board-skeleton__head"></span>
-                <span class="kanban-board-skeleton__card"></span>
-                <span class="kanban-board-skeleton__card"></span>
-                <span class="kanban-board-skeleton__card kanban-board-skeleton__card--short"></span>
-            </div>
+        <div v-else-if="loading && columns.length === 0" class="kanban-board-loading">
+            <BrandLoader variant="inline" label="Loading leads" />
         </div>
         <!-- No stages yet -->
         <div v-else-if="!loading && columns.length === 0" class="kanban-empty-state">
@@ -1154,10 +1149,12 @@ import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import ConvertLeadModal from './ConvertLeadModal.vue'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
+import BrandLoader from '@/components/layout/BrandLoader.vue'
 
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
+import { peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
@@ -2312,6 +2309,71 @@ async function saveStage() {
     }
 }
 
+function applyStagesWithLeadsResponse(response, params) {
+    const responseData = response?.data?.data
+    const stagesData = responseData?.stages || []
+    const analytics = responseData?.analytics
+    if (analytics && typeof analytics === 'object') {
+        const nextAnalytics = {
+            tempCold: Number(analytics.tempCold) || 0,
+            tempWarm: Number(analytics.tempWarm) || 0,
+            tempHot: Number(analytics.tempHot) || 0,
+            callAnswered: Number(analytics.callAnswered) || 0,
+            callNoAnswer: Number(analytics.callNoAnswer) || 0,
+        }
+        // Free-text search skips server analytics for speed — keep previous chip totals.
+        const searching = !!(params.search && String(params.search).trim())
+        const hasAny = Object.values(nextAnalytics).some((n) => n > 0)
+        if (!searching || hasAny) {
+            leadAnalyticsServer.value = nextAnalytics
+        }
+    }
+
+    const searching = !!(params.search && String(params.search).trim())
+    const newData = stagesData.map((stage, index) => ({
+        title: stage.name,
+        status: stage.id,
+        color: stage.color || getColorByIndex(index),
+        order: stage.order ?? index,
+        // Keep server order during free-text search (no client re-rank by updated_at).
+        leads: searching
+            ? [...(stage.leads || [])]
+            : sortLeadsByUpdatedAt([...(stage.leads || [])]),
+        pagination: stage.pagination || {
+            current_page: 1,
+            last_page: 1,
+            per_page: leadsPerPage.value,
+            total: stage.lead_count || 0,
+            has_more_pages: false
+        }
+    }))
+
+    columns.value = newData
+    seedActivityAvatarCacheFromColumns(newData)
+    syncStageOrderMapFromColumns(newData)
+
+    const nextCounts = {}
+    columns.value.forEach(col => {
+        const total = Array.isArray(col.leads) ? col.leads.length : 0
+        nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
+    })
+    visibleLeadCounts.value = nextCounts
+
+    const newStagePagination = {}
+    stagesData.forEach(stage => {
+        newStagePagination[stage.id] = {
+            currentPage: stage.pagination?.current_page || 1,
+            lastPage: stage.pagination?.last_page || 1,
+            perPage: stage.pagination?.per_page || leadsPerPage.value,
+            total: stage.pagination?.total || stage.lead_count || 0,
+            hasMorePages: stage.pagination?.has_more_pages || false
+        }
+    })
+    stagePagination.value = newStagePagination
+
+    error.value = null
+}
+
 const executeFetchLeads = async (options = {}) => {
     // Latest request wins: cancel older in-flight fetches instead of dropping
     // the newest user intent.
@@ -2350,78 +2412,28 @@ const executeFetchLeads = async (options = {}) => {
             ...buildLeadSearchApiParams(q),
         }
 
-        const response = await api.get('/stages/kanban/stages-with-leads', {
-            params,
-            signal: abortController.value.signal
-        })
-
-        if (generation !== fetchGeneration) return
-        
-        const responseData = response?.data?.data
-        const stagesData = responseData?.stages || []
-        const analytics = responseData?.analytics
-        if (analytics && typeof analytics === 'object') {
-            const nextAnalytics = {
-                tempCold: Number(analytics.tempCold) || 0,
-                tempWarm: Number(analytics.tempWarm) || 0,
-                tempHot: Number(analytics.tempHot) || 0,
-                callAnswered: Number(analytics.callAnswered) || 0,
-                callNoAnswer: Number(analytics.callNoAnswer) || 0,
+        const prefetched = takeLeadBoardPrefetch(params)
+        let response
+        if (prefetched) {
+            try {
+                response = await prefetched
+            } catch (prefetchError) {
+                if (generation !== fetchGeneration) return
+                response = await api.get('/stages/kanban/stages-with-leads', {
+                    params,
+                    signal: abortController.value.signal
+                })
             }
-            // Free-text search skips server analytics for speed — keep previous chip totals.
-            const searching = !!(params.search && String(params.search).trim())
-            const hasAny = Object.values(nextAnalytics).some((n) => n > 0)
-            if (!searching || hasAny) {
-                leadAnalyticsServer.value = nextAnalytics
-            }
+        } else {
+            response = await api.get('/stages/kanban/stages-with-leads', {
+                params,
+                signal: abortController.value.signal
+            })
         }
 
-        // تحويل البيانات
-        const searching = !!(params.search && String(params.search).trim())
-        const newData = stagesData.map((stage, index) => ({
-            title: stage.name,
-            status: stage.id,
-            color: stage.color || getColorByIndex(index),
-            order: stage.order ?? index,
-            // Keep server order during free-text search (no client re-rank by updated_at).
-            leads: searching
-                ? [...(stage.leads || [])]
-                : sortLeadsByUpdatedAt([...(stage.leads || [])]),
-            pagination: stage.pagination || {
-                current_page: 1,
-                last_page: 1,
-                per_page: leadsPerPage.value,
-                total: stage.lead_count || 0,
-                has_more_pages: false
-            }
-        }))
-        
-        columns.value = newData
-        seedActivityAvatarCacheFromColumns(newData)
-        syncStageOrderMapFromColumns(newData)
-        
-        // تحديث visibleLeadCounts (العدد المرئي)
-        const nextCounts = {}
-        columns.value.forEach(col => {
-            const total = Array.isArray(col.leads) ? col.leads.length : 0
-            nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
-        })
-        visibleLeadCounts.value = nextCounts
-        
-        // تخزين pagination info
-        const newStagePagination = {}
-        stagesData.forEach(stage => {
-            newStagePagination[stage.id] = {
-                currentPage: stage.pagination?.current_page || 1,
-                lastPage: stage.pagination?.last_page || 1,
-                perPage: stage.pagination?.per_page || leadsPerPage.value,
-                total: stage.pagination?.total || stage.lead_count || 0,
-                hasMorePages: stage.pagination?.has_more_pages || false
-            }
-        })
-        stagePagination.value = newStagePagination
-        
-        error.value = null
+        if (generation !== fetchGeneration) return
+
+        applyStagesWithLeadsResponse(response, params)
         saveColumnsToCache()
         
     } catch (err) {
@@ -2509,6 +2521,25 @@ function loadCachedColumns() {
     } catch (e) {
         // ignore cache errors
         return false
+    }
+}
+
+// Paint a saved board on the first render. Reading it in onMounted is one
+// frame too late, so the loader flashes even when the cards are already here.
+const hadCachedBoard = loadCachedColumns()
+// Same for a prefetch that already resolved: onMounted is one frame too late.
+// Peek only — the request stays owned by the later fetchLeads() call.
+let paintedSettledPrefetch = false
+if (!hadCachedBoard) {
+    const earlyParams = {
+        per_page: leadsPerPage.value,
+        ...buildLeadSearchApiParams(effectiveSearchParams.value),
+    }
+    const settled = peekSettledLeadBoardPrefetch(earlyParams)
+    if (settled) {
+        applyStagesWithLeadsResponse(settled, earlyParams)
+        loading.value = false
+        paintedSettledPrefetch = true
     }
 }
 
@@ -3218,10 +3249,9 @@ onMounted(async () => {
     unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
     markKanbanReady()
 
-    const hadCache = loadCachedColumns()
-    if (hadCache) {
+    if (hadCachedBoard || paintedSettledPrefetch) {
         markKanbanReady()
-        // Paint instantly from cache, refresh quietly in the background.
+        // Paint instantly from cache or an already-resolved prefetch, refresh quietly.
         fetchLeads(true, undefined, { silent: true })
     } else {
         try {
@@ -5176,7 +5206,8 @@ const setupRevertAlertListener  = () => {
 const fetchRevertNotifications = async () => {
     try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/notifications?limit=5`, {
+        const revertType = encodeURIComponent('App\\Notifications\\LeadRevertWarningNotification')
+        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/notifications?type=${revertType}`, {
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         })
         if (!response.ok) return
@@ -5349,47 +5380,17 @@ const fetchRevertNotifications = async () => {
     padding-right: 0;
 }
 
-.kanban-board-skeleton {
+.kanban-board-loading {
     display: flex;
-    gap: 14px;
-    height: 100%;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
     min-height: 420px;
-    padding: 8px 4px 12px;
-    box-sizing: border-box;
 }
-.kanban-board-skeleton__col {
-    flex: 1 1 0;
-    min-width: 180px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.55);
-}
-.kanban-board-skeleton__head,
-.kanban-board-skeleton__card {
-    display: block;
-    border-radius: 12px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.85), rgba(255,255,255,0.35));
-    background-size: 200% 100%;
-    animation: kanban-skeleton-shimmer 1.1s ease-in-out infinite;
-}
-.kanban-board-skeleton__head {
-    height: 28px;
-    width: 55%;
-    border-radius: 999px;
-}
-.kanban-board-skeleton__card {
-    height: 92px;
-}
-.kanban-board-skeleton__card--short {
-    height: 64px;
-}
-@keyframes kanban-skeleton-shimmer {
-    0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
+.kanban-board-loading :deep(.brand-loader--inline) {
+    background: transparent;
+    min-height: 280px;
+    width: 100%;
 }
 
 /* Empty / loading / error states */
