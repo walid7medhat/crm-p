@@ -110,12 +110,18 @@ class LeadRequest extends FormRequest
 
         if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
             $rules['lead_number'] = 'string|unique:leads,lead_number,' . $this->route('lead')->id;
+
+            // Editing: client name and primary phone are optional for everyone.
+            // (LeadController::update saves '' for the NOT NULL first_name column; who
+            // may change the phone at all is still decided there.)
+            $rules['first_name'] = 'nullable|string|max:255';
+            $rules['work_phone'] = ['nullable', 'max:20'];
         }
 
-        // branch_admin and listing-team sales may leave the client's first name and
-        // primary phone empty — when creating AND editing (otherwise a lead they created
-        // without them could never be saved again). LeadController::store/update save ''
-        // for the NOT NULL first_name column. Everyone else keeps both required.
+        // Creating: branch_admin and listing-team sales may leave the client's first name
+        // and primary phone empty (editing already allows it for everyone, above).
+        // LeadController::store saves '' for the NOT NULL first_name column. Everyone
+        // else keeps both required when creating.
         if ($this->mayCreateWithoutNameAndPhone()) {
             $rules['first_name'] = 'nullable|string|max:255';
             $rules['work_phone'] = ['nullable', 'max:20'];

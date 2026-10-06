@@ -696,6 +696,14 @@ class LeadController extends Controller
                         // branch_admin can edit the lead but never its primary phone.
                         unset($leadData['work_phone']);
                     }
+
+                // Lead source: only super_admin / admin / branch_admin may change it (the
+                // edit form sends the current value back for everyone else — keep it). A change
+                // is recorded in the lead history by the "updated" log below (lead_source isn't
+                // in $ignoreKeys).
+                if (! $user->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
+                    unset($leadData['lead_source']);
+                }
                 
                 $participants = $request->input('participants', []);
                 $observers = $request->input('observers', []);

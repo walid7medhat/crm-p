@@ -163,6 +163,31 @@
         <!--</div>-->
     </div>
      <div class="info-section section-highlight"  v-if="!showOnlySection || showOnlySection === 'leadInfo'">
+            <!-- Source: editable by super_admin / admin / branch_admin only (can_edit_source).
+                 Changes are logged in the lead history. -->
+            <div class="info-group mb-3" v-if="canEditSource">
+                <label class="form-label-custom">Source <span class="text-danger">*</span></label>
+                <v-select
+                    v-model="form.lead_source"
+                    :options="editSourceOptions"
+                    :reduce="option => option.value"
+                    label="text"
+                    placeholder="Select Source"
+                    :loading="isLoadingSources"
+                    :clearable="false"
+                    class="custom-v-select"
+                    :class="{ 'is-invalid-select': validationErrors.lead_source }"
+                >
+                    <template #open-indicator="{ attributes }">
+                        <span v-bind="attributes">
+                            <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+                        </span>
+                    </template>
+                </v-select>
+                <div v-if="validationErrors.lead_source" class="invalid-feedback d-block">
+                    {{ validationErrors.lead_source[0] }}
+                </div>
+            </div>
             <div class="info-group mb-3">
                 <label class="form-label-custom">More Information</label>
                 <b-form-textarea 
@@ -405,7 +430,8 @@
                 
 
 
-                <!-- Source (required) -->
+                <!-- Source moved to the Lead Information section (top of this form). -->
+                <!-- Old Source block (kept for reference) -->
                 <!--<div class="info-group">-->
                 <!--    <label class="form-label-custom">Source <span class="text-danger">*</span></label>-->
                 <!--    <v-select -->
@@ -1081,6 +1107,39 @@ const initializeForm = () => {
 const canEditPhoneEmail = computed(() => {
     return props.lead?.can_edit_phone_email ?? false
 })
+// Lead source: super_admin / admin / branch_admin only (LeadResource can_edit_source;
+// LeadController::update ignores it from anyone else).
+const canEditSource = computed(() => !!props.lead?.can_edit_source)
+
+// Same list as the create form (GET /sources), plus the lead's current source when it
+// isn't in that list (old / imported values) so saving never silently changes it.
+const apiSourceOptions = ref([])
+const isLoadingSources = ref(false)
+const editSourceOptions = computed(() => {
+    const list = [...apiSourceOptions.value]
+    const current = props.lead?.lead_source
+    if (current && !list.some(o => o.value === current)) {
+        list.unshift({ value: current, text: current })
+    }
+    return list
+})
+
+async function fetchEditSources() {
+    if (!canEditSource.value) return
+    isLoadingSources.value = true
+    try {
+        const response = await api.get('/sources')
+        const data = response.data?.data || response.data || []
+        apiSourceOptions.value = (Array.isArray(data) ? data : [])
+            .filter(source => source?.name)
+            .map(source => ({ value: source.name, text: source.name }))
+    } catch (error) {
+        console.error('Error fetching sources:', error)
+    } finally {
+        isLoadingSources.value = false
+    }
+}
+
 // Primary phone: admin / super_admin only (branch_admin can edit the rest of the lead).
 // Older payloads without the flag fall back to can_edit_phone_email.
 const canEditPrimaryPhone = computed(() => {
@@ -1242,6 +1301,7 @@ onMounted(async () => {
     // otherwise stop the click before it ever reaches this document listener,
     // leaving the budget dropdown stuck open no matter what else gets clicked.
     document.addEventListener('click', onDocumentClick, true)
+    fetchEditSources()
     await fetchUsers()
 
     if (props.lead?.area_id || props.lead?.property_type_id) {
