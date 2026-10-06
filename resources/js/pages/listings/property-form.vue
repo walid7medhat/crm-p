@@ -4561,8 +4561,12 @@ const handleSubmit = async (action = 'draft') => {
     
     proxy.$showNotification(successMessage, "success");
     
-    if (action === 'preview') proxy.$router.push(`/property-details/${propertyId}`);
-    else proxy.$router.push(`/property-details/${propertyId}`);
+    // Back to My Listings with the new listing's popup open (?listing= opens it).
+    proxy.$router.push(
+      propertyId
+        ? { path: '/my-listing', query: { listing: String(propertyId) } }
+        : '/my-listing'
+    );
     
   } catch (error) {
     console.error("❌ Full Error:", error);

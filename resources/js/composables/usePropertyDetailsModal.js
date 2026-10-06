@@ -49,7 +49,9 @@ function clearListingQuery() {
   if (returnUrl !== null) {
     if (typeof window !== 'undefined') window.history.replaceState(window.history.state, '', returnUrl);
     returnUrl = null;
-    return;
+    // Usually the page's own URL has no ?listing=. If it does (e.g. a redirect to
+    // /my-listing?listing=<id> after saving), fall through and drop it so a refresh
+    // doesn't reopen the popup.
   }
   if (!router || !route || route.query[LISTING_QUERY_KEY] == null) return;
   const query = { ...route.query };
