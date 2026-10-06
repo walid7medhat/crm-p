@@ -73,7 +73,6 @@ import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
 import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
 const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
-loadViewLeadModal().catch(() => {})
 const LeadOpeningLoader = {
   name: 'LeadOpeningLoader',
   setup() {
@@ -217,11 +216,9 @@ export default {
     })
 
     watch(
-      () => route.path,
-      (path) => {
-        if (path === '/kanban' || path === '/kanban_deal') {
-          preloadViewLeadModal()
-        }
+      () => route.query.lead,
+      (leadId) => {
+        if (leadId) preloadViewLeadModal()
       },
       { immediate: true },
     )
