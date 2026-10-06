@@ -1154,6 +1154,7 @@ import BrandLoader from '@/components/layout/BrandLoader.vue'
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
+import { takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
@@ -2346,10 +2347,24 @@ const executeFetchLeads = async (options = {}) => {
             ...buildLeadSearchApiParams(q),
         }
 
-        const response = await api.get('/stages/kanban/stages-with-leads', {
-            params,
-            signal: abortController.value.signal
-        })
+        const prefetched = takeLeadBoardPrefetch(params)
+        let response
+        if (prefetched) {
+            try {
+                response = await prefetched
+            } catch (prefetchError) {
+                if (generation !== fetchGeneration) return
+                response = await api.get('/stages/kanban/stages-with-leads', {
+                    params,
+                    signal: abortController.value.signal
+                })
+            }
+        } else {
+            response = await api.get('/stages/kanban/stages-with-leads', {
+                params,
+                signal: abortController.value.signal
+            })
+        }
 
         if (generation !== fetchGeneration) return
         
@@ -2507,6 +2522,10 @@ function loadCachedColumns() {
         return false
     }
 }
+
+// Paint a saved board on the first render. Reading it in onMounted is one
+// frame too late, so the loader flashes even when the cards are already here.
+loadCachedColumns()
 
 function getVisibleLeadCount(stageId) {
     const current = visibleLeadCounts.value[stageId]

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import Swal from 'sweetalert2'
+import { waitForLeadBoardPriority } from '../composables/leadBoardPriority.js'
 
 export function getApiBaseUrl() {
   return (
@@ -141,7 +142,11 @@ function attachAuthInterceptor(client) {
   if (client[INTERCEPTOR_FLAG]) return
   client[INTERCEPTOR_FLAG] = true
 
-  client.interceptors.request.use((config) => {
+  client.interceptors.request.use(async (config) => {
+    const url = String(config?.url || '')
+    if (!url.includes('stages-with-leads')) {
+      await waitForLeadBoardPriority()
+    }
     const token = resolveAuthToken()
     if (token) {
       config.headers = config.headers || {}
