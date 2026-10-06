@@ -47,7 +47,7 @@
                                 <span v-if="comment.deletedAt" class="comment-deleted-badge">Soft deleted</span>
                             </span>
                             <div class="comment-header-right">
-                                <button
+                                <!-- <button
                                     v-if="hasArabic(comment.comment)"
                                     type="button"
                                     class="comment-translate-btn"
@@ -61,7 +61,7 @@
                                         class="comment-translate-icon"
                                         :class="{ spinning: stateFor(comment)?.loading }"
                                     ></iconify-icon>
-                                </button>
+                                </button> -->
                                 <span class="comment-time">{{ comment.time }}</span>
                                 <div
                                     class="comment-avatar-hover-anchor"
