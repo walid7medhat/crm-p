@@ -227,6 +227,9 @@
                   <button class="btn btn-secondary" v-if="property.status" >
                  {{ property.status }}
                 </button>
+                  <button class="btn btn-warning" v-if="needsApproval">
+                    <i class="ri-time-line me-1"></i>Needs Approval
+                  </button>
                   <!-- <button class="btn btn-success" @click="openFloorPlanSlider(0)" v-if="property?.floor_plans?.length > 0">
                     <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
                     VIEW FLOOR PLAN
@@ -2714,6 +2717,24 @@ const hasRejectionReason = computed(() => {
   console.log('  - Result:', hasReason);
   return hasReason;
 });
+// Waiting for approval (not rejected). Shown only to the listing's own agent,
+// listing-team managers/team leads, and super admins.
+const needsApproval = computed(() => {
+  const p = property.value;
+  if (!p || !p.status) return false;
+  if (p.approved) return false;
+
+  const user = getCurrentUser();
+  if (!user) return false;
+  const roles = user.roles || [];
+  const agentId = p.agent?.id ?? p.agent_id;
+  const isListingAgent = agentId != null && Number(agentId) === Number(user.id);
+  const isListingTeamLead = (roles.includes('manager') || roles.includes('team_lead')) && user.is_listing_team;
+  if (!isListingAgent && !isListingTeamLead && !roles.includes('super_admin')) return false;
+
+  if (['converted', 'rented'].includes(p.status)) return false;
+  return !(p.rejection_reason && p.rejection_reason.trim() !== '');
+});
 const rejectionDetails = computed(() => {
   if (!hasRejectionReason.value) return null;
   
@@ -3119,6 +3140,7 @@ const mobileGalleryBadges = computed(() => {
   if (p.completion_status === 'Under Construction') badges.push('Off-Plan');
   else if (p.completion_status === 'Completed') badges.push('Ready');
   if (p.is_hot_deal === 'Yes') badges.push('Hot Deal');
+  if (needsApproval.value) badges.push('Needs Approval');
   return badges;
 });
 
@@ -8529,7 +8551,7 @@ const getHistoryIcon = (event) => {
     markAsRentedByOIAgent,
     openAToAModalForRent,
     submitAToAForRent,
-   hasRejectionReason,formatRejectionDate ,rejectionDetails,
+   hasRejectionReason,formatRejectionDate ,rejectionDetails, needsApproval,
 
     internalUpdates,
   newUpdateText,
