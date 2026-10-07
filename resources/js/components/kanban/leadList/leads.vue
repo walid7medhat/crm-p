@@ -454,7 +454,7 @@
                                                                     </div>
                                                                     <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                                                         <div
-                                                                            v-if="activityPerson(task)"
+                                                                            v-if="showActivityPersonAvatar && activityPerson(task)"
                                                                             class="person-hover-anchor person-hover-clickable"
                                                                             :title="activityPerson(task)?.name || ''"
                                                                             @mouseenter.stop="showPersonHoverCard(task, 'activity', $event)"
@@ -1310,6 +1310,9 @@ const onProfilePopupUpdate = (open) => {
 
 /** Last person who commented or logged an activity. Null hides the avatar. */
 const activityPerson = (task) => task?.last_activity_user ?? null
+
+/** Temporarily hide the Activity-row person photo (date + source icon stay). */
+const showActivityPersonAvatar = false
 
 /** Cached CRM avatars loaded after hover/API (user id → avatar URL). */
 const activityAvatarCache = ref({})
