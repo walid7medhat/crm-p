@@ -166,6 +166,13 @@ return [
         'path' => storage_path('logs/bitrix_deleted.log'),
         'level' => 'info',
     ],
+    // Every payload posted to /website-lead/wordpress (one file per day, 30 days kept).
+    'wordpress_leads' => [
+        'driver' => 'daily',
+        'path' => storage_path('logs/wordpress-leads.log'),
+        'level' => 'info',
+        'days' => 30,
+    ],
     ],
 
 ];

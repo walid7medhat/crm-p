@@ -785,7 +785,18 @@ public function store_wordpress(Request $request)
     // }
 
     $data = $request->all();
-    // Ignore client assignee fields — Lead Assignment (ProcessLeadAutoAssignmentJob on create) assigns.
+
+    // Keep a record of exactly what WordPress sent (secrets stripped) — storage/logs/wordpress-leads-*.log
+    Log::channel('wordpress_leads')->info('WordPress lead received', [
+        'ip' => $request->ip(),
+        'user_agent' => $request->userAgent(),
+        'payload' => \Illuminate\Support\Arr::except($data, ['secret', 'api_key']),
+    ]);
+
+    // Same as store_website: #25 → #1690 for leads from outside (Lead::externalResponsibleId).
+    $response = Lead::externalResponsibleId($data['responsible_person_id'] ?? null);
+
+    // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
 
 $fieldData = [];
@@ -821,12 +832,18 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => 1,
+        'responsible_person_id' => $response ?? 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
  $lead->lead_branch_source=$lead->responsiblePerson?->admin_parent?->name;
           $lead->save();
+
+    Log::channel('wordpress_leads')->info('WordPress lead created', [
+        'lead_id' => $lead->id,
+        'responsible_person_id' => $lead->responsible_person_id,
+    ]);
+
     LeadHistoryHelper::log($lead->id, ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]);
     broadcast(new LeadUpdated($lead, 'created'));
 
