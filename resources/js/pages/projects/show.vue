@@ -123,7 +123,7 @@
             </div>
           </section>
 
-         <section class="info-card floor-card" v-if="groupedFloorPlans.length">
+         <section class="info-card floor-card" v-if="areaTabs.some(tab => tab.count > 0)">
                 <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">
                   Floor Plans 
                 </h3>
@@ -368,7 +368,17 @@ export default {
       return tiles;
     });
 
-    const floorPlans = computed(() => (Array.isArray(project.value?.floor_plan_images) ? project.value.floor_plan_images : []));
+    // floor_plan_images has each plan stored several times (same image + area); show each once.
+    const floorPlans = computed(() => {
+      const list = Array.isArray(project.value?.floor_plan_images) ? project.value.floor_plan_images : [];
+      const seen = new Set();
+      return list.filter((plan) => {
+        const key = `${plan.area_id ?? ''}|${plan.image_path || plan.image_url || plan.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    });
     const floorTabs = computed(() => {
       const tabs = ['All'];
       floorPlans.value.forEach((item) => {
@@ -393,24 +403,39 @@ export default {
     });
 
     const activeFloorPlan = computed(() => filteredFloorPlans.value[0] || null);
+
+    // Buildings/phases — same list as the Floor Plans page's "Select Building/Phases".
+    const projectAreas = ref([]);
+    const fetchProjectAreas = async () => {
+      try {
+        const res = await api.get(`/listings/projects/${currentProjectId.value}/areas`);
+        projectAreas.value = Array.isArray(res.data?.data) ? res.data.data : [];
+      } catch (_e) {
+        projectAreas.value = [];
+      }
+    };
+
+    // One tab per building name (areas are stored several times under the same name),
+    // including buildings that have no floor plans yet — they show the empty state.
+    const areaKey = (name) => `name:${String(name || '').trim().toLowerCase()}`;
     const groupedFloorPlans = computed(() => {
-      const plans = floorPlans.value;
-      if (!plans.length) return [];
+      const groups = new Map();
+      projectAreas.value.forEach((area) => {
+        const key = areaKey(area.name);
+        if (!area.name || groups.has(key)) return;
+        groups.set(key, { areaId: key, areaName: area.name, plans: [] });
+      });
 
-      const grouped = plans.reduce((acc, plan) => {
-        const areaId = plan.area_id || 'unassigned';
-        if (!acc[areaId]) {
-          acc[areaId] = {
-            areaId: areaId,
-            areaName: plan.area_name || plan.area || 'General',
-            plans: []
-          };
+      floorPlans.value.forEach((plan) => {
+        const name = plan.area_name || plan.area || 'General';
+        const key = plan.area_id ? areaKey(name) : 'unassigned';
+        if (!groups.has(key)) {
+          groups.set(key, { areaId: key, areaName: plan.area_id ? name : 'General', plans: [] });
         }
-        acc[areaId].plans.push(plan);
-        return acc;
-      }, {});
+        groups.get(key).plans.push(plan);
+      });
 
-      return Object.values(grouped);
+      return [...groups.values()];
     });
 
     const areaTabs = computed(() => {
@@ -422,10 +447,7 @@ export default {
     });
 
     const currentAreaFloorPlans = computed(() => {
-      if (!activeAreaTab.value || activeAreaTab.value === 'unassigned') {
-        return floorPlans.value.filter(p => !p.area_id);
-      }
-      
+      if (!activeAreaTab.value) return [];
       const group = groupedFloorPlans.value.find(g => g.areaId === activeAreaTab.value);
       return group ? group.plans : [];
     });
@@ -481,7 +503,6 @@ export default {
 
    const getCurrentAreaName = () => {
       if (!activeAreaTab.value) return 'General';
-      if (activeAreaTab.value === 'unassigned') return 'Unassigned';
       const tab = areaTabs.value.find(t => t.areaId === activeAreaTab.value);
       return tab ? tab.label : 'General';
     };
@@ -656,10 +677,10 @@ export default {
   onMounted(() => {
       // The popup scrolls itself; natural page scroll is only for the /projects/:id route.
       if (!isEmbedded.value) enablePageNaturalScroll();
-      fetchProject().then(() => {
-        if (areaTabs.value.length) {
-          activeAreaTab.value = areaTabs.value[0].areaId;
-        }
+      Promise.all([fetchProject(), fetchProjectAreas()]).then(() => {
+        // Open on the first building that has plans (empty buildings still get a tab).
+        const firstWithPlans = areaTabs.value.find((tab) => tab.count > 0);
+        activeAreaTab.value = (firstWithPlans || areaTabs.value[0])?.areaId ?? null;
       });
       document.addEventListener('keydown', handleKeydown);
     });

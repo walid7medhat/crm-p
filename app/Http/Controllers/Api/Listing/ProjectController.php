@@ -941,6 +941,7 @@ public function getFloorPlans( $id)
             $floorPlanImage->update([
                 'name' => $request->name
             ]);
+            $this->clearCache();
 
             Log::info('Floor plan name updated', [
                 'id' => $id,
@@ -1120,6 +1121,10 @@ public function getFloorPlans( $id)
 
         DB::commit();
         Log::info('=== END UPDATE FLOOR PLANS - SUCCESS ===');
+
+        // Project show() is cached for CACHE_TTL — without this the project page keeps
+        // showing the old floor plan list for up to 30 minutes after a save.
+        $this->clearCache();
 
         // نجيب الصور المحدثة
         $updatedFloorPlans = FloorPlanImage::where('project_id', $project->id)
