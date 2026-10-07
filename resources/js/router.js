@@ -54,7 +54,7 @@ const baseRoutes = [
 
   { path: '/lead-reports', component: () => import('./pages/lead-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
   { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue`
@@ -280,6 +280,17 @@ const isUser33FromStorage = () => {
     return false
   }
 }
+/** User 30 gets specific super-admin-only pages (route meta: allowUser30), like allowUser33. */
+const isUser30FromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Number(u?.id) === 30
+  } catch {
+    return false
+  }
+}
 const isAdminFromStorage = () => {
   try {
     const raw = localStorage.getItem('user')
@@ -346,7 +357,8 @@ router.beforeEach((to, from, next) => {
   if (
     to.matched.some((r) => r.meta.requiresSuperAdmin) &&
     !isSuperAdminFromStorage() &&
-    !(to.matched.some((r) => r.meta.allowUser33) && isUser33FromStorage())
+    !(to.matched.some((r) => r.meta.allowUser33) && isUser33FromStorage()) &&
+    !(to.matched.some((r) => r.meta.allowUser30) && isUser30FromStorage())
   ) {
     next('/')
     return

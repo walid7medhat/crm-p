@@ -303,13 +303,13 @@ class ReportController extends Controller
      * Lead Pool self-assignments in a date range (by when the lead was taken —
      * lead_pool_assignments.assigned_at): per user, how many leads they took from the
      * Lead Pool and which stage each of those leads is in NOW, plus the leads themselves.
-     * super_admin only (for now).
+     * super_admin + user #30 only (for now).
      */
     public function leadPoolAssignmentsReport(Request $request)
     {
         try {
             $user = auth()->user();
-            if (!$user->hasRole('super_admin')) {
+            if (!$user->hasRole('super_admin') && (int) $user->id !== 30) {
                 return ApiResponse::error('Unauthorized - Only super admins can access this report', 403);
             }
 
