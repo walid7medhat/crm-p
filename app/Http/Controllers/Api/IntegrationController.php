@@ -793,8 +793,19 @@ public function store_wordpress(Request $request)
         'payload' => \Illuminate\Support\Arr::except($data, ['secret', 'api_key']),
     ]);
 
-    // Same as store_website: #25 → #1690 for leads from outside (Lead::externalResponsibleId).
-    $response = Lead::externalResponsibleId($data['responsible_person_id'] ?? null);
+    // WordPress sends its own ids for the responsible person (responsible_person_id or
+    // responsible_person) — map them to CRM users first, then the shared outside-lead
+    // rule (#25 → #1690, Lead::externalResponsibleId). An id that isn't a CRM user falls
+    // back to #1 (auto-assign takes over) so the lead is never lost.
+    $wordpressResponsibleMap = [
+        2911 => 59,
+        2909 => 1690,
+    ];
+    $incoming = (int) ($data['responsible_person_id'] ?? $data['responsible_person'] ?? 0);
+    $response = Lead::externalResponsibleId($wordpressResponsibleMap[$incoming] ?? ($incoming ?: null));
+    if (! \App\Models\User::whereKey($response)->exists()) {
+        $response = 1;
+    }
 
     // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
