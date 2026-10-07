@@ -1512,6 +1512,21 @@ const onLeadSearch = (payload) => {
     
 }
 
+// A filtered link (?filter=…, e.g. a home-dashboard number) was applied by kanban_deal.vue —
+// show it as the current search (chips) without dispatching another search.
+const onKanbanUrlFilterApplied = (e) => {
+    const detail = e?.detail || {}
+    const query = detail.query && typeof detail.query === 'object' && Object.keys(detail.query).length
+        ? { ...detail.query }
+        : null
+    activeFilter.value = { ...defaultFilter }
+    lastQuery.value = query
+    activeFilters.value = Array.isArray(detail.activeFilters) && detail.activeFilters.length
+        ? [...detail.activeFilters]
+        : buildNavbarFiltersFromQuery(query)
+    setSearchSilently('')
+}
+
 // قم بتعديل دالة onDealSearch
 const onDealSearch = (payload) => {
     console.log('🔍 onDealSearch called with payload:', payload)
@@ -2425,6 +2440,7 @@ onMounted(() => {
 
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.addEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
   loadStoredDealType()
 
   // Disable the nav search input the instant another modal (Create Lead/Deal, Add
@@ -2461,6 +2477,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-deal-search-update', () => {})
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
     searchDebounceTimer.value = null;

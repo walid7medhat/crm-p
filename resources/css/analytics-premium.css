@@ -4381,3 +4381,40 @@ body:has(.ap-dashboard--uni) .chat-floating-badge {
     min-height: 150px !important;
   }
 }
+
+/* ===== Home dashboard: clickable numbers (open the filtered board / page) ===== */
+.ap-dashboard--uni .adx-click {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+
+.ap-dashboard--uni .adx-click:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(107, 33, 168, 0.12);
+}
+
+.ap-dashboard--uni .adx-click:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+/* Rows inside lists: highlight instead of lifting. */
+.ap-dashboard--uni li.adx-click:hover,
+.ap-dashboard--uni .adx-uni-funnel-row.adx-click:hover,
+.ap-dashboard--uni .adx-uni-progress.adx-click:hover {
+  transform: none;
+  box-shadow: none;
+  background-color: rgba(124, 58, 237, 0.06);
+  border-radius: 8px;
+}
+
+/* Small links inside a card (warm / cold, Lost, deal types). */
+.ap-dashboard--uni .adx-sub-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ap-dashboard--uni .adx-sub-link:hover {
+  text-decoration: underline;
+}

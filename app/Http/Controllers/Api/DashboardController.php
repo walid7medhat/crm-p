@@ -1341,6 +1341,19 @@ public function getPropertyTypesWithListings(Request $request)
 
         $leadBase = $scopeLeads(Lead::query());
 
+        // Call answered / No answer only count leads in the Contacted stage (0 = none).
+        $contactedStageId = (int) (Stage::query()
+            ->where('stage_type', 'lead')
+            ->whereRaw('LOWER(name) = ?', ['contacted'])
+            ->value('id') ?? 0);
+
+        // Converted = leads in the Converted stage (same as the board's column). It used
+        // converted_at, which isn't set on every lead moved there — showed 0 vs 6 on the board.
+        $convertedStageId = (int) (Stage::query()
+            ->where('stage_type', 'lead')
+            ->whereRaw('LOWER(name) = ?', ['converted'])
+            ->value('id') ?? 0);
+
         // ONE pass for every plain counter (was ~10 separate COUNT/SUM queries — each a
         // full scan of the leads table for super admin / admin, whose scope is everyone).
         $agg = (clone $leadBase)
@@ -1348,14 +1361,14 @@ public function getPropertyTypesWithListings(Request $request)
             ->selectRaw(
                 'COUNT(*) AS total_leads,
                  SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS new_leads,
-                 SUM(CASE WHEN converted_at IS NOT NULL THEN 1 ELSE 0 END) AS converted,
-                 SUM(CASE WHEN interaction_result = \'no_answer\' THEN 1 ELSE 0 END) AS no_answer,
-                 SUM(CASE WHEN interaction_result = \'answered\' THEN 1 ELSE 0 END) AS answered,
+                 SUM(CASE WHEN stage_id = ? THEN 1 ELSE 0 END) AS converted,
+                 SUM(CASE WHEN interaction_result = \'no_answer\' AND stage_id = ? THEN 1 ELSE 0 END) AS no_answer,
+                 SUM(CASE WHEN interaction_result = \'answered\' AND stage_id = ? THEN 1 ELSE 0 END) AS answered,
                  SUM(CASE WHEN LOWER(priority) = \'cold\' OR LOWER(status_lead) = \'cold\' THEN 1 ELSE 0 END) AS cold,
                  SUM(CASE WHEN LOWER(priority) = \'warm\' OR LOWER(status_lead) = \'warm\' THEN 1 ELSE 0 END) AS warm,
                  SUM(CASE WHEN LOWER(priority) = \'hot\' OR LOWER(status_lead) = \'hot\' THEN 1 ELSE 0 END) AS hot,
                  SUM(CASE WHEN converted_at IS NOT NULL THEN COALESCE(budget_to, 0) ELSE 0 END) AS revenue_from_leads',
-                [now()->subDays(7)]
+                [now()->subDays(7), $convertedStageId, $contactedStageId, $contactedStageId]
             )
             ->first();
 
@@ -1383,7 +1396,9 @@ public function getPropertyTypesWithListings(Request $request)
             foreach ($countByStage as $row) {
                 $name = strtolower((string) $row['name']);
                 foreach ($needles as $needle) {
-                    if (str_contains($name, strtolower($needle))) {
+                    // Match at the start of a word, not anywhere: "qualified" must not
+                    // match "Unqualified" (Qualified showed Qualified + Unqualified).
+                    if (preg_match('/\b' . preg_quote(strtolower($needle), '/') . '/', $name)) {
                         $total += (int) $row['count'];
                         break;
                     }
@@ -1419,7 +1434,8 @@ public function getPropertyTypesWithListings(Request $request)
             ->select(
                 'responsible_person_id',
                 DB::raw('count(*) as leads_count'),
-                DB::raw('sum(case when converted_at is not null then 1 else 0 end) as converted_count')
+                // "Won" = in the Converted stage, same as the Converted number above.
+                DB::raw('sum(case when stage_id = ' . (int) $convertedStageId . ' then 1 else 0 end) as converted_count')
             )
             ->whereNotNull('responsible_person_id')
             ->groupBy('responsible_person_id')
@@ -1519,6 +1535,8 @@ public function getPropertyTypesWithListings(Request $request)
             ->orderBy('order')
             ->get(['id', 'name', 'deal_type'])
             ->map(fn ($s) => [
+                // id: home dashboard links each stage to the deals board filtered to it.
+                'id' => $s->id,
                 'label' => $s->name,
                 'type' => $s->deal_type,
                 'count' => (int) ($dealStageCounts[$s->id] ?? 0),

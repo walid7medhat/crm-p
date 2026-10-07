@@ -49,39 +49,41 @@
         <div class="adx-uni-leads">
           <!-- KPI strip — white cards, color on numbers only -->
           <div class="adx-uni-leads__kpis">
-            <div class="adx-uni-kpi adx-uni-kpi--hero">
+            <div class="adx-uni-kpi adx-uni-kpi--hero adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadsLink())" @keydown.enter="go(leadsLink())">
               <span class="adx-uni-kpi__label">Total Leads</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.total_leads) }}</strong>
               <span class="adx-uni-kpi__sub">{{ crm.conversion_rate || 0 }}% conversion</span>
             </div>
-            <div class="adx-uni-kpi">
+            <div class="adx-uni-kpi adx-click" role="link" tabindex="0" title="Leads created in the last 7 days" @click="go(newLeadsLink())" @keydown.enter="go(newLeadsLink())">
               <span class="adx-uni-kpi__label">New</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.new_leads) }}</strong>
             </div>
-            <div class="adx-uni-kpi">
+            <div class="adx-uni-kpi adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadStageLink('contacted'))" @keydown.enter="go(leadStageLink('contacted'))">
               <span class="adx-uni-kpi__label">Contacted</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.contacted) }}</strong>
             </div>
-            <div class="adx-uni-kpi">
+            <div class="adx-uni-kpi adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadStageLink('qualified'))" @keydown.enter="go(leadStageLink('qualified'))">
               <span class="adx-uni-kpi__label">Qualified</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.qualified) }}</strong>
             </div>
-            <div class="adx-uni-kpi adx-uni-kpi--warn">
+            <div class="adx-uni-kpi adx-uni-kpi--warn adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadStageLink('follow'))" @keydown.enter="go(leadStageLink('follow'))">
               <span class="adx-uni-kpi__label">Follow-ups</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.follow_up) }}</strong>
               <span v-if="crm.follow_up_overdue" class="adx-uni-kpi__sub">{{ formatNumber(crm.follow_up_overdue) }} overdue</span>
             </div>
-            <div class="adx-uni-kpi adx-uni-kpi--hot">
+            <div class="adx-uni-kpi adx-uni-kpi--hot adx-click" role="link" tabindex="0" title="Open HOT leads" @click="go(heatLink('hot'))" @keydown.enter="go(heatLink('hot'))">
               <span class="adx-uni-kpi__label">HOT</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.hot) }}</strong>
               <span class="adx-uni-kpi__sub adx-uni-kpi__sub--temp">
-                {{ formatNumber(crm.warm) }} warm · {{ formatNumber(crm.cold) }} cold
+                <a href="#" class="adx-sub-link" @click.stop.prevent="go(heatLink('warm'))">{{ formatNumber(crm.warm) }} warm</a>
+                ·
+                <a href="#" class="adx-sub-link" @click.stop.prevent="go(heatLink('cold'))">{{ formatNumber(crm.cold) }} cold</a>
               </span>
             </div>
-            <div class="adx-uni-kpi adx-uni-kpi--success">
+            <div class="adx-uni-kpi adx-uni-kpi--success adx-click" role="link" tabindex="0" title="Open converted leads" @click="go(leadStageLink('converted'))" @keydown.enter="go(leadStageLink('converted'))">
               <span class="adx-uni-kpi__label">Converted</span>
               <strong class="adx-uni-kpi__value">{{ formatNumber(crm.converted) }}</strong>
-              <span class="adx-uni-kpi__sub">{{ formatNumber(crm.lost) }} Lost</span>
+              <a href="#" class="adx-uni-kpi__sub adx-sub-link" @click.stop.prevent="go(leadStageLink('lost'))">{{ formatNumber(crm.lost) }} Lost</a>
             </div>
           </div>
 
@@ -94,8 +96,13 @@
                 <div
                   v-for="pill in leadStatusPills"
                   :key="pill.label"
-                  class="adx-uni-stage-pill"
+                  class="adx-uni-stage-pill adx-click"
                   :class="`adx-uni-stage-pill--${pill.tone}`"
+                  role="link"
+                  tabindex="0"
+                  :title="`Open ${pill.label} leads`"
+                  @click="go(pillLink(pill.label))"
+                  @keydown.enter="go(pillLink(pill.label))"
                 >
                   <span class="adx-uni-stage-pill__val">{{ formatNumber(pill.value) }}</span>
                   <span class="adx-uni-stage-pill__label">{{ pill.label }}</span>
@@ -116,13 +123,22 @@
                         <iconify-icon icon="lucide:users" width="18" height="18" class="adx-uni-sources-center__icon" />
                       </div>
                     </div>
-                    <div class="adx-uni-sources-total">
+                    <div class="adx-uni-sources-total adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadsLink())" @keydown.enter="go(leadsLink())">
                       <strong>{{ formatNumber(crm.total_leads) }}</strong>
                       <span>Total Leads</span>
                     </div>
                   </div>
                   <ul v-if="leadSourceRows.length" class="adx-uni-source-list">
-                    <li v-for="src in leadSourceRows.slice(0, 5)" :key="src.source">
+                    <li
+                      v-for="src in leadSourceRows.slice(0, 5)"
+                      :key="src.source"
+                      class="adx-click"
+                      role="link"
+                      tabindex="0"
+                      :title="`Open leads from ${src.source}`"
+                      @click="go(sourceLink(src.source))"
+                      @keydown.enter="go(sourceLink(src.source))"
+                    >
                       <span class="adx-uni-source-list__sq" :style="{ background: src.color }" />
                       <div class="adx-uni-source-list__meta">
                         <strong>{{ formatNumber(src.count) }}</strong>
@@ -139,28 +155,28 @@
             <div class="adx-uni-leads__activity">
               <p class="adx-uni-panel-title">Activity</p>
               <div class="adx-uni-activity-grid">
-                <div class="adx-uni-activity-card">
+                <div class="adx-uni-activity-card adx-click" role="link" tabindex="0" title="Open leads whose call was answered" @click="go(callResultLink('answered', 'Answered'))" @keydown.enter="go(callResultLink('answered', 'Answered'))">
                   <div class="adx-uni-activity-card__text">
                     <strong class="adx-uni-activity-card__val">{{ formatNumber(crm.calls_answered) }}</strong>
                     <span class="adx-uni-activity-card__label">Call answered</span>
                   </div>
                   <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:phone" width="16" height="16" /></span>
                 </div>
-                <div class="adx-uni-activity-card">
+                <div class="adx-uni-activity-card adx-click" role="link" tabindex="0" title="Open leads with no answer" @click="go(callResultLink('no_answer', 'No Answer'))" @keydown.enter="go(callResultLink('no_answer', 'No Answer'))">
                   <div class="adx-uni-activity-card__text">
                     <strong class="adx-uni-activity-card__val">{{ formatNumber(crm.calls_no_answer) }}</strong>
                     <span class="adx-uni-activity-card__label">No answer</span>
                   </div>
                   <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:phone" width="16" height="16" /></span>
                 </div>
-                <div class="adx-uni-activity-card">
+                <div class="adx-uni-activity-card adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadsLink())" @keydown.enter="go(leadsLink())">
                   <div class="adx-uni-activity-card__text">
                     <strong class="adx-uni-activity-card__val">{{ crm.avg_response_time_min || 0 }}m</strong>
                     <span class="adx-uni-activity-card__label">Avg response</span>
                   </div>
                   <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:clock" width="16" height="16" /></span>
                 </div>
-                <div class="adx-uni-activity-card adx-uni-activity-card--alert">
+                <div class="adx-uni-activity-card adx-uni-activity-card--alert adx-click" role="link" tabindex="0" title="Open qualified leads" @click="go(leadStageLink('qualified'))" @keydown.enter="go(leadStageLink('qualified'))">
                   <div class="adx-uni-activity-card__text">
                     <strong class="adx-uni-activity-card__val">{{ pipelineHealth }}%</strong>
                     <span class="adx-uni-activity-card__label">Need attention</span>
@@ -168,7 +184,15 @@
                   <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:trending-up" width="16" height="16" /></span>
                 </div>
               </div>
-              <div v-if="crm.best_closer" class="adx-uni-closer">
+              <div
+                v-if="crm.best_closer"
+                class="adx-uni-closer adx-click"
+                role="link"
+                tabindex="0"
+                :title="`Open ${crm.best_closer.name}'s leads`"
+                @click="go(agentLink(crm.best_closer))"
+                @keydown.enter="go(agentLink(crm.best_closer))"
+              >
                 <span class="adx-uni-closer__avatar">
                   <iconify-icon icon="lucide:trophy" width="16" height="16" />
                 </span>
@@ -190,7 +214,16 @@
               </p>
               <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
               <ul v-else-if="leadAgents.length" class="adx-uni-agent-list">
-                <li v-for="(agent, idx) in leadAgents" :key="agent.id" class="adx-uni-agent">
+                <li
+                  v-for="(agent, idx) in leadAgents"
+                  :key="agent.id"
+                  class="adx-uni-agent adx-click"
+                  role="link"
+                  tabindex="0"
+                  :title="`Open ${agent.name}'s leads`"
+                  @click="go(agentLink(agent))"
+                  @keydown.enter="go(agentLink(agent))"
+                >
                   <div class="adx-uni-agent__media">
                     <div class="adx-uni-agent__avatar" aria-hidden="true">{{ agentInitials(agent.name) }}</div>
                     <span class="adx-uni-agent__rank" :class="`adx-uni-agent__rank--${idx + 1}`">{{ idx + 1 }}</span>
@@ -213,7 +246,12 @@
                 <div
                   v-for="(stage, i) in crmFunnelStages"
                   :key="i"
-                  class="adx-uni-funnel-row adx-uni-funnel-row--stacked"
+                  class="adx-uni-funnel-row adx-uni-funnel-row--stacked adx-click"
+                  role="link"
+                  tabindex="0"
+                  :title="`Open ${stage.label} leads`"
+                  @click="go(leadStageByNameLink(stage.label))"
+                  @keydown.enter="go(leadStageByNameLink(stage.label))"
                 >
                   <div class="adx-uni-funnel-row__head">
                     <span class="adx-uni-funnel-row__dot" :style="{ background: stage.color }" />
@@ -263,13 +301,13 @@
         </header>
 
         <div class="adx-uni-crm">
-          <div class="adx-uni-crm__hero adx-uni-crm__hero--deals">
+          <div class="adx-uni-crm__hero adx-uni-crm__hero--deals adx-click" role="link" tabindex="0" title="Open these deals" @click="go(dealsLink())" @keydown.enter="go(dealsLink())">
             <p class="adx-uni-eyebrow">Total deals</p>
             <p class="adx-uni-mega">{{ formatNumber(deals.total_deals) }}</p>
             <div class="adx-uni-crm__chips">
-              <span class="adx-uni-chip">{{ formatNumber(deals.primary) }} primary</span>
-              <span class="adx-uni-chip">{{ formatNumber(deals.secondary) }} secondary</span>
-              <span class="adx-uni-chip adx-uni-chip--gold">{{ formatNumber(deals.rental) }} rental</span>
+              <a href="#" class="adx-uni-chip adx-sub-link" @click.stop.prevent="go(dealTypeLink('primary'))">{{ formatNumber(deals.primary) }} primary</a>
+              <a href="#" class="adx-uni-chip adx-sub-link" @click.stop.prevent="go(dealTypeLink('secondary'))">{{ formatNumber(deals.secondary) }} secondary</a>
+              <a href="#" class="adx-uni-chip adx-uni-chip--gold adx-sub-link" @click.stop.prevent="go(dealTypeLink('rental'))">{{ formatNumber(deals.rental) }} rental</a>
             </div>
             <div class="adx-uni-crm__mini">
               <span><strong>{{ formatCurrency(deals.total_sale) }}</strong> sales</span>
@@ -284,7 +322,12 @@
               <div
                 v-for="(stage, i) in dealStageRows"
                 :key="`deal-${i}`"
-                class="adx-uni-funnel-row"
+                class="adx-uni-funnel-row adx-click"
+                role="link"
+                tabindex="0"
+                :title="`Open ${stage.label} deals`"
+                @click="go(dealStageLink(stage))"
+                @keydown.enter="go(dealStageLink(stage))"
               >
                 <span class="adx-uni-funnel-row__dot" :style="{ background: stage.color }" />
                 <span class="adx-uni-funnel-row__label">{{ stage.label }}</span>
@@ -330,7 +373,7 @@
             <div v-if="listingLoading" class="adx-uni-skeleton adx-uni-skeleton--round" />
             <template v-else>
               <div ref="listingChartRef" class="adx-uni-chart adx-uni-chart--donut" />
-              <div class="adx-uni-list__donut-center">
+              <div class="adx-uni-list__donut-center adx-click" role="link" tabindex="0" title="Open listings" @click="go('/alllisting')" @keydown.enter="go('/alllisting')">
                 <strong>{{ formatNumber(listing.total_listings) }}</strong>
                 <span>properties</span>
               </div>
@@ -342,7 +385,12 @@
             <div
               v-for="item in listingBreakdown"
               :key="item.label"
-              class="adx-uni-progress"
+              class="adx-uni-progress adx-click"
+              role="link"
+              tabindex="0"
+              :title="item.label === 'Pending' ? 'Open listings waiting for approval' : 'Open listings'"
+              @click="go(item.label === 'Pending' ? '/need-approve-requests' : '/alllisting')"
+              @keydown.enter="go(item.label === 'Pending' ? '/need-approve-requests' : '/alllisting')"
             >
               <div class="adx-uni-progress__head">
                 <span class="adx-uni-progress__dot" :style="{ background: item.color }" />
@@ -360,21 +408,21 @@
           </div>
 
           <div class="adx-uni-list__callouts">
-            <div class="adx-uni-callout">
+            <div class="adx-uni-callout adx-click" role="link" tabindex="0" title="Open listings" @click="go('/alllisting')" @keydown.enter="go('/alllisting')">
               <iconify-icon icon="lucide:eye" width="22" height="22" />
               <div>
                 <strong>{{ formatNumber(listing.total_views) }}</strong>
                 <span>Total views</span>
               </div>
             </div>
-            <div class="adx-uni-callout">
+            <div class="adx-uni-callout adx-click" role="link" tabindex="0" title="Open listings" @click="go('/alllisting')" @keydown.enter="go('/alllisting')">
               <iconify-icon icon="lucide:inbox" width="22" height="22" />
               <div>
                 <strong>{{ formatNumber(listing.inquiry_requests) }}</strong>
                 <span>Inquiries</span>
               </div>
             </div>
-            <div class="adx-uni-callout">
+            <div class="adx-uni-callout adx-click" role="link" tabindex="0" title="Open listings" @click="go('/alllisting')" @keydown.enter="go('/alllisting')">
               <iconify-icon icon="lucide:badge-check" width="22" height="22" />
               <div>
                 <strong>{{ listing.conversion_rate || 0 }}%</strong>
@@ -403,7 +451,7 @@
         </header>
 
         <div class="adx-uni-hr">
-          <div class="adx-uni-hr__ring">
+          <div class="adx-uni-hr__ring adx-click" role="link" tabindex="0" title="Open HR" @click="go('/hr')" @keydown.enter="go('/hr')">
             <svg class="adx-uni-ring" viewBox="0 0 120 120" aria-hidden="true">
               <circle class="adx-uni-ring__bg" cx="60" cy="60" r="52" />
               <circle
@@ -419,7 +467,7 @@
             </div>
           </div>
 
-          <div class="adx-uni-hr__presence">
+          <div class="adx-uni-hr__presence adx-click" role="link" tabindex="0" title="Open HR" @click="go('/hr')" @keydown.enter="go('/hr')">
             <p class="adx-uni-panel-title">Today's presence</p>
             <div class="adx-uni-presence-bar">
               <div
@@ -469,7 +517,7 @@
         </header>
 
         <div class="adx-uni-attendance" :class="{ 'adx-uni-attendance--manager': isAttendanceManager }">
-          <div class="adx-uni-attendance__ring" title="On-time + late days ÷ working days so far this month">
+          <div class="adx-uni-attendance__ring adx-click" role="link" tabindex="0" title="On-time + late days ÷ working days so far this month — open my profile" @click="go('/view-profile')" @keydown.enter="go('/view-profile')">
             <svg class="adx-uni-ring" viewBox="0 0 120 120" aria-hidden="true">
               <circle class="adx-uni-ring__bg" cx="60" cy="60" r="52" />
               <circle
@@ -488,7 +536,7 @@
             <p class="adx-uni-panel-title">My attendance this month</p>
             <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
             <template v-else>
-              <div class="adx-uni-attendance-chips">
+              <div class="adx-uni-attendance-chips adx-click" role="link" tabindex="0" title="Open my profile" @click="go('/view-profile')" @keydown.enter="go('/view-profile')">
                 <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good" title="Checked in at or before 9:15 AM">
                   <strong>{{ formatNumber(personalAttendance.present) }}</strong>
                   <span>Present</span>
@@ -564,7 +612,9 @@
 
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import ApexCharts from 'apexcharts'
+import { kanbanFilterLink, openKanbanFilterLink } from '@/utils/kanbanUrlFilter.js'
 import DashboardDateRangePicker from '@/components/dashboard/home/DashboardDateRangePicker.vue'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js'
 import { useAnalyticsDashboard } from '@/composables/useAnalyticsDashboard.js'
@@ -598,7 +648,7 @@ const showAttendance = computed(() => !showHr.value)
 
 const {
   crmLoading, dealsLoading, listingLoading, hrLoading,
-  error, crm, deals, listing, hr, dateFrom, dateTo, periodLabel,
+  error, crm, deals, listing, hr, dateFrom, dateTo, period, periodLabel,
   load, setCustomRange,
 } = useAnalyticsDashboard()
 
@@ -624,6 +674,100 @@ const dateRangeLabel = computed(() => {
 })
 
 const formatNumber = (n) => new Intl.NumberFormat().format(Number(n) || 0)
+
+// ================= Clickable numbers → boards already filtered =================
+// Each number opens the Leads / Deals board filtered to match it (utils/kanbanUrlFilter.js),
+// using the dashboard's date range (created_from / created_to) so the counts line up.
+const router = useRouter()
+// Filtered board links go through openKanbanFilterLink (saves the tab / deal type first so
+// the board doesn't switch tabs and wipe the filter); plain paths are pushed as-is.
+const go = (location) => (location && typeof location === 'object' && location.query?.filter
+  ? openKanbanFilterLink(router, location)
+  : router.push(location).catch(() => {}))
+
+const shortDate = (ymd) => {
+  const d = parseToDate(ymd)
+  return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ymd
+}
+
+const toYmd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// The range the dashboard numbers are counted for. Custom dates when picked; otherwise
+// the default period, worked out the same way as DashboardController::resolveAnalyticsPeriod
+// (the page leaves dateFrom/dateTo empty for "This month", so links had no date filter
+// and the board showed every lead).
+const effectiveRange = computed(() => {
+  if (dateFrom.value && dateTo.value) {
+    return { from: dateFrom.value, to: dateTo.value }
+  }
+  const now = new Date()
+  switch (period.value) {
+    case 'today':
+      return { from: toYmd(now), to: toYmd(now) }
+    case 'weekly': {
+      const start = new Date(now)
+      const offset = (now.getDay() + 6) % 7 // Monday-based week, like Carbon::startOfWeek
+      start.setDate(now.getDate() - offset)
+      const end = new Date(start)
+      end.setDate(start.getDate() + 6)
+      return { from: toYmd(start), to: toYmd(end) }
+    }
+    case 'yearly':
+      return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-12-31` }
+    default:
+      return {
+        from: toYmd(new Date(now.getFullYear(), now.getMonth(), 1)),
+        to: toYmd(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      }
+  }
+})
+
+const rangeQuery = computed(() => ({ created_from: effectiveRange.value.from, created_to: effectiveRange.value.to }))
+
+const rangeChips = computed(() => [
+  { id: 'created_on', queryKey: 'created_at', label: 'Created On', value: `${shortDate(effectiveRange.value.from)} → ${shortDate(effectiveRange.value.to)}` },
+])
+
+const chip = (id, label, value) => ({ id, queryKey: id, label, value: String(value) })
+
+function leadsLink(query = {}, chips = []) {
+  return kanbanFilterLink('leads', { ...rangeQuery.value, ...query }, [...rangeChips.value, ...chips])
+}
+
+function dealsLink(query = {}, chips = [], dealType = null) {
+  return kanbanFilterLink('deals', { ...rangeQuery.value, ...query }, [...rangeChips.value, ...chips], { dealType })
+}
+
+// Stage numbers (Contacted, Qualified, Converted, Lost, pipeline pills, stage lists) open
+// the board with the dashboard's DATE RANGE only — no stage filter; the board shows every
+// stage as its own column, so each column count matches the dashboard number.
+const leadStageLink = () => leadsLink()
+const leadStageByNameLink = () => leadsLink()
+
+// "New" on the dashboard = created in the last 7 days.
+function newLeadsLink() {
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(today.getDate() - 7)
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return kanbanFilterLink('leads', { created_from: ymd(from), created_to: ymd(today) }, [
+    { id: 'created_on', queryKey: 'created_at', label: 'Created On', value: 'Last 7 days' },
+  ])
+}
+
+const heatLink = (heat) => leadsLink({ status_lead: heat }, [chip('status_lead', 'Quality Status', heat.toUpperCase())])
+const callResultLink = (result, label) => leadsLink({ interaction_result: result }, [chip('interaction_result', 'Call Result', label)])
+const sourceLink = (source) => leadsLink({ source }, [chip('source', 'Source', source)])
+const agentLink = (agent) => (agent?.id
+  ? leadsLink({ responsible_person_id: agent.id }, [chip('responsible_person_id', 'Responsible Person', agent.name)])
+  : leadsLink())
+
+const dealTypeLink = (type) => dealsLink({}, [], type)
+// Deal stage rows: the deals board on that deal type's tab, with the date range only.
+const dealStageLink = (stage) => dealsLink({}, [], stage?.type || null)
+
+// "New" isn't a stage (created in the last 7 days) — it keeps its own date filter.
+const pillLink = (label) => (label === 'New' ? newLeadsLink() : leadsLink())
 
 const formatStageCount = (n) => {
   const num = Number(n) || 0
@@ -706,6 +850,8 @@ const dealStageRows = computed(() => {
   const stages = deals.value.stages || []
   const max = Math.max(...stages.map((s) => Number(s.count) || 0), 1)
   return stages.slice(0, 6).map((s, i) => ({
+    id: s.id,
+    type: s.type,
     label: s.label,
     value: Number(s.count) || 0,
     pct: Math.round(((Number(s.count) || 0) / max) * 100),

@@ -968,7 +968,10 @@ function onDealDragEnd() {
 // Fetch deals from API
 const runtimeFilters = ref({})
 
-async function fetchDeals(immediate = false, externalFilters = null) {
+// externalFilters: an object → use these filters; null → clear them; left out → keep the
+// current ones. (The default used to be null, so every refresh — after a drag, a save,
+// the retry button, the queued re-run — silently dropped the active search.)
+async function fetchDeals(immediate = false, externalFilters = undefined) {
   if (externalFilters && typeof externalFilters === 'object') {
     runtimeFilters.value = { ...externalFilters }
   } else if (externalFilters === null) {
@@ -1131,8 +1134,10 @@ async function executeFetchDeals() {
 
     if (pendingFetchDeals.value) {
       pendingFetchDeals.value = false
-      // Re-run with latest tab/filters after the in-flight request finished.
-      await fetchDeals(true)
+      // Re-run with latest tab/filters after the in-flight request finished. Pass the
+      // current filters explicitly — fetchDeals(true) alone means "no filters" and wiped
+      // a search that was queued behind the first load (e.g. a dashboard link's filter).
+      await fetchDeals(true, { ...runtimeFilters.value })
     }
 
     const waiters = fetchWaiters.value.splice(0, fetchWaiters.value.length)

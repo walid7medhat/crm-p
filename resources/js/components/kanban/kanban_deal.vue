@@ -69,6 +69,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide, defineAsyncComponent } from 'vue'
 import { openDealView, useDealViewModal, dealUrlSyncedId, setDealQuery, clearDealQuery } from '@/composables/useDealViewModal.js'
+import { readKanbanUrlFilter } from '@/utils/kanbanUrlFilter.js'
 
 const addStage = '/assets/images/kanban/add-stage.svg'
 import { BTabs, BTab, BFormInput, BDropdown, BDropdownItem, BModal, BButton } from 'bootstrap-vue-3'
@@ -279,6 +280,84 @@ watch(() => route.query.deal, () => {
     openDealFromUrl()
 })
 
+// ================= Filtered links (?filter=…, e.g. from the home dashboard) =================
+// See utils/kanbanUrlFilter.js. Switch to the right board / deal type, wait until that
+// board component is ready (it loads async — a search sent earlier was lost), apply the
+// query, tell the navbar so its filter chips show, and drop ?filter from the URL.
+let pendingUrlFilter = null
+
+function tryApplyPendingUrlFilter() {
+    const pending = pendingUrlFilter
+    if (!pending) return
+    const target = pending.board === 'deals' ? dealsRef.value : leadsRef.value
+    const component = Array.isArray(target) ? target[0] : target
+    const ready = pending.board === 'deals'
+        ? typeof component?.fetchDeals === 'function'
+        : typeof component?.fetchLeads === 'function'
+    if (!ready) return // the leadsRef / dealsRef watcher below retries once it mounts
+
+    pendingUrlFilter = null
+    // Short wait after the board mounts: lets its first load and any tab / deal-type
+    // announcements from the navbar finish, so nothing reloads it unfiltered afterwards.
+    setTimeout(() => {
+        const payload = { query: pending.query, activeFilters: pending.chips }
+        if (pending.board === 'deals') {
+            onDealSearch(payload)
+        } else {
+            onLeadSearch(payload)
+        }
+        window.dispatchEvent(new CustomEvent('kanban-url-filter-applied', {
+            detail: { board: pending.board, query: pending.query, activeFilters: pending.chips },
+        }))
+    }, 300)
+}
+
+async function applyUrlFilter() {
+    const parsed = readKanbanUrlFilter(route)
+    if (!parsed) return
+
+    const query = { ...route.query }
+    delete query.filter
+    router.replace({ query }).catch(() => {})
+
+    if (parsed.board === 'deals') {
+        rememberCrmSection(CRM_SECTIONS.DEAL)
+        persistKanbanTab('deals')
+        if (parsed.dealType) {
+            try {
+                localStorage.setItem(DEAL_TYPE_KEY, parsed.dealType)
+            } catch {
+                /* ignore */
+            }
+        }
+        activeTab.value = 'deals'
+        window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'deals' }))
+        if (parsed.dealType) {
+            window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: parsed.dealType }))
+        }
+    } else {
+        persistKanbanTab('leads')
+        activeTab.value = 'leads'
+        window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: 'leads' }))
+    }
+
+    // A tab change makes the navbar reset the search — let that finish first so it
+    // can't wipe the filter we're about to apply.
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 60))
+
+    pendingUrlFilter = parsed
+    tryApplyPendingUrlFilter()
+}
+
+watch([leadsRef, dealsRef], () => {
+    tryApplyPendingUrlFilter()
+})
+
+watch(() => route.query.filter, (value) => {
+    if (value) applyUrlFilter()
+})
+
 // The shared popup (converted deals, links, notifications) keeps ?deal in step too.
 watch(showDealViewModal, (isOpen) => {
     if (isOpen && dealViewPayload.value?.id) {
@@ -456,6 +535,8 @@ onMounted(() => {
     document.addEventListener('click', onDocumentClick)
     // Opened straight from a shared deal link / reload with ?deal=ID.
     openDealFromUrl()
+    // Opened from a filtered link (?filter=…, e.g. home dashboard numbers).
+    applyUrlFilter()
    window.addEventListener('kanban-open-settings', onKanbanOpenSettings)
       // Refs declared on components inside a v-for are arrays in Vue 3 — unwrap so
       // external callers (navbar search handlers) get the actual component instance.
