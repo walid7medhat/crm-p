@@ -249,14 +249,13 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     /**
      * branch_admin is placed as a regular team member INSIDE an office (not above it,
      * unlike admin/manager/team_lead) — they typically have no subordinates of their
-     * own. Their scope is everyone under the real office/branch admin their own
-     * ->office resolves to (siblings + themselves), not their own descendants.
+     * own. Their DEAL scope (deals board, opening, stage changes, reassigning, lead →
+     * deal conversion) is everyone in their whole BRANCH, all offices — same as their
+     * lead scope (getBranchUserIds). Was only their own office before.
      */
     public function getBranchAdminSubordinateIds(): array
     {
-        $officeAdmin = $this->office;
-
-        return $officeAdmin ? $officeAdmin->getAllSubordinatesIds() : [$this->id];
+        return $this->getBranchUserIds();
     }
 
     /**
@@ -319,7 +318,7 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
      * User ids whose leads this user sees:
      *  - branch_admin / show-branch-leads → whole branch (all its offices)
      *  - otherwise                        → their own hierarchy
-     * (Deals still scope branch_admin to their office — see getBranchAdminSubordinateIds().)
+     * (Deals use the same whole-branch scope for branch_admin — getBranchAdminSubordinateIds().)
      */
     public function leadScopeUserIds(): array
     {
