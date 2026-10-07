@@ -26,8 +26,21 @@
             </div>
             <div class="info-group" v-if="lead?.work_phone">
                 <label class="form-label-custom">Primary Phone</label>
-                <div class="info-value">
-                    <span v-if="canView"><a :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }} </a></span>
+                <div class="info-value phone-with-whatsapp">
+                    <span v-if="canView" class="phone-with-whatsapp__row">
+                        <a :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }}</a>
+                        <a
+                            v-if="whatsappUrl(lead.work_phone)"
+                            :href="whatsappUrl(lead.work_phone)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="whatsapp-chat-btn"
+                            title="Chat on WhatsApp"
+                            aria-label="Chat on WhatsApp"
+                        >
+                            <iconify-icon icon="logos:whatsapp-icon" width="18" height="18"></iconify-icon>
+                        </a>
+                    </span>
                     <span v-else>
                         {{ lead?.work_phone?.slice(0,3) || '' }}
                         <span class="blurred-stars">{{ maskValue(lead?.work_phone?.slice(3)) }}</span>
@@ -46,8 +59,21 @@
             </div>
             <div class="info-group" v-if="lead?.work_phone_2">
                 <label class="form-label-custom">Secondary Phone</label>
-                <div class="info-value">
-                    <span v-if="canView"><a :href="'tel:' + lead.work_phone_2">{{ lead?.work_phone_2 || '—' }}</a></span>
+                <div class="info-value phone-with-whatsapp">
+                    <span v-if="canView" class="phone-with-whatsapp__row">
+                        <a :href="'tel:' + lead.work_phone_2">{{ lead?.work_phone_2 || '—' }}</a>
+                        <a
+                            v-if="whatsappUrl(lead.work_phone_2)"
+                            :href="whatsappUrl(lead.work_phone_2)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="whatsapp-chat-btn"
+                            title="Chat on WhatsApp"
+                            aria-label="Chat on WhatsApp"
+                        >
+                            <iconify-icon icon="logos:whatsapp-icon" width="18" height="18"></iconify-icon>
+                        </a>
+                    </span>
                     <span v-else>
                         {{ lead?.work_phone_2?.slice(0,3) || '' }}
                         <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
@@ -961,6 +987,11 @@ const canView = computed(() => {
     const isResponsible = props.lead?.responsible_person_id === user.value.id
     return isAdmin || isResponsible
 })
+
+const whatsappUrl = (phone) => {
+    const digits = String(phone || '').replace(/\D/g, '')
+    return digits ? `https://wa.me/${digits}` : ''
+}
 
 // Filter persons based on search query
 const filteredPersons = computed(() => personsList.value)
@@ -2244,6 +2275,28 @@ const saveClientRequirement = async () => {
 
     word-break: break-word;
     overflow-wrap: anywhere;
+}
+
+.phone-with-whatsapp__row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.whatsapp-chat-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(37, 211, 102, 0.12);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.whatsapp-chat-btn:hover {
+    background: rgba(37, 211, 102, 0.22);
 }
 
 .location-selected-view {
