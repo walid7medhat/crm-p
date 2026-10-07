@@ -1684,6 +1684,7 @@ import {
   resolvePaymentPlanOption,
 } from "@/composables/listingPaymentPlanPresets";
 import { requiresPlotSize } from "@/composables/listingPlotSize";
+import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
 import {
   useListingPaymentBreakdown,
   NOC_PAID_BELOW_REQUIRED_MSG,
@@ -2528,19 +2529,19 @@ watch(() => form.value.area, (newArea) => {
     filteredProjectFloorPlans.value = projectFloorPlans.value;
     console.log('Showing all floor plans (no area selected):', filteredProjectFloorPlans.value.length);
   } else {
-      // ✅ التصحيح: للمشروع 1788 لا تطبق الفلترة
-      if(form.value.project_id != 1788 || form.value.project_id != 1833){
+      // ALL_AREAS_FLOOR_PLAN_PROJECT_IDS (1788, 1833, 924): no area filter
+      if (!showsAllAreaFloorPlans(form.value.project_id)) {
         filterFloorPlansByArea(newArea.id);
       } else {
         filteredProjectFloorPlans.value = projectFloorPlans.value;
-        console.log('Project 1788: Showing all floor plans without area filter');
+        console.log('All-areas project: showing all floor plans without area filter');
       }
     
     // شيل الفلور بلانز المستوردة اللي مش في المنطقة الجديدة
     importedFloorPlans.value = importedFloorPlans.value.filter(plan => {
       if (plan.project_floor_plan_id) {
         const originalPlan = projectFloorPlans.value.find(p => p.id === plan.project_floor_plan_id);
-        if (originalPlan && originalPlan.area_id !== newArea.id && form.value.project_id != 1788 && form.value.project_id != 1833) {
+        if (originalPlan && originalPlan.area_id !== newArea.id && !showsAllAreaFloorPlans(form.value.project_id)) {
           return false;
         }
       }
@@ -3449,12 +3450,12 @@ const fetchProjectFloorPlans = async (page = 1) => {
     totalProjectFloorPlans.value = response.data.total || newPlans.length;
     currentProjectPage.value = page;
     
-    // ✅ التصحيح: للمشروع 1788 لا تطبق الفلترة، للمشاريع الأخرى طبق الفلترة إذا كانت المنطقة محددة
-    if (form.value.area && form.value.area.id && form.value.project_id != 1788 && form.value.project_id != 1833) {
+    // Filter by area unless the project is in ALL_AREAS_FLOOR_PLAN_PROJECT_IDS
+    if (form.value.area && form.value.area.id && !showsAllAreaFloorPlans(form.value.project_id)) {
       filterFloorPlansByArea(form.value.area.id);
     } else {
       filteredProjectFloorPlans.value = projectFloorPlans.value;
-      console.log('Showing all floor plans (no filter or project 1788)');
+      console.log('Showing all floor plans (no filter or all-areas project)');
     }
     
     console.log('✅ Project floor plans loaded:', projectFloorPlans.value.length);
@@ -3480,10 +3481,10 @@ const filterFloorPlansByArea = (areaId) => {
     return;
   }
   
-  // ✅ للمشروع 1788، اعرض جميع المخططات (لا تقم بالفلترة)
-  if (form.value.project_id == 1788 || form.value.project_id ==1833) {
+  // ALL_AREAS_FLOOR_PLAN_PROJECT_IDS: show every plan (no area filter)
+  if (showsAllAreaFloorPlans(form.value.project_id)) {
     filteredProjectFloorPlans.value = projectFloorPlans.value;
-    console.log('Project 1788: Skipping area filter');
+    console.log('All-areas project: skipping area filter');
     return;
   }
   

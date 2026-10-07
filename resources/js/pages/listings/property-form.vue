@@ -1985,6 +1985,7 @@ import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetail
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
 import { parsePriceInputDigits, formatPriceInputDisplay } from "@/utils/priceInputFormat";
 import { requiresPlotSize } from "@/composables/listingPlotSize";
+import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
 import Swal from "sweetalert2";
 const { proxy } = getCurrentInstance();
 
@@ -3442,8 +3443,8 @@ const fetchProjectFloorPlans = async (projectId) => {
     console.log('Showing all floor plans (no area filter)');
   } else {
     filteredFloorPlans.value = projectFloorPlans.value.filter(plan => {
-      // For project 1788,1833, include plans without area_id for al reef downtown and al reef villas
-      if (selectedProject.value?.id === 1788 || selectedProject.value?.id === 1833) {
+      // Projects in ALL_AREAS_FLOOR_PLAN_PROJECT_IDS (Al Reef Downtown / Villas, …): no area filter
+      if (showsAllAreaFloorPlans(selectedProject.value?.id)) {
         return true;
       }
       return plan.area_id === areaId;
@@ -3537,7 +3538,7 @@ const isSelectedProjectFloorPlan = (floorPlan) => {
 };
 
 const selectSingleProjectFloorPlan = (floorPlan) => {
-      if (selectedProject.value?.id !== 1788 && selectedProject.value?.id !== 1833) {
+      if (!showsAllAreaFloorPlans(selectedProject.value?.id)) {
 
   if (form.value.area && form.value.area.id) {
     if (!floorPlan.area_id ) {
@@ -3672,7 +3673,7 @@ watch(() => form.value.area, (newArea) => {
     return;
   }
   
-  // Special handling for project ID 1788,1833 or when no area is selected
+  // Special handling for ALL_AREAS_FLOOR_PLAN_PROJECT_IDS or when no area is selected
   if (!newArea || !newArea.id) {
     // Show all floor plans when no area is selected
     filteredFloorPlans.value = projectFloorPlans.value;
@@ -3682,9 +3683,9 @@ watch(() => form.value.area, (newArea) => {
     filteredFloorPlans.value = projectFloorPlans.value.filter(plan => {
       // If plan has no area_id, include it only if it's the only plan or has special flag
     
-        // For project 1788, include plans without area_id
-        if (selectedProject.value.id === 1788 || selectedProject.value.id ==1833) {
-          console.log(`Including floor plan "${plan.name}" with no area assignment for project 1788`);
+        // Projects in ALL_AREAS_FLOOR_PLAN_PROJECT_IDS: include every plan
+        if (showsAllAreaFloorPlans(selectedProject.value.id)) {
+          console.log(`Including floor plan "${plan.name}" with no area assignment for project ${selectedProject.value.id}`);
           return true;
         }
         
