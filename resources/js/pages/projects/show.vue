@@ -123,7 +123,7 @@
             </div>
           </section>
 
-         <section class="info-card floor-card" v-if="areaTabs.some(tab => tab.count > 0)">
+         <section class="info-card floor-card" v-if="groupedFloorPlans.length">
                 <h3 class="info-card-title" style="font-size:14px !important; line-height:1.25 !important;">
                   Floor Plans 
                 </h3>
@@ -404,28 +404,11 @@ export default {
 
     const activeFloorPlan = computed(() => filteredFloorPlans.value[0] || null);
 
-    // Buildings/phases — same list as the Floor Plans page's "Select Building/Phases".
-    const projectAreas = ref([]);
-    const fetchProjectAreas = async () => {
-      try {
-        const res = await api.get(`/listings/projects/${currentProjectId.value}/areas`);
-        projectAreas.value = Array.isArray(res.data?.data) ? res.data.data : [];
-      } catch (_e) {
-        projectAreas.value = [];
-      }
-    };
-
-    // One tab per building name (areas are stored several times under the same name),
-    // including buildings that have no floor plans yet — they show the empty state.
+    // One tab per building that has floor plan images. Grouped by building name because
+    // the same building is stored as several areas with the same name.
     const areaKey = (name) => `name:${String(name || '').trim().toLowerCase()}`;
     const groupedFloorPlans = computed(() => {
       const groups = new Map();
-      projectAreas.value.forEach((area) => {
-        const key = areaKey(area.name);
-        if (!area.name || groups.has(key)) return;
-        groups.set(key, { areaId: key, areaName: area.name, plans: [] });
-      });
-
       floorPlans.value.forEach((plan) => {
         const name = plan.area_name || plan.area || 'General';
         const key = plan.area_id ? areaKey(name) : 'unassigned';
@@ -677,10 +660,8 @@ export default {
   onMounted(() => {
       // The popup scrolls itself; natural page scroll is only for the /projects/:id route.
       if (!isEmbedded.value) enablePageNaturalScroll();
-      Promise.all([fetchProject(), fetchProjectAreas()]).then(() => {
-        // Open on the first building that has plans (empty buildings still get a tab).
-        const firstWithPlans = areaTabs.value.find((tab) => tab.count > 0);
-        activeAreaTab.value = (firstWithPlans || areaTabs.value[0])?.areaId ?? null;
+      fetchProject().then(() => {
+        activeAreaTab.value = areaTabs.value[0]?.areaId ?? null;
       });
       document.addEventListener('keydown', handleKeydown);
     });
