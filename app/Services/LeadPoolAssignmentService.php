@@ -7,9 +7,9 @@ use Illuminate\Support\Str;
 
 class LeadPoolAssignmentService
 {
-    public const DAILY_LIMIT = 20;
+    public const DAILY_LIMIT = 40;
 
-    public const BATCH_LIMIT = 5;
+    public const BATCH_LIMIT = 10;
 
     public const COOLDOWN_MINUTES = 60;
 

@@ -104,9 +104,9 @@ export function useLeadPoolBulkActions() {
     if (!leadIds?.length) {
       return { ok: [], failed: [] }
     }
-    if (leadIds.length > 5) {
+    if (leadIds.length > 10) {
         throw new Error(
-            'You can assign a maximum of 5 leads at a time.'
+            'You can assign a maximum of 10 leads at a time.'
         )
     }
 
