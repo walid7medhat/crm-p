@@ -141,6 +141,8 @@ class PropertyFinderLeadImporter
         $branch = self::EMIRATE_BRANCHES[strtolower((string) Arr::get($pf, 'property.emirate'))] ?? null;
         // Abu Dhabi → 25, Dubai → 59, anything else → 1 (config propertyfinder.branch_users).
         $responsibleId = (int) (config("propertyfinder.branch_users.{$branch}") ?: $systemUserId);
+        // #25 → #1690 for leads from outside (Lead::externalResponsibleId).
+        $responsibleId = Lead::externalResponsibleId($responsibleId);
 
         $newStageId = app(LeadAssignmentService::class)->resolveNewStageId()
             ?? Stage::where('stage_type', 'lead')->orderBy('order')->value('id');

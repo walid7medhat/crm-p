@@ -68,6 +68,25 @@ protected const NON_ENGAGEMENT_FIELDS = [
     'field_mappings_data',
     'raw_meta_data',
 ];
+    /**
+     * Leads received from outside (website form, Meta / Facebook, Property Finder): when
+     * the incoming responsible person is #25 (Abu Dhabi branch user), give it to #1690
+     * instead. Falls back to the original id if #1690 doesn't exist, so a lead is never
+     * saved with an owner that isn't there.
+     */
+    public const EXTERNAL_RESPONSIBLE_REMAP = [25 => 1690];
+
+    public static function externalResponsibleId($responsibleId): int
+    {
+        $id = (int) ($responsibleId ?: 1);
+        $mapped = self::EXTERNAL_RESPONSIBLE_REMAP[$id] ?? null;
+        if ($mapped && User::whereKey($mapped)->exists()) {
+            return $mapped;
+        }
+
+        return $id;
+    }
+
     protected static function booted()
     {
         

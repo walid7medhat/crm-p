@@ -538,7 +538,8 @@ class IntegrationController extends Controller
             'project_id' => $integration->project_id,
             'ad_id' => $leadData['ad_id'] ?? null,
             'added_by' => $integration->user_id,
-            'responsible_person_id' => $integration->responsible_person_id ?? 1,
+            // #25 → #1690 for leads from outside (Lead::externalResponsibleId).
+            'responsible_person_id' => Lead::externalResponsibleId($integration->responsible_person_id ?? 1),
             'raw_meta_data' => json_encode($leadData, JSON_UNESCAPED_UNICODE),
             'created_at' => isset($leadData['created_time']) 
                 ? Carbon::parse($leadData['created_time']) 
@@ -721,7 +722,9 @@ public function store_website(Request $request)
         return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
     $data = $request->all();
-    $response=$data['responsible_person_id'];
+    // Optional — a form that doesn't send it used to fail with "Undefined array key".
+    // #25 → #1690 (Lead::externalResponsibleId).
+    $response = Lead::externalResponsibleId($data['responsible_person_id'] ?? null);
 
     // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
