@@ -329,6 +329,10 @@
                     <span class="info-label">Size</span>
                     <span class="info-value">{{ property.size_sqft || property.size_sqmt || "N/A" }} {{ property.size_sqft ? 'Sq Ft' : property.size_sqmt ? 'Sq M' : '' }}</span>
                   </div>
+                  <div class="info-item" v-if="plotSizeLabel">
+                    <span class="info-label">Plot Size</span>
+                    <span class="info-value">{{ plotSizeLabel }}</span>
+                  </div>
                     <div class="info-item" v-if="property.is_hot_deal == 'Yes'">
                     <span class="info-label">Hot Deal</span>
                     <span class="info-value">{{ property.is_hot_deal }}</span>
@@ -2717,6 +2721,13 @@ const hasRejectionReason = computed(() => {
   console.log('  - Result:', hasReason);
   return hasReason;
 });
+/** "2,500 Sq Ft" when the listing has a plot size (villa / townhouse / twinhouse / duplex), else ''. */
+const plotSizeLabel = computed(() => {
+  const n = Number(property.value?.plot_size);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)} Sq Ft`;
+});
+
 // Waiting for approval (not rejected). Shown only to the listing's own agent,
 // listing-team managers/team leads, and super admins.
 const needsApproval = computed(() => {
@@ -3231,6 +3242,7 @@ const mobileDetailRows = computed(() => {
   if (!isLand && p.number_of_bathrooms) add('ri-drop-line', 'Bathrooms', p.number_of_bathrooms);
   if (p.size_sqft) add('ri-ruler-line', 'Property Size', `${p.size_sqft} Sq Ft`);
   else if (p.size_sqmt) add('ri-ruler-line', 'Property Size', `${p.size_sqmt} m²`);
+  if (plotSizeLabel.value) add('ri-landscape-line', 'Plot Size', plotSizeLabel.value);
   add('ri-checkbox-circle-line', 'Completion', p.completion_status);
   add('ri-home-smile-line', 'Occupancy', p.occupancy_status);
   add('ri-community-line', 'Project', p.project?.title);
@@ -6054,8 +6066,11 @@ const drawMobileDetails = async (pdf, logo) => {
     ['Bathrooms', String(property.value?.number_of_bathrooms ?? 'N/A')],
     ['Area Size', property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A'],
   ];
+  if (plotSizeLabel.value) rows.push(['Plot Size', plotSizeLabel.value]);
+  // 4 columns fit 46mm each; with Plot Size the same 184mm is split 5 ways.
+  const colWidth = 184 / rows.length;
   rows.forEach((row, index) => {
-    const x = 14 + (index % 4) * 46;
+    const x = 14 + index * colWidth;
     const y = 48;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
@@ -6064,7 +6079,7 @@ const drawMobileDetails = async (pdf, logo) => {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(11);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(pdf.splitTextToSize(String(row[1]).toUpperCase(), 42).slice(0, 2), x, y + 6);
+    pdf.text(pdf.splitTextToSize(String(row[1]).toUpperCase(), colWidth - 4).slice(0, 2), x, y + 6);
   });
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
@@ -6829,6 +6844,12 @@ const createSlide2 = () => {
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
   const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
+  const plotSize = plotSizeLabel.value ? plotSizeLabel.value.replace('Sq Ft', 'SQFT') : '';
+  const plotSizeColumn = plotSize ? `
+          <div style="flex:1 !important; padding-left:5mm !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Plot Size</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${plotSize}</p>
+          </div>` : '';
   const completionStatus = property.value?.completion_status || 'Under Construction';
   const features = additionalFeaturesList.value || [];
   const featuresBlock = features.length > 0 ? `
@@ -6866,10 +6887,10 @@ const createSlide2 = () => {
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
           </div>
-          <div style="flex:1 !important; padding-left:5mm !important;">
+          <div style="flex:1 !important; ${plotSize ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
-          </div>
+          </div>${plotSizeColumn}
         </div>
         <div style="display:flex !important;">
           <div style="flex:1 !important; max-width:25% !important;">
@@ -8551,7 +8572,7 @@ const getHistoryIcon = (event) => {
     markAsRentedByOIAgent,
     openAToAModalForRent,
     submitAToAForRent,
-   hasRejectionReason,formatRejectionDate ,rejectionDetails, needsApproval,
+   hasRejectionReason,formatRejectionDate ,rejectionDetails, needsApproval, plotSizeLabel,
 
     internalUpdates,
   newUpdateText,

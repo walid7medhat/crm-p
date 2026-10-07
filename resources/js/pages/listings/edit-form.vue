@@ -193,9 +193,23 @@
                   v-model.number="form.size_sqft"
                   type="number"
                   class="form-control"
-                  @blur="convertSqftToSqm" 
+                  @blur="convertSqftToSqm"
                   placeholder="Enter Size (sqft)"
                 @keydown="preventNumberInvalidKeys"
+                />
+              </div>
+
+              <!-- Plot size (villa / townhouse / twinhouse / duplex) -->
+              <div class="col-md-3" v-if="needsPlotSize">
+                <label class="form-label">Plot Size (sqft) <span class="text-danger">*</span></label>
+                <input
+                  v-model.number="form.plot_size"
+                  type="number"
+                  class="form-control"
+                  placeholder="Enter Plot Size (sqft)"
+                step="1"
+                min="1"
+                  @keydown="preventIntegerInvalidKeys"
                 />
               </div>
              <div class="col-md-12">
@@ -1669,6 +1683,7 @@ import {
   paymentPlanSelectionLabel,
   resolvePaymentPlanOption,
 } from "@/composables/listingPaymentPlanPresets";
+import { requiresPlotSize } from "@/composables/listingPlotSize";
 import {
   useListingPaymentBreakdown,
   NOC_PAID_BELOW_REQUIRED_MSG,
@@ -1725,6 +1740,7 @@ const isPlotOrLand = computed(() => {
     propertyTypeName.toLowerCase().includes(type.toLowerCase())
   );
 });
+const needsPlotSize = computed(() => requiresPlotSize(form.value.property_type));
 // Floor Plan Computed Properties
 const totalFloorPlans = computed(() => {
   return existingFloorPlans.value.length + 
@@ -1924,6 +1940,7 @@ const form = ref({
   furnished_status: "",
   size_sqmt: "",
   size_sqft: "",
+  plot_size: "",
   floorPlans: [],
   gallery: [],
   comment: "",
@@ -2727,6 +2744,8 @@ const fetchPropertyData = async (id) => {
       furnished_status: propertyData.furnished_status || "",
       size_sqmt: propertyData.size_sqmt || "",
       size_sqft: propertyData.size_sqft || "",
+      // Whole number (older/cached responses carry "1234.00").
+      plot_size: Number(propertyData.plot_size) > 0 ? Math.trunc(Number(propertyData.plot_size)) : "",
       comment: propertyData.comment || "",
       mortgageStatus: propertyData.mortgage_status || "",
       occupancyStatus: propertyData.occupancy_status || "",
@@ -2981,6 +3000,7 @@ const saveWithHeroImage = async (heroImageItem) => {
       'number_of_bathrooms': form.value.number_of_bathrooms,
       'size_sqmt': form.value.size_sqmt,
       'size_sqft': form.value.size_sqft,
+      'plot_size': needsPlotSize.value ? form.value.plot_size : '',
       'comment': form.value.comment,
     };
 
@@ -4148,6 +4168,12 @@ const handleSubmit = async (action = 'draft') => {
         isSubmitting.value = false;
         return;
       }
+
+      if (needsPlotSize.value && !(Number(form.value.plot_size) > 0)) {
+        proxy.$showNotification("❌ Please enter the plot size!", "error");
+        isSubmitting.value = false;
+        return;
+      }
       
      if (totalGalleryCount.value < 10 && !isPlot) {
         proxy.$showNotification(`❌ At least 10 gallery images are required! Currently you have ${totalGalleryCount.value}.`, "error");
@@ -4257,6 +4283,7 @@ const handleSubmit = async (action = 'draft') => {
       'number_of_bathrooms': form.value.number_of_bathrooms,
       'size_sqmt': form.value.size_sqmt,
       'size_sqft': form.value.size_sqft,
+      'plot_size': needsPlotSize.value ? form.value.plot_size : '',
       'furnished_status': form.value.furnished_status,
       'comment': form.value.comment,
       'mortgage_status': form.value.mortgageStatus,
@@ -4421,6 +4448,13 @@ const convertSqftToSqm = () => {
     form.value.size_sqmt = (form.value.size_sqft / 10.7639).toFixed(2);
   } else {
     form.value.size_sqmt = "";
+  }
+};
+
+// Plot size is a whole number: also block decimal separators.
+const preventIntegerInvalidKeys = (event) => {
+  if (['e', 'E', '+', '-', '.', ','].includes(event.key)) {
+    event.preventDefault();
   }
 };
 

@@ -195,7 +195,20 @@
                 @keydown="preventNumberInvalidKeys"
               />
             </div>
-            
+
+            <div class="col-md-3" v-if="needsPlotSize">
+              <label class="form-label">Plot Size (sqft) <span class="text-danger">*</span></label>
+              <input
+                v-model.number="form.plot_size"
+                type="number"
+                class="form-control"
+                placeholder="Enter Plot Size (sqft)"
+                step="1"
+                min="1"
+                @keydown="preventIntegerInvalidKeys"
+              />
+            </div>
+
             <div class="col-md-12">
               <label class="form-label">Additional Features</label>
               <div class="listing-feature-grid">
@@ -1971,6 +1984,7 @@ import "vue-select/dist/vue-select.css";
 import PaymentDetailsPreviewModal from "@/components/payment-plans/PaymentDetailsPreviewModal.vue";
 import AdvancedDatePicker from "@/components/shared/AdvancedDatePicker.vue";
 import { parsePriceInputDigits, formatPriceInputDisplay } from "@/utils/priceInputFormat";
+import { requiresPlotSize } from "@/composables/listingPlotSize";
 import Swal from "sweetalert2";
 const { proxy } = getCurrentInstance();
 
@@ -2115,7 +2129,7 @@ const form = ref({
   completionStatus: "", area: null, developer: null, property_type: null,
   price: "", original_price: "", number_of_bedrooms: "", number_of_bathrooms: "",
   layout_type: null, unit_view: null, furnished_status: "",
-  size_sqmt: "", size_sqft: "", floorPlans: [], gallery: [],
+  size_sqmt: "", size_sqft: "", plot_size: "", floorPlans: [], gallery: [],
   comment: "", mortgageStatus: "", occupancyStatus: "",
   mortgageAmount: "", rentExpiryDate: "", rentAmount: "",
   mortgageComment: "", projectAreas: [], rented_status: "",      
@@ -3507,6 +3521,8 @@ const isPlotOrLand = computed(() => {
   );
 });
 
+const needsPlotSize = computed(() => requiresPlotSize(form.value.property_type));
+
 const customFloorPlansCount = computed(() => {
   return form.value.floorPlans.filter(fp => !fp.fromProject).length;
 });
@@ -4391,7 +4407,13 @@ const handleSubmit = async (action = 'draft') => {
         isSubmitting.value = false;
         return;
       }
-      
+
+      if (needsPlotSize.value && !(Number(form.value.plot_size) > 0)) {
+        proxy.$showNotification("❌ Please enter the plot size!", "error");
+        isSubmitting.value = false;
+        return;
+      }
+
       if (form.value.gallery.length === 0) {
         proxy.$showNotification("❌ At least one gallery image is required!", "error");
         isSubmitting.value = false;
@@ -4469,6 +4491,7 @@ const handleSubmit = async (action = 'draft') => {
       'price': listingPriceForApi(), 'number_of_bedrooms': form.value.number_of_bedrooms,
       'number_of_bathrooms': form.value.number_of_bathrooms, 'size_sqmt': form.value.size_sqmt,
       'size_sqft': form.value.size_sqft, 'furnished_status': form.value.furnished_status,
+      'plot_size': needsPlotSize.value ? form.value.plot_size : '',
       'comment': form.value.comment, 'mortgage_status': form.value.mortgageStatus,
       'occupancy_status': form.value.occupancyStatus, 'mortgage_amount': form.value.mortgageAmount,
       'rent_expiry_date': form.value.rentExpiryDate, 'rent_amount': form.value.rentAmount,
@@ -4598,7 +4621,7 @@ const resetForm = () => {
     title: "", unit_number: "", ownership_type: null, saleOrRent: "", completionStatus: "",
     area: null, developer: null, property_type: null, price: "", original_price: "",
     number_of_bedrooms: "", number_of_bathrooms: "", layout_type: null, unit_view: null, furnished_status: "",
-    size_sqmt: "", size_sqft: "", hero_image: null, floorPlans: [], gallery: [],
+    size_sqmt: "", size_sqft: "", plot_size: "", hero_image: null, floorPlans: [], gallery: [],
     comment: "", mortgageStatus: "", occupancyStatus: "", mortgageAmount: "",
     rentExpiryDate: "", rentAmount: "", mortgageComment: "", projectAreas: [],
     rented_status: "", rented_until: "", payment_plan: "", payment_plans: null, driveLink: "", is_hot_deal: "",
@@ -4745,6 +4768,13 @@ const convertSqmToSqft = () => {
     form.value.size_sqft = (form.value.size_sqmt * 10.7639).toFixed(2);
   } else {
     form.value.size_sqft = "";
+  }
+};
+
+// Plot size is a whole number: also block decimal separators.
+const preventIntegerInvalidKeys = (event) => {
+  if (['e', 'E', '+', '-', '.', ','].includes(event.key)) {
+    event.preventDefault();
   }
 };
 

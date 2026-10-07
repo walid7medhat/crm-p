@@ -7,6 +7,9 @@ use Illuminate\Validation\Rule;
 
 class ListingRequest extends FormRequest
 {
+    /** Property type names (lowercase) that require a plot size. Keep in sync with listingPlotSize.js. */
+    public const PLOT_SIZE_TYPES = ['villa', 'townhouse', 'twinhouse', 'twin house', 'duplex'];
+
     public function authorize(): bool
     {
         return true;
@@ -28,6 +31,12 @@ $listingId = $this->route('property');
             $plotTypes = [24,31,35,36];
             $isPlot = in_array($propertyTypeId, $plotTypes);
         }
+
+        $needsPlotSize = false;
+        if ($propertyTypeId) {
+            $typeName = \App\Models\PropertyType::whereKey($propertyTypeId)->value('name');
+            $needsPlotSize = in_array(strtolower(trim((string) $typeName)), self::PLOT_SIZE_TYPES, true);
+        }
         $rules = [
             // 'unit_number' => 'required|string|max:50',
             'unit_number' => [
@@ -44,6 +53,7 @@ $listingId = $this->route('property');
             ],
             'size_sqft' => 'nullable|numeric|min:1',
             'size_sqmt' => 'nullable|numeric|min:1',
+            'plot_size' => ($needsPlotSize && ! $isDraft ? 'required' : 'nullable') . '|integer|min:1',
             'number_of_bedrooms' => $isPlot?'nullable':'nullable|integer|min:0',
             'number_of_bathrooms' => $isPlot?'nullable':'nullable|integer|min:0',
             'price' => 'required|numeric|min:10000',
@@ -141,6 +151,7 @@ $listingId = $this->route('property');
             'agent_id.required' => 'Agent is required',
             'owner_id.required' => 'Owner is required',
             'completion_status.required' => 'Completion status is required',
+            'plot_size.required' => 'Plot size is required for this property type',
             'gallery.required' => 'At least 10 gallery images are required',
             'gallery.min' => 'At least 10 gallery images are required',
             'gallery.*.image' => 'Each gallery file must be an image',

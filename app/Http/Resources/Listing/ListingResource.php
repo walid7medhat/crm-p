@@ -230,6 +230,7 @@ $allowedAgentIds = [];
             'unit_number' => $canSeeUnitNumber ? $this->unit_number : null,
             'size_sqft' => $this->size_sqft,
             'size_sqmt' => $this->size_sqmt,
+            'plot_size' => $this->plot_size !== null ? (int) $this->plot_size : null,
             'number_of_bedrooms' => $this->number_of_bedrooms,
             'number_of_bathrooms' => $this->number_of_bathrooms,
             'price' => $this->price,
