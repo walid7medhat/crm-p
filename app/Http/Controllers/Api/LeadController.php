@@ -348,8 +348,8 @@ class LeadController extends Controller
                             $serviceDupFlags,
                             KanbanLeadCardResource::duplicateIdsByLeadId($items)
                         );
-                        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
-                            $this->leadPoolActivityUsersForLeads($items)
+                        KanbanLeadCardResource::setEngagementUsersByLeadId(
+                            KanbanLeadCardResource::engagementUsersForLeads($items)
                         );
 
                         $payload = KanbanLeadCardResource::collection($items)->resolve();
@@ -369,7 +369,7 @@ class LeadController extends Controller
                         ]);
                     } finally {
                         KanbanLeadCardResource::clearKanbanMeta();
-                        KanbanLeadCardResource::clearKanbanActivityUsers();
+                        KanbanLeadCardResource::clearEngagementUsers();
                     }
                 }
 
@@ -2361,43 +2361,6 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     private function broadcastLeadUpdated(Lead $lead, string $actionType, ?array $changes = null): void
     {
         broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
-    }
-
-    /**
-     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
-     * @return array<int, \App\Models\User|null>
-     */
-    private function leadPoolActivityUsersForLeads($leads): array
-    {
-        $b24Ids = $leads
-            ->pluck('bitrix24_last_activity_by_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-
-        if ($b24Ids === []) {
-            return [];
-        }
-
-        $map = array_fill_keys($b24Ids, null);
-
-        $users = User::query()
-            ->whereIn('bitrix24_id', $b24Ids)
-            ->with([
-                'parent:id,name,display_name,avatar',
-                'roles:id,name',
-                'employeeProfile.companyBranch:id,name',
-                'employeeProfile.designation:id,name',
-            ])
-            ->get(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id']);
-
-        foreach ($users as $user) {
-            $map[(int) $user->bitrix24_id] = $user;
-        }
-
-        return $map;
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Resources\Lead;
 
 use App\Http\Resources\Lead\Concerns\ResolvesLeadLastActivity;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 use App\Models\Integration;
 use App\Models\Lead;
 use App\Models\LeadHistory;
@@ -28,6 +29,14 @@ class KanbanLeadCardResource extends JsonResource
 
     /** @var bool */
     protected static bool $collectionPrimed = false;
+
+    /**
+     * lead id => last comment/activity author. Null means primed and nobody commented
+     * or logged an activity, so the card must not show a person.
+     *
+     * @var array<int, User|null>|null
+     */
+    protected static ?array $engagementUsersByLeadId = null;
 
     /**
      * @param array<string, int> $duplicateCountsByPhone
@@ -92,12 +101,119 @@ class KanbanLeadCardResource extends JsonResource
         static::$collectionPrimed = false;
     }
 
+    /**
+     * @param  array<int, User|null>  $map
+     */
+    public static function setEngagementUsersByLeadId(array $map): void
+    {
+        static::$engagementUsersByLeadId = $map;
+    }
+
+    public static function clearEngagementUsers(): void
+    {
+        static::$engagementUsersByLeadId = null;
+    }
+
+    /**
+     * Last person who commented or logged an activity on each lead.
+     * Every requested lead id is present; the value is null when neither exists.
+     *
+     * @param  iterable<int, mixed>  $leads
+     * @return array<int, User|null>
+     */
+    public static function engagementUsersForLeads(iterable $leads): array
+    {
+        $leadIds = collect($leads)
+            ->map(static fn ($lead) => (int) (is_object($lead) ? ($lead->id ?? 0) : 0))
+            ->filter(static fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $map = array_fill_keys($leadIds, null);
+        if ($leadIds === []) {
+            return $map;
+        }
+
+        $comments = DB::table('lead_comments')
+            ->selectRaw('id, lead_id, user_id, COALESCE(updated_at, created_at) as acted_at')
+            ->whereIn('lead_id', $leadIds)
+            ->whereNull('deleted_at')
+            ->whereNotNull('user_id');
+
+        $activities = DB::table('lead_activities')
+            ->selectRaw('id, lead_id, user_id, COALESCE(updated_at, created_at) as acted_at')
+            ->whereIn('lead_id', $leadIds)
+            ->whereNull('deleted_at')
+            ->whereNotNull('user_id');
+
+        $ranked = DB::query()
+            ->fromSub($comments->unionAll($activities), 'engagement')
+            ->selectRaw('lead_id, user_id, ROW_NUMBER() OVER (PARTITION BY lead_id ORDER BY acted_at DESC, id DESC) as rn');
+
+        $rows = DB::query()
+            ->fromSub($ranked, 'ranked')
+            ->where('rn', 1)
+            ->get(['lead_id', 'user_id']);
+
+        if ($rows->isEmpty()) {
+            return $map;
+        }
+
+        $users = User::query()
+            ->whereIn('id', $rows->pluck('user_id')->map(static fn ($id) => (int) $id)->unique()->all())
+            ->with([
+                'parent:id,name,display_name,avatar',
+                'roles:id,name',
+                'employeeProfile.companyBranch:id,name',
+                'employeeProfile.designation:id,name',
+            ])
+            ->get(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id', 'status'])
+            ->keyBy('id');
+
+        foreach ($rows as $row) {
+            $map[(int) $row->lead_id] = $users->get((int) $row->user_id);
+        }
+
+        return $map;
+    }
+
+    /**
+     * Card-shaped activity person for a set of leads (Pusher replaces the whole card).
+     *
+     * @param  iterable<int, mixed>  $leads
+     * @return array<int, array<string, mixed>|null>
+     */
+    public static function activityUserPayloadsForLeads(iterable $leads): array
+    {
+        $presenter = new static(new Lead);
+        $payloads = [];
+        foreach (static::engagementUsersForLeads($leads) as $leadId => $user) {
+            $payloads[$leadId] = $presenter->formatActivityUser($user);
+        }
+
+        return $payloads;
+    }
+
+    /** Last comment or activity author. Null hides the avatar on the card. */
+    protected function cardActivityUser(): ?User
+    {
+        $leadId = (int) $this->id;
+
+        if (is_array(static::$engagementUsersByLeadId)) {
+            return static::$engagementUsersByLeadId[$leadId] ?? null;
+        }
+
+        return static::engagementUsersForLeads([$this->resource])[$leadId] ?? null;
+    }
+
     public function toArray($request): array
     {
         $phone = $this->work_phone;
         $duplicateIds = $this->resolveDuplicateIds();
 
-        [$lastActivityAt, $lastActivityUser] = $this->resolveLastActivity(includeHistoryFallback: false);
+        $lastActivityAt = $this->bitrix24_last_activity_at ?? $this->updated_at;
+        $lastActivityUser = $this->cardActivityUser();
 
         return [
             'id' => $this->id,

@@ -551,15 +551,10 @@ class StageController extends Controller
         }
 
         // Duplicate badge: one exact-phone lookup for all leads on the board (cheap, indexed).
-        // Service-duplicate / activity meta stay skipped on first paint.
         KanbanLeadCardResource::setKanbanMeta([], [], KanbanLeadCardResource::duplicateIdsByLeadId($allLeadsForMeta));
-        $activityMap = [];
-        foreach ($allLeadsForMeta as $lead) {
-            if (! empty($lead->bitrix24_last_activity_by_id)) {
-                $activityMap[(int) $lead->bitrix24_last_activity_by_id] = null;
-            }
-        }
-        KanbanLeadCardResource::setKanbanActivityUsersByBitrixId($activityMap);
+        KanbanLeadCardResource::setEngagementUsersByLeadId(
+            KanbanLeadCardResource::engagementUsersForLeads($allLeadsForMeta)
+        );
 
         foreach ($stagesWithLeads as &$stageRow) {
             $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads'])->resolve();
@@ -567,7 +562,7 @@ class StageController extends Controller
         unset($stageRow);
 
         KanbanLeadCardResource::clearKanbanMeta();
-        KanbanLeadCardResource::clearKanbanActivityUsers();
+        KanbanLeadCardResource::clearEngagementUsers();
 
         return ApiResponse::success([
             'stages' => $stagesWithLeads,
@@ -1145,14 +1140,14 @@ class StageController extends Controller
                 $serviceDupFlags,
                 KanbanLeadCardResource::duplicateIdsByLeadId($leadsCollection)
             );
-            KanbanLeadCardResource::setKanbanActivityUsersByBitrixId(
-                $this->kanbanActivityUsersForLeads($leadsCollection)
+            KanbanLeadCardResource::setEngagementUsersByLeadId(
+                KanbanLeadCardResource::engagementUsersForLeads($leadsCollection)
             );
 
             $leadsPayload = KanbanLeadCardResource::collection($leadsCollection)->resolve();
 
             KanbanLeadCardResource::clearKanbanMeta();
-            KanbanLeadCardResource::clearKanbanActivityUsers();
+            KanbanLeadCardResource::clearEngagementUsers();
 
             return ApiResponse::success([
                 'stage_id' => $stage->id,
@@ -1530,61 +1525,6 @@ public function getOffices()
         }
 
         \App\Support\LeadSourceFilter::apply($query, $request->source);
-    }
-
-    /**
-     * Preload local users referenced in Bitrix24 LAST_ACTIVITY_BY metadata (one query).
-     *
-     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
-     * @return \Illuminate\Support\Collection<int, User>
-     */
-    /**
-     * Batch-resolve the "Activity" person + time for Kanban cards from the local
-     * database (lead_histories), so each card doesn't run its own history query.
-     *
-     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
-     * @return array<int, array{user: \App\Models\User|null, at: mixed}>
-     */
-    /**
-     * Batch-resolve the "Activity" person for Kanban cards: the local users
-     * provisioned from Bitrix24 (users.bitrix24_id), keyed by Bitrix24 user id.
-     * Every referenced Bitrix24 id is present as a key (null when not yet
-     * provisioned) so the resource never falls back to a per-card query.
-     *
-     * @param  iterable<int, \App\Models\Lead>  $leads
-     * @return array<int, \App\Models\User|null>
-     */
-    private function kanbanActivityUsersForLeads($leads): array
-    {
-        $b24Ids = collect($leads)
-            ->pluck('bitrix24_last_activity_by_id')
-            ->filter()
-            ->map(static fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-
-        if ($b24Ids === []) {
-            return [];
-        }
-
-        $map = array_fill_keys($b24Ids, null);
-
-        $users = User::query()
-            ->whereIn('bitrix24_id', $b24Ids)
-            ->with([
-                'parent:id,name,display_name,avatar',
-                'roles:id,name',
-                'employeeProfile.companyBranch:id,name',
-                'employeeProfile.designation:id,name',
-            ])
-            ->get(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id']);
-
-        foreach ($users as $user) {
-            $map[(int) $user->bitrix24_id] = $user;
-        }
-
-        return $map;
     }
 
     /**

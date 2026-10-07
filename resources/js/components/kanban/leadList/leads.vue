@@ -444,7 +444,7 @@
                                                                 </div>
                                                             </div>
                                                             
-                                                            <!-- Activity: date + avatar of Bitrix24 LAST_ACTIVITY_BY user only -->
+                                                            <!-- Activity date, plus the avatar of the last person who commented or logged an activity. Hidden when neither exists. -->
                                                             <div v-else-if="field.key === 'assigned_by' && hasAssignedBy(task)" class="lead-activity-row">
                                                                 <hr class="mb-2 border-neutral-200">
                                                                 <div class="mt-1 d-flex align-items-center justify-content-between assignedBy">
@@ -1308,7 +1308,7 @@ const onProfilePopupUpdate = (open) => {
     }
 }
 
-/** Bitrix24 LAST_ACTIVITY_BY user for the Activity tile (never the assignee/parent). */
+/** Last person who commented or logged an activity. Null hides the avatar. */
 const activityPerson = (task) => task?.last_activity_user ?? null
 
 /** Cached CRM avatars loaded after hover/API (user id → avatar URL). */

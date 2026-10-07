@@ -138,6 +138,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
                         'facebook_questions_answers' =>$facebookFields,
             // 'parent'=>new \App\Http\Resources\User\UserResource($assignedBy),
             'assigned_at'=>$assignmentHistory?$assignmentHistory->created_at:$this->created_at,
+            // Full card replace on lead.updated — keep the activity avatar in sync.
+            // Null when nobody has commented or logged an activity.
+            'last_activity_user' => KanbanLeadCardResource::activityUserPayloadsForLeads([$this->resource])[(int) $this->id] ?? null,
             'property_type'=>$this->propertyType?->name,
             'area'=>$this->area?->title,
             'property_type_id'=>$this->propertyType?->id,
