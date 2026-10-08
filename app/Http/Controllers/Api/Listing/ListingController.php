@@ -2548,6 +2548,10 @@ private function sendResubmissionNotification($listing, $user)
             
             $floorPlan->delete();
 
+            // show() is cached — without this the deleted plan comes back on refresh.
+            $this->clearCache();
+            $this->clearSpecificCache($listing->id);
+
             return ApiResponse::success(null, 'Floor plan deleted successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to delete floor plan: ' . $e->getMessage());
