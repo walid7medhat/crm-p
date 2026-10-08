@@ -433,10 +433,21 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             $subordinatesIds = $this->hasRole('branch_admin')
                 ? $this->getBranchAdminSubordinateIds()
                 : $this->getAllSubordinatesIds();
-            return in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$this->id]));
+            if (in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$this->id]))) {
+                return true;
+            }
+        } elseif ((int) $deal->responsible_person_id === (int) $this->id) {
+            return true;
         }
 
-        return $deal->responsible_person_id == $this->id;
+        // The person who can open the source lead can open the deal created from it,
+        // even when the deal itself was assigned outside their team.
+        $lead = $deal->relationLoaded('lead') ? $deal->lead : $deal->lead()->first();
+        if ($lead && $this->canViewLead($lead)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function isManagerOrTeamLead(): bool

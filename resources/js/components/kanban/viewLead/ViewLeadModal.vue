@@ -12,9 +12,10 @@
         dialog-class="kanban-mobile-fullscreen-modal"
          @hidden="handleClose"
     >
-        <div v-if="show" class="view-lead-modal-content p-3 pb-0">
+        <div v-if="show" class="view-lead-modal-content p-3 pb-0" @click.capture="guardQualifiedRequirementAction" @focusin.capture="guardQualifiedRequirementFocus">
             <!-- Header -->
-            <div class="modal-header-custom d-flex align-items-center gap-2 px-1" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
+            <div class="modal-header-custom px-1" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
+                <div class="lead-header-main d-flex align-items-center gap-2">
                 <!-- Lead name — inline edit, same UX as the deal title -->
                 <template v-if="!isEditingName">
                     <div class="lead-title-read-row d-flex align-items-center gap-2 min-w-0">
@@ -51,12 +52,40 @@
                         @keydown.esc.prevent="cancelEditName"
                     />
                 </div>
+                <button
+                    v-if="convertedDealLink"
+                    type="button"
+                    class="lead-converted-deal-link"
+                    :title="convertedDealLink.deal_name"
+                    @click="openConvertedDeal"
+                >
+                    <span class="lead-converted-deal-kicker">Deal</span>
+                    <span class="lead-converted-deal-name">{{ convertedDealLink.deal_name }}</span>
+                </button>
+                <button
+                    v-else-if="showConvertedCreateDeal"
+                    type="button"
+                    class="lead-converted-create-deal"
+                    @click="openCreateDealForConvertedLead"
+                >
+                    Create deal
+                </button>
                 <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
                     <iconify-icon icon="lucide:x"></iconify-icon>
                 </button>
+                </div>
             </div>
 
             <!-- Stages Progress -->
+            <button
+                v-if="qualifiedRequirementPending && !qualifiedRequirementBlocking"
+                type="button"
+                class="complete-requirement-cta"
+                @click="openQualifiedRequirementForm"
+            >
+                Complete Client Requirement
+            </button>
+
             <StageSelector v-model="leadStageId"
             :require-validation="true"
             :disabled="disableStageChange"
@@ -142,6 +171,7 @@ import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
+import { openDealView } from '@/composables/useDealViewModal.js'
 
 
 
@@ -224,6 +254,14 @@ const qualifiedRequirementBlocking = computed(() =>
     showStageChangeModal.value && pendingStageChange.value?.requirementOnly === true
 )
 
+const qualifiedRequirementPending = computed(() => {
+    const currentLead = lead.value
+    if (!show.value || !currentLead?.id) return false
+    if (!isQualifiedRequirementRole(user.value)) return false
+    if (!isQualifiedLeadStage(currentLead)) return false
+    return !hasAtLeastOneClientRequirement(currentLead)
+})
+
 const normalizeRoleName = (role) => {
     if (!role) return ''
     const raw = typeof role === 'string' ? role : (role.name || role.role || '')
@@ -248,6 +286,87 @@ const isQualifiedLeadStage = (currentLead) => {
     const order = Number(currentLead?.stage?.order ?? currentLead?.stage_order)
     return order === 4
 }
+
+const isConvertedLeadStage = (currentLead) => {
+    const name = String(currentLead?.stage?.name || currentLead?.stage_name || '').trim().toLowerCase()
+    if (name) return name === 'converted'
+    const order = Number(currentLead?.stage?.order ?? currentLead?.stage_order)
+    return order === 6
+}
+
+const convertedDealLink = ref(null)
+const showConvertedCreateDeal = ref(false)
+let convertedDealRequest = 0
+
+const loadConvertedDealLink = async () => {
+    const requestId = ++convertedDealRequest
+    const current = lead.value
+    convertedDealLink.value = null
+    showConvertedCreateDeal.value = false
+    if (!show.value || !current?.id || !isConvertedLeadStage(current)) return
+
+    try {
+        const res = await api.get(`/leads/${current.id}/can-convert`)
+        if (requestId !== convertedDealRequest) return
+        const dealId = Number(res.data?.data?.converted_to_deal_id)
+        if (!dealId) {
+            showConvertedCreateDeal.value = true
+            return
+        }
+        let name = current.deal_name || current.lead_name || 'Deal'
+        let dealType = null
+        try {
+            const dealRes = await api.get(`/deals/${dealId}`)
+            if (requestId !== convertedDealRequest) return
+            const deal = dealRes.data?.data
+            name = deal?.deal_name || deal?.project_name || name
+            dealType = deal?.deal_type || deal?.type || null
+        } catch (_) {
+            /* The lead already points at this deal; the name can fall back. */
+        }
+        convertedDealLink.value = {
+            id: dealId,
+            deal_name: name,
+            deal_type: dealType,
+        }
+    } catch (_) {
+        if (requestId !== convertedDealRequest) return
+        showConvertedCreateDeal.value = false
+    }
+}
+
+const openConvertedDeal = async () => {
+    const deal = convertedDealLink.value
+    if (!deal?.id) return
+    const payload = {
+        id: deal.id,
+        deal_id: deal.id,
+        deal_type: deal.deal_type,
+        deal_name: deal.deal_name,
+        lead_id: lead.value?.id ?? null,
+    }
+    const onKanban = route.path === '/kanban' || route.path === '/kanban_deal'
+    if (onKanban) {
+        await openDealView(payload, { autoEditSection: false })
+        show.value = false
+        return
+    }
+    window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: payload }))
+    show.value = false
+}
+
+const openCreateDealForConvertedLead = async () => {
+    if (!lead.value?.id || convertedDealLink.value) return
+    selectedLeadForConversion.value = lead.value.id
+    selectedLeadData.value = lead.value
+    await nextTick()
+    convertModalRef.value?.show(lead.value.id, lead.value)
+}
+
+watch(
+    () => [show.value, lead.value?.id, lead.value?.stage?.name, lead.value?.stage_name, lead.value?.stage_id],
+    () => { loadConvertedDealLink() }
+)
 
 const requirementRowHasContent = (req) => {
     if (!req || req._kind === QUAL_META_KIND) return false
@@ -290,13 +409,19 @@ const blockQualifiedRequirementEscape = (event) => {
     show.value = false
 }
 
-const maybeOpenQualifiedRequirementGate = () => {
+const QUALIFIED_REQUIREMENT_ALLOW = '.view-lead-close-btn, .complete-requirement-cta, .lead-converted-deal-link, .lead-converted-create-deal, .tab-item, .btn-toggle, .scroll-hover-edge, .btn-show-older, .show-older-link'
+
+const isQualifiedRequirementAction = (target) => {
+    if (!(target instanceof Element)) return false
+    if (target.closest(QUALIFIED_REQUIREMENT_ALLOW)) return false
+    return Boolean(target.closest(
+        'button, input, textarea, select, [contenteditable="true"], [role="button"], .stage-pill, .lead-title-editable, .lead-title-edit-btn, .vs__dropdown-toggle, .comment-avatar-hover-anchor'
+    ))
+}
+
+const openQualifiedRequirementForm = () => {
     const currentLead = lead.value
-    if (!show.value || !currentLead?.id) return
-    if (qualifiedRequirementBlocking.value) return
-    if (!isQualifiedRequirementRole(user.value)) return
-    if (!isQualifiedLeadStage(currentLead)) return
-    if (hasAtLeastOneClientRequirement(currentLead)) return
+    if (!qualifiedRequirementPending.value || qualifiedRequirementBlocking.value || !currentLead?.id) return
 
     pendingStageChange.value = {
         leadId: currentLead.id,
@@ -311,6 +436,21 @@ const maybeOpenQualifiedRequirementGate = () => {
     }
     missingFieldsForLead.value = [...QUALIFIED_REQUIREMENT_FIELDS]
     showStageChangeModal.value = true
+}
+
+const guardQualifiedRequirementAction = (event) => {
+    if (!qualifiedRequirementPending.value || qualifiedRequirementBlocking.value) return
+    if (!isQualifiedRequirementAction(event.target)) return
+    event.preventDefault()
+    event.stopPropagation()
+    openQualifiedRequirementForm()
+}
+
+const guardQualifiedRequirementFocus = (event) => {
+    if (!qualifiedRequirementPending.value || qualifiedRequirementBlocking.value) return
+    if (!isQualifiedRequirementAction(event.target)) return
+    event.target?.blur?.()
+    openQualifiedRequirementForm()
 }
 
 function handleLeadConverted(deal) {
@@ -370,6 +510,10 @@ const canEditName = computed(() => {
 })
 
 const startEditName = () => {
+    if (qualifiedRequirementPending.value) {
+        openQualifiedRequirementForm()
+        return
+    }
     if (!canEditName.value) return
     leadNameInput.value = lead.value?.lead_name || ''
     isEditingName.value = true
@@ -475,6 +619,10 @@ const fetchStageOrders = async () => {
 
 // Handle stage change request from StageSelector
 const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
+    if (qualifiedRequirementPending.value) {
+        openQualifiedRequirementForm()
+        return
+    }
     if (props.disableStageChange) return
     console.log('🎯 handleStageChangeRequest called:', { stageId, stageName, stageOrder })
 
@@ -976,7 +1124,6 @@ const fetchLead = async ({ silent = false } = {}) => {
             if (fresh) {
                 lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
                 if (fresh.stage_id) leadStageId.value = fresh.stage_id
-                maybeOpenQualifiedRequirementGate()
             }
         } catch (error) {
             if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
@@ -1292,6 +1439,109 @@ defineExpose({
 
 .modal-header-custom.is-above-requirement {
     z-index: 13000;
+}
+
+.lead-converted-deal-link,
+.lead-converted-create-deal {
+    flex: 0 1 auto;
+    max-width: 280px;
+    height: 34px;
+    margin: 0;
+    padding: 0 10px 0 12px;
+    border-radius: 10px;
+    border: 1px solid #e9d5ff;
+    background: #faf5ff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lead-converted-deal-kicker {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #733E87;
+}
+
+.lead-converted-deal-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 650;
+    color: #0B0736;
+}
+
+.lead-converted-create-deal {
+    justify-content: center;
+    padding: 0 14px;
+    background: #733E87;
+    border-color: #733E87;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.lead-converted-deal-kicker {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #733E87;
+}
+
+.lead-converted-deal-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 650;
+    color: #0B0736;
+}
+
+.lead-converted-create-deal {
+    justify-content: center;
+    background: #733E87;
+    border-color: #733E87;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.lead-converted-deal-link:hover,
+.lead-converted-create-deal:hover {
+    filter: brightness(1.06);
+}
+
+.complete-requirement-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #733E87;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.2;
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+}
+
+.complete-requirement-cta:hover {
+    filter: brightness(1.06);
 }
 
 .modal-title {

@@ -113,26 +113,11 @@ class DealController extends Controller
      */
     public function show(Deal $deal)
     {
-        $user = auth()->user();
-        
-        if (!$user->hasAnyRole(['super_admin']) && $user->id != 30 && $user->id != 33) {
-            $canAccess = false;
-            
-            if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
-                $subordinatesIds = $user->hasRole('branch_admin')
-                    ? $user->getBranchAdminSubordinateIds()
-                    : $user->getAllSubordinatesIds();
-                $canAccess = in_array($deal->responsible_person_id, array_merge($subordinatesIds, [$user->id]));
-            } else {
-                $canAccess = $deal->responsible_person_id == $user->id;
-            }
-            
-            if (!$canAccess) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
+        if (!auth()->user()->canViewDeal($deal)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
         }
 
         $deal->load([
