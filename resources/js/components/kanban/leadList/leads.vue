@@ -4217,15 +4217,20 @@ const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
 
+// Always UAE time — the API sends UTC ("…Z"), and without a timeZone the browser
+// showed it in the viewer's own zone (e.g. an hour early on a computer set to Egypt).
+const CARD_TIME_ZONE = 'Asia/Dubai'
+
 function formatDate(dateString) {
     if (!dateString) return ''
     const date = new Date(dateString)
-    const options = { month: 'short', day: 'numeric', year: 'numeric' }
+    const options = { month: 'short', day: 'numeric', year: 'numeric', timeZone: CARD_TIME_ZONE }
     const formattedDate = date.toLocaleDateString('en-US', options)
     const formattedTime = date.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: CARD_TIME_ZONE,
     })
     return `${formattedDate}  |  ${formattedTime}`
 }
