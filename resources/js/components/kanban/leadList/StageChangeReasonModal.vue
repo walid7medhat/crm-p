@@ -1,8 +1,8 @@
 <!-- StageChangeReasonModal.vue -->
 <template>
 
-    <div v-if="visible" class="stage-change-modal-overlay" :class="{ 'stage-change-modal-overlay--clear': mandatory }" @click.self="onOverlayClick" @wheel="onOverlayWheel">
-        <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode, 'stage-change-modal--side': mandatory }">
+    <div v-if="visible" class="stage-change-modal-overlay" :class="{ 'stage-change-modal-overlay--clear': mandatory }" @click.self="onOverlayClick">
+        <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode }">
             <div class="modal-header">
                 <h5 class="modal-title">{{ mandatory ? 'Client Requirement' : (isConversion ? 'Complete Lead Information' : `Move Lead to ${targetStageName}`) }}</h5>
                 <button v-if="!mandatory" class="close-btn-custom" @click="closeModal">
@@ -1302,30 +1302,6 @@ const onOverlayClick = () => {
     closeModal()
 }
 
-/**
- * Mandatory mode: the empty area blocks clicks, but the mouse wheel over it scrolls
- * whatever is underneath (the lead's comments/timeline) — read-only peeking.
- */
-const onOverlayWheel = (event) => {
-    if (!props.mandatory || event.target !== event.currentTarget) return
-    const overlay = event.currentTarget
-    overlay.style.pointerEvents = 'none'
-    let below = null
-    try {
-        below = document.elementFromPoint(event.clientX, event.clientY)
-    } finally {
-        overlay.style.pointerEvents = ''
-    }
-    for (let el = below; el && el !== document.body; el = el.parentElement) {
-        const { overflowY } = window.getComputedStyle(el)
-        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
-            el.scrollBy({ top: event.deltaY, left: event.deltaX })
-            event.preventDefault()
-            return
-        }
-    }
-}
-
 const blockMandatoryEscape = (event) => {
     if (!props.mandatory || !visible.value) return
     if (event.key !== 'Escape') return
@@ -1915,60 +1891,6 @@ defineExpose({
 
 .stage-change-modal.modal-wide {
     max-width: 860px;
-}
-
-/* Mandatory "Client Requirement": dock it on the left and keep it narrow so the
-   lead's comments/timeline behind it stay readable (overlay is already transparent). */
-/* Anchored to the lead window (ViewLeadModal body, position: relative, non-scrolling)
-   instead of the viewport, so the panel starts at the lead window's left edge. */
-.stage-change-modal-overlay.stage-change-modal-overlay--clear {
-    position: absolute;
-    inset: 0;
-    justify-content: flex-start;
-    align-items: flex-start;
-    padding: 12px;
-}
-
-/* Above the lead window's header (ViewLeadModal `.is-above-requirement` = 13000).
-   The empty area still blocks clicks; wheel over it is forwarded to the lead behind
-   (onOverlayWheel) so comments can be read but not acted on. */
-.stage-change-modal-overlay.stage-change-modal-overlay--clear {
-    z-index: 13100 !important;
-}
-
-/* Half of the lead window; fits its height (modal-content is 92vh). */
-.stage-change-modal.stage-change-modal.stage-change-modal--side {
-    width: 49%;
-    max-width: none;
-    max-height: calc(92vh - 24px);
-}
-
-.stage-change-modal--side .lead-pool-move-grid {
-    grid-template-columns: 1fr;
-}
-
-.stage-change-modal--side .lead-qualification-trio {
-    flex-direction: column;
-    gap: 10px;
-}
-
-.stage-change-modal--side .lead-pool-move-btn {
-    width: 100%;
-}
-
-@media (max-width: 768px) {
-    /* Phones: keep the usual bottom sheet. */
-    .stage-change-modal-overlay.stage-change-modal-overlay--clear {
-        justify-content: center;
-        align-items: flex-end;
-        padding: 0;
-    }
-
-    .stage-change-modal.stage-change-modal.stage-change-modal--side {
-        width: 100%;
-        max-width: none;
-        max-height: min(88dvh, calc(100dvh - env(safe-area-inset-bottom, 0px) - 12px));
-    }
 }
 
 .modal-header {

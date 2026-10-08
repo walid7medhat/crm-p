@@ -311,22 +311,6 @@ const maybeOpenQualifiedRequirementGate = () => {
     }
     missingFieldsForLead.value = [...QUALIFIED_REQUIREMENT_FIELDS]
     showStageChangeModal.value = true
-    scrollToCommentList()
-}
-
-/**
- * While the mandatory Client Requirement panel is docked on the left, bring the lead's
- * comments into view behind it. Comments load async, so wait (up to ~4s) for the list.
- */
-const scrollToCommentList = (attempt = 0) => {
-    if (!show.value || !qualifiedRequirementBlocking.value) return
-    const list = document.querySelector('#view-lead-modal .lead-comment-list')
-        || document.querySelector('.view-lead-modal .lead-comment-list')
-    if (list) {
-        list.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        return
-    }
-    if (attempt < 20) setTimeout(() => scrollToCommentList(attempt + 1), 200)
 }
 
 function handleLeadConverted(deal) {
