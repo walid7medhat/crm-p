@@ -399,6 +399,56 @@ class ReportController extends Controller
     }
 
     /**
+     * "Export Leads" page (super_admin): preview of the leads matching the search text —
+     * total count + the newest 50 rows. Search rule: App\Exports\LeadSearchExport.
+     */
+    public function leadSearchPreview(Request $request)
+    {
+        if (!auth()->user()->hasRole('super_admin')) {
+            return ApiResponse::error('Unauthorized - Only super admins can export leads', 403);
+        }
+
+        $term = trim((string) $request->input('q', ''));
+        if (mb_strlen($term) < 2) {
+            return ApiResponse::error('Type at least 2 characters to search.', 422);
+        }
+
+        $query = \App\Exports\LeadSearchExport::searchQuery($term);
+        $total = (clone $query)->reorder()->count();
+        $rows = $query->limit(50)->get()->map(fn ($lead) => [
+            'id' => $lead->id,
+            'lead_name' => $lead->lead_name,
+            'name' => \App\Exports\LeadSearchExport::fullName($lead),
+            'email' => $lead->email,
+        ]);
+
+        return ApiResponse::success([
+            'total' => $total,
+            'rows' => $rows,
+        ], 'Lead search preview retrieved successfully');
+    }
+
+    /** Same search as leadSearchPreview(), downloaded as Excel (Lead Name, Name, Email). */
+    public function leadSearchExport(Request $request)
+    {
+        if (!auth()->user()->hasRole('super_admin')) {
+            return ApiResponse::error('Unauthorized - Only super admins can export leads', 403);
+        }
+
+        $term = trim((string) $request->input('q', ''));
+        if (mb_strlen($term) < 2) {
+            return ApiResponse::error('Type at least 2 characters to search.', 422);
+        }
+
+        $slug = \Illuminate\Support\Str::slug($term) ?: 'search';
+
+        return Excel::download(
+            new \App\Exports\LeadSearchExport($term),
+            "leads-{$slug}-" . now()->format('Y-m-d') . '.xlsx'
+        );
+    }
+
+    /**
      * نفس تقرير المصادر لكن كملف اكسل قابل للتحميل.
      */
     public function leadsBySourceReportExport(Request $request)

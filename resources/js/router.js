@@ -55,6 +55,7 @@ const baseRoutes = [
   { path: '/lead-reports', component: () => import('./pages/lead-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
+  { path: '/lead-export', component: () => import('./pages/lead-export.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue`

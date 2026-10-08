@@ -1185,6 +1185,8 @@ const mainMenuItems = computed(() => {
     items.push({ path: '/sales-intelligence', label: 'AI Sales Intelligence', iconSrc: insightsIcon.value });
     items.push({ path: '/investment-analysis', label: 'Investment Analysis', iconSrc: insightsIcon.value });
     items.push({ path: '/settings/city-investments', label: 'City Investments', iconSrc: projectsIcon.value });
+    // Search leads by text and download the result as Excel (Lead Name, Name, Email).
+    items.push({ path: '/lead-export', label: 'Export Leads', iconSrc: leadsIcon.value });
   }
 
   // Lead Pool Assignments report: super admins + user #30 (route meta allowUser30,

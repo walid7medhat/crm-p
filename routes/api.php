@@ -780,6 +780,9 @@ Route::prefix('leads')->group(function(){
             Route::get('/leads-by-source', [ReportController::class, 'leadsBySourceReport']);
             Route::get('/leads-by-source/export', [ReportController::class, 'leadsBySourceReportExport']);
             Route::get('/lead-pool-assignments', [ReportController::class, 'leadPoolAssignmentsReport']);
+            // "Export Leads" page (super_admin): search text → preview / Excel.
+            Route::get('/lead-search', [ReportController::class, 'leadSearchPreview']);
+            Route::get('/lead-search/export', [ReportController::class, 'leadSearchExport']);
         });
 });
   // =================sources=============
