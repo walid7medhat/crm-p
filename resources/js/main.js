@@ -97,11 +97,11 @@ function isStoredAdminOrSuperAdmin() {
   }
 }
 
-// LeadUpdatedNotification / LeadRevertWarningNotification — `type` is the class name.
-// Matched by class only: activity reminders and @mentions also carry a `lead` but
-// are personal, so they still pop up.
+// LeadUpdatedNotification / LeadRevertWarningNotification / DealUpdatedNotification —
+// `type` is the class name. Matched by class only: activity reminders and @mentions
+// (CommentMention, DealCommentMention) are personal, so they still pop up.
 function isLeadNotification(notification) {
-  return /\\Lead\w*Notification$/.test(String(notification?.type || ''))
+  return /\\(Lead\w*|DealUpdated)Notification$/.test(String(notification?.type || ''))
 }
 
 function isAssignmentAlert(notification) {

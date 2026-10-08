@@ -724,7 +724,8 @@ class LeadController extends Controller
                             $allowedIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
                             $allowedIds[] = (int) $user->id; // assign to themselves
                         }
-                        if (!in_array((int) $leadData['responsible_person_id'], array_map('intval', $allowedIds), true)) {
+                        if (!in_array((int) $leadData['responsible_person_id'], array_map('intval', $allowedIds), true)
+                            && !$this->isCrossBranchAdminTarget($user, (int) $leadData['responsible_person_id'])) {
                             return ApiResponse::error('You can only assign responsible person from your team', 403);
                         }
                     }
@@ -1005,7 +1006,8 @@ class LeadController extends Controller
                 $subordinatesIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
                 $subordinatesIds[] = (int) $user->id; // assign to themselves
             }
-            if (!in_array($request->responsible_person_id, $subordinatesIds)) {
+            if (!in_array($request->responsible_person_id, $subordinatesIds)
+                && !$this->isCrossBranchAdminTarget($user, (int) $request->responsible_person_id)) {
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
             }
         }
@@ -1197,13 +1199,21 @@ class LeadController extends Controller
             $roles = ['team_lead', 'sales', 'manager'];
             // Branch admins also get user #33 — and themselves (assign a lead to me).
             $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID, (int) $user->id] : [];
+            // Branch admins also get every user with the admin role, in ANY branch, so a
+            // lead can be handed to another branch (allowed in update / assignResponsiblePerson).
+            $includeAllAdmins = $user->hasRole('branch_admin');
 
-            $base->where(function ($q) use ($scopeIds, $roles, $extraIds) {
+            $base->where(function ($q) use ($scopeIds, $roles, $extraIds, $includeAllAdmins) {
                 $q->where(function ($q) use ($scopeIds, $roles) {
                     $q->role($roles)->whereIn('users.id', $scopeIds);
                 });
                 if ($extraIds) {
                     $q->orWhereIn('users.id', $extraIds);
+                }
+                if ($includeAllAdmins) {
+                    $q->orWhere(function ($q) {
+                        $q->role('admin')->whereNotNull('users.parent_id');
+                    });
                 }
             });
         } else {
@@ -1262,6 +1272,24 @@ class LeadController extends Controller
         return ApiResponse::error('Failed to retrieve available responsible persons: ' . $e->getMessage());
     }
 }
+
+    /**
+     * A branch_admin may also hand a lead to any user with the admin role in ANY branch
+     * (shown in their assign list — getAvailableResponsiblePersons).
+     */
+    private function isCrossBranchAdminTarget(User $user, int $targetId): bool
+    {
+        if (! $user->hasRole('branch_admin') || $targetId <= 0) {
+            return false;
+        }
+
+        $target = User::find($targetId);
+
+        return $target
+            && $target->status === 'active'
+            && $target->parent_id !== null
+            && $target->hasRole('admin');
+    }
 
     /**
      * super_admin (and ids 30/33, matching the rest of this controller) can delete any

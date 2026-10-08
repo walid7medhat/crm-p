@@ -499,4 +499,24 @@ class Bitrix24Client
 
         return $all;
     }
+
+    /**
+     * Fetch every Bitrix24 department (ID, NAME, PARENT, UF_HEAD), paging
+     * through department.get (50 rows per page).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listDepartments(): array
+    {
+        $all = [];
+        $start = 0;
+        do {
+            $r = $this->call('department.get', ['start' => $start]);
+            $page = $r['result'] ?? [];
+            $all = array_merge($all, $page);
+            $start = isset($r['next']) ? (int) $r['next'] : null;
+        } while ($start !== null && $page !== []);
+
+        return $all;
+    }
 }

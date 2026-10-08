@@ -1548,6 +1548,14 @@ const ensureCrmToastStyles = () => {
 }
 
 const showDealNotification = (event) => {
+  // No live deal pop-ups for super_admin / admin / branch_admin (they see every deal —
+  // they'd never stop). The board still updates; same rule as lead pop-ups (main.js).
+  try {
+    const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
+    if (roles.includes('super_admin') || roles.includes('admin') || roles.includes('branch_admin')) return
+  } catch {
+    /* ignore */
+  }
   ensureCrmToastStyles()
 
   const dealData = event.deal?.data || event.deal
