@@ -2062,6 +2062,17 @@ public function update(ListingRequest $request, $listingId): JsonResponse
 }
 
 /**
+ * Same rule update() uses to decide who may edit a listing.
+ */
+private function canEditListing($user, Listing $listing): bool
+{
+    return (int) $listing->added_by === (int) $user->id
+        || (int) $listing->agent_id === (int) $user->id
+        || $user->hasRole('super_admin')
+        || $user->canEditListings($listing->agent_id);
+}
+
+/**
  * Same rule approve()/reject() use to decide who may approve listings.
  */
 private function canApproveListings($user): bool
@@ -2518,13 +2529,16 @@ private function sendResubmissionNotification($listing, $user)
             if (!$listing || !$floorPlan) {
                 return ApiResponse::error('Listing or floor plan Not found', 404);
             }
-            
-            if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
-                return ApiResponse::error('Access denied', 403);
+
+            // Same rule as update(): whoever may edit the listing may remove its floor plans.
+            // (Was "sales must be the listing agent" with a strict !==, which rejected agents
+            // who created the listing for someone else, and int-vs-string ids.)
+            if (! $this->canEditListing($user, $listing)) {
+                return ApiResponse::error('You are not authorized to edit this listing', 403);
             }
-            
+
             // Check if floor plan belongs to listing
-            if ($floorPlan->floor_planable_id !== $listing->id || $floorPlan->floor_planable_type !== Listing::class) {
+            if ((int) $floorPlan->floor_planable_id !== (int) $listing->id || $floorPlan->floor_planable_type !== Listing::class) {
                 return ApiResponse::error('Floor plan Not found for this listing', 404);
             }
             

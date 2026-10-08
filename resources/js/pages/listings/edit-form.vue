@@ -3741,7 +3741,7 @@ const deleteFloorPlan = async (floorPlanId) => {
     proxy.$showNotification("🗑️ Floor plan deleted", "success");
   } catch (error) {
     console.error("❌ Error deleting floor plan:", error);
-    proxy.$showNotification("❌ Failed to delete floor plan", "error");
+    proxy.$showNotification(`❌ Failed to delete floor plan${error.response?.data?.message ? ": " + error.response.data.message : ""}`, "error");
   }
 };
 
@@ -3928,7 +3928,7 @@ const removeExistingFloorPlan = async (floorPlanId) => {
     proxy.$showNotification("🗑️ Floor plan deleted", "success");
   } catch (error) {
     console.error("❌ Error deleting floor plan:", error);
-    proxy.$showNotification("❌ Failed to delete floor plan", "error");
+    proxy.$showNotification(`❌ Failed to delete floor plan${error.response?.data?.message ? ": " + error.response.data.message : ""}`, "error");
   }
 };
 
