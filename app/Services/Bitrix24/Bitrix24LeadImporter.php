@@ -1534,7 +1534,10 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             return null;
         }
         try {
-            return Carbon::parse($v);
+            // Bitrix dates carry their own offset (e.g. "2026-10-08T01:30:00+03:00").
+            // Convert to UAE time (app timezone): several writes below go through
+            // DB::table()->insert with ->format(), which keeps the source clock time.
+            return Carbon::parse($v)->setTimezone(config('app.timezone'));
         } catch (\Throwable $e) {
             return null;
         }

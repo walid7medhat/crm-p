@@ -87,6 +87,24 @@ protected const NON_ENGAGEMENT_FIELDS = [
         return $id;
     }
 
+    /**
+     * Save every lead date in UAE time (the app timezone, Asia/Dubai).
+     *
+     * Eloquent writes a Carbon / DateTime using ITS OWN clock time, no conversion — so a
+     * UTC value (e.g. Meta's created_time "21:30+00:00") was stored as 21:30 and read back
+     * as UAE time: 4 hours early, and leads from 00:00–04:00 UAE landed on the previous
+     * day. Convert to the app timezone first. Plain strings are left as they are (they
+     * are already app-timezone wall-clock times).
+     */
+    public function fromDateTime($value)
+    {
+        if ($value instanceof \DateTimeInterface) {
+            $value = Carbon::instance($value)->setTimezone(config('app.timezone'));
+        }
+
+        return parent::fromDateTime($value);
+    }
+
     protected static function booted()
     {
         
