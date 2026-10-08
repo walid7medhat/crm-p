@@ -6237,11 +6237,15 @@ function openDatePicker(fieldId = 'created_on', event) {
 
 
 
+// Presets are UAE calendar days, whatever timezone the user's computer is in
+// (the backend treats created_from/created_to as UAE days — UaeDateRange).
+const uaeNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Dubai' }))
+
 function selectPresetRange(preset) {
 
     selectedPreset.value = preset
 
-    const today = new Date()
+    const today = uaeNow()
 
     const y = today.getFullYear()
 

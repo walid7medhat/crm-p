@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\UaeDateRange;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\Stage\StageRequest;
@@ -716,15 +717,8 @@ class StageController extends Controller
             if ($request->filled('added_by')) {
                 $q->where('added_by', $request->added_by);
             }
-            if ($request->filled('created_from')) {
-                $q->whereDate('created_at', '>=', $request->created_from);
-            }
-            if ($request->filled('created_to')) {
-                $q->whereDate('created_at', '<=', $request->created_to);
-            }
-            if ($request->filled('created_at')) {
-                $q->whereDate('created_at', '=', $request->created_at);
-            }
+            // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
+            UaeDateRange::apply($q, 'created_at', $request->created_from, $request->created_to, $request->created_at);
             $this->applyLeadSourceFilter($q, $request);
             if ($request->filled('bedrooms')) {
                 $q->where('bedrooms', $request->bedrooms);
@@ -840,16 +834,7 @@ class StageController extends Controller
                 $assignedDate = $request->assigned_at;
                 $q->whereHas('histories', function ($query) use ($assignedFrom, $assignedTo, $assignedDate) {
                     $query->where('changes->action', 'assigned');
-                    if ($assignedDate) {
-                        $query->whereDate('created_at', $assignedDate);
-                    } else {
-                        if ($assignedFrom) {
-                            $query->whereDate('created_at', '>=', $assignedFrom);
-                        }
-                        if ($assignedTo) {
-                            $query->whereDate('created_at', '<=', $assignedTo);
-                        }
-                    }
+                    UaeDateRange::apply($query, 'created_at', $assignedFrom, $assignedTo, $assignedDate);
                 });
             }
             if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
@@ -924,15 +909,8 @@ class StageController extends Controller
             if ($request->filled('added_by')) {
                 $leadsQuery->where('added_by', $request->added_by);
             }
-            if ($request->filled('created_from')) {
-                $leadsQuery->whereDate('created_at', '>=', $request->created_from);
-            }
-            if ($request->filled('created_to')) {
-                $leadsQuery->whereDate('created_at', '<=', $request->created_to);
-            }
-            if ($request->filled('created_at')) {
-                $leadsQuery->whereDate('created_at', '=', $request->created_at);
-            }
+            // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
+            UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
             $this->applyLeadSourceFilter($leadsQuery, $request);
             if ($request->filled('bedrooms')) {
                 $leadsQuery->where('bedrooms', $request->bedrooms);
@@ -1078,16 +1056,7 @@ class StageController extends Controller
                     $assignedDate = $request->assigned_at;
                     $leadsQuery->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
                         $query->where('changes->action', 'assigned');
-                        if ($assignedDate) {
-                            $query->whereDate('created_at', $assignedDate);
-                        } else {
-                            if ($assignedFrom) {
-                                $query->whereDate('created_at', '>=', $assignedFrom);
-                            }
-                            if ($assignedTo) {
-                                $query->whereDate('created_at', '<=', $assignedTo);
-                            }
-                        }
+                        UaeDateRange::apply($query, 'created_at', $assignedFrom, $assignedTo, $assignedDate);
                     });
                 }
                 if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {

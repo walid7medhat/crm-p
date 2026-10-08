@@ -304,8 +304,9 @@ class Deal extends Model
             ->when($request->from_date, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->to_date, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
             
-             ->when($request->created_from, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($request->created_to, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
+            // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
+            ->when($request->created_from, fn($q, $v) => $q->where('created_at', '>=', \App\Support\UaeDateRange::start($v)))
+            ->when($request->created_to, fn($q, $v) => $q->where('created_at', '<=', \App\Support\UaeDateRange::end($v)))
 
             // Last-assignment date filters: match only the most recent 'assigned'
             // history (either on the deal directly or its source lead).
@@ -332,12 +333,7 @@ class Deal extends Model
                                     })
                                     ->where('lh2.changes->action', 'assigned');
                             });
-                        if ($assignedDate) {
-                            $sub->whereDate('lh.created_at', $assignedDate);
-                        } else {
-                            if ($assignedFrom) $sub->whereDate('lh.created_at', '>=', $assignedFrom);
-                            if ($assignedTo) $sub->whereDate('lh.created_at', '<=', $assignedTo);
-                        }
+                        \App\Support\UaeDateRange::apply($sub, 'lh.created_at', $assignedFrom, $assignedTo, $assignedDate);
                     });
                 }
             )
