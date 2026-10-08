@@ -2674,10 +2674,12 @@ async function fetchMoreLeadsFromApi(stageId) {
         // إضافة الـ leads الجديدة للـ column
         const columnIndex = columns.value.findIndex(c => c.status === stageId)
         if (columnIndex !== -1) {
-            // ضيف الـ leads الجديدة تحت القديمة
+            // ضيف الـ leads الجديدة تحت القديمة — skip ones already shown (a lead that moved
+            // between pages, or arrived live via websocket, must not appear twice).
+            const shownIds = new Set(columns.value[columnIndex].leads.map(l => String(l?.id)))
             columns.value[columnIndex].leads = sortLeadsByUpdatedAt([
                 ...columns.value[columnIndex].leads,
-                ...newLeads,
+                ...newLeads.filter(l => !shownIds.has(String(l?.id))),
             ])
             
             // تحديث الـ pagination
@@ -3367,6 +3369,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+    clearTimeout(realtimeFilteredRefreshTimer)
     if (typeof unsubscribeLeadViewUpdated === 'function') {
         unsubscribeLeadViewUpdated()
         unsubscribeLeadViewUpdated = null
@@ -3525,7 +3528,13 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
     if (!leadData || !leadData.id) {
         return
     }
-    
+
+    // With a search/filter applied, a live lead may only show up if it matches it.
+    if (payload.action_type !== 'deleted' && !realtimeLeadPassesActiveFilters(leadData)) {
+        showLeadNotification(payload)
+        return
+    }
+
     switch (payload.action_type) {
         case 'created':
             handleNewLead(leadData)
@@ -3554,6 +3563,58 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
     
     showLeadNotification(payload)
 }
+// ================= Realtime vs active filters =================
+const REALTIME_DATE_FILTER_KEYS = ['created_from', 'created_to', 'created_at', 'assigned_from', 'assigned_to', 'assigned_at']
+let realtimeFilteredRefreshTimer = null
+
+/** 'YYYY-MM-DD' of a timestamp as a UAE calendar day (matches backend UaeDateRange). */
+function uaeDay(raw) {
+    if (!raw) return null
+    const d = new Date(raw)
+    return Number.isFinite(d.getTime()) ? d.toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' }) : null
+}
+
+function dayInRange(day, from, to, exact) {
+    if (exact) { from = exact; to = exact }
+    if (!from && !to) return true
+    if (!day) return false
+    if (from && day < String(from).slice(0, 10)) return false
+    if (to && day > String(to).slice(0, 10)) return false
+    return true
+}
+
+/**
+ * Should a Pusher lead be placed on the board under the current search/filters?
+ * - no filters: yes (unchanged behaviour)
+ * - only date filters: check created/assigned UAE day locally; a lead that no longer
+ *   matches is taken off the board
+ * - any other filter: we can't evaluate it reliably here — skip the event and quietly
+ *   reload the board so the server (same filters) decides what shows.
+ */
+function realtimeLeadPassesActiveFilters(lead) {
+    const params = buildLeadSearchApiParams(effectiveSearchParams.value)
+    const activeKeys = Object.keys(params).filter((k) => {
+        const v = params[k]
+        return v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)
+    })
+    if (activeKeys.length === 0) return true
+
+    if (activeKeys.every((k) => REALTIME_DATE_FILTER_KEYS.includes(k))) {
+        const matches =
+            dayInRange(uaeDay(lead.created_at), params.created_from, params.created_to, params.created_at) &&
+            dayInRange(uaeDay(lead.assigned_at), params.assigned_from, params.assigned_to, params.assigned_at)
+        if (!matches) removeLeadFromColumns(lead.id)
+        return matches
+    }
+
+    clearTimeout(realtimeFilteredRefreshTimer)
+    realtimeFilteredRefreshTimer = setTimeout(() => {
+        realtimeFilteredRefreshTimer = null
+        if (!isFetching.value) fetchLeads(true, undefined, { silent: true })
+    }, 600)
+    return false
+}
+
 const handleAssignedLead = (lead, changes) => {
     const user = JSON.parse(localStorage.getItem('user'))
     const currentUserId = user?.id
