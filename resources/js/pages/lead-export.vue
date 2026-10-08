@@ -33,8 +33,8 @@
         </button>
       </form>
       <p class="lex-hint">
-        Matches the text in: lead name, first name, last name, source, referral client name, source information and comment.
-        The Excel file has: Lead Name, Name, Email.
+        Only leads that have an email. Matches the text in: lead name, first name, last name, source, referral client name,
+        source information and comment. The Excel file has: Lead Name, Name, Email.
       </p>
 
       <div v-if="error" class="lex-error">

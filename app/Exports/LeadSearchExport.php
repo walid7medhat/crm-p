@@ -10,9 +10,9 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
 /**
- * "Export Leads" page (super_admin): leads whose lead name, first / last name, source,
- * referral client name, source information or comment contain the search text — as
- * Excel (Lead Name, Name, Email). Read in chunks (FromQuery), so big results don't
+ * "Export Leads" page (super_admin): leads that have an email and whose lead name,
+ * first / last name, source, referral client name, source information or comment contain
+ * the search text — as Excel (Lead Name, Name, Email). Read in chunks (FromQuery), so big results don't
  * load into memory at once.
  */
 class LeadSearchExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize
@@ -39,6 +39,9 @@ class LeadSearchExport implements FromQuery, WithHeadings, WithMapping, ShouldAu
 
         return Lead::query()
             ->select(['id', 'lead_name', 'first_name', 'last_name', 'email'])
+            // Only leads that have an email (blank / spaces-only don't count).
+            ->whereNotNull('email')
+            ->whereRaw("TRIM(email) <> ''")
             ->where(function (Builder $q) use ($like) {
                 foreach (self::SEARCH_COLUMNS as $column) {
                     $q->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$like]);
