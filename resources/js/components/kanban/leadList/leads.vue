@@ -4825,6 +4825,26 @@ async function onLeadDragChange(evt, column) {
           (  sourceStageName.includes('assign') || sourceStageName.includes('new lead')) &&
             (targetStageName.includes('followup') || targetStageName.includes('contacted'))
 
+        // Only the lead's responsible person (or super_admin/admin/branch_admin, for leads
+        // they can see) may release it into Lead Pool — the server enforces this too.
+        // Snap the card back before any stage modal opens.
+        const isLeadPoolTarget = newStageOrder === 9 || targetStageName === 'leadpool'
+        const isLeadPoolSource = sourceStageName === 'leadpool'
+            || (stageOrderMap.value[lead.stage_id] ?? sourceColumn?.order) === 9
+        if (isLeadPoolTarget && !isLeadPoolSource && !isAdminOrSuperAdmin.value
+            && Number(lead.responsible_person_id) !== Number(user.value?.id)) {
+            const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
+            if (targetColumnIndex !== -1) {
+                columns.value[targetColumnIndex].leads =
+                    columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
+            }
+            if (sourceColumn && !sourceColumn.leads.find(l => l.id === lead.id)) {
+                sourceColumn.leads.push(lead)
+            }
+            $showNotification('Only the responsible person can move this lead to Lead Pool', 'error')
+            return
+        }
+
         // [NEW] Logic for moving to Contacted stage from ANY stage
         const isMovingToContacted = targetStageName.includes('contacted')
         const isSalutationMissing = !lead.salutation || lead.salutation === ''

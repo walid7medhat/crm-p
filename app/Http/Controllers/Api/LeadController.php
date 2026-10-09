@@ -1579,7 +1579,17 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
 
         $oldStage = $lead->stage;
         $newStage = Stage::find($request->stage_id);
-        
+
+        // Only the lead's own responsible person may put it into the Lead Pool, plus
+        // super_admin/admin/branch_admin for leads in their scope (canViewLead above).
+        // Managers/team leads who can merely view the lead cannot release it.
+        if ($this->isLeadPoolStage($newStage)
+            && ! $this->isLeadPoolStage($oldStage)
+            && ! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])
+            && (int) $lead->responsible_person_id !== (int) $user->id) {
+            return ApiResponse::error('Only the responsible person can move this lead to Lead Pool', 403);
+        }
+
         $old = $lead->getAttributes();
 
         // Check revert condition for stage 3
