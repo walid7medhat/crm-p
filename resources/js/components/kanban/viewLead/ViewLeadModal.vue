@@ -12,67 +12,77 @@
         dialog-class="kanban-mobile-fullscreen-modal"
          @hidden="handleClose"
     >
-        <div v-if="show" class="view-lead-modal-content p-3 pb-0" @click.capture="guardQualifiedRequirementAction" @focusin.capture="guardQualifiedRequirementFocus">
+        <div v-if="show" class="view-lead-modal-content" @click.capture="guardQualifiedRequirementAction" @focusin.capture="guardQualifiedRequirementFocus">
             <!-- Header -->
-            <div class="modal-header-custom px-1" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
-                <div class="lead-header-main d-flex align-items-center gap-2">
-                <!-- Lead name — inline edit, same UX as the deal title -->
-                <template v-if="!isEditingName">
-                    <div class="lead-title-read-row d-flex align-items-center gap-2 min-w-0">
-                        <span
-                            class="modal-title"
-                            :class="{ 'lead-title-editable': canEditName }"
-                            @click="canEditName && startEditName()"
-                        >{{ lead?.lead_name }}</span>
+            <div class="modal-header-custom" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
+                <div class="lead-header-accent" aria-hidden="true"></div>
+                <div class="lead-header-main">
+                    <div class="lead-header-identity">
+                        <div class="lead-header-mark" aria-hidden="true">
+                            <iconify-icon icon="lucide:user-round"></iconify-icon>
+                        </div>
+                        <div class="lead-header-copy min-w-0">
+                            <span class="lead-header-kicker">Lead</span>
+                            <template v-if="!isEditingName">
+                                <div class="lead-title-read-row d-flex align-items-center gap-2 min-w-0">
+                                    <span
+                                        class="modal-title"
+                                        :class="{ 'lead-title-editable': canEditName }"
+                                        @click="canEditName && startEditName()"
+                                    >{{ lead?.lead_name || 'Untitled lead' }}</span>
+                                    <button
+                                        v-if="canEditName"
+                                        type="button"
+                                        class="lead-title-edit-btn"
+                                        aria-label="Edit lead name"
+                                        title="Edit lead name"
+                                        @click.stop="startEditName"
+                                    >
+                                        <span class="lead-title-edit-btn-inner">
+                                            <iconify-icon icon="lucide:pencil" class="lead-title-edit-icon" />
+                                        </span>
+                                    </button>
+                                </div>
+                            </template>
+                            <div v-else class="lead-title-input-shell min-w-0">
+                                <input
+                                    ref="leadNameInputRef"
+                                    v-model="leadNameInput"
+                                    type="text"
+                                    class="view-lead-title-input"
+                                    placeholder="Lead name"
+                                    maxlength="255"
+                                    :disabled="savingName"
+                                    @keyup.enter="saveLeadName"
+                                    @blur="onLeadNameBlur"
+                                    @keydown.esc.prevent="cancelEditName"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lead-header-actions">
                         <button
-                            v-if="canEditName"
+                            v-if="convertedDealLink"
                             type="button"
-                            class="lead-title-edit-btn"
-                            aria-label="Edit lead name"
-                            title="Edit lead name"
-                            @click.stop="startEditName"
+                            class="lead-converted-deal-link"
+                            :title="convertedDealLink.deal_name"
+                            @click="openConvertedDeal"
                         >
-                            <span class="lead-title-edit-btn-inner">
-                                <iconify-icon icon="lucide:pencil" class="lead-title-edit-icon" />
-                            </span>
+                            <span class="lead-converted-deal-kicker">Deal</span>
+                            <span class="lead-converted-deal-name">{{ convertedDealLink.deal_name }}</span>
+                        </button>
+                        <button
+                            v-else-if="showConvertedCreateDeal"
+                            type="button"
+                            class="lead-converted-create-deal"
+                            @click="openCreateDealForConvertedLead"
+                        >
+                            Create deal
+                        </button>
+                        <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
+                            <iconify-icon icon="lucide:x"></iconify-icon>
                         </button>
                     </div>
-                </template>
-                <div v-else class="lead-title-input-shell min-w-0">
-                    <input
-                        ref="leadNameInputRef"
-                        v-model="leadNameInput"
-                        type="text"
-                        class="view-lead-title-input"
-                        placeholder="Lead name"
-                        maxlength="255"
-                        :disabled="savingName"
-                        @keyup.enter="saveLeadName"
-                        @blur="onLeadNameBlur"
-                        @keydown.esc.prevent="cancelEditName"
-                    />
-                </div>
-                <button
-                    v-if="convertedDealLink"
-                    type="button"
-                    class="lead-converted-deal-link"
-                    :title="convertedDealLink.deal_name"
-                    @click="openConvertedDeal"
-                >
-                    <span class="lead-converted-deal-kicker">Deal</span>
-                    <span class="lead-converted-deal-name">{{ convertedDealLink.deal_name }}</span>
-                </button>
-                <button
-                    v-else-if="showConvertedCreateDeal"
-                    type="button"
-                    class="lead-converted-create-deal"
-                    @click="openCreateDealForConvertedLead"
-                >
-                    Create deal
-                </button>
-                <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
-                    <iconify-icon icon="lucide:x"></iconify-icon>
-                </button>
                 </div>
             </div>
 
@@ -87,14 +97,15 @@
             </button>
 
             <StageSelector v-model="leadStageId"
+            appearance="panel"
             :require-validation="true"
             :disabled="disableStageChange"
             :class="pt-0"
             @stage-change-request="handleStageChangeRequest"/>
 
             <!-- Tabs -->
-            <div class="tabs-container mb- border-bottom">
-                <div class="d-flex gap-4">
+            <div class="tabs-container">
+                <div class="view-lead-tabs">
                     <button 
                         class="tab-item" 
                         :class="{ active: activeTab === 'general' }"
@@ -114,7 +125,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="modal-body-custom p-4">
+            <div class="modal-body-custom" :class="{ 'is-split-scroll': activeTab === 'general' && lead }">
                 <BrandLoader v-if="isLoadingLead && !lead" variant="inline" label="Opening lead" />
 
                 <!-- General Tab Content -->
@@ -1426,15 +1437,87 @@ defineExpose({
 }
 .view-lead-modal-content {
     background: #fff;
-    border-radius: 16px;
-    overflow: visible;
+    border-radius: 18px;
+    overflow: hidden;
     font-family: 'Montserrat', sans-serif;
     position: relative;
 }
 
 .modal-header-custom {
-    background: #fff;
+    display: flex;
+    align-items: stretch;
     position: relative;
+    padding: 0;
+    border-bottom: none;
+    background:
+        radial-gradient(120% 140% at 0% 0%, rgba(196, 132, 232, 0.28) 0%, rgba(255, 255, 255, 0) 46%),
+        linear-gradient(180deg, #fbf7fd 0%, #ffffff 100%);
+    overflow: hidden;
+}
+
+.lead-header-accent {
+    width: 5px;
+    flex: 0 0 5px;
+    background: linear-gradient(180deg, #c084fc 0%, #733e87 55%, #4c1d6e 100%);
+}
+
+.lead-header-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px 12px 12px;
+}
+
+.lead-header-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.lead-header-mark {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: linear-gradient(145deg, #8b4ea3 0%, #733e87 55%, #4c1d6e 100%);
+    box-shadow: 0 8px 16px rgba(115, 62, 135, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    font-size: 18px;
+}
+
+.lead-header-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.lead-header-kicker {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #733e87;
+}
+
+.lead-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.view-lead-modal-content :deep(.stage-selector-wrapper) {
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .modal-header-custom.is-above-requirement {
@@ -1548,8 +1631,9 @@ defineExpose({
     flex: 1 1 auto;
     min-width: 0;
     font-size: 16px;
-    font-weight: 600;
-    color: #0B0736;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #1c1424;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1584,24 +1668,24 @@ defineExpose({
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
-    border: 1px solid #c7d2fe;
-    background: linear-gradient(155deg, #eef2ff 0%, #e0e7ff 48%, #c7d2fe 100%);
-    color: #312e81;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    border: 1px solid #eadff0;
+    background: rgba(255, 255, 255, 0.8);
+    color: #733e87;
+    box-shadow: 0 1px 2px rgba(115, 62, 135, 0.08);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .lead-title-edit-btn:hover .lead-title-edit-btn-inner {
-    color: #3730a3;
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(115, 62, 135, 0.16);
     transform: translateY(-1px);
 }
 
 .lead-title-edit-icon {
-    font-size: 18px;
+    font-size: 14px;
 }
 
 .lead-title-input-shell {
@@ -1644,24 +1728,30 @@ defineExpose({
 }
 
 .close-btn {
-    position: absolute;
-    top: 8px;
-    right: -65px;
-    width: 64px;
-    height: 49px;
-    border: 1px solid rgba(115, 62, 135, 0.75);
-    border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
-    color: #ffffff;
-    font-size: 18px;
+    position: static;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    margin-left: 0;
+    border: 1px solid rgba(115, 62, 135, 0.16);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.86);
+    color: #5c5366;
+    font-size: 14px;
     line-height: 1;
     padding: 0;
-    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
-    z-index: -1;
+    box-shadow: 0 4px 10px rgba(115, 62, 135, 0.08);
+    z-index: 2;
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: filter 0.2s ease;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.close-btn:hover {
+    background: #fff;
+    color: #733e87;
+    transform: translateY(-1px);
 }
 
 .close-btn iconify-icon {
@@ -1691,29 +1781,38 @@ defineExpose({
     color: #9CA3AF !important;
 }
 
+.tabs-container {
+    padding: 0 14px 10px 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
+    border-bottom: 1px solid #f0e8f4;
+}
+
+.view-lead-tabs {
+    display: flex;
+    gap: 6px;
+}
+
 .tab-item {
-    background: none;
-    border: none;
-    padding: 10px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #64748B;
+    background: #fff;
+    border: 1px solid #eadff0;
+    border-radius: 999px;
+    min-height: 26px;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #5c5366;
     position: relative;
     cursor: pointer;
 }
 
 .tab-item.active {
-    color: #0B0736;
+    background: #733e87;
+    border-color: #733e87;
+    color: #fff;
 }
 
 .tab-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: #733E87;
+    display: none;
 }
 
 .bg-light-gray {
@@ -1961,9 +2060,11 @@ textarea, input, select {
         background: #f8fbff;
         overflow: hidden;
     }
-    .modal-body-custom {
+    .modal-body-custom,
+    .modal-body-custom.is-split-scroll {
         flex: 1 1 auto;
         min-height: 0;
+        display: block;
         overflow-y: auto;
         padding: 8px 4px 16px !important;
     }
@@ -2001,8 +2102,8 @@ textarea, input, select {
 
 :deep(.view-lead-modal) {
     padding: 0 !important;
-    height: 98vh;
-    max-height: 98vh;
+    height: 88vh;
+    max-height: 88vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -2010,9 +2111,17 @@ textarea, input, select {
 
 /* تعديل الـ modal-content */
 :deep(.modal-content) {
-    height: 92vh;
-    max-height: 92vh;
-    border-radius: 16px;
+    height: 88vh;
+    max-height: 88vh;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background:
+        linear-gradient(#fff, #fff) padding-box,
+        linear-gradient(145deg, #f3d7ff 0%, #733e87 38%, #d8b4fe 68%, #4c1d6e 100%) border-box;
+    box-shadow:
+        0 0 0 5px rgba(115, 62, 135, 0.08),
+        0 28px 70px rgba(49, 16, 70, 0.22);
+    overflow: hidden;
 }
 
 /* المحتوى الداخلي */
@@ -2036,6 +2145,32 @@ textarea, input, select {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    background: #f7f3f8;
+    padding: 10px 12px 14px;
+}
+
+.modal-body-custom.is-split-scroll {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.modal-body-custom.is-split-scroll > * {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+@media (max-width: 900px) {
+    .modal-body-custom.is-split-scroll {
+        display: block;
+        overflow-y: auto;
+    }
+
+    .modal-body-custom.is-split-scroll > * {
+        flex: none;
+        min-height: auto;
+    }
 }
 
 .modal-body-custom::-webkit-scrollbar {
@@ -2068,16 +2203,28 @@ textarea, input, select {
 </style>
 <style>
 .modal#view-lead-modal .modal-dialog {
-    max-width: min(1200px, 95vw) !important;
-    width: min(1200px, 95vw) !important;
-    max-height: 98vh !important;
-    margin: 1vh auto !important;
+    max-width: min(1180px, 96vw) !important;
+    width: min(1180px, 96vw) !important;
+    max-height: 88vh !important;
+    margin: 4vh auto !important;
+}
+
+.modal#view-lead-modal .modal-content {
+    border-radius: 20px !important;
+    border: 2px solid transparent !important;
+    background:
+        linear-gradient(#fff, #fff) padding-box,
+        linear-gradient(145deg, #f3d7ff 0%, #733e87 38%, #d8b4fe 68%, #4c1d6e 100%) border-box !important;
+    box-shadow:
+        0 0 0 5px rgba(115, 62, 135, 0.08),
+        0 28px 70px rgba(49, 16, 70, 0.22) !important;
+    overflow: hidden !important;
 }
 
 .view-lead-modal {
     padding: 0 !important;
-    height: 98vh;
-    max-height: 100vh;
+    height: 88vh;
+    max-height: 88vh;
     display: flex;
     flex-direction: column;
 }
@@ -2101,6 +2248,9 @@ textarea, input, select {
         height: 100dvh !important;
         max-height: 100dvh !important;
         border-radius: 0 !important;
+        border-color: transparent !important;
+        background: #fff !important;
+        box-shadow: none !important;
         overflow: hidden !important;
     }
 

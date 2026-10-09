@@ -1,13 +1,14 @@
 <template>
     <div class="lead-info-view">
         <div class="info-section">
-            <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="info-section-head">
                 <div class="info-section-title mb-0">Lead Information</div>
                 <!-- emit(edit-request) for all info-->
                 <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-section', 'leadInfo')">
                     <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
                 </button>
             </div>
+            <div class="lead-info-grid">
             <div class="info-group">
                 <label class="form-label-custom">Lead Name</label>
                 <div class="info-value">{{ lead?.lead_name || '—' }}</div>
@@ -29,6 +30,14 @@
                 <div class="info-value phone-with-whatsapp">
                     <span v-if="canView" class="phone-with-whatsapp__row">
                         <a :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }}</a>
+                        <a
+                            :href="'tel:' + lead.work_phone"
+                            class="phone-call-btn"
+                            title="Call"
+                            aria-label="Call"
+                        >
+                            <iconify-icon icon="lucide:phone" width="16" height="16"></iconify-icon>
+                        </a>
                         <a
                             v-if="whatsappUrl(lead.work_phone)"
                             :href="whatsappUrl(lead.work_phone)"
@@ -63,6 +72,14 @@
                     <span v-if="canView" class="phone-with-whatsapp__row">
                         <a :href="'tel:' + lead.work_phone_2">{{ lead?.work_phone_2 || '—' }}</a>
                         <a
+                            :href="'tel:' + lead.work_phone_2"
+                            class="phone-call-btn"
+                            title="Call"
+                            aria-label="Call"
+                        >
+                            <iconify-icon icon="lucide:phone" width="16" height="16"></iconify-icon>
+                        </a>
+                        <a
                             v-if="whatsappUrl(lead.work_phone_2)"
                             :href="whatsappUrl(lead.work_phone_2)"
                             target="_blank"
@@ -89,6 +106,7 @@
                         <span class="blurred-stars">{{ maskValue(lead?.secondary_email?.slice(3))}}</span>
                     </span>
                 </div>
+            </div>
             </div>
             
         </div>
@@ -1925,15 +1943,22 @@ const saveClientRequirement = async () => {
 
 <style scoped>
 .client-requirement-wrap {
-    margin-bottom: 18px;
+    margin-bottom: 8px;
+    border: 1px solid #efe4f3;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
 }
 
 .client-requirement-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
-    padding: 0 2px;
+    margin-bottom: 0;
+    padding: 0 6px 0 0;
+    background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
+    border-bottom: 1px solid #f3eaf6;
 }
 
 .client-requirement-header-actions {
@@ -1944,15 +1969,22 @@ const saveClientRequirement = async () => {
 
 .client-requirement-panel {
     display: grid;
-    gap: 12px;
+    gap: 8px;
+    padding: 8px 10px 10px;
     overflow: visible;
+}
+
+.client-requirement-header-row .info-section-title {
+    background: transparent;
+    border-bottom: none;
+    margin: 0;
 }
 
 .client-req-block {
     position: relative;
-    padding: 14px;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
+    padding: 8px 10px 10px;
+    border: none;
+    border-radius: 0;
     background: #ffffff;
 }
 
@@ -2174,14 +2206,31 @@ const saveClientRequirement = async () => {
 }
 
 .client-req-location {
-    grid-column: 1 / -1;
+    grid-column: auto;
 }
 
 .client-requirement-list .info-group {
     margin-bottom: 0 !important;
 }
 .lead-info-view .info-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+}
+
+.lead-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+    padding: 8px 10px 4px;
+}
+
+.lead-info-grid .info-group,
+.client-requirement-list .info-group {
+    min-width: 0;
+}
+
+.client-req-modal-body .info-group--full,
+.client-req-inline-editor .info-group--full {
+    grid-column: 1 / -1;
 }
 
 .lead-info-view {
@@ -2189,21 +2238,61 @@ const saveClientRequirement = async () => {
 }
 
 .info-section {
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 14px;
-    margin-bottom: 10px;
+    border: 1px solid #efe4f3;
+    border-radius: 10px;
+    padding: 0 0 8px;
+    margin-bottom: 8px;
     background: #ffffff;
-    overflow: visible;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+}
+
+.info-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
+    border-bottom: 1px solid #f3eaf6;
+    padding-right: 4px;
+}
+
+.info-section-head .info-section-title {
+    background: transparent;
+    border-bottom: none;
+    margin: 0;
+    flex: 1;
 }
 
 .info-section-title {
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 8px;
+    padding: 6px 10px;
+    background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
+    border-bottom: 1px solid #f3eaf6;
+    font-size: 11px;
     font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 12px;
-    padding-bottom: 0;
-    border-bottom: none;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #733e87;
+}
+
+.info-section-title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: #733e87;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+}
+
+.info-section > .info-group,
+.info-section > .portal-links-group,
+.info-section .info-empty {
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 
@@ -2242,6 +2331,11 @@ const saveClientRequirement = async () => {
     .client-req-budget-inputs {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .lead-info-grid,
+    .client-requirement-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 .lead-edit-inline-btn:hover {
@@ -2258,10 +2352,10 @@ const saveClientRequirement = async () => {
 
 .lead-info-view .form-label-custom {
     display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: #64748B;
-    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #5c5366;
+    margin-bottom: 3px;
 }
 
 .lead-info-view .info-value,
@@ -2270,11 +2364,24 @@ const saveClientRequirement = async () => {
     overflow-wrap: anywhere;
 }
 .lead-info-view .info-value {
-    font-size: 14px;
-    color: #1E293B;
-
+    min-height: 32px;
+    border-radius: 8px;
+    border: 1px solid #eadff0;
+    background: #fff;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2a2230;
+    display: flex;
+    align-items: center;
     word-break: break-word;
     overflow-wrap: anywhere;
+}
+
+.lead-info-view .info-value-block {
+    display: block;
+    font-weight: 500;
+    align-items: flex-start;
 }
 
 .phone-with-whatsapp__row {
@@ -2283,6 +2390,7 @@ const saveClientRequirement = async () => {
     gap: 8px;
 }
 
+.phone-call-btn,
 .whatsapp-chat-btn {
     display: inline-flex;
     align-items: center;
@@ -2290,9 +2398,23 @@ const saveClientRequirement = async () => {
     width: 28px;
     height: 28px;
     border-radius: 8px;
-    background: rgba(37, 211, 102, 0.12);
     flex-shrink: 0;
     line-height: 1;
+    text-decoration: none;
+}
+
+.phone-call-btn {
+    background: rgba(115, 62, 135, 0.12);
+    color: #733E87;
+}
+
+.phone-call-btn:hover {
+    background: rgba(115, 62, 135, 0.22);
+    color: #733E87;
+}
+
+.whatsapp-chat-btn {
+    background: rgba(37, 211, 102, 0.12);
 }
 
 .whatsapp-chat-btn:hover {

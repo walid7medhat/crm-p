@@ -1,7 +1,7 @@
 <template>
-    <div class="row g-4">
+    <div class="lead-view-grid">
         <!-- Left Column: Lead Information -->
-        <div ref="editSectionAnchorRef" class="col-md-5">
+        <div ref="editSectionAnchorRef" class="lead-view-main">
             <div class="info-card bg-white  radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
                 <LeadInfoView ref="leadInfoViewRef" v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-section="handleEditSection" @edit-request="toggleEditMode" @lead-updated="handleLeadUpdated" />
@@ -20,8 +20,8 @@
         </div>
 
         <!-- Right Column: Activity & Comments -->
-        <div class="col-md-7">
-            <div class="activity-card bg-white p-3 radius-12 shadow-sm" v-if="!lead?.hide_created_info">
+        <div class="lead-view-side">
+            <div class="activity-card" v-if="!lead?.hide_created_info">
               <div v-if="canViewLeadQualificationSection && (qualityStatusBadge || callResultBadge || leadTypeBadge)" class="info-section compact-status-section mb-3">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div class="info-section-title lead-section-title-match mb-0">Lead Qualification</div>
@@ -68,10 +68,10 @@
                     @person-updated="handlePersonUpdated"
                 />
               
-              <div v-if="canViewCommentsAndActivities" class="d-flex justify-content-between align-items-center mb-4">
+              <div v-if="canViewCommentsAndActivities" class="d-flex justify-content-between align-items-center mb-2">
 
                 <!-- Activity/Comments Toggle -->
-                <div class="d-flex gap-2 mb-4 p-1 radius-100 w-fit-content toggle-buttons-container">
+                <div class="d-flex gap-1 p-1 radius-100 w-fit-content toggle-buttons-container">
                       <button 
                         class="btn-toggle d-flex align-items-center gap-2 px-3 py-1 radius-100"
                         :class="{ active: activeViewTab === 'comments' }"
@@ -157,7 +157,7 @@
 
             />
             <!-- Lead Created (first section from bottom) -->
-            <div v-if="lead?.id" class="lead-created-section bg-white p-3 radius-12 shadow-sm">
+            <div v-if="lead?.id" class="lead-created-section">
                 <LeadCreatedCard :lead="lead" />
             </div>
         </div>
@@ -626,6 +626,59 @@ watch(
 )
 </script><style scoped>
 /* GeneralTab Wrapper Styles */
+.lead-view-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(380px, 1fr);
+    gap: 12px;
+    align-items: stretch;
+    height: 100%;
+    min-height: 0;
+}
+
+.lead-view-main,
+.lead-view-side {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #ddd6e4 transparent;
+}
+
+.lead-view-main::-webkit-scrollbar,
+.lead-view-side::-webkit-scrollbar {
+    width: 8px;
+}
+
+.lead-view-main::-webkit-scrollbar-thumb,
+.lead-view-side::-webkit-scrollbar-thumb {
+    background: #ddd6e4;
+    border-radius: 999px;
+}
+
+.lead-view-side :deep(.activity-timeline) {
+    max-height: none;
+    overflow: visible;
+}
+
+.edit-lead-bar-spacer {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+    .lead-view-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+    }
+
+    .lead-view-main,
+    .lead-view-side {
+        overflow: visible;
+        max-height: none;
+    }
+}
+
 .info-card {
     border: none !important;
     box-shadow: none !important;
@@ -658,20 +711,29 @@ watch(
 }
 
 .compact-status-section {
-    border: 1px solid #E2E8F0;
+    border: 1px solid #efe4f3;
     border-radius: 10px;
     background: #fff;
-    padding: 4px !important;
+    padding: 0 0 8px !important;
     box-shadow: none !important;
     position: relative;
     top: 0;
     margin-bottom: 8px !important;
+    overflow: hidden;
+}
+
+.compact-status-section .d-flex {
+    margin: 0 !important;
+    padding: 6px 10px;
+    background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
+    border-bottom: 1px solid #f3eaf6;
 }
 
 .compact-status-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
+    padding: 8px 8px 0;
 }
 
 .compact-status-card {
@@ -795,13 +857,51 @@ watch(
     cursor: not-allowed;
 }
 
-.activity-card {
-    border: 1px solid #F4F4F4;
+.activity-card,
+.lead-created-section {
+    border: 1px solid #efe4f3;
+    border-radius: 10px;
+    background: #fff;
+    padding: 8px 10px;
+    box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
 }
 
 .lead-created-section {
-    border: 1px solid #F4F4F4;
-    margin-top: 12px;
+    margin-top: 8px;
+}
+
+.lead-section-title-match {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #733e87 !important;
+}
+
+.lead-section-title-match::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: #733e87;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+}
+
+.toggle-buttons-container {
+    border: 1px solid #eadff0 !important;
+    background: #fff;
+    box-shadow: none !important;
+}
+
+.btn-toggle {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5c5366;
+    min-height: 26px;
 }
 
 /* Utility Classes */

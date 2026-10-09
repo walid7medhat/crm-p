@@ -1,5 +1,5 @@
 <template>
-    <div class="stage-selector-wrapper py-3 pt-0 pb-0" :class="{ 'stage-selector-disabled': disabled }" :title="disabled ? 'Stage cannot be changed from here' : undefined">
+    <div class="stage-selector-wrapper py-3 pt-0 pb-0" :class="{ 'stage-selector-disabled': disabled, 'stage-selector--panel': appearance === 'panel' }" :title="disabled ? 'Stage cannot be changed from here' : undefined">
         <!-- Track = exact height of pills row so arrows align vertically in the middle -->
         <div class="stage-selector-track">
             <div
@@ -11,11 +11,11 @@
                 <template v-for="(stage, index) in stages" :key="stage.id">
                     <div
                         class="stage-pill"
-                        :class="{ active: index <= selectedStageIndex, 'stage-pill--blocked': isStageBlocked(stage) }"
+                        :class="{ active: index <= selectedStageIndex, 'is-current': index === selectedStageIndex, 'stage-pill--blocked': isStageBlocked(stage) }"
                         :title="isStageBlocked(stage) ? 'Leads cannot be created in Lead Pool' : undefined"
                         :style="{
-                            backgroundColor: index <= selectedStageIndex ? stage.color : 'transparent',
-                            borderColor: index <= selectedStageIndex ? stage.color : '#E2E8F0',
+                            backgroundColor: index <= selectedStageIndex ? stage.color : (appearance === 'panel' ? '#ffffff' : 'transparent'),
+                            borderColor: index <= selectedStageIndex ? stage.color : (appearance === 'panel' ? '#eadff0' : '#E2E8F0'),
                             zIndex: stages.length - index,
                         }"
                         @click="selectStage(index)"
@@ -72,6 +72,11 @@ const props = defineProps({
     disabled: {
         type: Boolean,
         default: false
+    },
+    /** panel: compact stage rail used on the lead view popup. */
+    appearance: {
+        type: String,
+        default: 'default'
     },
     // Create form: the Lead Pool stage can't be picked (LeadController::store rejects it).
     disableLeadPool: {
@@ -545,6 +550,71 @@ onUnmounted(() => {
 .stage-pill.active .stage-text {
     color: #0B0736;
     font-weight: 400;
+}
+
+.stage-selector--panel {
+    padding: 8px 14px 10px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
+}
+
+.stage-selector--panel .stage-container {
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid #efe4f3;
+    border-radius: 14px;
+    background: #faf6fb;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.stage-selector--panel .stage-pill {
+    min-width: 112px;
+    max-width: 168px;
+    min-height: 32px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    clip-path: none;
+    border: 1px solid #eadff0;
+    box-shadow: none;
+}
+
+.stage-selector--panel .stage-pill:not(.active) {
+    background: #fff;
+}
+
+.stage-selector--panel .stage-pill.active {
+    border-color: transparent;
+    box-shadow: 0 1px 2px rgba(28, 25, 38, 0.06);
+}
+
+.stage-selector--panel .stage-pill.is-current {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(115, 62, 135, 0.45);
+}
+
+.stage-selector--panel .stage-text {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    color: #5c5366;
+}
+
+.stage-selector--panel .stage-pill.active .stage-text {
+    color: #1c1424;
+    font-weight: 700;
+}
+
+.stage-selector--panel .scroll-edge-inner {
+    width: 28px;
+    height: 28px;
+    border-color: #eadff0;
+    background: #fff;
+    color: #733e87;
+    box-shadow: 0 4px 12px rgba(115, 62, 135, 0.12);
+}
+
+.stage-selector--panel .scroll-hover-edge:hover .scroll-edge-inner {
+    border-color: #733e87;
+    background: #fff;
+    color: #733e87;
 }
 
 @media (max-width: 768px) {
