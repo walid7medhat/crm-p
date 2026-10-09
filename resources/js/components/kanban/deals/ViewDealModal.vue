@@ -10,57 +10,67 @@
     dialog-class="kanban-mobile-fullscreen-modal"
     :no-focus="true"
   >
-    <div v-if="show" class="view-lead-modal-content p-3 pb-0">
-      <!-- Header — same structure as ViewLeadModal -->
-      <div class="modal-header-custom d-flex justify-content-between align-items-center px-1">
-        <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1 deal-title-header-group">
-          <template v-if="!isEditingTitle">
-            <div
-              class="deal-title-read-row d-flex align-items-center gap-2 min-w-0"
-              role="group"
-              aria-label="Deal name"
-            >
-              <span
-                class="modal-title view-deal-title-truncate min-w-0"
-                @click="startEditTitle"
-              >
-                {{ deal.value?.deal_name || dealTitle }}
-              </span>
-              <button
-                type="button"
-                class="deal-title-edit-btn"
-                aria-label="Edit deal name"
-                title="Edit deal name"
-                @click.stop="startEditTitle"
-              >
-                <span class="deal-title-edit-btn-inner">
-                  <iconify-icon icon="lucide:pencil" class="deal-title-edit-icon" />
-                </span>
-              </button>
+    <div v-if="show" class="view-lead-modal-content">
+      <div class="modal-header-custom">
+        <div class="lead-header-accent" aria-hidden="true"></div>
+        <div class="lead-header-main">
+          <div class="lead-header-identity">
+            <div class="lead-header-mark" aria-hidden="true">
+              <iconify-icon icon="lucide:handshake"></iconify-icon>
             </div>
-          </template>
-          <template v-else>
-            <div class="deal-title-input-shell min-w-0">
-              <input
-                ref="dealTitleInputRef"
-                v-model="dealTitleInput"
-                type="text"
-                class="view-deal-title-input"
-                placeholder="Deal name"
-                @keyup.enter="saveTitle"
-                @blur="onDealTitleBlur"
-                @keydown.esc.prevent="cancelTitleEdit"
-              />
+            <div class="lead-header-copy min-w-0">
+              <span class="lead-header-kicker">Deal</span>
+              <template v-if="!isEditingTitle">
+                <div
+                  class="deal-title-read-row d-flex align-items-center gap-2 min-w-0"
+                  role="group"
+                  aria-label="Deal name"
+                >
+                  <span
+                    class="modal-title view-deal-title-truncate min-w-0"
+                    @click="startEditTitle"
+                  >
+                    {{ deal.value?.deal_name || dealTitle }}
+                  </span>
+                  <button
+                    type="button"
+                    class="deal-title-edit-btn"
+                    aria-label="Edit deal name"
+                    title="Edit deal name"
+                    @click.stop="startEditTitle"
+                  >
+                    <span class="deal-title-edit-btn-inner">
+                      <iconify-icon icon="lucide:pencil" class="deal-title-edit-icon" />
+                    </span>
+                  </button>
+                </div>
+              </template>
+              <template v-else>
+                <div class="deal-title-input-shell min-w-0">
+                  <input
+                    ref="dealTitleInputRef"
+                    v-model="dealTitleInput"
+                    type="text"
+                    class="view-deal-title-input"
+                    placeholder="Deal name"
+                    @keyup.enter="saveTitle"
+                    @blur="onDealTitleBlur"
+                    @keydown.esc.prevent="cancelTitleEdit"
+                  />
+                </div>
+              </template>
             </div>
-          </template>
+          </div>
+          <div class="lead-header-actions">
+            <button class="close-btn" type="button" aria-label="Close" @click="close">
+              <iconify-icon icon="lucide:x"></iconify-icon>
+            </button>
+          </div>
         </div>
-        <button class="close-btn" type="button" aria-label="Close" @click="close">
-          <iconify-icon icon="lucide:x"></iconify-icon>
-        </button>
       </div>
 
       <!-- Pipeline steps (completed / active / upcoming) -->
-      <div class="deal-progress-wrapper py-2">
+      <div class="deal-progress-wrapper">
         <div class="deal-progress-label">Pipeline</div>
         <div class="deal-progress-bar">
           <template v-for="(stage, index) in currentStages" :key="stage.id">
@@ -88,8 +98,8 @@
       </div>
 
       <!-- Tabs — same classes as ViewLeadModal -->
-      <div class="tabs-container mb- border-bottom">
-        <div class="d-flex gap-4">
+      <div class="tabs-container">
+        <div class="view-lead-tabs">
           <button
             class="tab-item"
             :class="{ active: activeTab === 'general' }"
@@ -108,13 +118,13 @@
       </div>
 
       <!-- Main content — same padding as ViewLeadModal (p-4) -->
-      <div class="modal-body-custom p-4">
+      <div class="modal-body-custom" :class="{ 'is-split-scroll': activeTab === 'general' && deal }">
         <!-- General tab: two columns like Lead -->
         <template v-if="activeTab === 'general'">
-          <div class="row g-3 g-lg-4">
+          <div class="deal-view-grid">
             <!-- Left column: Deal Information (with edit icon) or full-width edit form -->
-            <div class="col-md-6">
-              <div class="info-card bg-white p-3 radius-12 shadow-sm">
+            <div class="deal-view-main">
+              <div class="info-card">
                   <div v-if="dealType === 'primary'" class="row g-3 view-deal-content">
                     <ViewPrimaryDeal
                       :deal="deal"
@@ -194,7 +204,7 @@
             </div>
 
             <!-- Right column: Activity | Comments (hidden when editing) -->
-            <div class="col-md-6">
+            <div class="deal-view-side">
               <ResponsiblePersonSection
                 v-if="deal?.id"
                 :deal="deal"
@@ -206,8 +216,8 @@
                 :lead="deal.lead"
                 @view-more="showLinkedLeadModal = true"
               />
-              <div class="activity-card bg-white p-3 radius-12 shadow-sm">
-                <div class="d-flex gap-2 mb-4 w-fit-content toggle-buttons-container">
+              <div class="activity-card">
+                <div class="d-flex gap-1 mb-2 w-fit-content toggle-buttons-container">
                   <button
                     class="btn-toggle btn-toggle-activity d-flex align-items-center gap-2"
                     :class="{ active: activeViewTab === 'activity' }"
@@ -1180,23 +1190,29 @@ function close() {
 <style>
 /* Mirrors ViewLeadModal non-scoped modal shell — fluid width for all viewports */
 .modal#view-deal-modal .modal-dialog {
-  max-width: min(1200px, calc(100vw - 24px)) !important;
-  width: min(1200px, calc(100vw - 24px)) !important;
-  max-height: min(98vh, 100dvh) !important;
-  margin: 1vh auto !important;
+  max-width: min(1180px, 96vw) !important;
+  width: min(1180px, 96vw) !important;
+  max-height: 88vh !important;
+  margin: 4vh auto !important;
 }
 
 #view-deal-modal .modal-content {
-  overflow: visible !important;
-  border: 1px solid #e5e7eb !important;
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08) !important;
-  max-height: min(98vh, 100dvh) !important;
+  overflow: hidden !important;
+  border-radius: 20px !important;
+  border: 2px solid transparent !important;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(145deg, #f3d7ff 0%, #733e87 38%, #d8b4fe 68%, #4c1d6e 100%) border-box !important;
+  box-shadow:
+    0 0 0 5px rgba(115, 62, 135, 0.08),
+    0 28px 70px rgba(49, 16, 70, 0.22) !important;
+  max-height: 88vh !important;
 }
 
 .view-lead-modal {
   padding: 0 !important;
-  height: min(98vh, 100dvh);
-  max-height: 100vh;
+  height: 88vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
 }
@@ -1207,6 +1223,14 @@ function close() {
     width: 100% !important;
     margin: 0 !important;
     min-height: 100dvh;
+    max-height: 100dvh !important;
+  }
+
+  #view-deal-modal .modal-content {
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    max-height: 100dvh !important;
   }
 
   .view-lead-modal {
@@ -1225,8 +1249,8 @@ function close() {
 
 .view-lead-modal-content {
   background: #fff;
-  border-radius: 16px;
-  overflow: visible;
+  border-radius: 18px;
+  overflow: hidden;
   font-family: 'Montserrat', sans-serif;
   position: relative;
   display: flex;
@@ -1243,14 +1267,83 @@ function close() {
 }
 
 .modal-header-custom {
-  background: #fff;
+  display: flex;
+  align-items: stretch;
   position: relative;
+  padding: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(196, 132, 232, 0.28) 0%, rgba(255, 255, 255, 0) 46%),
+    linear-gradient(180deg, #fbf7fd 0%, #ffffff 100%);
+}
+
+.lead-header-accent {
+  width: 5px;
+  flex: 0 0 5px;
+  background: linear-gradient(180deg, #c084fc 0%, #733e87 55%, #4c1d6e 100%);
+}
+
+.lead-header-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 3px 12px 3px 10px;
+}
+
+.lead-header-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lead-header-mark {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(145deg, #8b4ea3 0%, #733e87 55%, #4c1d6e 100%);
+  box-shadow: 0 4px 8px rgba(115, 62, 135, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  font-size: 13px;
+}
+
+.lead-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lead-header-kicker {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #733e87;
+  line-height: 1.1;
+}
+
+.lead-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .modal-title {
-  font-size: clamp(14px, 2.8vw, 16px);
-  font-weight: 600;
-  color: #0B0736;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: #1c1424;
 }
 
 .view-deal-title-truncate {
@@ -1268,7 +1361,7 @@ function close() {
 }
 
 .deal-title-read-row {
-  padding: 2px 0;
+  padding: 0;
   width: fit-content;
   max-width: min(620px, calc(100vw - 220px));
 }
@@ -1287,28 +1380,20 @@ function close() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  border: 1px solid #c7d2fe;
-  background: linear-gradient(155deg, #eef2ff 0%, #e0e7ff 48%, #c7d2fe 100%);
-  color: #312e81;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
+  width: 22px;
+  height: 22px;
+  border-radius: 9px;
+  border: 1px solid #eadff0;
+  background: rgba(255, 255, 255, 0.8);
+  color: #733e87;
+  box-shadow: 0 1px 2px rgba(115, 62, 135, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .deal-title-edit-btn:hover .deal-title-edit-btn-inner {
-  background: linear-gradient(155deg, #eef2ff 0%, #e0e7ff 45%, #c7d2fe 100%);
-  color: #3730a3;
-  box-shadow:
-    0 6px 16px rgba(99, 102, 241, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: #fff;
+  color: #733e87;
+  box-shadow: 0 6px 14px rgba(115, 62, 135, 0.16);
   transform: translateY(-1px);
 }
 
@@ -1318,7 +1403,7 @@ function close() {
 }
 
 .deal-title-edit-icon {
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .deal-title-input-shell {
@@ -1435,20 +1520,20 @@ function close() {
   display: none;
 }
 
-/* Stage progress (match Create Deal modal) */
+/* Stage progress — same rail as the lead view */
 .deal-progress-wrapper {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
   scrollbar-width: none;
-  padding: 0.75rem 0.75rem 0;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 4px 12px 6px !important;
+  border-bottom: none;
   position: relative;
   z-index: 2;
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
   display: block !important;
-  margin-top: 2px;
+  margin-top: 0;
   min-height: 42px;
 }
 .deal-progress-wrapper::-webkit-scrollbar {
@@ -1457,30 +1542,32 @@ function close() {
 .deal-progress-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: nowrap;
-  min-height: 30px;
-  padding: 4px 4px 8px;
-  box-shadow: 1px 1px 5px 5px #00000005;
+  min-height: 32px;
+  padding: 6px;
+  border: 1px solid #efe4f3;
+  border-radius: 14px;
+  background: #faf6fb;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .deal-stage-pill {
     display: flex;
     align-items: center;
-    min-width: 140px;
-    max-width: 170px;
-    padding: 2px 10px;
-    /*border-radius: 30px;*/
+    justify-content: center;
+    min-width: 112px;
+    max-width: 168px;
+    padding: 5px 14px;
     cursor: pointer;
-    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease, box-shadow 0.15s ease;
     position: relative;
     overflow: hidden;
-    /*border: 1px solid transparent;*/
-    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
-    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
-    height: 25px;
+    border: 1px solid #eadff0;
+    border-radius: 999px;
+    clip-path: none;
+    box-shadow: none;
+    height: 32px;
+    background: #fff;
 }
 
 .deal-stage-pill:not(.active) {
@@ -1489,19 +1576,33 @@ function close() {
 
 .stage-text {
     font-family: Montserrat;
-    font-weight: 400;
-    font-size: 13px;
-    color: #0B0736;
+    font-weight: 600;
+    font-size: 11px;
+    color: #5c5366;
     display: block;
     width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: center;
+}
+
+.deal-stage-pill.upcoming {
+    background: #fff !important;
+    border-color: #eadff0 !important;
+}
+
+.deal-stage-pill.active {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(115, 62, 135, 0.45);
+}
+
+.deal-stage-pill.completed {
+    border-color: transparent;
 }
 
 .deal-stage-pill.active .stage-text {
-    color: #0B0736;
-    font-weight: 400;
+    color: #1c1424;
+    font-weight: 700;
 }
 
 @media (max-width: 991.98px) {
@@ -1531,35 +1632,37 @@ function close() {
 /* Tabs: General | History (orange underline when active) */
 .tabs-container {
   margin-bottom: 0;
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
+  padding: 0 12px 6px;
   position: relative;
   z-index: 2;
-  background: #fff;
-  margin-top: 2px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
+  border-bottom: 1px solid #f0e8f4;
+  margin-top: 0;
+}
+.view-lead-tabs {
+  display: flex;
+  gap: 6px;
 }
 .tab-item {
-  background: none;
-  border: none;
-  padding:  10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--deal-text-muted, #64748b);
+  background: #fff;
+  border: 1px solid #eadff0;
+  border-radius: 999px;
+  min-height: 26px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5c5366;
   position: relative;
   cursor: pointer;
   font-family: var(--deal-font, 'Inter', sans-serif);
 }
 .tab-item.active {
-  color: #0B0736;
+  background: #733e87;
+  border-color: #733e87;
+  color: #fff;
 }
 .tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: #733E87;
+  display: none;
 }
 
 .radius-12 { border-radius: 12px; }
@@ -1787,6 +1890,149 @@ function close() {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  background: #f7f3f8;
+  padding: 8px 8px 10px;
+}
+
+.modal-body-custom.is-split-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-body-custom.is-split-scroll > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.deal-view-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(380px, 1fr);
+  gap: 6px;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+.deal-view-main,
+.deal-view-side {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd6e4 transparent;
+}
+
+.activity-card {
+  border: 1px solid #efe4f3;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+}
+
+.view-lead-modal-content :deep(.view-card) {
+  background: #fff;
+  border: 1px solid #efe4f3 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04) !important;
+  padding: 0 0 10px !important;
+  overflow: hidden;
+  margin-bottom: 8px !important;
+}
+
+.view-lead-modal-content :deep(.view-card .section-head) {
+  margin: 0 0 8px !important;
+  padding: 6px 10px;
+  background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
+  border-bottom: 1px solid #f3eaf6;
+}
+
+.view-lead-modal-content :deep(.view-card .section-title),
+.view-lead-modal-content :deep(.view-card h6.section-title) {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #733e87 !important;
+}
+
+.view-lead-modal-content :deep(.view-card .section-title::before) {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: #733e87;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.view-lead-modal-content :deep(.view-card .info-label) {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #5c5366 !important;
+  margin-bottom: 3px !important;
+}
+
+.view-lead-modal-content :deep(.view-card .info-value) {
+  min-height: 32px;
+  border: 1px solid #eadff0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #2a2230 !important;
+  display: flex;
+  align-items: center;
+  background: #fff;
+}
+
+.view-lead-modal-content :deep(.view-card > :not(.section-head)) {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.view-lead-modal-content :deep(.view-card .row:has(> [class*="col-"] > .info-group)) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  --bs-gutter-x: 0;
+  margin: 0 0 4px !important;
+  padding: 2px 12px 8px;
+}
+
+.view-lead-modal-content :deep(.view-card .row:has(> [class*="col-"] > .info-group) > [class*="col-"]) {
+  width: auto !important;
+  max-width: none !important;
+  flex: none !important;
+  padding: 0 !important;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .modal-body-custom.is-split-scroll {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .deal-view-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .deal-view-main,
+  .deal-view-side {
+    overflow: visible;
+  }
+
+  .view-lead-modal-content :deep(.view-card .row:has(> [class*="col-"] > .info-group)) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-scroll-area {
@@ -1873,24 +2119,23 @@ function close() {
 }
 /* Close pill — matches ViewLeadModal / compiled selector values */
 .close-btn {
-  position: absolute;
-  top: 2px;
-  right: -61px;
-  width: 83px;
-  height: 49px;
-  border: 1px solid rgba(115, 62, 135, 0.75);
-  border-radius: 999px;
-  background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
-  color: #ffffff;
-  font-size: 18px;
+  position: static;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(115, 62, 135, 0.16);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  color: #5c5366;
+  font-size: 14px;
   line-height: 1;
-  padding: 0 14px 0 18px;
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
-  z-index: -1;
+  padding: 0;
+  box-shadow: 0 4px 10px rgba(115, 62, 135, 0.08);
+  z-index: 2;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
-  transition: filter 0.2s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .close-btn iconify-icon {
@@ -1900,7 +2145,9 @@ function close() {
 }
 
 .close-btn:hover {
-  filter: brightness(0.96);
+  background: #fff;
+  color: #733e87;
+  transform: translateY(-1px);
 }
 
 /* Match GeneralTab.vue — spacer + fixed Save/Cancel while editing deal */

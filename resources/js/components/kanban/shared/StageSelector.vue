@@ -553,7 +553,7 @@ onUnmounted(() => {
 }
 
 .stage-selector--panel {
-    padding: 8px 14px 10px !important;
+    padding: 4px 12px 6px !important;
     background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
 }
 

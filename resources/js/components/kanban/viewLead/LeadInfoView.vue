@@ -9,10 +9,6 @@
                 </button>
             </div>
             <div class="lead-info-grid">
-            <div class="info-group">
-                <label class="form-label-custom">Lead Name</label>
-                <div class="info-value">{{ lead?.lead_name || '—' }}</div>
-            </div>
             <div class="info-group" v-if="lead?.salutation">
                 <label class="form-label-custom">Salutation</label>
                 <div class="info-value">{{ lead?.salutation || '—' }}</div>
@@ -27,9 +23,15 @@
             </div>
             <div class="info-group" v-if="lead?.work_phone">
                 <label class="form-label-custom">Primary Phone</label>
-                <div class="info-value phone-with-whatsapp">
-                    <span v-if="canView" class="phone-with-whatsapp__row">
-                        <a :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }}</a>
+                <div class="phone-field-row">
+                    <div class="info-value">
+                        <a v-if="canView" :href="'tel:' + lead.work_phone">{{ lead?.work_phone || '—' }}</a>
+                        <span v-else>
+                            {{ lead?.work_phone?.slice(0,3) || '' }}
+                            <span class="blurred-stars">{{ maskValue(lead?.work_phone?.slice(3)) }}</span>
+                        </span>
+                    </div>
+                    <template v-if="canView">
                         <a
                             :href="'tel:' + lead.work_phone"
                             class="phone-call-btn"
@@ -49,11 +51,7 @@
                         >
                             <iconify-icon icon="logos:whatsapp-icon" width="18" height="18"></iconify-icon>
                         </a>
-                    </span>
-                    <span v-else>
-                        {{ lead?.work_phone?.slice(0,3) || '' }}
-                        <span class="blurred-stars">{{ maskValue(lead?.work_phone?.slice(3)) }}</span>
-                    </span>
+                    </template>
                 </div>
             </div>
             <div class="info-group" v-if="lead?.email">
@@ -68,9 +66,15 @@
             </div>
             <div class="info-group" v-if="lead?.work_phone_2">
                 <label class="form-label-custom">Secondary Phone</label>
-                <div class="info-value phone-with-whatsapp">
-                    <span v-if="canView" class="phone-with-whatsapp__row">
-                        <a :href="'tel:' + lead.work_phone_2">{{ lead?.work_phone_2 || '—' }}</a>
+                <div class="phone-field-row">
+                    <div class="info-value">
+                        <a v-if="canView" :href="'tel:' + lead.work_phone_2">{{ lead?.work_phone_2 || '—' }}</a>
+                        <span v-else>
+                            {{ lead?.work_phone_2?.slice(0,3) || '' }}
+                            <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
+                        </span>
+                    </div>
+                    <template v-if="canView">
                         <a
                             :href="'tel:' + lead.work_phone_2"
                             class="phone-call-btn"
@@ -90,11 +94,7 @@
                         >
                             <iconify-icon icon="logos:whatsapp-icon" width="18" height="18"></iconify-icon>
                         </a>
-                    </span>
-                    <span v-else>
-                        {{ lead?.work_phone_2?.slice(0,3) || '' }}
-                        <span class="blurred-stars">{{ maskValue(lead?.work_phone_2?.slice(3)) }}</span>
-                    </span>
+                    </template>
                 </div>
             </div>
             <div class="info-group" v-if="lead?.secondary_email">
@@ -2384,10 +2384,16 @@ const saveClientRequirement = async () => {
     align-items: flex-start;
 }
 
-.phone-with-whatsapp__row {
-    display: inline-flex;
+.phone-field-row {
+    display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    min-width: 0;
+}
+
+.phone-field-row .info-value {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .phone-call-btn,
