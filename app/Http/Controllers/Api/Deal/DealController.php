@@ -1244,9 +1244,11 @@ class DealController extends Controller
                     
                     $party = null;
                     if ($partyType) {
+                        // 'shared_buyer' uploads belong to the secondary buyer row.
+                        $isSharedBuyer = $partyType === 'shared_buyer';
                         $party = $deal->parties()
-                            ->where('party_type', $partyType)
-                            ->where('party_role', 'primary')
+                            ->where('party_type', $isSharedBuyer ? 'buyer' : $partyType)
+                            ->where('party_role', $isSharedBuyer ? 'secondary' : 'primary')
                             ->first();
                     }
 
@@ -1357,12 +1359,20 @@ class DealController extends Controller
      */
     private function updatePartiesFromRequest($deal, $request)
     {
-        $partyTypes = ['buyer', 'seller', 'tenant', 'landlord'];
-        
-        foreach ($partyTypes as $type) {
+        // prefix => [party_type, party_role]. The shared buyer is the deal's single
+        // secondary buyer row (same model lead conversion uses for a co-buyer).
+        $partyTypes = [
+            'buyer' => ['buyer', 'primary'],
+            'seller' => ['seller', 'primary'],
+            'tenant' => ['tenant', 'primary'],
+            'landlord' => ['landlord', 'primary'],
+            'shared_buyer' => ['buyer', 'secondary'],
+        ];
+
+        foreach ($partyTypes as $requestPrefix => [$type, $role]) {
             $partyData = [];
-            $prefix = $type . '_';
-            
+            $prefix = $requestPrefix . '_';
+
             $partyFields = [
                 'first_name', 'last_name', 'phone', 'email', 'nationality', 
                 'dob', 'residency_status', 'city', 'country', 'language', 'amount'
@@ -1379,16 +1389,16 @@ class DealController extends Controller
             if (!empty($partyData)) {
                 $party = $deal->parties()
                     ->where('party_type', $type)
-                    ->where('party_role', 'primary')
+                    ->where('party_role', $role)
                     ->first();
-                    
+
                 if ($party) {
                     $party->update($partyData);
                 } else {
                     if (isset($partyData['first_name']) && isset($partyData['last_name'])) {
                         $deal->parties()->create([
                             'party_type' => $type,
-                            'party_role' => 'primary',
+                            'party_role' => $role,
                             ...$partyData
                         ]);
                     }

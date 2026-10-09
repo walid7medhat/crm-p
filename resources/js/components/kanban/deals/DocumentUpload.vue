@@ -367,7 +367,7 @@ async function deleteExistingServerFile(typeId, file) {
   if (file.id == null || (typeof file.id === 'string' && !/^\d+$/.test(String(file.id)))) {
     throw new Error('Missing document id')
   }
-  await axios.delete(`/api/deals/documents/${file.id}`)
+  await axios.delete(`/deals/documents/${file.id}`)
 }
 
 function removeBox(typeId, boxId) {
@@ -722,10 +722,19 @@ watch(
       })
     })
 
+    lastEmittedSignature = modelSignature(allFiles)
     emit('update:modelValue', allFiles)
   },
   { deep: true, flush: 'post' }
 )
+
+// Identity of a files list. Used to recognise our own emit echoing back through
+// v-model: rehydrating from it would rebuild the boxes from files alone and drop
+// any empty box the user just added with "+" (which made that button look dead).
+let lastEmittedSignature = null
+function modelSignature(list) {
+  return JSON.stringify((Array.isArray(list) ? list : []).map((d) => [d?.document_type, d?.box_id, d?.id]))
+}
 
 watch(
   () => props.documentTypes,
@@ -741,6 +750,7 @@ watch(
   () => props.modelValue,
   (val) => {
     if (!props.documentTypes?.length) return
+    if (lastEmittedSignature !== null && modelSignature(val) === lastEmittedSignature) return
     hydrateFilesFromModelValue(val || [])
   },
   { deep: true }

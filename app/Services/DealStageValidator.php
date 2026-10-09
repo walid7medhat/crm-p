@@ -49,6 +49,11 @@ class DealStageValidator
         
         $parties = [];
         foreach ($deal->parties as $party) {
+            // Stage requirements apply to the primary party only — a secondary (shared)
+            // buyer must not overwrite the main buyer here.
+            if ($party->party_role === 'secondary') {
+                continue;
+            }
             $parties[$party->party_type] = $party;
         }
 

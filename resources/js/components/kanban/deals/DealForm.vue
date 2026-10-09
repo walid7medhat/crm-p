@@ -244,6 +244,83 @@
       </div>
     </section>
 
+    <!-- Shared Buyer Section (primary deals; only when explicitly edited from the deal view) -->
+    <section v-if="dealType === 'primary' && isSharedBuyerSectionActive" class="form-section">
+      <h6 class="section-title mb-3">Shared Buyer Details</h6>
+      <div class="form-card p-3 radius-12">
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label-custom">Shared Buyer First Name <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.shared_buyer_first_name }" /><div v-if="showErrors && fieldErrors.shared_buyer_first_name" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_first_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Shared Buyer Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.shared_buyer_last_name }" /><div v-if="showErrors && fieldErrors.shared_buyer_last_name" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_last_name }}</div></div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Shared Buyer Date Of Birth</label>
+            <AdvancedDatePicker type="date" date-only dob-layout placeholder="Select date" v-model="form.shared_buyer_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.shared_buyer_dob" />
+            <div v-if="showErrors && fieldErrors.shared_buyer_dob" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_dob }}</div>
+          </div>
+          <div class="col-md-4"><label class="form-label-custom">Shared Buyer Phone Number</label><CrmPhoneInput v-model="form.shared_buyer_phone" placeholder="Enter Phone" :invalid="showErrors && !!fieldErrors.shared_buyer_phone" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.shared_buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Shared Buyer Email</label><b-form-input v-model="form.shared_buyer_email" type="email" placeholder="Enter Email" class="custom-input" /><div v-if="showErrors && fieldErrors.shared_buyer_email" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_email }}</div></div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Shared Buyer Nationality</label>
+            <v-select v-model="form.shared_buyer_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+              <template #option="{ text, code }">
+                <div class="d-flex align-items-center gap-2">
+                  <img :src="`https://flagcdn.com/w20/${code}.png`" width="20" />
+                  <span>{{ text }}</span>
+                </div>
+              </template>
+              <template #selected-option="{ text, code }">
+                <div class="d-flex align-items-center gap-2">
+                  <img :src="`https://flagcdn.com/w20/${code}.png`" width="20" />
+                  <span>{{ text }}</span>
+                </div>
+              </template>
+            </v-select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Shared Buyer Residency Status</label>
+            <v-select v-model="form.shared_buyer_residency_status" :options="buyerResidencyOptions" :reduce="item => item.value" label="text" placeholder="Resident or Non Resident" :clearable="false" class="custom-v-select">
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+          </div>
+          <div class="col-md-4" v-if="form.shared_buyer_residency_status !== 'resident'">
+            <label class="form-label-custom">Shared Buyer Country Of Residence</label>
+            <v-select v-model="form.shared_buyer_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+          </div>
+          <div class="col-md-4" v-if="form.shared_buyer_residency_status === 'resident'">
+            <label class="form-label-custom">Shared Buyer City Of Residence</label>
+            <v-select v-model="form.shared_buyer_city" :options="sharedBuyerCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+            </v-select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label-custom">Shared Buyer Language</label>
+            <v-select :model-value="normalizeLanguageSelection(form.shared_buyer_language)" @update:modelValue="updateSharedBuyerLanguage" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language(s)" class="custom-v-select buyer-language-select" :multiple="true" :searchable="true" :close-on-select="false" clearable>
+              <template #open-indicator="{ attributes }">
+                <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
+              </template>
+              <template #deselect="{ option }">
+                <span class="custom-remove-icon"><iconify-icon icon="lucide:x-circle"></iconify-icon></span>
+              </template>
+            </v-select>
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="section-title">Shared Buyer Documents</label>
+          <DocumentUpload v-model="form.shared_buyer_documents" category="buyer" :document-types="sharedBuyerDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="sharedBuyerDocUploadRef" />
+        </div>
+      </div>
+    </section>
+
     <!-- Seller Section (for Secondary only) -->
     <section v-if="dealType === 'secondary' && !shouldHideSeller && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>
@@ -893,6 +970,7 @@ const currentUser = ref(null)
 
 // ========== Document Upload Refs ==========
 const buyerDocUploadRef = ref(null)
+const sharedBuyerDocUploadRef = ref(null)
 const sellerDocUploadRef = ref(null)
 const tenantDocUploadRef = ref(null)
 const landlordDocUploadRef = ref(null)
@@ -983,6 +1061,15 @@ const primaryBuyerDocTypes = computed(() => {
   docs.push({ id: 'kyc', name: 'KYC', required: isSpaStageOrLater.value })
   // docs.push({ id: 'spa', name: 'Buyer SPA', required: isSpaStageOrLater.value })
   // docs.push({ id: 'payment_proof', name: 'Buyer Payment Proof', required: isEoiStageOrLater.value })
+  return docs
+})
+// Same document slots as the main buyer, driven by the shared buyer's own residency.
+const sharedBuyerDocTypes = computed(() => {
+  const requiredResidencyDocs = getRequiredDocumentsByResidency(form.value?.shared_buyer_residency_status)
+  const docs = []
+  if (requiredResidencyDocs.includes('passport')) docs.push({ id: 'passport', name: 'Passport', required: true })
+  if (requiredResidencyDocs.includes('national_id')) docs.push({ id: 'national_id', name: 'Emirates ID', required: true })
+  docs.push({ id: 'kyc', name: 'KYC', required: isSpaStageOrLater.value })
   return docs
 })
 const propertyDocTypes = computed(() => {
@@ -1103,8 +1190,8 @@ const landlordDocTypes = computed(() => {
 // ========== City Options ==========
 // ========== Improved Watchers for Residency & Country ==========
 function setupResidencyAndCityWatchers() {
-  const parties = ['buyer', 'seller', 'tenant', 'landlord']
-  
+  const parties = ['buyer', 'shared_buyer', 'seller', 'tenant', 'landlord']
+
   parties.forEach(party => {
     // مراقبة تغيير Residency Status
     watch(() => form.value[`${party}_residency_status`], (newStatus) => {
@@ -1139,6 +1226,13 @@ const buyerCityOptions = computed(() => {
     const uaeCities = citiesByCountry['United Arab Emirates']
     return uaeCities || []
   }
+})
+
+const sharedBuyerCityOptions = computed(() => {
+  if (form.value?.shared_buyer_residency_status === 'resident') {
+    return citiesByCountry['United Arab Emirates'] || []
+  }
+  return []
 })
 
 const sellerCityOptions = computed(() => {
@@ -1198,11 +1292,18 @@ function isSectionVisible(sectionName) {
   return result
 }
 
+// Unlike other sections this is NOT shown when no section is active, so the
+// create-deal form never renders an empty shared buyer block.
+const isSharedBuyerSectionActive = computed(() =>
+  ['shared_buyer_details', 'shared_buyer_documents'].includes(props.activeEditSection)
+)
+
 function isDocumentEditMode(documentSectionKey) {
   return props.activeEditSection === documentSectionKey
 }
 
 const updateBuyerLanguage = (value) => { form.value.buyer_language = normalizeLanguageSelection(value) }
+const updateSharedBuyerLanguage = (value) => { form.value.shared_buyer_language = normalizeLanguageSelection(value) }
 
 function clearAllDocuments() {
   form.value.buyer_documents = []
@@ -2160,6 +2261,9 @@ removeBudgetDropdownListeners()
 :deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
 :deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff; }
 :deep(.buyer-language-select .vs__dropdown-option--selected) { background: #733E87; color: #fff; font-weight: 600; }
+/* Hovered option: white text (incl. custom option templates like nationality flag rows). */
+:deep(.custom-v-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff !important; }
+:deep(.custom-v-select .vs__dropdown-option--highlight *) { color: #fff !important; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }
@@ -2268,15 +2372,26 @@ removeBudgetDropdownListeners()
   border: none !important;
   box-shadow: none !important;
 }
+/* Single select: the options row fills the field height and centres the chosen
+   value vertically (previously it hugged the top once a value was picked). */
+:deep(.custom-v-select.vs--single .vs__selected-options) {
+  align-self: stretch !important;
+  align-items: center !important;
+  height: auto !important;
+}
 :deep(.custom-v-select.vs--single .vs__selected) {
   text-align: left !important;
   font-size: 13px;
   padding-left: 8px;
   margin: 0 !important;
-  align-self: stretch !important;
-  height: 100% !important;
+  align-self: center !important;
+  height: auto !important;
   display: flex !important;
   align-items: center !important;
+}
+:deep(.custom-v-select.vs--single .vs__search) {
+  align-self: center !important;
+  margin-top: 0 !important;
 }
 
 :deep(.custom-v-select .vs__search::placeholder),

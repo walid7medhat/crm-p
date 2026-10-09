@@ -726,6 +726,7 @@ function mapPropertyDocsForUpload(docs, documentTypeSlug) {
 function dealToFormData(deal) {
   if (!deal) return {}
   const buyer = getParty(deal, 'buyer')
+  const sharedBuyer = (deal.parties || []).find((p) => p.party_type === 'buyer' && p.party_role === 'secondary') || {}
   const seller = getParty(deal, 'seller')
   const tenant = getParty(deal, 'tenant')
   const landlord = getParty(deal, 'landlord')
@@ -751,6 +752,17 @@ function dealToFormData(deal) {
     buyer_country: buyer.country ?? '',
     buyer_language: normalizeLanguageSelection(buyer.language),
     buyer_documents: mapPartyDocuments(buyer, 'buyer'),
+    shared_buyer_first_name: sharedBuyer.first_name ?? '',
+    shared_buyer_last_name: sharedBuyer.last_name ?? '',
+    shared_buyer_dob: sharedBuyer.date_of_birth ?? sharedBuyer.dob ?? '',
+    shared_buyer_phone: sharedBuyer.phone ?? '',
+    shared_buyer_email: sharedBuyer.email ?? '',
+    shared_buyer_nationality: sharedBuyer.nationality ?? '',
+    shared_buyer_residency_status: sharedBuyer.residency_status ?? '',
+    shared_buyer_city: sharedBuyer.city ?? '',
+    shared_buyer_country: sharedBuyer.country ?? '',
+    shared_buyer_language: normalizeLanguageSelection(sharedBuyer.language),
+    shared_buyer_documents: mapPartyDocuments(sharedBuyer, 'buyer'),
     seller_first_name: seller.first_name ?? '',
     seller_last_name: seller.last_name ?? '',
     seller_dob: seller.date_of_birth ?? seller.dob ?? '',
@@ -820,6 +832,7 @@ function collectEditDocuments(formData) {
     seller_documents: 'seller',
     tenant_documents: 'tenant',
     landlord_documents: 'landlord',
+    shared_buyer_documents: 'shared_buyer',
   }
 
   const docs = []
@@ -827,11 +840,14 @@ function collectEditDocuments(formData) {
     const list = Array.isArray(formData[key]) ? formData[key] : []
     list.forEach((doc) => {
       if (!doc?.file) return
+      // Shared buyer files are stored under the 'buyer' category but must attach to
+      // the secondary buyer row — DocumentUpload stamps party_type 'buyer', so force it.
+      const isShared = party === 'shared_buyer'
       docs.push({
         file: doc.file,
         document_type: doc.document_type || 'other',
-        category: doc.category || party,
-        party_type: doc.party_type || party,
+        category: isShared ? 'buyer' : (doc.category || party),
+        party_type: isShared ? 'shared_buyer' : (doc.party_type || party),
       })
     })
   })
