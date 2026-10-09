@@ -460,9 +460,20 @@ SQL;
             ])
             ->withCount('galleryImages');
  $isManagerWithListingTeam = $user->hasRole('manager') && $user->listing_team;
-    
-   
-          if (!($user->hasRole('super_admin') || $isManagerWithListingTeam) && $request->boolean('my_listings')) {
+
+        // Sold / Rented tabs: super_admin and admin see every converted/rented listing;
+        // branch_admin sees those whose agent is in their branch (same scope as their
+        // leads/deals — getBranchUserIds()). Other roles keep the rules below.
+        $wantsClosedListings = $request->has('converted') || $request->has('rented')
+            || in_array($request->input('status'), ['converted', 'rented'], true);
+        $closedSeeAll = $wantsClosedListings && $user->hasAnyRole(['super_admin', 'admin']);
+        $closedBranchOnly = $wantsClosedListings && ! $closedSeeAll && $user->hasRole('branch_admin');
+        if ($closedBranchOnly) {
+            $query->whereIn('agent_id', $user->getBranchUserIds());
+        }
+
+
+          if (!($user->hasRole('super_admin') || $isManagerWithListingTeam || $closedSeeAll || $closedBranchOnly) && $request->boolean('my_listings')) {
                     $currentUser = $user;
                     $allIds = User::where(function($q) use ($currentUser) {
                         $q->where('id', $currentUser->id)
@@ -483,7 +494,7 @@ SQL;
         // Team lead's extra pending/draft visibility within their own hierarchy is
         // only surfaced via "Need Approval Listings" (getPendingApprovals()) and the
         // listing detail page (getListingData()), never mixed into this shared grid.
-        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') )){
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') ) && ! $closedSeeAll && ! $closedBranchOnly){
             $query->where('is_active', true)
                 ->where('status', '!=', 'converted')
                 ->where('status', '!=', 'rented')
