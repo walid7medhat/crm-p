@@ -4825,12 +4825,13 @@ async function onLeadDragChange(evt, column) {
           (  sourceStageName.includes('assign') || sourceStageName.includes('new lead')) &&
             (targetStageName.includes('followup') || targetStageName.includes('contacted'))
 
-        // Only the lead's responsible person may release it into Lead Pool (the server
-        // enforces this too) — snap the card back before any stage modal opens.
+        // Only the lead's responsible person (or super_admin/admin/branch_admin, for leads
+        // they can see) may release it into Lead Pool — the server enforces this too.
+        // Snap the card back before any stage modal opens.
         const isLeadPoolTarget = newStageOrder === 9 || targetStageName === 'leadpool'
         const isLeadPoolSource = sourceStageName === 'leadpool'
             || (stageOrderMap.value[lead.stage_id] ?? sourceColumn?.order) === 9
-        if (isLeadPoolTarget && !isLeadPoolSource
+        if (isLeadPoolTarget && !isLeadPoolSource && !isAdminOrSuperAdmin.value
             && Number(lead.responsible_person_id) !== Number(user.value?.id)) {
             const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
             if (targetColumnIndex !== -1) {
