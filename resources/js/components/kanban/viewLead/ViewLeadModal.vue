@@ -1467,7 +1467,7 @@ defineExpose({
     gap: 8px;
     width: 100%;
     min-width: 0;
-    padding: 3px 12px 3px 10px;
+    padding: 6px 14px 6px 10px;
 }
 
 .lead-header-identity {
@@ -1756,9 +1756,31 @@ defineExpose({
     transform: translateY(-1px);
 }
 
+.view-lead-close-btn {
+    width: 34px;
+    height: 34px;
+    border: 2px solid #fff;
+    background: linear-gradient(145deg, #a86bc0 0%, #733e87 55%, #4c1d6e 100%);
+    color: #fff;
+    box-shadow:
+        0 0 0 3px rgba(115, 62, 135, 0.22),
+        0 8px 16px rgba(76, 29, 110, 0.32);
+}
+
+.view-lead-close-btn:hover {
+    background: linear-gradient(145deg, #b57acc 0%, #6b21a8 100%);
+    color: #fff;
+    box-shadow:
+        0 0 0 4px rgba(115, 62, 135, 0.28),
+        0 10px 18px rgba(76, 29, 110, 0.4);
+    transform: scale(1.06);
+}
+
+.view-lead-close-btn iconify-icon,
 .close-btn iconify-icon {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    color: inherit;
 }
 
 .custom-dropdown-pill :deep(.btn) {
@@ -2229,6 +2251,31 @@ textarea, input, select {
     max-height: 88vh;
     display: flex;
     flex-direction: column;
+}
+
+#view-lead-modal .view-lead-close-btn {
+    width: 34px;
+    height: 34px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #a86bc0 0%, #733e87 55%, #4c1d6e 100%);
+    color: #fff;
+    box-shadow:
+        0 0 0 3px rgba(115, 62, 135, 0.22),
+        0 8px 16px rgba(76, 29, 110, 0.32);
+}
+
+#view-lead-modal .view-lead-close-btn:hover {
+    background: linear-gradient(145deg, #b57acc 0%, #6b21a8 100%);
+    color: #fff;
+    transform: scale(1.06);
+}
+
+#view-lead-modal .view-lead-close-btn iconify-icon,
+#view-lead-modal .view-lead-close-btn svg {
+    color: #fff;
+    width: 18px;
+    height: 18px;
 }
 
 @media (max-width: 768px) {

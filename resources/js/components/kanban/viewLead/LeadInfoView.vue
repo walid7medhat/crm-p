@@ -2571,32 +2571,36 @@ const saveClientRequirement = async () => {
 
 .person-hover-card {
     position: absolute;
-    top: 50%;
-    left: calc(100% + 10px);
-    transform: translateY(-50%);
-    width: 200px;
+    bottom: calc(100% + 8px);
+    right: 0;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 188px;
     z-index: 1200;
-    border-radius: 12px;
-    border: 1px solid #dbe3ef;
-    background: rgba(255, 255, 255, 0.97);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
-    backdrop-filter: blur(8px);
-    padding: 10px;
+    border-radius: 11px;
+    border: 1px solid #eadff0;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(76, 29, 110, 0.16);
+    backdrop-filter: none;
+    padding: 8px 9px 7px;
 }
 
 .person-hover-head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 7px;
+    margin-bottom: 6px;
+    min-width: 0;
 }
 
 .person-hover-avatar {
-    width: 34px;
-    height: 34px;
+    width: 24px;
+    height: 24px;
     border-radius: 999px;
     object-fit: cover;
-    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px #f4e9f8;
 }
 
 .person-hover-avatar-fallback {
@@ -2609,34 +2613,43 @@ const saveClientRequirement = async () => {
 .person-hover-name {
     font-size: 12px;
     font-weight: 700;
-    color: #0f172a;
+    color: #1c1424;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .person-hover-role {
     margin-top: 1px;
-    font-size: 11px;
-    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    color: #733e87;
+    line-height: 1.15;
 }
 
 .person-hover-line {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    font-size: 11px;
-    padding: 4px 0;
-    border-top: 1px dashed #e2e8f0;
+    gap: 8px;
+    font-size: 10px;
+    padding-top: 4px;
+    margin-top: 4px;
+    border-top: 1px solid #f3eaf6;
 }
 
 .person-hover-line span {
-    color: #64748b;
+    color: #94a3b8;
+    font-weight: 600;
+    flex-shrink: 0;
 }
 
 .person-hover-line b {
-    color: #0f172a;
+    color: #1c1424;
     font-weight: 700;
     text-align: right;
-    max-width: 120px;
+    max-width: 108px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2650,7 +2663,7 @@ const saveClientRequirement = async () => {
 .person-card-pop-enter-from,
 .person-card-pop-leave-to {
     opacity: 0;
-    transform: translateY(-50%) translateX(4px) scale(0.98);
+    transform: translateY(4px) scale(0.98);
 }
 
 .avatar-md {

@@ -14,8 +14,13 @@
                     <span>Change</span>
                 </b-button>
             </div>
-            <div class="d-flex align-items-center gap-3">
-                <div class="avatar-wrapper person-hover-anchor" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false" @click.stop="openPersonProfile(lead, 'responsible', $event)">
+            <div
+                ref="personHoverAnchor"
+                class="d-flex align-items-center gap-3 person-hover-anchor"
+                @mouseenter="openPersonHover"
+                @mouseleave="closePersonHover"
+            >
+                <div class="avatar-wrapper" @click.stop="openPersonProfile(lead, 'responsible', $event)">
                     <img
                         v-if="lead?.responsible_person?.avatar"
                         :src="lead?.responsible_person?.avatar"
@@ -24,36 +29,9 @@
                     <div v-else class="avatar-placeholder">
                         <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
                     </div>
-                    <transition name="person-card-pop">
-                        <div v-if="showPersonCard" class="person-hover-card">
-                            <div class="person-hover-head">
-                                <img
-                                    v-if="lead?.responsible_person?.avatar"
-                                    :src="lead?.responsible_person?.avatar"
-                                    alt=""
-                                    class="person-hover-avatar"
-                                />
-                                <div v-else class="person-hover-avatar person-hover-avatar-fallback">
-                                    <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
-                                </div>
-                                <div>
-                                    <div class="person-hover-name">{{ lead?.responsible_person?.name || '—' }}</div>
-                                    <div class="person-hover-role">{{ lead?.responsible_person?.position || lead?.responsible_person?.role_name || 'Team Member' }}</div>
-                                </div>
-                            </div>
-                            <div class="person-hover-line">
-                                <span>Reports To</span>
-                                <b>{{ lead?.responsible_person?.parent_name || lead?.responsible_person?.manager_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</b>
-                            </div>
-                            <div class="person-hover-line">
-                                <span>Branch</span>
-                                <b>{{ lead?.responsible_person?.office_name || lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.branch_name || lead?.lead_branch_source || 'Not specified' }}</b>
-                            </div>
-                        </div>
-                    </transition>
                 </div>
-                <div class="flex-grow-1"  >
-                    <div class="info-value" @mouseenter="showPersonCard = true" @mouseleave="showPersonCard = false"   >{{ lead?.responsible_person?.name || '—' }}
+                <div class="flex-grow-1">
+                    <div class="info-value">{{ lead?.responsible_person?.name || '—' }}
                              <span v-if="lead?.responsible_person?.role_name" class="user-position-badge">{{ lead?.responsible_person?.role_name }}</span>
                     </div>
                     <div class="info-subline">
@@ -66,6 +44,42 @@
                     </div>
                 </div>
             </div>
+            <Teleport to="body">
+                <transition name="person-card-pop">
+                    <div
+                        v-if="showPersonCard"
+                        class="person-hover-card"
+                        :style="personCardStyle"
+                        @mouseenter="openPersonHover"
+                        @mouseleave="closePersonHover"
+                        @click.stop="openPersonProfile(lead, 'responsible', $event)"
+                    >
+                        <div class="person-hover-head">
+                            <img
+                                v-if="lead?.responsible_person?.avatar"
+                                :src="lead?.responsible_person?.avatar"
+                                alt=""
+                                class="person-hover-avatar"
+                            />
+                            <div v-else class="person-hover-avatar person-hover-avatar-fallback">
+                                <iconify-icon icon="lucide:user"></iconify-icon>
+                            </div>
+                            <div class="person-hover-head-text">
+                                <div class="person-hover-name">{{ lead?.responsible_person?.name || '—' }}</div>
+                                <div class="person-hover-role">{{ lead?.responsible_person?.position || lead?.responsible_person?.role_name || 'Team Member' }}</div>
+                            </div>
+                        </div>
+                        <div class="person-hover-line">
+                            <span>Reports to</span>
+                            <b>{{ lead?.responsible_person?.parent_name || lead?.responsible_person?.manager_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</b>
+                        </div>
+                        <div class="person-hover-line">
+                            <span>Branch</span>
+                            <b>{{ lead?.responsible_person?.office_name || lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.branch_name || lead?.lead_branch_source || 'Not specified' }}</b>
+                        </div>
+                    </div>
+                </transition>
+            </Teleport>
         </div>
 
         <b-modal
@@ -149,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { BButton, BModal, BFormInput, BSpinner } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 import ProfilePopup from '../shared/ProfilePopup.vue'
@@ -187,6 +201,47 @@ const personsList = ref([])
 const selectedPersonId = ref(null)
 const personUpdateError = ref('')
 const showPersonCard = ref(false)
+const personHoverAnchor = ref(null)
+const personCardStyle = ref({})
+let personHoverTimer = null
+
+function placePersonHover() {
+    const el = personHoverAnchor.value
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const width = 188
+    const height = 86
+    const gap = 8
+    let left = rect.left - width - gap
+    let top = rect.top + Math.round((rect.height - height) / 2)
+    if (left < 8) {
+        left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8)
+        top = rect.top - height - gap
+    }
+    if (top < 8) top = rect.bottom + gap
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
+    top = Math.max(8, Math.min(top, window.innerHeight - height - 8))
+    personCardStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(top)}px`,
+        left: `${Math.round(left)}px`,
+        width: `${width}px`,
+        zIndex: 20000,
+    }
+}
+
+function openPersonHover() {
+    if (personHoverTimer) clearTimeout(personHoverTimer)
+    showPersonCard.value = true
+    nextTick(() => placePersonHover())
+}
+
+function closePersonHover() {
+    if (personHoverTimer) clearTimeout(personHoverTimer)
+    personHoverTimer = setTimeout(() => {
+        showPersonCard.value = false
+    }, 90)
+}
 
 
 
@@ -334,13 +389,77 @@ const updateResponsiblePerson = async () => {
 .avatar-md { width: 48px; height: 48px; object-fit: cover; }
 .avatar-placeholder { width: 48px; height: 48px; border-radius: 50%; background: #F3F4F6; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; }
 .avatar-icon { font-size: 24px; color: #9CA3AF; }
-.person-hover-anchor { position: relative; overflow: visible; }
-.person-hover-card { position: absolute; top: 50%; left: calc(100% + 10px); transform: translateY(-50%); width: 200px; z-index: 1200; border-radius: 12px; border: 1px solid #dbe3ef; background: rgba(255,255,255,.97); box-shadow: 0 14px 30px rgba(15,23,42,.2); padding: 10px; }
-.person-hover-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.person-hover-avatar { width: 34px; height: 34px; border-radius: 999px; object-fit: cover; border: 1px solid #e2e8f0; }
-.person-hover-name { font-size: 12px; font-weight: 700; color: #0f172a; }
-.person-hover-role { font-size: 11px; color: #64748b; }
-.person-hover-line { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; padding: 4px 0; border-top: 1px dashed #e2e8f0; }
+.person-hover-anchor { position: relative; }
+.person-hover-card {
+    border-radius: 11px;
+    border: 1px solid #eadff0;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(76, 29, 110, 0.16);
+    padding: 8px 9px 7px;
+    font-family: 'Montserrat', sans-serif;
+    pointer-events: auto;
+}
+.person-hover-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; min-width: 0; }
+.person-hover-head-text { min-width: 0; }
+.person-hover-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px #f4e9f8;
+}
+.person-hover-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f1fa;
+    color: #733e87;
+    font-size: 13px;
+}
+.person-hover-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1c1424;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.person-hover-role {
+    margin-top: 1px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #733e87;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.person-hover-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10px;
+    padding-top: 4px;
+    margin-top: 4px;
+    border-top: 1px solid #f3eaf6;
+}
+.person-hover-line span { color: #94a3b8; font-weight: 600; flex-shrink: 0; }
+.person-hover-line b {
+    color: #1c1424;
+    font-weight: 700;
+    text-align: right;
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.person-card-pop-enter-active,
+.person-card-pop-leave-active { transition: opacity 0.14s ease, transform 0.14s ease; }
+.person-card-pop-enter-from,
+.person-card-pop-leave-to { opacity: 0; transform: translateY(4px) scale(0.98); }
 .edit-person-btn { text-decoration: none; color: #733E87; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
 .edit-icon { font-size: 14px; }
 .person-list-scroll { max-height: 350px; overflow-y: auto; padding-right: 5px; }

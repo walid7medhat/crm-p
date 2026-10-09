@@ -2895,8 +2895,8 @@ const positionPersonHoverCard = (event, type = 'responsible') => {
         return
     }
     const rect = el.getBoundingClientRect()
-    const width = 210
-    const estimatedHeight = 118
+    const width = 188
+    const estimatedHeight = 92
     const gap = 8
     const isRight = type === 'activity'
     let left = isRight ? rect.right - width : rect.left - 10
@@ -2909,6 +2909,9 @@ const positionPersonHoverCard = (event, type = 'responsible') => {
         position: 'fixed',
         top: `${Math.round(top)}px`,
         left: `${Math.round(left)}px`,
+        right: 'auto',
+        bottom: 'auto',
+        height: 'auto',
         width: `${width}px`,
         zIndex: 12080,
     }
@@ -6466,43 +6469,40 @@ const fetchRevertNotifications = async () => {
 
 .person-hover-card {
     position: absolute;
-    top: calc(100% + 8px);
-    left: -10px;
-    width: 200px;
+    bottom: calc(100% + 6px);
+    top: auto;
+    left: 0;
+    width: 188px;
     z-index: 60;
-    border-radius: 12px;
-    border: 1px solid #dbe3ef;
-    background: rgba(255, 255, 255, 0.97);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.2);
-    backdrop-filter: blur(8px);
-    padding: 10px;
+    border-radius: 11px;
+    border: 1px solid #eadff0;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(76, 29, 110, 0.16);
+    padding: 8px 9px 7px;
     pointer-events: auto;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .person-hover-card--portal {
     position: fixed !important;
     top: auto;
     left: auto;
-    right: auto;
+    right: auto !important;
+    bottom: auto !important;
+    height: auto;
     z-index: 12080 !important;
-    width: 210px;
-    border: 1px solid #efe6f5;
-    border-radius: 12px;
+    width: 188px;
+    border: 1px solid #eadff0;
+    border-radius: 11px;
     background: #ffffff;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
-    padding: 8px 10px 8px 12px;
+    box-shadow: 0 12px 28px rgba(76, 29, 110, 0.16);
+    padding: 8px 9px 7px;
     overflow: hidden;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .person-hover-card--portal::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 10px;
-    bottom: 10px;
-    width: 3px;
-    border-radius: 0 4px 4px 0;
-    background: linear-gradient(180deg, #733e87 0%, #e8a317 100%);
+    content: none;
 }
 
 .person-hover-card-right {
@@ -6517,23 +6517,27 @@ const fetchRevertNotifications = async () => {
 .person-hover-head {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     margin-bottom: 6px;
+    min-width: 0;
 }
 
 .person-hover-avatar {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 999px;
     object-fit: cover;
-    border: 1px solid #fff;
-    box-shadow: 0 0 0 1.5px rgba(232, 163, 23, 0.55);
+    box-shadow: 0 0 0 2px #f4e9f8;
     flex-shrink: 0;
 }
 
 .person-hover-avatar-fallback {
-    background: linear-gradient(145deg, #fff7e8, #f3eaf8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f1fa;
     color: #733e87;
+    font-size: 13px;
 }
 
 .person-hover-head-text {
@@ -6543,25 +6547,31 @@ const fetchRevertNotifications = async () => {
 .person-hover-name {
     font-size: 12px;
     font-weight: 700;
-    color: #0b0736;
-    line-height: 1.2;
+    color: #1c1424;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .person-hover-role {
-    display: inline-flex;
+    display: block;
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #6d28d9;
-    line-height: 1.2;
+    color: #733e87;
+    line-height: 1.15;
     background: transparent;
     border: none;
     padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .person-hover-meta {
     display: grid;
-    gap: 2px;
+    gap: 0;
 }
 
 .person-hover-meta-item {
@@ -6570,11 +6580,12 @@ const fetchRevertNotifications = async () => {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 3px 0;
+    padding-top: 4px;
+    margin-top: 4px;
     border-radius: 0;
     background: transparent;
     border: none;
-    border-top: 1px solid #f1e8f6;
+    border-top: 1px solid #f3eaf6;
 }
 
 .person-hover-meta-item span {
@@ -6587,15 +6598,15 @@ const fetchRevertNotifications = async () => {
 }
 
 .person-hover-meta-item b {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    color: #0b0736;
+    color: #1c1424;
     text-align: right;
-    max-width: 120px;
+    max-width: 108px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 1.2;
+    line-height: 1.15;
 }
 
 .person-hover-pending {
@@ -6607,10 +6618,11 @@ const fetchRevertNotifications = async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    font-size: 11px;
-    padding: 4px 0;
-    border-top: 1px dashed #e2e8f0;
+    gap: 8px;
+    font-size: 10px;
+    padding-top: 4px;
+    margin-top: 4px;
+    border-top: 1px solid #f3eaf6;
 }
 
 .person-hover-line span {
