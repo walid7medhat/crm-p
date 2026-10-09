@@ -174,6 +174,8 @@ class ListingGridResource extends JsonResource
             || $flags['is_user_30']
         );
        $canSeeUnitNumber = $isPrivilegedViewer
+            // Deal Select-Unit picker (sends not_in_deals): branch admins pick any sold unit, like super_admin.
+            || ($user && $request->boolean('not_in_deals') && $user->hasRole('branch_admin'))
             || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER))
             // The agent who converted (sold) or rented out this listing needs the unit
             // number even if they aren't the current agent_id (e.g. it moved teams since).

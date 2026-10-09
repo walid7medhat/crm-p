@@ -2,7 +2,7 @@
 // rental deals (Create modal, change-stage modal, inline editor).
 //
 // Builds the /listings/properties query params based on the current user's role:
-//   - super_admin / admin → see every sold listing
+//   - super_admin / admin / branch_admin → see every sold listing
 //   - manager / team_lead → see listings sold by anyone in their team hierarchy
 //   - everyone else       → only their own sold inventory
 //
@@ -42,8 +42,8 @@ export function buildListingFilterParams({ dealType, areaId, user = null, curren
 
   if (!u) return params
 
-  if (hasRole(u, 'super_admin') || hasRole(u, 'admin')) {
-    // No agent scope — admins/super-admins see all sold/rented inventory.
+  if (hasRole(u, 'super_admin') || hasRole(u, 'admin') || hasRole(u, 'branch_admin')) {
+    // No agent scope — admins/super-admins/branch admins see all sold/rented inventory.
     return params
   }
 

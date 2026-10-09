@@ -1716,6 +1716,8 @@ const rentedStatusOptions = ['Available', 'Rented'];
 const existingGalleryImages = ref([]);
 const existingAdditionalDocuments = ref([]);
 const currentHeroImage = ref(null);
+/** Hero image as saved on the server (restored if a pending new hero is removed). */
+const savedHeroImage = ref(null);
 // Floor Plan Variables
 const showProjectFloorPlans = ref(false);
 const projectFloorPlans = ref([]);
@@ -2788,6 +2790,7 @@ const fetchPropertyData = async (id) => {
     existingGalleryImages.value = propertyData.gallery_images || [];
     existingAdditionalDocuments.value = propertyData.additional_documents || [];
     currentHeroImage.value = propertyData.hero_image || propertyData.main_image || null;
+    savedHeroImage.value = currentHeroImage.value;
 
     if (propertyData.owner) {
       selectedOwner.value = {
@@ -2948,6 +2951,9 @@ watch(() => selectedProject.value, async (newProject) => {
   
 }, { immediate: true });
 
+/** A not-yet-uploaded gallery image chosen as hero (applied on Save). */
+const pendingNewHeroImage = ref(null);
+
 const setAsHeroImage = async (item) => {
   try {
     isSettingHero.value = true;
@@ -2959,7 +2965,9 @@ const setAsHeroImage = async (item) => {
 
       if (response.data.data) {
         currentHeroImage.value = response.data.data.hero_image_url;
-        
+        savedHeroImage.value = currentHeroImage.value;
+        pendingNewHeroImage.value = null;
+
         existingGalleryImages.value = existingGalleryImages.value.map(img => ({
           ...img,
           is_hero: img.id === item.id
@@ -2968,115 +2976,18 @@ const setAsHeroImage = async (item) => {
         proxy.$showNotification("✅ Hero image updated successfully!", "success");
       }
     } else {
-      await saveWithHeroImage(item);
+      // Not uploaded yet: mark it as hero now; Save uploads it as the hero image.
+      // (Previously this re-saved the whole listing as a draft with a partial payload,
+      // which failed validation and changed the listing's status.)
+      pendingNewHeroImage.value = item;
+      currentHeroImage.value = item.preview || getImagePreview(item.file || item);
+      proxy.$showNotification("⭐ Hero image selected — click Save to apply it", "info");
     }
   } catch (error) {
     console.error("❌ Error updating hero image:", error);
-    proxy.$showNotification("❌ Failed to update hero image", "error");
+    proxy.$showNotification(`❌ Failed to update hero image${error.response?.data?.message ? ": " + error.response.data.message : ""}`, "error");
   } finally {
     isSettingHero.value = false;
-  }
-};
-
-const saveWithHeroImage = async (heroImageItem) => {
-  try {
-    isSubmitting.value = true;
-    
-    const formData = new FormData();
-    formData.append('action', 'draft');
-    formData.append('hero_image_from_gallery', 'first_new_image');
-
-    formData.append('owner_id', selectedOwner.value.id);
-    formData.append('agent_id', agentId.value);
-    formData.append('property_type_id', form.value.property_type.id);
-    formData.append('area_id', form.value.area.id);
-
-    const textFields = {
-      'unit_number': form.value.unit_number,
-      'ownership_type': form.value.ownership_type,
-      'listing_status': form.value.saleOrRent,
-      'completion_status': form.value.completionStatus,
-      'price': form.value.price,
-      'number_of_bedrooms': form.value.number_of_bedrooms,
-      'number_of_bathrooms': form.value.number_of_bathrooms,
-      'size_sqmt': form.value.size_sqmt,
-      'size_sqft': form.value.size_sqft,
-      'plot_size': needsPlotSize.value ? form.value.plot_size : '',
-      'comment': form.value.comment,
-    };
-
-    Object.entries(textFields).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        formData.append(key, value);
-      }
-    });
-
-    if (selectedProject.value && selectedProject.value.id) {
-      formData.append('project_id', selectedProject.value.id);
-    }
-
-    // Same ordering payload as the main update path: send existing image orders
-    // and a parallel `new_gallery_order` for new files.
-    {
-      const ordered = combinedGallery.value;
-      ordered.forEach((item, idx) => {
-        if (item && item.id) {
-          formData.append(`gallery_orders[${item.id}]`, idx + 1);
-        }
-      });
-      const positions = new Map();
-      ordered.forEach((it, idx) => {
-        if (it && !it.id) positions.set(it, idx + 1);
-      });
-      if (form.value.gallery.length > 0) {
-        form.value.gallery.forEach((item, index) => {
-          const file = item.file || item;
-          if (file instanceof File) {
-            formData.append(`gallery[${index}]`, file);
-            const pos = positions.get(item) ?? index + 1;
-            formData.append(`new_gallery_order[${index}]`, pos);
-          }
-        });
-      }
-    }
-
-    formData.append('_method', 'PUT');
-    const response = await api.post(`/listings/properties/${propertyId.value}`, formData, {
-      headers: { 
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    console.log("✅ Save with hero image response:", response.data);
-    
-    if (response.data.data) {
-      const propertyData = response.data.data;
-      
-      currentHeroImage.value = propertyData.hero_image_url || 
-                              (form.value.gallery[0]?.preview || 
-                               getImagePreview(form.value.gallery[0]?.file || form.value.gallery[0]));
-      
-      if (form.value.gallery.length > 0) {
-        const newGalleryItems = form.value.gallery.map((item, index) => ({
-          id: `temp-${Date.now()}-${index}`, 
-          image_url: item.preview || getImagePreview(item.file || item),
-          name: item.name || item.file?.name,
-          created_at: new Date().toISOString(),
-          is_new: true
-        }));
-        
-        existingGalleryImages.value = [...existingGalleryImages.value, ...newGalleryItems];
-        form.value.gallery = []; 
-      }
-    }
-    
-    proxy.$showNotification("✅ Image set as hero and changes saved!", "success");
-    
-  } catch (error) {
-    console.error("❌ Error saving with hero image:", error);
-    proxy.$showNotification("❌ Failed to save changes", "error");
-  } finally {
-    isSubmitting.value = false;
   }
 };
 
@@ -3977,6 +3888,11 @@ const removeGalleryItem = (item, index) => {
 };
 
 const removeGalleryImage = (index) => {
+  if (form.value.gallery[index] && form.value.gallery[index] === pendingNewHeroImage.value) {
+    // The pending hero was removed before saving — keep the saved hero.
+    pendingNewHeroImage.value = null;
+    currentHeroImage.value = savedHeroImage.value;
+  }
   if (form.value.gallery[index] && form.value.gallery[index].preview) {
     URL.revokeObjectURL(form.value.gallery[index].preview);
   }
@@ -4361,15 +4277,25 @@ const handleSubmit = async (action = 'draft') => {
         ordered.forEach((it, idx) => {
           if (it && !it.id) positions.set(it, idx + 1);
         });
-        form.value.gallery.forEach((item, index) => {
+        // A new image picked as hero is uploaded first: the backend makes gallery[0]
+        // the hero when hero_image_from_gallery=first_new_image. Display order still
+        // comes from new_gallery_order, so moving it first here doesn't reorder the gallery.
+        const pendingHero = pendingNewHeroImage.value;
+        const uploads = pendingHero && form.value.gallery.includes(pendingHero)
+          ? [pendingHero, ...form.value.gallery.filter(it => it !== pendingHero)]
+          : form.value.gallery;
+        uploads.forEach((item) => {
           const file = item.file || item;
           if (file instanceof File) {
-            formData.append(`gallery[${index}]`, file);
-            const pos = positions.get(item) ?? index + 1;
-            formData.append(`new_gallery_order[${index}]`, pos);
+            formData.append(`gallery[${newIdx}]`, file);
+            const pos = positions.get(item) ?? newIdx + 1;
+            formData.append(`new_gallery_order[${newIdx}]`, pos);
             newIdx += 1;
           }
         });
+        if (pendingHero && uploads[0] === pendingHero) {
+          formData.append('hero_image_from_gallery', 'first_new_image');
+        }
       }
     }
      // Add additional documents

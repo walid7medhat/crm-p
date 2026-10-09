@@ -3142,10 +3142,10 @@ public function setHeroImage(Request $request, $listingId): JsonResponse
         $listing = Listing::findOrFail($listingId);
         $galleryImageId = $request->input('gallery_image_id');
 
+        // Same rule as update(): anyone who may edit the listing may pick its hero image
+        // (was owner/agent/super_admin only, which refused admins and listing-team managers).
         $user = Auth::user();
-        $isOwner = (int) $listing->added_by === (int) $user->id || (int) $listing->agent_id === (int) $user->id;
-        $isPrivileged = $user->hasRole('super_admin');
-        if (!$isOwner && !$isPrivileged) {
+        if (! $this->canEditListing($user, $listing)) {
             return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
 
