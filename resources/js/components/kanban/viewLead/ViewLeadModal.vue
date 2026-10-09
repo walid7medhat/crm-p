@@ -62,17 +62,19 @@
                     </div>
                     <div class="lead-header-actions">
                         <button
-                            v-if="convertedDealLink"
+                            v-if="convertedDeals.length"
+                            ref="convertedDealsTriggerRef"
                             type="button"
                             class="lead-converted-deal-link"
-                            :title="convertedDealLink.deal_name"
-                            @click="openConvertedDeal"
+                            :aria-expanded="showConvertedDeals"
+                            @click.stop="showConvertedDeals = !showConvertedDeals"
                         >
-                            <span class="lead-converted-deal-kicker">Deal</span>
-                            <span class="lead-converted-deal-name">{{ convertedDealLink.deal_name }}</span>
+                            <span class="lead-converted-deal-kicker">Deals</span>
+                            <span class="lead-converted-deal-count">{{ convertedDeals.length }}</span>
+                            <iconify-icon icon="lucide:chevron-down" class="lead-converted-deal-caret" aria-hidden="true"></iconify-icon>
                         </button>
                         <button
-                            v-else-if="showConvertedCreateDeal"
+                            v-if="showConvertedCreateDeal"
                             type="button"
                             class="lead-converted-create-deal"
                             @click="openCreateDealForConvertedLead"
@@ -160,10 +162,17 @@
         />
        
     </b-modal>
+    <LeadDealsPopup
+        v-model="showConvertedDeals"
+        :deals="convertedDeals"
+        :trigger-element="convertedDealsTriggerRef"
+        @open-deal="openConvertedDeal"
+    />
      <ConvertLeadModal
         ref="convertModalRef"
         :leadId="selectedLeadForConversion"
         :leadData="selectedLeadData"
+        @submitting="closeLeadForNewDeal"
         @converted="handleLeadConverted"
         @closed="selectedLeadForConversion = null"
     />
@@ -176,13 +185,13 @@ import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
 import StageChangeReasonModal from '../leadList/StageChangeReasonModal.vue'
 import ConvertLeadModal from '../leadList/ConvertLeadModal.vue'
+import LeadDealsPopup from './LeadDealsPopup.vue'
 
 import BrandLoader from '@/components/layout/BrandLoader.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
-import { openDealView } from '@/composables/useDealViewModal.js'
 
 
 
@@ -305,73 +314,53 @@ const isConvertedLeadStage = (currentLead) => {
     return order === 6
 }
 
-const convertedDealLink = ref(null)
+// A Converted lead can have several deals: "Deals (n)" lists them (popup like
+// Duplicate Leads) and "Create deal" stays available to add another one.
+const convertedDeals = ref([])
+const showConvertedDeals = ref(false)
+const convertedDealsTriggerRef = ref(null)
 const showConvertedCreateDeal = ref(false)
 let convertedDealRequest = 0
 
 const loadConvertedDealLink = async () => {
     const requestId = ++convertedDealRequest
     const current = lead.value
-    convertedDealLink.value = null
+    convertedDeals.value = []
+    showConvertedDeals.value = false
     showConvertedCreateDeal.value = false
     if (!show.value || !current?.id || !isConvertedLeadStage(current)) return
 
     try {
         const res = await api.get(`/leads/${current.id}/can-convert`)
         if (requestId !== convertedDealRequest) return
-        const dealId = Number(res.data?.data?.converted_to_deal_id)
-        if (!dealId) {
-            showConvertedCreateDeal.value = true
-            return
-        }
-        let name = current.deal_name || current.lead_name || 'Deal'
-        let dealType = null
-        try {
-            const dealRes = await api.get(`/deals/${dealId}`)
-            if (requestId !== convertedDealRequest) return
-            const deal = dealRes.data?.data
-            name = deal?.deal_name || deal?.project_name || name
-            dealType = deal?.deal_type || deal?.type || null
-        } catch (_) {
-            /* The lead already points at this deal; the name can fall back. */
-        }
-        convertedDealLink.value = {
-            id: dealId,
-            deal_name: name,
-            deal_type: dealType,
-        }
+        const data = res.data?.data || {}
+        convertedDeals.value = Array.isArray(data.deals) ? data.deals : []
+        showConvertedCreateDeal.value = true
     } catch (_) {
         if (requestId !== convertedDealRequest) return
         showConvertedCreateDeal.value = false
     }
 }
 
-const openConvertedDeal = async () => {
-    const deal = convertedDealLink.value
-    if (!deal?.id) return
-    const payload = {
-        id: deal.id,
-        deal_id: deal.id,
-        deal_type: deal.deal_type,
-        deal_name: deal.deal_name,
-        lead_id: lead.value?.id ?? null,
-    }
-    const onKanban = route.path === '/kanban' || route.path === '/kanban_deal'
-    if (onKanban) {
-        await openDealView(payload, { autoEditSection: false })
-        show.value = false
-        return
-    }
-    window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: payload }))
+// Open a deal from the lead's "Deals" list on the Deals board itself — not stacked on top
+// of the lead. Close the lead first (its close clears ?lead with a query-only push), then
+// go to /kanban_deal?deal=ID; kanban_deal.vue switches to the deal's type tab and opens it.
+const openConvertedDeal = async (deal) => {
+    const dealId = Number(deal?.id)
+    if (!Number.isFinite(dealId) || dealId <= 0) return
     show.value = false
+    await nextTick()
+    router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
 }
 
 const openCreateDealForConvertedLead = async () => {
-    if (!lead.value?.id || convertedDealLink.value) return
+    if (!lead.value?.id) return
+    showConvertedDeals.value = false
     selectedLeadForConversion.value = lead.value.id
     selectedLeadData.value = lead.value
     await nextTick()
-    convertModalRef.value?.show(lead.value.id, lead.value)
+    // Each header "Create deal" makes a new, separate deal — require its own name.
+    convertModalRef.value?.show(lead.value.id, lead.value, { requireDealName: true })
 }
 
 watch(
@@ -464,6 +453,14 @@ const guardQualifiedRequirementFocus = (event) => {
     openQualifiedRequirementForm()
 }
 
+// Deal type chosen + Continue: close the lead now — the new deal opens on the Deals
+// board once created. This instance stays mounted (v-model, not v-if), so the convert
+// modal's pending request still reaches handleLeadConverted.
+function closeLeadForNewDeal() {
+    showConvertedDeals.value = false
+    show.value = false
+}
+
 function handleLeadConverted(deal) {
     // Let the Kanban board move/remove this lead's card immediately (it just became
     // a deal) instead of relying on a websocket broadcast or a full board refetch.
@@ -476,7 +473,21 @@ function handleLeadConverted(deal) {
     selectedLeadData.value = null
     show.value = false
     emit('update:modelValue', false)
-    window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: deal }))
+
+    // Kanban pages (kanban_deal.vue) switch to the Deals board and open the new deal
+    // with its details form. Elsewhere nothing listens for that event, so go to the
+    // Deals board via ?deal=ID, which opens the deal there.
+    const onKanban = route.path === '/kanban' || route.path === '/kanban_deal'
+    if (onKanban) {
+        window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: deal }))
+        return
+    }
+    const dealId = Number(deal?.id ?? deal?.deal_id)
+    if (Number.isFinite(dealId) && dealId > 0) {
+        nextTick(() => {
+            router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
+        })
+    }
 }
 
 const canViewHistory = computed(() => {
@@ -1597,6 +1608,28 @@ defineExpose({
     color: #ffffff;
     font-size: 13px;
     font-weight: 650;
+}
+
+.lead-converted-deal-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #733E87;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.lead-converted-deal-caret {
+    font-size: 14px;
+    color: #733E87;
+}
+
+.lead-header-actions {
+    gap: 8px;
 }
 
 .lead-converted-deal-link:hover,

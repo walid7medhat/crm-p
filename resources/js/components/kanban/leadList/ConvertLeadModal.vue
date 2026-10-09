@@ -43,6 +43,25 @@
                             </div>
                         </aside>
 
+                        <div class="convert-lead-main">
+                        <div v-if="requireDealName" class="deal-name-field">
+                            <label class="deal-name-label" for="convert-lead-deal-name">
+                                Deal name <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                id="convert-lead-deal-name"
+                                ref="dealNameInputRef"
+                                v-model="form.deal_name"
+                                type="text"
+                                class="deal-name-input"
+                                :class="{ 'is-invalid': dealNameError }"
+                                placeholder="Enter a name for this new deal"
+                                maxlength="255"
+                                @input="dealNameError = ''"
+                                @keyup.enter="submitConversion"
+                            />
+                            <div v-if="dealNameError" class="deal-name-error">{{ dealNameError }}</div>
+                        </div>
                         <div class="options-row">
                             <button
                                 type="button"
@@ -111,6 +130,7 @@
                                 </span>
                             </button>
                         </div>
+                        </div>
                     </div>
 
                     <div class="convert-lead-footer">
@@ -124,7 +144,7 @@
                                 type="button"
                                 class="btn-add-deal"
                                 @click.stop="submitConversion"
-                                :disabled="!form.deal_type || loading"
+                                :disabled="!form.deal_type || loading || (requireDealName && !form.deal_name.trim())"
                             >
                                 <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                                 <span>Continue</span>
@@ -139,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 
@@ -154,15 +174,24 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['converted', 'closed'])
+// 'submitting' fires the moment Continue is accepted (before the API answers), so a
+// host like the lead popup can close right away instead of lingering until 'converted'.
+const emit = defineEmits(['converted', 'closed', 'submitting'])
 
 const visible = ref(false)
 const loading = ref(false)
 
 const form = ref({
     lead_id: props.leadId,
-    deal_type: ''
+    deal_type: '',
+    deal_name: ''
 })
+
+// "Create deal" from a lead header makes an additional, separate deal — it needs
+// its own name rather than silently reusing the lead's name.
+const requireDealName = ref(false)
+const dealNameError = ref('')
+const dealNameInputRef = ref(null)
 
 watch(() => props.leadId, (newId) => {
     form.value.lead_id = newId
@@ -205,12 +234,23 @@ function cleanupBootstrapBackdrops() {
     document.body.style.removeProperty('padding-right')
 }
 
-const show = (leadId = null, leadData = null) => {
+/**
+ * @param {object} [options]
+ * @param {boolean} [options.requireDealName] ask for a (required) name for the new deal
+ * @param {string} [options.dealName] prefill, used when re-opening after a failed submit
+ */
+const show = (leadId = null, leadData = null, options = {}) => {
     cleanupBootstrapBackdrops()
     form.value.lead_id = resolveLeadId(leadId, leadData)
-    form.value.deal_type = 'primary'
+    form.value.deal_type = options.dealType || 'primary'
+    form.value.deal_name = options.dealName || ''
+    requireDealName.value = options.requireDealName === true
+    dealNameError.value = ''
     visible.value = true
     document.body.style.overflow = 'hidden'
+    if (requireDealName.value) {
+        nextTick(() => dealNameInputRef.value?.focus())
+    }
 }
 
 const hide = () => {
@@ -219,6 +259,8 @@ const hide = () => {
     document.body.style.overflow = ''
     emit('closed')
     form.value.deal_type = ''
+    form.value.deal_name = ''
+    dealNameError.value = ''
 }
 
 onMounted(() => {
@@ -243,6 +285,13 @@ const submitConversion = async () => {
         return
     }
 
+    const dealName = form.value.deal_name.trim()
+    if (requireDealName.value && !dealName) {
+        dealNameError.value = 'Deal name is required'
+        dealNameInputRef.value?.focus()
+        return
+    }
+
     if (loading.value) return
     loading.value = true
 
@@ -263,16 +312,19 @@ const submitConversion = async () => {
 
     const dealType = form.value.deal_type
     const leadDataSnapshot = props.leadData || null
+    const wasDealNameRequired = requireDealName.value
 
     // Close immediately so Add Deal feels instant; API runs in the background.
     hide()
+    emit('submitting', { leadId: resolvedLeadId, dealType })
 
     try {
         const response = await api.post('/leads/convert/to-deal', {
             lead_id: resolvedLeadId,
             leadId: resolvedLeadId,
             id: resolvedLeadId,
-            deal_type: dealType
+            deal_type: dealType,
+            ...(dealName ? { deal_name: dealName } : {}),
         })
 
         if (response.data.success) {
@@ -321,9 +373,16 @@ const submitConversion = async () => {
             return
         }
 
-        // Re-open so the user can retry without dragging the lead again.
-        show(resolvedLeadId, leadDataSnapshot)
-        form.value.deal_type = dealType
+        // Re-open so the user can retry without dragging the lead again (keeping what they typed).
+        show(resolvedLeadId, leadDataSnapshot, {
+            requireDealName: wasDealNameRequired,
+            dealName,
+            dealType,
+        })
+        const nameError = error.response?.data?.errors?.deal_name
+        if (nameError) {
+            dealNameError.value = Array.isArray(nameError) ? nameError[0] : String(nameError)
+        }
 
         const backendDebug = error?.response?.data?.debug?.payload
             ? ` | payload: ${JSON.stringify(error.response.data.debug.payload)}`
@@ -556,6 +615,59 @@ defineExpose({
     line-height: 1.45;
     color: rgba(255, 255, 255, 0.82);
     max-width: 26ch;
+}
+
+.convert-lead-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    min-width: 0;
+}
+
+.convert-lead-main > .options-row {
+    flex: 1;
+}
+
+.deal-name-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.deal-name-label {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #0B0736;
+}
+
+.deal-name-input {
+    height: 40px;
+    width: 100%;
+    padding: 0 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13.5px;
+    color: #0B0736;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.deal-name-input:focus {
+    border-color: #733E87;
+    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.15);
+}
+
+.deal-name-input.is-invalid {
+    border-color: #dc3545;
+}
+
+.deal-name-error {
+    font-size: 12px;
+    color: #dc3545;
 }
 
 .options-row {

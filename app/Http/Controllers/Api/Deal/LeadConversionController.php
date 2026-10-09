@@ -97,12 +97,26 @@ class LeadConversionController extends Controller
             }
         }
 
-        if ($lead->converted_to_deal_id) {
+        // A lead may have several deals (all linked via deals.lead_id). The first one
+        // marks the lead Converted and sets converted_to_deal_id; later ones only add a deal.
+        $isFirstDeal = !$lead->converted_to_deal_id;
+
+        // An extra deal on an already-converted lead is a separate deal, so it must be
+        // given its own name (the header "Create deal" form asks for it).
+        $dealName = trim((string) $request->input('deal_name', ''));
+        if (mb_strlen($dealName) > 255) {
             return response()->json([
                 'success' => false,
-                'message' => 'Lead already converted to deal',
-                'deal_id' => $lead->converted_to_deal_id
-            ], 400);
+                'message' => 'Deal name may not be longer than 255 characters.',
+                'errors' => ['deal_name' => ['Deal name may not be longer than 255 characters.']],
+            ], 422);
+        }
+        if (!$isFirstDeal && $dealName === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Deal name is required for a new deal.',
+                'errors' => ['deal_name' => ['Deal name is required for a new deal.']],
+            ], 422);
         }
 
         $stage = Stage::where('stage_type', 'deal')
@@ -144,7 +158,7 @@ class LeadConversionController extends Controller
                 'deal_type' => $request->deal_type,
                 'stage_id' => $stage->id,
                 'source' => $lead->lead_source ?? $lead->source,
-                'deal_name' => $lead->deal_name ?? $lead->lead_name,
+                'deal_name' => $dealName !== '' ? $dealName : ($lead->deal_name ?? $lead->lead_name),
                 'currency' => $lead->currency ?? 'AED',
                 'created_by' => auth()->id(),
                 'responsible_person_id' => $lead->responsible_person_id ?? auth()->id(),
@@ -181,27 +195,40 @@ class LeadConversionController extends Controller
             DealHistoryHelper::log($deal->id, ['action' => 'created']);
             
             $oldStage = $lead->stage;
-            $lead->update([
-                'stage_id' => 8,
-                'last_stage_change_at' => now(),
-                'converted_to_deal_id' => $deal->id,
-                'converted_at' => Carbon::now(),
-            ]);
+            $movedToConverted = (int) $lead->stage_id !== 8;
+            $leadUpdate = [];
+            if ($movedToConverted) {
+                $leadUpdate['stage_id'] = 8;
+                $leadUpdate['last_stage_change_at'] = now();
+            }
+            if ($isFirstDeal) {
+                $leadUpdate['converted_to_deal_id'] = $deal->id;
+                $leadUpdate['converted_at'] = Carbon::now();
+            }
+            if (!empty($leadUpdate)) {
+                $lead->update($leadUpdate);
+            }
             $newStage = $lead->fresh()->stage;
-            
+
             $changes = [
                 'old_stage' => $oldStage->name,
                 'new_stage' => $newStage->name
             ];
-            
-            LeadHistoryHelper::log($lead->id, [
-                'action' => 'stage_changed',
-                'old_stage' => $oldStage->name,
-                'new_stage' => $newStage->name
-            ]);
-            
+
+            // Only a real stage move is history — an extra deal on an already
+            // Converted lead must not log a "Converted → Converted" change.
+            if ($movedToConverted) {
+                LeadHistoryHelper::log($lead->id, [
+                    'action' => 'stage_changed',
+                    'old_stage' => $oldStage->name,
+                    'new_stage' => $newStage->name
+                ]);
+            }
+
             try {
-                broadcast(new LeadUpdated($lead, 'stage_changed', auth()->id(), $changes, 'crm'));
+                if ($movedToConverted) {
+                    broadcast(new LeadUpdated($lead, 'stage_changed', auth()->id(), $changes, 'crm'));
+                }
                 $this->broadcastDealUpdate($deal, 'created');
             } catch (\Throwable $e) {
                 Log::warning('Broadcast failed during lead conversion', [
@@ -287,13 +314,7 @@ class LeadConversionController extends Controller
             }
         }
 
-        if ($lead && $lead->converted_to_deal_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Lead already converted to deal',
-                'deal_id' => $lead->converted_to_deal_id
-            ], 400);
-        }
+        // No "already converted" block: a lead may have several deals.
 
         if (!$request->filled('stage_id')) {
             return response()->json([
@@ -1147,13 +1168,45 @@ private function createDealProperties(Deal $deal, $request)
             }
         }
 
+        // Every deal created from this lead (newest first). converted_to_deal_id is
+        // included for older deals created before deals.lead_id was always set.
+        $deals = Deal::query()
+            ->where(function ($q) use ($lead) {
+                $q->where('lead_id', $lead->id);
+                if ($lead->converted_to_deal_id) {
+                    $q->orWhere('id', $lead->converted_to_deal_id);
+                }
+            })
+            ->with(['stage:id,name,color', 'responsiblePerson:id,name'])
+            ->orderByDesc('id')
+            ->get(['id', 'deal_name', 'deal_number', 'deal_type', 'stage_id', 'responsible_person_id', 'created_at'])
+            ->map(fn (Deal $deal) => [
+                'id' => $deal->id,
+                'deal_name' => $deal->deal_name,
+                'deal_number' => $deal->deal_number,
+                'deal_type' => $deal->deal_type,
+                'stage' => $deal->stage ? [
+                    'id' => $deal->stage->id,
+                    'name' => $deal->stage->name,
+                    'color' => $deal->stage->color,
+                ] : null,
+                'responsible_person' => $deal->responsiblePerson ? [
+                    'id' => $deal->responsiblePerson->id,
+                    'name' => $deal->responsiblePerson->name,
+                ] : null,
+                'created_at' => $deal->created_at?->format('Y-m-d H:i:s'),
+            ])
+            ->values();
+
         return response()->json([
             'success' => true,
             'data' => [
-                'can_convert' => is_null($lead->converted_to_deal_id),
-                'is_converted' => !is_null($lead->converted_to_deal_id),
+                // A lead can always get another deal.
+                'can_convert' => true,
+                'is_converted' => !is_null($lead->converted_to_deal_id) || $deals->isNotEmpty(),
                 'converted_to_deal_id' => $lead->converted_to_deal_id,
                 'converted_at' => $lead->converted_at,
+                'deals' => $deals,
                 'available_deal_types' => ['primary', 'secondary', 'rental']
             ]
         ]);
