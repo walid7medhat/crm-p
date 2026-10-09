@@ -629,7 +629,7 @@ watch(
 .lead-view-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.2fr) minmax(380px, 1fr);
-    gap: 12px;
+    gap: 6px;
     align-items: stretch;
     height: 100%;
     min-height: 0;

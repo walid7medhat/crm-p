@@ -584,9 +584,9 @@ function onImgError(e) {
 
 @media (min-width: 520px) {
     .matching-scroll .matching-card {
-        /* Larger screens: one card + ~half of next */
-        flex: 0 0 calc((100% - 10px) / 1.55);
-        max-width: calc((100% - 10px) / 1.55);
+        /* Larger screens: a slightly smaller card, with the next listing showing beside it */
+        flex: 0 0 calc((100% - 12px) / 1.9);
+        max-width: calc((100% - 12px) / 1.9);
     }
 }
 
@@ -782,8 +782,8 @@ function onImgError(e) {
 
 .matching-card-media {
     position: relative;
-    aspect-ratio: 16 / 11;
-    min-height: clamp(74px, 14vw, 96px);
+    aspect-ratio: 16 / 10;
+    min-height: clamp(60px, 11vw, 78px);
     background: #f1f5f9;
 }
 
@@ -826,15 +826,15 @@ function onImgError(e) {
 }
 
 .matching-card-body {
-    padding: clamp(8px, 1.2vw, 11px);
+    padding: 7px 8px 8px;
     display: flex;
     flex-direction: column;
-    gap: clamp(3px, 0.7vw, 5px);
+    gap: 3px;
     flex: 1;
 }
 
 .matching-price {
-    font-size: clamp(0.9rem, 1.9vw, 1rem);
+    font-size: clamp(0.82rem, 1.6vw, 0.92rem);
     font-weight: 700;
     color: #0f172a;
     line-height: 1.2;

@@ -1464,32 +1464,32 @@ defineExpose({
 .lead-header-main {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
     min-width: 0;
-    padding: 12px 14px 12px 12px;
+    padding: 3px 12px 3px 10px;
 }
 
 .lead-header-identity {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     flex: 1 1 auto;
 }
 
 .lead-header-mark {
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
-    border-radius: 12px;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border-radius: 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     background: linear-gradient(145deg, #8b4ea3 0%, #733e87 55%, #4c1d6e 100%);
-    box-shadow: 0 8px 16px rgba(115, 62, 135, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
-    font-size: 18px;
+    box-shadow: 0 4px 8px rgba(115, 62, 135, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    font-size: 13px;
 }
 
 .lead-header-copy {
@@ -1500,11 +1500,12 @@ defineExpose({
 }
 
 .lead-header-kicker {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: #733e87;
+    line-height: 1.1;
 }
 
 .lead-header-actions {
@@ -1528,7 +1529,7 @@ defineExpose({
 .lead-converted-create-deal {
     flex: 0 1 auto;
     max-width: 280px;
-    height: 34px;
+    height: 26px;
     margin: 0;
     padding: 0 10px 0 12px;
     border-radius: 10px;
@@ -1630,9 +1631,10 @@ defineExpose({
 .modal-title {
     flex: 1 1 auto;
     min-width: 0;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: -0.01em;
+    line-height: 1.15;
     color: #1c1424;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1643,7 +1645,7 @@ defineExpose({
 .lead-title-read-row {
     flex: 1 1 auto;
     min-width: 0;
-    padding: 2px 0;
+    padding: 0;
 }
 
 .lead-title-read-row .modal-title {
@@ -1668,8 +1670,8 @@ defineExpose({
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 9px;
     border: 1px solid #eadff0;
     background: rgba(255, 255, 255, 0.8);
@@ -1730,8 +1732,8 @@ defineExpose({
 .close-btn {
     position: static;
     flex-shrink: 0;
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     margin-left: 0;
     border: 1px solid rgba(115, 62, 135, 0.16);
     border-radius: 50%;
@@ -1782,7 +1784,7 @@ defineExpose({
 }
 
 .tabs-container {
-    padding: 0 14px 10px 16px;
+    padding: 0 12px 6px;
     background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
     border-bottom: 1px solid #f0e8f4;
 }
@@ -2146,7 +2148,7 @@ textarea, input, select {
     overflow-y: auto;
     overflow-x: hidden;
     background: #f7f3f8;
-    padding: 10px 12px 14px;
+    padding: 8px 8px 10px;
 }
 
 .modal-body-custom.is-split-scroll {
