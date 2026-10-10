@@ -194,6 +194,16 @@ export default {
 
       const type = notification.type || notification?.data?.notification_type
 
+      if (type === 'App\\Notifications\\DailyMotivationTestNotification' || notification?.data?.type === 'daily_motivation_test') {
+        window.dispatchEvent(new CustomEvent('daily-edge:test', { detail: notification.data || {} }))
+        return
+      }
+
+      if (type === 'App\\Notifications\\DailyMotivationNotification' || notification?.data?.type === 'daily_motivation') {
+        window.dispatchEvent(new CustomEvent('daily-edge:open', { detail: notification.data || {} }))
+        return
+      }
+
       if (type === 'App\\Notifications\\BirthdayColleagueNotification') {
         const d = notification.data || {}
         if (typeof window !== 'undefined' && typeof window.__openPropertyChat === 'function') {

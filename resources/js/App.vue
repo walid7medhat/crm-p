@@ -14,6 +14,7 @@
     <AppLoader :show="isAppLoading" label="Loading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
     <SystemCampaignPopup v-if="showLayout" />
+    <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
     <main :class="showLayout ? 'dashboard-main' : 'auth-page-main'">
@@ -80,6 +81,7 @@ const LeadOpeningLoader = {
   },
 }
 const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layout/SystemCampaignPopup.vue'))
+const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-motivation/DailyEdgeLayer.vue'))
 const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
   delay: 80,
@@ -99,6 +101,7 @@ export default {
     NavProgressBar,
     BirthdayCelebrationLayer,
     SystemCampaignPopup,
+    DailyEdgeLayer,
     MobilePushToggle,
     PropertyDetailsModal,
     ProjectDetailsModal,
