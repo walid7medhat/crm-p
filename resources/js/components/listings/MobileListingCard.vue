@@ -76,6 +76,7 @@
 </template>
 
 <script setup>
+import { hidesBedsBaths } from "@/composables/listingPropertyType"
 import { computed, ref } from 'vue'
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal'
 
@@ -109,7 +110,8 @@ const typeName = computed(() => typeLabel.value.toLowerCase())
 
 const locationLabel = computed(() => props.property.area || '')
 
-const isLand = computed(() => typeName.value.includes('plot') || typeName.value.includes('land'))
+// Plot / land / office: no beds or baths (listingPropertyType.js).
+const isLand = computed(() => hidesBedsBaths(typeLabel.value))
 
 const isStudio = computed(() => {
   if (isLand.value) return false

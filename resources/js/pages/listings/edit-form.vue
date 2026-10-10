@@ -1684,6 +1684,7 @@ import {
   resolvePaymentPlanOption,
 } from "@/composables/listingPaymentPlanPresets";
 import { requiresPlotSize } from "@/composables/listingPlotSize";
+import { hidesBedsBaths } from "@/composables/listingPropertyType";
 import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
 import {
   useListingPaymentBreakdown,
@@ -1734,15 +1735,8 @@ const floorPlanTab = ref('existing');
 const filteredProjectFloorPlans = ref([]);
 const selectedAreaFilter = ref(null);
 // Add this to your computed properties section
-const isPlotOrLand = computed(() => {
-  const plotTypes = ['Plot', 'Land', 'Residential Plot', 'Commercial Plot'];
-  if (!form.value.property_type) return false;
-  
-  const propertyTypeName = form.value.property_type.name || form.value.property_type;
-  return plotTypes.some(type => 
-    propertyTypeName.toLowerCase().includes(type.toLowerCase())
-  );
-});
+// Plot / land / office: no Bedrooms or Bathrooms fields (listingPropertyType.js).
+const isPlotOrLand = computed(() => hidesBedsBaths(form.value.property_type));
 const needsPlotSize = computed(() => requiresPlotSize(form.value.property_type));
 // Floor Plan Computed Properties
 const totalFloorPlans = computed(() => {

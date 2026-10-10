@@ -76,8 +76,8 @@
 
             <div class="property-details d-flex justify-content-between text-muted small mb-3">
               <span><i class="ri-building-4-line me-1"></i>{{ getPropertyType(property) }}</span>
-              <span><i class="ri-hotel-bed-line me-1"></i>{{ property.number_of_bedrooms || 0 }}</span>
-              <span><i class="ri-water-flash-line me-1"></i>{{ property.number_of_bathrooms || 0 }}</span>
+              <span v-if="!hidesBedsBaths(property.property_type)"><i class="ri-hotel-bed-line me-1"></i>{{ property.number_of_bedrooms || 0 }}</span>
+              <span v-if="!hidesBedsBaths(property.property_type)"><i class="ri-water-flash-line me-1"></i>{{ property.number_of_bathrooms || 0 }}</span>
               <span><i class="ri-ruler-line me-1"></i>{{ property.size_sqft || property.size_sqmt || 0 }} {{ getAreaUnit(property) }}</span>
             </div>
             
@@ -181,6 +181,7 @@ import SearchBar from "./SearchBar.vue";
 import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
+import { hidesBedsBaths } from '@/composables/listingPropertyType';
 
 // Default images
 import property1 from "@/assets/images/a.jpeg";
@@ -468,6 +469,7 @@ export default {
 
     return {
       openPropertyDetailsFromClick,
+      hidesBedsBaths,
       properties,
       filteredProperties,
       isLoading,

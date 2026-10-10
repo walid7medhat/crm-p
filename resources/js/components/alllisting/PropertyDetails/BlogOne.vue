@@ -252,7 +252,7 @@
                       <!-- <span class="spec-main-label"></span> -->
                     </div>
                   </div>
-                   <div class="spec-main-item" v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
+                   <div class="spec-main-item" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-hotel-bed-line"></i>-->
@@ -262,7 +262,7 @@
                     </div>
                   </div>
                   
-                  <div class="spec-main-item"  v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
+                  <div class="spec-main-item"  v-if="!hidesBedsBaths(property.property_type) && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
                           <!--<i class="ri-contrast-drop-line"></i>-->
@@ -315,12 +315,12 @@
                   </div>
                   
                   
-                  <div class="info-item" v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
+                  <div class="info-item" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
                     <span class="info-label">Bedrooms</span>
                     <span class="info-value"> {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +'Bedrooms' }} </span>
                   </div>
                   
-                  <div class="info-item"  v-if="!property.property_type.name.toLowerCase().includes('plot') && !property.property_type.name.toLowerCase().includes('land') && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
+                  <div class="info-item"  v-if="!hidesBedsBaths(property.property_type) && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
                     <span class="info-label">Bathrooms</span>
                     <span class="info-value">{{ property.number_of_bathrooms || "0" }}</span>
                   </div>
@@ -2271,6 +2271,7 @@
 import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextTick } from 'vue';
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import { hidesBedsBaths } from '@/composables/listingPropertyType';
 import MobilePropertyGallery from '@/components/listings/MobilePropertyGallery.vue';
 import MobilePropertyAgentBar from '@/components/listings/MobilePropertyAgentBar.vue';
 import MobilePropertyActionsSheet from '@/components/listings/MobilePropertyActionsSheet.vue';
@@ -3185,7 +3186,7 @@ const mobileSpecs = computed(() => {
   const p = property.value;
   if (!p) return [];
   const typeName = (p.property_type?.name || '').toLowerCase();
-  const isLand = typeName.includes('plot') || typeName.includes('land');
+  const isLand = hidesBedsBaths(typeName); // plot / land / office
   const specs = [];
   if (p.property_type?.name) {
     specs.push({ key: 'type', icon: 'ri-building-4-line', value: p.property_type.name });
@@ -3212,7 +3213,7 @@ const mobileSpecSentence = computed(() => {
   const p = property.value;
   if (!p) return '';
   const typeName = (p.property_type?.name || '').toLowerCase();
-  const isLand = typeName.includes('plot') || typeName.includes('land');
+  const isLand = hidesBedsBaths(typeName); // plot / land / office
   const bits = [];
   if (p.property_type?.name) bits.push(p.property_type.name);
   if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
@@ -3233,7 +3234,7 @@ const mobileDetailRows = computed(() => {
     rows.push({ icon, label, value: String(value) });
   };
   const typeName = (p.property_type?.name || '').toLowerCase();
-  const isLand = typeName.includes('plot') || typeName.includes('land');
+  const isLand = hidesBedsBaths(typeName); // plot / land / office
   add('ri-price-tag-3-line', 'Sale/Rent', p.listing_status);
   add('ri-building-4-line', 'Property Type', p.property_type?.name);
   if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
@@ -6023,7 +6024,7 @@ const paintOfferPhoto = (pdf, dataUrl) => {
 const offerCoverFields = () => {
   const propertyTypeName = property.value?.property_type?.name || '';
   const bedrooms = property.value?.number_of_bedrooms;
-  const isPlot = /plot|land/i.test(propertyTypeName);
+  const isPlot = hidesBedsBaths(propertyTypeName); // plot / land / office: no bedrooms in subtitle
   const typeWithoutApartment = propertyTypeName.replace(/\bapartments?\b/ig, '').replace(/\s+/g, ' ').trim();
   let subtitle = typeWithoutApartment;
   if (!isPlot && bedrooms === 0) subtitle = 'Studio';
@@ -6086,10 +6087,13 @@ const drawMobileDetails = async (pdf, logo) => {
   pdf.setFontSize(22);
   pdf.text('PROPERTY', 14, 18);
   pdf.text('DETAILS', 14, 28);
+  const noBedsBaths = hidesBedsBaths(property.value?.property_type);
   const rows = [
     ['Property Type', property.value?.property_type?.name || 'N/A'],
-    ['Bedrooms', property.value?.number_of_bedrooms === 0 ? 'Studio' : String(property.value?.number_of_bedrooms ?? 'N/A')],
-    ['Bathrooms', String(property.value?.number_of_bathrooms ?? 'N/A')],
+    ...(noBedsBaths ? [] : [
+      ['Bedrooms', property.value?.number_of_bedrooms === 0 ? 'Studio' : String(property.value?.number_of_bedrooms ?? 'N/A')],
+      ['Bathrooms', String(property.value?.number_of_bathrooms ?? 'N/A')],
+    ]),
     ['Area Size', property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A'],
   ];
   if (plotSizeLabel.value) rows.push(['Plot Size', plotSizeLabel.value]);
@@ -6846,7 +6850,7 @@ const getProjectImageBySlot = (slot) => {
 const createSlide1 = (currentUser) => {
   const propertyTypeName = property.value?.property_type?.name || '';
   const bedrooms = property.value?.number_of_bedrooms;
-  const isPlot = /plot|land/i.test(propertyTypeName);
+  const isPlot = hidesBedsBaths(propertyTypeName); // plot / land / office: no bedrooms in subtitle
   const typeWithoutApartment = propertyTypeName.replace(/\bapartments?\b/ig, '').replace(/\s+/g, ' ').trim();
   let subtitle = typeWithoutApartment;
   if (!isPlot && bedrooms === 0) subtitle = 'Studio';
@@ -6889,6 +6893,8 @@ const createSlide2 = () => {
   const propertyType = property.value?.property_type?.name || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
   const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
+  // Plot / land / office: no Bedrooms / Bathrooms columns.
+  const noBedsBaths = hidesBedsBaths(property.value?.property_type);
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const plotSize = plotSizeLabel.value ? plotSizeLabel.value.replace('Sq Ft', 'SQFT') : '';
   const plotSizeColumn = plotSize ? `
@@ -6924,7 +6930,7 @@ const createSlide2 = () => {
           <div style="flex:1 !important; padding-right:5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Property Type</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${propertyType}</p>
-          </div>
+          </div>${noBedsBaths ? '' : `
           <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bedrooms</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${bedrooms}</p>
@@ -6932,7 +6938,7 @@ const createSlide2 = () => {
           <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
-          </div>
+          </div>`}
           <div style="flex:1 !important; ${plotSize ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
@@ -8618,7 +8624,7 @@ const getHistoryIcon = (event) => {
     markAsRentedByOIAgent,
     openAToAModalForRent,
     submitAToAForRent,
-   hasRejectionReason,formatRejectionDate ,rejectionDetails, needsApproval, plotSizeLabel,
+   hasRejectionReason,formatRejectionDate ,rejectionDetails, needsApproval, plotSizeLabel, hidesBedsBaths,
 
     internalUpdates,
   newUpdateText,
