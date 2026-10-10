@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BackgroundController;
 use App\Http\Controllers\Api\SystemCampaignController;
+use App\Http\Controllers\Api\DailyMotivationController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\Listing\FeatureController;
 use App\Http\Controllers\Api\UserInvitationController;
@@ -661,6 +662,27 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/{campaign}', [SystemCampaignController::class, 'update'])->whereNumber('campaign');
         Route::patch('/{campaign}/active', [SystemCampaignController::class, 'updateActive'])->whereNumber('campaign');
         Route::delete('/{campaign}', [SystemCampaignController::class, 'destroy'])->whereNumber('campaign');
+    });
+
+    // Daily motivation. Ordinary users only receive their own message.
+    // Settings, the message library, and private tests are Super Admin only.
+    Route::prefix('daily-motivation')->group(function () {
+        Route::get('/today', [DailyMotivationController::class, 'today']);
+        Route::post('/today/dismiss', [DailyMotivationController::class, 'dismiss']);
+
+        Route::middleware('role:super_admin')->prefix('admin')->group(function () {
+            Route::get('/overview', [DailyMotivationController::class, 'overview']);
+            Route::post('/delivery', [DailyMotivationController::class, 'delivery']);
+            Route::post('/send-today', [DailyMotivationController::class, 'sendToday']);
+            Route::get('/messages', [DailyMotivationController::class, 'messages']);
+            Route::put('/messages/{message}', [DailyMotivationController::class, 'updateMessage'])->whereNumber('message');
+            Route::patch('/messages/{message}/enabled', [DailyMotivationController::class, 'updateMessageEnabled'])->whereNumber('message');
+            Route::post('/preview', [DailyMotivationController::class, 'preview']);
+            Route::post('/send-test', [DailyMotivationController::class, 'sendTest']);
+            Route::post('/import', [DailyMotivationController::class, 'import']);
+            Route::get('/users', [DailyMotivationController::class, 'lookup']);
+            Route::post('/users/{user}/reset', [DailyMotivationController::class, 'resetUser'])->whereNumber('user');
+        });
     });
 
 

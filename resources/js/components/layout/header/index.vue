@@ -233,6 +233,21 @@
           </transition>
         </li>
 
+        <li v-if="isSuperAdmin">
+          <router-link to="/daily-motivation" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarSubItemActive('/daily-motivation') }"
+              @mouseenter="prefetchRoute('/daily-motivation')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:sunrise" class="menu-icon" />
+              <span>Daily Message</span>
+            </a>
+          </router-link>
+        </li>
+
         <li v-if="isSuperAdmin || Number(user?.id) === 33">
           <router-link to="/system-announcements" custom v-slot="{ navigate, href }">
             <a
@@ -597,6 +612,12 @@
               </button>
             </div>
           </template>
+
+          <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/daily-motivation') }" @click="onMoreGo('/daily-motivation')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:sunrise" /></span>
+            <span class="mobile-more-row__label">Daily Message</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
 
           <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/system-announcements') }" @click="onMoreGo('/system-announcements')">
             <span class="mobile-more-row__icon"><iconify-icon icon="lucide:megaphone" /></span>
@@ -1293,6 +1314,10 @@ const mobileDockItems = computed(() => {
 
   if (isSuperAdmin.value || isHr.value || user.value?.id === 186) {
     moreChildren.push({ path: '/hr', label: 'HR', iconSrc: hrIcon.value });
+  }
+
+  if (isSuperAdmin.value) {
+    moreChildren.push({ path: '/daily-motivation', label: 'Daily Message', icon: 'lucide:sunrise' });
   }
 
   if (filteredUsersItems.value.length) {

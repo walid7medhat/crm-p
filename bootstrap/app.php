@@ -136,6 +136,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->dailyAt('09:00')
     ->timezone('Asia/Dubai');
 
+    $schedule->command('motivation:send')
+        ->dailyAt(config('daily_motivation.send_time', '09:00'))
+        ->timezone(config('daily_motivation.timezone', 'Asia/Dubai'))
+        ->withoutOverlapping()
+        ->appendOutputTo(storage_path('logs/daily-motivation.log'));
+
     $schedule->command('interviews:send-reminders --hours=1')
         ->everyMinute()
         ->timezone('Asia/Dubai');
