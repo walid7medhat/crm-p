@@ -1861,19 +1861,16 @@ class DealController extends Controller
         $propertiesData = [];
     }
     
-    $deal->properties()->delete();
-    
-    if (empty($propertiesData)) {
-        return;
-    }
-    
-    foreach ($propertiesData as $index => $propertyData) {
-        // تأكد أن propertyData هو array
-        if (!is_array($propertyData)) {
-            continue;
-        }
-        
-        $deal->properties()->create([
+    // Update the existing rows in place (matched by id when sent, else by position) instead of
+    // delete + recreate — recreating gave every property a new id, so an already-open deal
+    // view then failed to save its property card ("No query results for model DealProperty").
+    $existing = $deal->properties()->orderBy('sort_order')->orderBy('id')->get();
+    $byId = $existing->keyBy('id');
+    $unused = $existing->values();
+    $keptIds = [];
+
+    foreach (array_values(array_filter($propertiesData, 'is_array')) as $index => $propertyData) {
+        $row = [
             'sort_order' => $index,
             'unit_no' => $propertyData['unit_no'] ?? null,
             'property_type_id' => $propertyData['property_type_id'] ?? null,
@@ -1898,8 +1895,22 @@ class DealController extends Controller
             'mou_documents' => $propertyData['mou_documents'] ?? null,
             'noc_documents' => $propertyData['noc_documents'] ?? null,
             'title_deed_documents' => $propertyData['title_deed_documents'] ?? null,
-        ]);
+        ];
+
+        $property = (! empty($propertyData['id']) && $byId->has((int) $propertyData['id']) && ! in_array((int) $propertyData['id'], $keptIds, true))
+            ? $byId->get((int) $propertyData['id'])
+            : $unused->first(fn ($p) => ! in_array($p->id, $keptIds, true));
+
+        if ($property) {
+            $property->update($row);
+        } else {
+            $property = $deal->properties()->create($row);
+        }
+        $keptIds[] = $property->id;
     }
+
+    // Properties removed from the list.
+    $deal->properties()->whereNotIn('id', $keptIds ?: [0])->delete();
 }
 
     /**

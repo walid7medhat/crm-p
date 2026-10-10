@@ -1791,14 +1791,13 @@ async function onDealDragChange(evt, targetColumn) {
 
 
 
-  let fullDealData = deal
-  if (!fullDealData?.properties) {
-    fullDealData = await fetchDealDetails(deal.id)
-    if (!fullDealData) {
-      revertDealDrag(deal, targetColumn, oldStageId)
-      showNotification('Failed to load deal details', 'error')
-      return
-    }
+  // Always load the deal fresh: the card/open-modal copy can miss a property added since,
+  // and the stage form saves the whole property list (a stale list deleted that property).
+  const fullDealData = (await fetchDealDetails(deal.id)) || (deal?.properties ? deal : null)
+  if (!fullDealData) {
+    revertDealDrag(deal, targetColumn, oldStageId)
+    showNotification('Failed to load deal details', 'error')
+    return
   }
 
   try {
@@ -1825,6 +1824,7 @@ async function onDealDragChange(evt, targetColumn) {
         originalStageId: oldStageId,
         dealData: {
           ...originalDeal,
+          ...fullDealData,
           stage: fullDealData?.stage ?? originalDeal.stage ?? null,
         },
         missingFields,
@@ -2164,13 +2164,12 @@ function normalizeStageName(value) {
 async function handleStageChangeFromModal({ dealId, originalStageId, targetStageId, targetStageName,targetStageOrder, dealData }) {
   if (!dealId || targetStageId == null) return
   if (String(originalStageId) === String(targetStageId)) return
-    let fullDealData = dealData
-  if (!fullDealData?.properties) {
-    fullDealData = await fetchDealDetails(dealId)
-    if (!fullDealData) {
-      showNotification('Failed to load deal details', 'error')
-      return
-    }
+  // Always load the deal fresh (same as onDealDragChange): a property added in the open modal may be
+  // missing from dealData, and the stage form saves the whole property list.
+  const fullDealData = (await fetchDealDetails(dealId)) || (dealData?.properties ? dealData : null)
+  if (!fullDealData) {
+    showNotification('Failed to load deal details', 'error')
+    return
   }
   const targetColumn =
     columns.value.find((c) => String(c.stage_id) === String(targetStageId)) ||
@@ -2229,6 +2228,7 @@ async function handleStageChangeFromModal({ dealId, originalStageId, targetStage
       originalStageId,
       dealData: {
         ...(dealData || selectedDeal.value || {}),
+        ...fullDealData,
         stage: fullDealData?.stage ?? (dealData || selectedDeal.value)?.stage ?? null,
       },
       missingFields,

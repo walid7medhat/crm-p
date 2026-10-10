@@ -1151,6 +1151,17 @@ async function saveEdit() {
     }
   } catch (error) {
     console.error('Error updating property:', error)
+    if (error.response?.status === 404) {
+      // The deal was saved elsewhere since this view loaded — reload it so the next save works.
+      emit('refresh-deal')
+      Swal.fire({
+        icon: 'warning',
+        title: 'Deal updated',
+        text: 'This deal was changed since you opened it. It has been reloaded — please make your edit again.'
+      })
+      isEditing.value = false
+      return
+    }
     Swal.fire({
       icon: 'error',
       title: 'Error',

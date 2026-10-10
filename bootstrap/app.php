@@ -47,8 +47,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 return ApiResponse::error('Unauthorized', 401);
             }
 
-            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                return ApiResponse::error('Resource not found', 404);
+            // Route-model binding misses arrive wrapped in a NotFoundHttpException whose message is
+            // "No query results for model [App\Models\…] 290" — never show that to users.
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException
+                || $e->getPrevious() instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return ApiResponse::error('This record no longer exists. Please refresh the page and try again.', 404);
             }
 
             return ApiResponse::error(
