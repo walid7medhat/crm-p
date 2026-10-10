@@ -15,6 +15,16 @@
         <button type="button" class="edge-btn edge-btn--test" :disabled="busy || !messages.length" @click="runTest">
           Test
         </button>
+        <button type="button" class="edge-btn edge-btn--test" :disabled="busy" @click="pickWorkbook">
+          Import
+        </button>
+        <input
+          ref="workbookInput"
+          type="file"
+          class="edge-file"
+          accept=".xlsx,.xls,.csv"
+          @change="onWorkbookChosen"
+        >
       </div>
     </header>
 
@@ -30,7 +40,11 @@
 
     <section class="edge-list">
       <p class="edge-list-title">All messages</p>
-      <p v-if="!messages.length" class="edge-empty">No messages are loaded yet.</p>
+      <p v-if="!messages.length" class="edge-empty">
+        No messages in the database yet. Git push only deploys the page — import
+        <strong>OIA_Daily_Sales_Motivation_120.xlsx</strong> here, or run
+        <code>php artisan motivation:import</code> on the server.
+      </p>
       <button
         v-for="item in pageMessages"
         :key="item.id"
@@ -79,6 +93,7 @@ import { openDailyEdgeTest } from '@/composables/useDailyEdgePreview.js'
 import {
   fetchMessages,
   fetchOverview,
+  importWorkbook,
   motivationError,
   previewMessage,
   sendToday,
@@ -94,6 +109,7 @@ const notice = ref('')
 const noticeError = ref(false)
 const busy = ref(false)
 const dialog = ref(null)
+const workbookInput = ref(null)
 
 const canStart = computed(() => !!overview.value?.messages?.ready && !overview.value?.is_enabled)
 const pageCount = computed(() => Math.max(1, Math.ceil(messages.value.length / pageSize)))
@@ -171,6 +187,29 @@ async function confirmDialog() {
     await load()
   } catch (error) {
     flash(motivationError(error, 'That change was not saved.'), true)
+  } finally {
+    busy.value = false
+  }
+}
+
+function pickWorkbook() {
+  workbookInput.value?.click()
+}
+
+async function onWorkbookChosen(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  busy.value = true
+  notice.value = ''
+  try {
+    const response = await importWorkbook(file)
+    const result = response.data?.data || {}
+    await load()
+    flash(`Imported ${result.total || messages.value.length} messages (${result.created || 0} new, ${result.updated || 0} updated).`)
+  } catch (error) {
+    flash(motivationError(error, 'The workbook could not be imported.'), true)
   } finally {
     busy.value = false
   }
@@ -264,6 +303,10 @@ onMounted(async () => {
 .edge-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.edge-file {
+  display: none;
 }
 
 .edge-btn--start {
