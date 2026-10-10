@@ -108,6 +108,27 @@ class Bitrix24FieldLabels
     }
 
     /**
+     * Question/answer rows not worth showing on a lead:
+     *  - "Last Communication time" (Bitrix bookkeeping, not a client answer);
+     *  - an unlabeled Bitrix custom field (UF_CRM_*) whose answer is only option IDs
+     *    such as "572" or "572,507,597" — unreadable without the Bitrix enum list.
+     *    IDs are capped at 5 digits so phone numbers in custom fields still show.
+     */
+    public static function isHiddenAnswer(?string $fieldName, $value): bool
+    {
+        $name = strtolower(trim(str_replace('_', ' ', (string) $fieldName)));
+        if ($name === 'last communication time') {
+            return true;
+        }
+
+        if (preg_match('/^UF_CRM_/i', (string) $fieldName)) {
+            return (bool) preg_match('/^\s*\d{1,5}(\s*,\s*\d{1,5})*\s*$/', (string) $value);
+        }
+
+        return false;
+    }
+
+    /**
      * Bitrix24 label fields come back per-language, e.g. {"en": "...", "1033": "..."}.
      * Prefer English, otherwise take whatever's first.
      */

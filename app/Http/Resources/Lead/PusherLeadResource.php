@@ -18,6 +18,9 @@ $facebookFields = [];
 if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) {
     foreach ($rawMetaData['field_data'] as $field) {
         if (isset($field['name']) && isset($field['values'][0])) {
+            if (Bitrix24FieldLabels::isHiddenAnswer($field['name'], $field['values'][0])) {
+                continue;
+            }
             $label = Bitrix24FieldLabels::resolve($field['name']) ?? $field['name'];
             $facebookFields[$label] = $field['values'][0];
         }
@@ -203,7 +206,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
                 $fieldName = $field['name'];
                 $fieldValue = $field['values'][0];
                 
-                if (!in_array($fieldName, $basicFields)) {
+                if (!in_array($fieldName, $basicFields) && !Bitrix24FieldLabels::isHiddenAnswer($fieldName, $fieldValue)) {
                     $label = Bitrix24FieldLabels::resolve($fieldName) ?? $fieldName;
                     $facebookFields[$label] = $fieldValue;
                 }
