@@ -5571,12 +5571,21 @@ let pdfMobileMode = false;
 let offerPdfInFlight = false;
 const pdfImageCache = {};
 
+// Desktop gets the same treatment at print quality: every offer photo is fetched in
+// parallel up front and downscaled to DESKTOP_PDF_IMAGE_WIDTH (= slide width at the
+// html2canvas scale of 2, so no visible loss). html2canvas then works from in-memory
+// data URLs instead of downloading + decoding multi-MB originals slide after slide,
+// which is what made desktop offers take minutes and time out on slower connections.
+let pdfDesktopMode = false;
+const pdfDesktopImageCache = {};
+const DESKTOP_PDF_IMAGE_WIDTH = 1600;
+
 // 1x1 transparent GIF — used when a source image can't be fetched/resized in time, so
 // html2canvas never gets handed the original (possibly slow/large/CORS-blocked) network
 // URL as a fallback. A blank slide background beats one that hangs the whole render.
 const PDF_BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
 
-const resizeImageToDataUrl = (url, maxWidth = 720, quality = 0.6, timeoutMs = 5000) => new Promise((resolve) => {
+const resizeImageToDataUrl = (url, maxWidth = 720, quality = 0.6, timeoutMs = 5000, resizeQuality = 'low') => new Promise((resolve) => {
   if (!url) return resolve(null);
   let settled = false;
   const finish = (value) => {
@@ -5630,7 +5639,7 @@ const resizeImageToDataUrl = (url, maxWidth = 720, quality = 0.6, timeoutMs = 50
     const blob = await response.blob();
     let bitmap;
     try {
-      bitmap = await createImageBitmap(blob, { resizeWidth: maxWidth, resizeQuality: 'low' });
+      bitmap = await createImageBitmap(blob, { resizeWidth: maxWidth, resizeQuality });
     } catch {
       bitmap = await createImageBitmap(blob);
     }
@@ -5653,8 +5662,25 @@ const resizeImageToDataUrl = (url, maxWidth = 720, quality = 0.6, timeoutMs = 50
 // cached, that original fetch is exactly what was slow/stuck in the first place, so
 // html2canvas would just hit the same wall again. A blank background is the safe fallback.
 const pdfImg = (resolvedUrl) => {
-  if (!pdfMobileMode || !resolvedUrl) return resolvedUrl;
+  if (!resolvedUrl) return resolvedUrl;
+  // Desktop: use the downscaled copy when we have one, otherwise the original (as before).
+  if (pdfDesktopMode) return pdfDesktopImageCache[resolvedUrl] || resolvedUrl;
+  if (!pdfMobileMode) return resolvedUrl;
   return pdfImageCache[resolvedUrl] || PDF_BLANK_IMG;
+};
+
+/** Desktop offer: fetch + downscale every offer photo, a few at a time, in parallel. */
+const preloadDesktopOfferImages = async (concurrency = 4) => {
+  const urls = collectOfferImageUrls().filter((u) => u && !pdfDesktopImageCache[u]);
+  let next = 0;
+  const worker = async () => {
+    while (next < urls.length) {
+      const url = urls[next++];
+      const data = await resizeImageToDataUrl(url, DESKTOP_PDF_IMAGE_WIDTH, 0.88, 20000, 'high');
+      if (data) pdfDesktopImageCache[url] = data;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, worker));
 };
 
 const collectOfferImageUrls = () => {
@@ -6537,10 +6563,13 @@ const generatePDF = async () => {
       }
     };
 
+    // Start fetching/downscaling the photos now so it overlaps with saving the offer.
+    const imagesReady = preloadDesktopOfferImages();
+
     // First, save offer to database
     const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
       offer_data: offerData,
-      client_name: 'Potential Client' 
+      client_name: 'Potential Client'
     });
 
     if (!saveResponse.data.status) {
@@ -6553,7 +6582,11 @@ const generatePDF = async () => {
     const filename = `sales-offer-${offerNumber}.pdf`;
 
     pdfMobileMode = false;
+    Swal.update({ text: 'Preparing images…' });
+    await imagesReady;
+    pdfDesktopMode = true;
     const pdfContent = createNewDesignContent(currentUser);
+    Swal.update({ text: 'Building the offer pages…' });
 
     // Load every slide's images up front, in parallel, instead of letting each
     // html2canvas pass block on network fetches one slide at a time — this is
@@ -6586,7 +6619,8 @@ const generatePDF = async () => {
         60000,
         `Slide ${i + 1} of ${slideElements.length} timed out rendering`
       );
-      const imgData = slideCanvas.toDataURL('image/jpeg', 0.98);
+      // 0.92: visually identical to 0.98 for photos, but a much smaller/faster PDF.
+      const imgData = slideCanvas.toDataURL('image/jpeg', 0.92);
       slideCanvas.width = 0;
       slideCanvas.height = 0;
       if (i > 0) pdf.addPage([210, 148], 'landscape');
@@ -6633,6 +6667,7 @@ const generatePDF = async () => {
     proxy.$showNotification(`Failed to generate PDF: ${detail}`, 'error');
   } finally {
     pdfMobileMode = false;
+    pdfDesktopMode = false;
     offerPdfInFlight = false;
   }
 };
