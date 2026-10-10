@@ -6601,8 +6601,19 @@ const generatePDF = async () => {
       });
     }));
 
+    // html2canvas clones the WHOLE document into an iframe before drawing — once per
+    // slide here. With the offer opened from the property popup on top of All Listings /
+    // the Kanban board, that meant copying the entire CRM page 8–10 times, which is what
+    // made the offer so slow. Only html2pdf's overlay (which holds the slide) is ever
+    // drawn, so skip every other top-level node while cloning. Output is unchanged.
+    const keepOnlyOfferOverlay = (el) =>
+      el.parentElement === document.body && !el.classList?.contains('html2pdf__overlay');
+
     const options = {
-      html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0 },
+      html2canvas: {
+        scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0,
+        ignoreElements: keepOnlyOfferOverlay,
+      },
     };
 
     const withTimeout = (promise, ms, message) => Promise.race([
