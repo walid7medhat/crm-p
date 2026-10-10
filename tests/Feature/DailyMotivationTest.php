@@ -67,6 +67,29 @@ class DailyMotivationTest extends TestCase
         $this->assertSame(0, MotivationAssignment::query()->where('user_id', $sales->id)->count());
     }
 
+    public function test_overview_lists_only_activated_sales_agents(): void
+    {
+        $admin = $this->makeUser('super_admin');
+        $agent = $this->makeUser('sales');
+        $neverLoggedIn = $this->makeUser('sales');
+        $neverLoggedIn->forceFill(['last_login_at' => null])->save();
+        $inactive = $this->makeUser('sales', 'in_active');
+        $staffWithSales = $this->makeUser('admin');
+        Role::findOrCreate('sales', 'api');
+        $staffWithSales->assignRole('sales');
+
+        $names = $this->asUser($admin)->getJson('/api/daily-motivation/admin/overview')
+            ->assertOk()
+            ->json('data.sales');
+
+        $ids = collect($names)->pluck('id')->all();
+        $this->assertContains($agent->id, $ids);
+        $this->assertNotContains($neverLoggedIn->id, $ids);
+        $this->assertNotContains($inactive->id, $ids);
+        $this->assertNotContains($staffWithSales->id, $ids);
+        $this->assertNotContains($admin->id, $ids);
+    }
+
     public function test_enable_requires_confirmation_and_the_full_collection(): void
     {
         $admin = $this->makeUser('super_admin');
@@ -361,6 +384,7 @@ class DailyMotivationTest extends TestCase
         $user = User::factory()->create([
             'status' => $status,
             'email' => uniqid($role, true).'@example.test',
+            'last_login_at' => $status === 'active' ? now() : null,
         ]);
         Role::findOrCreate($role, 'api');
         $user->assignRole($role);

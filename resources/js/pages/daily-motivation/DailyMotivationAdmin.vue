@@ -31,8 +31,8 @@
     <p v-if="notice" class="edge-notice" :class="{ 'is-error': noticeError }" role="status">{{ notice }}</p>
 
     <section class="edge-list">
-      <p class="edge-list-title">Active sales · {{ sales.length }}</p>
-      <p v-if="!sales.length" class="edge-empty">No active sales people.</p>
+      <p class="edge-list-title">Active agents · {{ sales.length }}</p>
+      <p v-if="!sales.length" class="edge-empty">No activated sales agents.</p>
       <ul v-else class="edge-sales">
         <li v-for="person in sales" :key="person.id">{{ person.name }}</li>
       </ul>

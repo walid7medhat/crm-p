@@ -257,17 +257,47 @@ class DailyMotivationService
         return now($this->timezone())->format('H:i') >= $sendAt;
     }
 
+    /** Staff roles that must not receive Daily Message even if they also have sales. */
+    private const STAFF_ROLES = [
+        'super_admin',
+        'admin',
+        'branch_admin',
+        'manager',
+        'team_lead',
+        'hr',
+        'IT',
+        'Marketing',
+        'listing with project access',
+        'project adder',
+    ];
+
     private function isActiveSales(User $user): bool
     {
-        return ($user->status ?? null) === 'active' && $user->hasRole('sales');
+        if (($user->status ?? null) !== 'active') {
+            return false;
+        }
+
+        if (! $user->hasRole('sales')) {
+            return false;
+        }
+
+        if ($user->roles->contains(fn ($role) => in_array($role->name, self::STAFF_ROLES, true))) {
+            return false;
+        }
+
+        return $user->last_login_at !== null;
     }
 
     private function activeSalesQuery()
     {
         return User::query()
             ->where('status', 'active')
+            ->whereNotNull('last_login_at')
             ->whereHas('roles', function ($query) {
                 $query->where('name', 'sales')->where('guard_name', 'api');
+            })
+            ->whereDoesntHave('roles', function ($query) {
+                $query->where('guard_name', 'api')->whereIn('name', self::STAFF_ROLES);
             });
     }
 
