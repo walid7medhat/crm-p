@@ -727,6 +727,73 @@ function columnBodyRect(column) {
     return column?.getBoundingClientRect?.() || null
 }
 
+function firstLeadSlot(column, sample) {
+    const scroller = column?.querySelector?.('.column-content-scrollable')
+    const host = scroller || column
+    if (!host?.getBoundingClientRect) return null
+    const body = host.getBoundingClientRect()
+    if (body.width < 20 || body.height < 40) return null
+    const card = host.querySelector('.kanban-card')
+    const cardRect = card?.getBoundingClientRect?.()
+    const width = Math.min(
+        (cardRect?.width > 8 ? cardRect.width : 0) || sample?.width || 220,
+        Math.max(120, body.width - 16),
+    )
+    const height = (cardRect?.height > 8 ? cardRect.height : 0) || sample?.height || 120
+    const atTop = cardRect
+        && cardRect.height > 8
+        && cardRect.top >= body.top - 4
+        && cardRect.top <= body.top + 36
+        && cardRect.bottom > body.top
+    return {
+        x: atTop ? cardRect.left : body.left + 8,
+        y: atTop ? cardRect.top : body.top + 8,
+        width,
+        height,
+    }
+}
+
+function usesFirstCardLane(job) {
+    return job?.scene === 'contact' || job?.scene === 'deliver'
+}
+
+function alignToFirstCards(job) {
+    if (!usesFirstCardLane(job)) return
+    const slot = firstLeadSlot(stageEl(job.from?.id), job.sourceRect)
+    if (!slot) return
+    job.sourceRect = {
+        left: slot.x,
+        top: slot.y,
+        width: slot.width,
+        height: slot.height,
+        right: slot.x + slot.width,
+        bottom: slot.y + slot.height,
+    }
+    if (job.parked) {
+        job.parked.style.left = `${slot.x}px`
+        job.parked.style.top = `${slot.y}px`
+        job.parked.style.width = `${Math.max(180, slot.width)}px`
+    }
+}
+
+function landOnFirstCard(job, dest) {
+    if (!usesFirstCardLane(job) || !dest?.rect) return dest
+    const slot = firstLeadSlot(dest.column, dest.rect)
+    if (!slot) return dest
+    return {
+        ...dest,
+        rect: {
+            ...dest.rect,
+            left: slot.x,
+            top: slot.y,
+            width: slot.width || dest.rect.width,
+            height: slot.height || dest.rect.height,
+            right: slot.x + (slot.width || dest.rect.width),
+            bottom: slot.y + (slot.height || dest.rect.height),
+        },
+    }
+}
+
 function measureDest(job) {
     const column = stageEl(job.to?.id) || (job.scene === 'convert' ? stageByKind('converted') : null)
     const card = cardEl(job.leadId)
@@ -1192,12 +1259,12 @@ function playDeliver(job, dest) {
 
     let stopX = from.x + Math.min(cardW0, 220) * 0.28 - jeepW * doorFrac
     stopX = clamp(stopX, board.left - jeepW * 0.08, Math.max(board.left, board.right - jeepW - 8))
-    const floor = clamp(from.y + Math.min(cardH, 200) * 0.55, bodyTop + jeepH * 0.45, bodyBottom - 6)
+    const floor = clamp(from.y + Math.min(cardH, 160) * 0.42, bodyTop + jeepH * 0.45, bodyBottom - 6)
     const stopY = floor - jeepH
     const startX = Math.min(stopX - 170, board.left - jeepW * 0.4)
     let dropX = land.left + Math.min(land.width || cardW0, 220) * 0.22 - jeepW * doorFrac
     dropX = clamp(dropX, board.left + 4, board.right - jeepW * 0.2)
-    const dropY = clamp(land.top + 8, bodyTop + 4, Math.max(bodyTop + 4, bodyBottom - jeepH - 4))
+    const dropY = clamp(stopY + (land.top - from.y), bodyTop + 4, Math.max(bodyTop + 4, bodyBottom - jeepH - 4))
 
     const card = movingCard(job, parent, job.to?.name || 'Qualified')
     const jeep = document.createElement('div')
@@ -1895,6 +1962,7 @@ async function runJob(job) {
         finishJob(job)
         return
     }
+    alignToFirstCards(job)
     const column = stageEl(job.to?.id) || (job.scene === 'convert' ? stageByKind('converted') : null)
     const card = cardEl(job.leadId)
     const board = boardScroller()
@@ -1920,7 +1988,7 @@ async function runJob(job) {
         finishJob(job)
         return
     }
-    const dest = measureDest(job)
+    const dest = landOnFirstCard(job, measureDest(job))
     if (!dest.rect) {
         finishJob(job)
         return
