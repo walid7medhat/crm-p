@@ -32,7 +32,8 @@
                 </div>
                 <div class="flex-grow-1">
                     <div class="info-value">{{ lead?.responsible_person?.name || '—' }}
-                             <span v-if="lead?.responsible_person?.role_name" class="user-position-badge">{{ lead?.responsible_person?.role_name }}</span>
+                             <!-- Same as the hover card: job position, else the role. -->
+                             <span v-if="lead?.responsible_person?.position || lead?.responsible_person?.role_name" class="user-position-badge">{{ lead?.responsible_person?.position || lead?.responsible_person?.role_name }}</span>
                     </div>
                     <div class="info-subline">
                            <span class="sub-key">Reports To: </span>
@@ -119,7 +120,7 @@
                             <div class="person-item-info">
                                 <div class="person-item-name">
                                     <span class="user-item-name">{{ user.name }}</span>
-                                    <span v-if="user.role_name" class="user-position-badge">{{ user.role_name }}</span>
+                                    <span v-if="user.position || user.role_name" class="user-position-badge">{{ user.position || user.role_name }}</span>
                                 </div>
                                 <div class="user-item-meta-line">
                                     <span class="meta-value">{{ user.parent_name }}</span>
@@ -321,6 +322,7 @@ const updateResponsiblePerson = async () => {
             name: selectedPerson?.name,
             avatar: selectedPerson?.avatar,
             role_name: selectedPerson?.role_name,
+            position: selectedPerson?.position || null,
             // "Reports To" = direct parent, "Branch" = office (getAvailableResponsiblePersons
             // already resolves branch_name from the office hierarchy, not employeeProfile).
             parent_name: selectedPerson?.parent_name,
