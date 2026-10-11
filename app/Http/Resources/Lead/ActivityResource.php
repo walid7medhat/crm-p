@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Lead;
 
+use App\Models\User;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ActivityResource extends JsonResource
@@ -12,7 +13,13 @@ class ActivityResource extends JsonResource
             'id' => $this->id,
             'lead_id' => $this->lead_id,
             'user_id' => $this->user_id,
-            'user_name' => $this->user->name ?? null,
+            // Same hover fields as comments — names via resolveDisplayName like UserResource.
+            'user_name' => User::resolveDisplayName($this->user),
+            'user_avatar' => $this->user->avatar_url ?? null,
+            'user_role_name' => $this->user?->roles?->first()?->name,
+            'user_position' => $this->user?->employeeProfile?->designation?->name,
+            'user_parent_name' => User::resolveDisplayName($this->user?->parent),
+            'user_branch_name' => User::resolveDisplayName($this->user?->office),
             'title' => $this->title,
             'reminder_date' => $this->reminder_date->format('Y-m-d H:i:s'),
             'is_completed' => $this->is_completed,

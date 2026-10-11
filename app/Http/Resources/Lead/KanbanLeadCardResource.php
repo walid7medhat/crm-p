@@ -230,7 +230,7 @@ class KanbanLeadCardResource extends JsonResource
             'work_phone_2' => $this->work_phone_2,
             'email' => $this->email,
             'lead_source' => $this->lead_source,
-            'lead_branch_source' => $this->lead_branch_source,
+            'lead_branch_source' => Lead::branchLabel($this->lead_branch_source),
             'source_information' => $this->source_information,
             'status_lead' => $this->status_lead,
             'interaction_result' => $this->interaction_result,

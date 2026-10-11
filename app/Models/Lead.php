@@ -39,6 +39,9 @@ class Lead extends Model
         'revert'=>'datetime',
         'converted_at'=>'datetime',
         'last_scored_at' => 'datetime',
+        // Serialised as ISO UTC like updated_at/created_at — as a bare "Y-m-d H:i:s" string the
+        // board mixed formats when sorting cards by activity (Safari can't even parse it).
+        'bitrix24_last_activity_at' => 'datetime',
         'score_breakdown' => 'array',
         'extra_client_requirements' => 'array',
          'whatsapp_qualification' => 'array', 
@@ -75,6 +78,14 @@ protected const NON_ENGAGEMENT_FIELDS = [
      * saved with an owner that isn't there.
      */
     public const EXTERNAL_RESPONSIBLE_REMAP = [25 => 1690];
+
+    /** Branch source for API output — each word capitalised ("abu dhabi" → "Abu Dhabi"). */
+    public static function branchLabel($branch): ?string
+    {
+        $branch = trim((string) $branch);
+
+        return $branch === '' ? null : ucwords($branch);
+    }
 
     public static function externalResponsibleId($responsibleId): int
     {

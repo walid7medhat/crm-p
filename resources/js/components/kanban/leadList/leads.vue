@@ -3764,7 +3764,10 @@ function leadUpdatedAtMs(lead) {
     const raw = lead?.last_activity_at ?? lead?.bitrix24_last_activity_at ?? lead?.assigned_at
         ?? lead?.updated_at ?? lead?.created_at
     if (!raw) return 0
-    const t = new Date(raw).getTime()
+    // Bare "Y-m-d H:i:s" (no zone) is UAE wall time — make it parseable everywhere.
+    const str = String(raw)
+    const iso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(str) ? `${str.replace(' ', 'T')}+04:00` : str
+    const t = new Date(iso).getTime()
     return Number.isFinite(t) ? t : 0
 }
 
@@ -5306,7 +5309,12 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (payload.interaction_result) lead.interaction_result = payload.interaction_result
         if (additionalData.area) lead.area = additionalData.area
         if (additionalData.property_type) lead.property_type = additionalData.property_type
-        lead.updated_at = new Date().toISOString()
+        // The column sorts by last_activity_at — stamp it too, or the card lands at its old
+        // activity time (bottom) until the server answers.
+        const movedAt = new Date().toISOString()
+        lead.updated_at = movedAt
+        lead.last_activity_at = movedAt
+        lead.bitrix24_last_activity_at = movedAt
         handleUpdatedLead(lead, 'updated')
         suppressStageRestore = true
         showStageChangeModal.value = false

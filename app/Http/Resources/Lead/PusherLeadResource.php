@@ -84,8 +84,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'integration_project_id' => $this->resolveIntegrationProjectId(),
             'source_information' => $this->source_information,
                 'office_branch' =>
-            $this->responsiblePerson?->admin_parent?->name,
-             'lead_branch_source' => $this->lead_branch_source ,
+            \App\Models\Lead::branchLabel($this->responsiblePerson?->admin_parent?->name),
+             'lead_branch_source' => \App\Models\Lead::branchLabel($this->lead_branch_source),
             'ad_id' => $this->ad_id,
             'available_to_everyone' => $this->available_to_everyone,
             
@@ -144,6 +144,11 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // Full card replace on lead.updated — keep the activity avatar in sync.
             // Null when nobody has commented or logged an activity.
             'last_activity_user' => KanbanLeadCardResource::activityUserPayloadsForLeads([$this->resource])[(int) $this->id] ?? null,
+            // Same activity time as KanbanLeadCardResource — the board sorts each column by it,
+            // so without it a just-moved card fell back to assigned_at and dropped to the bottom.
+            'last_activity_at' => $this->bitrix24_last_activity_at ?? $this->updated_at,
+            'bitrix24_last_activity_at' => $this->bitrix24_last_activity_at,
+            'updated_at' => $this->updated_at,
             'property_type'=>$this->propertyType?->name,
             'area'=>$this->area?->title,
             'property_type_id'=>$this->propertyType?->id,

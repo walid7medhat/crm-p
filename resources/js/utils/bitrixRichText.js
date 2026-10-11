@@ -152,7 +152,7 @@ export function extractPortalLinks(raw) {
 
     const lower = safe.toLowerCase()
     let portal = 'other'
-    let label = 'Portal link'
+    let label = 'link'
     if (lower.includes('bayut.com')) {
       portal = 'bayut'
       label = 'Bayut'

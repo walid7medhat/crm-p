@@ -21,13 +21,14 @@ class LeadHistoryResource extends JsonResource
             'user'      => $this->whenLoaded('user', function () {
                 return [
                     'id'   => $this->user?->id,
-                    'name' => $this->user?->name,
+                    // display_name ?: short name — same as UserResource.
+                    'name' => \App\Models\User::resolveDisplayName($this->user),
                     'avatar'=>$this->user?->avatar_url,
                      'user_role_name' => $this->user?->roles?->first()?->name,
                     // Employee profile designation — shown instead of the role when set.
                     'user_position' => $this->user?->employeeProfile?->designation?->name,
-                    'user_parent_name' => $this->user?->parent?->name,
-                    'user_branch_name' => $this->user?->office?->name,
+                    'user_parent_name' => \App\Models\User::resolveDisplayName($this->user?->parent),
+                    'user_branch_name' => \App\Models\User::resolveDisplayName($this->user?->office),
                 ];
             }),
             'date'      => $this->created_at->format('Y-m-d H:i'),

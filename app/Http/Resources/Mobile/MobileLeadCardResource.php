@@ -35,6 +35,7 @@ class MobileLeadCardResource extends JsonResource
             'property_status' => $this->property_status,
             'budget' => $this->budget,
             'lead_source' => $this->lead_source,
+            'lead_branch_source' => \App\Models\Lead::branchLabel($this->lead_branch_source),
             'score' => $this->score,
             'priority' => $this->priority,
         ];

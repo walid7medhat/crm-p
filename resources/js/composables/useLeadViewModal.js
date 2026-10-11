@@ -47,13 +47,17 @@ export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
   if (!id) return
 
+  // The ?lead= URL sync (and page-mount checks) call this again for a lead that is
+  // already open — only the first open counts as a view.
+  const alreadyOpen = showLeadViewModal.value && Number(leadViewModalId.value) === id
+
   leadViewModalId.value = id
   leadViewModalSeed.value = leadData && typeof leadData === 'object'
     ? { ...leadData, id: leadData.id || id }
     : null
   leadViewModalDisableStageChange.value = !!options.disableStageChange
   showLeadViewModal.value = true
-  api.get(`/leads/${id}/history/view`).catch(() => {})
+  if (!alreadyOpen) api.get(`/leads/${id}/history/view`).catch(() => {})
 
   // Stay on the current page. Sending the user to /kanban first left a blank
   // screen until that page finished loading, then the lead appeared.

@@ -2159,10 +2159,20 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 return ApiResponse::error('You are not authorized to view this lead', 403);
             }
 
-            LeadHistoryHelper::log(
-                $lead->id,
-                ['action' => 'view']
-            );
+            // One "view" per user per lead per minute — the same open can reach this
+            // more than once (URL sync, page-mount checks, double clicks, two tabs).
+            $recentlyViewed = LeadHistory::where('lead_id', $lead->id)
+                ->where('user_id', auth()->id())
+                ->where('changes->action', 'view')
+                ->where('created_at', '>=', now()->subMinute())
+                ->exists();
+
+            if (! $recentlyViewed) {
+                LeadHistoryHelper::log(
+                    $lead->id,
+                    ['action' => 'view']
+                );
+            }
 
             // Frontend ignores the body — avoid serializing a full LeadResource on every open.
             return ApiResponse::success(

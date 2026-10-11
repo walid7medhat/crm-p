@@ -272,12 +272,15 @@ class LeadResource extends JsonResource
         $finalLastActivityUser = $lastActivityUser;
         $finalLastActivityAt = $lastActivityAt;
 
+        // Fallback picks a person to show; keep the real activity time when there is one
+        // (a stage change stamps bitrix24_last_activity_at) — the board sorts by this time,
+        // so replacing it with the old assignment date dropped a just-moved card to the bottom.
         if (empty($finalLastActivityUser) && ($assignmentHistory && $assignmentHistory->user)) {
             $finalLastActivityUser = $assignmentHistory->user;
-            $finalLastActivityAt = $assignmentHistory->created_at;
+            $finalLastActivityAt = $this->bitrix24_last_activity_at ?? $assignmentHistory->created_at;
         } elseif (empty($finalLastActivityUser) && $assignedBy) {
             $finalLastActivityUser = $assignedBy;
-            $finalLastActivityAt = $this->created_at;
+            $finalLastActivityAt = $this->bitrix24_last_activity_at ?? $this->created_at;
         }
 
         $duplicateIds = $this->resolveDuplicateIds();
@@ -335,13 +338,13 @@ $branchName =
             /** Project for matching listings: integration project, then DB lookup, then lead.project_id. */
             'integration_project_id' => $this->resolveIntegrationProjectId(),
             'source_information' => $this->source_information,
-           'office_branch' =>
+           'office_branch' => Lead::branchLabel(
             $this->lead_branch_source
-            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name,
+            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name),
 
-        'lead_branch_source' =>
+        'lead_branch_source' => Lead::branchLabel(
             $this->lead_branch_source
-            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name,
+            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name),
             'ad_id' => $this->ad_id,
             'available_to_everyone' => $this->available_to_everyone,
 
@@ -416,7 +419,7 @@ $branchName =
                 : '',
             'original_name' => data_get($this->createdHistory, 'changes.name', $this->name),
 
-            'original_branch' => $this->resolveOriginalBranch(),
+            'original_branch' => Lead::branchLabel($this->resolveOriginalBranch()),
             'api_first_question' => $this->getFirstApiQuestion(),
             'has_service_duplicate' => $this->hasServiceDuplicate(),
             'whatsapp_qualification' => $this->when(

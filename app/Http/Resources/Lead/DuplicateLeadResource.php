@@ -34,7 +34,7 @@ class DuplicateLeadResource extends JsonResource
             'source_information' => $this->source_information,
                 'lead_branch_source' =>
             // $this->lead_branch_source ??
-            $this->responsiblePerson?->admin_parent?->name,
+            \App\Models\Lead::branchLabel($this->responsiblePerson?->admin_parent?->name),
            
             'responsible_person_id' => $this->responsible_person_id,
             'last_stage_change_at' => $this->last_stage_change_at,
