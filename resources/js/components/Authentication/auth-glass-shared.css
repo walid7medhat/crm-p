@@ -353,42 +353,74 @@
   margin-top: 20px;
 }
 
-/* Mobile keeps dark purple shell + light text */
+.auth-mobile-hero,
+.auth-mobile-only {
+  display: none;
+}
+
+/* Mobile sign-in / sign-up — light shell. Desktop rules above stay untouched. */
 @media (max-width: 768px) {
-  .auth-glass-card--signin {
+  .auth-glass-card,
+  .auth-glass-card--signin,
+  .auth-glass-card:not(.auth-glass-card--signin) {
     width: 100%;
     min-width: 0;
     max-width: 100%;
     min-height: 0;
     max-height: none;
-    padding: 20px 18px 14px;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(61, 34, 104, 0.55);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    padding: 8px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     box-shadow: none;
-    color: #fff;
+    color: #01062d;
+    overflow: visible;
+    animation: auth-mobile-rise 0.45s ease both;
   }
 
-  .auth-glass-card:not(.auth-glass-card--signin) {
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(61, 34, 104, 0.55);
-    color: #fff;
-    box-shadow: none;
-  }
-
+  .auth-glass-card:has(.auth-mobile-hero) .auth-glass-card__eyebrow,
+  .auth-glass-card:has(.auth-mobile-hero) .auth-glass-card__title,
   .auth-glass-card__eyebrow--desktop,
   .auth-glass-card__title--desktop {
     display: none !important;
   }
 
+  .auth-mobile-hero {
+    display: block;
+    margin: 18px 0 28px;
+    text-align: center;
+  }
+
+  .auth-glass-card .auth-mobile-hero__title {
+    margin: 0;
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: #01062d;
+  }
+
+  .auth-mobile-hero__lead {
+    max-width: 280px;
+    margin: 10px auto 0;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: #64748b;
+  }
+
   .auth-glass-card__eyebrow {
-    color: rgba(255, 255, 255, 0.7);
+    color: #64748b;
   }
 
   .auth-glass-card__title {
-    color: #fff;
+    color: #01062d;
+  }
+
+  .auth-glass-form {
+    display: flex;
+    flex-direction: column;
   }
 
   .auth-glass-card--signin .auth-glass-form {
@@ -396,147 +428,208 @@
     justify-content: flex-start;
   }
 
-  .auth-glass-card--signin .auth-glass-field {
+  .auth-glass-field {
+    order: 0;
     margin-bottom: 14px;
   }
 
-  .auth-glass-field__label {
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #fff;
-  }
-
-  .auth-glass-input {
-    height: 48px;
-    padding: 0 44px 0 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: rgba(42, 21, 72, 0.45);
-    font-size: 16px;
-    color: #fff;
-  }
-
-  .auth-glass-input::placeholder {
-    color: rgba(255, 255, 255, 0.42);
-  }
-
-  .auth-glass-input:focus {
-    border-color: rgba(192, 38, 211, 0.5);
-    box-shadow: 0 0 0 2px rgba(192, 38, 211, 0.22);
-    background: rgba(42, 21, 72, 0.55);
-  }
-
-  .auth-glass-input__icon {
-    right: 14px;
-    font-size: 1.15rem;
-    color: rgba(255, 255, 255, 0.72);
-  }
-
-  .auth-glass-input__icon--clickable {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .auth-glass-link {
-    margin-top: 8px;
-    font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.88);
-  }
-
-  .auth-glass-link:hover {
-    color: #fff;
+  .auth-glass-error,
+  .auth-glass-field-error {
+    order: 1;
   }
 
   .auth-glass-actions {
-    margin-top: 18px;
-    gap: 10px;
+    order: 2;
+    margin-top: 8px;
+    gap: 0;
   }
 
-  .auth-glass-btn {
-    height: 48px;
-    border-radius: 999px;
-    font-size: 0.95rem;
-  }
-
-  .auth-glass-btn--ghost {
-    background: transparent;
-    border-color: rgba(255, 255, 255, 0.45);
-    color: #fff;
-  }
-
-  .auth-glass-btn--ghost:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-  }
-
-  .auth-glass-btn--primary {
-    background: #fff;
-    color: #2a1548;
-    font-weight: 700;
-    box-shadow: none;
-  }
-
-  .auth-glass-btn--primary:hover:not(:disabled) {
-    filter: none;
-    background: rgba(255, 255, 255, 0.92);
-    color: #2a1548;
+  .auth-glass-pill-link {
+    order: 3;
   }
 
   .auth-glass-divider {
-    margin: 16px 0 14px;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    order: 4;
+  }
+
+  .auth-mobile-stack {
+    order: 5;
+  }
+
+  .auth-glass-footer-link,
+  .auth-glass-footer-link--policy {
+    order: 6;
+  }
+
+  .auth-glass-field__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .auth-glass-input {
+    height: 54px;
+    padding: 0 52px 0 48px;
+    border-radius: 999px;
+    border: 1px solid rgba(1, 6, 45, 0.04);
+    background: #fff;
+    font-size: 16px;
+    color: #01062d;
+    box-shadow: 0 8px 22px rgba(1, 6, 45, 0.05);
+  }
+
+  .auth-glass-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .auth-glass-input:focus {
+    border-color: #733e87;
+    box-shadow: 0 0 0 4px rgba(115, 62, 135, 0.14);
+    background: #fff;
+  }
+
+  .auth-mobile-only {
+    display: inline-flex;
+  }
+
+  .auth-glass-input__icon {
+    left: 18px;
+    right: auto;
+    font-size: 1.15rem;
+    color: #733e87;
+  }
+
+  .auth-glass-input__icon--clickable {
+    left: auto;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: #01062d;
+  }
+
+  .auth-glass-link {
+    display: block;
+    margin-top: 10px;
+    text-align: right;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #faa300;
+  }
+
+  .auth-glass-link:hover {
+    color: #01062d;
+  }
+
+  .auth-glass-btn {
+    height: 54px;
+    border-radius: 999px;
+    font-size: 1rem;
+  }
+
+  .auth-glass-btn--ghost {
+    display: none;
+  }
+
+  .auth-glass-btn--primary {
+    flex: 1 1 100%;
+    background: #733e87;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 12px 24px rgba(115, 62, 135, 0.28);
+  }
+
+  .auth-glass-btn--primary:hover:not(:disabled),
+  .auth-glass-btn--primary:active:not(:disabled) {
+    filter: none;
+    background: #01062d;
+    color: #fff;
+  }
+
+  .auth-glass-divider {
+    margin: 18px 0 6px;
+    font-size: 0.82rem;
+    color: #94a3b8;
   }
 
   .auth-glass-divider::before,
   .auth-glass-divider::after {
-    background: rgba(255, 255, 255, 0.2);
+    background: #e6e0ee;
   }
 
   .auth-glass-pill-link {
-    height: 48px;
-    font-size: 0.88rem;
-    border-color: rgba(255, 255, 255, 0.35);
+    height: auto;
+    margin-top: 16px;
+    padding: 0;
+    border: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.92);
+    color: #64748b;
+    font-size: 0.92rem;
   }
 
   .auth-glass-pill-link b {
-    color: #fff;
+    color: #01062d;
   }
 
   .auth-glass-pill-link:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: transparent;
+    border-color: transparent;
+    color: #733e87;
   }
 
-  .auth-glass-footer-link {
-    color: rgba(255, 255, 255, 0.7);
-  }
-
-  .auth-glass-footer-link:hover {
-    color: #fff;
-  }
-
+  .auth-glass-footer-link,
   .auth-glass-footer-link--policy {
-    margin-top: 14px;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.75);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+    margin-top: 18px;
+    font-size: 0.78rem;
+    color: #64748b;
+    text-decoration: none;
+  }
+
+  .auth-glass-footer-link:hover,
+  .auth-glass-footer-link--policy:hover {
+    color: #733e87;
   }
 
   .auth-glass-success,
   .auth-glass-success h6 {
-    color: #fff;
+    color: #01062d;
   }
 
   .auth-glass-success__note {
-    color: rgba(255, 255, 255, 0.7);
+    color: #64748b;
   }
 
   .auth-glass-error {
-    color: #fecaca;
+    color: #b91c1c;
+    background: rgba(248, 113, 113, 0.12);
+  }
+
+  .auth-glass-field-error {
+    color: #dc2626;
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .auth-glass-card,
+  .auth-glass-card--signin {
+    animation: none;
+  }
+}
+
+@keyframes auth-mobile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -551,6 +644,6 @@
 
 @media (max-width: 639px) {
   .auth-glass-card:not(.auth-glass-card--signin) {
-    padding: 22px 20px 18px;
+    padding: 8px 0 0;
   }
 }

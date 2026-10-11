@@ -87,7 +87,7 @@ export function normalizeAsset(row) {
   const currentAssignment = row.current_assignment || row.currentAssignment
   const assignments = Array.isArray(row.assignments) ? row.assignments : []
   const histories = Array.isArray(row.histories) ? row.histories : []
-
+  
   return {
     id: row.id,
     name: row.name || '—',
@@ -106,7 +106,7 @@ export function normalizeAsset(row) {
     assignedUserId:
       currentUser?.id ||
       currentAssignment?.user_id ||
-      currentAssignment?.user?.id ||
+      currentAssignment?.user?.id ||    
       row.user_id ||
       null,
 

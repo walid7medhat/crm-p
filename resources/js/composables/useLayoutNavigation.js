@@ -587,47 +587,25 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
 }
 
 /**
- * Top header shortcut row (CRM, HRM) — dashboard / home layout only.
+ * Top header shortcut row on the dashboard — replaces the old CRM / HRM switch.
  */
-export function buildTopModuleNav(ctx = {}) {
-  const {
-    isAdmin,
-    isHr,
-    isSuperAdmin,
-    userId,
-  } = ctx;
-
-  const items = [];
-
-  if (isAdmin && !isHr) {
-    items.push({
-      id: 'crm',
-      label: 'CRM',
-      path: getCrmEntryPath(ctx),
-      matchModules: [LAYOUT_MODULES.CRM],
-    });
-  }
-
-  if (isSuperAdmin || userId === 186 || isHr) {
-    items.push({
-      id: 'hr',
-      label: 'HRM',
-      path: '/hr',
-      matchModules: [LAYOUT_MODULES.HR],
-    });
-  }
-
-  return items;
+export function buildTopModuleNav() {
+  return [
+    { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
+    { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
+    { id: 'property', label: 'Property', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
+    { id: 'transaction', label: 'Transaction', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
+  ];
 }
 
 export function isTopModuleNavActive(currentPath, activeModule, item) {
+  const paths = item.matchPaths || (item.path ? [item.path] : []);
   if (isDashboardRoute(currentPath) || activeModule === LAYOUT_MODULES.DASHBOARD) {
-    return false;
+    return paths.some((p) => isPathActive(currentPath, p));
   }
   if (item.matchModules?.length && item.matchModules.includes(activeModule)) {
     return true;
   }
-  const paths = item.matchPaths || (item.path ? [item.path] : []);
   return paths.some((p) => isPathActive(currentPath, p));
 }
 

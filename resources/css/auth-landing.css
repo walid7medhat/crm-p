@@ -284,13 +284,12 @@
   flex: 0 0 auto;
 }
 
+.auth-mobile-back {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .auth-landing {
-    --auth-mobile-purple: #5c3488;
-    --auth-mobile-purple-deep: #3d2268;
-    --auth-mobile-purple-dark: #2a1548;
-    --auth-mobile-surface: rgba(61, 34, 104, 0.55);
-    --auth-mobile-input-bg: rgba(42, 21, 72, 0.5);
     align-items: stretch;
     justify-content: flex-start;
     height: auto;
@@ -300,20 +299,40 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0;
-    color: #fff;
-    background: linear-gradient(
-      180deg,
-      var(--auth-mobile-purple) 0%,
-      var(--auth-mobile-purple-deep) 42%,
-      var(--auth-mobile-purple-dark) 100%
-    );
+    color: #01062d;
+    background: linear-gradient(180deg, #ffffff 0%, #f6f1fb 46%, #f6f1fb 100%);
   }
 
   .auth-landing__bg-image,
   .auth-landing__overlay,
   .auth-landing__mesh,
-  .auth-landing__glow {
+  .auth-landing__glow,
+  .auth-landing__marketing {
     display: none;
+  }
+
+  .auth-mobile-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    left: 18px;
+    z-index: 4;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: #01062d;
+    box-shadow: 0 8px 22px rgba(1, 6, 45, 0.08);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .auth-mobile-back:active {
+    transform: scale(0.96);
   }
 
   .auth-landing__grid {
@@ -329,143 +348,15 @@
     overflow: visible;
   }
 
-  .auth-landing__marketing {
-    flex: 0 0 auto;
-    flex-shrink: 0;
-    justify-content: flex-start;
-    gap: 12px;
-    padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 10px;
-    overflow: hidden;
-    position: relative;
-    z-index: 1;
-    background: transparent;
-    order: 2;
-  }
-
-  .auth-landing__brand-row {
-    justify-content: center;
-    gap: 28px;
-    margin-bottom: 0;
-    flex-shrink: 0;
-    background: #fff;
-    border-radius: 18px;
-    padding: 8px 16px;
-    width: fit-content;
-    margin-inline: auto;
-  }
-
-  .auth-landing__brand-divider {
-    display: none;
-  }
-
-  .auth-landing__brand-logo--altcrm {
-    width: auto;
-    height: 64px;
-    max-width: 86px;
-    max-height: none;
-  }
-
-  .auth-landing__brand-logo--oia {
-    width: auto;
-    height: 52px;
-    max-width: 156px;
-    max-height: none;
-  }
-
-  .auth-landing__headline--desktop {
-    display: none;
-  }
-
-  .auth-landing__headline--mobile {
-    display: block;
-    text-align: center;
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.35;
-    letter-spacing: -0.01em;
-    padding: 0 4px;
-    max-width: 320px;
-    margin: 0 auto;
-    flex-shrink: 0;
-    color: #fff;
-  }
-
-  .auth-landing__cards-track {
-    flex: 0 0 auto;
-    gap: 10px;
-    padding: 0 2px 2px;
-    margin: 0;
-    max-height: 132px;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .auth-landing__feature-card {
-    flex: 0 0 calc(50% - 6px);
-    min-width: calc(50% - 6px);
-    max-height: 128px;
-    min-height: 0;
-    height: 128px;
-    padding: 8px 8px 6px;
-    border-radius: 16px;
-    border-color: rgba(255, 255, 255, 0.18);
-    background: rgba(61, 34, 104, 0.45);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: none;
-  }
-
-  .auth-landing__feature-title {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    line-height: 1.3;
-    color: rgba(255, 255, 255, 0.92);
-    -webkit-line-clamp: 2;
-  }
-
-  .auth-landing__feature-media {
-    flex: 1 1 auto;
-    min-height: 0;
-    background: transparent;
-  }
-
-  .auth-landing__feature-image {
-    max-height: 78px;
-    height: 100%;
-    object-fit: contain;
-    object-position: center center;
-    border-radius: 0;
-    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28));
-  }
-
-  .auth-landing__dots {
-    flex-shrink: 0;
-    gap: 6px;
-    padding-top: 2px;
-    padding-bottom: 0;
-  }
-
-  .auth-landing__dot {
-    width: 6px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.35);
-  }
-
-  .auth-landing__dot.is-active {
-    width: 22px;
-    background: #fff;
-  }
-
   .auth-landing__auth-panel {
-    flex: 0 0 auto;
-    flex-shrink: 0;
+    flex: 1 1 auto;
     display: flex;
     align-items: stretch;
     justify-content: center;
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: calc(64px + env(safe-area-inset-top, 0px)) 26px calc(18px + env(safe-area-inset-bottom, 0px));
     min-height: 0;
     overflow: visible;
     position: relative;
@@ -473,13 +364,18 @@
     background: transparent;
     grid-column: 1;
     grid-row: auto;
-    order: 1;
   }
 
   .auth-landing__auth-panel > * {
     width: 100%;
-    max-width: 100%;
+    max-width: 420px;
     flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .auth-mobile-back:active {
+    transform: none;
   }
 }
 

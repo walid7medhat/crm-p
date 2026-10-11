@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-3">
+  <div class="mt-3 edit-property-page">
     <!-- Loading State -->
     <div v-if="isLoading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -1415,7 +1415,7 @@
             </div>
           </div>
           
-          <div class="card-footer text-center footer-pt">
+          <div class="card-footer text-center footer-pt edit-property-actions">
             <div class="d-flex gap-2 justify-content-center">
               <button
                 type="button"
@@ -1460,11 +1460,14 @@
     </div>
 
     <!-- Add Owner Modal -->
-    <div v-if="showAddOwner" class="modal-backdrop">
+    <Teleport to="body">
+    <div v-if="showAddOwner" class="modal-backdrop owner-modal">
       <div class="modal-container">
         <div class="modal-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New Owner</h5>
-          <button class="btn-close" @click="closeAddOwner"></button>
+          <button type="button" class="owner-modal-close" aria-label="Close" @click="closeAddOwner">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
 
         <div class="modal-body">
@@ -1611,10 +1614,11 @@
           </div>
         </div>
 
-        <div class="modal-footer text-end mt-3">
-          <button class="btn btn-secondary me-2" @click="closeAddOwner">Cancel</button>
-          <button 
-            class="btn btn-primary" 
+        <div class="modal-footer owner-modal-actions">
+          <button type="button" class="btn btn-secondary" @click="closeAddOwner">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-primary"
             @click="submitNewOwner"
             :disabled="isSubmittingOwner"
           >
@@ -1627,6 +1631,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
     <Teleport to="body">
   <div v-if="showFloorPlanViewer" class="floor-plan-viewer-modal" @click.self="closeFloorPlanViewer">
     <div class="viewer-container">
@@ -4725,13 +4730,39 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .card-footer .d-flex {
-    flex-direction: column;
+  .edit-property-page {
+    padding-bottom: calc(170px + env(safe-area-inset-bottom, 0px));
   }
-  
-  .card-footer .btn {
-    margin-bottom: 10px;
-    width: 100%;
+
+  .edit-property-actions {
+    position: sticky;
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    background: #fff;
+    border-top: 1px solid #ece8f3;
+    padding: 10px 12px;
+  }
+
+  .edit-property-actions .d-flex {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .edit-property-actions .btn {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    min-height: 44px;
+    padding: 8px 4px;
+    font-size: 12px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .edit-property-actions .btn i {
+    display: none;
   }
 }
 

@@ -66,13 +66,56 @@
 }
 
 .navbar-header .top-module-btn.active,
-.navbar-header .top-module-btn.active:hover,
-.navbar-header--dashboard-home .top-module-btn.active,
-.navbar-header--dashboard-home .top-module-btn.active:hover {
+.navbar-header .top-module-btn.active:hover {
   background: var(--shell-purple) !important;
   color: #ffffff !important;
   border-color: var(--shell-purple) !important;
   box-shadow: none !important;
+  transform: none !important;
+}
+
+.navbar-header--dashboard-home .mob-module-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.navbar-header--dashboard-home .mob-module-toolbar .top-module-nav {
+  align-self: flex-start;
+  margin-left: 4px;
+}
+
+.navbar-header--dashboard-home .top-module-nav {
+  display: flex !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  background: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 10px 28px rgba(55, 24, 92, 0.06) !important;
+  padding: 4px !important;
+  gap: 4px !important;
+}
+
+.navbar-header--dashboard-home .top-module-btn {
+  padding: 8px 16px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: #4b4563 !important;
+}
+
+.navbar-header--dashboard-home .top-module-btn:hover {
+  color: #733e87 !important;
+  background: #f3e8ff !important;
+}
+
+.navbar-header--dashboard-home .top-module-btn.active,
+.navbar-header--dashboard-home .top-module-btn.active:hover {
+  background: #733e87 !important;
+  color: #ffffff !important;
+  border-color: #733e87 !important;
+  box-shadow: 0 6px 14px rgba(115, 62, 135, 0.28) !important;
   transform: none !important;
 }
 

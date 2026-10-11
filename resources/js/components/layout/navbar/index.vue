@@ -237,6 +237,28 @@
             </Teleport>
           </div>
         </div>
+        <nav
+          v-if="isDashboardHome && topModuleNavItems.length"
+          class="top-module-nav"
+          aria-label="Dashboard"
+        >
+          <router-link
+            v-for="item in topModuleNavItems"
+            :key="item.id"
+            :to="item.path"
+            custom
+            v-slot="{ navigate, href }"
+          >
+            <a
+              :href="href"
+              class="top-module-btn"
+              :class="{ active: isTopModuleItemActive(item) }"
+              @click="navigate"
+            >
+              {{ item.label }}
+            </a>
+          </router-link>
+        </nav>
       </div>
 
       <template v-else>

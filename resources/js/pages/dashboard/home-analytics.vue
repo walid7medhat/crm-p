@@ -1,7 +1,7 @@
 <template>
-  <AnalyticsDashboard />
+  <StudioDashboard />
 </template>
 
 <script setup>
-import AnalyticsDashboard from '@/components/dashboard/analytics/AnalyticsDashboard.vue'
+import StudioDashboard from '@/components/dashboard/home/StudioDashboard.vue'
 </script>

@@ -33,52 +33,54 @@
                 <div class="d-flex flex-column align-items-end gap-2 ms-auto">
                     <div class="d-flex align-items-center gap-2">
                         <span class="department-pill">Department : {{ department }}</span>
-                        <b-dropdown 
-                            variant="link" 
-                            toggle-class="text-decoration-none p-0 no-caret-custom" 
+                        <b-dropdown
+                            v-if="!isNarrow"
+                            ref="personDropdown"
+                            variant="link"
+                            toggle-class="text-decoration-none p-0 no-caret-custom"
                             no-caret
                             right
                             class="change-person-dropdown"
-                            :show="dropdownShow"
-                            @update:show="dropdownShow = $event"
-                           
+                            auto-close="outside"
+                            @show="dropdownShow = true"
+                            @hide="dropdownShow = false"
                         >
                             <template #button-content>
-                                <button class="btn-change-person">
+                                <button type="button" class="btn-change-person">
                                     Change Person
                                     <iconify-icon icon="lucide:user-plus" class="ms-1"></iconify-icon>
                                 </button>
                             </template>
-                            
-                            <div class="dropdown-search-wrapper p-3">
+
+                            <div class="p-3">
                                 <div class="d-flex align-items-center justify-content-between border-bottom mb-3">
                                     <span class="modal-title-dropdown">Person</span>
-                                    <button class="close-btn-top" @click="dropdownShow = false">
+                                    <button type="button" class="close-btn-top" @click="closePicker">
                                         <iconify-icon icon="lucide:x"></iconify-icon>
                                     </button>
                                 </div>
                                 <div class="search-input-wrapper mb-3">
-                                    <b-form-input 
-                                        v-model="searchQuery" 
-                                        placeholder="Search Responsible Person" 
+                                    <b-form-input
+                                        v-model="searchQuery"
+                                        placeholder="Search Responsible Person"
                                         class="dropdown-search-input"
                                     />
                                     <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
                                 </div>
-                                
+
                                 <div class="user-list-scroll">
                                     <div v-if="searching" class="text-center p-3 text-muted">Searching...</div>
-                                    <div 
-                                        v-for="user in filteredUsers" 
+                                    <div
+                                        v-for="user in filteredUsers"
                                         :key="user.id"
                                         class="user-item d-flex align-items-center justify-content-between p-2"
                                         @click="selectUser(user)"
                                         :class="{ 'selected': modelValue === user.id }"
                                     >
                                         <div class="d-flex align-items-center gap-2">
-                                            <img 
-                                                :src="user.avatar || defaultAvatar" 
-                                                class="user-item-avatar" 
+                                            <img
+                                                :src="user.avatar || defaultAvatar"
+                                                class="user-item-avatar"
                                             />
                                             <div class="user-item-info">
                                                 <div class="user-item-head">
@@ -94,18 +96,22 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <iconify-icon 
-                                            v-if="modelValue === user.id" 
-                                            icon="lucide:check" 
+                                        <iconify-icon
+                                            v-if="modelValue === user.id"
+                                            icon="lucide:check"
                                             class="text-warning"
                                         ></iconify-icon>
                                     </div>
-                                    <div v-if="filteredUsers.length === 0" class="text-center p-3 text-muted">
+                                    <div v-if="!searching && filteredUsers.length === 0" class="text-center p-3 text-muted">
                                         No persons found
                                     </div>
                                 </div>
                             </div>
                         </b-dropdown>
+                        <button v-else type="button" class="btn-change-person" @click="openPicker">
+                            Change Person
+                            <iconify-icon icon="lucide:user-plus" class="ms-1"></iconify-icon>
+                        </button>
                     </div>
                     <div v-if="validationError" class="invalid-feedback d-block" style="margin-top: -8px;">
                         {{ validationError }}
@@ -114,10 +120,71 @@
             </div>
         </div>
     </div>
+    <Teleport :to="sheetTarget">
+        <div v-if="isNarrow && dropdownShow" class="person-sheet-root">
+            <div class="person-sheet-backdrop" @click="dropdownShow = false"></div>
+            <div class="person-sheet" role="dialog" aria-label="Responsible person">
+                <div class="person-sheet-head">
+                    <span class="modal-title-dropdown">Person</span>
+                    <button type="button" class="close-btn-top" @click="dropdownShow = false">
+                        <iconify-icon icon="lucide:x"></iconify-icon>
+                    </button>
+                </div>
+                <div class="search-input-wrapper">
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        inputmode="search"
+                        enterkeyhint="search"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        placeholder="Search Responsible Person"
+                        class="dropdown-search-input"
+                    />
+                    <iconify-icon icon="lucide:search" class="search-icon"></iconify-icon>
+                </div>
+                <div class="user-list-scroll">
+                    <div v-if="searching" class="text-center p-3 text-muted">Searching...</div>
+                    <div
+                        v-for="user in filteredUsers"
+                        :key="user.id"
+                        class="user-item d-flex align-items-center justify-content-between p-2"
+                        @click="selectUser(user)"
+                        :class="{ 'selected': modelValue === user.id }"
+                    >
+                        <div class="d-flex align-items-center gap-2">
+                            <img :src="user.avatar || defaultAvatar" class="user-item-avatar" />
+                            <div class="user-item-info">
+                                <div class="user-item-head">
+                                    <div class="user-item-name">{{ user.name }}</div>
+                                    <span v-if="getUserPosition(user) !== '—'" class="user-position-badge">
+                                        {{ getUserPosition(user) }}
+                                    </span>
+                                </div>
+                                <div class="user-item-meta-line">
+                                    <span class="meta-value">{{ getUserParent(user) }}</span>
+                                    <span class="meta-divider">|</span>
+                                    <span class="meta-value">{{ getUserBranch(user) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <iconify-icon
+                            v-if="modelValue === user.id"
+                            icon="lucide:check"
+                            class="text-warning"
+                        ></iconify-icon>
+                    </div>
+                    <div v-if="!searching && filteredUsers.length === 0" class="text-center p-3 text-muted">
+                        No persons found
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { BDropdown, BFormInput } from 'bootstrap-vue-3'
 import api from '@/plugins/axios'
 
@@ -152,6 +219,43 @@ const emit = defineEmits(['update:modelValue', 'user-selected'])
 
 const searchQuery = ref('')
 const dropdownShow = ref(false)
+const personDropdown = ref(null)
+const isNarrow = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
+const sheetTarget = ref('body')
+let narrowQuery = null
+
+function syncNarrow() {
+    isNarrow.value = Boolean(narrowQuery?.matches)
+}
+
+function openPicker(event) {
+    document.querySelectorAll('[data-person-sheet-host]').forEach((el) => {
+        el.removeAttribute('data-person-sheet-host')
+    })
+    const modal = event?.currentTarget?.closest?.('.modal')
+    if (modal) {
+        modal.setAttribute('data-person-sheet-host', '')
+        sheetTarget.value = '[data-person-sheet-host]'
+    } else {
+        sheetTarget.value = 'body'
+    }
+    dropdownShow.value = true
+}
+
+function closePicker() {
+    dropdownShow.value = false
+    personDropdown.value?.hide?.()
+}
+
+onMounted(() => {
+    narrowQuery = window.matchMedia('(max-width: 768px)')
+    syncNarrow()
+    narrowQuery.addEventListener('change', syncNarrow)
+})
+
+onUnmounted(() => {
+    narrowQuery?.removeEventListener('change', syncNarrow)
+})
 const searching = ref(false)
 const listedUsers = ref([])
 const defaultAvatar = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz_em9Ua12dTx64KMpyFSdH1sbuA2Ud5BKxQ&s'
@@ -212,7 +316,7 @@ const filteredUsers = computed(() => listedUsers.value)
 const selectUser = (user) => {
     emit('update:modelValue', user.id)
     emit('user-selected', user)
-    dropdownShow.value = false
+    closePicker()
     searchQuery.value = ''
 }
 const getUserPosition = (user) => {
@@ -377,6 +481,7 @@ const parentName = computed(() => {
     right: 15px;
     color: #733E87;
     font-size: 20px;
+    pointer-events: none;
 }
 
 .user-list-scroll {
@@ -477,5 +582,55 @@ const parentName = computed(() => {
     color: #DC2626;
     margin-top: 4px;
     font-family: var(--deal-font, 'Montserrat', sans-serif);
+}
+
+.person-sheet-root {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+}
+
+.person-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(11, 7, 54, 0.35);
+}
+
+.person-sheet {
+    position: absolute;
+    z-index: 2;
+    top: max(12px, env(safe-area-inset-top, 0px));
+    left: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    max-height: min(62dvh, 460px);
+    padding: 14px 14px 8px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(11, 7, 54, 0.22);
+    pointer-events: auto;
+}
+
+.person-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f4f4f4;
+}
+
+.person-sheet .dropdown-search-input {
+    font-size: 16px !important;
+    pointer-events: auto;
+}
+
+.person-sheet .user-list-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 240px;
+    margin-top: 12px;
 }
 </style>

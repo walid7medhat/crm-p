@@ -599,6 +599,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/listings-status-summary', [DashboardController::class, 'getListingsStatusSummary']);
     Route::get('/dashboard/kanban-task-summary', [DashboardController::class, 'getKanbanTaskSummary']);
     Route::get('/dashboard/schedule', [DashboardController::class, 'getDashboardSchedule']);
+    Route::get('/dashboard/studio', [DashboardController::class, 'getStudio']);
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 

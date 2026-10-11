@@ -2354,8 +2354,9 @@ textarea, input, select {
     }
 
     .lead-header-identity {
-        flex: 1 1 auto;
+        flex: 1 1 0;
         min-width: 0;
+        max-width: calc(100% - 44px);
         order: 1;
     }
 
@@ -2393,6 +2394,7 @@ textarea, input, select {
 
     .view-lead-close-btn {
         order: 2;
+        flex: 0 0 32px;
     }
 
     .modal-title {
@@ -2726,7 +2728,7 @@ textarea, input, select {
         height: 32px !important;
         min-width: 32px !important;
         min-height: 32px !important;
-        flex-shrink: 0 !important;
+        flex: 0 0 32px !important;
         margin-left: 0 !important;
         z-index: 20 !important;
         display: flex !important;
@@ -2760,6 +2762,19 @@ textarea, input, select {
 
     #view-lead-modal .lead-header-main {
         flex-wrap: wrap !important;
+    }
+
+    #view-lead-modal .lead-header-identity {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        max-width: calc(100% - 44px) !important;
+    }
+
+    #view-lead-modal .lead-header-copy,
+    #view-lead-modal .lead-title-read-row {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
     }
 
     #view-lead-modal .lead-header-actions {

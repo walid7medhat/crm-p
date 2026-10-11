@@ -1743,11 +1743,18 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home {
 /* —— Mobile home dashboard: block stack (no viewport-height flex trap) —— */
 @media (max-width: 768px) {
   #app main.dashboard-main:has(> .dashboard-main-router--home) > .navbar-header {
-    display: none !important;
+    display: block !important;
+    height: auto !important;
+    min-height: 52px !important;
     margin: 0 !important;
-    min-height: 0 !important;
-    height: 0 !important;
-    padding: 0 !important;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 10px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40 !important;
+    background: rgba(246, 241, 251, 0.94) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   body.app-has-video-bg #app main.dashboard-main:has(> .dashboard-main-router--home),

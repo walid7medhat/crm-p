@@ -153,11 +153,11 @@ export default {
 
 @media (max-width: 768px) {
   .auth-reset-heading__title {
-    color: #fff;
+    color: #01062d;
   }
 
   .auth-reset-heading__subtitle {
-    color: rgba(255, 255, 255, 0.7);
+    color: #64748b;
   }
 }
 </style>

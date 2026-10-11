@@ -1,5 +1,8 @@
 <template>
-  <section class="auth-landing">
+  <section class="auth-landing" @focusin="onAuthFocusIn">
+    <button type="button" class="auth-mobile-back" aria-label="Back" @click="goBack">
+      <iconify-icon icon="lucide:arrow-left"></iconify-icon>
+    </button>
     <div class="auth-landing__bg-image" aria-hidden="true" />
     <div class="auth-landing__overlay" aria-hidden="true" />
     <div class="auth-landing__mesh" aria-hidden="true" />
@@ -196,7 +199,24 @@ function advanceCarousel() {
 
 function startCarouselAutoplay() {
   stopCarouselAutoplay();
+  if (window.matchMedia('(max-width: 768px)').matches) return;
   carouselTimer = window.setInterval(advanceCarousel, AUTOPLAY_MS);
+}
+
+function goBack() {
+  if (window.history.length > 1) {
+    window.history.back();
+  }
+}
+
+function onAuthFocusIn(event) {
+  const field = event.target;
+  if (!(field instanceof HTMLInputElement)) return;
+  if (!window.matchMedia('(max-width: 768px)').matches) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.setTimeout(() => {
+    field.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+  }, 280);
 }
 
 function stopCarouselAutoplay() {

@@ -3,6 +3,10 @@
     <div class="auth-glass-card auth-glass-card--compact">
       <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
       <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
+      <div class="auth-mobile-hero">
+        <h6 class="auth-mobile-hero__title">Create Account</h6>
+        <p class="auth-mobile-hero__lead">Sign up with your email to join the workspace.</p>
+      </div>
 
       <div v-if="registrationSuccess" class="auth-glass-success">
         <h6>Registration Successful</h6>
@@ -22,7 +26,10 @@
               type="text"
               class="auth-glass-input"
               :class="{ 'is-invalid': errors.name }"
-              placeholder="Enter your name"
+              placeholder="Full Name"
+              autocomplete="name"
+              autocapitalize="words"
+              enterkeyhint="next"
               required
             />
             <span class="auth-glass-input__icon" aria-hidden="true">
@@ -41,7 +48,12 @@
               type="email"
               class="auth-glass-input"
               :class="{ 'is-invalid': errors.email }"
-              placeholder="name@oiaproperties.com"
+              placeholder="Email Address"
+              autocomplete="email"
+              inputmode="email"
+              enterkeyhint="next"
+              autocapitalize="off"
+              spellcheck="false"
               required
               @input="validateEmailDomain"
             />
@@ -61,9 +73,14 @@
               :type="showPassword ? 'text' : 'password'"
               class="auth-glass-input"
               :class="{ 'is-invalid': errors.password }"
-              placeholder="Enter Password"
+              placeholder="Password"
+              autocomplete="new-password"
+              enterkeyhint="done"
               required
             />
+            <span class="auth-glass-input__icon auth-mobile-only" aria-hidden="true">
+              <iconify-icon icon="lucide:lock" />
+            </span>
             <button
               type="button"
               class="auth-glass-input__icon auth-glass-input__icon--clickable"
@@ -93,11 +110,13 @@
         </div>
 
         <div class="auth-glass-divider" role="separator">
-          <span>Or</span>
+          <span>or</span>
         </div>
 
+        <AuthMobileStack />
+
         <router-link to="/sign-in" class="auth-glass-pill-link">
-          already have account? <b>Sign In</b>
+          Already have an account? <b>Sign In</b>
         </router-link>
 
         <router-link to="/privacy-policy" class="auth-glass-footer-link">Privacy Policy</router-link>
@@ -110,11 +129,13 @@
 import api from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
+import AuthMobileStack from './AuthMobileStack.vue';
 
 export default {
   name: 'SignUp',
   components: {
     AuthLandingShell,
+    AuthMobileStack,
   },
   data() {
     return {

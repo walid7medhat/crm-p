@@ -1548,13 +1548,13 @@
     </div>
     
     <!-- Add Owner Modal -->
-    <div v-if="showAddOwner" class="modal-backdrop">
+    <Teleport to="body">
+    <div v-if="showAddOwner" class="modal-backdrop owner-modal">
       <div class="modal-container">
         <!-- Modal Header -->
         <div class="modal-header d-flex justify-content-between align-items-center">
-          <div class="d-flex align-items-center gap-3">
-          </div>
-          <button class="btn-close" @click="showAddOwner = false">
+          <h5 class="mb-0">Add New Owner</h5>
+          <button type="button" class="owner-modal-close" aria-label="Close" @click="showAddOwner = false">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -1904,23 +1904,21 @@
 
         <!-- Modal Footer -->
         <div class="modal-footer">
-          <div class="d-flex justify-content-between w-100">
-            <div>
-              <button class="btn btn-outline-primary" @click="resetNewOwnerForm">
-                <i class="fas fa-redo me-2"></i>
-                Reset Form
-              </button>
-            </div>
-            <div class="d-flex gap-3">
-              <button class="btn btn-secondary" @click="showAddOwner = false">
-                <i class="fas fa-times me-2"></i>
-                Cancel
-              </button>
-              <button 
-                class="btn btn-primary" 
-                @click="submitNewOwner"
-                :disabled="isSubmitting"
-              >
+          <div class="owner-modal-actions">
+            <button type="button" class="btn btn-outline-primary" @click="resetNewOwnerForm">
+              <i class="fas fa-redo me-2"></i>
+              Reset Form
+            </button>
+            <button type="button" class="btn btn-secondary" @click="showAddOwner = false">
+              <i class="fas fa-times me-2"></i>
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="submitNewOwner"
+              :disabled="isSubmitting"
+            >
                 <i class="fas fa-save me-2"></i>
                 <span v-if="isSubmitting">
                   <span class="spinner-border spinner-border-sm me-2"></span>
@@ -1928,11 +1926,11 @@
                 </span>
                 <span v-else>Save Owner</span>
               </button>
-            </div>
           </div>
         </div>
       </div>
     </div>
+    </Teleport>
     <!-- Floor Plan Image Viewer Modal -->
 <Teleport to="body">
   <div v-if="showFloorPlanViewer" class="floor-plan-viewer-modal" @click.self="closeFloorPlanViewer">
@@ -4955,8 +4953,10 @@ body {
   border-radius: 16px;
   width: 100%;
   max-width: 1200px;
-  max-height: 85vh;
-  overflow-y: auto;
+  max-height: min(85vh, calc(100dvh - 40px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;
   animation: slideUp 0.4s ease;
@@ -4968,8 +4968,11 @@ body {
 }
 
 .modal-header {
-  color: white;
-  padding: 24px 30px;
+  flex-shrink: 0;
+  color: #111111;
+  background: #ffffff;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eaeaea;
   border-radius: 16px 16px 0 0;
   position: sticky;
   top: 0;
@@ -4984,10 +4987,11 @@ body {
 
 .modal-header .btn-close {
   border-radius: 50%;
-  padding: 8px;
-  opacity: 0.8;
+  padding: 0;
+  opacity: 1;
   transition: all 0.3s ease;
-  color: white;
+  color: #111111;
+  background: #f4f4f5;
   border: none;
   width: 36px;
   height: 36px;
@@ -5002,17 +5006,26 @@ body {
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 30px;
 }
 
 .modal-footer {
+  flex-shrink: 0;
   background: #f8f9fa;
-  padding: 20px 30px;
+  padding: 16px 20px;
   border-radius: 0 0 16px 16px;
   border-top: 1px solid #eaeaea;
+}
+
+.owner-modal-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 /* 🔹 Section Styles */
@@ -5381,18 +5394,55 @@ body {
 }
 
 @media (max-width: 768px) {
-  .modal-container {
-    max-height: 90vh;
-    border-radius: 12px;
-    margin: 10px;
+  .owner-modal.modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .owner-modal .modal-container {
+    max-width: none;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .owner-modal .modal-header,
+  .owner-modal .modal-footer {
+    border-radius: 0;
+  }
+
+  .owner-modal .modal-header {
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+  }
+
+  .owner-modal .modal-header h5 {
+    font-size: 17px;
   }
   
   .modal-body {
-    padding: 20px;
+    padding: 12px;
   }
-  
-  .modal-header {
-    padding: 18px 20px;
+
+  .owner-modal .modal-footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .owner-modal .owner-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .owner-modal .owner-modal-actions .btn-primary {
+    grid-column: 1 / -1;
+  }
+
+  .owner-modal .owner-modal-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
   }
   
   .section {
@@ -5410,9 +5460,13 @@ body {
   }
 }
 
+:global(body:has(.owner-modal) .chat-floating-btn) {
+  display: none !important;
+}
+
 @media (max-width: 576px) {
   .modal-container {
-    max-height: 95vh;
+    max-height: 100dvh;
   }
   
   .modal-body {

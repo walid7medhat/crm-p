@@ -3,6 +3,10 @@
     <div class="auth-glass-card auth-glass-card--signin">
       <h6 class="auth-glass-card__eyebrow auth-glass-card__eyebrow--desktop">Welcome To</h6>
       <h6 class="auth-glass-card__title auth-glass-card__title--desktop">OIA PROPERTIES</h6>
+      <div class="auth-mobile-hero">
+        <h6 class="auth-mobile-hero__title">Welcome Back</h6>
+        <p class="auth-mobile-hero__lead">Sign in with your email to access your workspace.</p>
+      </div>
 
       <form class="auth-glass-form" @submit.prevent="login">
         <div class="auth-glass-field">
@@ -13,8 +17,12 @@
               v-model="email"
               type="email"
               class="auth-glass-input"
-              placeholder="Enter Email"
+              placeholder="Email Address"
               autocomplete="username"
+              inputmode="email"
+              enterkeyhint="next"
+              autocapitalize="off"
+              spellcheck="false"
               required
             />
             <span class="auth-glass-input__icon" aria-hidden="true">
@@ -31,10 +39,14 @@
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
               class="auth-glass-input"
-              placeholder="Enter Password"
+              placeholder="Password"
               autocomplete="current-password"
+              enterkeyhint="go"
               required
             />
+            <span class="auth-glass-input__icon auth-mobile-only" aria-hidden="true">
+              <iconify-icon icon="lucide:lock" />
+            </span>
             <button
               type="button"
               class="auth-glass-input__icon auth-glass-input__icon--clickable"
@@ -58,16 +70,18 @@
             Clear
           </button>
           <button type="submit" class="auth-glass-btn auth-glass-btn--primary" :disabled="loading">
-            {{ loading ? '...' : 'Login' }}
+            {{ loading ? '...' : 'Log In' }}
           </button>
         </div>
 
         <div class="auth-glass-divider" role="separator">
-          <span>Or</span>
+          <span>or</span>
         </div>
 
+        <AuthMobileStack />
+
         <router-link to="/sign-up" class="auth-glass-pill-link">
-          don't have account? <b>Sign Up</b>
+          Don't have an account? <b>Sign Up</b>
         </router-link>
 
         <router-link to="/privacy-policy" class="auth-glass-footer-link auth-glass-footer-link--policy">Privacy Policy</router-link>
@@ -81,10 +95,12 @@ import api, { setAuthToken, clearAuthToken } from '@/plugins/axios';
 import { askLeadPushPermission, subscribeLeadPush } from '@/services/offerLeadPush';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
+import AuthMobileStack from './AuthMobileStack.vue';
 
 export default {
   components: {
     AuthLandingShell,
+    AuthMobileStack,
   },
   data() {
     return {

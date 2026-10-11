@@ -163,19 +163,19 @@ async function submit() {
 
 @media (max-width: 768px) {
   .auth-reset-heading__title {
-    color: #fff;
+    color: #01062d;
   }
 
   .auth-reset-heading__subtitle {
-    color: rgba(255, 255, 255, 0.7);
+    color: #64748b;
   }
 
   .auth-resend-note {
-    color: rgba(255, 255, 255, 0.7);
+    color: #64748b;
   }
 
   .auth-resend-link {
-    color: #fff;
+    color: #733e87;
   }
 }
 </style>

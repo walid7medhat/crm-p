@@ -25,6 +25,7 @@ use App\Models\DealProperty;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class DashboardController extends Controller
@@ -1920,5 +1921,583 @@ public function getPropertyTypesWithListings(Request $request)
 
         return $insights;
     }
-    
+
+    /**
+     * Home dashboard payload: KPIs, performance, featured listing, reminders,
+     * deal progress, calendar, inventory, contacts, and schedule.
+     */
+    public function getStudio(Request $request)
+    {
+        $user = auth()->user();
+        $period = $request->get('period') === 'weekly' ? 'weekly' : 'monthly';
+
+        try {
+            $month = $request->filled('month')
+                ? Carbon::createFromFormat('Y-m', (string) $request->month)->startOfMonth()
+                : now()->startOfMonth();
+        } catch (\Throwable $e) {
+            $month = now()->startOfMonth();
+        }
+
+        try {
+            $build = fn () => $this->buildStudioPayload($user, $period, $month);
+            if (config('app.debug')) {
+                $payload = $build();
+            } else {
+                $cacheKey = sprintf(
+                    'dashboard:studio:%d:%s:%s',
+                    $user->id,
+                    $period,
+                    $month->format('Y-m')
+                );
+                $payload = Cache::remember($cacheKey, now()->addSeconds(45), $build);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load dashboard',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $payload,
+        ]);
+    }
+
+    private function buildStudioPayload($user, string $period, Carbon $month): array
+    {
+        $isAdmin = $user->hasRole('super_admin') || $user->hasRole('admin');
+        $ids = $isAdmin ? [] : User::query()->where(function ($q) use ($user) {
+            $q->where('id', $user->id)
+                ->orWhere('parent_id', $user->id)
+                ->orWhereHas('parent', fn ($parent) => $parent->where('parent_id', $user->id));
+        })->pluck('id')->all();
+        $scopeIds = $ids ?: [0];
+
+        $thisMonthStart = now()->copy()->startOfMonth();
+        $thisMonthEnd = now()->copy()->endOfMonth();
+        $lastMonthStart = now()->copy()->subMonthNoOverflow()->startOfMonth();
+        $lastMonthEnd = now()->copy()->subMonthNoOverflow()->endOfMonth();
+
+        $leadScope = function ($query) use ($isAdmin, $scopeIds) {
+            if (! $isAdmin) {
+                $query->whereIn('responsible_person_id', $scopeIds);
+            }
+
+            return $query;
+        };
+        $listingScope = function ($query) use ($isAdmin, $scopeIds) {
+            if (! $isAdmin) {
+                $query->where(function ($q) use ($scopeIds) {
+                    $q->whereIn('agent_id', $scopeIds)->orWhereIn('added_by', $scopeIds);
+                });
+            }
+
+            return $query;
+        };
+        $dealScope = function ($query) use ($isAdmin, $scopeIds) {
+            if (! $isAdmin) {
+                $query->whereIn('responsible_person_id', $scopeIds);
+            }
+
+            return $query;
+        };
+
+        $closedLeadStageIds = Stage::query()
+            ->where('stage_type', 'lead')
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%converted%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%won%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%lost%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%junk%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%unqualified%']);
+            })
+            ->pluck('id');
+
+        $wonLeadStageIds = Stage::query()
+            ->where('stage_type', 'lead')
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%converted%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%won%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%closed%']);
+            })
+            ->pluck('id');
+
+        $followStageIds = Stage::query()
+            ->where('stage_type', 'lead')
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%follow%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%callback%']);
+            })
+            ->pluck('id');
+
+        $activeLeadBase = $leadScope(Lead::query());
+        if ($closedLeadStageIds->isNotEmpty()) {
+            $activeLeadBase->where(function ($q) use ($closedLeadStageIds) {
+                $q->whereNull('stage_id')->orWhereNotIn('stage_id', $closedLeadStageIds);
+            });
+        }
+        $activeLeads = (clone $activeLeadBase)->count();
+        $leadsThis = (clone $activeLeadBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->count();
+        $leadsLast = (clone $activeLeadBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
+
+        $revenueTotal = (float) $dealScope(Deal::query())->sum('deal_total_amount');
+        $propertyRevenue = (float) DB::table('deal_properties')
+            ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
+            ->when(! $isAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
+            ->sum('deal_properties.purchase_price');
+        if ($propertyRevenue > $revenueTotal) {
+            $revenueTotal = $propertyRevenue;
+        }
+        $revenueThis = (float) $dealScope(Deal::query())->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('deal_total_amount');
+        $revenueLast = (float) $dealScope(Deal::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('deal_total_amount');
+
+        $activeListingBase = $listingScope(Listing::query())
+            ->where('is_active', true)
+            ->where('is_archived', false)
+            ->where('approved', true)
+            ->whereNotIn('status', ['converted', 'draft', 'rented']);
+        $activeListings = (clone $activeListingBase)->count();
+        $listingsThis = (clone $activeListingBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->count();
+        $listingsLast = (clone $activeListingBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
+
+        $closedDeals = (int) $dealScope(Deal::query())->where('status', 'completed')->count();
+        $wonLeads = $wonLeadStageIds->isEmpty()
+            ? 0
+            : (int) $leadScope(Lead::query())->whereIn('stage_id', $wonLeadStageIds)->count();
+        $totalClosed = max($closedDeals, $wonLeads);
+        $closedThis = (int) $dealScope(Deal::query())->where('status', 'completed')->whereBetween('updated_at', [$thisMonthStart, $thisMonthEnd])->count();
+        $closedLast = (int) $dealScope(Deal::query())->where('status', 'completed')->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])->count();
+
+        $openDeals = (int) $dealScope(Deal::query())->where(function ($q) {
+            $q->whereNull('status')->orWhereNotIn('status', ['completed', 'cancelled', 'rejected']);
+        })->count();
+
+        $performance = $this->studioPerformance($isAdmin, $scopeIds, $period);
+
+        $featured = $this->studioFeaturedListing($activeListingBase, $isAdmin, $scopeIds);
+
+        $followBase = $leadScope(Lead::query());
+        if ($followStageIds->isNotEmpty()) {
+            $followBase->whereIn('stage_id', $followStageIds);
+        } else {
+            $followBase->whereRaw('1 = 0');
+        }
+        $followCount = (clone $followBase)->count();
+        $followAgentIds = (clone $followBase)
+            ->whereNotNull('responsible_person_id')
+            ->select('responsible_person_id')
+            ->groupBy('responsible_person_id')
+            ->limit(4)
+            ->pluck('responsible_person_id');
+        $followAvatars = User::query()
+            ->whereIn('id', $followAgentIds)
+            ->get(['id', 'name', 'avatar'])
+            ->map(fn ($agent) => [
+                'name' => User::shortName($agent->name),
+                'avatar' => $this->studioPublicUrl($agent->getRawOriginal('avatar')),
+            ])
+            ->values();
+
+        $documents = (int) $listingScope(Listing::query())
+            ->where('approved', false)
+            ->where('is_archived', false)
+            ->count();
+
+        $expiring = (int) $listingScope(Listing::query())
+            ->where('is_archived', false)
+            ->whereNotNull('handover_date')
+            ->whereBetween('handover_date', [now()->toDateString(), now()->addDays(5)->toDateString()])
+            ->count();
+        if (Schema::hasColumn('listings', 'rent_expiry_date')) {
+            $expiring += (int) $listingScope(Listing::query())
+                ->where('is_archived', false)
+                ->whereNotNull('rent_expiry_date')
+                ->where('rent_expiry_date', '!=', '')
+                ->whereRaw("STR_TO_DATE(rent_expiry_date, '%Y-%m-%d') BETWEEN ? AND ?", [
+                    now()->toDateString(),
+                    now()->addDays(5)->toDateString(),
+                ])
+                ->count();
+        }
+
+        $listings = $this->studioListingRows($listingScope, $isAdmin, $scopeIds);
+        $contacts = $this->studioContacts($leadScope);
+        $calendar = $this->studioCalendar($user, $isAdmin, $scopeIds, $month, $followBase);
+
+        $rawAvatar = $user->getRawOriginal('avatar');
+
+        return [
+            'user' => [
+                'name' => User::resolveDisplayName($user) ?: $user->name,
+                'role' => (string) ($user->getRoleNames()->first() ?: 'Agent'),
+                'avatar' => $this->studioPublicUrl($rawAvatar),
+            ],
+            'kpis' => [
+                'active_leads' => ['value' => $activeLeads, 'change' => $this->studioPct($leadsThis, $leadsLast)],
+                'total_revenue' => ['value' => round($revenueTotal, 2), 'change' => $this->studioPct($revenueThis, $revenueLast)],
+                'active_listings' => ['value' => $activeListings, 'change' => $this->studioPct($listingsThis, $listingsLast)],
+                'total_closed' => ['value' => $totalClosed, 'change' => $this->studioPct($closedThis, $closedLast)],
+            ],
+            'performance' => $performance,
+            'featured' => $featured,
+            'reminders' => [
+                'follow_ups' => ['count' => $followCount, 'avatars' => $followAvatars],
+                'documents' => ['count' => $documents],
+                'expiring' => ['count' => $expiring, 'days' => 5],
+            ],
+            'deals' => [
+                'closed' => $closedDeals,
+                'progress' => $openDeals,
+            ],
+            'listings' => $listings,
+            'contacts' => $contacts,
+            'calendar' => $calendar,
+        ];
+    }
+
+    private function studioPct(float|int $current, float|int $previous): float
+    {
+        $current = (float) $current;
+        $previous = (float) $previous;
+        if ($previous <= 0) {
+            return $current > 0 ? 100.0 : 0.0;
+        }
+
+        return round((($current - $previous) / $previous) * 100, 1);
+    }
+
+    private function studioPublicUrl(?string $path): ?string
+    {
+        if (! $path || $path === 'users/user.png') {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return asset('storage/'.ltrim($path, '/'));
+    }
+
+    private function studioPerformance(bool $isAdmin, array $scopeIds, string $period): array
+    {
+        $buckets = [];
+        if ($period === 'weekly') {
+            $cursor = now()->startOfWeek(Carbon::MONDAY)->subWeeks(7);
+            for ($i = 0; $i < 8; $i++) {
+                $point = $cursor->copy()->addWeeks($i);
+                $buckets[] = [
+                    'key' => $point->format('o').'-'.$point->format('W'),
+                    'label' => $point->format('j M'),
+                ];
+            }
+            $from = $cursor->copy();
+            $bucketSql = "DATE_FORMAT(%s, '%%x-%%v')";
+        } else {
+            $cursor = now()->startOfMonth()->subMonths(7);
+            for ($i = 0; $i < 8; $i++) {
+                $point = $cursor->copy()->addMonths($i);
+                $buckets[] = [
+                    'key' => $point->format('Y-m'),
+                    'label' => $point->format('M'),
+                ];
+            }
+            $from = $cursor->copy();
+            $bucketSql = "DATE_FORMAT(%s, '%%Y-%%m')";
+        }
+
+        $revenueMap = DB::table('deal_properties')
+            ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
+            ->when(! $isAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
+            ->where('deal_properties.created_at', '>=', $from)
+            ->selectRaw(sprintf($bucketSql, 'deal_properties.created_at').' as bucket, SUM(deal_properties.purchase_price) as total')
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
+        if ($revenueMap->sum() <= 0) {
+            $revenueMap = DB::table('deals')
+                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->where('created_at', '>=', $from)
+                ->selectRaw(sprintf($bucketSql, 'created_at').' as bucket, SUM(deal_total_amount) as total')
+                ->groupBy('bucket')
+                ->pluck('total', 'bucket');
+        }
+
+        $visitMap = DB::table('listing_access_requests')
+            ->when(! $isAdmin, function ($q) use ($scopeIds) {
+                $q->where(function ($inner) use ($scopeIds) {
+                    $inner->whereIn('requested_by', $scopeIds)
+                        ->orWhereIn('listing_id', function ($sub) use ($scopeIds) {
+                            $sub->select('id')->from('listings')->whereIn('agent_id', $scopeIds);
+                        });
+                });
+            })
+            ->where('created_at', '>=', $from)
+            ->selectRaw(sprintf($bucketSql, 'created_at').' as bucket, COUNT(*) as total')
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
+        return [
+            'period' => $period,
+            'points' => collect($buckets)->map(fn ($bucket) => [
+                'label' => $bucket['label'],
+                'revenue' => round((float) ($revenueMap[$bucket['key']] ?? 0), 2),
+                'visits' => (int) ($visitMap[$bucket['key']] ?? 0),
+            ])->values(),
+        ];
+    }
+
+    private function studioFeaturedListing($activeListingBase, bool $isAdmin, array $scopeIds): ?array
+    {
+        $listing = (clone $activeListingBase)
+            ->with([
+                'propertyType:id,name',
+                'area:id,name',
+                'project:id,title',
+                'project.images' => fn ($q) => $q->orderByDesc('is_main')->orderBy('sort_order'),
+                'firstGalleryImage',
+            ])
+            ->withCount('accessRequests')
+            ->orderByDesc('access_requests_count')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $listing) {
+            return null;
+        }
+
+        $sold = 0;
+        $rented = 0;
+        if ($listing->project_id) {
+            $counts = Listing::query()
+                ->where('project_id', $listing->project_id)
+                ->selectRaw("SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) as sold, SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) as rented")
+                ->first();
+            $sold = (int) ($counts->sold ?? 0);
+            $rented = (int) ($counts->rented ?? 0);
+        }
+
+        $recommended = 0;
+        if ($listing->project_id || $listing->area_id) {
+            $recommended = Lead::query()
+                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->where(function ($q) use ($listing) {
+                    if ($listing->project_id) {
+                        $q->where('project_id', $listing->project_id);
+                    }
+                    if ($listing->area_id) {
+                        $listing->project_id ? $q->orWhere('area_id', $listing->area_id) : $q->where('area_id', $listing->area_id);
+                    }
+                })
+                ->count();
+        }
+
+        $image = null;
+        $projectImage = $listing->project?->images?->first();
+        if ($projectImage?->image_path) {
+            $image = $this->studioPublicUrl($projectImage->image_path);
+        } elseif ($listing->hero_image_path) {
+            $image = $this->studioPublicUrl($listing->hero_image_path);
+        } elseif ($listing->firstGalleryImage?->image_path) {
+            $image = $this->studioPublicUrl($listing->firstGalleryImage->image_path);
+        }
+
+        return [
+            'id' => $listing->id,
+            'title' => $listing->project?->title ?: ($listing->title ?: 'Listing'),
+            'type' => $listing->propertyType?->name ?: 'Property',
+            'location' => $listing->area?->name,
+            'image' => $image,
+            'sold' => $sold,
+            'rented' => $rented,
+            'views' => (int) $listing->access_requests_count,
+            'recommended' => $recommended,
+        ];
+    }
+
+    private function studioListingRows($listingScope, bool $isAdmin, array $scopeIds): array
+    {
+        $rows = $listingScope(Listing::query())
+            ->where('is_archived', false)
+            ->with([
+                'propertyType:id,name',
+                'area:id,name,parent_id',
+                'area.parent:id,name',
+                'project:id,title',
+                'firstGalleryImage',
+            ])
+            ->withCount('accessRequests')
+            ->orderByRaw("CASE WHEN status IN ('converted', 'rented') THEN 1 ELSE 0 END")
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get([
+                'id', 'title', 'price', 'status', 'occupancy_status', 'listing_status',
+                'property_type_id', 'area_id', 'project_id', 'hero_image_path',
+                'number_of_bedrooms', 'is_archived',
+            ]);
+
+        $projectIds = $rows->pluck('project_id')->filter()->unique()->values();
+        $areaIds = $rows->pluck('area_id')->filter()->unique()->values();
+
+        $unitsByProject = $projectIds->isEmpty()
+            ? collect()
+            : Listing::query()->whereIn('project_id', $projectIds)->select('project_id', DB::raw('COUNT(*) as total'))->groupBy('project_id')->pluck('total', 'project_id');
+
+        $leadsByProject = $projectIds->isEmpty()
+            ? collect()
+            : Lead::query()
+                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->whereIn('project_id', $projectIds)
+                ->select('project_id', DB::raw('COUNT(*) as total'))
+                ->groupBy('project_id')
+                ->pluck('total', 'project_id');
+
+        $leadsByArea = $areaIds->isEmpty()
+            ? collect()
+            : Lead::query()
+                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->whereIn('area_id', $areaIds)
+                ->select('area_id', DB::raw('COUNT(*) as total'))
+                ->groupBy('area_id')
+                ->pluck('total', 'area_id');
+
+        return $rows->map(function ($listing) use ($unitsByProject, $leadsByProject, $leadsByArea) {
+            $status = strtolower((string) $listing->status);
+            $occupancy = strtolower((string) $listing->occupancy_status);
+            if (in_array($status, ['converted', 'rented', 'sold'], true)) {
+                $label = 'Sold Out';
+            } elseif (str_contains($occupancy, 'occup')) {
+                $label = 'Occupied';
+            } else {
+                $label = 'Available';
+            }
+
+            $location = $listing->area?->name;
+            $parent = $listing->area?->parent?->name;
+            if ($parent && $parent !== $location) {
+                $location = trim($location.', '.$parent);
+            }
+
+            $image = $listing->hero_image_path
+                ? $this->studioPublicUrl($listing->hero_image_path)
+                : ($listing->firstGalleryImage?->image_path ? $this->studioPublicUrl($listing->firstGalleryImage->image_path) : null);
+
+            $leads = (int) ($listing->project_id ? ($leadsByProject[$listing->project_id] ?? 0) : 0);
+            if ($leads === 0 && $listing->area_id) {
+                $leads = (int) ($leadsByArea[$listing->area_id] ?? 0);
+            }
+
+            $title = $listing->title ?: ($listing->project?->title ?: ($listing->area?->name ?: 'Listing'));
+
+            return [
+                'id' => $listing->id,
+                'title' => $title,
+                'location' => $location,
+                'type' => $listing->propertyType?->name ?: ($listing->listing_status === 'rent' ? 'Rent' : 'Sale'),
+                'units' => (int) ($listing->project_id ? ($unitsByProject[$listing->project_id] ?? 1) : max(1, (int) $listing->number_of_bedrooms)),
+                'cost' => (float) ($listing->price ?? 0),
+                'leads' => $leads,
+                'views' => (int) $listing->access_requests_count,
+                'status' => $label,
+                'image' => $image,
+            ];
+        })->values()->all();
+    }
+
+    private function studioContacts($leadScope): array
+    {
+        return $leadScope(Lead::query())
+            ->with([
+                'area:id,name',
+                'responsiblePerson:id,name,display_name,avatar',
+            ])
+            ->latest('id')
+            ->limit(6)
+            ->get(['id', 'first_name', 'last_name', 'lead_name', 'work_phone', 'area_id', 'responsible_person_id', 'lead_source'])
+            ->map(function ($lead) {
+                $name = trim(implode(' ', array_filter([$lead->first_name, $lead->last_name])));
+                if ($name === '') {
+                    $name = $lead->lead_name ?: 'Lead';
+                }
+                $agent = $lead->responsiblePerson;
+
+                return [
+                    'id' => $lead->id,
+                    'name' => $name,
+                    'location' => $lead->area?->name ?: ($lead->lead_source ?: ''),
+                    'phone' => $lead->work_phone,
+                    'avatar' => $agent ? $this->studioPublicUrl($agent->getRawOriginal('avatar')) : null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function studioCalendar($user, bool $isAdmin, array $scopeIds, Carbon $month, $followBase): array
+    {
+        $start = $month->copy()->startOfMonth();
+        $end = $month->copy()->endOfMonth();
+
+        $viewings = ListingAccessRequest::query()
+            ->with([
+                'requestedBy:id,name,display_name,avatar',
+                'listing:id,title,area_id',
+                'listing.area:id,name',
+            ])
+            ->where('request_type', 'viewing')
+            ->whereBetween('viewing_date', [$start->toDateString(), $end->toDateString()])
+            ->when(! $isAdmin, fn ($q) => $q->where(function ($inner) use ($scopeIds) {
+                $inner->whereIn('requested_by', $scopeIds)
+                    ->orWhereHas('listing', fn ($listing) => $listing->whereIn('agent_id', $scopeIds));
+            }))
+            ->orderBy('viewing_date')
+            ->limit(80)
+            ->get();
+
+        $items = $viewings->map(function ($viewing) use ($user) {
+            $who = User::resolveDisplayName($viewing->requestedBy) ?: 'Client';
+            $place = $viewing->listing?->area?->name;
+
+            return [
+                'id' => 'view-'.$viewing->id,
+                'date' => $viewing->viewing_date?->toDateString(),
+                'kind' => 'visit',
+                'title' => 'Visit '.$who,
+                'detail' => trim(($viewing->listing?->title ?: 'Property').($place ? ' · '.$place : '')),
+                'phone' => null,
+                'mine' => (int) $viewing->requested_by === (int) $user->id,
+            ];
+        })->filter(fn ($item) => ! empty($item['date']))->values();
+
+        $followUps = (clone $followBase)
+            ->latest('updated_at')
+            ->limit(4)
+            ->get(['id', 'first_name', 'last_name', 'lead_name', 'work_phone', 'responsible_person_id', 'updated_at']);
+
+        foreach ($followUps as $lead) {
+            $name = trim(implode(' ', array_filter([$lead->first_name, $lead->last_name]))) ?: ($lead->lead_name ?: 'Lead');
+            $items->push([
+                'id' => 'follow-'.$lead->id,
+                'date' => now()->toDateString(),
+                'kind' => 'follow',
+                'title' => 'Follow Up '.$name,
+                'detail' => $lead->work_phone ?: 'Open the lead to continue',
+                'phone' => $lead->work_phone,
+                'mine' => (int) $lead->responsible_person_id === (int) $user->id,
+                'lead_id' => $lead->id,
+            ]);
+        }
+
+        $dates = $items->pluck('date')->unique()->values();
+
+        return [
+            'month' => $month->format('Y-m'),
+            'label' => $month->format('F Y'),
+            'dates' => $dates,
+            'items' => $items->values(),
+        ];
+    }
 }
