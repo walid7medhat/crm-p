@@ -4,19 +4,28 @@
         v-model="show"
         hide-header
         hide-footer
+        no-fade
         size="xl"
         centered
         body-class="p-0 view-lead-modal"
         :z-index="zIndex"
         :no-focus="true"
         dialog-class="kanban-mobile-fullscreen-modal"
+        @hide="onDetailHide"
          @hidden="handleClose"
     >
-        <div v-if="show" class="view-lead-modal-content" @click.capture="guardQualifiedRequirementAction" @focusin.capture="guardQualifiedRequirementFocus">
+        <div
+            v-if="show"
+            ref="leadModalRoot"
+            class="view-lead-modal-content"
+            :class="{ 'lead-detail-motion': detailAnimating }"
+            @click.capture="guardQualifiedRequirementAction"
+            @focusin.capture="guardQualifiedRequirementFocus"
+        >
             <!-- Header -->
             <div class="modal-header-custom" :class="{ 'is-above-requirement': qualifiedRequirementBlocking }">
                 <div class="lead-header-accent" aria-hidden="true"></div>
-                <div class="lead-header-main">
+                <div class="lead-header-main" data-motion="identity">
                     <div class="lead-header-identity">
                         <div class="lead-header-mark" aria-hidden="true">
                             <iconify-icon icon="lucide:user-round"></iconify-icon>
@@ -60,7 +69,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="lead-header-actions">
+                    <div v-if="convertedDeals.length || showConvertedCreateDeal" class="lead-header-actions">
                         <button
                             v-if="convertedDeals.length"
                             ref="convertedDealsTriggerRef"
@@ -81,10 +90,10 @@
                         >
                             Create deal
                         </button>
-                        <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="show = false">
-                            <iconify-icon icon="lucide:x"></iconify-icon>
-                        </button>
                     </div>
+                    <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="closeWithMotion">
+                        <iconify-icon icon="lucide:x"></iconify-icon>
+                    </button>
                 </div>
             </div>
 
@@ -98,19 +107,21 @@
                 Complete Client Requirement
             </button>
 
+            <div data-motion="stages">
             <StageSelector v-model="leadStageId"
             appearance="panel"
             :require-validation="true"
             :disabled="disableStageChange"
             :class="pt-0"
             @stage-change-request="handleStageChangeRequest"/>
+            </div>
 
             <!-- Tabs -->
-            <div class="tabs-container">
+            <div class="tabs-container" data-motion="tabs">
                 <div class="view-lead-tabs">
                     <button 
                         class="tab-item" 
-                        :class="{ active: activeTab === 'general' }"
+                        :class="{ active: activeTab === 'general' && activeJump !== 'comments' && activeJump !== 'activity' }"
                         @click="switchTab('general')"
                     >
                         General
@@ -122,6 +133,22 @@
                         @click="switchTab('history')"
                     >
                         History
+                    </button>
+                    <button
+                        type="button"
+                        class="tab-item"
+                        :class="{ active: activeTab === 'general' && activeJump === 'comments' }"
+                        @click="jumpTo('comments')"
+                    >
+                        Comments
+                    </button>
+                    <button
+                        type="button"
+                        class="tab-item"
+                        :class="{ active: activeTab === 'general' && activeJump === 'activity' }"
+                        @click="jumpTo('activity')"
+                    >
+                        Activity
                     </button>
                 </div>
             </div>
@@ -135,7 +162,9 @@
                     v-else-if="activeTab === 'general' && lead" 
                     :lead="lead" 
                     :stage-id="leadStageId"
+                    :focus-section="focusSection"
                     @update:lead="handleLeadUpdateFromTab"
+                    @section-change="activeJump = $event"
                 />
 
                 <!-- History Tab Content -->
@@ -192,6 +221,20 @@ import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
+import {
+    playLeadDetailData,
+    playLeadDetailEntrance,
+    playLeadDetailExit,
+    stopLeadDetailMotion,
+    takeLeadDetailOrigin,
+} from '@/motion/leadDetailMotion'
+import {
+    armLeadMotion,
+    beginConversionCelebration,
+    cancelLeadMotion,
+    playLeadMotion,
+    prefersReducedMotion,
+} from '@/motion/leadStageMotion'
 
 
 
@@ -238,6 +281,15 @@ const isLoadingLead = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
+const leadModalRoot = ref(null)
+const activeJump = ref('details')
+const focusSection = ref('details')
+let jumpScroller = null
+let jumpTarget = null
+let jumpSettleTimer = null
+const detailAnimating = ref(false)
+let detailExitGuard = false
+let entranceToken = 0
 const leadStageId = ref(null)
 const activeTab = ref('general')
 const echoListener = ref(null)
@@ -465,6 +517,11 @@ function handleLeadConverted(deal) {
     // Let the Kanban board move/remove this lead's card immediately (it just became
     // a deal) instead of relying on a websocket broadcast or a full board refetch.
     const updatedLead = deal?._lead
+    const celebrate = !deal?._alreadyExisted && updatedLead?.id && beginConversionCelebration({
+        leadId: updatedLead.id,
+        leadName: lead.value?.lead_name,
+        stageId: updatedLead.stage_id,
+    })
     if (updatedLead?.id) {
         lead.value = { ...lead.value, ...updatedLead }
         emit('lead-updated', lead.value)
@@ -474,20 +531,27 @@ function handleLeadConverted(deal) {
     show.value = false
     emit('update:modelValue', false)
 
-    // Kanban pages (kanban_deal.vue) switch to the Deals board and open the new deal
-    // with its details form. Elsewhere nothing listens for that event, so go to the
-    // Deals board via ?deal=ID, which opens the deal there.
-    const onKanban = route.path === '/kanban' || route.path === '/kanban_deal'
-    if (onKanban) {
-        window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: deal }))
+    const openConvertedDeal = () => {
+        // Kanban pages (kanban_deal.vue) switch to the Deals board and open the new deal
+        // with its details form. Elsewhere nothing listens for that event, so go to the
+        // Deals board via ?deal=ID, which opens the deal there.
+        const onKanban = route.path === '/kanban' || route.path === '/kanban_deal'
+        if (onKanban) {
+            window.dispatchEvent(new CustomEvent('kanban-open-converted-deal', { detail: deal }))
+            return
+        }
+        const dealId = Number(deal?.id ?? deal?.deal_id)
+        if (Number.isFinite(dealId) && dealId > 0) {
+            nextTick(() => {
+                router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
+            })
+        }
+    }
+    if (celebrate) {
+        void playLeadMotion(updatedLead.id).finally(openConvertedDeal)
         return
     }
-    const dealId = Number(deal?.id ?? deal?.deal_id)
-    if (Number.isFinite(dealId) && dealId > 0) {
-        nextTick(() => {
-            router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
-        })
-    }
+    openConvertedDeal()
 }
 
 const canViewHistory = computed(() => {
@@ -510,6 +574,10 @@ const canViewHistory = computed(() => {
 
 const switchTab = (tab) => {
     activeTab.value = tab
+    if (tab === 'general') {
+        activeJump.value = 'details'
+        focusSection.value = 'details'
+    }
 }
 
 // ================= Inline lead-name edit (like the deal title) =================
@@ -831,6 +899,20 @@ const handleStageChangeRequest = async ({ stageId, stageName, stageOrder }) => {
 
 // Execute stage change API call (without modal)
 const executeStageChange = async (newStageId, oldStageId) => {
+    const motionArmed = armLeadMotion({
+        leadId: lead.value?.id,
+        leadName: lead.value?.lead_name,
+        from: {
+            id: oldStageId,
+            name: lead.value?.stage?.name || lead.value?.stage_name || '',
+            order: stageOrderMap.value[oldStageId] || 0,
+        },
+        to: {
+            id: newStageId,
+            name: '',
+            order: stageOrderMap.value[newStageId] || 0,
+        },
+    })
     try {
         isUserAction.value = true
         const response = await api.post(`/leads/${lead.value.id}/change-stage`, {
@@ -843,7 +925,9 @@ const executeStageChange = async (newStageId, oldStageId) => {
         leadStageId.value = newStageId
         emit('lead-updated', lead.value)
         $showNotification('Stage updated successfully', 'success')
+        if (motionArmed) void playLeadMotion(lead.value.id)
     } catch (error) {
+        if (motionArmed) cancelLeadMotion(lead.value?.id)
         console.error('❌ Error updating stage:', error)
         $showNotification(error.response?.data?.message || 'Failed to update stage', 'error')
         leadStageId.value = oldStageId
@@ -969,6 +1053,24 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
 
         const isConversion = pendingStageChange.value?.isConversion || false
         const targetStageOrder = pendingStageChange.value?.targetStageOrder || 0
+        const originalStageId = pendingStageChange.value?.originalStageId ?? leadData.stage_id
+        const converting = isConversion && targetStageOrder === 6
+        const motionArmed = pendingStageChange.value?.requirementOnly ? false : armLeadMotion({
+            leadId,
+            leadName: leadData.lead_name || lead.value?.lead_name,
+            from: {
+                id: originalStageId,
+                name: lead.value?.stage?.name || lead.value?.stage_name || '',
+                order: stageOrderMap.value[originalStageId] || 0,
+            },
+            to: {
+                id: targetStageId,
+                name: pendingStageChange.value?.targetStageName || '',
+                order: targetStageOrder,
+            },
+            interactionResult: additionalData.interaction_result || null,
+            force: converting ? 'stash' : null,
+        })
 
         // Prepare payload
         const payload = {
@@ -1073,10 +1175,12 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
                 lead.value = { ...lead.value, ...response.data.data }
                 emit('lead-updated', lead.value)
             }
+            if (motionArmed) void playLeadMotion(leadId)
 
             // Background refresh — do not block the UI
             fetchLead({ silent: true }).catch(() => {})
         } catch (error) {
+            if (motionArmed || converting) cancelLeadMotion(leadId)
             console.error('❌ Error in handleStageChangeWithReason:', error)
             const errorMessage = error.response?.data?.message ||
                                 error.response?.data?.error ||
@@ -1089,6 +1193,7 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
         
     } catch (error) {
         console.error('❌ Error preparing stage change:', error)
+        cancelLeadMotion(leadId)
         throw error
     }
 }
@@ -1295,12 +1400,95 @@ onMounted(() => {
     document.addEventListener('keydown', blockQualifiedRequirementEscape, true)
 })
 
+function syncJumpFromScroll() {
+    if (jumpTarget) {
+        activeJump.value = jumpTarget
+        return
+    }
+    const root = leadModalRoot.value
+    const scroller = root?.querySelector('.modal-body-custom')
+    if (!root || !scroller) return
+    const line = scroller.getBoundingClientRect().top + 88
+    let current = 'details'
+    ;['details', 'comments', 'activity'].forEach((id) => {
+        const node = root.querySelector(`#lead-section-${id}`)
+        if (node && node.getBoundingClientRect().top <= line) current = id
+    })
+    activeJump.value = current
+}
+
+function jumpTo(section) {
+    activeJump.value = section
+    focusSection.value = section
+    jumpTarget = section
+    const reveal = () => {
+        const root = leadModalRoot.value
+        const target = root?.querySelector(`#lead-section-${section}`)
+        if (!target) {
+            jumpTarget = null
+            return
+        }
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        const behavior = reduce ? 'auto' : 'smooth'
+        const side = target.closest('.lead-view-side')
+        const sideScrolls = side && side.scrollHeight > side.clientHeight + 4
+        if (sideScrolls) {
+            const top = target.getBoundingClientRect().top - side.getBoundingClientRect().top + side.scrollTop - 8
+            side.scrollTo({ top: Math.max(0, top), behavior })
+        } else {
+            const scroller = root?.querySelector('.modal-body-custom')
+            if (!scroller) {
+                target.scrollIntoView({ behavior, block: 'start' })
+            } else {
+                const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 8
+                scroller.scrollTo({ top: Math.max(0, top), behavior })
+            }
+        }
+        window.clearTimeout(jumpSettleTimer)
+        jumpSettleTimer = window.setTimeout(releaseJumpTarget, reduce ? 40 : 1600)
+    }
+    if (activeTab.value !== 'general') activeTab.value = 'general'
+    nextTick(() => nextTick(reveal))
+}
+
+function releaseJumpTarget() {
+    jumpTarget = null
+    syncJumpFromScroll()
+}
+
+function onJumpScroll() {
+    if (!jumpTarget) {
+        syncJumpFromScroll()
+        return
+    }
+    activeJump.value = jumpTarget
+    window.clearTimeout(jumpSettleTimer)
+    jumpSettleTimer = window.setTimeout(releaseJumpTarget, 140)
+}
+
+function bindJumpObserver() {
+    const scroller = leadModalRoot.value?.querySelector('.modal-body-custom')
+    if (!scroller || scroller === jumpScroller) return
+    jumpScroller?.removeEventListener('scroll', onJumpScroll)
+    jumpScroller = scroller
+    if (!window.matchMedia('(max-width: 768px)').matches) return
+    scroller.addEventListener('scroll', onJumpScroll, { passive: true })
+}
+
+watch(() => lead.value?.id, () => {
+    if (show.value) nextTick(() => bindJumpObserver())
+})
+
 onUnmounted(() => {
+    jumpScroller?.removeEventListener('scroll', onJumpScroll)
     document.removeEventListener('keydown', blockQualifiedRequirementEscape, true)
+    stopLeadDetailMotion()
     cleanup()
 })
 
 const handleClose = () => {
+  detailExitGuard = false
+  detailAnimating.value = false
   show.value = false
   if (props.syncUrl && route.query.lead) {
     // No `path` — this modal is embedded on more than one page (Kanban, Lead Pool inside
@@ -1374,9 +1562,59 @@ watch(() => route.path, (newPath) => {
 })
 
 
+async function queueLeadDetailEntrance() {
+    const token = ++entranceToken
+    if (prefersReducedMotion()) {
+        detailAnimating.value = false
+        return
+    }
+    await nextTick()
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    if (token !== entranceToken || !show.value) return
+    const root = leadModalRoot.value
+    if (!root) {
+        detailAnimating.value = false
+        return
+    }
+    const hasData = !!root.querySelector('.lead-view-main')
+    playLeadDetailEntrance(root, takeLeadDetailOrigin(), () => {
+        detailAnimating.value = false
+    })
+    window.setTimeout(() => {
+        if (token === entranceToken) detailAnimating.value = false
+    }, 900)
+    if (!hasData) {
+        const stop = watch(() => lead.value?.id, async (id) => {
+            if (!id || !show.value) return
+            stop()
+            await nextTick()
+            playLeadDetailData(leadModalRoot.value)
+        })
+    }
+}
+
+async function closeWithMotion() {
+    if (detailExitGuard) return
+    detailExitGuard = true
+    entranceToken += 1
+    detailAnimating.value = false
+    await playLeadDetailExit(leadModalRoot.value)
+    show.value = false
+}
+
+function onDetailHide(event) {
+    if (detailExitGuard || prefersReducedMotion()) return
+    if (!event || typeof event.preventDefault !== 'function') return
+    event.preventDefault()
+    void closeWithMotion()
+}
+
 watch(show, (val, oldVal) => {
   console.log('[ViewLeadModal] watch show', { val, oldVal, propsLeadId: props.leadId, syncUrl: props.syncUrl, routePath: route.path })
   if (val) {
+    activeJump.value = 'details'
+    detailExitGuard = false
+    if (!prefersReducedMotion()) detailAnimating.value = true
     modalHostPath.value = route.path
     if (props.leadId) {
       fetchLead()
@@ -1384,7 +1622,13 @@ watch(show, (val, oldVal) => {
     } else {
       console.log('[ViewLeadModal] watch show -> val true but props.leadId falsy, fetchLead NOT called')
     }
+    void queueLeadDetailEntrance()
+    nextTick(() => bindJumpObserver())
   } else if (oldVal) {
+    jumpScroller?.removeEventListener('scroll', onJumpScroll)
+    jumpScroller = null
+    detailAnimating.value = false
+    if (!detailExitGuard) stopLeadDetailMotion()
     if (pendingStageChange.value?.requirementOnly) {
       showStageChangeModal.value = false
       clearPendingStageChange()
@@ -1452,6 +1696,12 @@ defineExpose({
     overflow: hidden;
     font-family: 'Montserrat', sans-serif;
     position: relative;
+}
+
+.lead-detail-motion [data-motion],
+.lead-detail-motion :deep(.lead-view-main),
+.lead-detail-motion :deep(.lead-view-side) {
+    opacity: 0;
 }
 
 .modal-header-custom {
@@ -1847,19 +2097,23 @@ defineExpose({
 .view-lead-tabs {
     display: flex;
     gap: 6px;
+    width: 100%;
 }
 
 .tab-item {
+    flex: 1 1 0;
     background: #fff;
     border: 1px solid #eadff0;
     border-radius: 999px;
     min-height: 26px;
-    padding: 0 12px;
+    padding: 0 8px;
     font-size: 11px;
     font-weight: 600;
     color: #5c5366;
     position: relative;
     cursor: pointer;
+    white-space: nowrap;
+    text-align: center;
 }
 
 .tab-item.active {
@@ -2051,28 +2305,28 @@ textarea, input, select {
         right: auto !important;
         left: auto !important;
         transform: none;
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        margin-left: auto;
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        margin-left: 0;
         padding: 0;
         display: flex !important;
         justify-content: center;
         align-items: center;
         flex-shrink: 0;
-        box-shadow: 0 2px 8px rgba(11, 7, 54, 0.15);
-        border-radius: 999px;
+        box-shadow: none;
+        border-radius: 10px;
         border: none;
-        background: linear-gradient(135deg, #6b21a8 0%, #733e87 100%);
+        background: #111111;
         color: #ffffff !important;
         z-index: 10 !important;
     }
 
     .close-btn iconify-icon,
     .view-lead-close-btn iconify-icon {
-        width: 20px !important;
-        height: 20px !important;
+        width: 16px !important;
+        height: 16px !important;
         color: #ffffff !important;
     }
 
@@ -2081,10 +2335,64 @@ textarea, input, select {
         top: 0;
         z-index: 10;
         flex-shrink: 0;
+        align-items: stretch;
+        width: calc(100% + 20px);
+        margin: 0 -10px 8px;
+        padding: 0 !important;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+
+    .lead-header-main {
+        display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 10px;
-        padding: 10px 12px !important;
-        margin-bottom: 8px;
+        gap: 8px 10px;
+        width: 100%;
+        padding: 8px 12px;
+    }
+
+    .lead-header-identity {
+        flex: 1 1 auto;
+        min-width: 0;
+        order: 1;
+    }
+
+    .lead-header-kicker {
+        display: none;
+    }
+
+    .lead-header-mark {
+        width: 32px;
+        height: 32px;
+        flex-basis: 32px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+
+    .lead-header-actions {
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+        margin-left: 0;
+        gap: 8px;
+    }
+
+    .lead-header-actions:empty {
+        display: none;
+    }
+
+    .lead-converted-deal-link,
+    .lead-converted-create-deal {
+        flex: 1 1 0;
+        max-width: none;
+        height: 34px;
+        justify-content: center;
+    }
+
+    .view-lead-close-btn {
+        order: 2;
     }
 
     .modal-title {
@@ -2134,11 +2442,72 @@ textarea, input, select {
         padding-left: 12px !important;
         padding-right: 12px !important;
     }
+
+    .modal-header-custom {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
     :deep(.stage-selector-wrapper .stage-text) {
         font-size: 11px !important;
     }
     .tabs-container {
         margin-top: 8px;
+    }
+
+    .lead-jump {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        flex-shrink: 0;
+        margin: 0 0 8px;
+        padding: 4px;
+        border-radius: 16px;
+        background: #01062d;
+        position: relative;
+        z-index: 8;
+    }
+
+    .lead-jump__btn {
+        min-height: 40px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .lead-jump__btn.is-active {
+        background: #fff;
+        color: #01062d;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+    }
+
+    .lead-header-mark {
+        width: 40px;
+        height: 40px;
+        flex-basis: 40px;
+        border-radius: 14px;
+        font-size: 18px;
+        background: #01062d;
+        color: #FAA300;
+    }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #01062d;
+    }
+
+    .stage-selector-wrapper {
+        margin-bottom: 8px;
     }
     .details-content,
     .timeline-content,
@@ -2191,9 +2560,20 @@ textarea, input, select {
 }
 
 /* الأجزاء الثابتة */
+.lead-jump {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .lead-jump {
+        display: grid;
+    }
+}
+
 .modal-header-custom,
 .stage-selector-wrapper,
-.tabs-container {
+.tabs-container,
+.lead-jump {
     flex-shrink: 0;
 }
 
@@ -2342,41 +2722,56 @@ textarea, input, select {
         top: auto !important;
         right: auto !important;
         left: auto !important;
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
         flex-shrink: 0 !important;
-        margin-left: auto !important;
+        margin-left: 0 !important;
         z-index: 20 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         border: none !important;
-        border-radius: 999px !important;
-        background: linear-gradient(135deg, #6b21a8 0%, #733e87 100%) !important;
+        border-radius: 10px !important;
+        background: #111111 !important;
         color: #fff !important;
-        box-shadow: 0 2px 10px rgba(11, 7, 54, 0.25) !important;
+        box-shadow: none !important;
     }
 
     #view-lead-modal .view-lead-close-btn iconify-icon,
     #view-lead-modal .view-lead-close-btn svg {
         color: #fff !important;
-        width: 20px !important;
-        height: 20px !important;
+        width: 16px !important;
+        height: 16px !important;
     }
 
     #view-lead-modal .modal-header-custom {
         display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
+        align-items: stretch !important;
+        width: calc(100% + 20px) !important;
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
         overflow: hidden !important;
         flex-shrink: 0 !important;
+    }
+
+    #view-lead-modal .lead-header-main {
+        flex-wrap: wrap !important;
+    }
+
+    #view-lead-modal .lead-header-actions {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        margin-left: 0 !important;
     }
 
     #view-lead-modal .modal-title {
         flex: 1 1 auto !important;
         min-width: 0 !important;
-        max-width: calc(100% - 54px) !important;
+        max-width: 100% !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;

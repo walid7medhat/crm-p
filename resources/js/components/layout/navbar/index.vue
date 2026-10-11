@@ -4,6 +4,7 @@
     :class="{
       'navbar-header--mobile-compact': isMobileViewport,
       'navbar-header--kanban-mobile': isKanbanRoute && isMobileViewport,
+      'navbar-header--lead-board': showLeadBoardHeader,
       'navbar-header--search-chips': isKanbanRoute && isMobileViewport && resolvedActiveFilters.length > 0,
       'navbar-header--dashboard-home': isDashboardHome,
       'navbar-header--property-detail': isPropertyDetailRoute && isMobileViewport,
@@ -15,6 +16,30 @@
     >
       <div v-if="showMobileCompactHeader" class="mob-module-toolbar">
         <div class="kanban-mob-toolbar__main kanban-mob-toolbar__main--board">
+          <template v-if="showLeadBoardHeader">
+            <button type="button" class="lead-board-id" aria-label="Profile" @click.stop="openProfilePanel">
+              <img
+                v-if="user && user.avatar && !mobileAvatarFailed"
+                :src="user.avatar"
+                alt=""
+                class="lead-board-id__avatar"
+                @error="mobileAvatarFailed = true"
+              >
+              <span v-else class="lead-board-id__avatar lead-board-id__avatar--letter" aria-hidden="true">{{ leadBoardInitial }}</span>
+              <span class="lead-board-id__name">{{ leadBoardFirstName }} <span aria-hidden="true">👋</span></span>
+            </button>
+            <div class="kanban-mob-toolbar__actions">
+              <button type="button" class="lead-board-add" @click="handleKanbanCreateNew">Add Lead</button>
+              <NotificationBell
+                ref="notificationBellMob"
+                class="kanban-mob-notification"
+                :sound-enabled="soundEnabled"
+                :browser-notifications-enabled="browserNotificationsEnabled"
+                @toggle="handleNotificationToggle"
+              />
+            </div>
+          </template>
+          <template v-else>
           <button
             v-if="!isDashboardHome"
             type="button"
@@ -70,6 +95,7 @@
               </button>
             </div>
           </div>
+          </template>
         </div>
 
         <Teleport to="body">
@@ -150,6 +176,15 @@
                 <iconify-icon icon="lucide:x" />
               </button>
             </div>
+            <button
+              v-if="canUseLeadSearchModal && activeKanbanTab !== 'deals'"
+              type="button"
+              class="kanban-mob-search-grid"
+              aria-label="Search filters"
+              @click.stop="openSearchModal()"
+            >
+              <iconify-icon :icon="showLeadBoardHeader ? 'lucide:sliders-horizontal' : 'lucide:layout-grid'" />
+            </button>
             </div>
             <div
               v-if="resolvedActiveFilters.length"
@@ -1128,6 +1163,20 @@ const kanbanMobileTitle = computed(() => {
   return tab?.label || mobileModuleLabel.value;
 });
 
+const showLeadBoardHeader = computed(() => (
+  isMobileViewport.value
+  && isLeadRoute.value
+  && !showMobileHeaderBack.value
+  && activeKanbanTab.value !== 'lead-pool'
+));
+
+const leadBoardFirstName = computed(() => {
+  const name = String(user.value?.name || '').trim();
+  return name.split(/\s+/)[0] || 'Leads';
+});
+
+const leadBoardInitial = computed(() => leadBoardFirstName.value.slice(0, 1).toUpperCase() || 'L');
+
 function kanbanSwitchIcon(tab) {
   if (tab?.id === 'lead-pool') return 'lucide:layers';
   if (tab?.id === 'leads' || tab?.id === 'list') return 'lucide:users';
@@ -1252,7 +1301,7 @@ const searchInputPlaceholder = computed(() => {
     if (isDealRoute.value || activeKanbanTab.value === 'deals') {
         return 'Search deals, client, phone…';
     }
-    return 'Search Leads';
+    return isMobileViewport.value ? 'Search leads...' : 'Search Leads';
 });
 
 const visibleFilterPills = computed(() => {
@@ -4872,6 +4921,87 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     flex-shrink: 0;
   }
 
+  .lead-board-id {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #111111;
+    cursor: pointer;
+  }
+
+  .lead-board-id__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #e9d5ff;
+  }
+
+  .lead-board-id__avatar--letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b21a8;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .lead-board-id__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #111111;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  .lead-board-add {
+    height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #111111;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .lead-board-add:active {
+    transform: scale(0.97);
+  }
+
+  .navbar-header--lead-board .kanban-mob-notification :deep(.notification-bell-btn) {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    border: 1px solid #ececef;
+    background: #ffffff;
+    color: #111111;
+    box-shadow: none;
+  }
+
+  .navbar-header--lead-board .kanban-mob-search-glyph {
+    left: 12px;
+    right: auto;
+    color: #111111;
+  }
+
+  .navbar-header--lead-board .kanban-mob-search-field input {
+    padding-left: 34px !important;
+    padding-right: 12px !important;
+  }
+
   .kanban-mob-create {
     flex-shrink: 0;
     width: 40px;
@@ -5053,6 +5183,20 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     gap: 10px;
     width: 100%;
     min-width: 0;
+  }
+
+  .kanban-mob-search-grid {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #01062d;
+    box-shadow: 0 6px 16px rgba(1, 6, 45, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .kanban-mob-search-row .search-wrapper {

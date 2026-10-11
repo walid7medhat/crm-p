@@ -7,7 +7,7 @@
             size="xl"
             centered
             body-class="p-0"
-            dialog-class="kanban-mobile-fullscreen-modal"
+            dialog-class="create-lead-dialog kanban-mobile-fullscreen-modal"
         >
             <div class="create-lead-modal-content p-3">
                 <div class="create-lead-modal-top">
@@ -25,10 +25,11 @@
                     </div>
                 </div>
 
+                <div class="create-lead-body">
                 <!-- Form Content -->
                 <div class="form-scroll-area">
                     <div class="step-content">
-                        <div class="row g-4 p-0 p-md-4 position-relative">
+                        <div class="row g-2 p-0 position-relative">
                             <!-- Lead Name -->
                             <div class="col-12">
                                 <label class="form-label-custom">Lead Name</label>
@@ -46,13 +47,13 @@
                           
     
                             <!-- Contact Details Section -->
-                                <div class="contact-details-card p-3">
-                                    <span class="section-title d-block mb-3">Lead Information</span>
+                                <div class="contact-details-card">
+                                    <span class="section-title">Lead Information</span>
                                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                                                       <!-- Salutation, First Name, Last Name, Position -->
                                         <div class="col">
                                             <label class="form-label-custom">Salutation</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.salutation" 
                                                 :options="salutationOptions" 
                                                 :reduce="option => option.value"
@@ -166,7 +167,7 @@
                                 <b-form-textarea 
                                     v-model="form.comment" 
                                     placeholder="Text Here" 
-                                    rows="4" 
+                                    rows="2" 
                                     class="custom-textarea"
                                     :class="{ 'is-invalid': validationErrors.comment }"
                                 ></b-form-textarea>
@@ -177,20 +178,16 @@
     
                             <!-- Additional Fields Builder -->
                             <div class="col-12" v-if="currentStageOrder !== 0">
-                                <div class="additional-fields-card p-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <div>
-                                            <span class="section-title d-block">Client Requirement</span>
-                                        </div>
-                                    </div>
+                                <div class="additional-fields-card">
+                                    <span class="section-title">Client Requirement</span>
     
-                                    <div class="row gy-3 gx-0 mt-0 client-requirements-grid">
+                                    <div class="row gy-2 gx-2 mt-0 client-requirements-grid">
                                       
     
                                         <!-- Bedrooms (Stage 4) -->
                                         <div v-if="shouldShowField('bedrooms') && !isPlotsOrLand" class="col-md-4" style="order: 5;">
                                             <label class="form-label-custom">How Many Bedrooms</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.bedrooms" 
                                                 :options="bedroomOptions" 
                                                 :reduce="option => option.value"
@@ -266,7 +263,7 @@
                                         <!-- Purpose (Stage 4) -->
                                         <div v-if="shouldShowField('purpose_buying') && !isRentOnly" class="col-md-4" style="order: 8;">
                                             <label class="form-label-custom">Purpose Of Purchase</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.purpose_buying" 
                                                 :options="purposeOptions" 
                                                 :reduce="option => option.value"
@@ -285,7 +282,7 @@
                                         <!-- Source (Stage 4) -->
                                             <div class="col-md-4" style="order: 20;">
                                                 <label class="form-label-custom">Source <span class="text-danger">*</span></label>
-                                                <v-select 
+                                                <v-select :append-to-body="true" 
                                                     v-model="form.lead_source" 
                                                     :options="dynamicSourceOptions" 
                                                     :reduce="option => option.value"
@@ -421,7 +418,7 @@
                                         <!-- Location / Area (Stage 4) -->
                                         <div v-if="shouldShowField('area_id')" class="col-md-4" style="order: 1;">
                                             <label class="form-label-custom">Location / Area</label>
-                                            <v-select
+                                            <v-select :append-to-body="true"
                                                 v-model="form.area_id"
                                                 :options="areas"
                                                 :reduce="area => area.id"
@@ -457,7 +454,7 @@
                                         <!-- Property Type (Stage 4) -->
                                         <div v-if="shouldShowField('property_type_id')" class="col-md-4" style="order: 2;">
                                             <label class="form-label-custom">Property Type</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.property_type_id"
                                                 :options="propertyTypeOptions"
                                                 :reduce="option => option.value"
@@ -476,7 +473,7 @@
                                         <!-- Lead Type (Sale/Rent) - جديد -->
                                         <div v-if="shouldShowField('lead_type')" class="col-md-4" style="order: 3;">
                                             <label class="form-label-custom">Lead Type</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.lead_type" 
                                                 :options="leadTypeOptions" 
                                                 :reduce="option => option.value"
@@ -499,7 +496,7 @@
                                         <!-- Property Status (Ready/Off Plan/Both) - جديد -->
                                         <div v-if="shouldShowField('property_status') && !isRentOnly" class="col-md-4" style="order: 4;">
                                             <label class="form-label-custom">Property Status</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.property_status" 
                                                 :options="propertyStatusOptions" 
                                                 :reduce="option => option.value"
@@ -522,7 +519,7 @@
                                         <!-- Lead Status (Stages 4, 9, 10) -->
                                         <div v-if="shouldShowField('lead_status') || shouldShowField('lead_status_pool') || shouldShowField('unqualified_status')" class="col-md-4">
                                             <label class="form-label-custom">Quality Status</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.status_lead" 
                                                 :options="getLeadStatusOptions()" 
                                                 :reduce="option => option.value"
@@ -553,7 +550,7 @@
                                         <!-- Branch (Stage 7) -->
                                         <div v-if="shouldShowField('branch')" class="col-md-4">
                                             <label class="form-label-custom">Branch</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.branch" 
                                                 :options="branchOptions" 
                                                 :reduce="option => option.value"
@@ -572,7 +569,7 @@
                                         <!-- Lost Reason (Stage 8) -->
                                         <div v-if="shouldShowField('lost_reason')" class="col-md-4">
                                             <label class="form-label-custom">Lost Reason</label>
-                                            <v-select 
+                                            <v-select :append-to-body="true" 
                                                 v-model="form.lost_reason" 
                                                 :options="lostReasonOptions" 
                                                 :reduce="option => option.value"
@@ -622,6 +619,22 @@
                             <!-- Location / Property Type moved into the Additional fields section -->
                         </div>
                     </div>
+                </div>
+
+                <aside class="lead-campaign-preview" aria-live="polite" aria-label="Lead card preview">
+                    <article class="lead-preview-card">
+                        <p v-if="leadPreview.title" class="lead-preview-card__title">{{ leadPreview.title }}</p>
+                        <p v-else class="lead-preview-card__title is-empty">Lead name</p>
+                        <div
+                            v-for="row in leadPreview.rows"
+                            :key="row.label"
+                            class="lead-preview-card__row"
+                        >
+                            <span>{{ row.label }}</span>
+                            <strong>{{ row.value }}</strong>
+                        </div>
+                    </article>
+                </aside>
                 </div>
     
                 <!-- Footer Actions -->
@@ -1124,7 +1137,25 @@ watch(selectedExistingClient, (client) => {
         showBudgetDropdown.value = !showBudgetDropdown.value
     }
     
+    function closeOpenLeadSelects(event) {
+        const target = event.target
+        if (!(target instanceof Element)) return
+        const modal = document.getElementById('create-lead-modal')
+        if (!modal) return
+        modal.querySelectorAll('.v-select.vs--open').forEach((select) => {
+            const listId = select.querySelector('[aria-owns]')?.getAttribute('aria-owns')
+            const menu = listId ? document.getElementById(listId) : null
+            if (select.contains(target) || menu?.contains(target)) return
+            const input = select.querySelector('.vs__search')
+            if (!input) return
+            // vue-select ignores the first blur while its menu mousedown flag is set.
+            input.dispatchEvent(new FocusEvent('blur'))
+            input.dispatchEvent(new FocusEvent('blur'))
+        })
+    }
+
     function onDocumentClick(event) {
+        closeOpenLeadSelects(event)
         if (!showBudgetDropdown.value) return
         const target = event.target
         const triggerEl = budgetTriggerRef.value
@@ -1152,6 +1183,44 @@ watch(selectedExistingClient, (client) => {
     const locationSecondLine = (area) => {
         return area.parent || ''
     }
+
+    const previewOptionLabel = (options, value) => {
+        if (value == null || value === '') return ''
+        const list = Array.isArray(options) ? options : []
+        const match = list.find((option) => option.value === value || option.id === value)
+        return match?.text || match?.name || ''
+    }
+
+    const leadPreview = computed(() => {
+        const title = String(form.value.lead_name || '').trim()
+        const person = [form.value.salutation, form.value.first_name, form.value.last_name]
+            .map((part) => String(part || '').trim())
+            .filter(Boolean)
+            .join(' ')
+        const area = areas.value.find((item) => item.id === form.value.area_id)
+        const budgetText = budgetDisplay.value === 'Select budget range' ? '' : `${budgetDisplay.value} AED`
+        const rows = [
+            ['Name', person],
+            ['Phone', form.value.work_phone],
+            ['Email', form.value.email],
+            ['Secondary Phone', form.value.work_phone_2],
+            ['Secondary Email', form.value.secondary_email],
+            ['Source', previewOptionLabel(dynamicSourceOptions.value, form.value.lead_source)],
+            ['Location', area ? locationFirstLine(area) : ''],
+            ['Property Type', previewOptionLabel(propertyTypeOptions.value, form.value.property_type_id)],
+            ['Bedrooms', previewOptionLabel(bedroomOptions, form.value.bedrooms)],
+            ['Lead Type', previewOptionLabel(leadTypeOptions, form.value.lead_type)],
+            ['Property Status', previewOptionLabel(propertyStatusOptions, form.value.property_status)],
+            ['Purpose', previewOptionLabel(purposeOptions, form.value.purpose_buying)],
+            ['Budget', budgetText],
+            ['Notes', form.value.comment],
+            ['More Information', form.value.source_information],
+            ['Responsible', form.value.responsible_person?.name || ''],
+        ]
+            .map(([label, value]) => ({ label, value: String(value || '').trim() }))
+            .filter((row) => row.value)
+        return { title, rows }
+    })
     watch(() => props.modelValue, (val) => {
         show.value = val
     })
@@ -1262,6 +1331,7 @@ watch(selectedExistingClient, (client) => {
         // otherwise stop the click before it ever reaches this document listener,
         // leaving the budget dropdown stuck open no matter what else gets clicked.
         document.addEventListener('click', onDocumentClick, true)
+        document.addEventListener('pointerdown', closeOpenLeadSelects, true)
         fetchUsers()
         fetchSources()
          fetchStages()
@@ -1273,6 +1343,7 @@ watch(selectedExistingClient, (client) => {
     onBeforeUnmount(() => {
         window.removeEventListener('resize', syncMobileModal)
         document.removeEventListener('click', onDocumentClick, true)
+        document.removeEventListener('pointerdown', closeOpenLeadSelects, true)
     })
     
     const salutationOptions = [
@@ -1814,6 +1885,128 @@ watch(selectedExistingClient, (client) => {
         border-radius: 12px;
     }
 
+    .create-lead-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 8px;
+        align-items: start;
+    }
+
+    .create-lead-modal-content.p-3 {
+        padding: 8px 10px 6px !important;
+    }
+
+    .lead-campaign-preview {
+        position: sticky;
+        top: 8px;
+        min-width: 0;
+        align-self: start;
+    }
+
+    @media (min-width: 992px) {
+        .create-lead-modal-content {
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100dvh - 40px);
+        }
+
+        .create-lead-body {
+            min-height: 0;
+        }
+
+        .form-scroll-area {
+            max-height: min(72vh, 740px);
+            overflow-y: auto;
+        }
+    }
+
+    .lead-preview-card {
+        padding: 12px;
+        color: #1e293b;
+        background: #ffffff;
+        border: 1px solid rgba(30, 27, 46, 0.14);
+        border-radius: 14px;
+        box-shadow: 0 2px 10px rgba(30, 27, 46, 0.08);
+        font-family: Montserrat, sans-serif;
+    }
+
+    .lead-preview-card__title {
+        margin: 0 0 12px;
+        color: #1a1528;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: -0.2px;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .lead-preview-card__title.is-empty {
+        color: #8b8798;
+        font-weight: 600;
+    }
+
+    .lead-preview-card__row {
+        margin-bottom: 8px;
+        animation: lead-preview-in 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    .lead-preview-card__row span {
+        display: block;
+        margin-bottom: 2px;
+        color: #8b8798;
+        font-size: 10px;
+        font-weight: 500;
+    }
+
+    .lead-preview-card__row strong {
+        display: block;
+        color: #353535;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    @keyframes lead-preview-in {
+        from {
+            opacity: 0;
+            transform: translateY(4px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @media (max-width: 991px) {
+        .create-lead-body {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .form-scroll-area {
+            order: 1;
+        }
+
+        .lead-campaign-preview {
+            order: 2;
+            position: static;
+            flex: 0 0 auto;
+            width: 100%;
+            max-height: 132px;
+            overflow: auto;
+            padding: 0 10px 8px;
+            z-index: 0;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .lead-preview-card__row {
+            animation: none;
+        }
+    }
+
     /* Duplicate-phone note under the phone fields (admins only) */
     .phone-dup-note {
         display: flex;
@@ -1846,24 +2039,42 @@ watch(selectedExistingClient, (client) => {
     
     /* Form Styles */
     .step-content .row {
-        padding: 20px !important;
+        padding: 6px 8px !important;
         margin: 0 !important;
     }
     
     .form-label-custom {
         display: block;
-        font-size: 13px;
-        font-weight: 500;
-        color: #000;
-        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #5c5366;
+        margin-bottom: 3px;
     }
     
     .section-title {
-        font-family: Montserrat;
-        font-weight: 500;
-        font-style: Medium;
-        font-size: 13px;
-        color: #0B0736;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 0 0 8px;
+        padding: 6px 10px;
+        background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
+        border-bottom: 1px solid #f3eaf6;
+        font-family: Montserrat, sans-serif;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #733e87;
+    }
+
+    .section-title::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 1px;
+        background: #733e87;
+        transform: rotate(45deg);
+        flex-shrink: 0;
     }
     
     .custom-textarea {
@@ -1871,26 +2082,20 @@ watch(selectedExistingClient, (client) => {
         padding: 12px 15px;
     }
     
-    .form-label-custom {
-        display: block;
-        font-size: 13px;
-        font-weight: 500;
-        color: #000000;
-        margin-bottom: 2px;
-    }
-    
     .custom-input, .custom-textarea {
-        height: 42px !important;
-        border-radius: 10px !important;
-        border: 1px solid #E2E8F0 !important;
-        font-size: 13px !important;
-        color: #64748B !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+        border: 1px solid #eadff0 !important;
+        font-size: 12px !important;
+        color: #2a2230 !important;
         font-family: 'Montserrat';
+        padding: 4px 8px !important;
     }
     
     .custom-textarea {
-        height: 143px !important;
-        padding: 12px 15px !important;
+        height: 64px !important;
+        min-height: 64px !important;
+        padding: 6px 8px !important;
     }
     
     /* Custom v-select styles to match the image */
@@ -1899,10 +2104,10 @@ watch(selectedExistingClient, (client) => {
     }
     
     :deep(.custom-v-select .vs__dropdown-toggle) {
-        min-height: 42px;
-        height: 42px;
-        border-radius: 10px;
-        border: 1px solid #E2E8F0;
+        min-height: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 1px solid #eadff0;
         background: #fff;
         padding: 0 8px;
         display: flex !important;
@@ -1986,13 +2191,18 @@ watch(selectedExistingClient, (client) => {
         vertical-align: middle !important;
     }
     
+    :deep(.custom-v-select.vs--open) {
+        position: relative;
+        z-index: 40;
+    }
+
     :deep(.custom-v-select .vs__dropdown-menu) {
-        /* border-radius: 12px; */
         border: 1px solid #E2E8F0;
+        background: #fff;
         box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
         padding: 0;
         margin-top: 5px;
-        z-index: 1100;
+        z-index: 13000;
     }
     
     :deep(.custom-v-select .vs__dropdown-option) {
@@ -2231,8 +2441,8 @@ watch(selectedExistingClient, (client) => {
     }
     
     .modal-footer-custom {
-        border-top: 1px solid #F4F4F4;
-        padding: 15px;
+        border-top: 1px solid #f3eaf6;
+        padding: 8px 10px;
     }
     
     .alert {
@@ -2248,18 +2458,38 @@ watch(selectedExistingClient, (client) => {
         color: #991B1B;
     }
     
-    .contact-details-card {
-        background: #FFFFFF;
-        border: 1px solid #F3F3F3;
-        border-radius: 10px;
-        box-shadow: 1px 1px 5px 5px #00000005;
-    }
-    
+    .contact-details-card,
     .additional-fields-card {
-        background: #FFFFFF;
-        border: 1px solid #F3F3F3;
+        background: #ffffff;
+        border: 1px solid #efe4f3;
         border-radius: 10px;
-        box-shadow: 1px 1px 5px 5px #00000005;
+        padding: 0 0 8px !important;
+        margin: 0;
+        box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+        overflow: visible;
+    }
+
+    .contact-details-card > .d-flex {
+        display: grid !important;
+        gap: 8px 10px !important;
+        align-items: start !important;
+        padding: 0 10px;
+        margin-bottom: 8px !important;
+    }
+
+    .contact-details-card > .d-flex:first-of-type {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .contact-details-card > .d-flex:last-of-type {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .contact-details-card .col {
+        width: auto;
+        max-width: none;
+        flex: none;
+        padding: 0;
     }
     .client-requirements-grid {
         margin-left: 0 !important;
@@ -2271,10 +2501,15 @@ watch(selectedExistingClient, (client) => {
         padding-right: 0 !important;
         padding-bottom: 0 !important;
     }
-    .additional-fields-card .col-md-4{
+    .additional-fields-card .col-md-4,
+    .additional-fields-card .col-md-12 {
         padding-top: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 12px !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    .client-requirements-grid {
+        padding: 0 4px !important;
     }
     .additional-checklist {
         display: grid;
@@ -2789,6 +3024,10 @@ watch(selectedExistingClient, (client) => {
         background: #f8fbff;
         overflow: hidden;
       }
+      .create-lead-body {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
       .create-lead-modal-top {
         flex-shrink: 0;
         position: sticky;
@@ -2832,7 +3071,8 @@ watch(selectedExistingClient, (client) => {
         flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 12px;
       }
       .modal-header-custom {
         background: #fff;
@@ -2906,25 +3146,35 @@ watch(selectedExistingClient, (client) => {
         height: 46px !important;
         min-height: 46px !important;
         border-radius: 12px !important;
-        font-size: 14px !important;
+        font-size: 16px !important;
       }
       .custom-input::placeholder,
       .custom-textarea::placeholder,
       :deep(.custom-v-select .vs__search::placeholder) {
-        font-size: 14px !important;
+        font-size: 16px !important;
         color: #9aa6b2 !important;
       }
       :deep(.custom-v-select .vs__selected),
       :deep(.custom-v-select .vs__search) {
-        font-size: 14px !important;
+        font-size: 16px !important;
         line-height: 1.2 !important;
       }
+      :deep(.vue-tel-input) {
+        display: flex !important;
+        width: 100% !important;
+      }
+      :deep(.vti__input) {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: 1% !important;
+        font-size: 16px !important;
+      }
       .modal-footer-custom {
-        position: sticky;
-        /* Keep Save/Cancel buttons above the fixed bottom Lead/Listing actions on mobile. */
-        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        position: relative;
+        bottom: auto;
         left: 0;
         right: 0;
+        flex-shrink: 0;
         background: #fff;
         border-top: 1px solid #edf2f7;
         padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
@@ -2953,14 +3203,20 @@ watch(selectedExistingClient, (client) => {
         align-items: center;
         justify-content: center;
       }
-      .contact-details-card .d-flex {
-        flex-direction: column !important;
-        align-items: stretch !important;
+      .contact-details-card > .d-flex,
+      .contact-details-card > .d-flex:first-of-type,
+      .contact-details-card > .d-flex:last-of-type {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
       }
       .contact-details-card .col {
         width: 100%;
         max-width: 100%;
+        min-width: 0;
         flex: 0 0 100%;
+      }
+      .additional-checklist {
+        grid-template-columns: 1fr;
       }
     }
     
@@ -3239,5 +3495,18 @@ watch(selectedExistingClient, (client) => {
     }
 }
     </style>
-    
+
+    <style>
+    @media (min-width: 992px) {
+        #create-lead-modal .create-lead-dialog {
+            max-width: min(1180px, calc(100vw - 24px));
+            width: calc(100% - 24px);
+        }
+    }
+
+    body > .vs__dropdown-menu {
+        z-index: 13000 !important;
+        background: #fff;
+    }
+    </style>
     

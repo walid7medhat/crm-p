@@ -1,5 +1,5 @@
 <template>
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--searching': showKanbanSearchOverlay, 'kanban-outer--list': boardView === 'list' }">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--mobile-stage': kanbanIsMobile && mobileListFilterStageId !== MOBILE_FILTER_ALL, 'kanban-outer--searching': showKanbanSearchOverlay, 'kanban-outer--list': boardView === 'list' }">
         <div
             v-if="showKanbanSearchOverlay"
             class="kanban-search-overlay"
@@ -59,16 +59,28 @@
             </div>
         </div>
         <div class="board-head">
-            <div v-if="kanbanIsMobile" class="mobile-stage-nav">
-                <button type="button" class="mobile-stage-nav__arrow" aria-label="Previous stage" @click.stop="shiftMobileStage(-1)">
-                    <iconify-icon icon="lucide:chevron-left" />
+            <div v-if="kanbanIsMobile" class="mobile-stage-carousel" role="tablist" aria-label="Lead stages">
+                <button
+                    type="button"
+                    class="mobile-stage-carousel__pill"
+                    role="tab"
+                    :class="{ 'is-active': mobileListFilterStageId === MOBILE_FILTER_ALL }"
+                    :aria-selected="mobileListFilterStageId === MOBILE_FILTER_ALL ? 'true' : 'false'"
+                    @click="selectMobileStage(MOBILE_FILTER_ALL, $event)"
+                >
+                    All leads ({{ totalLeadsCount.toLocaleString() }})
                 </button>
-                <button type="button" class="mobile-stage-nav__pill" :style="mobileStageBarStyle" @click="openMobileListFilterSheet">
-                    <iconify-icon :icon="mobileStageIcon(mobileActiveStageColumn?.title)" />
-                    <span>{{ mobileListFilterLabel }}</span>
-                </button>
-                <button type="button" class="mobile-stage-nav__arrow" aria-label="Next stage" @click.stop="shiftMobileStage(1)">
-                    <iconify-icon icon="lucide:chevron-right" />
+                <button
+                    v-for="col in columns"
+                    :key="'stage-pill-' + col.status"
+                    type="button"
+                    class="mobile-stage-carousel__pill"
+                    role="tab"
+                    :class="{ 'is-active': String(mobileListFilterStageId) === String(col.status) }"
+                    :aria-selected="String(mobileListFilterStageId) === String(col.status) ? 'true' : 'false'"
+                    @click="selectMobileStage(col.status, $event)"
+                >
+                    {{ col.title }}
                 </button>
             </div>
 
@@ -211,6 +223,9 @@
                 <div
                     v-show="isColumnVisibleOnMobile(column)"
                     class="kanban-column radius-12 flex-column"
+                    :data-stage-id="column.status"
+                    :data-stage-name="column.title"
+                    :data-stage-order="column.order"
                     :style="{ '--column-color': column.color }"
                 >
                     <div class="p-0 overflow-visible shadow-none border-0 bg-transparent h-100 d-flex flex-column">
@@ -219,7 +234,7 @@
                             <div
                                 class="column-header d-flex align-items-center justify-content-between flex-shrink-0"
                                 :class="{ 'column-header--mobile': kanbanIsMobile, 'cursor-move': !kanbanIsMobile }"
-                                :style="{ backgroundColor: column.color }"
+                                :style="{ backgroundColor: column.color, color: kanbanIsMobile ? stageTextOn(column.color) : undefined }"
                             >
                                 <div class="d-flex align-items-center gap-2 column-header__title-block">
                                     <span v-if="kanbanIsMobile" class="column-header__dot" aria-hidden="true" />
@@ -271,9 +286,11 @@
                                             <div
                                                 :key="task.id"
                                                 class="kanban-card bg-white p-12 radius-12 mb-10 cursor-pointer"
+                                                :data-lead-id="task.id"
                                                 :class="{
                                                     'kanban-card--mobile': kanbanIsMobile,
                                                     'kanban-card--selected': isLeadSelected(task.id),
+                                                    'kanban-card--motion-hold': motionHeld[task.id],
                                                 }"
                                                 v-show="leadMatchesShortcutFilter(task)"
                                                 @touchstart="onMobileCardTouchStart(column, $event)"
@@ -410,7 +427,7 @@
                                                                 <div class="info-value">{{ task.whatsapp_number }}</div>
                                                             </div>
 
-                                                            <div v-else-if="field.key === 'api_first_question' && task.api_first_question" class="info-item mb-8">
+                                                            <div v-else-if="field.key === 'api_first_question' && task.api_first_question" class="info-item info-item--span mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">More Information</div>
                                                                 <div class="info-value">{{formatMaskedQuestion(task.api_first_question)}}</div>
                                                             </div>
@@ -418,7 +435,7 @@
                                                             
                                                             
                                                             <!-- Responsible Person -->
-                                                            <div v-else-if="field.key === 'responsible_person' && hasResponsiblePerson(task)" class="responsible-info d-flex align-items-center justify-content-between mb-12">
+                                                            <div v-else-if="field.key === 'responsible_person' && hasResponsiblePerson(task)" class="responsible-info info-item--span d-flex align-items-center justify-content-between mb-12">
                                                                 <div class="d-flex align-items-center gap-2">
                                                                     <div
                                                                         class="person-hover-anchor"
@@ -539,9 +556,11 @@
                         <tr
                             v-for="(row, index) in pagedListRows"
                             :key="'r-' + row.task.id"
+                            :data-lead-id="row.task.id"
                             :class="{
                                 'is-selected': isLeadSelected(row.task.id),
                                 'is-highlighted': isLeadHighlighted(row.task.id),
+                                'lead-row--motion-hold': motionHeld[row.task.id],
                             }"
                             @click="onLeadCardClick(row.task, row.column, $event)"
                             @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
@@ -1190,6 +1209,20 @@ import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { peekLeadBoardPrefetchPromise, peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
+import { rememberLeadDetailOrigin } from '@/motion/leadDetailMotion'
+import {
+    armLeadMotion,
+    beginConversionCelebration,
+    beginLeadMove,
+    cancelLeadMotion,
+    consumeSupersededStage,
+    destroyLeadMotion,
+    isLatestLeadMove,
+    motionHeld,
+    noteLeadDragOrigin,
+    playLeadMotion,
+    rememberSupersededStage,
+} from '@/motion/leadStageMotion'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import { shouldSuppressLeadUpdateNotification, normalizeLeadRealtimeEvent, buildCrmLeadNotificationEvent } from '@/utils/leadRealtimeNotifications.js'
@@ -2126,6 +2159,7 @@ function stepDragAutoScroll() {
 }
 
 function onLeadDragStart(event) {
+    noteLeadDragOrigin(event)
     isLeadDragging.value = true
     onGlobalPointerMove(event?.originalEvent || event)
 
@@ -2798,19 +2832,30 @@ function handleLeadConverted(deal) {
     // Move/remove the card locally from the fresh post-conversion lead instead of
     // refetching the whole board — much faster and avoids a visible reload.
     const updatedLead = deal?._lead
+    let existing = null
     if (updatedLead?.id) {
-        let existing = null
         for (const col of columns.value) {
             existing = col.leads?.find((l) => l && l.id === updatedLead.id) || null
             if (existing) break
         }
+    }
+    const celebrate = !deal?._alreadyExisted && updatedLead?.id && beginConversionCelebration({
+        leadId: updatedLead.id,
+        leadName: existing?.lead_name || selectedLeadData.value?.lead_name,
+        stageId: updatedLead.stage_id,
+    })
+    if (updatedLead?.id) {
         handleUpdatedLead({ ...(existing || {}), ...updatedLead }, 'updated')
     } else {
         fetchLeads(true)
     }
-    emit('deal-created', payload)
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
+    if (celebrate) {
+        void playLeadMotion(updatedLead.id).finally(() => emit('deal-created', payload))
+        return
+    }
+    emit('deal-created', payload)
 }
 
 
@@ -2878,6 +2923,7 @@ const enabledFieldsForColumn = (column, task) => {
             .filter(field => hasDynamicFieldValue(task, field.key) || field.key === 'responsible_person' || field.key === 'assigned_by')
     )
 }
+
 const isFieldEnabled = (fieldKey) => {
     return cardFields.value.some(field => field.key === fieldKey && field.enabled)
 }
@@ -3386,6 +3432,7 @@ onUnmounted(() => {
     window.removeEventListener('echo-ready', onEchoReady)
     window.removeEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     cleanup()
+    destroyLeadMotion()
 })
 
 // Expose fetchLeads so parent can call it
@@ -4491,7 +4538,25 @@ function formatListCreated(dateString) {
     return formatListStamp(dateString) || '—'
 }
 
+function motionAssignee(lead) {
+    const person = lead?.responsible_person
+    const name = String(person?.name || '').trim()
+    if (!name) return null
+    return {
+        name,
+        avatar: person?.avatar || person?.photo_url || '',
+    }
+}
+
+function stageMotionMeta(column, fallback = null) {
+    if (column) {
+        return { id: column.status, name: column.title, order: column.order }
+    }
+    return fallback
+}
+
 function onLeadCardClick(task, column, event) {
+    rememberLeadDetailOrigin(event?.currentTarget)
     if (kanbanIsMobile.value && mobileSwipeMoved.value[String(column.status)]) {
         mobileSwipeMoved.value[String(column.status)] = false
         return
@@ -4538,6 +4603,12 @@ function closeMobileListFilterSheet() {
 function selectMobileListFilter(stageId) {
     mobileListFilterStageId.value = stageId === MOBILE_FILTER_ALL ? MOBILE_FILTER_ALL : String(stageId)
     closeMobileListFilterSheet()
+}
+
+function selectMobileStage(stageId, event) {
+    selectMobileListFilter(stageId)
+    const pill = event?.currentTarget
+    pill?.scrollIntoView?.({ inline: 'center', block: 'nearest', behavior: 'smooth' })
 }
 
 function confirmMobileListFilter() {
@@ -4875,6 +4946,7 @@ async function onLeadDragChange(evt, column) {
                 isConversion: false,
                 interactionMode: true // or false? Based on your modal, interactionMode shows call results. Set to false to show reason field.
             }
+            beginLeadMove(lead.id)
             // Specify that 'salutation' is the missing field
             missingFieldsForLead.value = ['salutation']
 
@@ -4896,6 +4968,7 @@ async function onLeadDragChange(evt, column) {
         }
 
         if (isAssignToFollowUpOrContacted) {
+            beginLeadMove(lead.id)
             pendingStageChange.value = {
                 leadId: lead.id,
                 targetStageId: newStageId,
@@ -4951,6 +5024,7 @@ async function onLeadDragChange(evt, column) {
             
             if (missingFields.length > 0) {
                 console.log('Showing modal to complete missing fields for conversion')
+                beginLeadMove(lead.id)
                 
                 pendingStageChange.value = {
                     leadId: lead.id,
@@ -4985,6 +5059,7 @@ async function onLeadDragChange(evt, column) {
             
             // جميع البيانات موجودة، انتقل إلى التحويل
             console.log('All data complete, showing conversion modal')
+            beginLeadMove(lead.id)
             selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
             selectedLeadData.value = lead
             
@@ -5031,6 +5106,7 @@ async function onLeadDragChange(evt, column) {
             }
         if (fieldsToShow.length > 0 || [3,4,5,7,8,9,10].includes(newStageOrder)) {
             console.log('Showing modal for stage order:', newStageOrder, 'Missing fields:', leadMissingFields)
+            beginLeadMove(lead.id)
             
             pendingStageChange.value = {
                 leadId: lead.id,
@@ -5079,12 +5155,26 @@ async function applyProgrammaticStageChange(lead, targetColumn) {
     await onLeadDragChange({ added: { element: moved } }, targetColumn)
 }
 
-async function moveLeadWithStageChange(lead, newStageId) {
+async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
+    const token = moveToken == null ? beginLeadMove(lead.id) : moveToken
     const oldLeadSnapshot = { ...lead }
+    const fromCol = columns.value.find((column) => column.status === lead.stage_id)
+    const toCol = columns.value.find((column) => column.status === newStageId)
+    const motionArmed = armLeadMotion({
+        leadId: lead.id,
+        leadName: lead.lead_name,
+        from: stageMotionMeta(fromCol),
+        to: stageMotionMeta(toCol, { id: newStageId, name: toCol?.title, order: toCol?.order }),
+    })
     try {
         const response = await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
         })
+        if (!isLatestLeadMove(lead.id, token)) {
+            rememberSupersededStage(lead.id, newStageId)
+            return
+        }
+        consumeSupersededStage(lead.id)
         const freshLead = response?.data?.data
         if (freshLead) {
             Object.assign(lead, freshLead)
@@ -5108,7 +5198,11 @@ async function moveLeadWithStageChange(lead, newStageId) {
                 user.value,
             ),
         )
+        if (motionArmed) void playLeadMotion(lead.id, { assignee: motionAssignee(lead), toId: newStageId })
     } catch (error) {
+        if (!isLatestLeadMove(lead.id, token)) return
+        consumeSupersededStage(lead.id)
+        if (motionArmed) cancelLeadMotion(lead.id)
         // Revert the UI change if API fails - only refetch if not already fetching
         if (!isFetching.value) {
             await fetchLeads(true) // Immediate refetch on error
@@ -5128,11 +5222,28 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         return
     }
 
+    const moveToken = beginLeadMove(leadId)
+
     const isConversion = pendingStageChange.value?.isConversion || false
     const targetStageOrder = pendingStageChange.value?.targetStageOrder || 0
     // Closing the modal below clears `pendingStageChange` (see the showStageChangeModal
     // watcher), so grab this now — the catch block needs it to revert the optimistic move.
     const originalStageId = pendingStageChange.value?.originalStageId ?? lead.stage_id
+    const fromCol = columns.value.find((column) => column.status === originalStageId)
+    const toCol = columns.value.find((column) => column.status === targetStageId)
+    const converting = isConversion && targetStageOrder === 6
+    const motionArmed = armLeadMotion({
+        leadId,
+        leadName: lead.lead_name,
+        from: stageMotionMeta(fromCol, { id: originalStageId, name: fromCol?.title, order: fromCol?.order }),
+        to: stageMotionMeta(toCol, {
+            id: targetStageId,
+            name: pendingStageChange.value?.targetStageName || toCol?.title,
+            order: targetStageOrder,
+        }),
+        interactionResult: additionalData.interaction_result || null,
+        force: converting ? 'stash' : null,
+    })
 
     try {
         // Prepare payload with correct field names for backend
@@ -5197,6 +5308,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         if (additionalData.property_type) lead.property_type = additionalData.property_type
         lead.updated_at = new Date().toISOString()
         handleUpdatedLead(lead, 'updated')
+        suppressStageRestore = true
         showStageChangeModal.value = false
         $showNotification('Lead stage updated successfully', 'success')
         clearPendingStageChange()
@@ -5211,6 +5323,11 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
         // Fire API in background; reconcile lightly / revert on failure.
         try {
             const response = await api.post(`/leads/${leadId}/change-stage`, payload)
+            if (!isLatestLeadMove(leadId, moveToken)) {
+                rememberSupersededStage(leadId, targetStageId)
+                return
+            }
+            consumeSupersededStage(leadId)
             const freshLead = response.data?.data
             if (freshLead && lead) {
                 const preserve = {
@@ -5221,24 +5338,44 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
                 Object.assign(lead, freshLead, preserve)
                 handleUpdatedLead(lead, 'updated')
             }
+            if (motionArmed) void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId })
         } catch (error) {
+            if (!isLatestLeadMove(leadId, moveToken)) return
+            const supersededStageId = consumeSupersededStage(leadId)
+            if (motionArmed || converting) cancelLeadMotion(leadId)
             console.error('Error in handleStageChangeWithReason:', error)
             const errorMessage = error.response?.data?.message ||
                                 error.response?.data?.error ||
                                 'Failed to update lead data'
             $showNotification(errorMessage, 'error')
 
-            if (lead?.id && originalStageId) {
-                lead.stage_id = originalStageId
-                handleUpdatedLead(lead, 'updated')
+            if (lead?.id) {
+                lead.stage_id = supersededStageId || originalStageId
+                if (lead.stage_id) handleUpdatedLead(lead, 'updated')
             }
             throw error
         }
 
     } catch (error) {
+        if (!isLatestLeadMove(leadId, moveToken)) return
         console.error('Error preparing stage change:', error)
+        cancelLeadMotion(leadId)
         clearPendingStageChange()
         throw error
+    }
+}
+
+let suppressStageRestore = false
+
+function restoreLeadToStage(leadId, stageId) {
+    if (!stageId) return
+    for (const column of columns.value) {
+        const lead = column.leads?.find((item) => item && item.id === leadId)
+        if (!lead) continue
+        if (String(lead.stage_id) === String(stageId) && String(column.status) === String(stageId)) return
+        lead.stage_id = stageId
+        handleUpdatedLead(lead, 'updated')
+        return
     }
 }
 
@@ -5248,9 +5385,13 @@ function clearPendingStageChange() {
     showStageChangeModal.value = false
 }
 watch(showStageChangeModal, (newVal) => {
-    if (!newVal) {
-        clearPendingStageChange()
-    }
+    if (newVal) return
+    const pending = pendingStageChange.value
+    const suppress = suppressStageRestore
+    suppressStageRestore = false
+    clearPendingStageChange()
+    if (suppress || !pending?.leadId) return
+    restoreLeadToStage(pending.leadId, consumeSupersededStage(pending.leadId))
 })
 
 // Notification helper
@@ -5568,7 +5709,7 @@ const fetchRevertNotifications = async () => {
     border: 1px solid rgba(30, 27, 46, 0.08);
 }
 .kanban-skeleton-card {
-    height: 92px;
+    height: 156px;
     margin: 0 2px 10px;
 }
 .kanban-board-skeleton--list {
@@ -5585,6 +5726,25 @@ const fetchRevertNotifications = async () => {
 @keyframes kanban-skeleton-shimmer {
     0% { background-position: 100% 0; }
     100% { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kanban-skeleton-card,
+    .kanban-skeleton-row,
+    .kanban-search-overlay__beam,
+    .kanban-search-overlay__ring,
+    .kanban-search-overlay__dots span,
+    .kanban-search-overlay__shimmer {
+        animation: none;
+    }
+
+    .kanban-card,
+    .kanban-card:hover,
+    .kanban-card:active,
+    .dragging {
+        transition: none;
+        transform: none;
+    }
 }
 
 /* Empty / loading / error states */
@@ -6331,7 +6491,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card {
-    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 160ms ease, border-color 160ms ease;
     color: #1e293b;
     border: 1px solid rgba(30, 27, 46, 0.14) !important;
     border-radius: 14px !important;
@@ -6343,11 +6503,44 @@ const fetchRevertNotifications = async () => {
     z-index: 1;
 }
 
-.kanban-card:hover {
+@media (hover: hover) and (pointer: fine) {
+    .kanban-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(1, 6, 45, 0.22) !important;
+        background: #ffffff !important;
+        box-shadow: 0 8px 18px rgba(1, 6, 45, 0.1) !important;
+    }
+
+    .kanban-card.lead-priority-hot-border:hover {
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.16) !important;
+    }
+
+    .kanban-card.lead-priority-warm-border:hover {
+        box-shadow: 0 8px 18px rgba(245, 158, 11, 0.16) !important;
+    }
+
+    .kanban-card.lead-priority-cold-border:hover {
+        box-shadow: 0 8px 18px rgba(100, 116, 139, 0.14) !important;
+    }
+
+    .kanban-card--selected:hover {
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.18), 0 10px 20px rgba(1, 6, 45, 0.12) !important;
+    }
+}
+
+.kanban-card:active {
+    transform: translateY(0) scale(0.988);
+}
+
+.kanban-card:focus-visible {
+    outline: 2px solid #FAA300;
+    outline-offset: 2px;
+}
+
+.kanban-card--motion-hold,
+.kanban-card--motion-hold:hover,
+.kanban-card--motion-hold:active {
     transform: none;
-    border-color: rgba(30, 27, 46, 0.22) !important;
-    background: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(30, 27, 46, 0.12) !important;
 }
 
 .lead-priority-hot-border {
@@ -6684,13 +6877,40 @@ const fetchRevertNotifications = async () => {
 }
 
 /* Draggable styles */
+.tasks-list:has(.ghost) {
+    border-radius: 12px;
+    background: rgba(1, 6, 45, 0.035);
+    box-shadow: inset 0 0 0 1px rgba(250, 163, 0, 0.55);
+}
+
 .ghost {
-    opacity: 0.5;
-    background: #c8ebfb;
+    opacity: 0.45;
+    background: rgba(1, 6, 45, 0.04);
+    border: 1px dashed rgba(250, 163, 0, 0.85) !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
 .dragging {
     cursor: grabbing;
+    z-index: 4;
+    transform: rotate(1.25deg) scale(1.015);
+    box-shadow: 0 14px 28px rgba(1, 6, 45, 0.16) !important;
+    transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 140ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kanban-card,
+    .kanban-card:hover,
+    .kanban-card:active,
+    .dragging,
+    .kanban-outer--mobile .kanban-card--mobile,
+    .mobile-stage-nav__arrow,
+    .mobile-stage-nav__pill {
+        transition: none;
+        transform: none;
+        animation: none;
+    }
 }
 
 .task-title {
@@ -6965,13 +7185,9 @@ const fetchRevertNotifications = async () => {
     flex: 1 1 auto;
     min-height: 0 !important;
     height: auto !important;
-    /* Stage header stays put; finger-scroll the leads inside this stage. */
-    max-height: min(68dvh, 640px) !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
+    max-height: none !important;
+    overflow: visible !important;
     touch-action: pan-y;
-    overscroll-behavior-y: auto;
 }
 
 .kanban-outer--mobile .tasks-list {
@@ -6981,11 +7197,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .column-header--mobile {
-    min-height: 34px;
-    margin: 6px 6px 0;
-    padding: 5px 10px;
-    clip-path: none;
-    border-radius: 999px;
+    display: none !important;
 }
 
 .kanban-outer--mobile .column-header__dot {
@@ -6998,8 +7210,8 @@ const fetchRevertNotifications = async () => {
 
 .kanban-outer--mobile .column-header--mobile .header-title,
 .kanban-outer--mobile .column-header--mobile .leads-count-badge {
-    color: #0f0f12 !important;
-    font-weight: 600 !important;
+    color: inherit !important;
+    font-weight: 700 !important;
 }
 
 .kanban-outer--mobile .column-header--mobile .header-title-input {
@@ -7026,18 +7238,42 @@ const fetchRevertNotifications = async () => {
     padding: 0;
 }
 
-.kanban-outer--mobile .column-header--mobile {
-    display: none;
+.kanban-outer--mobile-stage .column-header--mobile {
+    display: none !important;
 }
 
 .kanban-outer--mobile .kanban-card--mobile {
-    border: 1px solid #f3f1f6 !important;
-    border-radius: 18px !important;
-    box-shadow: 0 8px 22px rgba(30, 27, 46, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e9d5ff !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: none !important;
     padding: 14px 14px 12px !important;
-    touch-action: pan-y;
+    margin-bottom: 12px !important;
+    touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
+}
+
+.kanban-outer--mobile .kanban-card--mobile::before {
+    display: none;
+}
+
+.kanban-outer--mobile .kanban-card--mobile:active {
+    background: #fafafa;
+}
+
+.kanban-outer--mobile .kanban-card--mobile:nth-child(2) { animation-delay: 40ms; }
+.kanban-outer--mobile .kanban-card--mobile:nth-child(3) { animation-delay: 80ms; }
+.kanban-outer--mobile .kanban-card--mobile:nth-child(4) { animation-delay: 120ms; }
+.kanban-outer--mobile .kanban-card--mobile:nth-child(5) { animation-delay: 160ms; }
+.kanban-outer--mobile .kanban-card--mobile:nth-child(6) { animation-delay: 200ms; }
+.kanban-outer--mobile .kanban-card--mobile:nth-child(n + 7) { animation-delay: 220ms; }
+
+@keyframes mlead-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
 }
 
 .kanban-outer--mobile .kanban-card--mobile .task-header {
@@ -7055,9 +7291,9 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .kanban-card--mobile .task-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .kanban-outer--mobile .kanban-card--mobile .info-item,
@@ -7081,6 +7317,10 @@ const fetchRevertNotifications = async () => {
     margin-top: 2px;
 }
 
+.kanban-outer--mobile .kanban-card--mobile .info-item--span {
+    grid-column: 1 / -1;
+}
+
 .kanban-outer--mobile .kanban-card--mobile .info-label,
 .kanban-outer--mobile .kanban-card--mobile .text-secondary-light {
     font-size: 11px !important;
@@ -7093,12 +7333,49 @@ const fetchRevertNotifications = async () => {
     color: #1c1730;
 }
 
-.mobile-stage-nav {
+.mobile-stage-carousel {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
-    margin: 4px 0 10px;
+    margin: 4px 0 12px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid #e9d5ff;
+    border-radius: 16px;
+    background: #ffffff;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+}
+
+.mobile-stage-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.mobile-stage-carousel__pill {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #8e8e96;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mobile-stage-carousel__pill.is-active {
+    background: #111111;
+    color: #ffffff;
+}
+
+.mobile-stage-carousel__pill:active {
+    transform: scale(0.97);
 }
 
 .mobile-stage-nav__arrow,
@@ -7111,26 +7388,33 @@ const fetchRevertNotifications = async () => {
 }
 
 .mobile-stage-nav__arrow {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.55);
-    color: #3f3a4d;
-    box-shadow: 0 4px 12px rgba(30, 27, 46, 0.08);
+    border-radius: 14px;
+    background: #fff;
+    color: #01062d;
+    box-shadow: 0 6px 16px rgba(1, 6, 45, 0.06);
+    transition: transform 140ms ease;
+}
+
+.mobile-stage-nav__arrow:active,
+.mobile-stage-nav__pill:active {
+    transform: scale(0.96);
 }
 
 .mobile-stage-nav__pill {
     flex: 1;
     min-width: 0;
-    height: 42px;
+    height: 40px;
     gap: 8px;
     padding: 0 16px;
-    border-radius: 999px;
+    border-radius: 14px;
     font-size: 14px;
     font-weight: 700;
-    box-shadow: 0 8px 18px rgba(20, 184, 166, 0.22);
+    box-shadow: 0 8px 18px rgba(1, 6, 45, 0.08);
     text-shadow: none;
+    transition: transform 140ms ease;
 }
 
 .mobile-stage-nav__pill,
@@ -8321,10 +8605,10 @@ const fetchRevertNotifications = async () => {
         padding: 0 8px;
     }
 
-    .board-head .mobile-stage-nav {
+    .board-head .mobile-stage-carousel {
         grid-column: 1 / -1;
         grid-row: 1;
-        margin: 6px 0 8px;
+        margin: 2px 0 8px;
     }
 
     .board-head .board-view-switch {

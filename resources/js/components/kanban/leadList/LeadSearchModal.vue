@@ -7028,10 +7028,34 @@ onBeforeUnmount(() => {
     background: #fff;
     /* overflow: hidden; */
     position: relative;
+    animation: lead-search-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .lead-search-shell {
     position: relative;
+    animation: lead-search-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes lead-search-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lead-search-shell,
+    .lead-search-dropdown-panel,
+    .pill-btn,
+    .city-child-btn {
+        animation: none;
+        transition: none;
+        transform: none;
+    }
 }
 
 .lead-search-initial-loader {
@@ -7092,7 +7116,7 @@ onBeforeUnmount(() => {
     min-height: 30px;
     padding: 0 12px;
     text-align: center;
-    transition: all 0.2s;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 120ms ease;
     border: 1px solid #E2E8F0;
     width: fit-content;
     white-space: nowrap;
@@ -7100,6 +7124,27 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+}
+
+.pill-btn:hover {
+    border-color: #d7c3e4;
+    color: #733e87;
+}
+
+.pill-btn.active:hover {
+    border-color: #6b21a8;
+    color: #fff;
+}
+
+.pill-btn:active {
+    transform: scale(0.98);
+}
+
+.pill-btn:focus-visible,
+.city-child-btn:focus-visible,
+.lead-search-desk-close:focus-visible {
+    outline: 2px solid #733e87;
+    outline-offset: 2px;
 }
 
 .pill-btn.active {
@@ -7159,14 +7204,19 @@ onBeforeUnmount(() => {
 }
 
 .city-child-btn:hover {
-    background: #eef2ff;
-    border-color: #c7d2fe;
+    background: #fbf8fc;
+    border-color: #d7c3e4;
+    color: #733e87;
+}
+
+.city-child-btn:active {
+    transform: scale(0.98);
 }
 
 .city-child-btn.active {
-    background: #eaf3ff;
-    border-color: #bfdbfe;
-    color: #1d4ed8;
+    background: rgba(115, 62, 135, 0.1);
+    border-color: #733e87;
+    color: #733e87;
 }
 
 .city-children-empty {

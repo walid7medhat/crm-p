@@ -68,7 +68,11 @@
                     @person-updated="handlePersonUpdated"
                 />
               
-              <div v-if="canViewCommentsAndActivities" class="d-flex justify-content-between align-items-center mb-2">
+              <div
+                v-if="canViewCommentsAndActivities"
+                :id="activeViewTab === 'activity' ? 'lead-section-activity' : 'lead-section-comments'"
+              >
+              <div class="d-flex justify-content-between align-items-center mb-2">
 
                 <!-- Activity/Comments Toggle -->
                 <div class="d-flex gap-1 p-1 radius-100 w-fit-content toggle-buttons-container">
@@ -156,6 +160,7 @@
                 :lead-id="lead?.id"
 
             />
+              </div>
             <!-- Lead Created (first section from bottom) -->
             <div v-if="lead?.id" class="lead-created-section">
                 <LeadCreatedCard :lead="lead" />
@@ -203,15 +208,25 @@ const props = defineProps({
     stageId: {
         type: Number,
         default: null
+    },
+    focusSection: {
+        type: String,
+        default: 'details'
     }
 })
 
-const emit = defineEmits(['update:lead'])
+const emit = defineEmits(['update:lead', 'section-change'])
 const editingSection = ref(null)
 
 const isEditMode = ref(false)
 const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
 const activeViewTab = ref('comments')
+watch(() => props.focusSection, (section) => {
+    if (section === 'comments' || section === 'activity') activeViewTab.value = section
+}, { immediate: true })
+watch(activeViewTab, (section) => {
+    if (section === 'comments' || section === 'activity') emit('section-change', section)
+})
 const showActivityTimeline = ref(false)
 const commentListRef = ref(null)
 const leadInfoViewRef = ref(null)

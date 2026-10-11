@@ -3,7 +3,37 @@
     class="crm-dashboard-home crm-dashboard-home--unified ap-dashboard ap-dashboard--uni"
     :class="{ 'crm-dashboard-home--mobile': isMobileViewport }"
   >
-    <header class="adx-header">
+    <header v-if="isMobileViewport" class="cilo-hero">
+      <div class="cilo-hero__top">
+        <div class="cilo-hero__id">
+          <img
+            v-if="hasUserPhoto"
+            class="cilo-hero__avatar"
+            :src="userAvatar"
+            alt=""
+            @error="avatarFailed = true"
+          />
+          <span v-else class="cilo-hero__avatar cilo-hero__avatar--initials" aria-hidden="true">{{ greetingInitial }}</span>
+          <div class="cilo-hero__greet">
+            <p class="cilo-hero__when">
+              <span aria-hidden="true">{{ dayPart.mark }}</span>
+              {{ dayPart.label }}
+            </p>
+            <h1 class="cilo-hero__name">{{ greetingName }}</h1>
+          </div>
+        </div>
+        <div class="cilo-hero__tools">
+          <button type="button" class="cilo-icon" aria-label="Search" @click="openDashboardSearch">
+            <iconify-icon icon="lucide:search" width="20" height="20" />
+          </button>
+          <div class="cilo-icon cilo-icon--bell">
+            <NotificationBell />
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <header v-else class="adx-header">
       <div class="adx-header__brand">
         <div>
           <h1 class="adx-header__title">Hello, {{ greetingName }} 👋</h1>
@@ -15,7 +45,6 @@
           v-model:date-from="dateFrom"
           v-model:date-to="dateTo"
           :label="dateRangeLabel"
-          :icon-only="isMobileViewport"
           picker-class="dh-header-date adx-date-pill"
           @apply="applyDateRange"
         />
@@ -29,258 +58,110 @@
     </div>
 
     <div class="adx-uni-body">
-      <!-- 1. Leads -->
-      <section v-if="showLeads" class="adx-uni-band adx-uni-band--leads">
-        <header class="adx-uni-band__head">
-          <div class="adx-uni-band__title">
-            <span class="adx-uni-band__icon adx-uni-band__icon--leads">
-              <iconify-icon icon="lucide:users" width="18" height="18" />
-            </span>
-            <div>
-              <h2>Leads</h2>
-              <p>Pipeline, sources, agents &amp; activity</p>
-            </div>
-          </div>
-          <router-link to="/kanban" class="adx-uni-band__link adx-uni-band__link--solid">
-            View Leads &gt;
-          </router-link>
-        </header>
-
-        <div class="adx-uni-leads">
-          <!-- KPI strip — white cards, color on numbers only -->
-          <div class="adx-uni-leads__kpis">
-            <div class="adx-uni-kpi adx-uni-kpi--hero adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadsLink())" @keydown.enter="go(leadsLink())">
-              <span class="adx-uni-kpi__label">Total Leads</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.total_leads) }}</strong>
-              <span class="adx-uni-kpi__sub">{{ crm.conversion_rate || 0 }}% conversion</span>
-            </div>
-            <div class="adx-uni-kpi adx-click" role="link" tabindex="0" title="Leads created in the last 7 days" @click="go(newLeadsLink())" @keydown.enter="go(newLeadsLink())">
-              <span class="adx-uni-kpi__label">New</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.new_leads) }}</strong>
-            </div>
-            <div class="adx-uni-kpi adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadStageLink('contacted'))" @keydown.enter="go(leadStageLink('contacted'))">
-              <span class="adx-uni-kpi__label">Contacted</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.contacted) }}</strong>
-            </div>
-            <div class="adx-uni-kpi adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadStageLink('qualified'))" @keydown.enter="go(leadStageLink('qualified'))">
-              <span class="adx-uni-kpi__label">Qualified</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.qualified) }}</strong>
-            </div>
-            <div class="adx-uni-kpi adx-uni-kpi--warn adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadStageLink('follow'))" @keydown.enter="go(leadStageLink('follow'))">
-              <span class="adx-uni-kpi__label">Follow-ups</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.follow_up) }}</strong>
-              <span v-if="crm.follow_up_overdue" class="adx-uni-kpi__sub">{{ formatNumber(crm.follow_up_overdue) }} overdue</span>
-            </div>
-            <div class="adx-uni-kpi adx-uni-kpi--hot adx-click" role="link" tabindex="0" title="Open HOT leads" @click="go(heatLink('hot'))" @keydown.enter="go(heatLink('hot'))">
-              <span class="adx-uni-kpi__label">HOT</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.hot) }}</strong>
-              <span class="adx-uni-kpi__sub adx-uni-kpi__sub--temp">
-                <a href="#" class="adx-sub-link" @click.stop.prevent="go(heatLink('warm'))">{{ formatNumber(crm.warm) }} warm</a>
-                ·
-                <a href="#" class="adx-sub-link" @click.stop.prevent="go(heatLink('cold'))">{{ formatNumber(crm.cold) }} cold</a>
-              </span>
-            </div>
-            <div class="adx-uni-kpi adx-uni-kpi--success adx-click" role="link" tabindex="0" title="Open converted leads" @click="go(leadStageLink('converted'))" @keydown.enter="go(leadStageLink('converted'))">
-              <span class="adx-uni-kpi__label">Converted</span>
-              <strong class="adx-uni-kpi__value">{{ formatNumber(crm.converted) }}</strong>
-              <a href="#" class="adx-uni-kpi__sub adx-sub-link" @click.stop.prevent="go(leadStageLink('lost'))">{{ formatNumber(crm.lost) }} Lost</a>
-            </div>
-          </div>
-
-          <div class="adx-uni-leads__main">
-            <!-- Lead Pipeline -->
-            <div class="adx-uni-leads__stages">
-              <p class="adx-uni-panel-title">Lead Pipeline</p>
-              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
-              <div v-else class="adx-uni-stage-grid">
-                <div
-                  v-for="pill in leadStatusPills"
-                  :key="pill.label"
-                  class="adx-uni-stage-pill adx-click"
-                  :class="`adx-uni-stage-pill--${pill.tone}`"
-                  role="link"
-                  tabindex="0"
-                  :title="`Open ${pill.label} leads`"
-                  @click="go(pillLink(pill.label))"
-                  @keydown.enter="go(pillLink(pill.label))"
-                >
-                  <span class="adx-uni-stage-pill__val">{{ formatNumber(pill.value) }}</span>
-                  <span class="adx-uni-stage-pill__label">{{ pill.label }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Lead Source -->
-            <div class="adx-uni-leads__sources">
-              <p class="adx-uni-panel-title">Lead Source</p>
-              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--round" />
-              <template v-else>
-                <div class="adx-uni-sources-body">
-                  <div class="adx-uni-sources-donut-wrap">
-                    <div class="adx-uni-sources-donut">
-                      <div ref="leadSourcesChartRef" class="adx-uni-chart adx-uni-chart--donut" />
-                      <div class="adx-uni-sources-center" aria-hidden="true">
-                        <iconify-icon icon="lucide:users" width="18" height="18" class="adx-uni-sources-center__icon" />
-                      </div>
-                    </div>
-                    <div class="adx-uni-sources-total adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadsLink())" @keydown.enter="go(leadsLink())">
-                      <strong>{{ formatNumber(crm.total_leads) }}</strong>
-                      <span>Total Leads</span>
-                    </div>
-                  </div>
-                  <ul v-if="leadSourceRows.length" class="adx-uni-source-list">
-                    <li
-                      v-for="src in leadSourceRows.slice(0, 5)"
-                      :key="src.source"
-                      class="adx-click"
-                      role="link"
-                      tabindex="0"
-                      :title="`Open leads from ${src.source}`"
-                      @click="go(sourceLink(src.source))"
-                      @keydown.enter="go(sourceLink(src.source))"
-                    >
-                      <span class="adx-uni-source-list__sq" :style="{ background: src.color }" />
-                      <div class="adx-uni-source-list__meta">
-                        <strong>{{ formatNumber(src.count) }}</strong>
-                        <span class="adx-uni-source-list__name">{{ src.source }}</span>
-                      </div>
-                    </li>
-                  </ul>
-                  <p v-else class="adx-uni-empty">No source data yet</p>
-                </div>
-              </template>
-            </div>
-
-            <!-- Activity -->
-            <div class="adx-uni-leads__activity">
-              <p class="adx-uni-panel-title">Activity</p>
-              <div class="adx-uni-activity-grid">
-                <div class="adx-uni-activity-card adx-click" role="link" tabindex="0" title="Open leads whose call was answered" @click="go(callResultLink('answered', 'Answered'))" @keydown.enter="go(callResultLink('answered', 'Answered'))">
-                  <div class="adx-uni-activity-card__text">
-                    <strong class="adx-uni-activity-card__val">{{ formatNumber(crm.calls_answered) }}</strong>
-                    <span class="adx-uni-activity-card__label">Call answered</span>
-                  </div>
-                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:phone" width="16" height="16" /></span>
-                </div>
-                <div class="adx-uni-activity-card adx-click" role="link" tabindex="0" title="Open leads with no answer" @click="go(callResultLink('no_answer', 'No Answer'))" @keydown.enter="go(callResultLink('no_answer', 'No Answer'))">
-                  <div class="adx-uni-activity-card__text">
-                    <strong class="adx-uni-activity-card__val">{{ formatNumber(crm.calls_no_answer) }}</strong>
-                    <span class="adx-uni-activity-card__label">No answer</span>
-                  </div>
-                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:phone" width="16" height="16" /></span>
-                </div>
-                <div class="adx-uni-activity-card adx-click" role="link" tabindex="0" title="Open these leads" @click="go(leadsLink())" @keydown.enter="go(leadsLink())">
-                  <div class="adx-uni-activity-card__text">
-                    <strong class="adx-uni-activity-card__val">{{ crm.avg_response_time_min || 0 }}m</strong>
-                    <span class="adx-uni-activity-card__label">Avg response</span>
-                  </div>
-                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:clock" width="16" height="16" /></span>
-                </div>
-                <div class="adx-uni-activity-card adx-uni-activity-card--alert adx-click" role="link" tabindex="0" title="Open qualified leads" @click="go(leadStageLink('qualified'))" @keydown.enter="go(leadStageLink('qualified'))">
-                  <div class="adx-uni-activity-card__text">
-                    <strong class="adx-uni-activity-card__val">{{ pipelineHealth }}%</strong>
-                    <span class="adx-uni-activity-card__label">Need attention</span>
-                  </div>
-                  <span class="adx-uni-activity-card__icon"><iconify-icon icon="lucide:trending-up" width="16" height="16" /></span>
-                </div>
-              </div>
-              <div
-                v-if="crm.best_closer"
-                class="adx-uni-closer adx-click"
-                role="link"
-                tabindex="0"
-                :title="`Open ${crm.best_closer.name}'s leads`"
-                @click="go(agentLink(crm.best_closer))"
-                @keydown.enter="go(agentLink(crm.best_closer))"
-              >
-                <span class="adx-uni-closer__avatar">
-                  <iconify-icon icon="lucide:trophy" width="16" height="16" />
-                </span>
-                <div class="adx-uni-closer__meta">
-                  <strong>{{ crm.best_closer.name }}</strong>
-                  <span>Best closer</span>
-                </div>
-                <strong class="adx-uni-closer__rate">{{ bestCloserRate }}%</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="adx-uni-leads__bottom">
-            <!-- Agent ranking -->
-            <div class="adx-uni-leads__agents">
-              <p class="adx-uni-panel-title adx-uni-panel-title--agents">
-                <iconify-icon icon="lucide:user" width="14" height="14" aria-hidden="true" />
-                Top Agents
-              </p>
-              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
-              <ul v-else-if="leadAgents.length" class="adx-uni-agent-list">
-                <li
-                  v-for="(agent, idx) in leadAgents"
-                  :key="agent.id"
-                  class="adx-uni-agent adx-click"
-                  role="link"
-                  tabindex="0"
-                  :title="`Open ${agent.name}'s leads`"
-                  @click="go(agentLink(agent))"
-                  @keydown.enter="go(agentLink(agent))"
-                >
-                  <div class="adx-uni-agent__media">
-                    <div class="adx-uni-agent__avatar" aria-hidden="true">{{ agentInitials(agent.name) }}</div>
-                    <span class="adx-uni-agent__rank" :class="`adx-uni-agent__rank--${idx + 1}`">{{ idx + 1 }}</span>
-                  </div>
-                  <div class="adx-uni-agent__info">
-                    <span class="adx-uni-agent__name">{{ agent.name }}</span>
-                    <span class="adx-uni-agent__meta">{{ formatNumber(agent.leads) }} Leads · {{ formatNumber(agent.converted) }} Won</span>
-                  </div>
-                  <strong class="adx-uni-agent__rate">{{ agent.rate }}%</strong>
-                </li>
-              </ul>
-              <p v-else class="adx-uni-empty">No agent data yet</p>
-            </div>
-
-            <!-- Funnel / Deal stages -->
-            <div class="adx-uni-leads__funnel">
-              <p class="adx-uni-panel-title">Deal Stages</p>
-              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
-              <div v-else class="adx-uni-funnel-scroll">
-                <div
-                  v-for="(stage, i) in crmFunnelStages"
-                  :key="i"
-                  class="adx-uni-funnel-row adx-uni-funnel-row--stacked adx-click"
-                  role="link"
-                  tabindex="0"
-                  :title="`Open ${stage.label} leads`"
-                  @click="go(leadStageByNameLink(stage.label))"
-                  @keydown.enter="go(leadStageByNameLink(stage.label))"
-                >
-                  <div class="adx-uni-funnel-row__head">
-                    <span class="adx-uni-funnel-row__dot" :style="{ background: stage.color }" />
-                    <span class="adx-uni-funnel-row__label">{{ stage.label }}</span>
-                    <span class="adx-uni-funnel-row__val">{{ formatStageCount(stage.value) }}</span>
-                  </div>
-                  <div class="adx-uni-funnel-row__track">
-                    <div
-                      class="adx-uni-funnel-row__fill"
-                      :style="{ width: `${stage.pct}%`, background: stage.color }"
-                    />
-                  </div>
-                </div>
-                <p v-if="!crmFunnelStages.length" class="adx-uni-empty">No pipeline data yet</p>
-              </div>
-              <router-link to="/kanban_deal" class="adx-uni-stages-btn">
-                <iconify-icon icon="lucide:columns-2" width="14" height="14" aria-hidden="true" />
-                View Stages &gt;
-              </router-link>
-            </div>
-
-            <!-- Trend -->
-            <div class="adx-uni-leads__trend">
-              <p class="adx-uni-panel-title">Leads trend — last 7 days</p>
-              <div v-if="crmLoading" class="adx-uni-skeleton adx-uni-skeleton--chart" />
-              <div v-else ref="leadsChartRef" class="adx-uni-chart adx-uni-chart--trend" />
-            </div>
-          </div>
+      <section v-if="showLeads || showDeals || showListing" class="cilo-overview" aria-label="Summary">
+        <div v-if="overviewLoading" class="cilo-overview__grid" aria-hidden="true">
+          <div v-for="n in 4" :key="n" class="cilo-card cilo-card--skeleton" />
         </div>
+        <div v-else class="cilo-overview__grid">
+          <button
+            v-for="card in overviewCards"
+            :key="card.key"
+            type="button"
+            class="cilo-card"
+            @click="card.open()"
+          >
+            <span class="cilo-card__top">
+              <span class="cilo-card__label">{{ card.label }}</span>
+              <iconify-icon class="cilo-card__arrow" icon="lucide:arrow-up-right" />
+            </span>
+            <strong class="cilo-card__value">{{ card.value }}</strong>
+            <p class="cilo-card__meta">
+              <span v-if="card.deltaText" class="cilo-card__delta" :class="`is-${card.tone}`">{{ card.deltaText }}</span>
+              <span class="cilo-card__vs">{{ card.vs }}</span>
+            </p>
+          </button>
+        </div>
+      </section>
+
+      <!-- 1. Leads -->
+      <section v-if="showLeads" class="perf-stack">
+        <article class="perf-card">
+          <header class="perf-card__head">
+            <h2 class="perf-card__title">Performance Overview</h2>
+            <DashboardDateRangePicker
+              v-model:date-from="dateFrom"
+              v-model:date-to="dateTo"
+              :label="dateRangeLabel"
+              picker-class="perf-range"
+              @apply="applyDateRange"
+            />
+          </header>
+          <div class="perf-legend">
+            <span><i class="is-leads" /> Leads</span>
+            <span><i class="is-deals" /> Deals</span>
+          </div>
+          <div v-if="crmLoading" class="perf-chart perf-chart--loading" />
+          <div v-else class="perf-chart">
+            <div class="perf-chart__y">
+              <span v-for="tick in perfTicks" :key="tick">{{ formatTick(tick) }}</span>
+            </div>
+            <div class="perf-chart__main">
+              <div class="perf-chart__bars">
+                <div v-for="col in perfColumns" :key="col.key" class="perf-group">
+                  <i class="perf-bar" :style="{ height: col.leadH }" />
+                  <i class="perf-bar is-deal" :style="{ height: col.dealH }" />
+                </div>
+              </div>
+              <div class="perf-chart__x">
+                <span v-for="col in perfColumns" :key="`${col.key}-x`">{{ col.short }}</span>
+              </div>
+            </div>
+          </div>
+          <p class="perf-trend">
+            {{ perfTrendText }}
+            <iconify-icon :icon="perfTrendIcon" />
+          </p>
+          <p class="perf-note">Showing new leads vs deals for this period</p>
+        </article>
+
+        <article class="cohort-card">
+          <header class="perf-card__head">
+            <h2 class="perf-card__title">Leads by stage</h2>
+            <DashboardDateRangePicker
+              v-model:date-from="dateFrom"
+              v-model:date-to="dateTo"
+              :label="dateRangeLabel"
+              picker-class="perf-range"
+              @apply="applyDateRange"
+            />
+          </header>
+          <div class="cohort-table" role="table">
+            <div class="cohort-table__row cohort-table__row--head" role="row">
+              <span role="columnheader">Stage</span>
+              <span role="columnheader">Leads</span>
+              <span role="columnheader">Share</span>
+              <span role="columnheader">Rate</span>
+            </div>
+            <button
+              v-for="row in stageRows"
+              :key="row.label"
+              type="button"
+              class="cohort-table__row"
+              role="row"
+              @click="go(pillLink(row.label))"
+            >
+              <span role="cell">{{ row.label }}</span>
+              <span role="cell">{{ formatNumber(row.count) }}</span>
+              <span role="cell">{{ row.share }}%</span>
+              <span role="cell" class="cohort-rate" :class="`is-${row.tone}`">
+                {{ row.share }}%
+                <iconify-icon v-if="row.tone === 'up'" icon="lucide:arrow-up" />
+                <iconify-icon v-else-if="row.tone === 'down'" icon="lucide:arrow-down" />
+              </span>
+            </button>
+          </div>
+        </article>
+
       </section>
 
       <!-- 2. Deals -->
@@ -616,7 +497,10 @@ import { useRouter } from 'vue-router'
 import ApexCharts from 'apexcharts'
 import { kanbanFilterLink, openKanbanFilterLink } from '@/utils/kanbanUrlFilter.js'
 import DashboardDateRangePicker from '@/components/dashboard/home/DashboardDateRangePicker.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
+import userAvatarPlaceholder from '@/assets/images/users/user1.png'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js'
+import { useSwipeDeck } from '@/composables/useSwipeDeck.js'
 import { useAnalyticsDashboard } from '@/composables/useAnalyticsDashboard.js'
 import { useDashboardPermissions } from '@/composables/useDashboardPermissions.js'
 import { parseToDate } from '@/composables/useAdvancedDateModel.js'
@@ -637,6 +521,10 @@ const FUNNEL_COLORS = ['#60a5fa', '#eab308', '#f97316', '#86efac', '#16a34a', '#
 const SOURCE_COLORS = [PURPLE_MID, GREEN, GOLD, ORANGE, '#a78bfa', SLATE]
 
 const { isMobileViewport } = useMobileNavigation()
+const leadDeck = useSwipeDeck(() => phoneLeadCards.value.length)
+const leadDeckIndex = leadDeck.index
+const leadDeckDragging = leadDeck.dragging
+const leadDeckReduced = leadDeck.reducedMotion
 const { canViewModule } = useDashboardPermissions()
 
 const showLeads = computed(() => canViewModule('crm'))
@@ -652,14 +540,112 @@ const {
   load, setCustomRange,
 } = useAnalyticsDashboard()
 
-const greetingName = computed(() => {
+const avatarFailed = ref(false)
+const sessionUser = computed(() => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || 'null')
-    return (user?.name || 'User').split(' ')[0]
+    return JSON.parse(localStorage.getItem('user') || 'null')
   } catch {
-    return 'User'
+    return null
   }
 })
+const greetingName = computed(() => (sessionUser.value?.name || 'User').split(' ')[0])
+const greetingInitial = computed(() => (greetingName.value || 'U').slice(0, 1).toUpperCase())
+const hasUserPhoto = computed(() => !avatarFailed.value && !!sessionUser.value?.avatar)
+const userAvatar = computed(() => sessionUser.value?.avatar || userAvatarPlaceholder)
+const dayPart = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return { label: 'Morning', mark: '☀️' }
+  if (hour < 17) return { label: 'Afternoon', mark: '🌤️' }
+  return { label: 'Evening', mark: '🌙' }
+})
+
+function halfDelta(series) {
+  const values = (series || []).map((point) => Number(point?.value) || 0)
+  if (values.length < 4) return null
+  const mid = Math.floor(values.length / 2)
+  const previous = values.slice(0, mid).reduce((sum, value) => sum + value, 0)
+  const current = values.slice(mid).reduce((sum, value) => sum + value, 0)
+  if (!previous) return null
+  return Math.round(((current - previous) / previous) * 1000) / 10
+}
+
+function niceTop(max) {
+  const value = Math.max(Math.ceil(Number(max) || 0), 4)
+  const step = Math.max(Math.ceil(value / 4), 1)
+  return step * 4
+}
+
+function formatTick(n) {
+  const value = Number(n) || 0
+  if (value >= 1000) {
+    const k = value / 1000
+    return `${Number.isInteger(k) ? k : k.toFixed(1)}k`
+  }
+  return String(Math.round(value))
+}
+
+function shortAxisLabel(label) {
+  const text = String(label || '').trim()
+  const dated = text.match(/^[A-Za-z]{3}\s+(\d{1,2})$/)
+  if (dated) return dated[1]
+  return text.slice(0, 3)
+}
+
+const overviewLoading = computed(() => (
+  (showLeads.value && crmLoading.value && crm.value?.total_leads == null)
+  || (showDeals.value && dealsLoading.value && deals.value?.total_deals == null)
+  || (showListing.value && listingLoading.value && listing.value?.active_listings == null)
+))
+
+const overviewCards = computed(() => {
+  const total = Number(crm.value?.total_leads) || 0
+  const qualified = Number(crm.value?.qualified) || 0
+  const qualifiedPct = total ? Math.round((qualified / total) * 1000) / 10 : 0
+  const totalDeals = Number(deals.value?.total_deals) || 0
+  const activeListings = Number(listing.value?.active_listings) || 0
+  return [
+    {
+      key: 'total-leads',
+      label: 'Total Leads',
+      value: formatNumber(total),
+      deltaText: '',
+      tone: 'flat',
+      vs: 'this month',
+      open: () => go(leadsLink()),
+    },
+    {
+      key: 'qualified',
+      label: 'Qualified',
+      value: formatNumber(qualified),
+      deltaText: '',
+      tone: 'flat',
+      vs: total ? `${qualifiedPct}% of leads` : 'of leads',
+      open: () => go(leadStageLink('qualified')),
+    },
+    {
+      key: 'total-deals',
+      label: 'Total deals',
+      value: formatNumber(totalDeals),
+      deltaText: '',
+      tone: 'flat',
+      vs: 'this month',
+      open: () => go(dealsLink()),
+    },
+    {
+      key: 'active-listing',
+      label: 'Active listing',
+      value: formatNumber(activeListings),
+      deltaText: '',
+      tone: 'flat',
+      vs: 'live now',
+      open: () => go('/alllisting'),
+    },
+  ]
+})
+
+function openDashboardSearch() {
+  router.push('/kanban').catch(() => {})
+}
 
 const dateRangeLabel = computed(() => {
   const fmt = (ymd) => {
@@ -818,6 +804,183 @@ const leadStatusPills = computed(() => [
   { label: 'Converted', value: crm.value.converted, tone: 'converted' },
   { label: 'Lost', value: crm.value.lost, tone: 'lost' },
 ])
+
+const perfModel = computed(() => {
+  const leads = (crm.value?.trend || []).slice(-6)
+  const dealSeries = (deals.value?.trend || []).slice(-Math.max(leads.length, 1))
+  const leadVals = leads.map((point) => Number(point.value) || 0)
+  const dealVals = leads.map((_, index) => {
+    const offset = leads.length - dealSeries.length
+    return Number(dealSeries[index - offset]?.value) || 0
+  })
+  const top = niceTop(Math.max(...leadVals, ...dealVals, 1))
+  return {
+    ticks: [top, top * 0.75, top * 0.5, top * 0.25, 0],
+    columns: leads.map((point, index) => ({
+      key: `${point.label || 'd'}-${index}`,
+      short: shortAxisLabel(point.label),
+      leadH: `${leadVals[index] ? Math.max((leadVals[index] / top) * 100, 4) : 0}%`,
+      dealH: `${dealVals[index] ? Math.max((dealVals[index] / top) * 100, 4) : 0}%`,
+    })),
+  }
+})
+const perfTicks = computed(() => perfModel.value.ticks)
+const perfColumns = computed(() => perfModel.value.columns)
+const perfTrend = computed(() => {
+  const values = (crm.value?.trend || []).map((point) => Number(point.value) || 0)
+  if (values.length < 4) return { text: 'Not enough history yet', icon: 'lucide:arrow-up-right' }
+  const mid = Math.floor(values.length / 2)
+  const previous = values.slice(0, mid).reduce((sum, value) => sum + value, 0)
+  const current = values.slice(mid).reduce((sum, value) => sum + value, 0)
+  if (!previous && !current) return { text: 'Flat this month', icon: 'lucide:arrow-up-right' }
+  if (!previous) return { text: 'Trending up this month', icon: 'lucide:arrow-up-right' }
+  if (!current) return { text: 'Trending down this month', icon: 'lucide:arrow-down-right' }
+  const delta = Math.round(((current - previous) / previous) * 1000) / 10
+  if (!delta) return { text: 'Flat this month', icon: 'lucide:arrow-up-right' }
+  const up = delta > 0
+  return {
+    text: `Trending ${up ? 'up' : 'down'} by ${Math.abs(delta).toFixed(1)}% this month`,
+    icon: up ? 'lucide:arrow-up-right' : 'lucide:arrow-down-right',
+  }
+})
+const perfTrendText = computed(() => perfTrend.value.text)
+const perfTrendIcon = computed(() => perfTrend.value.icon)
+const stageRows = computed(() => {
+  const total = Number(crm.value?.total_leads) || 0
+  return leadStatusPills.value.map((pill) => {
+    const count = Number(pill.value) || 0
+    const share = total ? Math.round((count / total) * 100) : 0
+    const tone = pill.tone === 'lost' ? 'down' : (pill.tone === 'converted' || pill.tone === 'qualified' ? 'up' : 'flat')
+    return { ...pill, count, share, tone }
+  })
+})
+
+const phoneLeadCards = computed(() => {
+  const c = crm.value || {}
+  const total = Number(c.total_leads) || 0
+  const trend = Array.isArray(c.trend) ? c.trend.slice(-7) : []
+  const maxTrend = Math.max(...trend.map((point) => Number(point.value) || 0), 1)
+  const ofTotal = (count) => (total ? `${formatNumber(count)} of ${formatNumber(total)} leads` : '')
+  const shareOf = (count) => (total ? Math.min(100, Math.round(((Number(count) || 0) / total) * 100)) : 0)
+  return [
+    {
+      key: 'total',
+      kind: 'total',
+      label: 'Total Leads',
+      value: formatNumber(c.total_leads),
+      note: `${c.conversion_rate || 0}% conversion`,
+      stages: leadStatusPills.value,
+      spark: [],
+      share: null,
+      links: [],
+    },
+    {
+      key: 'new',
+      kind: 'new',
+      label: 'New',
+      value: formatNumber(c.new_leads),
+      note: ofTotal(c.new_leads),
+      stages: [],
+      spark: trend.map((point) => ({
+        label: point.label || '',
+        value: Number(point.value) || 0,
+        h: Math.round(((Number(point.value) || 0) / maxTrend) * 100),
+      })),
+      share: shareOf(c.new_leads),
+      links: [],
+    },
+    {
+      key: 'contacted',
+      kind: 'contacted',
+      label: 'Contacted',
+      value: formatNumber(c.contacted),
+      note: ofTotal(c.contacted),
+      stages: [],
+      spark: [],
+      share: shareOf(c.contacted),
+      links: [],
+    },
+    {
+      key: 'qualified',
+      kind: 'qualified',
+      label: 'Qualified',
+      value: formatNumber(c.qualified),
+      note: ofTotal(c.qualified),
+      stages: [],
+      spark: [],
+      share: shareOf(c.qualified),
+      links: [],
+    },
+    {
+      key: 'follow',
+      kind: 'follow',
+      label: 'Follow-ups',
+      value: formatNumber(c.follow_up),
+      note: c.follow_up_overdue ? `${formatNumber(c.follow_up_overdue)} overdue` : ofTotal(c.follow_up),
+      stages: [],
+      spark: [],
+      share: shareOf(c.follow_up),
+      links: [],
+    },
+    {
+      key: 'hot',
+      kind: 'hot',
+      label: 'HOT',
+      value: formatNumber(c.hot),
+      note: ofTotal(c.hot),
+      stages: [],
+      spark: [],
+      share: shareOf(c.hot),
+      links: [
+        { label: `${formatNumber(c.warm)} warm`, href: heatLink('warm') },
+        { label: `${formatNumber(c.cold)} cold`, href: heatLink('cold') },
+      ],
+    },
+    {
+      key: 'converted',
+      kind: 'converted',
+      label: 'Converted',
+      value: formatNumber(c.converted),
+      note: ofTotal(c.converted),
+      stages: [],
+      spark: [],
+      share: shareOf(c.converted),
+      links: [
+        { label: `${formatNumber(c.lost)} lost`, href: leadStageLink('lost') },
+      ],
+    },
+  ]
+})
+
+function stageShare(value) {
+  const max = Math.max(...leadStatusPills.value.map((stage) => Number(stage.value) || 0), 1)
+  return `${Math.round(((Number(value) || 0) / max) * 100)}%`
+}
+
+function phoneLeadCardStyle(index) {
+  const current = leadDeck.index.value
+  const depth = index - current
+  if (depth < 0 || depth > 2) return { visibility: 'hidden', pointerEvents: 'none' }
+  const drag = depth === 0 ? leadDeck.dragX.value : 0
+  return {
+    transform: `translate3d(${drag}px, ${depth * 16}px, 0) scale(${1 - depth * 0.045})`,
+    zIndex: 12 - depth,
+    opacity: depth === 2 ? 0.55 : 1,
+  }
+}
+
+function openPhoneLeadCard(card) {
+  if (leadDeck.consumeClick()) return
+  if (card.kind === 'total') go(leadsLink())
+  else if (card.kind === 'new') go(newLeadsLink())
+  else if (card.kind === 'hot') go(heatLink('hot'))
+  else go(leadStageLink(card.kind))
+}
+
+function openPhoneLeadPart(link) {
+  if (leadDeck.consumeClick()) return
+  go(link)
+}
 
 const leadSourceRows = computed(() => {
   const sources = crm.value.lead_sources || []
@@ -1257,3 +1420,501 @@ onBeforeUnmount(() => {
   hrChart?.destroy()
 })
 </script>
+
+<style scoped>
+.cilo-hero,
+.cilo-overview,
+.cilo-card {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+.cilo-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 2px 2px 6px;
+}
+
+.perf-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.perf-card,
+.cohort-card {
+  background: #ffffff;
+  border: 1px solid #f2f2f4;
+  border-radius: 22px;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.05);
+  padding: 16px 14px 14px;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+.perf-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.perf-card__title {
+  margin: 0;
+  color: #111111;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.perf-range :deep(.dh-date-picker) {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ececef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: none;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.perf-range :deep(.dh-date-picker-icon) {
+  display: none;
+}
+
+.perf-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 14px 0 10px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.perf-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perf-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #e9d5ff;
+}
+
+.perf-legend i.is-deals {
+  background: #d9d9de;
+}
+
+.perf-chart {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px;
+  min-height: 196px;
+}
+
+.perf-chart--loading {
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f4f4f5 0%, #fafafa 50%, #f4f4f5 100%);
+  background-size: 200% 100%;
+  animation: cilo-shimmer 1.2s ease-in-out infinite;
+}
+
+.perf-chart__y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 168px;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.perf-chart__bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 168px;
+  border-bottom: 1px solid #eeeeee;
+  background-image: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent calc(25% - 1px),
+    #f3f4f6 calc(25% - 1px),
+    #f3f4f6 25%
+  );
+}
+
+.perf-group {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+  flex: 1 1 0;
+}
+
+.perf-bar {
+  width: 16px;
+  border-radius: 4px 4px 0 0;
+  background: #e9d5ff;
+}
+
+.perf-bar.is-deal {
+  width: 14px;
+  background: #e4e4e7;
+}
+
+.perf-chart__x {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 8px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.perf-chart__x span {
+  flex: 1 1 0;
+  text-align: center;
+}
+
+.perf-trend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  color: #111111;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.perf-trend iconify-icon {
+  font-size: 16px;
+}
+
+.perf-note {
+  margin: 4px 0 0;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cohort-table {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+
+.cohort-table__row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr 0.7fr 0.9fr;
+  align-items: center;
+  width: 100%;
+  padding: 11px 2px;
+  border: 0;
+  background: transparent;
+  color: #111111;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cohort-table__row--head {
+  padding-bottom: 6px;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: default;
+}
+
+.cohort-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cohort-rate.is-up {
+  color: #16a34a;
+}
+
+.cohort-rate.is-down {
+  color: #ef4444;
+}
+
+.cohort-rate.is-flat {
+  color: #111111;
+}
+
+.cohort-rate iconify-icon {
+  font-size: 13px;
+}
+
+.cilo-hero__top,
+.cilo-hero__sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cilo-hero__id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cilo-hero__avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #ececef;
+}
+
+.cilo-hero__avatar--initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9d5ff;
+  color: #6b21a8;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.cilo-hero__greet {
+  min-width: 0;
+}
+
+.cilo-hero__when {
+  margin: 0;
+  color: #1c1c1e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.cilo-hero__name {
+  margin: 1px 0 0;
+  color: #111111;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.cilo-hero__tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cilo-icon {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid #f1f1f3;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #161616;
+  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cilo-icon iconify-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+
+.cilo-icon--solid {
+  background: #e9d5ff;
+  border-color: #e9d5ff;
+  color: #6b21a8;
+}
+
+.cilo-icon--bell {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cilo-icon--bell :deep(.notification-wrapper) {
+  display: flex;
+}
+
+.cilo-icon--bell :deep(.notification-bell-btn) {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid #f1f1f3;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.06);
+  color: #161616;
+}
+
+.cilo-icon--bell :deep(.notification-bell-icon) {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: #161616;
+}
+
+.cilo-icon--bell :deep(.notification-badge) {
+  top: 10px;
+  right: 10px;
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  background: #ef4444;
+  border: 0;
+}
+
+.cilo-overview {
+  margin: 0 0 4px;
+}
+
+.cilo-overview__title {
+  margin: 0;
+  color: #1c1c1e;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.cilo-overview__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.cilo-overview__title + .cilo-overview__grid {
+  margin-top: 12px;
+}
+
+.cilo-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 118px;
+  padding: 14px 14px 12px;
+  border: 1px solid #f2f2f4;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.05);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.cilo-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.cilo-card__label {
+  color: #8e8e96;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.cilo-card__arrow {
+  color: #b0b0b8;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.cilo-card__value {
+  color: #111111;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.cilo-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  margin: 0;
+}
+
+.cilo-card__delta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cilo-card__delta.is-up {
+  color: #16a34a;
+}
+
+.cilo-card__delta.is-down {
+  color: #ef4444;
+}
+
+.cilo-card__delta.is-flat {
+  color: #8e8e96;
+}
+
+.cilo-card__vs {
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cilo-card--skeleton {
+  min-height: 118px;
+  background: linear-gradient(90deg, #f4f4f5 0%, #fafafa 50%, #f4f4f5 100%);
+  background-size: 200% 100%;
+  animation: cilo-shimmer 1.2s ease-in-out infinite;
+  box-shadow: none;
+}
+
+@keyframes cilo-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (min-width: 900px) {
+  .cilo-overview__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .cilo-card__value {
+    font-size: 30px;
+  }
+}
+</style>

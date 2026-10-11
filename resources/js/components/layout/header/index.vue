@@ -83,11 +83,11 @@
           <a  v-if="!isHr" href="javascript:void(0)" @click.stop.prevent="handleCrmClick" :class="{ active: isSidebarModuleActive('crm') }">
             <img :src="crmIcon" class="imgicon" alt="" />
             <span>CRM</span>
-            <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'crm' }" />
+            <span class="dropdown-arrow dropdown-arrow--crm" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
           <ul v-if="!isHr" v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
             <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
-              <a href="/kanban" class="sidebar-nav-link" @mouseenter="prefetchRoute('/kanban')" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
+              <a href="/kanban" class="sidebar-nav-link sidebar-nav-link--leads" @mouseenter="prefetchRoute('/kanban')" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
                 <img :src="leadsIcon" class="imgicon submenu-icon" alt="" />
                 <span>Leads</span>
               </a>
@@ -398,7 +398,7 @@
             :class="{ 'is-active': isHomeTabActive }"
             @click="onTabHome(navigate, $event)"
           >
-            <iconify-icon icon="lucide:house" class="mobile-tab-bar__icon" />
+            <iconify-icon icon="lucide:layout-grid" class="mobile-tab-bar__icon" />
             <span>Home</span>
           </a>
         </router-link>
@@ -409,7 +409,7 @@
             :class="{ 'is-active': isCoreDockLeadsActive && !isMobileMenuOpen }"
             @click="onTabLeads(navigate, $event)"
           >
-            <iconify-icon icon="lucide:contact" class="mobile-tab-bar__icon" />
+            <iconify-icon icon="lucide:inbox" class="mobile-tab-bar__icon" />
             <span>Leads</span>
           </a>
         </router-link>
@@ -424,6 +424,7 @@
         @click="toggleCreateSheet"
       >
         <iconify-icon :icon="showCreateSheet ? 'lucide:x' : 'lucide:plus'" />
+        <span class="mobile-tab-bar__create-label">Create</span>
       </button>
       <div class="mobile-tab-bar__group">
         <router-link v-if="showTabListings" :to="crmListingsFlatPath" custom v-slot="{ href, navigate }">
@@ -444,7 +445,7 @@
           :aria-expanded="(isMobileViewport ? showMoreSheet : isMobileMenuOpen) ? 'true' : 'false'"
           @click="onTabMore"
         >
-          <iconify-icon icon="lucide:ellipsis" class="mobile-tab-bar__icon" />
+          <iconify-icon icon="lucide:sparkles" class="mobile-tab-bar__icon" />
           <span>More</span>
         </button>
       </div>
@@ -2982,6 +2983,61 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
     min-height: 44px;
     padding: 10px 12px;
     font-size: 12px;
+  }
+}
+
+.dropdown-arrow--crm {
+  transition: transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.dropdown-arrow--crm.rotated {
+  transform: rotate(90deg);
+}
+
+.sidebar-menu > li.dropdown.open > .sidebar-submenu--crm {
+  animation: crm-submenu-in 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes crm-submenu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a.sidebar-nav-link--leads {
+    transition: background 160ms ease, transform 120ms ease;
+  }
+
+  a.sidebar-nav-link--leads:hover {
+    background: rgba(1, 6, 45, 0.05);
+  }
+}
+
+a.sidebar-nav-link--leads:active {
+  transform: scale(0.98);
+}
+
+@media (min-width: 769px) {
+  .sidebar-submenu--crm > .nav-link.active-page > a.sidebar-nav-link--leads {
+    background: rgba(1, 6, 45, 0.05) !important;
+    box-shadow: inset 3px 0 0 #FAA300 !important;
+    border-radius: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-arrow--crm,
+  .sidebar-menu > li.dropdown.open > .sidebar-submenu--crm,
+  a.sidebar-nav-link--leads {
+    animation: none;
+    transition: none;
+    transform: none;
   }
 }
 
