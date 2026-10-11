@@ -293,9 +293,11 @@
                                                     'kanban-card--motion-hold': motionHeld[task.id],
                                                 }"
                                                 v-show="leadMatchesShortcutFilter(task)"
-                                                @touchstart="onMobileCardTouchStart(column, $event)"
+                                                @touchstart="onMobileCardTouchStart(column, task, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
+                                                @touchcancel="clearMobileLongPress"
+                                                @contextmenu="onMobileCardContextMenu"
                                                 @click="onLeadCardClick(task, column, $event)"
                                                 @dblclick.stop.prevent="onLeadCardDblClick(task)"
                                             >
@@ -562,6 +564,11 @@
                                 'is-highlighted': isLeadHighlighted(row.task.id),
                                 'lead-row--motion-hold': motionHeld[row.task.id],
                             }"
+                            @touchstart="onMobileCardTouchStart(row.column, row.task, $event)"
+                            @touchmove="onMobileCardTouchMove(row.column, $event)"
+                            @touchend="onMobileCardTouchEnd(row.column, $event)"
+                            @touchcancel="clearMobileLongPress"
+                            @contextmenu="onMobileCardContextMenu"
                             @click="onLeadCardClick(row.task, row.column, $event)"
                             @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
                         >
@@ -710,6 +717,40 @@
             </div>
         </template>
     </div>
+
+    <!-- Mobile: long-press or double-tap delete, for roles that can delete leads -->
+    <Teleport to="body">
+        <div
+            v-if="kanbanIsMobile && showMobileDeleteSheet && canDeleteLeads"
+            class="mobile-kanban-overlay mobile-kanban-overlay--quick"
+            @click.self="closeMobileDeleteSheet"
+        >
+            <div class="mobile-kanban-sheet mobile-kanban-sheet--quick" @click.stop>
+                <button type="button" class="mobile-kanban-sheet__close" aria-label="Close" @click="closeMobileDeleteSheet">
+                    <iconify-icon icon="lucide:x" />
+                </button>
+                <p class="mobile-kanban-sheet__hint">{{ mobileDeleteLead?.lead_name || 'Lead' }}</p>
+                <div class="mobile-kanban-quick-actions">
+                    <button
+                        type="button"
+                        class="mobile-kanban-quick-btn mobile-kanban-quick-btn--danger"
+                        :disabled="bulkActionBusy"
+                        @click="confirmMobileDeleteLead"
+                    >
+                        <iconify-icon icon="lucide:trash-2" class="me-1" />
+                        Delete
+                    </button>
+                    <button
+                        type="button"
+                        class="mobile-kanban-quick-btn mobile-kanban-quick-btn--cancel"
+                        @click="closeMobileDeleteSheet"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 
     <!-- Mobile: stage change + pick stage (bottom sheets) -->
     <Teleport to="body">
@@ -1461,6 +1502,8 @@ const MOBILE_FILTER_ALL = 'all'
 const mobileListFilterStageId = ref(MOBILE_FILTER_ALL)
 const mobileListFilterDraft = ref(MOBILE_FILTER_ALL)
 const showMobileQuickSheet = ref(false)
+const showMobileDeleteSheet = ref(false)
+const mobileDeleteLead = ref(null)
 const showMobilePickStageSheet = ref(false)
 const showMobileListFilterSheet = ref(false)
 const mobileQuickLead = ref(null)
@@ -1563,6 +1606,10 @@ const archiveLoading = ref(false)
 const archiveDetail = ref(null)
 const archivePagination = ref({ current_page: 1, last_page: 1, per_page: 20, total: 0 })
 let leadCardClickTimer = null
+let mobileLongPressTimer = null
+let mobileLongPressFired = false
+let suppressLeadClickUntil = 0
+let mobileLastTap = { id: 0, at: 0 }
 let archiveSearchTimer = null
 
 function isLeadSelected(id) {
@@ -1599,9 +1646,8 @@ function removeLeadsFromBoard(ids) {
     })
 }
 
-async function deleteSelectedLeads() {
-    if (!canDeleteLeads.value || !selectedLeadIds.value.length || bulkActionBusy.value) return
-    const ids = [...selectedLeadIds.value]
+async function archiveLeadIds(ids) {
+    if (!canDeleteLeads.value || !ids.length || bulkActionBusy.value) return false
     const result = await Swal.fire({
         title: ids.length === 1 ? 'Archive this lead?' : `Archive ${ids.length} leads?`,
         text: 'They move to the archive. You can delete them forever from there.',
@@ -1610,7 +1656,7 @@ async function deleteSelectedLeads() {
         confirmButtonText: 'Archive',
         cancelButtonText: 'Cancel',
     })
-    if (!result.isConfirmed) return
+    if (!result.isConfirmed) return false
     bulkActionBusy.value = true
     const failed = []
     const failureReasons = new Set()
@@ -1625,7 +1671,6 @@ async function deleteSelectedLeads() {
     }
     const archived = ids.filter((id) => !failed.includes(id))
     removeLeadsFromBoard(archived)
-    clearLeadSelection()
     bulkActionBusy.value = false
     if (failed.length) {
         // Surface the backend's actual reason (e.g. "has a deal and cannot be deleted")
@@ -1635,6 +1680,12 @@ async function deleteSelectedLeads() {
     } else {
         window.$showNotification?.(archived.length === 1 ? 'Lead deleted.' : `${archived.length} leads deleted.`, 'success')
     }
+    return true
+}
+
+async function deleteSelectedLeads() {
+    const archived = await archiveLeadIds([...selectedLeadIds.value])
+    if (archived) clearLeadSelection()
 }
 
 function openBulkStagePicker() {
@@ -3419,6 +3470,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
     clearTimeout(realtimeFilteredRefreshTimer)
+    clearTimeout(leadCardClickTimer)
+    clearMobileLongPress()
     if (typeof unsubscribeLeadViewUpdated === 'function') {
         unsubscribeLeadViewUpdated()
         unsubscribeLeadViewUpdated = null
@@ -4293,7 +4346,37 @@ function formatActivityDate(task) {
     return formatDate(activityDisplayAt(task))
 }
 
-function onMobileCardTouchStart(column, event) {
+function clearMobileLongPress() {
+    clearTimeout(mobileLongPressTimer)
+    mobileLongPressTimer = null
+}
+
+function openMobileDeleteSheet(task) {
+    if (!kanbanIsMobile.value || !canDeleteLeads.value || !task?.id) return
+    clearTimeout(leadCardClickTimer)
+    mobileDeleteLead.value = task
+    showMobileDeleteSheet.value = true
+    try { navigator.vibrate?.(12) } catch (_) { /* optional */ }
+}
+
+function closeMobileDeleteSheet() {
+    showMobileDeleteSheet.value = false
+    mobileDeleteLead.value = null
+}
+
+async function confirmMobileDeleteLead() {
+    const lead = mobileDeleteLead.value
+    closeMobileDeleteSheet()
+    if (!lead?.id) return
+    await archiveLeadIds([Number(lead.id)])
+}
+
+function onMobileCardContextMenu(event) {
+    if (!kanbanIsMobile.value || !canDeleteLeads.value) return
+    event.preventDefault()
+}
+
+function onMobileCardTouchStart(column, task, event) {
     if (!kanbanIsMobile.value) return
     const key = String(column.status)
     const touch = event.changedTouches?.[0]
@@ -4304,6 +4387,14 @@ function onMobileCardTouchStart(column, event) {
     mobileTouchLastX.value[key] = x
     mobileTouchLastY.value[key] = y
     mobileSwipeMoved.value[key] = false
+    mobileLongPressFired = false
+    clearMobileLongPress()
+    if (!canDeleteLeads.value || !task?.id) return
+    mobileLongPressTimer = setTimeout(() => {
+        mobileLongPressFired = true
+        suppressLeadClickUntil = Date.now() + 700
+        openMobileDeleteSheet(task)
+    }, 520)
 }
 
 function onMobileCardTouchMove(column, event) {
@@ -4311,12 +4402,18 @@ function onMobileCardTouchMove(column, event) {
     const key = String(column.status)
     const touch = event.changedTouches?.[0]
     if (!touch) return
+    const startX = mobileTouchStartX.value[key] ?? touch.clientX
+    const startY = mobileTouchStartY.value[key] ?? touch.clientY
+    if (Math.abs(touch.clientX - startX) > 12 || Math.abs(touch.clientY - startY) > 12) {
+        clearMobileLongPress()
+    }
     mobileTouchLastX.value[key] = touch.clientX
     mobileTouchLastY.value[key] = touch.clientY
 }
 
 function onMobileCardTouchEnd(column, event) {
     if (!kanbanIsMobile.value) return
+    clearMobileLongPress()
     const key = String(column.status)
     const startX = mobileTouchStartX.value[key] ?? 0
     const startY = mobileTouchStartY.value[key] ?? 0
@@ -4560,6 +4657,10 @@ function stageMotionMeta(column, fallback = null) {
 
 function onLeadCardClick(task, column, event) {
     rememberLeadDetailOrigin(event?.currentTarget)
+    if (mobileLongPressFired || Date.now() < suppressLeadClickUntil) {
+        mobileLongPressFired = false
+        return
+    }
     if (kanbanIsMobile.value && mobileSwipeMoved.value[String(column.status)]) {
         mobileSwipeMoved.value[String(column.status)] = false
         return
@@ -4569,13 +4670,28 @@ function onLeadCardClick(task, column, event) {
         toggleLeadSelection(task)
         return
     }
+    if (kanbanIsMobile.value && canDeleteLeads.value) {
+        const now = Date.now()
+        const id = Number(task?.id)
+        if (mobileLastTap.id === id && now - mobileLastTap.at < 380) {
+            mobileLastTap = { id: 0, at: 0 }
+            openMobileDeleteSheet(task)
+            return
+        }
+        mobileLastTap = { id, at: now }
+    }
     clearTimeout(leadCardClickTimer)
-    leadCardClickTimer = setTimeout(() => viewLead(task), 220)
+    const openDelay = kanbanIsMobile.value && canDeleteLeads.value ? 380 : 220
+    leadCardClickTimer = setTimeout(() => viewLead(task), openDelay)
 }
 
 function onLeadCardDblClick(task) {
-    if (!isAdminOrSuperAdmin.value) return
     clearTimeout(leadCardClickTimer)
+    if (kanbanIsMobile.value) {
+        openMobileDeleteSheet(task)
+        return
+    }
+    if (!isAdminOrSuperAdmin.value) return
     toggleLeadSelection(task)
 }
 
@@ -7718,6 +7834,18 @@ const fetchRevertNotifications = async () => {
     border-color: #e2e8f0;
     background: #ffffff;
     color: #475569;
+}
+
+.mobile-kanban-quick-btn--danger {
+    grid-column: 1 / -1;
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.kanban-card--mobile,
+.lead-list-table tbody tr {
+    -webkit-touch-callout: none;
 }
 
 .mobile-kanban-sheet__head {
