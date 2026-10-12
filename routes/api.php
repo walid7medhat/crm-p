@@ -14,7 +14,6 @@ use App\Http\Controllers\Api\Listing\PropertyTypeController;
 use App\Http\Controllers\Api\Listing\OwnerController;
 use App\Http\Controllers\Api\Listing\DeveloperController;
 use App\Http\Controllers\Api\Listing\ListingController;
-use App\Http\Controllers\Api\Listing\OfferPdfController;
 use App\Http\Controllers\Api\Listing\ListingAccessRequestController;
 use App\Http\Controllers\Api\Listing\UnitViewController;
 use App\Http\Controllers\Api\Listing\LayoutTypeController;
@@ -135,11 +134,7 @@ Route::middleware(['jwt.auth'])->prefix('settings')->group(function () {
     Route::put('/deal-costs/{key}', [DealCostSettingController::class, 'update']);
 });
 
-// Signed (no login header): served as an attachment so iOS Safari downloads the offer PDF.
-Route::get('/offer-pdf/{token}', [OfferPdfController::class, 'download'])
-    ->middleware('signed:relative')
-    ->name('offer-pdf.download');
-route::get('/webhook/facebook', [integrationcontroller::class, 'verifywebhook']);
+Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook']);
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
 Route::post('/website-lead', [IntegrationController::class, 'store_website']);
 Route::post('/website-lead/wordpress', [IntegrationController::class, 'store_wordpress']);
@@ -862,8 +857,6 @@ Route::post('{id}/duplicate', [ListingController::class, 'duplicate']);
     Route::post('hot-deal-requests/{requestId}/process', [HotDealApprovalController::class, 'processRequest']);
     
     Route::post('/properties/{id}/generate-offer', [ListingController::class, 'generateOffer']);
-    // iPhone/iPad: upload the finished offer PDF, get a short-lived signed download link.
-    Route::post('/properties/{id}/offer-pdf', [OfferPdfController::class, 'store']);
 Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);
     Route::get('/{id}/comments/stats', [ListingCommentController::class, 'getStats']);
