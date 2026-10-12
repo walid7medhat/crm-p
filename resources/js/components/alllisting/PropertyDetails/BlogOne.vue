@@ -7225,97 +7225,64 @@ const createSlide2 = () => {
   const noBedsBaths = hidesBedsBaths(property.value?.property_type);
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const plotSize = plotSizeLabel.value ? plotSizeLabel.value.replace('Sq Ft', 'SQFT') : '';
+  const plotSizeColumn = plotSize ? `
+          <div style="flex:1 !important; padding-left:5mm !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Plot Size</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${plotSize}</p>
+          </div>` : '';
   const completionStatus = property.value?.completion_status || 'Under Construction';
-  const isCompleted = /complet|ready/i.test(completionStatus);
-  const features = (additionalFeaturesList.value || []).slice(0, 6);
-
-  const label = (text) => offerTextImg(text, { size: 2.3, color: '#64748b', spacing: 0.15, upper: true });
-  const value = (text, maxWidth = 0) => offerTextImg(text, { size: 5, weight: 700, color: OFFER_NAVY, maxWidth });
-  const divider = '<div style="width:0.3mm !important; align-self:stretch !important; background:#e5e7eb !important; margin:0 5mm !important;"></div>';
-  // cardIcon: listing-card icon key (bed/bath/area) if loaded; else the drawn fallback.
-  // Bedrooms / Bathrooms / Area Size / Plot Size: label and value centred in the column.
-  const stat = (title, val, iconPaths, cardIcon) => `
-        <div style="flex:1 !important; min-width:0 !important; display:flex !important; flex-direction:column !important; align-items:center !important;">
-          ${label(title)}
-          <div style="display:flex !important; align-items:center !important; justify-content:center !important; gap:2.5mm !important; margin-top:1.4mm !important;">
-            ${value(val, 30)}${cardIcon && offerCardIcons[cardIcon] ? offerImgIcon(offerCardIcons[cardIcon], 5) : (iconPaths ? offerIcon(iconPaths, { size: 5 }) : '')}
-          </div>
-        </div>`;
-
-  const stats = [
-    `<div style="flex:1.4 !important; min-width:0 !important; display:flex !important; align-items:center !important; gap:4mm !important;">
-        <div style="width:13mm !important; height:13mm !important; border-radius:3mm !important; background:#f3f0f8 !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important;">
-          ${offerIcon(OFFER_ICON_PATHS.building, { color: OFFER_NAVY, size: 6.5 })}
+  const features = additionalFeaturesList.value || [];
+  const featuresBlock = features.length > 0 ? `
+    <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 4.5mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important;">Features</p>
+      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
+          ${features.map((feature) => `
+            <span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:2.5mm !important; height:5.2mm !important; padding:0 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;"><span style="display:inline-block !important; position:relative !important; top:-1.15mm !important;">${feature}</span></span>
+          `).join('')}
         </div>
-        <div style="min-width:0 !important;">${label('Property Type')}<div style="margin-top:1.4mm !important;">${value(propertyType, 32)}</div></div>
-      </div>`,
-    ...(noBedsBaths ? [] : [
-      stat('Bedrooms', bedrooms, OFFER_ICON_PATHS.bed, 'bed'),
-      stat('Bathrooms', bathrooms, OFFER_ICON_PATHS.shower, 'bath'),
-    ]),
-    stat('Area Size', areaSize, OFFER_ICON_PATHS.area, 'area'),
-    ...(plotSize ? [stat('Plot Size', plotSize, OFFER_ICON_PATHS.plot)] : []),
-  ].join(divider);
-
-  const featuresRow = features.length ? `
-      <div style="display:flex !important; align-items:stretch !important; margin-top:7mm !important;">
-        <div style="display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:1.5mm !important; padding-right:6mm !important; flex-shrink:0 !important;">
-          ${offerIcon(OFFER_ICON_PATHS.star, { color: OFFER_PURPLE, fill: OFFER_PURPLE, size: 5 })}
-          ${offerTextImg('Features', { size: 2.3, color: '#64748b', spacing: 0.15, upper: true })}
-        </div>
-        ${features.map((feature) => `
-        <div style="width:0.3mm !important; background:#e5e7eb !important;"></div>
-        <div style="flex:1 !important; min-width:0 !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:2mm !important; padding:0 1.5mm !important;">
-          ${offerIcon(offerFeatureIcon(feature), { color: OFFER_NAVY, size: 6 })}
-          ${offerTextImg(feature, { size: 2.7, color: OFFER_NAVY, maxWidth: 25 })}
-        </div>`).join('')}
-      </div>` : '';
-
-  const statusIcon = isCompleted ? OFFER_ICON_PATHS.check : OFFER_ICON_PATHS.hardHat;
+    </div>
+  ` : '';
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; line-height:1.25 !important;">
-    <!-- Photo header -->
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:63mm !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:63mm !important; background:linear-gradient(90deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0.15) 100%) !important;"></div>
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:63mm !important; padding:7mm 9mm 0 9mm !important; box-sizing:border-box !important; display:flex !important; justify-content:space-between !important; align-items:flex-start !important;">
-      <div>
-        <div style="display:flex !important; align-items:center !important; gap:2.5mm !important; margin-bottom:8mm !important;">
-          <div style="width:6mm !important; height:0.4mm !important; background:#ffffff !important;"></div>
-          ${offerTextImg('Property Offer', { size: 2.4, weight: 700, color: '#ffffff', spacing: 0.25, upper: true })}
-        </div>
-        ${offerTextImg('Property', { size: 9, weight: 700, color: '#ffffff', upper: true })}
-        <div style="margin-top:-1.6mm !important;">${offerTextImg('Details', { size: 9, weight: 700, color: '#ffffff', upper: true })}</div>
-      </div>
-      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
-    </div>
-
-    <!-- Detail panel -->
-    <div style="position:absolute !important; top:63mm !important; left:0 !important; width:100% !important; height:85mm !important; padding:9mm 9mm 0 9mm !important; box-sizing:border-box !important; background:#ffffff !important;">
-      <div style="display:flex !important; align-items:center !important;">${stats}
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
+    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:10mm 14mm 8mm 14mm !important; display:flex !important; flex-direction:column !important;">
+      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; flex-shrink:0 !important;">
+        <h1 style="color:#fff !important; font-size:7mm !important; font-weight:700 !important; margin:0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">Property<br>Details</h1>
+        <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
       </div>
 
-      <div style="display:flex !important; align-items:center !important; justify-content:space-between !important; margin-top:7mm !important; padding:3.5mm 3.5mm 3.5mm 4mm !important; background:#f6f3fa !important; border-radius:3mm !important;">
-        <div style="display:flex !important; align-items:center !important; gap:4mm !important;">
-          <div style="width:9mm !important; height:9mm !important; border-radius:50% !important; background:${OFFER_PURPLE} !important; display:flex !important; align-items:center !important; justify-content:center !important;">
-            ${offerIcon(statusIcon, { color: '#ffffff', size: 4.2 })}
+      <div style="width:100% !important; margin-top:7mm !important; flex-shrink:0 !important;">
+        <div style="display:flex !important; padding-bottom:4mm !important; margin-bottom:4mm !important; border-bottom:0.3mm solid rgba(255,255,255,0.22) !important;">
+          <div style="flex:1 !important; padding-right:5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Property Type</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${propertyType}</p>
+          </div>${noBedsBaths ? '' : `
+          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bedrooms</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${bedrooms}</p>
           </div>
-          ${offerTextImg('Completion Status', { size: 2.6, color: '#475569', spacing: 0.15, upper: true })}
+          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
+          </div>`}
+          <div style="flex:1 !important; ${plotSize ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
+          </div>${plotSizeColumn}
         </div>
-        <div style="display:flex !important; align-items:center !important; gap:2mm !important; background:${OFFER_PURPLE} !important; border-radius:6mm !important; padding:2.4mm 5.5mm !important;">
-          ${offerIcon(statusIcon, { color: '#ffffff', size: 3.8 })}
-          ${offerTextImg(completionStatus, { size: 2.9, weight: 700, color: '#ffffff' })}
+        <div style="display:flex !important;">
+          <div style="flex:1 !important; max-width:25% !important;">
+            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Completion Status</p>
+            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${completionStatus}</p>
+          </div>
         </div>
       </div>
-      ${featuresRow}
-    </div>
 
-    <!-- Footer -->
-    <div style="position:absolute !important; left:9mm !important; right:9mm !important; bottom:7mm !important; display:flex !important; align-items:center !important; gap:6mm !important;">
-      ${offerTextImg('Powered By Oia Properties', { size: 2.4, color: OFFER_NAVY })}
-      <div style="flex:1 !important; height:0.3mm !important; background:${OFFER_PURPLE} !important; opacity:0.6 !important;"></div>
-      ${offerTextImg('Your Dream Home Awaits', { size: 2.4, color: OFFER_NAVY, spacing: 0.2, upper: true })}
+      ${featuresBlock}
     </div>
+    ${createFooter()}
   </div>
   `;
 };
