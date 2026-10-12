@@ -5694,12 +5694,8 @@ const collectOfferImageUrls = () => {
 
   const project = property.value?.project;
   if (project?.image) push(getImageUrl(project.image));
-  const gallery = Array.isArray(project?.gallery_images) ? project.gallery_images : [];
-  [1, 2, 3].forEach((slot) => {
-    const byOrder = gallery.find((img) => Number(img?.sort_order) === slot);
-    if (byOrder?.image_url) push(getImageUrl(byOrder.image_url));
-    else if (gallery[slot - 1]?.image_url) push(getImageUrl(gallery[slot - 1].image_url));
-  });
+  // Project photos used by About Project / Amenities (same picker as the slides).
+  [1, 2].forEach((slot) => push(projectImageUrlBySlot(slot)));
 
   return [...urls];
 };
@@ -6079,56 +6075,165 @@ const drawMobileCover = async (pdf, logo) => {
   drawOfferFooter(pdf);
 };
 
+/**
+ * Mobile offer: Property Details page drawn with jsPDF in the same layout as the desktop
+ * slide (createSlide2) — photo header, stats row, completion bar, features, text footer.
+ * Measurements mirror the HTML version (mm on a 210×148 page; 1mm ≈ 2.835pt).
+ */
+const MM_TO_PT = 2.835;
+const hexRgb = (hex) => {
+  const h = String(hex).replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+};
+
 const drawMobileDetails = async (pdf, logo) => {
-  paintOfferPhoto(pdf, await darkenOfferJpeg(mobilePdfImage(getListingImageBySlot(2)), 0.55));
-  if (logo) tryAddOfferImage(pdf, logo, 184, 8, 18, 12);
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(22);
-  pdf.text('PROPERTY', 14, 18);
-  pdf.text('DETAILS', 14, 28);
-  const noBedsBaths = hidesBedsBaths(property.value?.property_type);
-  const rows = [
-    ['Property Type', property.value?.property_type?.name || 'N/A'],
-    ...(noBedsBaths ? [] : [
-      ['Bedrooms', property.value?.number_of_bedrooms === 0 ? 'Studio' : String(property.value?.number_of_bedrooms ?? 'N/A')],
-      ['Bathrooms', String(property.value?.number_of_bathrooms ?? 'N/A')],
-    ]),
-    ['Area Size', property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A'],
-  ];
-  if (plotSizeLabel.value) rows.push(['Plot Size', plotSizeLabel.value]);
-  // 4 columns fit 46mm each; with Plot Size the same 184mm is split 5 ways.
-  const colWidth = 184 / rows.length;
-  rows.forEach((row, index) => {
-    const x = 14 + index * colWidth;
-    const y = 48;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(220, 220, 220);
-    pdf.text(row[0], x, y);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(pdf.splitTextToSize(String(row[1]).toUpperCase(), colWidth - 4).slice(0, 2), x, y + 6);
-  });
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.setTextColor(220, 220, 220);
-  pdf.text('Completion Status', 14, 72);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text(String(property.value?.completion_status || 'Under Construction').toUpperCase(), 14, 80);
-  const features = (additionalFeaturesList.value || []).slice(0, 16);
-  if (features.length) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(230, 230, 230);
-    pdf.text('Features', 14, 96);
-    pdf.setFontSize(9);
-    pdf.text(pdf.splitTextToSize(features.join('   ·   '), 180).slice(0, 4), 14, 103);
+  const p = property.value || {};
+  const navy = hexRgb(OFFER_NAVY);
+  const purple = hexRgb(OFFER_PURPLE);
+  const grey = hexRgb('#64748b');
+  const left = 9;
+  const right = 201;
+
+  // Text helper: size in mm (like the HTML slide), optional letter spacing / max width.
+  const text = (str, x, y, { size, bold = false, color = navy, spacing = 0, align = 'left', maxWidth = 0 } = {}) => {
+    let pt = size * MM_TO_PT;
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+    pdf.setFontSize(pt);
+    const s = String(str ?? '');
+    const width = () => pdf.getTextWidth(s) + spacing * Math.max(0, s.length - 1);
+    if (maxWidth) {
+      while (width() > maxWidth && pt > 4) { pt -= 0.5; pdf.setFontSize(pt); }
+    }
+    const w = width();
+    const startX = align === 'center' ? x - w / 2 : (align === 'right' ? x - w : x);
+    pdf.setTextColor(...color);
+    pdf.text(s, startX, y, spacing ? { charSpace: spacing } : undefined);
+    return w;
+  };
+  // Baseline that vertically centres capitals of a `size`mm font on centreY.
+  const capBaseline = (centreY, size) => centreY + (size * 0.716) / 2;
+  const icon = async (uri, x, y, size) => {
+    const png = await offerIconPng(uri);
+    if (png) tryAddOfferImage(pdf, png, x, y, size, size);
+  };
+
+  // ---- Photo header (listing photo 2, else 1) ----
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(0, 0, 210, 148, 'F');
+  pdf.setFillColor(...navy);
+  pdf.rect(0, 0, 210, 63, 'F');
+  const photo = mobilePdfImage(getListingImageBySlot(2));
+  if (photo) {
+    const cropped = await cropOfferImageToBox(photo, 210, 63);
+    tryAddOfferImage(pdf, await darkenOfferJpeg(cropped, 0.42), 0, 0, 210, 63);
   }
-  drawOfferFooter(pdf);
+  if (logo) tryAddOfferImage(pdf, logo, 183, 7, 18, 12);
+  pdf.setDrawColor(255, 255, 255);
+  pdf.setLineWidth(0.4);
+  pdf.line(left, 8.6, left + 6, 8.6);
+  text('PROPERTY OFFER', left + 8.5, capBaseline(8.6, 2.4), { size: 2.4, bold: true, color: [255, 255, 255], spacing: 0.25 });
+  text('PROPERTY', left, capBaseline(23.9, 9), { size: 9, bold: true, color: [255, 255, 255] });
+  text('DETAILS', left, capBaseline(34, 9), { size: 9, bold: true, color: [255, 255, 255] });
+
+  // ---- Stats row ----
+  const noBedsBaths = hidesBedsBaths(p.property_type);
+  const stats = [
+    ...(noBedsBaths ? [] : [
+      ['Bedrooms', p.number_of_bedrooms === 0 ? 'Studio' : String(p.number_of_bedrooms ?? 'N/A'), offerCardIcons.bed || offerIconUri(OFFER_ICON_PATHS.bed)],
+      ['Bathrooms', String(p.number_of_bathrooms ?? 'N/A'), offerCardIcons.bath || offerIconUri(OFFER_ICON_PATHS.shower)],
+    ]),
+    ['Area Size', p.size_sqft ? `${p.size_sqft} SQFT` : 'N/A', offerCardIcons.area || offerIconUri(OFFER_ICON_PATHS.area)],
+    ...(plotSizeLabel.value ? [['Plot Size', plotSizeLabel.value.replace('Sq Ft', 'SQFT'), offerIconUri(OFFER_ICON_PATHS.plot)]] : []),
+  ];
+  const rowTop = 72;
+  const rowH = 13;
+  const rowMid = rowTop + rowH / 2;
+  const dividerSpace = 10.3; // 5mm margin each side + 0.3mm line
+  const unit = (right - left - dividerSpace * stats.length) / (1.4 + stats.length);
+  const labelY = capBaseline(rowTop + 2.55, 2.3);
+  const valueY = capBaseline(rowTop + 8.6, 5);
+
+  // Property type: tile + label/value, left aligned.
+  pdf.setFillColor(...hexRgb('#f3f0f8'));
+  pdf.roundedRect(left, rowTop, 13, 13, 3, 3, 'F');
+  await icon(offerIconUri(OFFER_ICON_PATHS.building, { color: OFFER_NAVY }), left + 3.25, rowTop + 3.25, 6.5);
+  const typeX = left + 17;
+  text('PROPERTY TYPE', typeX, labelY, { size: 2.3, color: grey, spacing: 0.15 });
+  text(p.property_type?.name || 'N/A', typeX, valueY, { size: 5, bold: true, maxWidth: 1.4 * unit - 17 });
+
+  let colX = left + 1.4 * unit;
+  pdf.setDrawColor(...hexRgb('#e5e7eb'));
+  pdf.setLineWidth(0.3);
+  for (const [title, val, iconUri] of stats) {
+    pdf.line(colX + 5, rowTop, colX + 5, rowTop + rowH);
+    const x0 = colX + dividerSpace;
+    const centre = x0 + unit / 2;
+    text(title.toUpperCase(), centre, labelY, { size: 2.3, color: grey, spacing: 0.15, align: 'center' });
+    // Value + icon centred together.
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(5 * MM_TO_PT);
+    const vw = Math.min(pdf.getTextWidth(val), unit - 8);
+    const groupW = vw + 2.5 + 5;
+    const vx = centre - groupW / 2;
+    text(val, vx, valueY, { size: 5, bold: true, maxWidth: unit - 8 });
+    await icon(iconUri, vx + vw + 2.5, rowTop + 8.6 - 2.5, 5);
+    colX = x0 + unit;
+  }
+
+  // ---- Completion status bar ----
+  const status = p.completion_status || 'Under Construction';
+  const statusIcon = /complet|ready/i.test(status) ? OFFER_ICON_PATHS.check : OFFER_ICON_PATHS.hardHat;
+  const barTop = rowTop + rowH + 7;
+  const barH = 16;
+  const barMid = barTop + barH / 2;
+  pdf.setFillColor(...hexRgb('#f6f3fa'));
+  pdf.roundedRect(left, barTop, right - left, barH, 3, 3, 'F');
+  pdf.setFillColor(...purple);
+  pdf.circle(left + 4 + 4.5, barMid, 4.5, 'F');
+  await icon(offerIconUri(statusIcon, { color: '#ffffff' }), left + 4 + 4.5 - 2.1, barMid - 2.1, 4.2);
+  text('COMPLETION STATUS', left + 4 + 9 + 4, capBaseline(barMid, 2.6), { size: 2.6, color: hexRgb('#475569'), spacing: 0.15 });
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(2.9 * MM_TO_PT);
+  const statusW = pdf.getTextWidth(status);
+  const pillH = 8.6;
+  const pillW = 5.5 * 2 + 3.8 + 2 + statusW;
+  const pillX = right - 3.5 - pillW;
+  pdf.setFillColor(...purple);
+  pdf.roundedRect(pillX, barMid - pillH / 2, pillW, pillH, pillH / 2, pillH / 2, 'F');
+  await icon(offerIconUri(statusIcon, { color: '#ffffff' }), pillX + 5.5, barMid - 1.9, 3.8);
+  text(status, pillX + 5.5 + 3.8 + 2, capBaseline(barMid, 2.9), { size: 2.9, bold: true, color: [255, 255, 255] });
+
+  // ---- Features row ----
+  const features = (additionalFeaturesList.value || []).slice(0, 6);
+  if (features.length) {
+    const fTop = barTop + barH + 7;
+    const fH = 12;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(2.3 * MM_TO_PT);
+    const featLabelW = pdf.getTextWidth('FEATURES') + 0.15 * 7;
+    const starCentre = left + featLabelW / 2;
+    await icon(offerIconUri(OFFER_ICON_PATHS.star, { color: OFFER_PURPLE, fill: OFFER_PURPLE }), starCentre - 2.5, fTop + 1.3, 5);
+    text('FEATURES', starCentre, capBaseline(fTop + 9.3, 2.3), { size: 2.3, color: grey, spacing: 0.15, align: 'center' });
+    const fx0 = left + featLabelW + 6;
+    const colW = (right - fx0) / features.length;
+    pdf.setDrawColor(...hexRgb('#e5e7eb'));
+    pdf.setLineWidth(0.3);
+    for (let i = 0; i < features.length; i += 1) {
+      const cx = fx0 + i * colW;
+      pdf.line(cx, fTop, cx, fTop + fH);
+      const centre = cx + colW / 2;
+      await icon(offerIconUri(offerFeatureIcon(features[i]), { color: OFFER_NAVY }), centre - 3, fTop + 0.5, 6);
+      text(features[i], centre, capBaseline(fTop + 9.6, 2.7), { size: 2.7, align: 'center', maxWidth: colW - 3 });
+    }
+  }
+
+  // ---- Footer: text + thin line (same as the desktop slide) ----
+  const footY = 148 - 7 - 1.6;
+  const leftW = text('Powered By Oia Properties', left, capBaseline(footY, 2.4), { size: 2.4 });
+  const rightW = text('YOUR DREAM HOME AWAITS', right, capBaseline(footY, 2.4), { size: 2.4, spacing: 0.2, align: 'right' });
+  pdf.setDrawColor(...hexRgb('#b79bc4'));
+  pdf.setLineWidth(0.3);
+  pdf.line(left + leftW + 6, footY, right - rightW - 6, footY);
 };
 
 const drawMobileFloor = (pdf, logo) => {
@@ -6481,9 +6586,12 @@ const generateMobileOffer = async () => {
   const offerNumber = saveResponse.data?.data?.offer?.offer_number;
   if (!offerNumber) throw new Error('Offer number was not returned');
   setMobileOfferBusyText('Preparing images…');
-  await preloadMobileOfferImages();
-  setMobileOfferBusyText('Building the PDF…');
-  const pdf = await buildMobileOfferPdf(currentUser);
+  // Same slides as desktop (renderOfferSlidesPdf). The old jsPDF-only mobile pages
+  // (buildMobileOfferPdf) drifted from the desktop design; html2canvas is fine on phones
+  // now that photos are downscaled first and the CRM page isn't cloned per slide.
+  pdfMobileMode = false;
+  await Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
+  const pdf = await renderOfferSlidesPdf(currentUser, setMobileOfferBusyText);
   showMobileOfferReady({
     blob: pdf.output('blob'),
     filename: `sales-offer-${offerNumber}.pdf`,
@@ -6565,6 +6673,74 @@ const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }
   });
 };
 
+/**
+ * Builds the offer PDF from the HTML slides (createNewDesignContent) with html2canvas — used
+ * by BOTH desktop and mobile so the two offers are identical. Call after the photos and
+ * card icons are preloaded (preloadDesktopOfferImages / preloadOfferCardIcons).
+ * onProgress(text) updates whatever progress UI the caller shows.
+ */
+const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}) => {
+  pdfDesktopMode = true;
+  const pdfContent = createNewDesignContent(currentUser);
+  onProgress('Building the offer pages…');
+
+  // Load every slide's images up front, in parallel, instead of letting each
+  // html2canvas pass block on network fetches one slide at a time — this is
+  // what was actually eating into the per-slide render timeout.
+  const imgs = [...pdfContent.querySelectorAll('img')];
+  await Promise.allSettled(imgs.map((img) => {
+    if (img.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+      setTimeout(resolve, 10000);
+    });
+  }));
+
+  // html2canvas clones the WHOLE document into an iframe before drawing — once per
+  // slide here. With the offer opened from the property popup on top of All Listings /
+  // the Kanban board, that meant copying the entire CRM page 8–10 times, which is what
+  // made the offer so slow. Only html2pdf's overlay (which holds the slide) is ever
+  // drawn, so skip every other top-level node while cloning. Output is unchanged.
+  const keepOnlyOfferOverlay = (el) =>
+    el.parentElement === document.body && !el.classList?.contains('html2pdf__overlay');
+
+  const options = {
+    html2canvas: {
+      scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0,
+      ignoreElements: keepOnlyOfferOverlay,
+    },
+  };
+
+  const withTimeout = (promise, ms, message) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+
+  const slideElements = [...pdfContent.children];
+  const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
+
+  for (let i = 0; i < slideElements.length; i++) {
+    const slideCanvas = await withTimeout(
+      html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
+      60000,
+      `Slide ${i + 1} of ${slideElements.length} timed out rendering`
+    );
+    // 0.92: visually identical to 0.98 for photos, but a much smaller/faster PDF.
+    const imgData = slideCanvas.toDataURL('image/jpeg', 0.92);
+    slideCanvas.width = 0;
+    slideCanvas.height = 0;
+    if (i > 0) pdf.addPage([210, 148], 'landscape');
+    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
+  }
+
+  onProgress('Finishing the PDF…');
+  await paintPaymentDetailsPage(pdf, pdfContent);
+  await paintAmenitiesPage(pdf, pdfContent);
+  paintCoverBadge(pdf, pdfContent);
+  return pdf;
+};
+
 const generatePDF = async () => {
   if (offerPdfInFlight) return;
   offerPdfInFlight = true;
@@ -6577,6 +6753,7 @@ const generatePDF = async () => {
       showMobileOfferError(detail);
     } finally {
       pdfMobileMode = false;
+      pdfDesktopMode = false;
       offerPdfInFlight = false;
     }
     return;
@@ -6631,64 +6808,7 @@ const generatePDF = async () => {
     pdfMobileMode = false;
     Swal.update({ text: 'Preparing images…' });
     await imagesReady;
-    pdfDesktopMode = true;
-    const pdfContent = createNewDesignContent(currentUser);
-    Swal.update({ text: 'Building the offer pages…' });
-
-    // Load every slide's images up front, in parallel, instead of letting each
-    // html2canvas pass block on network fetches one slide at a time — this is
-    // what was actually eating into the per-slide render timeout.
-    const imgs = [...pdfContent.querySelectorAll('img')];
-    await Promise.allSettled(imgs.map((img) => {
-      if (img.complete) return Promise.resolve();
-      return new Promise((resolve) => {
-        img.addEventListener('load', resolve, { once: true });
-        img.addEventListener('error', resolve, { once: true });
-        setTimeout(resolve, 10000);
-      });
-    }));
-
-    // html2canvas clones the WHOLE document into an iframe before drawing — once per
-    // slide here. With the offer opened from the property popup on top of All Listings /
-    // the Kanban board, that meant copying the entire CRM page 8–10 times, which is what
-    // made the offer so slow. Only html2pdf's overlay (which holds the slide) is ever
-    // drawn, so skip every other top-level node while cloning. Output is unchanged.
-    const keepOnlyOfferOverlay = (el) =>
-      el.parentElement === document.body && !el.classList?.contains('html2pdf__overlay');
-
-    const options = {
-      html2canvas: {
-        scale: 2, useCORS: true, logging: false, allowTaint: true, scrollX: 0, scrollY: 0,
-        ignoreElements: keepOnlyOfferOverlay,
-      },
-    };
-
-    const withTimeout = (promise, ms, message) => Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
-    ]);
-
-    const slideElements = [...pdfContent.children];
-    const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
-
-    for (let i = 0; i < slideElements.length; i++) {
-      const slideCanvas = await withTimeout(
-        html2pdf().set(options).from(slideElements[i]).toCanvas().get('canvas'),
-        60000,
-        `Slide ${i + 1} of ${slideElements.length} timed out rendering`
-      );
-      // 0.92: visually identical to 0.98 for photos, but a much smaller/faster PDF.
-      const imgData = slideCanvas.toDataURL('image/jpeg', 0.92);
-      slideCanvas.width = 0;
-      slideCanvas.height = 0;
-      if (i > 0) pdf.addPage([210, 148], 'landscape');
-      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
-    }
-
-    Swal.update({ text: 'Finishing the PDF…' });
-    await paintPaymentDetailsPage(pdf, pdfContent);
-    await paintAmenitiesPage(pdf, pdfContent);
-    paintCoverBadge(pdf, pdfContent);
+    const pdf = await renderOfferSlidesPdf(currentUser, (text) => Swal.update({ text }));
 
     const pdfBlob = pdf.output('blob');
 
@@ -6863,38 +6983,44 @@ const createGallerySlide = (imagesChunk) => {
   `;
 };
 /**
- * Pick a project gallery image whose `sort_order` matches the requested
- * 1-based slot. Falls back, in order, to:
- *   1) the gallery image at array index (slot - 1),
- *   2) the project's main image (`project.image`),
- *   3) the listing's current main image (`getMainImage()`).
+ * The project's photos in gallery order (sort_order, then as returned), for the offer:
+ * slot 1 = About Project, 2 = Amenities. A missing slot
+ * falls back to project photo 1, then the project's main image, then the listing's photo.
+ * (sort_order may start at 0 or 1, so position in the sorted list is used, not the value.)
  */
-const getProjectImageBySlot = (slot) => {
+const projectImageUrlBySlot = (slot) => {
   const project = property.value?.project || {};
-  const list = Array.isArray(project.gallery_images) ? project.gallery_images : [];
-  if (list.length > 0) {
-    const byOrder = list.find((img) => Number(img?.sort_order) === Number(slot));
-    if (byOrder?.image_url) return pdfImg(getImageUrl(byOrder.image_url));
-    const byIndex = list[slot - 1];
-    if (byIndex?.image_url) return pdfImg(getImageUrl(byIndex.image_url));
-    // Requested slot missing (e.g. only one project photo) → the first project photo.
-    if (slot > 1) return getProjectImageBySlot(1);
-  }
-  if (project?.image) return pdfImg(getImageUrl(project.image));
-  return pdfImg(getMainImage());
+  const list = (Array.isArray(project.gallery_images) ? project.gallery_images : [])
+    .filter((img) => img?.image_url)
+    .map((img, index) => ({ img, index }))
+    .sort((a, b) => {
+      const ao = Number.isFinite(Number(a.img.sort_order)) ? Number(a.img.sort_order) : Infinity;
+      const bo = Number.isFinite(Number(b.img.sort_order)) ? Number(b.img.sort_order) : Infinity;
+      return ao - bo || a.index - b.index;
+    })
+    .map(({ img }) => getImageUrl(img.image_url))
+    // Some projects have every photo stored twice in project_images — skip repeats so
+    // photo 2 is really the next different photo (cover and details were identical).
+    .filter((url, i, all) => all.indexOf(url) === i);
+  if (list.length) return list[slot - 1] || list[0];
+  if (project?.image) return getImageUrl(project.image);
+  return getMainImage();
 };
+const getProjectImageBySlot = (slot) => pdfImg(projectImageUrlBySlot(slot));
 
 /**
  * The listing's own photos for the offer: slot 1 = the main (first) photo, slot 2 = the
  * next gallery photo that isn't the main one — falling back to the first photo.
  */
 const listingImageUrlBySlot = (slot) => {
-  const main = getMainImage();
-  if (slot <= 1) return main;
-  const others = (property.value?.gallery_images || [])
-    .map((img) => getImageUrl(img?.image_url))
-    .filter((url) => url && url !== main);
-  return others[slot - 2] || main;
+  // Same file can come back as different URLs (main_image vs gallery image_url), so
+  // compare by the storage path, not the full URL.
+  const fileKey = (url) => String(url || '').replace(/^https?:\/\/[^/]+/i, '').replace(/^\/?storage\//, '').split('?')[0];
+  const photos = [getMainImage(), ...(property.value?.gallery_images || []).map((img) => getImageUrl(img?.image_url))]
+    .filter((url) => url && url !== 'placeholder.png')
+    .filter((url, i, all) => all.findIndex((other) => fileKey(other) === fileKey(url)) === i);
+  if (!photos.length) return getMainImage();
+  return photos[slot - 1] || photos[0];
 };
 const getListingImageBySlot = (slot) => pdfImg(listingImageUrlBySlot(slot));
 
@@ -7076,7 +7202,7 @@ const offerTextImg = (text, {
 };
 
 const createSlide2 = () => {
-  // Header photo: the listing's second photo (falls back to the first).
+  // Slide 2 (Property Details): the listing's second photo (falls back to the first).
   const bgImage = getListingImageBySlot(2);
   const propertyType = property.value?.property_type?.name || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
@@ -7194,7 +7320,7 @@ const createSlide3 = () => {
   const col1 = features.slice(0, half);
   const col2 = features.slice(half);
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
-  const projectImage = getProjectImageBySlot(2); // second project slide: photo 2 (else 1)
+  const projectImage = getProjectImageBySlot(2); // Amenities: project photo 2 (else 1)
   amenitiesSlideModel = {
     items: features.map((feature) => ({
       name: feature.name,
@@ -7247,7 +7373,7 @@ const createSlide4 = () => {
   const projectTitle    = project?.title || project?.name || '';
   const projectAbout = project?.about || '';
   // Slide 4 uses the project's multi-image at order 2 (fallback to current image).
-  const projectImage = getProjectImageBySlot(1); // first project slide: project photo 1
+  const projectImage = getProjectImageBySlot(1); // About Project: project photo 1
   const aboutLimited = limitText(projectAbout, 720);
   const aboutHtml = String(aboutLimited).replace(/\s+/g, ' ').trim().split(' ').reduce((lines, word) => {
     const current = lines[lines.length - 1];
