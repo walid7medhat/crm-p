@@ -3710,6 +3710,11 @@ function realtimeLeadPassesActiveFilters(lead) {
         return matches
     }
 
+    // Already on the board → it matched the search, so update the card in place. Reloading
+    // the whole board here (e.g. for the user's own stage change) made the move lag/jump
+    // and cut the stage motion. Only leads we don't have yet need the server to decide.
+    if (findLeadInColumns(lead.id)) return true
+
     clearTimeout(realtimeFilteredRefreshTimer)
     realtimeFilteredRefreshTimer = setTimeout(() => {
         realtimeFilteredRefreshTimer = null
@@ -4994,12 +4999,21 @@ const fetchStageOrders = async () => {
     }
 }
 
+// Snap a dragged card back into its old column at its sorted place (where it was), not
+// at the end — the stage-change motion starts from the card's position, and at the end
+// of the column it flew in from the bottom of the page.
+function restoreLeadToColumn(sourceColumn, lead) {
+    if (!sourceColumn?.leads || sourceColumn.leads.find(l => l && String(l.id) === String(lead.id))) return
+    sourceColumn.leads.push(lead)
+    sortLeadsByUpdatedAt(sourceColumn.leads)
+}
+
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
         const lead = evt.added.element
         const newStageId = column.status
         const newStageOrder = stageOrderMap.value[newStageId] ?? column.order ?? 0
-        const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+        const sourceColumn = columns.value.find(c => String(c.status) === String(lead.stage_id))
         const normalizeStageName = (name) => String(name || '').toLowerCase().replace(/[^a-z]/g, '')
         const sourceStageName = normalizeStageName(sourceColumn?.title)
         const targetStageName = normalizeStageName(column?.title)
@@ -5020,9 +5034,7 @@ async function onLeadDragChange(evt, column) {
                 columns.value[targetColumnIndex].leads =
                     columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
             }
-            if (sourceColumn && !sourceColumn.leads.find(l => l.id === lead.id)) {
-                sourceColumn.leads.push(lead)
-            }
+            if (sourceColumn) restoreLeadToColumn(sourceColumn, lead)
             $showNotification('Only the responsible person can move this lead to Lead Pool', 'error')
             return
         }
@@ -5065,9 +5077,7 @@ async function onLeadDragChange(evt, column) {
                     columns.value[targetColumnIndex].leads =
                         columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
                 }
-                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-                    sourceColumn.leads.push(lead)
-                }
+                restoreLeadToColumn(sourceColumn, lead)
             }
 
             await nextTick()
@@ -5095,9 +5105,7 @@ async function onLeadDragChange(evt, column) {
                     columns.value[targetColumnIndex].leads =
                         columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
                 }
-                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-                    sourceColumn.leads.push(lead)
-                }
+                restoreLeadToColumn(sourceColumn, lead)
             }
 
             await nextTick()
@@ -5147,7 +5155,7 @@ async function onLeadDragChange(evt, column) {
                 missingFieldsForLead.value = missingFields
                 
                 // إرجاع الـ lead للمرحلة السابقة
-                const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+                const sourceColumn = columns.value.find(c => String(c.status) === String(lead.stage_id))
                 if (sourceColumn) {
                     const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
                     if (targetColumnIndex !== -1) {
@@ -5155,9 +5163,7 @@ async function onLeadDragChange(evt, column) {
                             columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
                     }
                     
-                    if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-                        sourceColumn.leads.push(lead)
-                    }
+                    restoreLeadToColumn(sourceColumn, lead)
                 }
                 
                 await nextTick()
@@ -5228,7 +5234,7 @@ async function onLeadDragChange(evt, column) {
             
             missingFieldsForLead.value = fieldsToShow
             
-            const sourceColumn = columns.value.find(c => c.status === lead.stage_id)
+            const sourceColumn = columns.value.find(c => String(c.status) === String(lead.stage_id))
             if (sourceColumn) {
                 const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
                 if (targetColumnIndex !== -1) {
@@ -5236,9 +5242,7 @@ async function onLeadDragChange(evt, column) {
                         columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
                 }
                 
-                if (!sourceColumn.leads.find(l => l.id === lead.id)) {
-                    sourceColumn.leads.push(lead)
-                }
+                restoreLeadToColumn(sourceColumn, lead)
             }
             
             await nextTick()
@@ -5253,7 +5257,7 @@ async function onLeadDragChange(evt, column) {
 async function applyProgrammaticStageChange(lead, targetColumn) {
     const newStageId = targetColumn.status
     if (lead.stage_id === newStageId) return
-    const sourceCol = columns.value.find(c => c.status === lead.stage_id)
+    const sourceCol = columns.value.find(c => String(c.status) === String(lead.stage_id))
     if (!sourceCol) return
     const idx = sourceCol.leads.findIndex(l => l.id === lead.id)
     if (idx === -1) return
@@ -5287,14 +5291,25 @@ function settleLeadOnBoard(lead, stageId) {
 async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
     const token = moveToken == null ? beginLeadMove(lead.id) : moveToken
     const oldLeadSnapshot = { ...lead }
-    const fromCol = columns.value.find((column) => column.status === lead.stage_id)
-    const toCol = columns.value.find((column) => column.status === newStageId)
+    // String compare: stage ids arrive as numbers or strings depending on the source.
+    const fromCol = columns.value.find((column) => String(column.status) === String(lead.stage_id))
+    const toCol = columns.value.find((column) => String(column.status) === String(newStageId))
     const motionArmed = armLeadMotion({
         leadId: lead.id,
         leadName: lead.lead_name,
         from: stageMotionMeta(fromCol),
         to: stageMotionMeta(toCol, { id: newStageId, name: toCol?.title, order: toCol?.order }),
     })
+    // The dragged card is already in its new column — play now instead of after the
+    // server answers (the parked card froze until then, so the move felt laggy).
+    let motionPlayed = false
+    if (motionArmed && toCol) {
+        await nextTick()
+        void playLeadMotion(lead.id, { assignee: motionAssignee(lead), toId: newStageId }).catch(() => {
+            cancelLeadMotion(lead.id)
+        })
+        motionPlayed = true
+    }
     try {
         const response = await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
@@ -5320,7 +5335,7 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
                 user.value,
             ),
         )
-        if (motionArmed) {
+        if (motionArmed && !motionPlayed) {
             void playLeadMotion(lead.id, { assignee: motionAssignee(lead), toId: newStageId }).catch(() => {
                 cancelLeadMotion(lead.id)
             })
@@ -5355,8 +5370,8 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
     // Closing the modal below clears `pendingStageChange` (see the showStageChangeModal
     // watcher), so grab this now — the catch block needs it to revert the optimistic move.
     const originalStageId = pendingStageChange.value?.originalStageId ?? lead.stage_id
-    const fromCol = columns.value.find((column) => column.status === originalStageId)
-    const toCol = columns.value.find((column) => column.status === targetStageId)
+    const fromCol = columns.value.find((column) => String(column.status) === String(originalStageId))
+    const toCol = columns.value.find((column) => String(column.status) === String(targetStageId))
     const converting = isConversion && targetStageOrder === 6
     const motionArmed = armLeadMotion({
         leadId,
@@ -5451,6 +5466,20 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             showConvertLeadModalWhenReady()
         }
 
+        // The card already moved above — play the motion now with it. Waiting for the
+        // server left the parked "Assigned → Contacted" card frozen, then the board just
+        // switched. Only when this board renders the target stage; a failed save still
+        // cancels the motion and moves the card back.
+        let motionPlayed = false
+        const targetOnBoard = columns.value.some((column) => String(column.status) === String(targetStageId))
+        if (motionArmed && targetOnBoard) {
+            await nextTick()
+            void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId }).catch(() => {
+                cancelLeadMotion(leadId)
+            })
+            motionPlayed = true
+        }
+
         // Fire API in background; reconcile lightly / revert on failure.
         try {
             const response = await api.post(`/leads/${leadId}/change-stage`, payload)
@@ -5470,7 +5499,7 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
             }
             const landed = settleLeadOnBoard(lead, targetStageId)
             if (!landed && motionArmed) cancelLeadMotion(leadId)
-            else if (motionArmed) void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId }).catch(() => {
+            else if (motionArmed && !motionPlayed) void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId }).catch(() => {
                 cancelLeadMotion(leadId)
             })
         } catch (error) {

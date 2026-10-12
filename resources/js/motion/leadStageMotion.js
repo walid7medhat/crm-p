@@ -865,8 +865,43 @@ function jobIsCurrent(job) {
     return !!job && !job.dead && !job.finished && jobs.get(job.leadId) === job
 }
 
+// ---- Motion log: every step, why it stopped, and where it lagged. ----
+// On by default; turn off in the browser console with localStorage.lead_motion_log = '0'.
+const LAG_MS = { start: 400, scroll: 700, total: 6000 }
+
+function motionLogOn() {
+    try {
+        return localStorage.getItem('lead_motion_log') !== '0'
+    } catch (_) {
+        return true
+    }
+}
+
+function msSince(t) {
+    return typeof t === 'number' ? Math.round(performance.now() - t) : null
+}
+
+function motionLog(level, message, job, extra) {
+    if (!motionLogOn()) return
+    try {
+        const info = {
+            lead: job?.leadId ?? extra?.leadId,
+            scene: job?.scene,
+            move: job ? `${job.from?.name || job.from?.id || '?'} → ${job.to?.name || job.to?.id || '?'}` : undefined,
+            sinceArm: job ? `${msSince(job.armedAt)}ms` : undefined,
+            ...(extra || {}),
+        }
+        const fn = level === 'warn' ? console.warn : console.info
+        fn(`[lead-motion] ${message}`, info)
+    } catch (_) { /* logging must never break the motion */ }
+}
+
 function abortJob(job, { release = true } = {}) {
     if (!job || job.dead) return
+    if (!job.finished) {
+        motionLog('warn', 'STOPPED: cancelled before it finished', job)
+        if (motionLogOn()) console.trace('[lead-motion] cancelled by')
+    }
     job.dead = true
     clearJobTimer(job)
     job.wheelSpin?.forEach((tween) => tween.kill())
@@ -885,6 +920,12 @@ function abortJob(job, { release = true } = {}) {
 
 function finishJob(job) {
     if (!job || job.finished) return
+    if (job.playStartedAt != null) {
+        const total = msSince(job.playStartedAt)
+        if (job.animating) {
+            motionLog(total > LAG_MS.total ? 'warn' : 'info', total > LAG_MS.total ? `LAG: animation took ${total}ms` : `done in ${total}ms`, job)
+        }
+    }
     job.finished = true
     clearJobTimer(job)
     job.wheelSpin?.forEach((tween) => tween.kill())
@@ -2005,21 +2046,30 @@ async function runJob(job) {
         nextFrame(resolve)
     })
     if (!jobIsCurrent(job)) {
+        motionLog('warn', 'STOPPED: replaced or cancelled before the first frame', job)
         finishJob(job)
         return
     }
     if (!destinationPlayable(job.to?.id)) {
+        motionLog('warn', 'STOPPED: target stage is not shown on this board (or list view)', job)
         finishJob(job)
         return
     }
     alignToFirstCards(job)
     const column = stageEl(job.to?.id) || (job.scene === 'convert' ? stageByKind('converted') : null)
     const card = cardEl(job.leadId)
+    if (!column) motionLog('warn', 'target column element not found on the page', job)
+    if (!card) motionLog('info', 'lead card not in the DOM yet (will use the column slot)', job)
     const board = boardScroller()
     const scrollBefore = board?.scrollLeft || 0
     const scrollTweens = scrollIntoView(column, card)
     job.scrollTweens = scrollTweens
+    const scrollStart = performance.now()
     await waitForScroll(scrollTweens)
+    const scrollMs = msSince(scrollStart)
+    if (scrollTweens.length) {
+        motionLog(scrollMs > LAG_MS.scroll ? 'warn' : 'info', scrollMs > LAG_MS.scroll ? `LAG: scrolling to the column took ${scrollMs}ms` : `scrolled to the column in ${scrollMs}ms`, job)
+    }
     const scrollDelta = scrollBefore - (board?.scrollLeft || 0)
     if (scrollDelta && job.sourceRect) {
         job.sourceRect = {
@@ -2030,16 +2080,19 @@ async function runJob(job) {
         if (job.parked) job.parked.style.left = `${job.sourceRect.left}px`
     }
     if (!jobIsCurrent(job)) {
+        motionLog('warn', 'STOPPED: replaced or cancelled while scrolling', job)
         finishJob(job)
         return
     }
     await new Promise((resolve) => nextFrame(resolve))
     if (!jobIsCurrent(job)) {
+        motionLog('warn', 'STOPPED: replaced or cancelled before measuring the target', job)
         finishJob(job)
         return
     }
     const dest = landOnFirstCard(job, measureDest(job))
     if (!dest?.rect || !destinationPlayable(job.to?.id)) {
+        motionLog('warn', 'STOPPED: could not measure where the card should land', job, { hasColumn: !!dest?.column, hasCard: !!dest?.card })
         finishJob(job)
         return
     }
@@ -2050,9 +2103,12 @@ async function runJob(job) {
     layer.appendChild(job.particles.canvas)
     overlay().appendChild(layer)
     if (!jobIsCurrent(job)) {
+        motionLog('warn', 'STOPPED: replaced or cancelled just before animating', job)
         finishJob(job)
         return
     }
+    job.animating = true
+    motionLog('info', `animating "${job.scene}"`, job, { readyIn: `${msSince(job.playStartedAt)}ms` })
     if (job.scene === 'arrival') playArrival(job, dest)
     else if (job.scene === 'contact') playFirstContact(job, dest)
     else if (job.scene === 'deliver') playDeliver(job, dest)
@@ -2096,7 +2152,9 @@ function createJob(ctx, scene) {
         dead: false,
         finished: false,
         resolve: null,
+        armedAt: performance.now(),
     }
+    if (previous) motionLog('info', 'replacing an older motion for the same lead', job)
     jobs.set(id, job)
     return job
 }
@@ -2114,18 +2172,29 @@ export function armLeadMotion(ctx) {
         })
         return false
     }
-    if (prefersReducedMotion()) return false
+    if (prefersReducedMotion()) {
+        motionLog('warn', 'NO MOTION: the OS "reduce motion" setting is on', null, { leadId: ctx.leadId })
+        return false
+    }
     const from = hydrateStage(ctx.from)
     const to = hydrateStage(ctx.to)
     const scene = ctx.force === 'convert'
         ? { scene: 'convert', variant: null, duration: SCENE_DURATION.convert }
         : classifyLeadTransition(from, to, ctx.interactionResult)
-    if (!scene) return false
+    if (!scene) {
+        const why = !from || !to ? 'from/to stage unknown' : 'same kind of stage or moving backwards'
+        motionLog('warn', `NO MOTION: ${why}`, null, { leadId: ctx.leadId, from, to })
+        return false
+    }
     // List view and a destination this role does not render have nothing to animate.
     // Leaving the job unarmed keeps the real card in the normal stage update.
-    if (!destinationPlayable(to?.id)) return false
+    if (!destinationPlayable(to?.id)) {
+        motionLog('warn', 'NO MOTION: target stage is not shown on this board (or list view)', null, { leadId: ctx.leadId, to })
+        return false
+    }
     const job = createJob({ ...ctx, from, to }, scene)
     job.parkedOnly = true
+    motionLog('info', `armed "${scene.scene}"`, job)
     return true
 }
 
@@ -2160,18 +2229,24 @@ export function playLeadMotion(leadId, extra) {
     const id = Number(leadId)
     const job = jobs.get(id)
     if (!job || job.dead) {
+        motionLog('warn', 'NOT PLAYED: no live motion for this lead (never armed, or already cancelled)', null, { leadId: id })
         if (!jobs.has(id)) releaseHold(id)
         return Promise.resolve(false)
     }
     if (extra?.toId != null && String(job.to?.id) !== String(extra.toId)) {
+        motionLog('warn', 'NOT PLAYED: the lead was sent to a different stage meanwhile', job, { requestedTo: extra.toId })
         return Promise.resolve(false)
     }
     const person = sanitizeAssignee(extra?.assignee) || job.assignee || assigneeFromCard(id)
     if (person) job.assignee = person
     if (prefersReducedMotion() || !destinationPlayable(job.to?.id)) {
+        motionLog('warn', 'NOT PLAYED: reduce-motion on, or target stage not on this board', job)
         finishJob(job)
         return Promise.resolve(false)
     }
+    const waited = msSince(job.armedAt)
+    motionLog(waited > LAG_MS.start ? 'warn' : 'info', waited > LAG_MS.start ? `LAG: play started ${waited}ms after arming (waiting on the app/server)` : `play (started ${waited}ms after arming)`, job)
+    job.playStartedAt = performance.now()
     return new Promise((resolve) => {
         let settled = false
         const settle = (played) => {
@@ -2182,10 +2257,14 @@ export function playLeadMotion(leadId, extra) {
         job.resolve = () => settle(true)
         const limit = Math.min(6000, Math.round(((job.duration || 2) + 1.6) * 1000))
         job.safetyTimer = setTimeout(() => {
-            if (!job.finished) finishJob(job)
+            if (!job.finished) {
+                motionLog('warn', `STOPPED: safety timeout after ${limit}ms — the animation hung, card landed without it`, job)
+                finishJob(job)
+            }
             settle(false)
         }, limit)
-        runJob(job).catch(() => {
+        runJob(job).catch((error) => {
+            motionLog('warn', 'STOPPED: animation threw an error', job, { error: error?.message || String(error) })
             finishJob(job)
             settle(false)
         })
