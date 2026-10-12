@@ -1225,28 +1225,48 @@ function playQualify(job, dest) {
     tl.add(() => revealCard(job), 0.9)
 }
 
+function snapshotRealCard(real) {
+    const clone = real.cloneNode(true)
+    clone.removeAttribute('id')
+    clone.removeAttribute('data-lead-id')
+    clone.classList.remove('kanban-card--motion-hold')
+    clone.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'))
+    clone.style.opacity = '1'
+    clone.style.pointerEvents = 'none'
+    clone.style.width = '100%'
+    clone.style.maxWidth = 'none'
+    clone.style.transform = 'none'
+    clone.style.margin = '0'
+    return clone
+}
+
 function movingCard(job, parent, fallbackMeta) {
     const card = document.createElement('div')
     card.className = 'lsm-deliver-card'
     const real = cardEl(job.leadId)
     if (real) {
-        const clone = real.cloneNode(true)
-        clone.removeAttribute('id')
-        clone.removeAttribute('data-lead-id')
-        clone.classList.remove('kanban-card--motion-hold')
-        clone.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'))
-        clone.style.opacity = '1'
-        clone.style.pointerEvents = 'none'
-        clone.style.width = '100%'
-        clone.style.maxWidth = 'none'
-        clone.style.transform = 'none'
-        clone.style.margin = '0'
-        card.appendChild(clone)
+        card.appendChild(snapshotRealCard(real))
     } else {
         card.innerHTML = cardHtml(job.leadName, fallbackMeta)
     }
+    job.movingCardEl = card
     parent.appendChild(card)
     return card
+}
+
+/**
+ * The motion starts before the server answers, so the flying card is a snapshot of the
+ * card as it was in the old stage. Call this once the board has the server's fresh lead
+ * to swap the flying card's content for the updated card (the motion keeps going).
+ */
+export function refreshLeadMotionCard(leadId) {
+    const job = jobs.get(Number(leadId))
+    if (!jobIsCurrent(job) || !job.movingCardEl) return false
+    const real = cardEl(job.leadId)
+    if (!real) return false
+    job.movingCardEl.replaceChildren(snapshotRealCard(real))
+    motionLog('info', 'flying card refreshed with the server data', job)
+    return true
 }
 
 function placeRealCard(job) {

@@ -1262,6 +1262,7 @@ import {
     motionHeld,
     noteLeadDragOrigin,
     playLeadMotion,
+    refreshLeadMotionCard,
     rememberSupersededStage,
 } from '@/motion/leadStageMotion'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
@@ -5328,6 +5329,8 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
         // Just-moved card must land on top of its new column, sorted by the same
         // "activity time" shown on the card rather than being appended at the end.
         settleLeadOnBoard(lead, newStageId)
+        // Motion started before the server answered — show the fresh card while it flies.
+        if (motionPlayed) nextTick(() => refreshLeadMotionCard(lead.id))
         showLeadNotification(
             buildCrmLeadNotificationEvent(
                 { ...lead, stage_id: newStageId },
@@ -5498,6 +5501,8 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
                 Object.assign(lead, freshLead, preserve)
             }
             const landed = settleLeadOnBoard(lead, targetStageId)
+            // Motion started before the server answered — show the fresh card while it flies.
+            if (landed && motionPlayed) nextTick(() => refreshLeadMotionCard(leadId))
             if (!landed && motionArmed) cancelLeadMotion(leadId)
             else if (motionArmed && !motionPlayed) void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId }).catch(() => {
                 cancelLeadMotion(leadId)
