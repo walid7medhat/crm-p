@@ -78,6 +78,11 @@
             <span>Draft</span>
             <em v-if="activeStatus === 'draft'">{{ formattedResultCount }}</em>
           </button>
+          <button v-if="showRejectedTab" type="button" class="bayut-status-tab" :class="{ active: activeStatus === 'rejected' }" @click="emitStatusChange('rejected')">
+            <i class="ri-close-circle-line"></i>
+            <span>Rejected</span>
+            <em v-if="activeStatus === 'rejected'">{{ formattedResultCount }}</em>
+          </button>
         </div>
 
         <div class="bayut-results-header">
@@ -499,6 +504,9 @@
         </button>
           <button class="status-btn" v-if="showStatusTabs" :class="{ active: activeStatus === 'draft' }" @click="emitStatusChange('draft')">
             <i class="fa fa-pencil-alt"></i> Draft
+          </button>
+          <button class="status-btn" v-if="showStatusTabs && showRejectedTab" :class="{ active: activeStatus === 'rejected' }" @click="emitStatusChange('rejected')">
+            <i class="ri-close-circle-line"></i> Rejected
           </button>
           <!--<span class="status-sort-separator" v-if="showStatusTabs"></span>-->
         </div>
@@ -1061,6 +1069,11 @@ export default {
       default: null
     },
     showStatusTabs: {
+      type: Boolean,
+      default: false
+    },
+    // My Listings only: "Rejected" tab (listings rejected by approvers, to fix & resubmit).
+    showRejectedTab: {
       type: Boolean,
       default: false
     },

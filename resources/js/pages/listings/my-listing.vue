@@ -9,6 +9,7 @@
           :initial-filters="initialFilters"
           :result-count="pagination?.total || filteredProperties.length"
           :show-status-tabs="true"
+          :show-rejected-tab="true"
           :active-status="activeStatus"
         />
       </div>
@@ -112,10 +113,10 @@
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>
-                  <span v-if="!property.approved && property.rejection_reason" class="badge-sold bg-danger">
+                  <span v-if="isRejectedListing(property)" class="badge-sold bg-danger">
                     <i class="ri-close-circle-fill me-1"></i>Rejected
                   </span>
-                  <span v-else-if="!property.approved && !property.rejection_reason && property.status==draft" class="badge-sold bg-danger">
+                  <span v-else-if="!property.approved && ['draft', 'published'].includes(property.status)" class="badge-sold bg-danger">
                     <i class="ri-time-line me-1"></i>Need Approve
                   </span>
                   <span
@@ -323,6 +324,10 @@ export default {
     // Default images array for fallback
     const defaultImages = [property1, property2, property3, property4];
 
+    /** Rejected by an approver (same rule as the API `rejected` filter). */
+    const isRejectedListing = (property) =>
+      !property?.approved && !!String(property?.rejection_reason || '').trim() && property?.status === 'draft';
+
     // Computed property for filtered properties based on status
   const filteredProperties = computed(() => {
       switch (activeStatus.value) {
@@ -346,8 +351,10 @@ export default {
           return properties.value.filter(property => property.status === 'draft');
        case 'sold':
           return properties.value.filter(p => p.status === 'converted');
-        case 'rented': 
+        case 'rented':
            return properties.value.filter(property => property.status === 'rented');
+        case 'rejected':
+          return properties.value.filter(property => isRejectedListing(property));
 
         case 'draft':
           return properties.value.filter(
@@ -490,6 +497,9 @@ const fetchProperties = async (filters = {}, page = 1) => {
           break;
       case 'draft':
           params.status = 'draft';
+          break;
+      case 'rejected':
+          params.rejected = true;
           break;
       default:
         break;
@@ -1252,6 +1262,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
       openDetailsModal,
       listingNeedsPaymentBreakdownHighlight,
       hidesBedsBaths,
+      isRejectedListing,
       canQuickEditPaymentBreakdown,
     };
   }

@@ -563,6 +563,15 @@ SQL;
             $query->where('status', 'converted');
         }
 
+        // Rejected listings (reject() sets approved=false, a reason, status=draft). Editing
+        // and re-publishing one resubmits it for approval (see update()).
+        if ($request->boolean('rejected')) {
+            $query->where('approved', false)
+                ->whereNotNull('rejection_reason')
+                ->where('rejection_reason', '!=', '')
+                ->where('status', 'draft');
+        }
+
         if($request->has('status') && $request->status != 'All') {
             $query->where('status', $request->status);
         }

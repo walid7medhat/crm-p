@@ -203,6 +203,7 @@ class ListingGridResource extends JsonResource
             'rejected_by_name' => $this->relationLoaded('rejectedBy')
                 ? User::resolveDisplayName($this->rejectedBy)
                 : null,
+            'rejected_at' => $this->rejected_at,
             'is_active' => (bool) $this->is_active,
             'is_archived' => (bool) $this->is_archived,
             'is_hot_deal' => $this->is_hot_deal == 'Yes' && $this->hot_deal_approved_by && $this->hot_deal_approved_at

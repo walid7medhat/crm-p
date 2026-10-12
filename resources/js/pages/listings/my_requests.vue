@@ -59,7 +59,45 @@
                 <MobileStatusFilter v-model="activeFilter" :options="statusOptions" class="filter-mobile mb-3" />
 
                 <div class="overflow-x-auto">
-                    <table class="table bordered-table mb-0 mx-0">
+                    <!-- Rejected Listings tab: the user's listings rejected by an approver -->
+                    <table v-if="isRejectedListingsTab" class="table bordered-table mb-0 mx-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Property</th>
+                                <th>Rejection Reason</th>
+                                <th>Rejected By</th>
+                                <th>Rejected Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="listing in rejectedListings" :key="`rejected-${listing.id}`">
+                                <td>{{ listing.reference_number || listing.id }}</td>
+                                <td>
+                                    <span class="text-md fw-bolder d-block">{{ listing.title || 'Untitled listing' }}</span>
+                                    <span class="text-sm text-secondary-light d-block">{{ listing.area }}</span>
+                                </td>
+                                <td>
+                                    <span class="rejection-reason-cell">{{ listing.rejection_reason }}</span>
+                                </td>
+                                <td>{{ listing.rejected_by_name || '-' }}</td>
+                                <td>{{ listing.rejected_at ? formatDate(listing.rejected_at) : '-' }}</td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" @click="viewProperty(listing.id)">
+                                            <i class="ri-home-line me-1"></i> View
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-primary" @click="editRejectedListing(listing)">
+                                            <i class="ri-edit-line me-1"></i> Edit &amp; Resubmit
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table v-else class="table bordered-table mb-0 mx-0">
                         <thead>
                             <tr>
                                 <th @click="sortBy('reference_number')">#</th>
@@ -310,8 +348,8 @@
                     <!-- Empty State -->
                     <div v-if="!loading && filteredRequests.length === 0" class="text-center py-5">
                         <i class="ri-inbox-line" style="font-size: 64px; color: #6c757d;"></i>
-                        <h5 class="mt-3">No Requests Found</h5>
-                        <p class="text-muted">You don't have any incoming access requests yet.</p>
+                        <h5 class="mt-3">{{ isRejectedListingsTab ? 'No Rejected Listings' : 'No Requests Found' }}</h5>
+                        <p class="text-muted">{{ isRejectedListingsTab ? 'None of your listings have been rejected.' : "You don't have any incoming access requests yet." }}</p>
                     </div>
 
                     <!-- Loading State -->
@@ -698,11 +736,17 @@ const filterTabs = [
     { label: 'Approved', value: 'approved' },
     { label: 'Sold Out', value: 'converted' },
     { label: 'Rejected', value: 'rejected' },
-    { label: 'Cancelled', value: 'cancelled' }
+    { label: 'Cancelled', value: 'cancelled' },
+    // Not an access-request status: the user's own listings rejected by an approver.
+    { label: 'Rejected Listings', value: 'rejected_listings' }
 ]
 
+const REJECTED_LISTINGS_TAB = 'rejected_listings'
+const isRejectedListingsTab = computed(() => activeFilter.value === REJECTED_LISTINGS_TAB)
+const rejectedListings = ref([])
+
 // Server already applies status/search/sort/page — rows are the current page.
-const filteredRequests = computed(() => requests.value)
+const filteredRequests = computed(() => (isRejectedListingsTab.value ? rejectedListings.value : requests.value))
 const paginatedRequests = computed(() => requests.value)
 
 const totalPages = computed(() =>
@@ -842,7 +886,59 @@ watch(selectedShow, () => {
     fetchMyRequests()
 })
 
+/** "Rejected Listings" tab: the user's listings rejected by an approver (fix & resubmit). */
+async function fetchRejectedListings() {
+    try {
+        loading.value = true
+        const perPage = Number(selectedShow.value) || 10
+        const params = { my_listings: 1, rejected: 1, page: currentPage.value, per_page: perPage }
+        const refNo = searchText.value?.trim()
+        if (refNo) params.reference_number = refNo
+        const response = await api.get('/listings/properties', { params })
+        const rows = Array.isArray(response.data?.data) ? response.data.data : []
+        const meta = response.data?.meta || {}
+        rejectedListings.value = rows
+        const page = meta.current_page || currentPage.value
+        const per = meta.per_page || perPage
+        const total = meta.total ?? rows.length
+        paginationMeta.value = {
+            current_page: page,
+            last_page: meta.last_page || 1,
+            per_page: per,
+            total,
+            from: total ? (page - 1) * per + 1 : null,
+            to: total ? (page - 1) * per + rows.length : null,
+        }
+        currentPage.value = page
+        statusCounts.value = { ...statusCounts.value, [REJECTED_LISTINGS_TAB]: total }
+    } catch (err) {
+        console.error('Error fetching rejected listings:', err)
+        rejectedListings.value = []
+        Swal.fire({ title: 'Error!', text: 'Failed to load rejected listings', icon: 'error', confirmButtonColor: '#6b21a8' })
+    } finally {
+        loading.value = false
+    }
+}
+
+/** Badge count for the "Rejected Listings" tab while another tab is open. */
+async function fetchRejectedListingsCount() {
+    try {
+        const response = await api.get('/listings/properties', { params: { my_listings: 1, rejected: 1, per_page: 1 } })
+        const total = response.data?.meta?.total ?? (response.data?.data || []).length
+        statusCounts.value = { ...statusCounts.value, [REJECTED_LISTINGS_TAB]: total }
+    } catch (e) {
+        // count is cosmetic
+    }
+}
+
+function editRejectedListing(listing) {
+    router.push(`/properties/${listing.id}/edit`)
+}
+
 async function fetchMyRequests() {
+    if (isRejectedListingsTab.value) {
+        return fetchRejectedListings()
+    }
     try {
         loading.value = true
         const params = {
@@ -1166,6 +1262,7 @@ function openVacationModal() {
 // Lifecycle
 onMounted(() => {
     fetchMyRequests(),
+    fetchRejectedListingsCount(),
     fetchAgents(),
     setTimeout(() => {
         initializeRealTimeUpdates()
@@ -1652,6 +1749,14 @@ onUnmounted(() => {
 .review-display {
     max-width: 320px;
     min-width: 180px;
+}
+
+.rejection-reason-cell {
+    display: block;
+    max-width: 360px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #991b1b !important;
 }
 
 .review-text {
