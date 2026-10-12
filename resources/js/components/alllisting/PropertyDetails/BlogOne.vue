@@ -6487,29 +6487,19 @@ const generateMobileOffer = async () => {
   const blob = pdf.output('blob');
   const filename = `sales-offer-${offerNumber}.pdf`;
 
-  // Android (and other non-iOS) browsers allow a programmatic download after async
-  // work, so download straight away like desktop. iOS Safari silently drops it once
-  // the original tap has been followed by async work — keep the "Download PDF" tap there.
-  if (!isIosOfferDevice()) {
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
-    closeMobileOfferPanel();
-    proxy.$showNotification(`Sales Offer ${offerNumber} downloaded`, 'success');
-    return;
-  }
-
-  showMobileOfferReady({
-    blob,
-    filename,
-    offerNumber,
-    creatorName: currentUser?.name,
-  });
+  // Download straight away on every phone, like desktop — no "Download PDF / Close" step.
+  // Note: iOS Safari may ignore a download started this long after the original tap
+  // (showMobileOfferReady() is the old tap-to-download panel, kept but unused).
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+  closeMobileOfferPanel();
+  proxy.$showNotification(`Sales Offer ${offerNumber} downloaded`, 'success');
 };
 
 // iOS drops programmatic downloads and window.open() once the original tap has
