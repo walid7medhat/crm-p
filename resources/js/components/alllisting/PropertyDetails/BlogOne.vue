@@ -6040,7 +6040,7 @@ const offerCoverFields = () => {
     priceText,
     projectTitle: project?.title || project?.name || property.value?.title || 'Property',
     badge: `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`,
-    background: mobilePdfImage(project?.image ? getImageUrl(project.image) : getMainImage()),
+    background: mobilePdfImage(listingImageUrlBySlot(1)),
   };
 };
 
@@ -6080,7 +6080,7 @@ const drawMobileCover = async (pdf, logo) => {
 };
 
 const drawMobileDetails = async (pdf, logo) => {
-  paintOfferPhoto(pdf, await darkenOfferJpeg(mobilePdfImage(getProjectImageBySlot(1)), 0.55));
+  paintOfferPhoto(pdf, await darkenOfferJpeg(mobilePdfImage(getListingImageBySlot(2)), 0.55));
   if (logo) tryAddOfferImage(pdf, logo, 184, 8, 18, 12);
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
@@ -6206,7 +6206,7 @@ const drawMobileAbout = (pdf, logo) => {
   const project = property.value?.project || {};
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
-  const photo = mobilePdfImage(getProjectImageBySlot(2));
+  const photo = mobilePdfImage(getProjectImageBySlot(1));
   if (photo) tryAddOfferImage(pdf, photo, 108, 0, 102, 133);
   else {
     pdf.setFillColor(1, 6, 45);
@@ -6230,7 +6230,7 @@ const drawMobileAbout = (pdf, logo) => {
 const drawMobileAmenities = (pdf, logo) => {
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
-  const photo = mobilePdfImage(getProjectImageBySlot(3));
+  const photo = mobilePdfImage(getProjectImageBySlot(2));
   if (photo) tryAddOfferImage(pdf, photo, 105, 0, 105, 133);
   else {
     pdf.setFillColor(1, 6, 45);
@@ -6877,10 +6877,26 @@ const getProjectImageBySlot = (slot) => {
     if (byOrder?.image_url) return pdfImg(getImageUrl(byOrder.image_url));
     const byIndex = list[slot - 1];
     if (byIndex?.image_url) return pdfImg(getImageUrl(byIndex.image_url));
+    // Requested slot missing (e.g. only one project photo) → the first project photo.
+    if (slot > 1) return getProjectImageBySlot(1);
   }
   if (project?.image) return pdfImg(getImageUrl(project.image));
   return pdfImg(getMainImage());
 };
+
+/**
+ * The listing's own photos for the offer: slot 1 = the main (first) photo, slot 2 = the
+ * next gallery photo that isn't the main one — falling back to the first photo.
+ */
+const listingImageUrlBySlot = (slot) => {
+  const main = getMainImage();
+  if (slot <= 1) return main;
+  const others = (property.value?.gallery_images || [])
+    .map((img) => getImageUrl(img?.image_url))
+    .filter((url) => url && url !== main);
+  return others[slot - 2] || main;
+};
+const getListingImageBySlot = (slot) => pdfImg(listingImageUrlBySlot(slot));
 
 const createSlide1 = (currentUser) => {
   const propertyTypeName = property.value?.property_type?.name || '';
@@ -6902,8 +6918,8 @@ const createSlide1 = (currentUser) => {
   coverBadgeLabel = `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`;
   const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
   const project = property.value?.project;
-  // Slide 1 uses the project's main image (fallback to current listing image).
-  const bgImage = pdfImg(project?.image ? getImageUrl(project.image) : getMainImage());
+  // Slide 1 (cover): the listing's first photo.
+  const bgImage = getListingImageBySlot(1);
   return `
   <div id="cover-slide" style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
@@ -6951,10 +6967,42 @@ const preloadOfferCardIcons = () => Promise.all(Object.entries(OFFER_CARD_ICON_F
 const offerImgIcon = (src, size) =>
   `<img src="${src}" style="width:${size}mm !important; height:${size}mm !important; object-fit:contain !important; display:block !important;" />`;
 
-const offerIcon = (paths, { color = OFFER_PURPLE, size = 6, fill = 'none' } = {}) => {
+const offerIconUri = (paths, { color = OFFER_PURPLE, fill = 'none' } = {}) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="${fill}" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
-  return `<img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}" style="width:${size}mm !important; height:${size}mm !important; display:block !important;" />`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 };
+
+const offerIcon = (paths, { color = OFFER_PURPLE, size = 6, fill = 'none' } = {}) =>
+  `<img src="${offerIconUri(paths, { color, fill })}" style="width:${size}mm !important; height:${size}mm !important; display:block !important;" />`;
+
+/** Rasterise an (SVG) icon to a square PNG for jsPDF, keeping its aspect ratio (contain). */
+const offerIconPng = (uri, px = 160) => new Promise((resolve) => {
+  if (!uri) return resolve(null);
+  const timer = setTimeout(() => resolve(null), 3000);
+  const img = new Image();
+  img.onload = () => {
+    clearTimeout(timer);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = px;
+      canvas.height = px;
+      const w = img.naturalWidth || px;
+      const h = img.naturalHeight || px;
+      const scale = Math.min(px / w, px / h);
+      const dw = w * scale;
+      const dh = h * scale;
+      canvas.getContext('2d').drawImage(img, (px - dw) / 2, (px - dh) / 2, dw, dh);
+      resolve(canvas.toDataURL('image/png'));
+    } catch {
+      resolve(null);
+    }
+  };
+  img.onerror = () => {
+    clearTimeout(timer);
+    resolve(null);
+  };
+  img.src = uri;
+});
 
 const OFFER_ICON_PATHS = {
   building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
@@ -7028,8 +7076,8 @@ const offerTextImg = (text, {
 };
 
 const createSlide2 = () => {
-  // Header photo: the project's multi-image at order 1 (fallback to current image).
-  const bgImage = getProjectImageBySlot(1);
+  // Header photo: the listing's second photo (falls back to the first).
+  const bgImage = getListingImageBySlot(2);
   const propertyType = property.value?.property_type?.name || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
   const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
@@ -7146,7 +7194,7 @@ const createSlide3 = () => {
   const col1 = features.slice(0, half);
   const col2 = features.slice(half);
   // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
-  const projectImage = getProjectImageBySlot(3);
+  const projectImage = getProjectImageBySlot(2); // second project slide: photo 2 (else 1)
   amenitiesSlideModel = {
     items: features.map((feature) => ({
       name: feature.name,
@@ -7199,7 +7247,7 @@ const createSlide4 = () => {
   const projectTitle    = project?.title || project?.name || '';
   const projectAbout = project?.about || '';
   // Slide 4 uses the project's multi-image at order 2 (fallback to current image).
-  const projectImage = getProjectImageBySlot(2);
+  const projectImage = getProjectImageBySlot(1); // first project slide: project photo 1
   const aboutLimited = limitText(projectAbout, 720);
   const aboutHtml = String(aboutLimited).replace(/\s+/g, ' ').trim().split(' ').reduce((lines, word) => {
     const current = lines[lines.length - 1];
