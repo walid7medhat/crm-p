@@ -5689,7 +5689,7 @@ const collectOfferImageUrls = () => {
   const push = (u) => { if (u) urls.add(u); };
 
   push(getMainImage());
-  (property.value?.gallery_images || []).slice(0, 9).forEach((img) => push(getImageUrl(img.image_url)));
+  (property.value?.gallery_images || []).slice(0, OFFER_GALLERY_MAX).forEach((img) => push(getImageUrl(img.image_url)));
   (property.value?.floor_plans || []).slice(0, 2).forEach((img) => push(getImageUrl(img.image_url)));
 
   const project = property.value?.project;
@@ -6148,13 +6148,56 @@ const drawMobileFloor = (pdf, logo) => {
   drawOfferFooter(pdf);
 };
 
-const drawMobileGallery = (pdf, images, logo) => {
+/**
+ * Center-crop an image data URL to the w:h box ratio (like CSS background-size: cover),
+ * so photos aren't stretched when drawn into a fixed box. Falls back to the original.
+ */
+const cropOfferImageToBox = (dataUrl, w, h) => new Promise((resolve) => {
+  if (!dataUrl) return resolve(dataUrl);
+  const timer = setTimeout(() => resolve(dataUrl), 3000);
+  const img = new Image();
+  img.onload = () => {
+    clearTimeout(timer);
+    try {
+      const target = w / h;
+      const srcW = img.naturalWidth || img.width;
+      const srcH = img.naturalHeight || img.height;
+      let cw = srcW;
+      let ch = srcH;
+      if (srcW / srcH > target) cw = Math.round(srcH * target);
+      else ch = Math.round(srcW / target);
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      canvas.getContext('2d').drawImage(img, (srcW - cw) / 2, (srcH - ch) / 2, cw, ch, 0, 0, cw, ch);
+      const out = canvas.toDataURL('image/jpeg', 0.85);
+      canvas.width = 0;
+      canvas.height = 0;
+      resolve(out);
+    } catch {
+      resolve(dataUrl);
+    }
+  };
+  img.onerror = () => {
+    clearTimeout(timer);
+    resolve(dataUrl);
+  };
+  img.src = dataUrl;
+});
+
+const drawMobileGallery = async (pdf, images, logo) => {
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, 210, 148, 'F');
-  images.forEach((image, index) => {
-    const data = mobilePdfImage(getImageUrl(image.image_url));
-    tryAddOfferImage(pdf, data, 4 + index * 68, 6, 65, 122);
-  });
+  // 2 photos side by side (50/50) in a 202mm-wide area with a 3mm gap; a lone photo fills it.
+  const gap = 3;
+  const areaW = 202;
+  const boxW = images.length > 1 ? (areaW - gap) / 2 : areaW;
+  const boxH = 122;
+  for (let index = 0; index < images.length; index += 1) {
+    const raw = mobilePdfImage(getImageUrl(images[index].image_url));
+    const data = await cropOfferImageToBox(raw, boxW, boxH);
+    tryAddOfferImage(pdf, data, 4 + index * (boxW + gap), 6, boxW, boxH);
+  }
   if (logo) tryAddOfferImage(pdf, logo, 184, 8, 16, 11);
   drawOfferFooter(pdf);
 };
@@ -6257,9 +6300,9 @@ const buildMobileOfferPdf = async (currentUser) => {
   const hasFloor = Array.isArray(property.value?.floor_plans) && property.value.floor_plans.length > 0;
   const hasProject = Boolean(property.value?.project?.id);
   const hasAmenities = rememberAmenitiesModel();
-  const gallery = (property.value?.gallery_images || []).slice(0, 9);
+  const gallery = (property.value?.gallery_images || []).slice(0, OFFER_GALLERY_MAX);
   const galleryChunks = [];
-  for (let index = 0; index < gallery.length; index += 3) galleryChunks.push(gallery.slice(index, index + 3));
+  for (let index = 0; index < gallery.length; index += OFFER_GALLERY_PER_SLIDE) galleryChunks.push(gallery.slice(index, index + OFFER_GALLERY_PER_SLIDE));
 
   const pages = ['cover', 'details'];
   if (hasPayment) pages.push('payment');
@@ -6283,7 +6326,7 @@ const buildMobileOfferPdf = async (currentUser) => {
     if (kind === 'cover') await drawMobileCover(pdf, logo);
     else if (kind === 'details') await drawMobileDetails(pdf, logo);
     else if (kind === 'floor') drawMobileFloor(pdf, logo);
-    else if (kind === 'gallery') drawMobileGallery(pdf, page.images, logo);
+    else if (kind === 'gallery') await drawMobileGallery(pdf, page.images, logo);
     else if (kind === 'about') drawMobileAbout(pdf, logo);
     else if (kind === 'amenities') drawMobileAmenities(pdf, logo);
     else if (kind === 'thanks') await drawMobileThanks(pdf, currentUser);
@@ -6441,9 +6484,29 @@ const generateMobileOffer = async () => {
   await preloadMobileOfferImages();
   setMobileOfferBusyText('Building the PDF…');
   const pdf = await buildMobileOfferPdf(currentUser);
+  const blob = pdf.output('blob');
+  const filename = `sales-offer-${offerNumber}.pdf`;
+
+  // Android (and other non-iOS) browsers allow a programmatic download after async
+  // work, so download straight away like desktop. iOS Safari silently drops it once
+  // the original tap has been followed by async work — keep the "Download PDF" tap there.
+  if (!isIosOfferDevice()) {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+    closeMobileOfferPanel();
+    proxy.$showNotification(`Sales Offer ${offerNumber} downloaded`, 'success');
+    return;
+  }
+
   showMobileOfferReady({
-    blob: pdf.output('blob'),
-    filename: `sales-offer-${offerNumber}.pdf`,
+    blob,
+    filename,
     offerNumber,
     creatorName: currentUser?.name,
   });
@@ -6777,10 +6840,14 @@ const createNewDesignContent = (currentUser) => {
   return container;
 };
 
-const createGallerySlides = () => {
-  const images = (property.value?.gallery_images || []).slice(0, 9); 
+// Offer gallery: up to 8 photos, 2 per slide side by side (50/50).
+const OFFER_GALLERY_MAX = 8;
+const OFFER_GALLERY_PER_SLIDE = 2;
 
-  const chunks = chunkArray(images, 3);
+const createGallerySlides = () => {
+  const images = (property.value?.gallery_images || []).slice(0, OFFER_GALLERY_MAX);
+
+  const chunks = chunkArray(images, OFFER_GALLERY_PER_SLIDE);
 
   return chunks.map(chunk => createGallerySlide(chunk)).join('');
 };
@@ -6792,35 +6859,23 @@ const chunkArray = (arr, size = 3) => {
   return result;
 };
 const createGallerySlide = (imagesChunk) => {
-  const img1 = imagesChunk[0]
-    ? pdfImg(getImageUrl(imagesChunk[0].image_url))
-    : 'placeholder.png';
-
-  const img2 = imagesChunk[1]
-    ? pdfImg(getImageUrl(imagesChunk[1].image_url))
-    : 'placeholder.png';
-
-  const img3 = imagesChunk[2]
-    ? pdfImg(getImageUrl(imagesChunk[2].image_url))
-    : 'placeholder.png';
+  // 2 photos side by side (50/50); a lone last photo fills the slide. Logo on the last one.
+  const urls = imagesChunk.map((img) => pdfImg(getImageUrl(img.image_url)));
+  const panels = urls.map((url, index) => {
+    const logo = index === urls.length - 1 ? `
+        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+        </div>` : '';
+    return `
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${url}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">${logo}
+      </div>`;
+  }).join('');
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
-    
+
     <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
-      
-      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img1}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-      
-      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-      
-      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${img3}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
-        
-        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
-        </div>
-
-      </div>
-
+      ${panels}
     </div>
 
     ${createFooter()}
