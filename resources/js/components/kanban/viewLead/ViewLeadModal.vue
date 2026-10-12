@@ -548,7 +548,7 @@ function handleLeadConverted(deal) {
         }
     }
     if (celebrate) {
-        void playLeadMotion(updatedLead.id).finally(openConvertedDeal)
+        void playLeadMotion(updatedLead.id).catch(() => cancelLeadMotion(updatedLead.id)).finally(openConvertedDeal)
         return
     }
     openConvertedDeal()
@@ -925,7 +925,9 @@ const executeStageChange = async (newStageId, oldStageId) => {
         leadStageId.value = newStageId
         emit('lead-updated', lead.value)
         $showNotification('Stage updated successfully', 'success')
-        if (motionArmed) void playLeadMotion(lead.value.id)
+        if (motionArmed) {
+            void playLeadMotion(lead.value.id).catch(() => cancelLeadMotion(lead.value?.id))
+        }
     } catch (error) {
         if (motionArmed) cancelLeadMotion(lead.value?.id)
         console.error('❌ Error updating stage:', error)
@@ -1175,7 +1177,9 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
                 lead.value = { ...lead.value, ...response.data.data }
                 emit('lead-updated', lead.value)
             }
-            if (motionArmed) void playLeadMotion(leadId)
+            if (motionArmed) {
+                void playLeadMotion(leadId).catch(() => cancelLeadMotion(leadId))
+            }
 
             // Background refresh — do not block the UI
             fetchLead({ silent: true }).catch(() => {})

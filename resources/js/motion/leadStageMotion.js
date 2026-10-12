@@ -58,6 +58,21 @@ function hold(id) {
 function releaseHold(id) {
     heldIds.delete(id)
     delete motionHeld[id]
+    const card = cardEl(id)
+    if (!card) return
+    card.style.opacity = ''
+    card.style.transform = ''
+    try {
+        gsap.set(card, { clearProps: 'opacity,transform,filter' })
+    } catch (_) {
+        /* The stage change has already landed. A style reset must not trap the card. */
+    }
+}
+
+function clearJobTimer(job) {
+    if (!job?.safetyTimer) return
+    clearTimeout(job.safetyTimer)
+    job.safetyTimer = null
 }
 
 export function prefersReducedMotion() {
@@ -679,6 +694,33 @@ function boardScroller() {
     return document.querySelector('.kanban-container')
 }
 
+function kanbanBoardVisible() {
+    const board = boardScroller()
+    if (!board || board.classList.contains('kanban-container--list')) return false
+    const rect = board.getBoundingClientRect?.()
+    return !!rect && rect.width > 40 && rect.height > 40
+}
+
+function destinationPlayable(stageId) {
+    if (!kanbanBoardVisible()) return false
+    const column = stageEl(stageId)
+    if (!column) return false
+    const rect = columnBodyRect(column) || column.getBoundingClientRect?.()
+    return !!rect && rect.width > 8 && rect.height > 8
+}
+
+function waitForScroll(tweens) {
+    if (!tweens?.length) return Promise.resolve()
+    const settled = Promise.all(tweens.map((tween) => {
+        if (!tween?.then) return Promise.resolve()
+        return Promise.resolve(tween).catch(() => {})
+    }))
+    return Promise.race([
+        settled,
+        new Promise((resolve) => setTimeout(resolve, 700)),
+    ])
+}
+
 function scrollIntoView(column, card) {
     const board = boardScroller()
     const tweens = []
@@ -826,6 +868,7 @@ function jobIsCurrent(job) {
 function abortJob(job, { release = true } = {}) {
     if (!job || job.dead) return
     job.dead = true
+    clearJobTimer(job)
     job.wheelSpin?.forEach((tween) => tween.kill())
     job.scrollTweens?.forEach((tween) => tween.kill())
     job.timeline?.kill()
@@ -834,8 +877,8 @@ function abortJob(job, { release = true } = {}) {
     job.parked?.remove()
     job.layer?.remove()
     if (release) {
-        releaseHold(job.leadId)
         if (jobs.get(job.leadId) === job) jobs.delete(job.leadId)
+        if (!jobs.has(job.leadId)) releaseHold(job.leadId)
     }
     destroyRootIfIdle()
 }
@@ -843,6 +886,7 @@ function abortJob(job, { release = true } = {}) {
 function finishJob(job) {
     if (!job || job.finished) return
     job.finished = true
+    clearJobTimer(job)
     job.wheelSpin?.forEach((tween) => tween.kill())
     job.scrollTweens?.forEach((tween) => tween.kill())
     job.cargoTween?.kill()
@@ -853,12 +897,13 @@ function finishJob(job) {
     const superseded = job.dead || (current && current !== job)
     const resolve = job.resolve
     job.resolve = null
+    if (current === job) jobs.delete(job.leadId)
+    if (!jobs.has(job.leadId)) releaseHold(job.leadId)
     if (superseded) {
         resolve?.(false)
+        destroyRootIfIdle()
         return
     }
-    releaseHold(job.leadId)
-    jobs.delete(job.leadId)
     resolve?.()
     destroyRootIfIdle()
 }
@@ -1165,10 +1210,7 @@ function movingCard(job, parent, fallbackMeta) {
 
 function placeRealCard(job) {
     if (!jobIsCurrent(job)) return
-    const live = cardEl(job.leadId)
-    if (live) gsap.set(live, { opacity: 0 })
     releaseHold(job.leadId)
-    if (live) gsap.set(live, { clearProps: 'opacity,transform' })
 }
 
 function sanitizeAssignee(person) {
@@ -1938,20 +1980,24 @@ function playTravel(job, dest) {
 function revealCard(job, duration = 0.22) {
     if (!jobIsCurrent(job)) return
     const card = cardEl(job.leadId)
-    if (card) gsap.set(card, { opacity: 0 })
     releaseHold(job.leadId)
-    if (!card || prefersReducedMotion()) {
-        if (card) gsap.set(card, { clearProps: 'opacity' })
-        return
+    if (!card || prefersReducedMotion()) return
+    try {
+        gsap.fromTo(card, { opacity: 0, y: 8, scale: 0.97 }, {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration,
+            ease: 'power2.out',
+            clearProps: 'opacity,transform',
+            onInterrupt: () => {
+                try { gsap.set(card, { clearProps: 'opacity,transform' }) } catch (_) {}
+            },
+        })
+    } catch (_) {
+        card.style.opacity = ''
+        card.style.transform = ''
     }
-    gsap.fromTo(card, { opacity: 0, y: 8, scale: 0.97 }, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration,
-        ease: 'power2.out',
-        clearProps: 'opacity,transform',
-    })
 }
 
 async function runJob(job) {
@@ -1962,6 +2008,10 @@ async function runJob(job) {
         finishJob(job)
         return
     }
+    if (!destinationPlayable(job.to?.id)) {
+        finishJob(job)
+        return
+    }
     alignToFirstCards(job)
     const column = stageEl(job.to?.id) || (job.scene === 'convert' ? stageByKind('converted') : null)
     const card = cardEl(job.leadId)
@@ -1969,7 +2019,7 @@ async function runJob(job) {
     const scrollBefore = board?.scrollLeft || 0
     const scrollTweens = scrollIntoView(column, card)
     job.scrollTweens = scrollTweens
-    if (scrollTweens.length) await Promise.all(scrollTweens)
+    await waitForScroll(scrollTweens)
     const scrollDelta = scrollBefore - (board?.scrollLeft || 0)
     if (scrollDelta && job.sourceRect) {
         job.sourceRect = {
@@ -1989,10 +2039,11 @@ async function runJob(job) {
         return
     }
     const dest = landOnFirstCard(job, measureDest(job))
-    if (!dest.rect) {
+    if (!dest?.rect || !destinationPlayable(job.to?.id)) {
         finishJob(job)
         return
     }
+    hold(job.leadId)
     const layer = document.createElement('div')
     job.layer = layer
     job.particles = makeParticleField()
@@ -2047,10 +2098,6 @@ function createJob(ctx, scene) {
         resolve: null,
     }
     jobs.set(id, job)
-    hold(id)
-    const ghostParent = overlay()
-    job.parked = spawnGhost(job, ghostParent)
-    job.parked.dataset.parked = '1'
     return job
 }
 
@@ -2074,6 +2121,9 @@ export function armLeadMotion(ctx) {
         ? { scene: 'convert', variant: null, duration: SCENE_DURATION.convert }
         : classifyLeadTransition(from, to, ctx.interactionResult)
     if (!scene) return false
+    // List view and a destination this role does not render have nothing to animate.
+    // Leaving the job unarmed keeps the real card in the normal stage update.
+    if (!destinationPlayable(to?.id)) return false
     const job = createJob({ ...ctx, from, to }, scene)
     job.parkedOnly = true
     return true
@@ -2109,19 +2159,35 @@ export function consumeSupersededStage(leadId) {
 export function playLeadMotion(leadId, extra) {
     const id = Number(leadId)
     const job = jobs.get(id)
-    if (!job || job.dead) return Promise.resolve(false)
-    if (extra?.toId != null && String(job.to?.id) !== String(extra.toId)) return Promise.resolve(false)
+    if (!job || job.dead) {
+        if (!jobs.has(id)) releaseHold(id)
+        return Promise.resolve(false)
+    }
+    if (extra?.toId != null && String(job.to?.id) !== String(extra.toId)) {
+        return Promise.resolve(false)
+    }
     const person = sanitizeAssignee(extra?.assignee) || job.assignee || assigneeFromCard(id)
     if (person) job.assignee = person
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || !destinationPlayable(job.to?.id)) {
         finishJob(job)
         return Promise.resolve(false)
     }
     return new Promise((resolve) => {
-        job.resolve = () => resolve(true)
+        let settled = false
+        const settle = (played) => {
+            if (settled) return
+            settled = true
+            resolve(played)
+        }
+        job.resolve = () => settle(true)
+        const limit = Math.min(6000, Math.round(((job.duration || 2) + 1.6) * 1000))
+        job.safetyTimer = setTimeout(() => {
+            if (!job.finished) finishJob(job)
+            settle(false)
+        }, limit)
         runJob(job).catch(() => {
             finishJob(job)
-            resolve(false)
+            settle(false)
         })
     })
 }

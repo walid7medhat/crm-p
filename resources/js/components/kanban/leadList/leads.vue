@@ -2903,7 +2903,7 @@ function handleLeadConverted(deal) {
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
     if (celebrate) {
-        void playLeadMotion(updatedLead.id).finally(() => emit('deal-created', payload))
+        void playLeadMotion(updatedLead.id).catch(() => cancelLeadMotion(updatedLead.id)).finally(() => emit('deal-created', payload))
         return
     }
     emit('deal-created', payload)
@@ -3931,31 +3931,33 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
     }
     
     let leadFound = false
+    const sameId = (left, right) => String(left) === String(right)
     
     // First, try to find and update existing lead
     for (let i = 0; i < columns.value.length; i++) {
         const column = columns.value[i]
         if (column.leads) {
-            const index = column.leads.findIndex(l => l && l.id === lead.id)
+            const index = column.leads.findIndex(l => l && sameId(l.id, lead.id))
             if (index !== -1) {
                 leadFound = true
                 adjustInteractionAnalytics(column.leads[index], lead)
 
-                if (column.status !== stageId) {
+                if (!sameId(column.status, stageId)) {
                     // Lead moved to different stage
+                    const destination = columns.value.find((col) => sameId(col.status, stageId))
                     const keepQualifiedPlace = columnStageKind(column) === 'qualified'
-                        && columnStageKind(columns.value.find((col) => col.status === stageId)) === 'unqualified'
+                        && columnStageKind(destination) === 'unqualified'
                     const qualifiedScroll = keepQualifiedPlace ? captureQualifiedListScroll(column.status) : null
                     column.leads.splice(index, 1)
                     
-                    const newColumnIndex = columns.value.findIndex(c => c.status === stageId)
+                    const newColumnIndex = columns.value.findIndex(c => sameId(c.status, stageId))
                     if (newColumnIndex !== -1) {
                         if (!columns.value[newColumnIndex].leads) {
                             columns.value[newColumnIndex].leads = []
                         }
                         
                         // Check if lead already exists in new column to avoid duplicates
-                        const existingIndex = columns.value[newColumnIndex].leads.findIndex(l => l && l.id === lead.id)
+                        const existingIndex = columns.value[newColumnIndex].leads.findIndex(l => l && sameId(l.id, lead.id))
                         if (existingIndex === -1) {
                             columns.value[newColumnIndex].leads.unshift(lead)
                         } else {
@@ -3973,16 +3975,18 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
         }
     }
     
-    // If lead not found in any column, add it to the appropriate column (newly assigned lead)
+    // If lead not found in any column, add it only when this role's board has that stage.
+    // A missing column means the stage is not rendered here — do not park the card on
+    // the first column, which left it in the wrong stage after a successful move.
     if (!leadFound) {
-        const columnIndex = columns.value.findIndex(col => col.status === stageId)
+        const columnIndex = columns.value.findIndex(col => sameId(col.status, stageId))
         if (columnIndex !== -1) {
             if (!columns.value[columnIndex].leads) {
                 columns.value[columnIndex].leads = []
             }
             
             // Check if lead already exists to avoid duplicates
-            const existingIndex = columns.value[columnIndex].leads.findIndex(l => l && l.id === lead.id)
+            const existingIndex = columns.value[columnIndex].leads.findIndex(l => l && sameId(l.id, lead.id))
             if (existingIndex === -1) {
                 // Ensure lead has stage_id set
                 const leadToAdd = { ...lead, stage_id: stageId }
@@ -3992,22 +3996,6 @@ const handleUpdatedLead = (lead, updateType = 'updated') => {
                 columns.value[columnIndex].leads[existingIndex] = { ...lead, stage_id: stageId }
             }
             sortColumnLeadsByUpdatedAt(columnIndex)
-        } else {
-            // Try to add to first available column as fallback
-            if (columns.value.length > 0) {
-                const firstColumn = columns.value[0]
-                
-                if (!firstColumn.leads) {
-                    firstColumn.leads = []
-                }
-                
-                const existingIndex = firstColumn.leads.findIndex(l => l && l.id === lead.id)
-                if (existingIndex === -1) {
-                    const leadToAdd = { ...lead, stage_id: firstColumn.status }
-                    firstColumn.leads.unshift(leadToAdd)
-                }
-                sortColumnLeadsByUpdatedAt(0)
-            }
         }
     }
 }
@@ -4031,24 +4019,25 @@ const handleStageChanged = (lead, changes) => {
 
     const existingLead = columns.value
         .flatMap(c => c.leads)
-        .find(l => l.id === leadId)
+        .find(l => l && String(l.id) === String(leadId))
 
-    if (existingLead && existingLead.stage_id === leadStageId) {
+    if (existingLead && String(existingLead.stage_id) === String(leadStageId)) {
         return
     }
     
     for (let i = 0; i < columns.value.length; i++) {
         const column = columns.value[i]
         if (column.leads) {
-            const index = column.leads.findIndex(l => l && l.id === leadId)
+            const index = column.leads.findIndex(l => l && String(l.id) === String(leadId))
             if (index !== -1) {
-                if (column.status !== leadStageId) {
+                if (String(column.status) !== String(leadStageId)) {
+                    const destination = columns.value.find((col) => String(col.status) === String(leadStageId))
                     const keepQualifiedPlace = columnStageKind(column) === 'qualified'
-                        && columnStageKind(columns.value.find((col) => col.status === leadStageId)) === 'unqualified'
+                        && columnStageKind(destination) === 'unqualified'
                     const qualifiedScroll = keepQualifiedPlace ? captureQualifiedListScroll(column.status) : null
                     column.leads.splice(index, 1)
                     
-                    const newColumnIndex = columns.value.findIndex(c => c.status === leadStageId)
+                    const newColumnIndex = columns.value.findIndex(c => String(c.status) === String(leadStageId))
                     if (newColumnIndex !== -1) {
                         if (!columns.value[newColumnIndex].leads) {
                             columns.value[newColumnIndex].leads = []
@@ -5274,6 +5263,27 @@ async function applyProgrammaticStageChange(lead, targetColumn) {
     await onLeadDragChange({ added: { element: moved } }, targetColumn)
 }
 
+function settleLeadOnBoard(lead, stageId) {
+    if (!lead?.id || stageId == null || stageId === '') return false
+    lead.stage_id = stageId
+    const sameId = (left, right) => String(left) === String(right)
+    const target = columns.value.find((column) => sameId(column.status, stageId)) || null
+    columns.value.forEach((column) => {
+        if (!column.leads) return
+        column.leads = column.leads.filter((item) => !item || !sameId(item.id, lead.id))
+    })
+    if (!target) {
+        // This role's board does not render the new stage. Reload from the server
+        // so a column that should be visible can still receive the card.
+        if (!isFetching.value) fetchLeads(true, undefined, { silent: true })
+        return false
+    }
+    if (!target.leads) target.leads = []
+    target.leads.unshift(lead)
+    sortColumnLeadsByUpdatedAt(columns.value.indexOf(target))
+    return true
+}
+
 async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
     const token = moveToken == null ? beginLeadMove(lead.id) : moveToken
     const oldLeadSnapshot = { ...lead }
@@ -5300,16 +5310,9 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
         }
         lead.stage_id = newStageId
         adjustInteractionAnalytics(oldLeadSnapshot, lead)
-        columns.value.forEach((col) => {
-            col.leads = col.leads.filter((l) => l.id !== lead.id)
-        })
-        const targetCol = columns.value.find((c) => c.status === newStageId)
-        if (targetCol && !targetCol.leads.some((l) => l.id === lead.id)) {
-            // Just-moved card must land on top of its new column, sorted by the same
-            // "activity time" shown on the card rather than being appended at the end.
-            targetCol.leads.unshift(lead)
-            sortColumnLeadsByUpdatedAt(columns.value.indexOf(targetCol))
-        }
+        // Just-moved card must land on top of its new column, sorted by the same
+        // "activity time" shown on the card rather than being appended at the end.
+        settleLeadOnBoard(lead, newStageId)
         showLeadNotification(
             buildCrmLeadNotificationEvent(
                 { ...lead, stage_id: newStageId },
@@ -5317,7 +5320,11 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
                 user.value,
             ),
         )
-        if (motionArmed) void playLeadMotion(lead.id, { assignee: motionAssignee(lead), toId: newStageId })
+        if (motionArmed) {
+            void playLeadMotion(lead.id, { assignee: motionAssignee(lead), toId: newStageId }).catch(() => {
+                cancelLeadMotion(lead.id)
+            })
+        }
     } catch (error) {
         if (!isLatestLeadMove(lead.id, token)) return
         consumeSupersededStage(lead.id)
@@ -5460,9 +5467,12 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
                     has_service_duplicate: lead.has_service_duplicate,
                 }
                 Object.assign(lead, freshLead, preserve)
-                handleUpdatedLead(lead, 'updated')
             }
-            if (motionArmed) void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId })
+            const landed = settleLeadOnBoard(lead, targetStageId)
+            if (!landed && motionArmed) cancelLeadMotion(leadId)
+            else if (motionArmed) void playLeadMotion(leadId, { assignee: motionAssignee(lead), toId: targetStageId }).catch(() => {
+                cancelLeadMotion(leadId)
+            })
         } catch (error) {
             if (!isLatestLeadMove(leadId, moveToken)) return
             const supersededStageId = consumeSupersededStage(leadId)
