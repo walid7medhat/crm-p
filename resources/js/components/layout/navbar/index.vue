@@ -4990,7 +4990,8 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     padding: 0 14px;
     border: 0;
     border-radius: 12px;
-    background: #111111;
+    /* Theme purple — same as the desktop "Create New" button. */
+    background: #733E87;
     color: #ffffff;
     font-size: 14px;
     font-weight: 700;

@@ -59,17 +59,9 @@
             </div>
         </div>
         <div class="board-head">
+            <!-- Mobile: one tab per stage (no "All leads"), each outlined in its stage colour;
+                 the active tab is filled with that colour. -->
             <div v-if="kanbanIsMobile" class="mobile-stage-carousel" role="tablist" aria-label="Lead stages">
-                <button
-                    type="button"
-                    class="mobile-stage-carousel__pill"
-                    role="tab"
-                    :class="{ 'is-active': mobileListFilterStageId === MOBILE_FILTER_ALL }"
-                    :aria-selected="mobileListFilterStageId === MOBILE_FILTER_ALL ? 'true' : 'false'"
-                    @click="selectMobileStage(MOBILE_FILTER_ALL, $event)"
-                >
-                    All leads ({{ totalLeadsCount.toLocaleString() }})
-                </button>
                 <button
                     v-for="col in columns"
                     :key="'stage-pill-' + col.status"
@@ -77,10 +69,11 @@
                     class="mobile-stage-carousel__pill"
                     role="tab"
                     :class="{ 'is-active': String(mobileListFilterStageId) === String(col.status) }"
+                    :style="mobileStagePillStyle(col)"
                     :aria-selected="String(mobileListFilterStageId) === String(col.status) ? 'true' : 'false'"
                     @click="selectMobileStage(col.status, $event)"
                 >
-                    {{ col.title }}
+                    {{ col.title }} ({{ stageCountForColumn(col) }})
                 </button>
             </div>
 
@@ -4763,6 +4756,32 @@ function stageTextOn(hex) {
     return stageIsLight(hex) ? '#1c1730' : '#ffffff'
 }
 
+// Mobile stage tab: border in the stage colour; filled with it when active.
+// Light colours (e.g. yellow) use dark text so the label stays readable.
+function mobileStagePillStyle(col) {
+    const color = col?.color || '#733E87'
+    return {
+        '--pill-color': color,
+        '--pill-text': stageIsLight(color) ? '#1c1730' : color,
+        '--pill-active-text': stageTextOn(color),
+    }
+}
+
+// "All leads" tab is gone on mobile — start on the first stage instead of the
+// all-stages view (once; picking "All" from the filter sheet still works).
+let mobileStageDefaulted = false
+watch(
+    () => [kanbanIsMobile.value, columns.value.length],
+    ([isMobile, count]) => {
+        if (!isMobile || !count || mobileStageDefaulted) return
+        mobileStageDefaulted = true
+        if (mobileListFilterStageId.value === MOBILE_FILTER_ALL) {
+            mobileListFilterStageId.value = String(columns.value[0].status)
+        }
+    },
+    { immediate: true },
+)
+
 const mobileActiveStageColumn = computed(() => {
     if (mobileListFilterStageId.value === MOBILE_FILTER_ALL) return null
     return columns.value.find(c => String(c.status) === String(mobileListFilterStageId.value)) || null
@@ -7335,11 +7354,61 @@ const fetchRevertNotifications = async () => {
     min-width: 0 !important;
     max-width: 100% !important;
     scroll-snap-align: none;
-    border-left: none;
+    /* Stage column outlined in a soft tint of its stage colour (matches the stage tabs
+       above), with a faint glow of the same colour so it reads as one card. */
+    border: 1px solid #e9d5ff !important;
+    border: 1px solid color-mix(in srgb, var(--column-color, #733E87) 45%, #ffffff) !important;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    padding-top: 6px;
+    /* Soft wash of the stage colour fading to white behind the cards. */
+    background: #ffffff;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--column-color, #733E87) 10%, #ffffff) 0%,
+        #ffffff 220px
+    );
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 14px 30px -18px var(--column-color, rgba(115, 62, 135, 0.45));
     height: auto !important;
     min-height: 0 !important;
     max-height: none;
     flex-shrink: 0;
+}
+
+/* No top strip on mobile stage columns — same (none) for every stage, first included. */
+.kanban-outer--mobile .kanban-column::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* Cards inside: light tint of the stage colour as the border, and a soft lift. */
+.kanban-outer--mobile .kanban-column .kanban-card--mobile {
+    border-color: color-mix(in srgb, var(--column-color, #733E87) 28%, #ffffff) !important;
+    box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.35) !important;
+}
+
+/* Stage-colour stripe on the left — only while the card is hovered / pressed. */
+.kanban-outer--mobile .kanban-column .kanban-card--mobile::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--column-color, #733E87);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.kanban-outer--mobile .kanban-column .kanban-card--mobile:hover::after,
+.kanban-outer--mobile .kanban-column .kanban-card--mobile:active::after,
+.kanban-outer--mobile .kanban-column .kanban-card--mobile:focus-visible::after {
+    opacity: 0.9;
 }
 
 .kanban-outer--mobile .kanban-column > div,
@@ -7526,20 +7595,22 @@ const fetchRevertNotifications = async () => {
     flex: 0 0 auto;
     height: 36px;
     padding: 0 14px;
-    border: 0;
+    border: 1.5px solid var(--pill-color, #733E87);
     border-radius: 999px;
-    background: transparent;
-    color: #8e8e96;
+    background: #ffffff;
+    color: var(--pill-text, #733E87);
     font-size: 14px;
     font-weight: 600;
     letter-spacing: -0.02em;
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .mobile-stage-carousel__pill.is-active {
-    background: #111111;
-    color: #ffffff;
+    background: var(--pill-color, #733E87);
+    color: var(--pill-active-text, #ffffff);
+    box-shadow: 0 6px 14px -8px var(--pill-color, #733E87);
 }
 
 .mobile-stage-carousel__pill:active {

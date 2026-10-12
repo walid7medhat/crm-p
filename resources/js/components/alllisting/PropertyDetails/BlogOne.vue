@@ -6611,7 +6611,7 @@ const generatePDF = async () => {
     };
 
     // Start fetching/downscaling the photos now so it overlaps with saving the offer.
-    const imagesReady = preloadDesktopOfferImages();
+    const imagesReady = Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
 
     // First, save offer to database
     const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
@@ -6922,8 +6922,113 @@ const createSlide1 = (currentUser) => {
   `;
 };
 
+// ---- Property Details slide (offer) — light layout: photo header + white detail panel ----
+const OFFER_NAVY = '#0B0736';
+const OFFER_PURPLE = '#733E87';
+
+/** Line icon (lucide-style paths) as an <img> data URI — html2canvas draws it like any image. */
+/**
+ * The listing cards' own bed / bath / area icons, recoloured to the theme purple. Loaded
+ * once before the offer is built (createSlide2 is synchronous); if they fail to load the
+ * slide falls back to the drawn icons below.
+ */
+const OFFER_CARD_ICON_FILES = {
+  bed: '/assets/icons/bedroom-icon.svg',
+  bath: '/assets/icons/bathroom-icon.svg',
+  area: '/assets/icons/area-size.svg',
+};
+const offerCardIcons = {};
+const preloadOfferCardIcons = () => Promise.all(Object.entries(OFFER_CARD_ICON_FILES).map(async ([key, url]) => {
+  if (offerCardIcons[key]) return;
+  try {
+    const svg = await (await fetch(url)).text();
+    const themed = svg.replace(/"(black|#000|#000000|#0F0939)"/gi, `"${OFFER_PURPLE}"`);
+    offerCardIcons[key] = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(themed)}`;
+  } catch {
+    // fall back to the drawn icon
+  }
+}));
+const offerImgIcon = (src, size) =>
+  `<img src="${src}" style="width:${size}mm !important; height:${size}mm !important; object-fit:contain !important; display:block !important;" />`;
+
+const offerIcon = (paths, { color = OFFER_PURPLE, size = 6, fill = 'none' } = {}) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="${fill}" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+  return `<img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}" style="width:${size}mm !important; height:${size}mm !important; display:block !important;" />`;
+};
+
+const OFFER_ICON_PATHS = {
+  building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+  bed: '<path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6M2 18h20"/>',
+  shower: '<path d="m4 4 2.5 2.5"/><path d="M13.5 6.5a4.95 4.95 0 0 0-7 7"/><path d="M15 5 5 15"/><path d="M14 17v.01M10 16v.01M13 13v.01M16 10v.01M11 20v.01M17 14v.01M20 11v.01"/>',
+  area: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M14 10l4-4M18 6h-3M18 6v3M10 14l-4 4M6 18h3M6 18v-3"/>',
+  plot: '<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
+  hardHat: '<path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M14 6a6 6 0 0 1 6 6v3"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><rect x="2" y="15" width="20" height="4" rx="1"/>',
+  check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
+  waves: '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>',
+  city: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2M10 6h4M10 10h4M10 14h4M10 18h4"/>',
+  door: '<path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14M2 20h20M14 12v.01"/>',
+  balcony: '<path d="M3 21h18M3 11h18M5 11v10M9 11v10M15 11v10M19 11v10M7 11V5a5 5 0 0 1 10 0v6"/>',
+  trees: '<path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/>',
+  car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+};
+
+/** Pick an icon for a feature name by keyword (falls back to a star). */
+const offerFeatureIcon = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/sea|water|beach|marina|canal|lagoon|lake|pool|creek/.test(n)) return OFFER_ICON_PATHS.waves;
+  if (/city|skyline|burj|downtown|community/.test(n)) return OFFER_ICON_PATHS.city;
+  if (/floor|tower|high|low/.test(n)) return OFFER_ICON_PATHS.building;
+  if (/balcony|terrace|roof/.test(n)) return OFFER_ICON_PATHS.balcony;
+  if (/garden|park|green|golf|landscape/.test(n)) return OFFER_ICON_PATHS.trees;
+  if (/parking|car|garage/.test(n)) return OFFER_ICON_PATHS.car;
+  if (/room|maid|study|storage|laundry|powder|closet|wardrobe/.test(n)) return OFFER_ICON_PATHS.door;
+  return OFFER_ICON_PATHS.star;
+};
+
+/**
+ * Text as an image for the offer slides. html2canvas places live text using its own font
+ * metrics, which drift with the browser zoom (text sank below its icons at <100% zoom).
+ * Drawing the text with the browser's canvas first and handing html2canvas an <img> makes
+ * the position exact at any zoom. Caps/digits are centred vertically in the box, so a value
+ * lines up with an icon centred beside it. Font: Arial (same as the other offer slides).
+ */
+const OFFER_TEXT_PX_PER_MM = 14;
+const offerTextImg = (text, {
+  size = 3, weight = 400, color = OFFER_NAVY, spacing = 0, upper = false, maxWidth = 0,
+} = {}) => {
+  const str = String(text ?? '');
+  const shown = upper ? str.toUpperCase() : str;
+  const px = OFFER_TEXT_PX_PER_MM;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const fontCss = `${weight} ${size * px}px Arial, Helvetica, sans-serif`;
+  ctx.font = fontCss;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${spacing * px}px`;
+  let widthPx = Math.ceil(ctx.measureText(shown).width) + 2;
+  const heightPx = Math.ceil(size * 1.3 * px);
+  canvas.width = Math.max(1, widthPx);
+  canvas.height = heightPx;
+  ctx.font = fontCss; // resizing the canvas resets the context
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${spacing * px}px`;
+  ctx.fillStyle = color;
+  ctx.textBaseline = 'alphabetic';
+  // Arial cap height ≈ 0.716em: put the baseline so capitals sit centred in the box.
+  ctx.fillText(shown, 1, heightPx / 2 + (size * px * 0.716) / 2);
+  const data = canvas.toDataURL('image/png');
+  let wMm = widthPx / px;
+  let hMm = heightPx / px;
+  if (maxWidth && wMm > maxWidth) { // shrink to fit, keeping the aspect ratio
+    hMm *= maxWidth / wMm;
+    wMm = maxWidth;
+  }
+  canvas.width = 0;
+  canvas.height = 0;
+  return `<img src="${data}" alt="${shown.replace(/"/g, '&quot;')}" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; max-width:none !important; display:block !important; flex-shrink:0 !important;" />`;
+};
+
 const createSlide2 = () => {
-  // Slide 2 uses the project's multi-image at order 1 (fallback to current image).
+  // Header photo: the project's multi-image at order 1 (fallback to current image).
   const bgImage = getProjectImageBySlot(1);
   const propertyType = property.value?.property_type?.name || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
@@ -6932,64 +7037,97 @@ const createSlide2 = () => {
   const noBedsBaths = hidesBedsBaths(property.value?.property_type);
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
   const plotSize = plotSizeLabel.value ? plotSizeLabel.value.replace('Sq Ft', 'SQFT') : '';
-  const plotSizeColumn = plotSize ? `
-          <div style="flex:1 !important; padding-left:5mm !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Plot Size</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${plotSize}</p>
-          </div>` : '';
   const completionStatus = property.value?.completion_status || 'Under Construction';
-  const features = additionalFeaturesList.value || [];
-  const featuresBlock = features.length > 0 ? `
-    <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 4.5mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important;">Features</p>
-      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
-          ${features.map((feature) => `
-            <span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:2.5mm !important; height:5.2mm !important; padding:0 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;"><span style="display:inline-block !important; position:relative !important; top:-1.15mm !important;">${feature}</span></span>
-          `).join('')}
+  const isCompleted = /complet|ready/i.test(completionStatus);
+  const features = (additionalFeaturesList.value || []).slice(0, 6);
+
+  const label = (text) => offerTextImg(text, { size: 2.3, color: '#64748b', spacing: 0.15, upper: true });
+  const value = (text, maxWidth = 0) => offerTextImg(text, { size: 5, weight: 700, color: OFFER_NAVY, maxWidth });
+  const divider = '<div style="width:0.3mm !important; align-self:stretch !important; background:#e5e7eb !important; margin:0 5mm !important;"></div>';
+  // cardIcon: listing-card icon key (bed/bath/area) if loaded; else the drawn fallback.
+  // Bedrooms / Bathrooms / Area Size / Plot Size: label and value centred in the column.
+  const stat = (title, val, iconPaths, cardIcon) => `
+        <div style="flex:1 !important; min-width:0 !important; display:flex !important; flex-direction:column !important; align-items:center !important;">
+          ${label(title)}
+          <div style="display:flex !important; align-items:center !important; justify-content:center !important; gap:2.5mm !important; margin-top:1.4mm !important;">
+            ${value(val, 30)}${cardIcon && offerCardIcons[cardIcon] ? offerImgIcon(offerCardIcons[cardIcon], 5) : (iconPaths ? offerIcon(iconPaths, { size: 5 }) : '')}
+          </div>
+        </div>`;
+
+  const stats = [
+    `<div style="flex:1.4 !important; min-width:0 !important; display:flex !important; align-items:center !important; gap:4mm !important;">
+        <div style="width:13mm !important; height:13mm !important; border-radius:3mm !important; background:#f3f0f8 !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important;">
+          ${offerIcon(OFFER_ICON_PATHS.building, { color: OFFER_NAVY, size: 6.5 })}
         </div>
-    </div>
-  ` : '';
+        <div style="min-width:0 !important;">${label('Property Type')}<div style="margin-top:1.4mm !important;">${value(propertyType, 32)}</div></div>
+      </div>`,
+    ...(noBedsBaths ? [] : [
+      stat('Bedrooms', bedrooms, OFFER_ICON_PATHS.bed, 'bed'),
+      stat('Bathrooms', bathrooms, OFFER_ICON_PATHS.shower, 'bath'),
+    ]),
+    stat('Area Size', areaSize, OFFER_ICON_PATHS.area, 'area'),
+    ...(plotSize ? [stat('Plot Size', plotSize, OFFER_ICON_PATHS.plot)] : []),
+  ].join(divider);
+
+  const featuresRow = features.length ? `
+      <div style="display:flex !important; align-items:stretch !important; margin-top:7mm !important;">
+        <div style="display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:1.5mm !important; padding-right:6mm !important; flex-shrink:0 !important;">
+          ${offerIcon(OFFER_ICON_PATHS.star, { color: OFFER_PURPLE, fill: OFFER_PURPLE, size: 5 })}
+          ${offerTextImg('Features', { size: 2.3, color: '#64748b', spacing: 0.15, upper: true })}
+        </div>
+        ${features.map((feature) => `
+        <div style="width:0.3mm !important; background:#e5e7eb !important;"></div>
+        <div style="flex:1 !important; min-width:0 !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:2mm !important; padding:0 1.5mm !important;">
+          ${offerIcon(offerFeatureIcon(feature), { color: OFFER_NAVY, size: 6 })}
+          ${offerTextImg(feature, { size: 2.7, color: OFFER_NAVY, maxWidth: 25 })}
+        </div>`).join('')}
+      </div>` : '';
+
+  const statusIcon = isCompleted ? OFFER_ICON_PATHS.check : OFFER_ICON_PATHS.hardHat;
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
-    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:10mm 14mm 8mm 14mm !important; display:flex !important; flex-direction:column !important;">
-      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; flex-shrink:0 !important;">
-        <h1 style="color:#fff !important; font-size:7mm !important; font-weight:700 !important; margin:0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">Property<br>Details</h1>
-        <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
-      </div>
-
-      <div style="width:100% !important; margin-top:7mm !important; flex-shrink:0 !important;">
-        <div style="display:flex !important; padding-bottom:4mm !important; margin-bottom:4mm !important; border-bottom:0.3mm solid rgba(255,255,255,0.22) !important;">
-          <div style="flex:1 !important; padding-right:5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Property Type</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${propertyType}</p>
-          </div>${noBedsBaths ? '' : `
-          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bedrooms</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${bedrooms}</p>
-          </div>
-          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
-          </div>`}
-          <div style="flex:1 !important; ${plotSize ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
-          </div>${plotSizeColumn}
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; line-height:1.25 !important;">
+    <!-- Photo header -->
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:63mm !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:63mm !important; background:linear-gradient(90deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0.15) 100%) !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:63mm !important; padding:7mm 9mm 0 9mm !important; box-sizing:border-box !important; display:flex !important; justify-content:space-between !important; align-items:flex-start !important;">
+      <div>
+        <div style="display:flex !important; align-items:center !important; gap:2.5mm !important; margin-bottom:8mm !important;">
+          <div style="width:6mm !important; height:0.4mm !important; background:#ffffff !important;"></div>
+          ${offerTextImg('Property Offer', { size: 2.4, weight: 700, color: '#ffffff', spacing: 0.25, upper: true })}
         </div>
-        <div style="display:flex !important;">
-          <div style="flex:1 !important; max-width:25% !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Completion Status</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${completionStatus}</p>
-          </div>
-        </div>
+        ${offerTextImg('Property', { size: 9, weight: 700, color: '#ffffff', upper: true })}
+        <div style="margin-top:-1.6mm !important;">${offerTextImg('Details', { size: 9, weight: 700, color: '#ffffff', upper: true })}</div>
       </div>
-
-      ${featuresBlock}
+      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
     </div>
-    ${createFooter()}
+
+    <!-- Detail panel -->
+    <div style="position:absolute !important; top:63mm !important; left:0 !important; width:100% !important; height:85mm !important; padding:9mm 9mm 0 9mm !important; box-sizing:border-box !important; background:#ffffff !important;">
+      <div style="display:flex !important; align-items:center !important;">${stats}
+      </div>
+
+      <div style="display:flex !important; align-items:center !important; justify-content:space-between !important; margin-top:7mm !important; padding:3.5mm 3.5mm 3.5mm 4mm !important; background:#f6f3fa !important; border-radius:3mm !important;">
+        <div style="display:flex !important; align-items:center !important; gap:4mm !important;">
+          <div style="width:9mm !important; height:9mm !important; border-radius:50% !important; background:${OFFER_PURPLE} !important; display:flex !important; align-items:center !important; justify-content:center !important;">
+            ${offerIcon(statusIcon, { color: '#ffffff', size: 4.2 })}
+          </div>
+          ${offerTextImg('Completion Status', { size: 2.6, color: '#475569', spacing: 0.15, upper: true })}
+        </div>
+        <div style="display:flex !important; align-items:center !important; gap:2mm !important; background:${OFFER_PURPLE} !important; border-radius:6mm !important; padding:2.4mm 5.5mm !important;">
+          ${offerIcon(statusIcon, { color: '#ffffff', size: 3.8 })}
+          ${offerTextImg(completionStatus, { size: 2.9, weight: 700, color: '#ffffff' })}
+        </div>
+      </div>
+      ${featuresRow}
+    </div>
+
+    <!-- Footer -->
+    <div style="position:absolute !important; left:9mm !important; right:9mm !important; bottom:7mm !important; display:flex !important; align-items:center !important; gap:6mm !important;">
+      ${offerTextImg('Powered By Oia Properties', { size: 2.4, color: OFFER_NAVY })}
+      <div style="flex:1 !important; height:0.3mm !important; background:${OFFER_PURPLE} !important; opacity:0.6 !important;"></div>
+      ${offerTextImg('Your Dream Home Awaits', { size: 2.4, color: OFFER_NAVY, spacing: 0.2, upper: true })}
+    </div>
   </div>
   `;
 };
@@ -7903,7 +8041,7 @@ const createPaymentDetailsSlide = () => {
 
 const createFooter = () => {
   return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#6b21a8 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
     <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
   </div>
   `;
