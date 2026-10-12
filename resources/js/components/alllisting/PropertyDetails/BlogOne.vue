@@ -2282,7 +2282,7 @@ import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue';
 // import lastSlideBgImg from '@/assets/images/lastslide-bg.png';
 
 import { useRoute, useRouter } from 'vue-router';
-import api from '@/plugins/axios';
+import api, { getAppOrigin } from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import html2pdf from 'html2pdf.js';
 import jsPDF from 'jspdf';
@@ -6487,9 +6487,27 @@ const generateMobileOffer = async () => {
   const blob = pdf.output('blob');
   const filename = `sales-offer-${offerNumber}.pdf`;
 
-  // Download straight away on every phone, like desktop — no "Download PDF / Close" step.
-  // Note: iOS Safari may ignore a download started this long after the original tap
-  // (showMobileOfferReady() is the old tap-to-download panel, kept but unused).
+  // iPhone / iPad: Safari can't save a blob PDF — it just opens it in a new page. Upload it
+  // and go to a short-lived signed link served as an attachment, so Safari downloads it
+  // (to Files) and the user stays here. (showMobileOfferReady() = old tap panel, unused.)
+  if (isIosOfferDevice()) {
+    setMobileOfferBusyText('Downloading…');
+    const form = new FormData();
+    form.append('file', new File([blob], filename, { type: 'application/pdf' }));
+    form.append('filename', filename);
+    const uploadResponse = await api.post(`/listings/properties/${property.value.id}/offer-pdf`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const downloadUrl = uploadResponse.data?.data?.url;
+    if (!downloadUrl) throw new Error('Download link was not returned');
+    closeMobileOfferPanel();
+    // Relative signed path from the API — prefix the API origin (it may differ from this page).
+    window.location.href = downloadUrl.startsWith('http') ? downloadUrl : `${getAppOrigin()}${downloadUrl}`;
+    proxy.$showNotification(`Sales Offer ${offerNumber} downloaded`, 'success');
+    return;
+  }
+
+  // Android & others: download straight away, like desktop.
   const blobUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = blobUrl;
