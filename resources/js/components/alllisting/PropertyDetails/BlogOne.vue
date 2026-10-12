@@ -7013,12 +7013,11 @@ const getProjectImageBySlot = (slot) => pdfImg(projectImageUrlBySlot(slot));
  * next gallery photo that isn't the main one — falling back to the first photo.
  */
 const listingImageUrlBySlot = (slot) => {
-  // Same file can come back as different URLs (main_image vs gallery image_url), so
-  // compare by the storage path, not the full URL.
-  const fileKey = (url) => String(url || '').replace(/^https?:\/\/[^/]+/i, '').replace(/^\/?storage\//, '').split('?')[0];
-  const photos = [getMainImage(), ...(property.value?.gallery_images || []).map((img) => getImageUrl(img?.image_url))]
-    .filter((url) => url && url !== 'placeholder.png')
-    .filter((url, i, all) => all.findIndex((other) => fileKey(other) === fileKey(url)) === i);
+  const photos = (property.value?.gallery_images || [])
+    .map((img) => getImageUrl(img?.image_url_final || img?.image_url))
+    .filter((url) => url && url !== '/default-property.jpg')
+    .filter((url, i, all) => all.indexOf(url) === i);
+
   if (!photos.length) return getMainImage();
   return photos[slot - 1] || photos[0];
 };
