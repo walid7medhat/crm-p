@@ -7083,22 +7083,37 @@ const preloadOfferCardIcons = () => Promise.all(Object.entries(OFFER_CARD_ICON_F
   if (offerCardIcons[key]) return;
   try {
     const svg = await (await fetch(url)).text();
-    const themed = svg.replace(/"(black|#000|#000000|#0F0939)"/gi, `"${OFFER_PURPLE}"`);
+    let themed = svg.replace(/"(black|#000|#000000|#0F0939)"/gi, `"${OFFER_PURPLE}"`);
+    // Give the SVG its on-slide size (fits a 5mm box, aspect kept) — iOS html2canvas
+    // draws SVGs at their intrinsic size, not the CSS box.
+    const w = Number((themed.match(/<svg[^>]*\swidth="([\d.]+)"/) || [])[1]);
+    const h = Number((themed.match(/<svg[^>]*\sheight="([\d.]+)"/) || [])[1]);
+    if (w > 0 && h > 0) {
+      const k = 5 / Math.max(w, h);
+      themed = themed
+        .replace(/(<svg[^>]*\s)width="[\d.]+"/, `$1width="${(w * k).toFixed(2)}mm"`)
+        .replace(/(<svg[^>]*\s)height="[\d.]+"/, `$1height="${(h * k).toFixed(2)}mm"`);
+    }
     offerCardIcons[key] = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(themed)}`;
   } catch {
     // fall back to the drawn icon
   }
 }));
+// Card icons carry their own mm size (see preloadOfferCardIcons), so let the box follow it —
+// html2canvas ignores object-fit, so a fixed square box would stretch the bed icon.
 const offerImgIcon = (src, size) =>
-  `<img src="${src}" style="width:${size}mm !important; height:${size}mm !important; object-fit:contain !important; display:block !important;" />`;
+  `<img src="${src}" style="width:auto !important; height:auto !important; max-width:${size}mm !important; max-height:${size}mm !important; display:block !important;" />`;
 
-const offerIconUri = (paths, { color = OFFER_PURPLE, fill = 'none' } = {}) => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="${fill}" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+// sizeAttr: the SVG's own width/height. Safari/iOS html2canvas draws an SVG <img> at its
+// intrinsic size and ignores the CSS box, so slide icons pass their real size ("6mm");
+// otherwise they came out 48px (~12.7mm) — far too big — in the mobile offer.
+const offerIconUri = (paths, { color = OFFER_PURPLE, fill = 'none', sizeAttr = '48' } = {}) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${sizeAttr}" height="${sizeAttr}" viewBox="0 0 24 24" fill="${fill}" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 };
 
 const offerIcon = (paths, { color = OFFER_PURPLE, size = 6, fill = 'none' } = {}) =>
-  `<img src="${offerIconUri(paths, { color, fill })}" style="width:${size}mm !important; height:${size}mm !important; display:block !important;" />`;
+  `<img src="${offerIconUri(paths, { color, fill, sizeAttr: `${size}mm` })}" style="width:${size}mm !important; height:${size}mm !important; display:block !important;" />`;
 
 /** Rasterise an (SVG) icon to a square PNG for jsPDF, keeping its aspect ratio (contain). */
 const offerIconPng = (uri, px = 160) => new Promise((resolve) => {
