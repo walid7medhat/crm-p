@@ -305,6 +305,16 @@ const isAdminFromStorage = () => {
     return false
   }
 }
+const isBranchAdminFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.roles) && u.roles.includes('branch_admin')
+  } catch {
+    return false
+  }
+}
 const isHrFromStorage = () => {
   try {
     const raw = localStorage.getItem('user')

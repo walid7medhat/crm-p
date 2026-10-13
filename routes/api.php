@@ -808,6 +808,9 @@ Route::prefix('leads')->group(function(){
             // "Export Leads" page (super_admin): search text → preview / Excel.
             Route::get('/lead-search', [ReportController::class, 'leadSearchPreview']);
             Route::get('/lead-search/export', [ReportController::class, 'leadSearchExport']);
+            // Daily Leads Report (super_admin / user #33 / branch_admin): preview, then Excel of the edited preview.
+            Route::get('/daily-leads', [ReportController::class, 'dailyLeadsReport']);
+            Route::post('/daily-leads/export', [ReportController::class, 'dailyLeadsReportExport']);
         });
 });
   // =================sources=============
