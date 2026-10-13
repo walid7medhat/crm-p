@@ -7027,8 +7027,9 @@ const getProjectImageBySlot = (slot) => pdfImg(projectImageUrlBySlot(slot));
  * next gallery photo that isn't the main one — falling back to the first photo.
  */
 const listingImageUrlBySlot = (slot) => {
+  // Original files (image_url), like the gallery slides — image_url_final is the watermark route.
   const photos = (property.value?.gallery_images || [])
-    .map((img) => getImageUrl(img?.image_url_final || img?.image_url))
+    .map((img) => getImageUrl(img?.image_url || img?.image_url_final))
     .filter((url) => url && url !== '/default-property.jpg')
     .filter((url, i, all) => all.indexOf(url) === i);
 
