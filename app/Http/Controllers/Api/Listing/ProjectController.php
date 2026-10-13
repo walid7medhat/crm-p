@@ -44,7 +44,7 @@ class ProjectController extends Controller
             }
 
             $filtersHash = md5(serialize($request->all()));
-            $cacheKey = self::versionedKey('index_' . Auth::id() . '_' . $filtersHash);
+            $cacheKey = self::versionedKey('index_options_v1_' . Auth::id() . '_' . $filtersHash);
 
             if (method_exists(Cache::getStore(), 'tags')) {
                 $result = Cache::tags([self::CACHE_TAG])->remember(
@@ -61,7 +61,7 @@ class ProjectController extends Controller
             }
 
             return ApiResponse::success(
-                ProjectResource::collection($result['projects']),
+                $result['projects'],
                 'Projects retrieved successfully',
                 200,
                 $result['pagination']
@@ -76,7 +76,13 @@ class ProjectController extends Controller
 
    private function getProjectsData(Request $request): array
 {
-    $query = Project::with(['developer', 'area', 'images', 'mainImage']);
+    // Dropdowns ask for every project. Keep this to the fields they read.
+    // The full resource (galleries, features, listing counts, duplicate checks)
+    // exhausts the memory limit and the form reports that projects failed to load.
+    $query = Project::query()->with([
+        'developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan',
+        'area:id,name,parent_id,type',
+    ]);
 
     // Filters
     if ($request->has('search')) {
@@ -117,30 +123,100 @@ class ProjectController extends Controller
         default: $query->orderBy('created_at', 'desc'); break;
     }
 
-    // Get ALL projects without pagination
-    // if ($request->has('get_all') && $request->get('get_all') === 'true') {
-        $projects = $query->get();
+    $directory = $this->areaNameDirectory();
+    $projects = $query->get()->map(function (Project $project) use ($directory) {
+        $areaLabel = $this->areaChainLabel(
+            $project->area_id ? (int) $project->area_id : null,
+            $directory
+        );
 
         return [
-            'projects' => $projects,
-            'pagination' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => $projects->count(),
-                'total' => $projects->count(),
-            ]
+            'id' => $project->id,
+            'title' => $project->title,
+            'name' => $areaLabel !== '' ? $project->title.', '.$areaLabel : $project->title,
+            'area_id' => $project->area_id,
+            'status' => $project->status,
+            'developer' => $project->developer ? [
+                'id' => $project->developer->id,
+                'name' => $project->developer->name,
+                'avatar' => $project->developer->avatar_path
+                    ? asset('storage/'.$project->developer->avatar_path)
+                    : null,
+                'noc_fees_ready' => $project->developer->noc_fees_ready,
+                'noc_fees_off_plan' => $project->developer->noc_fees_off_plan,
+            ] : null,
+            'area' => $project->area ? [
+                'id' => $project->area->id,
+                'name' => $project->area->name,
+                'title' => $areaLabel,
+                'area_parents_title' => $areaLabel,
+            ] : null,
         ];
-    // }
-
-    // Default: Use pagination
-    $perPage = $request->get('per_page', 15);
-    $projects = $query->paginate($perPage);
+    })->values();
 
     return [
         'projects' => $projects,
-        'pagination' => $projects->toArray()
+        'pagination' => [
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => $projects->count(),
+            'total' => $projects->count(),
+        ],
     ];
 }
+
+    /**
+     * Parent-chain labels without walking Eloquent relations per row.
+     *
+     * @return array{name: array<int, string>, parent: array<int, int>, type: array<int, string|null>}
+     */
+    private function areaNameDirectory(): array
+    {
+        $name = [];
+        $parent = [];
+        $type = [];
+
+        foreach (DB::table('areas')->select('id', 'name', 'parent_id', 'type')->get() as $row) {
+            $id = (int) $row->id;
+            $name[$id] = (string) $row->name;
+            $parent[$id] = $row->parent_id ? (int) $row->parent_id : 0;
+            $type[$id] = $row->type;
+        }
+
+        return ['name' => $name, 'parent' => $parent, 'type' => $type];
+    }
+
+    /**
+     * @param  array{name: array<int, string>, parent: array<int, int>, type: array<int, string|null>}  $directory
+     */
+    private function areaChainLabel(?int $areaId, array $directory): string
+    {
+        if (! $areaId) {
+            return '';
+        }
+
+        $parts = [];
+        $current = $areaId;
+        $guard = 0;
+
+        while ($current && $guard < 8) {
+            if (($directory['type'][$current] ?? null) === 'country') {
+                break;
+            }
+            $label = $directory['name'][$current] ?? null;
+            if ($label) {
+                $parts[] = $label;
+            }
+            $current = $directory['parent'][$current] ?? 0;
+            $guard++;
+        }
+
+        if (count($parts) > 3) {
+            array_pop($parts);
+        }
+
+        return implode(', ', $parts);
+    }
     /**
      * Create a new Project
      */
@@ -838,7 +914,7 @@ class ProjectController extends Controller
 
             $result = $this->getProjectsData($request);
             return ApiResponse::success(
-                ProjectResource::collection($result['projects']),
+                $result['projects'],
                 'Projects retrieved successfully (cache fallback)',
                 200,
                 $result['pagination']

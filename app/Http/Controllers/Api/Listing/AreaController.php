@@ -30,7 +30,7 @@ class AreaController extends Controller
         $forListingSearch = $request->has('has_listings');
         // v2: listing search returns place name + full parent location path
         $cacheKey = self::areasVersionedKey(
-            ($forListingSearch ? 'areas_listing_v2_' : 'areas_').md5(serialize($request->all()))
+            ($forListingSearch ? 'areas_listing_v2_' : 'areas_list_v3_').md5(serialize($request->all()))
         );
 
         $resolver = function () use ($request, $forListingSearch) {
@@ -138,7 +138,7 @@ class AreaController extends Controller
                 })->values()->all();
             }
 
-            return AreaResource::collection($areas)->resolve();
+            return $this->mapAreasForList($areas);
         };
 
         try {
@@ -190,6 +190,83 @@ class AreaController extends Controller
         }
 
         return array_map('intval', array_keys($allowed));
+    }
+
+    /**
+     * List payload without AreaResource. That resource loads every area's
+     * children and ancestor chain, which exhausts memory on the full table.
+     *
+     * @param  \Illuminate\Support\Collection<int, Area>  $areas
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapAreasForList($areas): array
+    {
+        $name = [];
+        $parent = [];
+        $type = [];
+        foreach (DB::table('areas')->select('id', 'name', 'parent_id', 'type')->get() as $row) {
+            $id = (int) $row->id;
+            $name[$id] = (string) $row->name;
+            $parent[$id] = $row->parent_id ? (int) $row->parent_id : 0;
+            $type[$id] = $row->type;
+        }
+
+        return $areas->map(function (Area $area) use ($name, $parent, $type) {
+            $id = (int) $area->id;
+            $chain = [];
+            $ancestorNames = [];
+            $current = $id;
+            $guard = 0;
+
+            while ($current && $guard < 8) {
+                $currentName = $name[$current] ?? null;
+                if ($currentName) {
+                    $ancestorNames[] = $currentName;
+                    if (($type[$current] ?? null) !== 'country') {
+                        $chain[] = $currentName;
+                    }
+                }
+                if (($type[$current] ?? null) === 'country') {
+                    break;
+                }
+                $current = $parent[$current] ?? 0;
+                $guard++;
+            }
+
+            if (count($chain) > 3) {
+                array_pop($chain);
+            }
+
+            $location = implode(', ', $chain);
+            $isAdgm = false;
+            foreach ($ancestorNames as $ancestorName) {
+                $lower = strtolower($ancestorName);
+                if (str_contains($lower, 'al maryah island') || str_contains($lower, 'al reem island')) {
+                    $isAdgm = true;
+                    break;
+                }
+            }
+
+            $parentId = $area->parent_id ? (int) $area->parent_id : null;
+
+            return [
+                'id' => $id,
+                'parent_id' => $parentId,
+                'parent_name' => $parentId ? ($name[$parentId] ?? null) : null,
+                'name' => $area->name,
+                'latitude' => $area->latitude !== null ? (float) $area->latitude : null,
+                'longitude' => $area->longitude !== null ? (float) $area->longitude : null,
+                'type' => $area->type,
+                'added_by' => $area->added_by,
+                'created_at' => $area->created_at,
+                'updated_at' => $area->updated_at,
+                'area_parents_title' => $location,
+                'children_count' => (int) ($area->child_count ?? 0),
+                'admin_fee_type' => $isAdgm ? 'adgm' : 'dari',
+                'is_adgm' => $isAdgm,
+                'all_names' => array_values(array_unique(array_filter($ancestorNames))),
+            ];
+        })->values()->all();
     }
 
     
