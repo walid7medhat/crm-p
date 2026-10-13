@@ -1867,10 +1867,11 @@ const STAGE_FLOW_LOOK = [
     { test: /new\s*lead/, color: '#f6c445', ink: '#1f2937', icon: 'lucide:folder' },
     { test: /assign/, color: '#f5a524', ink: '#1f2937', icon: 'lucide:user' },
     { test: /contact/, color: '#7c5cbf', ink: '#ffffff', icon: 'lucide:phone' },
+    // Before /qualif/ — "unqualified" contains "qualif" and was getting the Qualified look.
+    { test: /lost|unqualif/, color: '#ef4444', ink: '#ffffff', icon: 'lucide:x' },
     { test: /qualif/, color: '#3dcf8e', ink: '#14532d', icon: 'lucide:badge-check' },
     { test: /convert/, color: '#14b8a6', ink: '#042f2e', icon: 'lucide:check' },
     { test: /shared/, color: '#22c55e', ink: '#052e16', icon: 'lucide:share-2' },
-    { test: /lost|unqualif/, color: '#ef4444', ink: '#ffffff', icon: 'lucide:x' },
     { test: /pool/, color: '#94a3b8', ink: '#1f2937', icon: 'lucide:inbox' },
 ]
 
@@ -1879,13 +1880,18 @@ function stageFlowMeta(title) {
     return STAGE_FLOW_LOOK.find((item) => item.test.test(name)) || null
 }
 
+// Header colour comes from the stage's own colour in stage settings (column.color), so
+// changing it there changes the board. The fixed STAGE_FLOW_LOOK colour is only a
+// fallback for a stage that has no colour set.
 function stageFlowStyle(column) {
+    if (column?.color) {
+        return { backgroundColor: column.color, color: stageTextOn(column.color) }
+    }
     const meta = stageFlowMeta(column?.title)
     if (meta) {
         return { backgroundColor: meta.color, color: meta.ink }
     }
-    const backgroundColor = column?.color || 'var(--color-primary)'
-    return { backgroundColor, color: stageTextOn(backgroundColor) }
+    return { backgroundColor: 'var(--color-primary)', color: '#ffffff' }
 }
 
 function stageFlowIcon(title) {
