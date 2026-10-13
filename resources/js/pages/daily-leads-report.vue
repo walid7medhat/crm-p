@@ -61,8 +61,16 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in visibleRows" :key="row._uid">
-              <td class="dlr-num">{{ index + 1 }}</td>
+            <tr v-for="(row, index) in visibleRows" :key="row._uid" :class="{ 'dlr-row--selected': selected.has(row._uid) }">
+              <td
+                class="dlr-num"
+                role="button"
+                tabindex="0"
+                :title="selected.has(row._uid) ? 'Unselect row' : 'Select row'"
+                @click="toggleRow(row)"
+                @keydown.enter.prevent="toggleRow(row)"
+                @keydown.space.prevent="toggleRow(row)"
+              >{{ index + 1 }}</td>
               <td class="dlr-name-col">
                 <input v-model="row.name" type="text" class="dlr-cell dlr-cell--name" maxlength="150" />
               </td>
@@ -136,6 +144,16 @@ function normalizeCount(row, key) {
 
 function removeRow(row) {
   rows.value = rows.value.filter((r) => r._uid !== row._uid)
+  if (selected.value.has(row._uid)) toggleRow(row)
+}
+
+// Click the row number to select / unselect a row (highlight, like an Excel row header).
+const selected = ref(new Set())
+function toggleRow(row) {
+  const next = new Set(selected.value)
+  if (next.has(row._uid)) next.delete(row._uid)
+  else next.add(row._uid)
+  selected.value = next
 }
 
 async function load() {
@@ -146,6 +164,7 @@ async function load() {
     const data = res?.data?.data || {}
     columns.value = data.columns || []
     title.value = data.title || ''
+    selected.value = new Set()
     rows.value = (data.rows || []).map((r) => ({
       _uid: ++uid,
       agent_id: r.agent_id,
@@ -247,7 +266,14 @@ onMounted(load)
 .dlr-head--pf { background: #e6b8d5; color: #1e1e1e; }
 .dlr-total { background: #ffff00 !important; color: #000 !important; font-weight: 700; padding: 4px 10px !important; }
 .dlr-name-col { min-width: 190px; text-align: left !important; }
-.dlr-num { color: var(--dlr-muted); padding: 4px 8px !important; }
+.dlr-num { color: var(--dlr-muted); padding: 4px 8px !important; cursor: pointer; user-select: none; }
+.dlr-num:hover { background: var(--dlr-primary-soft); color: var(--dlr-primary); }
+.dlr-num:focus-visible { outline: 2px solid var(--dlr-primary); outline-offset: -2px; }
+
+/* Selected row (clicked on its number) */
+.dlr-row--selected td { background: #ede4f3; }
+.dlr-row--selected .dlr-num { background: var(--dlr-primary); color: #fff; font-weight: 700; }
+.dlr-row--selected .dlr-total { background: #f2e600 !important; }
 
 .dlr-cell { width: 100%; min-width: 60px; height: 30px; border: 0; background: transparent; text-align: center; color: var(--dlr-text); font-size: 12px; padding: 0 4px; -moz-appearance: textfield; }
 .dlr-cell::-webkit-outer-spin-button, .dlr-cell::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
