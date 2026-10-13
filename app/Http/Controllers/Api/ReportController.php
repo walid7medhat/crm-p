@@ -449,6 +449,56 @@ class ReportController extends Controller
     }
 
     /**
+     * Daily Leads Report (preview): per sales agent, leads assigned to them on one UAE day,
+     * counted per source. super_admin / admin see every agent; branch_admin their branch.
+     */
+    public function dailyLeadsReport(Request $request)
+    {
+        $user = auth()->user();
+        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $request->validate(['date' => 'nullable|date']);
+        $date = $request->input('date') ?: now(config('app.timezone'))->toDateString();
+
+        return ApiResponse::success(
+            \App\Services\Reports\DailyLeadsReport::build($user, $date),
+            'Daily leads report retrieved successfully'
+        );
+    }
+
+    /**
+     * Daily Leads Report as Excel, built from the preview the user edited (title, agent
+     * names and counts), so the file matches exactly what they reviewed.
+     */
+    public function dailyLeadsReportExport(Request $request)
+    {
+        $user = auth()->user();
+        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+            return ApiResponse::error('Unauthorized', 403);
+        }
+
+        $data = $request->validate([
+            'title' => 'required|string|max:150',
+            'columns' => 'required|array|min:1|max:60',
+            'columns.*.key' => 'required|string|max:120',
+            'columns.*.label' => 'required|string|max:120',
+            'rows' => 'present|array|max:1000',
+            'rows.*.name' => 'nullable|string|max:150',
+            'rows.*.counts' => 'nullable|array',
+            'rows.*.counts.*' => 'nullable|integer|min:0|max:100000',
+        ]);
+
+        $fileName = preg_replace('/[^A-Za-z0-9_\- ,]+/', '', $data['title']) ?: 'Daily Leads Report';
+
+        return Excel::download(
+            new \App\Exports\DailyLeadsReportExport($data['title'], $data['columns'], $data['rows']),
+            "{$fileName}.xlsx"
+        );
+    }
+
+    /**
      * نفس تقرير المصادر لكن كملف اكسل قابل للتحميل.
      */
     public function leadsBySourceReportExport(Request $request)

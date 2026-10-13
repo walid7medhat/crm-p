@@ -57,6 +57,8 @@ const baseRoutes = [
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
   { path: '/lead-export', component: () => import('./pages/lead-export.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+  // Daily Leads Report: super_admin / admin, and branch_admin (their branch only — scoped server-side).
+  { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowBranchAdmin: true } },
   { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue`
@@ -303,6 +305,16 @@ const isAdminFromStorage = () => {
     return false
   }
 }
+const isBranchAdminFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.roles) && u.roles.includes('branch_admin')
+  } catch {
+    return false
+  }
+}
 const isHrFromStorage = () => {
   try {
     const raw = localStorage.getItem('user')
@@ -368,7 +380,8 @@ router.beforeEach((to, from, next) => {
       if (
         to.matched.some((r) => r.meta.requiresAdmin) &&
         !isAdminFromStorage() &&
-        !(to.matched.some((r) => r.meta.allowHr) && isHrFromStorage())
+        !(to.matched.some((r) => r.meta.allowHr) && isHrFromStorage()) &&
+        !(to.matched.some((r) => r.meta.allowBranchAdmin) && isBranchAdminFromStorage())
       ) {
           next('/')
           return
