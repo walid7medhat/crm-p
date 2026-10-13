@@ -143,10 +143,10 @@
               v-if="deal.id && !hasSharedBuyer && !isEditingSection('shared_buyer_details')"
               type="button"
               class="btn-add-property-sm"
-              title="Add a shared buyer to this deal"
+              title="Add a joint buyer to this deal"
               @click="requestEdit('shared_buyer_details')"
             >
-              <iconify-icon icon="lucide:user-plus" /> Add Shared Buyer
+              <iconify-icon icon="lucide:user-plus" /> Add Joint Buyer
             </button>
             <button type="button" class="section-edit-btn" @click="requestEdit('buyer_details')">
               <iconify-icon icon="lucide:pencil" />
@@ -284,11 +284,11 @@
       </div>
     </div>
 
-    <!-- Shared Buyer Details (one per deal) -->
+    <!-- Joint Buyer Details (one per deal) -->
     <div class="col-12" v-if="hasSharedBuyer || isEditingSection('shared_buyer_details')">
       <div ref="sharedBuyerSectionEl" class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'shared_buyer_details' }">
         <div class="section-head mb-3">
-          <h6 class="section-title mb-0">Shared Buyer Details</h6>
+          <h6 class="section-title mb-0">Joint Buyer Details</h6>
           <button v-if="hasSharedBuyer" type="button" class="section-edit-btn" @click="requestEdit('shared_buyer_details')">
             <iconify-icon icon="lucide:pencil" />
           </button>
@@ -316,61 +316,61 @@
         <div v-else class="row g-3">
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer First Name</label>
+              <label class="info-label">Joint Buyer First Name</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.first_name) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Last Name</label>
+              <label class="info-label">Joint Buyer Last Name</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.last_name) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Date Of Birth</label>
+              <label class="info-label">Joint Buyer Date Of Birth</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.date_of_birth) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Phone Number</label>
+              <label class="info-label">Joint Buyer Phone Number</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.phone) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Email</label>
+              <label class="info-label">Joint Buyer Email</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.email) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Nationality</label>
+              <label class="info-label">Joint Buyer Nationality</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.nationality) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Residency Status</label>
+              <label class="info-label">Joint Buyer Residency Status</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.residency_status) }}</p>
             </div>
           </div>
           <div class="col-md-6" v-if="sharedBuyer.city">
             <div class="info-group">
-              <label class="info-label">Shared Buyer City Of Residence</label>
+              <label class="info-label">Joint Buyer City Of Residence</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.city) }}</p>
             </div>
           </div>
           <div class="col-md-6" v-if="sharedBuyer.country">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Country Of Residence</label>
+              <label class="info-label">Joint Buyer Country Of Residence</label>
               <p class="info-value mb-0">{{ val(sharedBuyer.country) }}</p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Shared Buyer Language</label>
+              <label class="info-label">Joint Buyer Language</label>
               <p class="info-value mb-0">{{ formatLanguageSelection(sharedBuyer.language) }}</p>
             </div>
           </div>
@@ -378,11 +378,11 @@
       </div>
     </div>
 
-    <!-- Shared Buyer Documents -->
+    <!-- Joint Buyer Documents -->
     <div class="col-12" v-if="hasSharedBuyer">
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'shared_buyer_documents' }">
         <div class="section-head mb-3">
-          <h6 class="section-title mb-0">Shared Buyer Documents</h6>
+          <h6 class="section-title mb-0">Joint Buyer Documents</h6>
           <button type="button" class="section-edit-btn" @click="requestEdit('shared_buyer_documents')">
             <iconify-icon icon="lucide:pencil" />
           </button>
@@ -737,7 +737,7 @@ const sharedBuyer = computed(() => {
 const hasSharedBuyer = computed(() => !!sharedBuyer.value.id)
 const sharedBuyerSectionEl = ref(null)
 
-// Opening the shared buyer form (e.g. via "Add Shared Buyer") renders the card below
+// Opening the shared buyer form (e.g. via "Add Joint Buyer") renders the card below
 // the buyer documents — bring it into view so the user sees the form they opened.
 watch(() => props.activeEditSection, (section) => {
   if (section !== 'shared_buyer_details') return

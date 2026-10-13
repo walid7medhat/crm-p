@@ -244,23 +244,23 @@
       </div>
     </section>
 
-    <!-- Shared Buyer Section (primary deals; only when explicitly edited from the deal view) -->
-    <section v-if="dealType === 'primary' && isSharedBuyerSectionActive" class="form-section">
-      <h6 class="section-title mb-3">Shared Buyer Details</h6>
+    <!-- Joint Buyer Section (primary + secondary deals; only when explicitly edited from the deal view) -->
+    <section v-if="(dealType === 'primary' || dealType === 'secondary') && isSharedBuyerSectionActive" class="form-section">
+      <h6 class="section-title mb-3">Joint Buyer Details</h6>
       <div class="form-card p-3 radius-12">
         <div class="row g-3">
-          <div class="col-md-4"><label class="form-label-custom">Shared Buyer First Name <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.shared_buyer_first_name }" /><div v-if="showErrors && fieldErrors.shared_buyer_first_name" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_first_name }}</div></div>
-          <div class="col-md-4"><label class="form-label-custom">Shared Buyer Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.shared_buyer_last_name }" /><div v-if="showErrors && fieldErrors.shared_buyer_last_name" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_last_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Joint Buyer First Name <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_first_name" placeholder="Enter First Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.shared_buyer_first_name }" /><div v-if="showErrors && fieldErrors.shared_buyer_first_name" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_first_name }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Joint Buyer Last Name <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_last_name" placeholder="Enter Last Name" class="custom-input" :class="{ 'is-invalid': showErrors && !form.shared_buyer_last_name }" /><div v-if="showErrors && fieldErrors.shared_buyer_last_name" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_last_name }}</div></div>
           <div class="col-md-4">
-            <label class="form-label-custom">Shared Buyer Date Of Birth</label>
+            <label class="form-label-custom">Joint Buyer Date Of Birth <span class="text-danger">*</span></label>
             <AdvancedDatePicker type="date" date-only dob-layout placeholder="Select date" v-model="form.shared_buyer_dob" class="custom-input" :invalid="showErrors && !!fieldErrors.shared_buyer_dob" />
             <div v-if="showErrors && fieldErrors.shared_buyer_dob" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_dob }}</div>
           </div>
-          <div class="col-md-4"><label class="form-label-custom">Shared Buyer Phone Number</label><CrmPhoneInput v-model="form.shared_buyer_phone" placeholder="Enter Phone" :invalid="showErrors && !!fieldErrors.shared_buyer_phone" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.shared_buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_phone }}</div></div>
-          <div class="col-md-4"><label class="form-label-custom">Shared Buyer Email</label><b-form-input v-model="form.shared_buyer_email" type="email" placeholder="Enter Email" class="custom-input" /><div v-if="showErrors && fieldErrors.shared_buyer_email" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_email }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Joint Buyer Phone Number <span class="text-danger">*</span></label><CrmPhoneInput v-model="form.shared_buyer_phone" placeholder="Enter Phone" :invalid="showErrors && !!fieldErrors.shared_buyer_phone" :show-errors="showErrors" /><div v-if="showErrors && fieldErrors.shared_buyer_phone" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_phone }}</div></div>
+          <div class="col-md-4"><label class="form-label-custom">Joint Buyer Email <span class="text-danger">*</span></label><b-form-input v-model="form.shared_buyer_email" type="email" placeholder="Enter Email" class="custom-input" :class="{ 'is-invalid': showErrors && !!fieldErrors.shared_buyer_email }" /><div v-if="showErrors && fieldErrors.shared_buyer_email" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_email }}</div></div>
           <div class="col-md-4">
-            <label class="form-label-custom">Shared Buyer Nationality</label>
-            <v-select v-model="form.shared_buyer_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" clearable>
+            <label class="form-label-custom">Joint Buyer Nationality <span class="text-danger">*</span></label>
+            <v-select v-model="form.shared_buyer_nationality" :options="nationalityOptions" :reduce="item => item.text" label="text" placeholder="Select Nationality" class="custom-v-select" :class="{ 'is-invalid': showErrors && !!fieldErrors.shared_buyer_nationality }" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
@@ -277,34 +277,38 @@
                 </div>
               </template>
             </v-select>
+            <div v-if="showErrors && fieldErrors.shared_buyer_nationality" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_nationality }}</div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Shared Buyer Residency Status</label>
-            <v-select v-model="form.shared_buyer_residency_status" :options="buyerResidencyOptions" :reduce="item => item.value" label="text" placeholder="Resident or Non Resident" :clearable="false" class="custom-v-select">
+            <label class="form-label-custom">Joint Buyer Residency Status <span class="text-danger">*</span></label>
+            <v-select v-model="form.shared_buyer_residency_status" :options="buyerResidencyOptions" :reduce="item => item.value" label="text" placeholder="Resident or Non Resident" :clearable="false" class="custom-v-select" :class="{ 'is-invalid': showErrors && !!fieldErrors.shared_buyer_residency_status }">
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
+            <div v-if="showErrors && fieldErrors.shared_buyer_residency_status" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_residency_status }}</div>
           </div>
           <div class="col-md-4" v-if="form.shared_buyer_residency_status !== 'resident'">
-            <label class="form-label-custom">Shared Buyer Country Of Residence</label>
-            <v-select v-model="form.shared_buyer_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" clearable>
+            <label class="form-label-custom">Joint Buyer Country Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.shared_buyer_country" :options="countryOptions" :reduce="item => item.value" label="text" placeholder="Select Country" class="custom-v-select" :class="{ 'is-invalid': showErrors && !!fieldErrors.shared_buyer_country }" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
+            <div v-if="showErrors && fieldErrors.shared_buyer_country" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_country }}</div>
           </div>
           <div class="col-md-4" v-if="form.shared_buyer_residency_status === 'resident'">
-            <label class="form-label-custom">Shared Buyer City Of Residence</label>
-            <v-select v-model="form.shared_buyer_city" :options="sharedBuyerCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" clearable>
+            <label class="form-label-custom">Joint Buyer City Of Residence <span class="text-danger">*</span></label>
+            <v-select v-model="form.shared_buyer_city" :options="sharedBuyerCityOptions" :reduce="item => item.value" label="text" placeholder="Select City" class="custom-v-select" :class="{ 'is-invalid': showErrors && !!fieldErrors.shared_buyer_city }" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
             </v-select>
+            <div v-if="showErrors && fieldErrors.shared_buyer_city" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_city }}</div>
           </div>
           <div class="col-md-4">
-            <label class="form-label-custom">Shared Buyer Language</label>
-            <v-select :model-value="normalizeLanguageSelection(form.shared_buyer_language)" @update:modelValue="updateSharedBuyerLanguage" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language(s)" class="custom-v-select buyer-language-select" :multiple="true" :searchable="true" :close-on-select="false" clearable>
+            <label class="form-label-custom">Joint Buyer Language <span class="text-danger">*</span></label>
+            <v-select :model-value="normalizeLanguageSelection(form.shared_buyer_language)" @update:modelValue="updateSharedBuyerLanguage" :options="languageOptions" :reduce="item => item.value" label="text" placeholder="Select Language(s)" class="custom-v-select buyer-language-select" :class="{ 'is-invalid': showErrors && !!fieldErrors.shared_buyer_language }" :multiple="true" :searchable="true" :close-on-select="false" clearable>
               <template #open-indicator="{ attributes }">
                 <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon></span>
               </template>
@@ -312,10 +316,11 @@
                 <span class="custom-remove-icon"><iconify-icon icon="lucide:x-circle"></iconify-icon></span>
               </template>
             </v-select>
+            <div v-if="showErrors && fieldErrors.shared_buyer_language" class="invalid-feedback d-block">{{ fieldErrors.shared_buyer_language }}</div>
           </div>
         </div>
         <div class="mt-3">
-          <label class="section-title">Shared Buyer Documents</label>
+          <label class="section-title">Joint Buyer Documents</label>
           <DocumentUpload v-model="form.shared_buyer_documents" category="buyer" :document-types="sharedBuyerDocTypes" :compact="inlineMode" :show-errors="showErrors" ref="sharedBuyerDocUploadRef" />
         </div>
       </div>

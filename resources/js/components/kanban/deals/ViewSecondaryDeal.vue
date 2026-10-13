@@ -139,9 +139,20 @@
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'buyer_details' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Buyer Details</h6>
-          <button type="button" class="section-edit-btn" @click="requestEdit('buyer_details')">
-            <iconify-icon icon="lucide:pencil" />
-          </button>
+          <div class="d-flex align-items-center gap-2">
+            <button
+              v-if="deal.id && !hasSharedBuyer && !isEditingSection('shared_buyer_details')"
+              type="button"
+              class="btn-add-property-sm"
+              title="Add a joint buyer to this deal"
+              @click="requestEdit('shared_buyer_details')"
+            >
+              <iconify-icon icon="lucide:user-plus" /> Add Joint Buyer
+            </button>
+            <button type="button" class="section-edit-btn" @click="requestEdit('buyer_details')">
+              <iconify-icon icon="lucide:pencil" />
+            </button>
+          </div>
         </div>
         <InlineSectionEditor
           v-if="isEditingSection('buyer_details')"
@@ -260,6 +271,133 @@
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
         />
         <DealDocumentsReadonly v-else :documents="buyerDocuments" />
+      </div>
+    </div>
+
+    <!-- Joint Buyer Details (one per deal) — same as primary deals -->
+    <div class="col-12" v-if="hasSharedBuyer || isEditingSection('shared_buyer_details')">
+      <div ref="sharedBuyerSectionEl" class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'shared_buyer_details' }">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Joint Buyer Details</h6>
+          <button v-if="hasSharedBuyer" type="button" class="section-edit-btn" @click="requestEdit('shared_buyer_details')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
+        <InlineSectionEditor
+          v-if="isEditingSection('shared_buyer_details')"
+          :model-value="inlineEditData"
+          section-key="shared_buyer_details"
+          deal-type="secondary"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+        />
+        <div v-else class="row g-3">
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer First Name</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.first_name) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Last Name</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.last_name) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Date Of Birth</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.date_of_birth) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Phone Number</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.phone) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Email</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.email) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Nationality</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.nationality) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Residency Status</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.residency_status) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6" v-if="sharedBuyer.city">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer City Of Residence</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.city) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6" v-if="sharedBuyer.country">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Country Of Residence</label>
+              <p class="info-value mb-0">{{ val(sharedBuyer.country) }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-group">
+              <label class="info-label">Joint Buyer Language</label>
+              <p class="info-value mb-0">{{ formatLanguageSelection(sharedBuyer.language) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Joint Buyer Documents -->
+    <div class="col-12" v-if="hasSharedBuyer">
+      <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'shared_buyer_documents' }">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Joint Buyer Documents</h6>
+          <button type="button" class="section-edit-btn" @click="requestEdit('shared_buyer_documents')">
+            <iconify-icon icon="lucide:pencil" />
+          </button>
+        </div>
+        <InlineSectionEditor
+          v-if="isEditingSection('shared_buyer_documents')"
+          :model-value="inlineEditData"
+          section-key="shared_buyer_documents"
+          deal-type="secondary"
+          :lookup="inlineEditLookup"
+          :selected-stage-id="selectedStageId"
+          :selected-stage-name="selectedStageName || ''"
+          :selected-stage-order="selectedStageOrder || 0"
+          :show-errors="inlineEditShowErrors"
+          :field-errors="inlineEditFieldErrors"
+          :saving="inlineEditSaving"
+          :loading="inlineEditLoading"
+          :hide-footer-actions="hideInlineEditActions"
+          @update:model-value="(v) => emit('update:inline-edit-data', v)"
+          @save="emit('inline-edit-save')"
+          @cancel="emit('inline-edit-cancel')"
+          @search-areas="(v) => emit('search-areas', v)"
+          @search-subcommunities="(v) => emit('search-subcommunities', v)"
+        />
+        <DealDocumentsReadonly v-else :documents="sharedBuyerDocuments" />
       </div>
     </div>
 
@@ -710,6 +848,23 @@ const seller = computed(() => {
 
 const buyerDocuments = computed(() => {
   return buyer.value?.documents || []
+})
+
+// A deal has at most one shared buyer: the secondary buyer party row (same as primary).
+const sharedBuyer = computed(() => {
+  const parties = props.deal?.parties || []
+  return parties.find(p => p.party_type === 'buyer' && p.party_role === 'secondary') || {}
+})
+const hasSharedBuyer = computed(() => !!sharedBuyer.value.id)
+const sharedBuyerSectionEl = ref(null)
+const sharedBuyerDocuments = computed(() => sharedBuyer.value.documents || [])
+
+// "Add Joint Buyer" opens the form below the buyer documents — scroll it into view.
+watch(() => props.activeEditSection, (section) => {
+  if (section !== 'shared_buyer_details') return
+  nextTick(() => {
+    sharedBuyerSectionEl.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  })
 })
 
 const sellerDocuments = computed(() => {

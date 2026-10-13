@@ -322,7 +322,8 @@ import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
 import axios from '@/plugins/axios'
 import { enrichDealStage, getDealStagePillStyle } from '@/config/dealStageStyles.js'
 import { useStageTransition } from '@/composables/useStageTransition'
-import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
+import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
+import { isNonEmptyPhoneValid } from '@/utils/phone'
 const props = defineProps({
   modelValue: Boolean,
   deal: { type: Object, default: null },
@@ -972,6 +973,36 @@ if (section === 'add_new_property') {
   await loadDealForEdit({ keepFormVisible: !!instant && Object.keys(instant).length > 0 })
 }
 
+/**
+ * Field errors for the Joint Buyer details section, or null when it is valid / not the
+ * section being saved. Same required fields as the main buyer (DealForm.validateForm):
+ * names, phone (valid), email (valid), nationality, date of birth, residency status,
+ * city (resident) or country (non-resident), and language.
+ */
+function validateJointBuyerSection(section, data) {
+  if (section !== 'shared_buyer_details') return null
+  const d = data || {}
+  const blank = (v) => !String(v ?? '').trim()
+  const errors = {}
+  if (blank(d.shared_buyer_first_name)) errors.shared_buyer_first_name = 'First name is required'
+  if (blank(d.shared_buyer_last_name)) errors.shared_buyer_last_name = 'Last name is required'
+  if (blank(d.shared_buyer_phone)) errors.shared_buyer_phone = 'Phone is required'
+  else if (!isNonEmptyPhoneValid(d.shared_buyer_phone)) errors.shared_buyer_phone = 'Invalid phone number'
+  const email = String(d.shared_buyer_email || '').trim()
+  if (!email) errors.shared_buyer_email = 'Email is required'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.shared_buyer_email = 'Enter a valid email address'
+  if (blank(d.shared_buyer_nationality)) errors.shared_buyer_nationality = 'Nationality is required'
+  if (blank(d.shared_buyer_dob)) errors.shared_buyer_dob = 'Date of birth is required'
+  if (blank(d.shared_buyer_residency_status)) errors.shared_buyer_residency_status = 'Residency status is required'
+  if (d.shared_buyer_residency_status === 'resident') {
+    if (blank(d.shared_buyer_city)) errors.shared_buyer_city = 'City is required'
+  } else if (blank(d.shared_buyer_country)) {
+    errors.shared_buyer_country = 'Country is required'
+  }
+  if (!hasLanguageSelection(d.shared_buyer_language)) errors.shared_buyer_language = 'Language is required'
+  return Object.keys(errors).length ? errors : null
+}
+
 async function saveEditDeal() {
   if (!deal.value?.id) return
   const stageId =
@@ -984,6 +1015,15 @@ async function saveEditDeal() {
     currentStages.value[0]?.id
   if (!stageId) {
     console.error('No stage_id for deal')
+    return
+  }
+  // Joint buyer section: the server only creates the joint buyer when both names are
+  // given, so an incomplete form used to "save successfully" while nothing was stored.
+  const jointErrors = validateJointBuyerSection(activeEditSection.value, editFormData.value)
+  if (jointErrors) {
+    editFieldErrors.value = jointErrors
+    editShowErrors.value = true
+    window.$showNotification?.(Object.values(jointErrors)[0], 'error')
     return
   }
   editSaving.value = true

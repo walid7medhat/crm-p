@@ -1193,6 +1193,16 @@ class DealController extends Controller
             ], 403);
         }
 
+        // Joint (shared) buyer safety net — the view sends every section's fields, so only
+        // reject what is clearly wrong instead of answering "success" while saving nothing.
+        if ($jointErrors = $this->jointBuyerErrors($deal, $request)) {
+            return response()->json([
+                'success' => false,
+                'message' => reset($jointErrors),
+                'errors' => $jointErrors,
+            ], 422);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -1352,6 +1362,76 @@ class DealController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Field errors for the joint (shared) buyer, or [] when fine.
+     *
+     * Adding a joint buyer (no joint buyer row yet, and the user filled at least one of its
+     * fields) must pass the same required fields as the main buyer: names, phone, email,
+     * nationality, date of birth, residency status, city (resident) / country (non-resident)
+     * and language. The deal view sends every section's fields on every save, so a joint
+     * buyer form that is completely empty is not treated as "adding" one.
+     * Any joint buyer email that is given must be a valid address.
+     *
+     * @return array<string, string>
+     */
+    private function jointBuyerErrors(Deal $deal, Request $request): array
+    {
+        $value = function (string $field) use ($request): string {
+            $raw = $request->input('shared_buyer_' . $field, '');
+            if (is_array($raw)) {
+                return implode(',', array_filter(array_map('strval', $raw), fn ($v) => trim($v) !== ''));
+            }
+            $str = trim((string) $raw);
+            // Language arrives as a JSON list ("[]" when nothing is picked).
+            if ($str !== '' && $str[0] === '[') {
+                $list = json_decode($str, true);
+                if (is_array($list)) {
+                    return implode(',', array_filter(array_map('strval', $list), fn ($v) => trim($v) !== ''));
+                }
+            }
+            return $str;
+        };
+
+        $fields = ['first_name', 'last_name', 'phone', 'email', 'nationality', 'dob', 'residency_status', 'city', 'country', 'language'];
+        $values = [];
+        foreach ($fields as $field) {
+            $values[$field] = $value($field);
+        }
+        $errors = [];
+
+        $hasJoint = $deal->parties()->where('party_type', 'buyer')->where('party_role', 'secondary')->exists();
+        $adding = ! $hasJoint && count(array_filter($values, fn ($v) => $v !== '')) > 0;
+
+        if ($adding) {
+            $required = [
+                'first_name' => 'First name is required',
+                'last_name' => 'Last name is required',
+                'phone' => 'Phone is required',
+                'email' => 'Email is required',
+                'nationality' => 'Nationality is required',
+                'dob' => 'Date of birth is required',
+                'residency_status' => 'Residency status is required',
+                'language' => 'Language is required',
+            ];
+            foreach ($required as $field => $message) {
+                if ($values[$field] === '') {
+                    $errors['shared_buyer_' . $field] = $message;
+                }
+            }
+            if ($values['residency_status'] === 'resident') {
+                if ($values['city'] === '') $errors['shared_buyer_city'] = 'City is required';
+            } elseif ($values['country'] === '') {
+                $errors['shared_buyer_country'] = 'Country is required';
+            }
+        }
+
+        if ($values['email'] !== '' && ! isset($errors['shared_buyer_email']) && ! filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['shared_buyer_email'] = 'Enter a valid email address';
+        }
+
+        return $errors;
     }
 
     /**
