@@ -1272,7 +1272,7 @@
     flex: 1 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 8px 16px 20px;
+    padding: 8px 16px calc(110px + env(safe-area-inset-bottom, 0px));
   }
 
   .bayut-filters-sheet__footer {
@@ -1372,6 +1372,30 @@
     background: transparent;
     color: #1e1b2e;
     font-size: 16px;
+  }
+
+  .bayut-filter-location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 1px solid #e7e2ee;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .bayut-filter-location .bayut-search-field__icon {
+    margin-left: auto;
+    color: var(--color-primary);
+  }
+
+  .bayut-filter-location__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
   }
 
   .bayut-feature-cats {

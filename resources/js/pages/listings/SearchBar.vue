@@ -527,21 +527,21 @@
         </div>
 
         <div class="bayut-filters-body">
-          <!-- Reference Number -->
-          <div class="mobile-filter-accordion">
-            <details :open="searchReferenceNumber.trim() !== ''">
-              <summary>
-                Reference Number
-                <small v-if="searchReferenceNumber">{{ searchReferenceNumber }}</small>
-              </summary>
-              <input
-                type="text"
-                v-model="searchReferenceNumber"
-                class="range-input-side listing-ref-input"
-                placeholder="Search by reference number"
-              >
-            </details>
-          </div>
+          <!-- Location (same picker as the search bar outside) -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Location</h6>
+            <div class="bayut-filter-location" role="button" tabindex="0" @click="openMobileSearchFromFilters" @keydown.enter="openMobileSearchFromFilters">
+              <span v-if="mobileSearchDisplay" class="bayut-search-value">{{ mobileSearchDisplay }}</span>
+              <span v-else class="bayut-search-placeholder">Search city, area or building</span>
+              <i class="ri-search-line bayut-search-field__icon" aria-hidden="true"></i>
+            </div>
+            <div v-if="selectedArea.length" class="bayut-filter-location__tags">
+              <span v-for="area in selectedArea" :key="'mf-area-' + area.id" class="bayut-area-tag">
+                {{ locationFirstLine(area) }}
+                <button type="button" aria-label="Remove" @click="removeMobileArea(area)"><i class="ri-close-line"></i></button>
+              </span>
+            </div>
+          </section>
 
           <!-- Purpose -->
           <section class="bayut-filter-section">
@@ -815,6 +815,21 @@
               class="bayut-show-more"
               @click="featuresExpanded = !featuresExpanded"
             >{{ featuresExpanded ? 'Show less' : 'Show all features (' + filteredMobileFeatures.length + ')' }}</button>
+          </section>
+
+          <!-- Reference Number -->
+          <section class="bayut-filter-section">
+            <h6 class="bayut-filter-section__title">Reference Number</h6>
+            <label class="bayut-feature-search">
+              <i class="ri-hashtag" aria-hidden="true"></i>
+              <input
+                v-model="searchReferenceNumber"
+                type="search"
+                class="bayut-feature-search__input"
+                placeholder="Search by reference number"
+                autocomplete="off"
+              />
+            </label>
           </section>
         </div>
 
@@ -1820,6 +1835,7 @@ const propertyTypeButtonLabel = computed(() => {
     };
 
     const openMobileSearchOverlay = async () => {
+      reopenFilterSheetAfterSearch = false;
       mobileSearchQuery.value = '';
       showMobileSearchOverlay.value = true;
       showMobileFilterSheet.value = false;
@@ -1828,9 +1844,21 @@ const propertyTypeButtonLabel = computed(() => {
       mobileSearchInputRef.value?.focus();
     };
 
+    // Opened from the Filters sheet → go back to the sheet when the location picker closes.
+    let reopenFilterSheetAfterSearch = false;
+
+    const openMobileSearchFromFilters = async () => {
+      await openMobileSearchOverlay();
+      reopenFilterSheetAfterSearch = true;
+    };
+
     const closeMobileSearchOverlay = () => {
       showMobileSearchOverlay.value = false;
       mobileSearchQuery.value = '';
+      if (reopenFilterSheetAfterSearch) {
+        reopenFilterSheetAfterSearch = false;
+        showMobileFilterSheet.value = true;
+      }
     };
 
     const selectMobileArea = (area) => {
@@ -2881,6 +2909,7 @@ const featuresButtonLabel = computed(() => {
       resetMobileSort,
       applyMobileSort,
       openMobileSearchOverlay,
+      openMobileSearchFromFilters,
       closeMobileSearchOverlay,
       selectMobileArea,
       removeMobileArea,
