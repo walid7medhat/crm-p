@@ -3244,7 +3244,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .unified-input:focus {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1);
   outline: none;
 }
@@ -3265,7 +3265,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .unified-select .vs__dropdown-toggle:focus-within {
-  border-color: #6b21a8 !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1) !important;
 }
 
@@ -3289,7 +3289,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .unified-btn:hover {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
 }
 
 .range-preview {
@@ -3379,7 +3379,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .range-input-side:focus {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   outline: none;
   box-shadow: 0 0 0 2px rgba(11, 7, 54, 0.1);
 }
@@ -3399,7 +3399,7 @@ const featuresButtonLabel = computed(() => {
 .range-progress {
   position: absolute;
   height: 100%;
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   border-radius: 2px;
   top: 0;
   z-index: 1;
@@ -3433,7 +3433,7 @@ const featuresButtonLabel = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -3445,7 +3445,7 @@ const featuresButtonLabel = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -3455,7 +3455,7 @@ const featuresButtonLabel = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -3476,8 +3476,8 @@ const featuresButtonLabel = computed(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #733E87;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -3500,8 +3500,8 @@ const featuresButtonLabel = computed(() => {
   justify-content: center;
   gap: 6px;
   background: #fff;
-  color: #733E87;
-  border: 1px solid #733E87;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
@@ -3566,14 +3566,14 @@ const featuresButtonLabel = computed(() => {
 }
 
 .status-tab:hover {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   color: #0B0736;
 }
 
 .status-tab.active {
-  background: #6b21a8;
-  color: #fff;
-  border-color: #6b21a8;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary);
 }
 
 /* Active Filters */
@@ -4020,8 +4020,8 @@ const featuresButtonLabel = computed(() => {
   min-width: 52px;
   border-radius: 999px;
   border: none;
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4031,9 +4031,9 @@ const featuresButtonLabel = computed(() => {
 .unified-reset-btn {
   min-height: 52px;
   border-radius: 999px;
-  border: 1px solid #733E87;
+  border: 1px solid var(--color-primary);
   background: #fff;
-  color: #733E87;
+  color: var(--color-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4115,7 +4115,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-chip-btn.active {
-    border-color: #733E87;
+    border-color: var(--color-primary);
     color: #b45309;
   background: #fff7ed;
 }
@@ -4301,7 +4301,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-status-row .status-btn.active {
-  background: linear-gradient(135deg, #733E87 0%, #ffb224 100%);
+  background: linear-gradient(135deg, var(--color-purple) 0%, #ffb224 100%);
   border-color: #f1a10a;
   color: #fff;
   box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
@@ -4415,8 +4415,8 @@ const featuresButtonLabel = computed(() => {
   font-size: 13px !important;
   padding: 0 16px !important;
   border-radius: 12px !important;
-  background: #733E87 !important;
-  color: #fff !important;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .unified-reset-btn {
@@ -4425,8 +4425,8 @@ const featuresButtonLabel = computed(() => {
   padding: 0 16px !important;
   border-radius: 12px !important;
   background: #fff !important;
-  color: #733E87 !important;
-  border: 1px solid #733E87 !important;
+  color: var(--color-primary) !important;
+  border: 1px solid var(--color-primary) !important;
 }
 
 .listing-notify-btn.listing-icon-circle {
@@ -4464,7 +4464,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-filter-wrap .listing-more-filter-popover::-webkit-scrollbar-thumb:hover {
-  background: #733e87;
+  background: var(--gradient-primary) !important;
 }
 
 :deep(.listing-pill-select .vs__dropdown-menu),
@@ -4844,7 +4844,7 @@ const featuresButtonLabel = computed(() => {
 
 .listing-tab-btn.active {
   color: #d97706;
-  border-bottom-color: #733E87;
+  border-bottom-color: var(--color-primary);
 }
 
 .listing-property-grid {
@@ -4870,7 +4870,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-property-pill.active {
-  border-color: #733E87;
+  border-color: var(--color-primary);
   color: #b45309;
   background: #fff7ed;
 }
@@ -4937,7 +4937,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-sort-option.active {
-  border-color: #733E87;
+  border-color: var(--color-primary);
   background: #fff7ed;
   color: #b45309;
 }
@@ -5144,7 +5144,7 @@ const featuresButtonLabel = computed(() => {
     font-weight: 500;
   }
   .mobile-sort-option.active {
-    border-color: #733E87;
+    border-color: var(--color-primary);
     color: #b45309;
     background: #fff7ed;
   }
@@ -5158,7 +5158,7 @@ const featuresButtonLabel = computed(() => {
   .mobile-filter-clear {
     border: none;
     background: transparent;
-    color: #733E87;
+    color: var(--color-primary);
     font-weight: 600;
     font-size: 14px;
     padding: 4px 0;
@@ -5328,7 +5328,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-main-location .location-chip {
-  border: 1.5px solid #733E87 !important;
+  border: 1.5px solid var(--color-primary) !important;
   background: #fff7ed !important;
   color: #b45309 !important;
   border-radius: 999px !important;
@@ -5446,13 +5446,13 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-feature-pill.active {
-  border-color: #733E87;
+  border-color: var(--color-primary);
   color: #b45309;
   background: #fff7ed;
 }
 
 .listing-feature-pill:hover {
-  border-color: #733E87;
+  border-color: var(--color-primary);
   background: #fef9e8;
 }
 

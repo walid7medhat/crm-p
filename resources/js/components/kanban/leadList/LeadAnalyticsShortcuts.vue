@@ -187,7 +187,7 @@ function onChipClick(key) {
 }
 
 .lfs-pill {
-  --pill-accent: #6b21a8;
+  --pill-accent: var(--color-purple);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -300,8 +300,8 @@ function onChipClick(key) {
   margin-left: auto;
   padding: 4px 8px 4px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(107, 33, 168, 0.18);
-  background: #f3e8ff;
+  border: 1px solid rgba(var(--color-purple-rgb), 0.18);
+  background: var(--gradient-primary);
   flex-shrink: 0;
 }
 
@@ -313,15 +313,15 @@ function onChipClick(key) {
 }
 
 .lfs-active-banner__text strong {
-  color: #6b21a8;
+  color: var(--color-primary);
   font-weight: 700;
 }
 
 .lfs-pill--clear {
-  border-color: rgba(107, 33, 168, 0.2);
+  border-color: rgba(var(--color-purple-rgb), 0.2);
   background: #fff;
-  color: #6b21a8;
-  --pill-accent: #6b21a8;
+  color: var(--color-primary);
+  --pill-accent: var(--color-purple);
   gap: 4px;
   padding: 5px 10px;
   font-size: 12px;
@@ -329,13 +329,13 @@ function onChipClick(key) {
 
 .lfs-pill--clear .lfs-pill__icon,
 .lfs-pill--clear {
-  color: #6b21a8;
+  color: var(--color-primary);
 }
 
 .lfs-pill--clear:hover {
-  border-color: #6b21a8;
-  background: #f3e8ff;
-  color: #6b21a8;
+  border-color: var(--color-primary);
+  background: var(--gradient-primary);
+  color: #ffffff;
 }
 
 @media (max-width: 1200px) {

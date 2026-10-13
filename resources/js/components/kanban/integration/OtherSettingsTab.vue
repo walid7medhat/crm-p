@@ -224,7 +224,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 
 .form-input:focus {
     outline: none;
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
 }
 
@@ -266,7 +266,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .toggle-switch.active {
-    background-color: #6b21a8;
+    background: var(--gradient-primary) !important;
 }
 
 .toggle-slider {
@@ -331,7 +331,7 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 
 .keyword-input {
     padding-right: 40px;
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     background-color: #FFFFFF;
 }
 
@@ -401,12 +401,12 @@ watch(dontMakeResponsibleIfNotClockedIn, (v) => emit('update:dontMakeResponsible
 }
 
 .checkbox-container:hover .checkmark {
-    border-color: #733E87;
+    border-color: var(--color-primary);
 }
 
 .custom-checkbox:checked ~ .checkmark {
-    background-color: #733E87;
-    border-color: #733E87;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .checkmark:after {

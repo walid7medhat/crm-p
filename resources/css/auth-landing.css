@@ -51,7 +51,7 @@
   pointer-events: none;
   background:
     radial-gradient(ellipse 55% 45% at 8% 92%, rgba(192, 38, 211, 0.45) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 35% at 22% 88%, rgba(115, 62, 135, 0.35) 0%, transparent 65%);
+    radial-gradient(ellipse 40% 35% at 22% 88%, rgba(var(--color-purple-rgb), 0.35) 0%, transparent 65%);
 }
 
 .auth-landing__glow {
@@ -67,7 +67,7 @@
   height: 580px;
   left: -200px;
   bottom: -280px;
-  background: radial-gradient(circle, rgba(192, 38, 211, 0.65) 0%, rgba(115, 62, 135, 0.25) 40%, transparent 70%);
+  background: radial-gradient(circle, rgba(192, 38, 211, 0.65) 0%, rgba(var(--color-purple-rgb), 0.25) 40%, transparent 70%);
 }
 
 .auth-landing__glow--two {

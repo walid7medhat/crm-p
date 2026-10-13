@@ -46,8 +46,8 @@
 
 .la-view-tab.is-active {
   background: #faf5ff;
-  border-color: #733e87;
-  color: #733e87;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .la-date-input {
@@ -128,13 +128,13 @@
 }
 
 .la-calendar__cell.is-today {
-  border-color: #733e87;
+  border-color: var(--color-primary);
 }
 
 .la-calendar__cell.is-selected {
-  background: #733e87;
-  border-color: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
 }
 
 .la-calendar__cell.is-selected .la-calendar__day {
@@ -185,7 +185,7 @@
 .la-calendar__schedule h6 {
   margin: 0 0 8px;
   font-size: 11px !important;
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .la-calendar__schedule ul {
@@ -302,7 +302,7 @@
 .la-dept-bar__fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #733e87, #9333ea);
+  background: linear-gradient(90deg, var(--color-purple), #9333ea);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -401,7 +401,7 @@
 .la-attendance-table__check input {
   width: 14px;
   height: 14px;
-  accent-color: #733e87;
+  accent-color: var(--color-purple);
   cursor: pointer;
 }
 
@@ -569,7 +569,7 @@
 
 .la-attendance-table__menu-btn:hover {
   background: #f4f0f8;
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .la-attendance-table__footer {
@@ -691,7 +691,7 @@
 
 .la-attendance-table__menu button:hover {
   background: #f4f0f8;
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .la-attendance-table-wrap--loading {

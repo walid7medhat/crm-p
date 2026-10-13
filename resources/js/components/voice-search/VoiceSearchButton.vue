@@ -45,7 +45,7 @@ defineEmits(['click']);
   border-radius: 50%;
   border: 1px solid #e2e8f0;
   background: #fff;
-  color: #733e87;
+  color: var(--color-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -58,13 +58,13 @@ defineEmits(['click']);
 
 .voice-search-btn:hover {
   background: #f5eef8;
-  box-shadow: 0 4px 12px rgba(115, 62, 135, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--color-purple-rgb), 0.12);
 }
 
 .voice-search-btn--active {
-  background: #733e87;
-  color: #fff;
-  border-color: #733e87;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary);
 }
 
 .voice-search-btn--mobile {

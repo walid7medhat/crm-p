@@ -525,7 +525,7 @@ function formatDisplay(rule) {
 
 .asp__section-total--ok {
   background: #d1fae5;
-  color: #047857;
+  color: var(--color-success);
 }
 
 .asp__rules-grid {

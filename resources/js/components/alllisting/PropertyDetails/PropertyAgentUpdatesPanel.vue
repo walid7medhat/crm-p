@@ -140,7 +140,7 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 
 .agent-updates-panel__title-row i {
   font-size: 15px;
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .agent-updates-panel__count {
@@ -148,8 +148,8 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-size: 10px;
   font-weight: 700;
   display: inline-flex;
@@ -205,8 +205,8 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
   height: 28px;
   border: none;
   border-radius: 8px;
-  background: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;

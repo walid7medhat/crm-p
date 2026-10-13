@@ -148,7 +148,7 @@ async function submit() {
   padding: 0;
   margin-left: 4px;
   font-weight: 600;
-  color: #7c3aed;
+  color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -175,7 +175,7 @@ async function submit() {
   }
 
   .auth-resend-link {
-    color: #733e87;
+    color: var(--color-primary);
   }
 }
 </style>

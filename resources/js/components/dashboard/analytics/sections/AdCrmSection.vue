@@ -96,7 +96,7 @@ const agentCols = [
   { key: 'rate', label: 'Rate', format: 'percent' },
 ]
 
-const colors = ['#7c5cbf', '#5b3d8f', '#16a34a', '#f59e0b']
+const colors = ['#7c5cbf', '#581c87', '#16a34a', '#f59e0b']
 
 const funnelOpts = computed(() => ({
   colors,

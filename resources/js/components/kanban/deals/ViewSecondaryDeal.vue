@@ -885,7 +885,7 @@ h6.section-title {
 }
 
 .section-highlight {
-  border-color: #733E87 !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.12);
 }
 
@@ -906,7 +906,7 @@ h6.section-title {
 
 .btn-add-property-sm {
   background: transparent;
-  border: 1px solid #6b21a8;
+  border: 1px solid var(--color-primary);
   border-radius: 100px;
   padding: 4px 12px;
   font-size: 11px;
@@ -919,8 +919,8 @@ h6.section-title {
   transition: all 0.2s;
 }
 .btn-add-property-sm:hover {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 /* ✅ Stage Dates Display */
 .stage-date-display {

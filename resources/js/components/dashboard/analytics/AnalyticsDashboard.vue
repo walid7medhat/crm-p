@@ -1504,7 +1504,7 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 2px;
-  background: #e9d5ff;
+  background: var(--gradient-primary) !important;
 }
 
 .perf-legend i.is-deals {
@@ -1562,7 +1562,7 @@ onBeforeUnmount(() => {
 .perf-bar {
   width: 16px;
   border-radius: 4px 4px 0 0;
-  background: #e9d5ff;
+  background: var(--gradient-primary) !important;
 }
 
 .perf-bar.is-deal {
@@ -1685,8 +1685,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #e9d5ff;
-  color: #6b21a8;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -1744,9 +1744,9 @@ onBeforeUnmount(() => {
 }
 
 .cilo-icon--solid {
-  background: #e9d5ff;
-  border-color: #e9d5ff;
-  color: #6b21a8;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
 }
 
 .cilo-icon--bell {

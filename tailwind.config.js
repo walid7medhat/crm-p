@@ -16,13 +16,13 @@ export default {
             },
             colors: {
                 crm: {
-                    primary: '#0B0736',
-                    secondary: '#733E87',
+                    primary: 'var(--color-primary)',
+                    secondary: 'var(--color-primary-hover)',
                 },
             },
             backgroundImage: {
-                'gradient-crm': 'linear-gradient(135deg, #0B0736 0%, #733E87 100%)',
-                'gradient-crm-vertical': 'linear-gradient(180deg, #0B0736 0%, #733E87 100%)',
+                'gradient-crm': 'linear-gradient(var(--color-primary), var(--color-primary))',
+                'gradient-crm-vertical': 'linear-gradient(var(--color-primary), var(--color-primary))',
             },
         },
     },

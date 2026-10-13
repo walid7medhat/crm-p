@@ -2064,7 +2064,7 @@ watch(selectedExistingClient, (client) => {
         font-size: 11px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: #733e87;
+        color: var(--color-primary);
     }
 
     .section-title::before {
@@ -2072,7 +2072,7 @@ watch(selectedExistingClient, (client) => {
         width: 6px;
         height: 6px;
         border-radius: 1px;
-        background: #733e87;
+        background: var(--gradient-primary) !important;
         transform: rotate(45deg);
         flex-shrink: 0;
     }
@@ -2214,13 +2214,13 @@ watch(selectedExistingClient, (client) => {
     }
     
     :deep(.custom-v-select .vs__dropdown-option--highlight) {
-        background: #733E87 !important;
-        color: #fff !important;
+        background: var(--gradient-primary) !important;
+        color: #ffffff !important;
     }
 
     :deep(.custom-v-select .vs__dropdown-option--selected) {
-        background: #733E87 !important;
-        color: #fff !important;
+        background: var(--gradient-primary) !important;
+        color: #ffffff !important;
     }
 
     /* Inline v-select for input groups */
@@ -2314,13 +2314,13 @@ watch(selectedExistingClient, (client) => {
     }
     
     :deep(.custom-v-select-inline .vs__dropdown-option--highlight) {
-        background: #733E87 !important;
-        color: #fff !important;
+        background: var(--gradient-primary) !important;
+        color: #ffffff !important;
     }
 
     :deep(.custom-v-select-inline .vs__dropdown-option--selected) {
-        background: #733E87 !important;
-        color: #fff !important;
+        background: var(--gradient-primary) !important;
+        color: #ffffff !important;
     }
     
     :deep(.custom-v-select-inline .vs__open-indicator) {
@@ -2465,7 +2465,7 @@ watch(selectedExistingClient, (client) => {
         border-radius: 10px;
         padding: 0 0 8px !important;
         margin: 0;
-        box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+        box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
         overflow: visible;
     }
 
@@ -2614,7 +2614,7 @@ watch(selectedExistingClient, (client) => {
     }
     
     .additional-chip.active {
-        border-color: #6b21a8;
+        border-color: var(--color-primary);
     }
     
     .additional-chip .chip-label {
@@ -2758,12 +2758,12 @@ watch(selectedExistingClient, (client) => {
     
     /* Footer Buttons */
     .btn-prev {
-        background: #6b21a8;
+        background: var(--gradient-primary) !important;
         border: none;
         padding: 10px 20px;
         border-radius: 100px;
         font-size: 14px;
-        color: #fff;
+        color: #ffffff !important;
         font-weight: 400;
         display: flex;
         align-items: center;
@@ -2792,12 +2792,12 @@ watch(selectedExistingClient, (client) => {
     }
     
     .btn-next-step {
-        background: #6b21a8;
+        background: var(--gradient-primary) !important;
         border: none;
         padding: 10px 20px;
         border-radius: 100px;
         font-size: 14px;
-        color: #fff;
+        color: #ffffff !important;
         font-weight: 400;
         display: flex;
         align-items: center;
@@ -3049,19 +3049,19 @@ watch(selectedExistingClient, (client) => {
         position: relative !important;
         top: auto !important;
         right: auto !important;
-        width: 40px !important;
-        height: 40px !important;
-        border-radius: 999px !important;
-        border: 1px solid #e5e7eb !important;
-        background: #f8fafc !important;
-        color: #0b0736 !important;
-        box-shadow: none !important;
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 50% !important;
+        border: 2px solid #ffffff !important;
+        background: var(--gradient-primary) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.22), 0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28) !important;
         z-index: 2 !important;
         margin-bottom: 0 !important;
       }
       :deep(.header-close-btn-top iconify-icon),
       :deep(.header-close-btn-top svg) {
-        color: #0b0736 !important;
+        color: #ffffff !important;
       }
       :deep(.header-modal-title) {
         font-size: 17px !important;
@@ -3258,7 +3258,7 @@ watch(selectedExistingClient, (client) => {
     justify-content: center;
     flex-shrink: 0;
     background: #f6f0fa;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 16px;
 }
 
@@ -3310,9 +3310,9 @@ watch(selectedExistingClient, (client) => {
 
 .referral-type.is-active {
     background: #f6f0fa;
-    border-color: #733e87;
+    border-color: var(--color-primary);
     color: #5b2d6e;
-    box-shadow: inset 0 0 0 1px #733e87;
+    box-shadow: inset 0 0 0 1px var(--color-purple);
 }
 
 .referral-fields {
@@ -3335,8 +3335,8 @@ watch(selectedExistingClient, (client) => {
 }
 
 .referral-search__box:focus-within {
-    border-color: #733e87;
-    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.12);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
 }
 
 .referral-search__icon {
@@ -3371,7 +3371,7 @@ watch(selectedExistingClient, (client) => {
 
 .referral-search__loading {
     margin: 0;
-    color: #733e87;
+    color: var(--color-primary);
     font-weight: 600;
 }
 
@@ -3437,8 +3437,8 @@ watch(selectedExistingClient, (client) => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    background: #733e87;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-size: 11px;
     font-weight: 700;
 }
@@ -3466,7 +3466,7 @@ watch(selectedExistingClient, (client) => {
     margin-left: auto;
     border: 0;
     background: transparent;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;

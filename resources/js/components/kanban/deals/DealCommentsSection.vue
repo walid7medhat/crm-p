@@ -627,12 +627,12 @@ const handleCancelFileModal = () => {
 }
 
 .btn-save {
-    background: #6b21a8;
+    background: var(--gradient-primary) !important;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;
     font-size: 14px;
-    color: #fff;
+    color: #ffffff !important;
     font-weight: 400;
     display: flex;
     align-items: center;
@@ -704,12 +704,12 @@ const handleCancelFileModal = () => {
 }
 
 .file-dropzone:hover {
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     background: #F1F5F9;
 }
 
 .file-dropzone.dragover {
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     background: #E2E8F0;
     border-style: solid;
 }

@@ -5,7 +5,7 @@
     <title>Employee Evaluation</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; color: #0f172a; font-size: 12px; }
-        .header { border-bottom: 2px solid #733E87; padding-bottom: 10px; margin-bottom: 16px; }
+        .header { border-bottom: 2px solid #00be83; padding-bottom: 10px; margin-bottom: 16px; }
         .brand { font-size: 20px; font-weight: 700; color: #0B0736; }
         .meta { color: #475569; font-size: 11px; margin-top: 4px; }
         .title { font-size: 18px; font-weight: 700; margin: 16px 0 4px; }
@@ -14,7 +14,7 @@
         .info-label { display: inline-block; width: 140px; color: #475569; font-size: 11px; }
         .info-value { font-weight: 700; }
         .section { margin-top: 18px; }
-        .section h3 { margin: 0 0 8px; font-size: 14px; color: #733E87; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+        .section h3 { margin: 0 0 8px; font-size: 14px; color: #00be83; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; font-size: 11px; }
         th { background: #f3ecf7; text-transform: uppercase; color: #0B0736; }

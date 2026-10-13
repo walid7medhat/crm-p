@@ -33,94 +33,54 @@
                 <div class="tab-content" id="ownerTabContent">
                     <!-- Personal Info Tab -->
                     <div class="tab-pane fade show active" id="personal" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <div class="card h-100">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">
-                                            <iconify-icon icon="lucide:user" class="me-2 text-primary"></iconify-icon>
-                                            Basic Information
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="info-grid">
-                                            <div class="info-item">
-                                                <span class="info-label">Salutation</span>
-                                                <span class="info-value">{{ owner.salutation || '-' }}</span>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">First Name</span>
-                                                <span class="info-value fw-bold">{{ owner.first_name || '-' }}</span>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">Last Name</span>
-                                                <span class="info-value fw-bold">{{ owner.last_name || '-' }}</span>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">Email</span>
-                                                <a :href="`mailto:${owner.email}`" class="info-value text-primary">
-                                                    {{ owner.email || '-' }}
-                                                </a>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">Phone</span>
-                                                <a :href="`tel:${owner.phone_number}`" class="info-value">
-                                                    {{ owner.phone_number || '-' }}
-                                                </a>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">Nationality</span>
-                                                <span class="info-value badge bg-info">{{ owner.nationality || '-' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <article class="owner-id-card">
+                            <header class="owner-id-card__head">
+                                <div class="owner-id-card__identity">
+                                    <p class="owner-id-card__kicker">Owner</p>
+                                    <h2 class="owner-id-card__name">{{ fullName }}</h2>
+                                </div>
+                                <span v-if="owner.id" class="owner-id-card__id">ID {{ owner.id }}</span>
+                            </header>
+                            <div class="owner-id-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Salutation</span>
+                                    <span class="info-value">{{ owner.salutation || '—' }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">First name</span>
+                                    <span class="info-value">{{ owner.first_name || '—' }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Last name</span>
+                                    <span class="info-value">{{ owner.last_name || '—' }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Email</span>
+                                    <a :href="`mailto:${owner.email}`" class="info-value">{{ owner.email || '—' }}</a>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Phone</span>
+                                    <a :href="`tel:${owner.phone_number}`" class="info-value">{{ owner.phone_number || '—' }}</a>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Nationality</span>
+                                    <span class="info-value">{{ owner.nationality || '—' }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Residency</span>
+                                    <span class="info-value">
+                                        <span v-if="owner.residency_status === 'resident'" class="owner-pill owner-pill--ok">Resident</span>
+                                        <span v-else-if="owner.residency_status === 'non_resident'" class="owner-pill owner-pill--warn">Non resident</span>
+                                        <span v-else>—</span>
+                                    </span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">{{ getLocationLabel() }}</span>
+                                    <span class="info-value">{{ owner.location?.name || '—' }}</span>
                                 </div>
                             </div>
-
-                            <!-- Status & Residency -->
-                            <div class="col-md-6 mb-4">
-                                <div class="card h-100">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">
-                                            <iconify-icon icon="lucide:map-pin" class="me-2 text-primary"></iconify-icon>
-                                            Residency Status
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="info-grid">
-                                            <div class="info-item">
-                                                <span class="info-label">Residency Status</span>
-                                                <span class="info-value">
-                                                    <span v-if="owner.residency_status === 'resident'" 
-                                                          class="badge bg-success">Resident</span>
-                                                    <span v-else-if="owner.residency_status === 'non_resident'" 
-                                                          class="badge bg-warning">Non Resident</span>
-                                                    <span v-else class="badge bg-secondary">-</span>
-                                                </span>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">{{ getLocationLabel() }}</span>
-                                                <span class="info-value">{{ owner.location?.name }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-12 mt-4" v-if="owner.notes">
-                                <div class="card">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">
-                                            <iconify-icon icon="lucide:sticky-note" class="me-2 text-primary"></iconify-icon>
-                                            Notes
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="mb-0">{{ owner.notes }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            <p v-if="owner.notes" class="owner-id-notes">{{ owner.notes }}</p>
+                        </article>
                     </div>
                     
                     <!-- Documents Tab -->
@@ -135,39 +95,19 @@
                                         </h6>
                                     </div>
                                     <div class="card-body">
-                                        <div class="row" v-if="hasDocuments">
-                                            <div class="col-md-4 col-sm-6 mb-4" 
-                                                 v-for="(doc, index) in getDocumentList()" 
-                                                 :key="index">
-                                                <div class="document-item card h-100">
-                                                    <div class="card-body text-center">
-                                                        <div class="document-icon mb-3">
-                                                            <iconify-icon :icon="getDocumentIcon(doc.type)" 
-                                                                         width="40" 
-                                                                         class="text-primary"></iconify-icon>
-                                                        </div>
-                                                        <h6 class="document-title mb-2">{{ doc.title }}</h6>
-                                                        <div class="document-actions d-flex gap-2 justify-content-center">
-                                                            <button class="btn btn-sm btn-outline-primary" 
-                                                                    @click="viewDocument(doc.url)">
-                                                                <iconify-icon icon="lucide:eye" class="me-1"></iconify-icon>
-                                                                View
-                                                            </button>
-                                                            <button class="btn btn-sm btn-outline-success" 
-                                                                    @click="downloadDocument(doc.url, doc.title)">
-                                                                <iconify-icon icon="lucide:download" class="me-1"></iconify-icon>
-                                                                Download
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                        <div class="owner-doc-list" v-if="hasDocuments">
+                                            <div
+                                                v-for="(doc, index) in getDocumentList()"
+                                                :key="index"
+                                                class="owner-doc-row"
+                                            >
+                                                <iconify-icon :icon="getDocumentIcon(doc.type)" class="owner-doc-row__icon"></iconify-icon>
+                                                <span class="owner-doc-row__title">{{ doc.title }}</span>
+                                                <button type="button" class="owner-doc-row__btn" @click="viewDocument(doc.url)">View</button>
+                                                <button type="button" class="owner-doc-row__btn" @click="downloadDocument(doc.url, doc.title)">Download</button>
                                             </div>
                                         </div>
-                                        <div v-else class="text-center py-5">
-                                            <iconify-icon icon="lucide:folder-x" width="64" class="text-muted mb-3"></iconify-icon>
-                                            <h5 class="text-muted">No Documents Found</h5>
-                                            <p class="text-muted">This owner has no uploaded documents.</p>
-                                        </div>
+                                        <div v-else class="owner-empty">No documents uploaded.</div>
                                     </div>
                                 </div>
                             </div>
@@ -821,50 +761,210 @@ export default {
 
 <style scoped>
 /* ============ TABS ============ */
+.owner-tabs {
+    gap: 6px;
+}
+
 .owner-tabs .nav-link {
-    border-radius: 8px;
-    padding: 10px 20px;
-    margin-right: 10px;
-    border: 1px solid #dee2e6;
-    background-color: #f8f9fa;
-    color: #6c757d;
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-right: 0;
+    border: 1px solid #e8eaef;
+    background-color: #ffffff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
 }
 
 .owner-tabs .nav-link.active {
-    background-color: #6b21a8;
-    color: white;
-    border-color: #6b21a8;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border-color: var(--color-primary);
 }
 
-/* ============ INFO GRID ============ */
-.info-grid {
+.owner-tabs .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-ink) !important;
+}
+
+.owner-tabs .nav-link.active .badge {
+    background: rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+}
+
+.owner-id-card {
+    border: 1px solid #efe4f3;
+    border-radius: 14px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.owner-id-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+    border-bottom: 1px solid var(--color-primary-border);
+}
+
+.owner-id-card__kicker {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    line-height: 1.2;
+}
+
+.owner-id-card__name {
+    margin: 1px 0 0;
+    font-size: 16px !important;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #171717;
+    line-height: 1.2;
+}
+
+.owner-id-card__id {
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--gradient-primary);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.owner-id-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
 }
 
 .info-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #f1f1f1;
-}
-
-.info-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    min-width: 0;
+    padding: 8px 14px;
+    border-bottom: 1px solid #f3f4f6;
 }
 
 .info-label {
-    font-weight: 500;
-    color: #6c757d;
-    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .info-value {
-    font-size: 14px;
-    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: #171717;
+    text-align: left;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.info-value:is(a) {
+    color: var(--color-primary-ink);
+    text-decoration: none;
+}
+
+.owner-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.owner-pill--ok {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-ink);
+}
+
+.owner-pill--warn {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.owner-id-notes {
+    margin: 0;
+    padding: 8px 14px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #475569;
+}
+
+.owner-doc-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.owner-doc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.owner-doc-row__icon {
+    font-size: 16px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.owner-doc-row__title {
+    min-width: 0;
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #171717;
+}
+
+.owner-doc-row__btn {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #171717;
+    border-radius: 999px;
+    height: 26px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.owner-doc-row__btn:hover {
+    background: var(--gradient-primary);
+    border-color: var(--color-primary);
+    color: #ffffff;
+}
+
+.owner-empty {
+    padding: 16px 0;
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+    .owner-id-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ============ DOCUMENT ITEMS ============ */
@@ -876,7 +976,7 @@ export default {
 .document-item:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
 }
 
 .document-icon {
@@ -1007,8 +1107,8 @@ export default {
   display: inline-block;
   text-align: center;
   width: 100%;
-  background: #733E87;
-  color: #ffffff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 500;
   border-radius: 10px;
   padding: 8px 0;
@@ -1018,7 +1118,7 @@ export default {
 }
 
 .view-more-btn:hover {
-  background: #111;
+  background: #581c87;
   color: #fff;
 }
 
@@ -1104,14 +1204,14 @@ export default {
 }
 
 .status-btn:hover {
-  border-color: #733E87;
-  color: #733E87;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .status-btn.active {
-  background: #733E87;
-  border-color: #733E87;
-  color: white;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
 }
@@ -1221,14 +1321,14 @@ export default {
 }
 /* ============ CARDS ============ */
 .card {
-    border-radius: 0.75rem;
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    border: 1px solid #efe4f3;
+    box-shadow: none;
 }
 
 .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+    transform: none;
+    box-shadow: none !important;
 }
 
 .card-header {
@@ -1321,5 +1421,41 @@ export default {
     .property-image {
         height: 13rem;
     }
+}
+
+.property-image {
+    height: 7.25rem !important;
+}
+
+.property-card .property-content {
+    padding: 8px 10px !important;
+}
+
+.property-price {
+    font-size: 13px !important;
+    font-weight: 700;
+}
+
+.property-title {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+}
+
+.property-location {
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+}
+
+.property-details {
+    font-size: 11px !important;
+    margin-bottom: 0 !important;
+}
+
+.card-body {
+    padding: 12px;
+}
+
+.card-header {
+    padding: 8px 12px;
 }
 </style>

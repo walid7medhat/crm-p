@@ -626,8 +626,8 @@ export default {
 }
 
 .view-more-btn:hover {
-  background: #111;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 /* Status Toggle Button */

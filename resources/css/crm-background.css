@@ -147,10 +147,10 @@ body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn 
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn.active {
-  background: #733E87 !important;
+  background: var(--gradient-primary) !important;
   color: #ffffff !important;
-  border-color: #733E87 !important;
-  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.22) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.22) !important;
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header.navbar-header--property-detail {

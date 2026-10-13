@@ -809,8 +809,8 @@ watch(
 }
 
 .btn-toggle.active {
-    background: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-weight: 400;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
 }
@@ -859,8 +859,8 @@ watch(
 }
 
 .edit-bar-save {
-    background: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 .edit-bar-save:hover:not(:disabled) {
@@ -878,7 +878,7 @@ watch(
     border-radius: 10px;
     background: #fff;
     padding: 8px 10px;
-    box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+    box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
 }
 
 .lead-created-section {
@@ -893,7 +893,7 @@ watch(
     font-weight: 700 !important;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #733e87 !important;
+    color: var(--color-primary) !important;
 }
 
 .lead-section-title-match::before {
@@ -901,7 +901,7 @@ watch(
     width: 6px;
     height: 6px;
     border-radius: 1px;
-    background: #733e87;
+    background: var(--gradient-primary) !important;
     transform: rotate(45deg);
     flex-shrink: 0;
 }

@@ -1246,8 +1246,8 @@ export default {
         rgba(5, 10, 40, 0.95) 100%    
 
     ); */
-    background-color: #733E87;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     padding: 5px 10px;
     border-radius: 5px;
     font-size: 0.75rem;
@@ -1435,7 +1435,7 @@ export default {
 }
 
 .stat-card:hover {
-    border-color: #733E87;
+    border-color: var(--color-primary);
     box-shadow: 0 6px 20px rgba(108, 92, 231, 0.15);
 }
 
@@ -1618,7 +1618,7 @@ export default {
 
 .detail-item i {
     font-size: 1rem;
-    color: #733E87;
+    color: var(--color-primary);
     margin-bottom: 0.25rem;
 }
 
@@ -1637,7 +1637,7 @@ export default {
 }
 
 .team-member-card:hover {
-    border-color: #733E87;
+    border-color: var(--color-primary);
     box-shadow: 0 6px 20px rgba(108, 92, 231, 0.1);
 }
 
@@ -1928,8 +1928,8 @@ export default {
   display: inline-block;
   text-align: center;
   width: 100%;
-  background: #733E87;
-  color: #ffffff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 500;
   border-radius: 10px;
   padding: 8px 0;
@@ -1939,7 +1939,7 @@ export default {
 }
 
 .view-more-btn:hover {
-  background: #111;
+  background: #581c87;
   color: #fff;
 }
 .property-card-link .view-more-btn {
@@ -1947,8 +1947,8 @@ export default {
   pointer-events: none; /* لمنع النقر على الزر نفسه بشكل منفصل */
 }
 .btn-success{
-    background-color: #6b21a8 !important;
-    border: 1px solid #6b21a8 !important ;
+    background: var(--gradient-primary) !important;
+    border: 1px solid var(--color-primary) !important ;
     border-radius: 5px !important;
 }
 .btn-outline-secondary{
@@ -2010,8 +2010,8 @@ export default {
 
 
 .status-badge {
-   background: #6b21a8 ;
-  color: white;
+   background: var(--gradient-primary) !important ;
+  color: #ffffff !important;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.7rem;
@@ -2030,7 +2030,7 @@ export default {
 
 .property-listed-date i {
   font-size: 0.8rem;
-  color: #733E87;
+  color: var(--color-primary);
 }
 .justify-between{
     justify-content:space-between;
@@ -2174,7 +2174,7 @@ export default {
     font-weight: 700;
 }
 .vacation-modal-head i {
-    color: #733E87;
+    color: var(--color-primary);
     font-size: 1.1rem;
 }
 .vacation-modal-close {

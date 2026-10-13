@@ -41,7 +41,7 @@ function barStyle(n) {
 }
 
 .voice-wave--active .voice-wave__bar {
-  background: #733e87;
+  background: var(--gradient-primary) !important;
   animation: voice-wave-pulse 0.9s ease-in-out infinite;
 }
 

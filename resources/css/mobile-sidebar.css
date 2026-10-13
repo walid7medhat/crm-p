@@ -83,7 +83,7 @@
   .mobile-drawer-header__logo {
     font-size: 20px;
     font-weight: 800;
-    color: #733e87;
+    color: var(--color-primary);
     letter-spacing: -0.02em;
   }
 
@@ -101,7 +101,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 50%;
     background: #fff;
-    color: #334155;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -212,12 +212,15 @@
 
   aside.sidebar .sidebar-nav-link.active .imgicon,
   aside.sidebar .sidebar-menu li > a.active-page .imgicon,
-  aside.sidebar .sidebar-submenu li.active-page .imgicon,
+  aside.sidebar .sidebar-submenu li.active-page .imgicon {
+    filter: brightness(0) invert(1) !important;
+  }
+
   aside.sidebar .sidebar-menu li.dropdown.open > a .imgicon,
   aside.sidebar .sidebar-menu li.active-parent > a .imgicon,
   aside.sidebar .sidebar-submenu__nested.open > a .imgicon,
   aside.sidebar .sidebar-submenu__nested.dropdown-open > a .imgicon {
-    filter: brightness(0) saturate(100%) invert(28%) sepia(47%) saturate(1200%) hue-rotate(256deg) brightness(88%) contrast(90%);
+    filter: brightness(0) saturate(100%) !important;
   }
 
   aside.sidebar .sidebar-menu li a:active,
@@ -225,18 +228,19 @@
     background: #f8fafc !important;
   }
 
-  /* Active item — left accent bar like Property Finder */
+  /* Active item — green pill, white label, so the current page is obvious */
   aside.sidebar .sidebar-nav-link.active,
   aside.sidebar .sidebar-menu .sidebar-submenu li.active-page a,
   aside.sidebar .sidebar-menu li > a.active-page {
-    background: #faf5ff !important;
-    color: #733e87 !important;
-    box-shadow: inset 3px 0 0 #733e87 !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
   }
 
   aside.sidebar .sidebar-nav-link.active span,
   aside.sidebar .sidebar-menu li > a.active-page span {
-    color: #733e87 !important;
+    color: #ffffff !important;
     font-weight: 700 !important;
   }
 
@@ -249,21 +253,22 @@
   aside.sidebar .sidebar-menu li.active-parent > a .menu-icon,
   aside.sidebar .sidebar-submenu__nested.open > a .menu-icon,
   aside.sidebar .sidebar-submenu__nested.dropdown-open > a .menu-icon {
-    color: #733e87 !important;
+    color: var(--color-primary) !important;
   }
 
   /* Parent dropdown — no heavy purple block */
   aside.sidebar .sidebar-menu li.dropdown.open > a,
   aside.sidebar .sidebar-menu li.dropdown.dropdown-open > a,
   aside.sidebar .sidebar-menu li.active-parent > a {
-    background: #f8fafc !important;
-    color: #733e87 !important;
-    box-shadow: inset 3px 0 0 #733e87 !important;
+    background: #f3f4f6 !important;
+    color: #171717 !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
   }
 
   aside.sidebar .sidebar-menu li.dropdown.open > a span,
   aside.sidebar .sidebar-menu li.dropdown.dropdown-open > a span {
-    color: #733e87 !important;
+    color: #171717 !important;
     font-weight: 700 !important;
   }
 
@@ -307,13 +312,13 @@
   aside.sidebar .sidebar-submenu li.active-page a,
   aside.sidebar .sidebar-submenu li.active-page .sidebar-nav-link {
     background: #faf5ff !important;
-    color: #733e87 !important;
+    color: var(--color-primary) !important;
     font-weight: 600 !important;
-    box-shadow: inset 3px 0 0 #733e87 !important;
+    box-shadow: inset 3px 0 0 var(--color-purple) !important;
   }
 
   aside.sidebar .sidebar-submenu li.active-page a span {
-    color: #733e87 !important;
+    color: var(--color-primary) !important;
     font-weight: 600 !important;
   }
 
@@ -325,8 +330,8 @@
   .sidebar.sidebar--mobile-drawer .sidebar-submenu__nested.open > a,
   .sidebar.sidebar--mobile-drawer .sidebar-submenu__nested.dropdown-open > a {
     background: #faf5ff !important;
-    color: #733e87 !important;
-    box-shadow: inset 3px 0 0 #733e87 !important;
+    color: var(--color-primary) !important;
+    box-shadow: inset 3px 0 0 var(--color-purple) !important;
   }
 
   /* Listings flyout — full panel in front of main menu */
@@ -364,7 +369,7 @@
     gap: 4px;
     border: none;
     background: transparent;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 17px;
     font-weight: 700;
     padding: 10px 8px;
@@ -416,15 +421,15 @@
 
   .mobile-drawer-flyout li.is-active .mobile-drawer-flyout__link {
     background: #faf5ff !important;
-    color: #733e87 !important;
-    box-shadow: inset 3px 0 0 #733e87 !important;
+    color: var(--color-primary) !important;
+    box-shadow: inset 3px 0 0 var(--color-purple) !important;
   }
 
   .mobile-drawer-flyout__count {
     flex-shrink: 0;
     font-size: 14px;
     font-weight: 700;
-    color: #733e87;
+    color: var(--color-primary);
   }
 
   .sidebar.sidebar--mobile-drawer.mobile-drawer-flyout-open .sidebar-menu-area {

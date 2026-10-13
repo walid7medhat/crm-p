@@ -1269,8 +1269,8 @@ const decodeFiltersFromQuery = async (query) => {
   display: inline-block;
   text-align: center;
   width: 100%;
-  background: #733E87;
-  color: #ffffff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 500;
   border-radius: 10px;
   padding: 8px 0;
@@ -1280,7 +1280,7 @@ const decodeFiltersFromQuery = async (query) => {
 }
 
 .view-more-btn:hover {
-  background: #111;
+  background: #581c87;
   color: #fff;
 }
 
@@ -1508,8 +1508,8 @@ const decodeFiltersFromQuery = async (query) => {
 
 
 .status-badge {
-   background: #6b21a8 ;
-  color: white;
+   background: var(--gradient-primary) !important ;
+  color: #ffffff !important;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.7rem;
@@ -1528,7 +1528,7 @@ const decodeFiltersFromQuery = async (query) => {
 
 .property-listed-date i {
   font-size: 0.8rem;
-  color: #733E87;
+  color: var(--color-primary);
 }
 
 .justify-between{

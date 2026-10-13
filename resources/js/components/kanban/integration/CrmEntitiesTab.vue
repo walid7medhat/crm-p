@@ -183,8 +183,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .entity-card.selected {
-    border-color: #6b21a8;
-    background: #6b21a8;
+    border-color: var(--color-primary);
+    background: var(--gradient-primary) !important;
     box-shadow: 0px 2px 8px rgba(1, 6, 44, 0.15);
 }
 
@@ -200,7 +200,7 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .entity-card.selected .entity-icon {
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .entity-label {
@@ -260,8 +260,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .expert-mode-checkbox:checked {
-    background-color: #733E87;
-    border-color: #733E87;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .expert-mode-checkbox:checked::after {
@@ -278,7 +278,7 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .expert-mode-checkbox:hover {
-    border-color: #733E87;
+    border-color: var(--color-primary);
 }
 
 .expert-mode-label {
@@ -357,8 +357,8 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .duplicate-checkbox:checked {
-    background-color: #733E87;
-    border-color: #733E87;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .duplicate-checkbox:checked::after {
@@ -375,7 +375,7 @@ watch(duplicateHandling, (newVal) => {
 }
 
 .duplicate-checkbox:hover {
-    border-color: #733E87;
+    border-color: var(--color-primary);
 }
 
 .duplicate-label {

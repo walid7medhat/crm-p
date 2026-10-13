@@ -46,7 +46,7 @@ export function useAssetsManagement() {
   const kpiCards = computed(() => {
     const s = statistics.value
     return [
-      { key: 'total', label: 'Total Assets', value: s.total_assets ?? 0, icon: 'lucide:package', bgColor: 'rgba(115, 62, 135, 0.12)', iconColor: '#733E87' },
+      { key: 'total', label: 'Total Assets', value: s.total_assets ?? 0, icon: 'lucide:package', bgColor: 'rgba(var(--color-purple-rgb), 0.12)', iconColor: 'var(--color-purple)' },
       { key: 'assigned', label: 'Assigned Assets', value: s.assigned ?? 0, icon: 'lucide:user-check', bgColor: '#e0f2fe', iconColor: '#0284c7' },
       { key: 'available', label: 'Available Assets', value: s.available ?? 0, icon: 'lucide:box', bgColor: '#e8f8ed', iconColor: '#16a34a' },
       { key: 'maintenance', label: 'Under Maintenance', value: s.maintenance ?? 0, icon: 'lucide:wrench', bgColor: '#fff7ed', iconColor: '#ea580c' },

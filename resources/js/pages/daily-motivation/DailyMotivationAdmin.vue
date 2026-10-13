@@ -310,8 +310,8 @@ onMounted(async () => {
 }
 
 .edge-btn--start {
-  color: #fff;
-  background: #733e87;
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
 }
 
 .edge-btn--stop {
@@ -399,18 +399,18 @@ onMounted(async () => {
 }
 
 .edge-page.is-current {
-  color: #fff;
-  background: #733e87;
-  border-color: #733e87;
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
 }
 
 .edge-message span:first-child {
-  color: #733e87;
+  color: var(--color-primary);
   font-weight: 700;
 }
 
 .edge-message.is-selected {
-  outline: 2px solid #733e87;
+  outline: 2px solid var(--color-primary);
 }
 
 .edge-modal {

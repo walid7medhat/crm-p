@@ -917,8 +917,8 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
    .unit-select-option-*) stayed gray-on-purple and was unreadable, since those classes
    set their own color and win over an inherited one. */
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-  background: #733E87 !important;
-  color: #fff !important;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 :deep(.custom-v-select .vs__dropdown-option--highlight .text-muted),
 :deep(.custom-v-select .vs__dropdown-option--highlight .small),
@@ -1004,8 +1004,8 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 12px !important; color: #9ca3af; text-align: left; }
 :deep(.custom-v-select .vs__placeholder) { font-size: 12px !important; color: #9ca3af; text-align: left; }
 :deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
-:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff; }
-:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #733E87; color: #fff; font-weight: 600; }
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: var(--gradient-primary) !important; color: #ffffff !important; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: var(--gradient-primary) !important; color: #ffffff !important; font-weight: 600; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
 :deep(.custom-v-select-inline .vs__selected) { font-size: 11px; font-weight: 500; color: #64748b; }
@@ -1178,7 +1178,7 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 
 .btn-add-property {
   background: transparent;
-  border: 1px solid #6b21a8;
+  border: 1px solid var(--color-primary);
   border-radius: 100px;
   padding: 8px 20px;
   font-size: 13px;
@@ -1191,8 +1191,8 @@ watch(() => localProperty.value.property_type_id, (newTypeId) => {
 }
 
 .btn-add-property:hover {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 /* Budget Dropdown Styles - نفس نظام Lead Search */
 .budget-field-wrap {

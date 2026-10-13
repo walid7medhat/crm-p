@@ -303,7 +303,7 @@ onMounted(() => {
     background-size: 18px 18px !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
-    box-shadow: 0px 0px 5px 4px #733E8726 !important;
+    box-shadow: 0px 0px 5px 4px rgba(var(--color-purple-rgb), 0.15) !important;
     border-radius: 4px !important;
 }
 
@@ -333,7 +333,7 @@ onMounted(() => {
     right: -61px;
     width: 83px;
     height: 49px;
-    color: rgb(255, 255, 255);
+    color: #ffffff !important;
     font-size: 18px;
     line-height: 1;
     box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
@@ -343,10 +343,10 @@ onMounted(() => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(115, 62, 135, 0.75);
+    border-color: rgba(var(--color-purple-rgb), 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
+    background: var(--gradient-primary) !important;
     padding: 0px;
     transition: filter 0.2s;;
 }
@@ -372,9 +372,9 @@ onMounted(() => {
 }
 
 .tab-btn.active {
-    background: #6b21a8;
-    color: #fff;
-    border-color: #6b21a8;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary);
     font-weight: 500;
 }
 
@@ -481,12 +481,12 @@ onMounted(() => {
 }
 
 .btn-apply {
-    background: #000;
+    background: var(--gradient-primary) !important;
     border: none;
     padding: 10px 25px;
     border-radius: 100px;
     font-size: 14px;
-    color: #fff;
+    color: #ffffff !important;
 }
 
 .text-muted {

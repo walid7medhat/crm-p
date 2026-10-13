@@ -1073,8 +1073,8 @@ export default {
 }
 
 :deep(.advanced-select .crm-searchable-select .vs__dropdown-option--highlight) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .text-right {

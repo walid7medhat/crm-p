@@ -355,8 +355,8 @@ watch(show, (v) => {
   outline: none;
 }
 .recipients-add input:focus{
-  border-color: #733e87;
-  box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
 }
 .recipients-toolbar{
   display:flex;
@@ -382,10 +382,10 @@ watch(show, (v) => {
 .recipient-item.is-selected{
   background: #f6f0fa;
   border-color: #e4d4ee;
-  box-shadow: inset 3px 0 0 #733e87;
+  box-shadow: inset 3px 0 0 var(--color-purple);
 }
 .recipient-item input{
-  accent-color: #733e87;
+  accent-color: var(--color-purple);
   width: 16px;
   height: 16px;
   flex-shrink: 0;
@@ -404,7 +404,7 @@ watch(show, (v) => {
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 700;
-  color: #733e87;
+  color: var(--color-primary);
   background: #faf7fc;
   border: 1px solid #efe6f5;
   border-radius: 999px;

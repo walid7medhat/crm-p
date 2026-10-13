@@ -441,27 +441,27 @@ const resetModal = () => {
 }
 
 .tab-button.active {
-    background: #6b21a8;
-    color: #FFFFFF;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-weight: 600;
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
 }
 
 .tab-button.active:hover {
-    background: #6b21a8;
-    color: #FFFFFF;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 /* استايل جديد للتاب المكتمل */
 .tab-button.completed {
-    background: #6b21a8;
-    color: #FFFFFF;
-    border-color: #6b21a8;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary);
 }
 
 .tab-button.completed:hover {
-    background: #733E87;
-    border-color: #733E87;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .tab-number {
@@ -511,7 +511,7 @@ const resetModal = () => {
 
 .custom-input-field:focus {
     outline: none;
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
 }
 
@@ -603,8 +603,8 @@ const resetModal = () => {
 }
 
 .next-btn {
-    background: #6b21a8;
-    color: #FFFFFF;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 .next-btn:hover:not(:disabled) {
@@ -618,14 +618,14 @@ const resetModal = () => {
 
 /* زر Save الجديد */
 .save-btn {
-    background: #733E87;
-    color: #FFFFFF;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-weight: 600;
     padding: 10px 24px;
 }
 
 .save-btn:hover:not(:disabled) {
-    background: #733E87;
+    background: var(--gradient-primary) !important;
 }
 
 .save-btn:disabled {

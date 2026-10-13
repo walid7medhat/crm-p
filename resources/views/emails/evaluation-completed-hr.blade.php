@@ -16,7 +16,7 @@
             <td style="padding: 40px 20px;">
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(11, 7, 54, 0.12);">
                     <tr>
-                        <td style="padding: 40px 40px 24px 40px; text-align: center; background: linear-gradient(135deg, #0B0736 0%, #733E87 100%);">
+                        <td style="padding: 40px 40px 24px 40px; text-align: center; background: linear-gradient(135deg, #0B0736 0%, #6b21a8 100%);">
                             <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Evaluation Completed</h1>
                             <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.85);">{{ $milestoneMonths }}-month review</p>
                         </td>

@@ -416,7 +416,7 @@ const updateResponsiblePerson = async () => {
     align-items: center;
     justify-content: center;
     background: #f7f1fa;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 13px;
 }
 .person-hover-name {
@@ -432,7 +432,7 @@ const updateResponsiblePerson = async () => {
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
@@ -462,12 +462,12 @@ const updateResponsiblePerson = async () => {
 .person-card-pop-leave-active { transition: opacity 0.14s ease, transform 0.14s ease; }
 .person-card-pop-enter-from,
 .person-card-pop-leave-to { opacity: 0; transform: translateY(4px) scale(0.98); }
-.edit-person-btn { text-decoration: none; color: #733E87; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.edit-person-btn { text-decoration: none; color: var(--color-primary); font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
 .edit-icon { font-size: 14px; }
 .person-list-scroll { max-height: 350px; overflow-y: auto; padding-right: 5px; }
 .person-item { cursor: pointer; border-radius: 8px; transition: all .2s; margin-bottom: 4px; border: 1px solid transparent; }
-.person-item:hover { background: #F8FAFC; border-color: #733E87; }
-.person-item.selected { background: #FFFBEB; border-color: #733E87; }
+.person-item:hover { background: #F8FAFC; border-color: var(--color-primary); }
+.person-item.selected { background: #FFFBEB; border-color: var(--color-primary); }
 .person-item.current { background: #F0F9FF; }
 .person-item-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 .person-item-name { font-weight: 600; font-size: 14px; color: #1E293B; }

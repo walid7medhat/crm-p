@@ -27,7 +27,7 @@ export const BRAND_COLORS = {
   navy: '#0b0736',
   navyMid: '#2a1548',
   purple: '#7c5cbf',
-  purpleDark: '#5b3d8f',
+  purpleDark: '#581c87',
   gold: '#f59e0b',
   goldLegacy: '#FAA300',
   gray: '#94a3b8',

@@ -883,7 +883,7 @@ async function submitReview() {
             title: 'Missing Review',
             text: 'Please provide your review text',
             icon: 'warning',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
         return
     }
@@ -893,7 +893,7 @@ async function submitReview() {
             title: 'Review Too Long',
             text: 'Review cannot exceed 500 characters',
             icon: 'warning',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
         return
     }
@@ -912,7 +912,7 @@ async function submitReview() {
                 title: 'Success!',
                 text: isEditingReview.value ? 'Review updated successfully' : 'Review submitted successfully',
                 icon: 'success',
-                confirmButtonColor: '#6b21a8',
+                confirmButtonColor: 'var(--color-purple)',
                 timer: 1500,
                 showConfirmButton: false
             })
@@ -930,7 +930,7 @@ async function submitReview() {
             title: 'Error!',
             text: err.response?.data?.message || 'Failed to submit review',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     }
 }
@@ -957,7 +957,7 @@ async function deleteReview() {
                 title: 'Deleted!',
                 text: 'Review deleted successfully',
                 icon: 'success',
-                confirmButtonColor: '#6b21a8',
+                confirmButtonColor: 'var(--color-purple)',
                 timer: 1500,
                 showConfirmButton: false
             })
@@ -971,7 +971,7 @@ async function deleteReview() {
             title: 'Error!',
             text: 'Failed to delete review',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     }
 }
@@ -985,7 +985,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     }
 }
@@ -999,7 +999,7 @@ function viewPropertyFromModal(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     }
 }
@@ -1059,7 +1059,7 @@ async function fetchMyOrders() {
             title: 'Error!',
             text: 'Failed to load orders',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     } finally {
         loading.value = false
@@ -1162,7 +1162,7 @@ async function cancelOrder(order) {
             title: 'Error!',
             text: err?.response?.data?.message || 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     }
 }
@@ -1199,7 +1199,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: '#6b21a8'
+                confirmButtonColor: 'var(--color-purple)'
             })
             showConvertModal.value = false
             await fetchMyOrders()
@@ -1212,7 +1212,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: '#6b21a8'
+            confirmButtonColor: 'var(--color-purple)'
         })
     }
 }
@@ -1473,8 +1473,8 @@ onUnmounted(() => {
 <style scoped>
 /* Tab count badges */
 .tab-count {
-    background: #6b21a8;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     border-radius: 12px;
     padding: 2px 8px;
     font-size: 11px;
@@ -1505,8 +1505,8 @@ onUnmounted(() => {
 }
 
 .tab-btn.active {
-    background: #6b21a8;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 .tab-btn:hover:not(.active) {
@@ -1576,14 +1576,14 @@ onUnmounted(() => {
 
 /* Refresh button styles */
 .btn-outline-primary {
-    border: 1px solid #6b21a8;
+    border: 1px solid var(--color-primary);
     color: #0B0736;
     background: transparent;
 }
 
 .btn-outline-primary:hover:not(:disabled) {
-    background: #6b21a8;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 .btn-outline-primary:disabled {

@@ -99,8 +99,8 @@ function reveal() {
   height: 32px;
   flex: none;
   border-radius: 10px;
-  color: #ffffff;
-  background: linear-gradient(160deg, #6b21a8, #733e87);
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
   font-size: 16px;
 }
 
@@ -111,7 +111,7 @@ function reveal() {
 
 .edge-card__kicker {
   margin: 0;
-  color: #733e87;
+  color: var(--color-primary);
   font-size: 11px !important;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -133,14 +133,14 @@ function reveal() {
   flex: none;
   border: 0;
   border-radius: 999px;
-  color: #733e87;
+  color: var(--color-primary);
   background: #f5f6fa;
   cursor: pointer;
 }
 
 .edge-card__close:focus-visible,
 .flip:focus-visible {
-  outline: 2px solid #733e87;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -187,10 +187,10 @@ function reveal() {
   position: relative;
   align-items: flex-start;
   overflow: hidden;
-  color: #ffffff;
+  color: var(--color-primary);
   background:
     radial-gradient(80% 80% at 100% 0%, rgba(255, 255, 255, 0.22), transparent 46%),
-    linear-gradient(155deg, #6b21a8, #733e87 58%, #0b0736);
+    var(--color-purple-light);
 }
 
 .face--front iconify-icon {
@@ -254,8 +254,8 @@ function reveal() {
   margin: 0 0 8px;
   padding: 2px 8px;
   border-radius: 999px;
-  color: #ffffff;
-  background: #733e87;
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
   font-size: 11px !important;
   font-weight: 700;
 }

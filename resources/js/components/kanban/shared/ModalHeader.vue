@@ -36,31 +36,37 @@ defineEmits(['close'])
     color: #0B0736;
 }
 
- .header-close-btn-top{
-            position: absolute;
-            top: 8px;
-            right: -61px;
-            width: 83px;
-            height: 49px;
-            color: rgb(255, 255, 255);
-            font-size: 18px;
-            line-height: 1;
-            box-shadow: rgba(15, 23, 42, 0.2) 0px 8px 16px;
-            z-index: -1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-width: 1px;
-            border-style: solid;
-            border-color: rgba(115, 62, 135, 0.75);
-            border-image: initial;
-            border-radius: 999px;
-            background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
-            padding: 0px;
-            transition: filter 0.2s;
-      }
+.header-close-btn-top {
+    position: relative;
+    top: auto;
+    right: auto;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: #ffffff !important;
+    box-shadow:
+        0 0 0 3px rgba(var(--color-primary-rgb), 0.22),
+        0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
 .header-close-btn-top:hover {
-    opacity: 0.7;
+    color: #ffffff !important;
+    background: var(--gradient-primary-hover);
+    transform: scale(1.06);
+}
+.header-close-btn-top iconify-icon,
+.header-close-btn-top svg {
+    color: #ffffff !important;
+    width: 16px;
+    height: 16px;
 }
 
 @media (max-width: 768px) {
@@ -83,22 +89,9 @@ defineEmits(['close'])
         position: relative;
         top: auto;
         right: auto;
-        flex-shrink: 0;
-        width: 40px;
-        height: 40px;
-        border-radius: 999px;
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        margin-bottom: 0;
-        font-size: 20px;
-        color: #0b0736;
-        box-shadow: none;
-        z-index: 2;
-    }
-
-    .header-close-btn-top :deep(iconify-icon),
-    .header-close-btn-top :deep(svg) {
-        color: #0b0736 !important;
+        width: 34px;
+        height: 34px;
+        color: #ffffff !important;
     }
 }
 </style>

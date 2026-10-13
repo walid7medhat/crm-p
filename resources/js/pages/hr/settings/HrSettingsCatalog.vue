@@ -287,7 +287,7 @@ defineExpose({ closeForm })
   cursor: pointer;
 }
 .hr-set-item.is-selected {
-  border-color: #6b21a8 !important;
+  border-color: var(--color-primary) !important;
   background: #f4f2f8;
   box-shadow: inset 3px 0 0 #0b0736;
 }
@@ -337,8 +337,8 @@ defineExpose({ closeForm })
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -448,7 +448,7 @@ defineExpose({ closeForm })
 .hr-set-form-dialog__body .hr-set-field select:focus,
 .hr-set-form-dialog__body .hr-set-field textarea:focus {
   outline: none;
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.1);
 }
 
@@ -504,7 +504,7 @@ defineExpose({ closeForm })
 }
 
 .hr-set-form-dialog__body .hr-set-switch input:checked + .hr-set-switch__track {
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
 }
 
 .hr-set-form-dialog__body .hr-set-switch input:checked + .hr-set-switch__track::after {
@@ -541,9 +541,9 @@ defineExpose({ closeForm })
 }
 
 .hr-set-form-dialog__foot .hr-set-btn--primary {
-  background: #6b21a8;
-  border-color: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
 }
 
 .hr-set-form-dialog__foot .hr-set-btn--primary:disabled {

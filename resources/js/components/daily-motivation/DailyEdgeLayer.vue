@@ -169,9 +169,9 @@ onUnmounted(() => {
   padding: 10px 14px;
   border: 0;
   border-radius: 999px;
-  color: #ffffff;
-  background: #733e87;
-  box-shadow: 0 10px 24px rgba(115, 62, 135, 0.28);
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
+  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.28);
   font-family: Inter, system-ui, sans-serif;
   font-size: 13px;
   font-weight: 650;

@@ -694,13 +694,13 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .btn-save {
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   border: none;
   padding: 8px 24px;
   border-radius: 100px;
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
+  color: #ffffff !important;
   cursor: pointer;
 }
 .btn-save:hover:not(:disabled) {

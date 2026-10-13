@@ -160,7 +160,7 @@ const apply = () => {
   color: #666;
   position: relative;
 }
-.tab-btn.active { background: #6b21a8; color: #fff; border-color: #6b21a8; }
+.tab-btn.active { background: var(--gradient-primary) !important; color: #ffffff !important; border-color: var(--color-primary); }
 .check-badge {
   position: absolute;
   top: -6px;
@@ -210,7 +210,7 @@ const apply = () => {
   background-size: 18px 18px !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
-  box-shadow: 0 0 5px 4px #733E8726 !important;
+  box-shadow: 0 0 5px 4px rgba(var(--color-purple-rgb), 0.15) !important;
 }
 .btn-cancel {
   background: #f4f4f4;
@@ -221,12 +221,12 @@ const apply = () => {
   color: #0B0736;
 }
 .btn-apply {
-  background: #000;
+  background: var(--gradient-primary) !important;
   border: none;
   padding: 9px 28px;
   border-radius: 100px;
   font-size: 14px;
-  color: #fff;
+  color: #ffffff !important;
 }
 .text-muted { color: #979797 !important; font-size: 13px; font-weight: 400; }
 @media (max-width: 768px) {

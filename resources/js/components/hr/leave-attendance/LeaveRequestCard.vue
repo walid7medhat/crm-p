@@ -273,7 +273,7 @@ function onAvatarError(event) {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #f3e8ff;
+  background: var(--gradient-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;

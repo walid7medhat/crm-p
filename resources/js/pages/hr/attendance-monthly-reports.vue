@@ -1022,7 +1022,7 @@ const today = new Date()
 <style scoped>
 .ar-page {
   --navy: #0b0736;
-  --purple: #733e87;
+  --purple: var(--color-purple);
   --border: #ece8f3;
   --muted: #6b7280;
   padding: 0;
@@ -1381,7 +1381,7 @@ const today = new Date()
   background: #f3f4f6;
   color: #4b5563;
 }
-.ar-pill--ok { background: #ecfdf5; color: #047857; }
+.ar-pill--ok { background: var(--color-success-soft); color: var(--color-success); }
 .ar-pill--warn { background: #fff7ed; color: #c2410c; }
 .ar-pill--orange { background: #ffedd5; color: #ea580c; }
 .ar-pill--danger { background: #fef2f2; color: #dc2626; }

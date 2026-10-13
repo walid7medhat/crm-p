@@ -85,8 +85,8 @@
 }
 
 .auth-glass-input:focus {
-  border-color: #a855f7;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
   background: #fff;
 }
 
@@ -114,20 +114,20 @@
   background: transparent;
   padding: 0;
   line-height: 1;
-  color: #7c3aed;
+  color: var(--color-primary);
 }
 
 .auth-glass-link {
   display: inline-block;
   margin-top: 5px;
   font-size: clamp(0.72rem, 0.95vw, 0.82rem);
-  color: #7c3aed;
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: 500;
 }
 
 .auth-glass-link:hover {
-  color: #6d28d9;
+  color: #581c87;
   text-decoration: underline;
 }
 
@@ -172,15 +172,22 @@
 }
 
 .auth-glass-btn--primary {
-  background: linear-gradient(135deg, #d946ef 0%, #a855f7 45%, #7c3aed 100%);
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   border-color: transparent;
   font-weight: 700;
-  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.28);
+  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.28);
 }
 
 .auth-glass-btn--primary:hover:not(:disabled) {
-  filter: brightness(1.05);
+  filter: none;
+  background: var(--gradient-primary-hover) !important;
+  color: #fff;
+}
+
+.auth-glass-btn--primary:active:not(:disabled) {
+  filter: none;
+  background: var(--gradient-primary-active) !important;
   color: #fff;
 }
 
@@ -231,7 +238,7 @@
 }
 
 .auth-glass-pill-link:hover {
-  background: #f3e8ff;
+  background: var(--gradient-primary);
   border-color: #d8b4fe;
   color: #0f172a;
 }
@@ -489,8 +496,8 @@
   }
 
   .auth-glass-input:focus {
-    border-color: #733e87;
-    box-shadow: 0 0 0 4px rgba(115, 62, 135, 0.14);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px var(--color-focus-ring);
     background: #fff;
   }
 
@@ -502,7 +509,7 @@
     left: 18px;
     right: auto;
     font-size: 1.15rem;
-    color: #733e87;
+    color: var(--color-primary);
   }
 
   .auth-glass-input__icon--clickable {
@@ -539,17 +546,22 @@
 
   .auth-glass-btn--primary {
     flex: 1 1 100%;
-    background: #733e87;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-weight: 700;
-    box-shadow: 0 12px 24px rgba(115, 62, 135, 0.28);
+    box-shadow: 0 12px 24px rgba(var(--color-purple-rgb), 0.28);
   }
 
-  .auth-glass-btn--primary:hover:not(:disabled),
+  .auth-glass-btn--primary:hover:not(:disabled) {
+    filter: none;
+    background: var(--gradient-primary-hover) !important;
+    color: var(--color-on-primary);
+  }
+
   .auth-glass-btn--primary:active:not(:disabled) {
     filter: none;
-    background: #01062d;
-    color: #fff;
+    background: var(--gradient-primary-active) !important;
+    color: var(--color-on-primary);
   }
 
   .auth-glass-divider {
@@ -580,7 +592,7 @@
   .auth-glass-pill-link:hover {
     background: transparent;
     border-color: transparent;
-    color: #733e87;
+    color: var(--color-primary);
   }
 
   .auth-glass-footer-link,
@@ -593,7 +605,7 @@
 
   .auth-glass-footer-link:hover,
   .auth-glass-footer-link--policy:hover {
-    color: #733e87;
+    color: var(--color-primary);
   }
 
   .auth-glass-success,

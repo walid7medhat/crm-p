@@ -480,7 +480,7 @@ onUnmounted(() => {
 }
 
 .activity-control-icon.bell-icon {
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .activity-control-text {
@@ -515,12 +515,12 @@ onUnmounted(() => {
 }
 
 .btn-save {
-    background: #6b21a8;
+    background: var(--gradient-primary) !important;
     border: none;
     padding: 5px 20px;
     border-radius: 100px;
     font-size: 14px;
-    color: #fff;
+    color: #ffffff !important;
     font-weight: 400;
     display: flex;
     align-items: center;
@@ -617,8 +617,8 @@ onUnmounted(() => {
 }
 
 .reminder-checkbox.checked {
-    background: #733E87;
-    border-color: #733E87;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .check-icon {

@@ -1223,8 +1223,8 @@ export default {
 }
 
 .users-search:focus-within {
-    border-color: #733e87;
-    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.12);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
 }
 
 .users-search__icon {
@@ -1332,9 +1332,9 @@ export default {
 }
 
 .agents-mobile__chip.is-on {
-    background: #6b21a8;
-    border-color: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
 }
 
 .agents-mobile__bar {
@@ -1377,7 +1377,7 @@ export default {
     border-radius: 12px;
     border: 1px solid #efe6f6;
     background: #f6f1fb;
-    color: #6b21a8;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1388,9 +1388,9 @@ export default {
 }
 
 .agents-mobile__tool--add {
-    background: #6b21a8;
-    border-color: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
 }
 
 .agents-mobile__list {
@@ -1475,7 +1475,7 @@ export default {
     padding: 4px 8px;
     border-radius: 999px;
     background: #f6f1fb;
-    color: #6b21a8;
+    color: var(--color-primary);
 }
 
 .agents-mobile__branch {
@@ -1540,7 +1540,7 @@ export default {
     border: none;
     border-radius: 10px;
     background: #f6f1fb;
-    color: #6b21a8;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1586,15 +1586,15 @@ export default {
     width: 14px;
     left: 2px;
     bottom: 4px;
-    background-color: #6b21a8;
+    background: var(--gradient-primary) !important;
     transition: .4s;
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .toggle-input:checked + .toggle-slider {
-    background-color: #6b21a8;
-    border-color: #6b21a8;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .toggle-input:checked + .toggle-slider:before {

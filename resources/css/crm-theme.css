@@ -1,0 +1,73 @@
+/**
+ * CRM color theme — single source of truth.
+ * Change a token here and every style that uses it updates.
+ *
+ * The boot splash in resources/views/welcome.blade.php copies the brand
+ * values onto #boot-splash only. They must not be declared on :root there:
+ * that style tag is parsed after the Vite stylesheet and would override
+ * these tokens for the whole app.
+ */
+:root {
+  /* Brand. Text and borders need a solid color; filled surfaces use the gradient. */
+  --color-primary: #733E87;
+  --color-primary-hover: #5c3270;
+  --color-primary-active: #4a285c;
+  --color-primary-rgb: 115, 62, 135;
+  --color-primary-hover-rgb: 92, 50, 112;
+  --color-primary-active-rgb: 74, 40, 92;
+  /* Gold is mixed over the solid brand so white type stays readable. */
+  --gradient-primary:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(212, 175, 55, 0.38) 100%),
+    rgb(115, 62, 135);
+  --gradient-primary-hover:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(212, 175, 55, 0.46) 100%),
+    rgb(92, 50, 112);
+  --gradient-primary-active:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.12) 0%, rgba(184, 148, 42, 0.4) 100%),
+    rgb(74, 40, 92);
+
+  /* Tints used behind the brand fill */
+  --color-primary-soft: #f7f2f8;
+  --color-primary-border: #e7dcec;
+  --color-primary-muted: #d4c0de;
+  --color-primary-glow: #d4af37;
+  --color-primary-bright: #8f5aa3;
+  --color-primary-ink: #3f2148;
+
+  /* Text and surfaces */
+  --color-on-primary: #ffffff;
+  --color-text-primary: #171717;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #6b7280;
+  --color-text-nav: #4b4568;
+  --color-background: #f3f2f6;
+  --color-background-plain: #f6f7f6;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f5f7;
+  --color-surface-hover: #f3f4f6;
+  --color-border: #e8e6ee;
+  --color-border-strong: #e2e8f0;
+
+  /* Semantic roles. These follow the brand unless noted. */
+  --color-accent: var(--color-primary);
+
+  /* Existing purple accent. Separate from the brand. */
+  --color-purple: #6b21a8;
+  --color-purple-rgb: 107, 33, 168;
+  --color-purple-light: #e9d5ff;
+  --color-tab-active: var(--color-primary);
+  --color-tab-inactive: var(--color-text-nav);
+  --color-tab-track: var(--color-surface-muted);
+  --color-button-primary: var(--color-primary);
+  --color-button-primary-hover: var(--color-primary-hover);
+  --color-button-secondary: var(--color-surface-muted);
+  --color-button-secondary-text: var(--color-text-primary);
+  --color-focus-ring: rgba(var(--color-primary-rgb), 0.16);
+  --color-primary-ring: rgba(var(--color-primary-rgb), 0.22);
+
+  /* Status colors stay independent of the brand. */
+  --color-success: #198754;
+  --color-success-soft: #dcfce7;
+  --color-danger: #dc3545;
+  --color-warning: #f4a100;
+}

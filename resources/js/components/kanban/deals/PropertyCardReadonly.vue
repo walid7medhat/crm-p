@@ -1536,7 +1536,7 @@ onBeforeUnmount(() => {
 }
 .section-edit-btn:hover {
   background: #fef3c7;
-  border-color: #733E87;
+  border-color: var(--color-primary);
 }
 .input-group {
   display: flex;
@@ -1764,8 +1764,8 @@ onBeforeUnmount(() => {
 }
 
 .property-card-edit-bottom-bar .edit-bar-save {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .property-card-edit-bottom-bar .edit-bar-save:hover:not(:disabled) {

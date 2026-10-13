@@ -1208,15 +1208,15 @@ const $showNotification = (message, type = 'info') => {
      border-radius: 999px;
     padding: 4px 14px;
     min-height: 30px;
-    background: linear-gradient(90deg, #12b981, #22c55e);
-    border: 1px solid #16a34a;
-    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.45);
+    background: var(--gradient-primary);
+    border: 1px solid var(--color-primary-hover);
+    box-shadow: 0 2px 6px rgba(var(--color-primary-rgb), 0.45);
     transition: all 0.2s ease;
 }
 
 .btn-create-new:hover {
-   background: linear-gradient(90deg, #16a34a, #22c55e);
-    border-color: #15803d;
+   background: var(--gradient-primary-hover);
+    border-color: var(--color-primary-active);
 }
 
 .action-icon-btn {

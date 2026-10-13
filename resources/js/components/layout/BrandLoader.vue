@@ -13,6 +13,7 @@
       </div>
       <p class="brand-loader__name"><span>ALT</span> CRM</p>
       <p class="brand-loader__label">{{ label }}</p>
+      <span class="brand-loader__bar" aria-hidden="true"><i /></span>
     </div>
   </div>
 </template>
@@ -40,7 +41,7 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7f4fb;
+  background: #f6f7f6;
 }
 
 .brand-loader--inline {
@@ -56,7 +57,7 @@ defineProps({
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 0;
   background: transparent;
   border: 0;
@@ -65,8 +66,8 @@ defineProps({
 
 .brand-loader__mark {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
 }
@@ -75,52 +76,76 @@ defineProps({
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(115, 62, 135, 0.08), #733e87 40%, rgba(115, 62, 135, 0));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  background: conic-gradient(from 0deg, rgba(var(--color-primary-rgb), 0.08), var(--color-primary) 40%, rgba(var(--color-primary-rgb), 0));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   animation: brand-loader-spin 0.7s linear infinite;
 }
 
 .brand-loader__core {
-  width: 40px;
-  height: 40px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #fff;
-  color: #733e87;
-  font-size: 18px !important;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 12px !important;
   font-weight: 800;
-  box-shadow: 0 8px 20px rgba(115, 62, 135, 0.16);
+  box-shadow: none;
 }
 
 .brand-loader__name {
   margin: 0;
-  font-size: 13px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.2em;
-  color: #1a1528;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em;
+  color: #171717;
   line-height: 1;
 }
 
 .brand-loader__name span {
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .brand-loader__label {
   margin: 0;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #6b7280;
+}
+
+.brand-loader__bar {
+  width: 64px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  overflow: hidden;
+}
+
+.brand-loader__bar i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-primary);
+  animation: brand-loader-bar 1.1s ease-in-out infinite;
 }
 
 @keyframes brand-loader-spin {
   to { transform: rotate(360deg); }
 }
 
-@keyframes brand-loader-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+@keyframes brand-loader-bar {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(280%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader__ring,
+  .brand-loader__bar i {
+    animation: none;
+  }
 }
 </style>

@@ -1260,7 +1260,7 @@ const save = async () => {
 }
 
 .lpb-val--ok {
-  color: #047857;
+  color: var(--color-primary-ink);
 }
 
 .lpb-val--warn {

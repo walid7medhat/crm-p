@@ -276,8 +276,8 @@ export default {
   padding: 10px 16px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #6b21a8 0%, #733e87 100%);
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-size: 13px;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(11, 7, 54, 0.35);

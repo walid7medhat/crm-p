@@ -116,7 +116,7 @@
   }
 
   // Call the function for each chart with the desired ID and color
-  createChart('new-user-chart', '#733E87');
+  createChart('new-user-chart', '#6b21a8');
   createChart('active-user-chart', '#45b369');
   createChart('total-sales-chart', '#f4941e');
   createChart('conversion-user-chart', '#8252e9');
@@ -250,7 +250,7 @@
     var chart = new ApexCharts(document.querySelector(`#${chartId}`), options);
     chart.render();
   }
-  createChartTwo('revenue-chart', '#733E87');
+  createChartTwo('revenue-chart', '#6b21a8');
   // ================================ Revenue Growth Area Chart End ================================ 
 
   // ================================ Earning Statistics bar chart Start ================================ 
@@ -315,7 +315,7 @@
       },
       fill: {
           type: 'gradient',
-          colors: ['#733E87'], // Set the starting color (top color) here
+          colors: ['#6b21a8'], // Set the starting color (top color) here
           gradient: {
               shade: 'light', // Gradient shading type
               type: 'vertical',  // Gradient direction (vertical)
@@ -360,7 +360,7 @@
   // ================================ Custom Overview Donut chart Start ================================ 
     var options = { 
       series: [500, 500, 500],
-      colors: ['#45B369', '#FF9F29', '#733E87'],
+      colors: ['#45B369', '#FF9F29', '#6b21a8'],
       labels: ['Active', 'New', 'Total'] ,
       legend: {
           show: false 
@@ -551,11 +551,11 @@
       series: {
           regions: [{
               values: {
-                  "US": '#733E87 ',
-                  "SA": '#733E87',
-                  "AU": '#733E87',
-                  "CN": '#733E87',
-                  "GB": '#733E87',
+                  "US": '#6b21a8 ',
+                  "SA": '#6b21a8',
+                  "AU": '#6b21a8',
+                  "CN": '#6b21a8',
+                  "GB": '#6b21a8',
               },
               attribute: 'fill'
           }]

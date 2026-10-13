@@ -1,0 +1,98 @@
+/* One close control for popups: round, white X, soft ring. */
+button.view-lead-close-btn.view-lead-close-btn,
+button.header-close-btn-top.header-close-btn-top,
+button.owner-modal-close.owner-modal-close,
+button.close-btn-custom.close-btn-custom,
+button.email-modal-close.email-modal-close,
+button.vacation-modal-close.vacation-modal-close,
+button.add-viewing-close.add-viewing-close,
+button.announcement-viewer__close.announcement-viewer__close,
+button.project-about-modal__close.project-about-modal__close,
+button.la-reject-modal__close.la-reject-modal__close,
+button.profile-panel-close.profile-panel-close,
+button.lr-close-btn.lr-close-btn,
+button.mobile-kanban-sheet__close.mobile-kanban-sheet__close,
+button.mobile-more-sheet__close.mobile-more-sheet__close,
+button.mobile-dock-sheet__close.mobile-dock-sheet__close,
+button.hr-mob-nav-sheet__close.hr-mob-nav-sheet__close,
+button.lead-bulk-panel__close.lead-bulk-panel__close,
+button.asset-user-close-btn.asset-user-close-btn,
+button.bayut-sheet__close.bayut-sheet__close,
+button.mobile-filter-close.mobile-filter-close,
+.modal button.close-btn.close-btn,
+.modal-header > button.btn-close.btn-close,
+.swal2-popup button.swal2-close.swal2-close {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 50% !important;
+  background-color: var(--color-button-primary) !important;
+  background-image: none !important;
+  color: var(--color-on-primary) !important;
+  -webkit-text-fill-color: var(--color-on-primary) !important;
+  box-shadow:
+    0 0 0 3px rgba(var(--color-primary-rgb), 0.22),
+    0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28) !important;
+  opacity: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  flex: 0 0 34px !important;
+}
+
+button.view-lead-close-btn.view-lead-close-btn:hover,
+button.header-close-btn-top.header-close-btn-top:hover,
+button.owner-modal-close.owner-modal-close:hover,
+button.close-btn-custom.close-btn-custom:hover,
+button.email-modal-close.email-modal-close:hover,
+.modal button.close-btn.close-btn:hover,
+.modal-header > button.btn-close.btn-close:hover,
+.swal2-popup button.swal2-close.swal2-close:hover {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: var(--gradient-primary-hover) !important;
+  background-image: none !important;
+  transform: scale(1.06);
+}
+
+button.view-lead-close-btn.view-lead-close-btn iconify-icon,
+button.view-lead-close-btn.view-lead-close-btn svg,
+button.header-close-btn-top.header-close-btn-top iconify-icon,
+button.header-close-btn-top.header-close-btn-top svg,
+button.owner-modal-close.owner-modal-close i,
+button.owner-modal-close.owner-modal-close svg,
+.modal button.close-btn.close-btn iconify-icon,
+.modal button.close-btn.close-btn svg,
+.modal-header > button.btn-close.btn-close {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.modal-header > button.btn-close.btn-close,
+.swal2-popup button.swal2-close.swal2-close {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M3.1 1.7 8 6.6l4.9-4.9 1.4 1.4L9.4 8l4.9 4.9-1.4 1.4L8 9.4l-4.9 4.9-1.4-1.4L6.6 8 1.7 3.1z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 12px 12px, auto !important;
+  filter: none !important;
+}
+
+.swal2-popup.swal2-toast button.swal2-close.swal2-close,
+.crm-glass-toast-popup button.swal2-close.swal2-close,
+.crm-toast-popup button.swal2-close.swal2-close {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.view-lead-close-btn.view-lead-close-btn:hover,
+  button.header-close-btn-top.header-close-btn-top:hover,
+  .modal button.close-btn.close-btn:hover {
+    transform: none;
+  }
+}

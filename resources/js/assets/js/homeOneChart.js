@@ -23,13 +23,13 @@
         opacity: 0.1,
       },
     },
-    colors: ['#733E87'], // Set color for series
+    colors: ['#6b21a8'], // Set color for series
     dataLabels: {
       enabled: false
     },
     stroke: {
       curve: 'smooth',
-      colors: ['#733E87'], // Specify the line color here
+      colors: ['#6b21a8'], // Specify the line color here
       width: 3
     },
     markers: {
@@ -93,7 +93,7 @@
         },
         fill: {
           type: 'solid',
-          color: '#733E8740',
+          color: '#6b21a840',
           // gradient: {
           //   colorFrom: '#D8E3F0',
           //   // colorTo: '#BED1E6',
@@ -158,7 +158,7 @@
       },
       fill: {
           type: 'gradient',
-          colors: ['#733E87'],
+          colors: ['#6b21a8'],
           gradient: {
               shade: 'light',
               type: 'vertical',
@@ -198,7 +198,7 @@
     // ================================ Users Overview Donut chart Start ================================ 
     var options = { 
       series: [500, 500, 500],
-      colors: ['#FF9F29', '#733E87', '#F4F0F8'],
+      colors: ['#FF9F29', '#6b21a8', '#F4F0F8'],
       labels: ['Active', 'New', 'Total'] ,
       legend: {
           show: false 
@@ -254,7 +254,7 @@
         name: 'Revenue',
         data: [15000, 18000, 19000, 20000, 35000, 20000, 18000, 13000, 18000, 38000, 14000, 16000]
       }],
-      colors: ['#733E87', '#FF9F29'],
+      colors: ['#6b21a8', '#FF9F29'],
       labels: ['Active', 'New', 'Total'],
       legend: {
           show: false 
@@ -354,11 +354,11 @@
       series: {
           regions: [{
               values: {
-                  "US": '#733E87 ',
-                  "SA": '#733E87',
-                  "AU": '#733E87',
-                  "CN": '#733E87',
-                  "GB": '#733E87',
+                  "US": '#6b21a8 ',
+                  "SA": '#6b21a8',
+                  "AU": '#6b21a8',
+                  "CN": '#6b21a8',
+                  "GB": '#6b21a8',
               },
               attribute: 'fill'
           }]

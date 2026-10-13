@@ -76,7 +76,7 @@
 
 .background-settings-page .bg-toast--ok {
   background: #ecfdf5;
-  color: #047857;
+  color: var(--color-primary-ink);
 }
 
 .background-settings-page .bg-toast--err {

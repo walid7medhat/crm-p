@@ -621,8 +621,8 @@ watch(localMappings, (newVal) => {
 }
 
 :deep(.custom-select .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.custom-select .vs__open-indicator) {
@@ -1083,13 +1083,13 @@ watch(localMappings, (newVal) => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 @media (max-width: 640px) {
@@ -1150,8 +1150,8 @@ watch(localMappings, (newVal) => {
 
 .integration-mapping-menu .vs__dropdown-option--highlight,
 .integration-mapping-menu .vs__dropdown-option--selected {
-    background: #733E87;
-    color: #FFFFFF;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 .integration-mapping-menu .meta-option {

@@ -3076,7 +3076,7 @@ const openFloorPlanSlider = (index) => {
       title: 'No Floor Plans',
       text: 'No floor plans available for this property.',
       icon: 'warning',
-      confirmButtonColor: '#6b21a8'
+      confirmButtonColor: 'var(--color-purple)'
     });
     return;
   }
@@ -3425,7 +3425,7 @@ const runPropertyMenuAction = (action) => {
           : 'This property will be hidden from listings.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#6b21a8',
+        confirmButtonColor: 'var(--color-purple)',
         cancelButtonColor: '#6c757d',
         confirmButtonText: property.value.is_archived ? 'Yes, Unarchive' : 'Yes, Archive',
         cancelButtonText: 'Cancel'
@@ -3457,7 +3457,7 @@ const runPropertyMenuAction = (action) => {
           : 'This property will be marked as active.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#6b21a8',
+        confirmButtonColor: 'var(--color-purple)',
         cancelButtonColor: '#6c757d',
         confirmButtonText: property.value.is_active ? 'Yes, Deactivate' : 'Yes, Activate',
         cancelButtonText: 'Cancel'
@@ -5290,7 +5290,7 @@ const closeCancelReasonModal = () => {
             title: 'Deleted!',
             text: 'Property has been deleted successfully.',
             icon: 'success',
-            confirmButtonColor: '#6b21a8',
+            confirmButtonColor: 'var(--color-purple)',
             timer: 2000,
             showConfirmButton: false
           });
@@ -5355,7 +5355,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Phone Not Available',
           text: 'Phone number is not available for this owner.',
           icon: 'warning',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
         return;
       }
@@ -5368,7 +5368,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Email Not Available',
           text: 'Email address is not available for this owner.',
           icon: 'warning',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
         return;
       }
@@ -5381,7 +5381,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Phone Not Available',
           text: 'Phone number is not available for WhatsApp.',
           icon: 'warning',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
         return;
       }
@@ -5428,7 +5428,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'No Images',
           text: 'No gallery images available for this property.',
           icon: 'warning',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
         return;
       }
@@ -5905,7 +5905,8 @@ const drawOfferFooter = (pdf) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
   pdf.setTextColor(255, 255, 255);
-  pdf.text('Powered By Oia Properties', 8, 142);
+  pdf.text('Powered By altcrm', 8, 142);
+  pdf.text('Oia Properties', 202, 142, { align: 'right' });
 };
 
 const darkenOfferImage = (dataUrl, amount) => new Promise((resolve) => {
@@ -6227,13 +6228,7 @@ const drawMobileDetails = async (pdf, logo) => {
     }
   }
 
-  // ---- Footer: text + thin line (same as the desktop slide) ----
-  const footY = 148 - 7 - 1.6;
-  const leftW = text('Powered By Oia Properties', left, capBaseline(footY, 2.4), { size: 2.4 });
-  const rightW = text('YOUR DREAM HOME AWAITS', right, capBaseline(footY, 2.4), { size: 2.4, spacing: 0.2, align: 'right' });
-  pdf.setDrawColor(...hexRgb('#b79bc4'));
-  pdf.setLineWidth(0.3);
-  pdf.line(left + leftW + 6, footY, right - rightW - 6, footY);
+  drawOfferFooter(pdf);
 };
 
 const drawMobileFloor = (pdf, logo) => {
@@ -6368,9 +6363,7 @@ const drawMobileThanks = async (pdf, currentUser) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(11);
   pdf.text(String(currentUser?.phone || ''), 150, 128);
-  pdf.setFontSize(8);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text('Powered By Oia Properties', 8, 142);
+  drawOfferFooter(pdf);
 };
 
 const rememberAmenitiesModel = () => {
@@ -6468,7 +6461,7 @@ const mobileOfferButtonStyle = (filled) => [
   'appearance:none',
   '-webkit-appearance:none',
   filled
-    ? 'border:0;background:#6b21a8;color:#fff;'
+    ? 'border:0;background: var(--gradient-primary) !important;color: #ffffff !important;'
     : 'margin-top:10px;border:1px solid #d5dbe6;background:#fff;color:#0B0736;',
 ].join(';');
 
@@ -6630,7 +6623,7 @@ const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }
         <p style="margin-top: 12px;">Tap Download PDF. On iPhone, choose Save to Files from the share sheet.</p>
       </div>
       <button type="button" id="offer-pdf-download"
-        style="display:inline-block;margin-top:16px;background:#6b21a8;color:#fff;padding:12px 22px;border-radius:8px;border:0;font-weight:600;">
+        style="display:inline-block;margin-top:16px;background: var(--gradient-primary) !important;color: #ffffff !important;padding:12px 22px;border-radius:8px;border:0;font-weight:600;">
         Download PDF
       </button>
     `,
@@ -6834,7 +6827,7 @@ const generatePDF = async () => {
             <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
           </div>
         `,
-        confirmButtonColor: '#6b21a8'
+        confirmButtonColor: 'var(--color-purple)'
       });
     }
 
@@ -6861,7 +6854,7 @@ const showOfferHistory = async () => {
           title: 'No Offers',
           text: 'No offers have been generated for this property yet.',
           icon: 'info',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
         return;
       }
@@ -6892,7 +6885,7 @@ const showOfferHistory = async () => {
         title: 'Offer History',
         html: html,
         width: '600px',
-        confirmButtonColor: '#6b21a8',
+        confirmButtonColor: 'var(--color-purple)',
         confirmButtonText: 'Close'
       });
     }
@@ -7313,7 +7306,7 @@ const createSlide3 = () => {
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
     const icon = imageUrl
       ? `<img src="${imageUrl}" width="13" height="13" style="width:13px !important; height:13px !important; max-width:13px !important; max-height:13px !important; display:block !important;" />`
-      : `<span style="display:block !important; width:6px !important; height:6px !important; margin:3px !important; border-radius:50% !important; background:#6b21a8 !important;"></span>`;
+      : `<span style="display:block !important; width:6px !important; height:6px !important; margin:3px !important; border-radius:50% !important; background: var(--gradient-primary) !important;"></span>`;
     return `
       <td style="display:table-cell !important; width:18px !important; vertical-align:middle !important; padding:5px 6px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; line-height:0 !important;">${icon}</td>
       <td style="display:table-cell !important; vertical-align:middle !important; padding:5px 10px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:11px !important; line-height:14px !important; color:#1e293b !important; white-space:nowrap !important;">${feature.name}</td>
@@ -7469,7 +7462,7 @@ const createSlide9 = (currentUser) => {
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.65) !important;"></div>
      <div style="position:relative !important; z-index:5 !important; width:100% !important; height:100% !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:flex-start !important; padding-top:15mm !important;">      
       <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important; font-family:'Montserrat', sans-serif !important;margin-top:20mm  !important;">Thank You!</h1>
-      <div style="position:absolute !important; bottom:12mm !important; right:14mm !important; text-align:left !important;">
+      <div style="position:absolute !important; bottom:20mm !important; right:14mm !important; text-align:left !important;">
         <p style="color:rgba(255,255,255,0.7) !important; font-size:3.5mm !important; margin:0 0 1.5mm 0 !important;">Contact</p>
         <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.name || ''}</p>
         <p style="color:#fff !important; font-size:4.5mm !important; font-weight:500 !important; margin:1mm 0 0 0 !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.phone || ''}</p>
@@ -8196,19 +8189,14 @@ const createPaymentDetailsSlide = () => {
 
 const createFooter = () => {
   return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By altcrm</p>
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Oia Properties</p>
   </div>
   `;
 };
 
-const createFooter2 = () => {
-  return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:transparent !important; display:flex !important; align-items:center !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By Oia Properties</p>
-  </div>
-  `;
-};
+const createFooter2 = () => createFooter();
 
 const getMainImage = () => {
   if (property.value?.main_image) {
@@ -9076,7 +9064,7 @@ const getHistoryIcon = (event) => {
   margin: 0;
   border: none !important;
   border-radius: 8px;
-  background-color: #733e87 !important;
+  background: var(--gradient-primary) !important;
   color: #ffffff !important;
   font-family: Montserrat, sans-serif;
   font-size: 13px;
@@ -9098,7 +9086,7 @@ const getHistoryIcon = (event) => {
 
 .property-actions-accordion.is-open .property-actions-accordion__header {
   border-radius: 8px 8px 0 0;
-  background-color: #733e87 !important;
+  background: var(--gradient-primary) !important;
   color: #ffffff !important;
 }
 
@@ -9196,7 +9184,7 @@ const getHistoryIcon = (event) => {
 .form-select:focus,
 .form-control:focus {
   outline: none;
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(11, 7, 54, 0.1);
 }
 
@@ -9472,7 +9460,7 @@ margin-bottom: 20px;
 }
 
 .side-image.active {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
 }
 
 .side-image img {
@@ -9618,8 +9606,8 @@ margin-bottom: 20px;
 }
 
 .lightbox-nav:hover:not(:disabled) {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .lightbox-nav:disabled {
@@ -9794,8 +9782,8 @@ margin-bottom: 20px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .property-main-info:first {
@@ -9896,7 +9884,7 @@ margin-top: 20px;
   color: #0B0736;
   /* margin-bottom: 12px; */
   padding: 10px 12px;
-  /* background: #6b21a8; */
+  /* background: var(--gradient-primary) !important; */
   /* border-radius: 8px; */
 }
 
@@ -10117,7 +10105,7 @@ margin-top: 20px;
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #6b21a8;
+  border: 2px solid var(--color-primary);
 }
 
 .agent-sidebar-info {
@@ -10302,8 +10290,8 @@ margin-top: 20px;
 .btn-show-owner-modal {
   width: 100%;
   padding: 8px;
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -10340,13 +10328,13 @@ margin-top: 20px;
 }
 
 .btn-request-unit {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .btn-request-owner {
-  background: #733E87;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .btn-sidebar:hover {
@@ -10784,8 +10772,8 @@ margin-top: 20px;
 }
 
 .badge-primary {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .badge-success {
@@ -10845,7 +10833,7 @@ margin-top: 20px;
 }
 
 .modal-info-item:hover {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   background: white;
 }
 
@@ -10941,19 +10929,19 @@ margin-top: 20px;
 }
 
 .document-item:hover {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   transform: translateY(-1px);
 }
 
 .document-icon {
   width: 36px;
   height: 36px;
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #ffffff !important;
   font-size: 16px;
 }
 
@@ -10971,8 +10959,8 @@ margin-top: 20px;
 }
 
 .btn-view-document {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   border: none;
   padding: 4px 8px;
   border-radius: 4px;
@@ -11028,8 +11016,8 @@ margin-top: 20px;
 }
 
 .btn-modal-primary {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11071,8 +11059,8 @@ margin-top: 20px;
 }
 
 .btn-edit {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .btn-delete {
@@ -11273,8 +11261,8 @@ margin-top: 20px;
 }
 
 .btn-reply:hover {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .btn-edit {
@@ -11854,8 +11842,8 @@ margin-top: 20px;
 
 @media print {
   .pdf-header {
-    background: #6b21a8 !important;
-    color: white !important;
+    background: var(--gradient-primary) !important;
+    color: var(--color-primary) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -11892,7 +11880,7 @@ margin-top: 20px;
   border-color: #c4b5fd;
   background: linear-gradient(135deg, #faf8fc 0%, #f8fafc 100%);
   transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(115, 62, 135, 0.12);
+  box-shadow: 0 8px 22px rgba(var(--color-purple-rgb), 0.12);
 }
 
 .option-icon {
@@ -11903,8 +11891,8 @@ margin-top: 20px;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #733e87;
-  background: rgba(115, 62, 135, 0.1);
+  color: var(--color-primary);
+  background: rgba(var(--color-purple-rgb), 0.1);
   flex-shrink: 0;
 }
 
@@ -11941,7 +11929,7 @@ margin-top: 20px;
 }
 
 .option-card:hover .option-arrow {
-  color: #733e87;
+  color: var(--color-primary);
   transform: translateX(3px);
 }
 .request-actions-grid {
@@ -11962,8 +11950,8 @@ display: flex;
     align-items: center;
     gap: 6px;
     padding: 8px;
-    background: #6b21a8;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     border: none;
     border-radius: 8px;
     font-size: 13px;
@@ -12069,8 +12057,8 @@ ease;
 }
 
 .btn-view-small {
-  background: #6b21a8;
-  color: white;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   border: none;
   border-radius: 4px;
   width: 24px;
@@ -12115,12 +12103,12 @@ ease;
   float: right;
 }
 .btn-success{
-  background-color: #6b21a8;
-  border-color: #6b21a8;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
 }
 .btn-success:hover,.btn-success:active,.btn-success:focus{
-  background-color: #733E87 !important;
-  border-color: #733E87 !important;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary) !important;
 }
 .btn-success svg{
       margin-bottom: 4px;
@@ -12197,7 +12185,7 @@ ease;
   }
 }
 .bg-primary{
-    background-color:#6b21a8 !important;
+    background: var(--gradient-primary) !important;
 }
 
 @media (max-width: 580px) {
@@ -12528,7 +12516,7 @@ body.property-actions-open .agent-sidebar-card {
 }
 
 body.property-actions-open .property-actions-accordion__header {
-  background-color: #733e87 !important;
+  background: var(--gradient-primary) !important;
   color: #ffffff !important;
 }
 
@@ -12583,7 +12571,7 @@ body.property-actions-open .sidebar-approved-viewings {
     height: 28px;
     border-radius: 50%;
     background: #f8f9fa;
-    border: 2px solid #6b21a8;
+    border: 2px solid var(--color-primary);
     display: flex;
     align-items: center;
     justify-content: center;

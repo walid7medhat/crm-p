@@ -2636,9 +2636,9 @@ defineExpose({
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(107, 33, 168, 0.28) 12%,
-    rgba(107, 33, 168, 0.38) 50%,
-    rgba(107, 33, 168, 0.28) 88%,
+    rgba(var(--color-purple-rgb), 0.28) 12%,
+    rgba(var(--color-purple-rgb), 0.38) 50%,
+    rgba(var(--color-purple-rgb), 0.28) 88%,
     transparent 100%
   );
   pointer-events: none;
@@ -3006,7 +3006,7 @@ font-weight: 700;
 }
 
 .mobile-action-origin {
-  border-color: #733E87 !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.25);
 }
 
@@ -3252,7 +3252,7 @@ font-weight: 700;
 }
 
 .mobile-action-item.active {
-  border-color: #733E87;
+  border-color: var(--color-primary);
   background: #fff8eb;
 }
 
@@ -3455,7 +3455,7 @@ font-weight: 700;
     align-items: center;
     justify-content: center;
     background: #f7f1fa;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 13px;
 }
 
@@ -3473,7 +3473,7 @@ font-weight: 700;
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
 }
 

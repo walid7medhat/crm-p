@@ -333,12 +333,12 @@ const trendOpts = computed(() => ({
 
 const sourceOpts = computed(() => ({
   labels: sourceLabels.value,
-  colors: ['#7c5cbf', '#5b3d8f', '#22c55e', '#f59e0b'],
+  colors: ['#7c5cbf', '#581c87', '#22c55e', '#f59e0b'],
   legend: { position: 'bottom', fontSize: '10px' },
 }))
 
 const funnelOpts = computed(() => ({
-  colors: ['#5b3d8f'],
+  colors: ['#581c87'],
   plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '55%' } },
   xaxis: { categories: funnelLabels.value, labels: { style: { fontSize: '9px', colors: '#9ca3af' } } },
 }))

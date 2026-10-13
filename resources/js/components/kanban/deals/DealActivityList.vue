@@ -1003,7 +1003,7 @@ onUnmounted(() => {
 }
 
 .activity-icon-orange {
-    background: #733E87;
+    background: var(--gradient-primary) !important;
 }
 
 .activity-icon-green {
@@ -1109,7 +1109,7 @@ onUnmounted(() => {
 
 .deadline-icon {
     font-size: 12px;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .lead-created-details {
@@ -1188,7 +1188,7 @@ onUnmounted(() => {
 }
 
 .btn-complete {
-    background: #6b21a8;
+    background: var(--gradient-primary) !important;
     border: none;
     border-radius: 8px;
     padding: 5px 14px;
@@ -1199,7 +1199,7 @@ onUnmounted(() => {
     transition: all 0.2s;
     font-size: 12px;
     font-weight: 400;
-    color: #fff;
+    color: #ffffff !important;
 }
 
 .btn-complete:hover {
@@ -1407,8 +1407,8 @@ onUnmounted(() => {
 }
 
 .reminder-checkbox.checked {
-    background: #733E87;
-    border-color: #733E87;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
 }
 
 .check-icon {
@@ -1488,7 +1488,7 @@ onUnmounted(() => {
 }
 
 .btn-save-edit {
-    background: #6b21a8;
+    background: var(--gradient-primary) !important;
     border: none;
     border-radius: 8px;
     padding: 5px 14px;
@@ -1499,7 +1499,7 @@ onUnmounted(() => {
     transition: all 0.2s;
     font-size: 12px;
     font-weight: 400;
-    color: #fff;
+    color: #ffffff !important;
 }
 
 .btn-save-edit:hover:not(:disabled) {

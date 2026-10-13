@@ -1715,15 +1715,15 @@ defineExpose({
     padding: 0;
     border-bottom: none;
     background:
-        radial-gradient(120% 140% at 0% 0%, rgba(196, 132, 232, 0.28) 0%, rgba(255, 255, 255, 0) 46%),
-        linear-gradient(180deg, #fbf7fd 0%, #ffffff 100%);
+        radial-gradient(120% 140% at 0% 0%, rgba(var(--color-primary-rgb), 0.16) 0%, rgba(255, 255, 255, 0) 46%),
+        linear-gradient(180deg, #f3fbf8 0%, #ffffff 100%);
     overflow: hidden;
 }
 
 .lead-header-accent {
     width: 5px;
     flex: 0 0 5px;
-    background: linear-gradient(180deg, #c084fc 0%, #733e87 55%, #4c1d6e 100%);
+    background: var(--gradient-primary);
 }
 
 .lead-header-main {
@@ -1752,8 +1752,8 @@ defineExpose({
     align-items: center;
     justify-content: center;
     color: #fff;
-    background: linear-gradient(145deg, #8b4ea3 0%, #733e87 55%, #4c1d6e 100%);
-    box-shadow: 0 4px 8px rgba(115, 62, 135, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    background: var(--gradient-primary);
+    box-shadow: 0 4px 8px rgba(var(--color-primary-rgb), 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
     font-size: 13px;
 }
 
@@ -1769,7 +1769,7 @@ defineExpose({
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.1;
 }
 
@@ -1798,7 +1798,7 @@ defineExpose({
     margin: 0;
     padding: 0 10px 0 12px;
     border-radius: 10px;
-    border: 1px solid #e9d5ff;
+    border: 1px solid var(--color-purple-light);
     background: #faf5ff;
     cursor: pointer;
     display: inline-flex;
@@ -1812,7 +1812,7 @@ defineExpose({
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .lead-converted-deal-name {
@@ -1828,9 +1828,9 @@ defineExpose({
 .lead-converted-create-deal {
     justify-content: center;
     padding: 0 14px;
-    background: #733E87;
-    border-color: #733E87;
-    color: #ffffff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
     font-size: 13px;
     font-weight: 650;
     white-space: nowrap;
@@ -1842,7 +1842,7 @@ defineExpose({
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .lead-converted-deal-name {
@@ -1857,9 +1857,9 @@ defineExpose({
 
 .lead-converted-create-deal {
     justify-content: center;
-    background: #733E87;
-    border-color: #733E87;
-    color: #ffffff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
     font-size: 13px;
     font-weight: 650;
 }
@@ -1869,8 +1869,8 @@ defineExpose({
     height: 18px;
     padding: 0 5px;
     border-radius: 999px;
-    background: #733E87;
-    color: #ffffff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-size: 11px;
     font-weight: 700;
     line-height: 18px;
@@ -1879,7 +1879,7 @@ defineExpose({
 
 .lead-converted-deal-caret {
     font-size: 14px;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .lead-header-actions {
@@ -1900,8 +1900,8 @@ defineExpose({
     padding: 8px 14px;
     border: none;
     border-radius: 10px;
-    background: #733E87;
-    color: #ffffff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-size: 13px;
     font-weight: 650;
     line-height: 1.2;
@@ -1962,14 +1962,14 @@ defineExpose({
     border-radius: 9px;
     border: 1px solid #eadff0;
     background: rgba(255, 255, 255, 0.8);
-    color: #733e87;
-    box-shadow: 0 1px 2px rgba(115, 62, 135, 0.08);
+    color: var(--color-primary);
+    box-shadow: 0 1px 2px rgba(var(--color-purple-rgb), 0.08);
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .lead-title-edit-btn:hover .lead-title-edit-btn-inner {
     background: #fff;
-    box-shadow: 0 6px 14px rgba(115, 62, 135, 0.16);
+    box-shadow: 0 6px 14px rgba(var(--color-purple-rgb), 0.16);
     transform: translateY(-1px);
 }
 
@@ -2022,14 +2022,14 @@ defineExpose({
     width: 24px;
     height: 24px;
     margin-left: 0;
-    border: 1px solid rgba(115, 62, 135, 0.16);
+    border: 1px solid rgba(var(--color-purple-rgb), 0.16);
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.86);
     color: #5c5366;
     font-size: 14px;
     line-height: 1;
     padding: 0;
-    box-shadow: 0 4px 10px rgba(115, 62, 135, 0.08);
+    box-shadow: 0 4px 10px rgba(var(--color-purple-rgb), 0.08);
     z-index: 2;
     display: flex;
     justify-content: center;
@@ -2039,7 +2039,7 @@ defineExpose({
 
 .close-btn:hover {
     background: #fff;
-    color: #733e87;
+    color: var(--color-primary);
     transform: translateY(-1px);
 }
 
@@ -2047,19 +2047,19 @@ defineExpose({
     width: 34px;
     height: 34px;
     border: 2px solid #fff;
-    background: linear-gradient(145deg, #a86bc0 0%, #733e87 55%, #4c1d6e 100%);
+    background: var(--gradient-primary);
     color: #fff;
     box-shadow:
-        0 0 0 3px rgba(115, 62, 135, 0.22),
-        0 8px 16px rgba(76, 29, 110, 0.32);
+        0 0 0 3px rgba(var(--color-primary-rgb), 0.22),
+        0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28);
 }
 
 .view-lead-close-btn:hover {
-    background: linear-gradient(145deg, #b57acc 0%, #6b21a8 100%);
+    background: var(--gradient-primary-hover);
     color: #fff;
     box-shadow:
-        0 0 0 4px rgba(115, 62, 135, 0.28),
-        0 10px 18px rgba(76, 29, 110, 0.4);
+        0 0 0 4px rgba(var(--color-primary-rgb), 0.28),
+        0 10px 18px rgba(var(--color-primary-hover-rgb), 0.32);
     transform: scale(1.06);
 }
 
@@ -2121,9 +2121,9 @@ defineExpose({
 }
 
 .tab-item.active {
-    background: #733e87;
-    border-color: #733e87;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
 }
 
 .tab-item.active::after {
@@ -2185,8 +2185,8 @@ defineExpose({
 }
 
 .btn-toggle.active {
-    background: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     box-shadow: 0px 4px 8px rgba(1, 6, 44, 0.2);
 }
 
@@ -2196,7 +2196,7 @@ defineExpose({
 }
 
 .btn-primary {
-    background: #6b21a8;
+    background: var(--gradient-primary) !important;
     border: none;
     font-weight: 500;
 }
@@ -2549,10 +2549,10 @@ textarea, input, select {
     border: 2px solid transparent;
     background:
         linear-gradient(#fff, #fff) padding-box,
-        linear-gradient(145deg, #f3d7ff 0%, #733e87 38%, #d8b4fe 68%, #4c1d6e 100%) border-box;
+        linear-gradient(145deg, var(--color-primary-muted) 0%, var(--color-primary) 50%, var(--color-primary-glow) 100%) border-box;
     box-shadow:
-        0 0 0 5px rgba(115, 62, 135, 0.08),
-        0 28px 70px rgba(49, 16, 70, 0.22);
+        0 0 0 5px rgba(var(--color-primary-rgb), 0.08),
+        0 28px 70px rgba(0, 80, 55, 0.16);
     overflow: hidden;
 }
 
@@ -2657,10 +2657,10 @@ textarea, input, select {
     border: 2px solid transparent !important;
     background:
         linear-gradient(#fff, #fff) padding-box,
-        linear-gradient(145deg, #f3d7ff 0%, #733e87 38%, #d8b4fe 68%, #4c1d6e 100%) border-box !important;
+        linear-gradient(145deg, var(--color-primary-muted) 0%, var(--color-primary) 50%, var(--color-primary-glow) 100%) border-box !important;
     box-shadow:
-        0 0 0 5px rgba(115, 62, 135, 0.08),
-        0 28px 70px rgba(49, 16, 70, 0.22) !important;
+        0 0 0 5px rgba(var(--color-primary-rgb), 0.08),
+        0 28px 70px rgba(0, 80, 55, 0.16) !important;
     overflow: hidden !important;
 }
 
@@ -2677,15 +2677,15 @@ textarea, input, select {
     height: 34px;
     border: 2px solid #fff;
     border-radius: 50%;
-    background: linear-gradient(145deg, #a86bc0 0%, #733e87 55%, #4c1d6e 100%);
+    background: var(--gradient-primary);
     color: #fff;
     box-shadow:
-        0 0 0 3px rgba(115, 62, 135, 0.22),
-        0 8px 16px rgba(76, 29, 110, 0.32);
+        0 0 0 3px rgba(var(--color-primary-rgb), 0.22),
+        0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28);
 }
 
 #view-lead-modal .view-lead-close-btn:hover {
-    background: linear-gradient(145deg, #b57acc 0%, #6b21a8 100%);
+    background: var(--gradient-primary-hover);
     color: #fff;
     transform: scale(1.06);
 }

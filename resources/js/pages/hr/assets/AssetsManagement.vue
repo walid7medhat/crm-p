@@ -1534,12 +1534,12 @@ onUnmounted(() => {
   font-size: 12px;
 }
 .add-field :deep(.vs__dropdown-option--highlight) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .add-field :deep(.vs__dropdown-option--selected) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 600;
 }
 .add-employee-footer {
