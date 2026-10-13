@@ -133,7 +133,7 @@
   .bayut-filter-chips .bayut-chip.active {
     border-color: var(--color-primary);
     color: var(--color-primary);
-    background: #faf5ff;
+    background: var(--color-primary-soft);
   }
 
   .bayut-status-tabs {
@@ -358,7 +358,7 @@
 
   .bayut-chip.active {
     border-color: var(--color-primary);
-    background: #faf5ff;
+    background: var(--color-primary-soft);
     color: var(--color-primary);
   }
 
@@ -512,11 +512,11 @@
 
   .bayut-search-suggestion:hover,
   .bayut-search-suggestion:active {
-    background: #faf5ff;
+    background: var(--color-primary-soft);
   }
 
   .bayut-search-suggestion.is-selected {
-    background: #faf5ff;
+    background: var(--color-primary-soft);
   }
 
   .bayut-search-suggestion__icon {
@@ -562,8 +562,8 @@
     gap: 6px;
     padding: 6px 10px;
     border-radius: 999px;
-    background: #faf5ff;
-    border: 1px solid #ddd6fe;
+    background: var(--color-primary-soft);
+    border: 1px solid var(--color-primary-border);
     color: var(--color-primary);
     font-size: 12px;
     font-weight: 600;
@@ -734,7 +734,7 @@
 
   .bayut-pill.active {
     border-color: var(--color-primary);
-    background: #faf5ff;
+    background: var(--color-primary-soft);
     color: var(--color-primary);
   }
 
@@ -1061,6 +1061,7 @@
   .ml-card__location i {
     flex-shrink: 0;
     font-size: 13px;
+    color: var(--color-primary);
   }
 
   .ml-card__specs {
@@ -1087,7 +1088,7 @@
 
   .ml-card__spec i {
     font-size: 14px;
-    color: #94a3b8;
+    color: var(--color-primary);
   }
 
   .ml-card__meta {
@@ -1182,7 +1183,7 @@
 
   .mobile-sidebar-dock--bayut .mobile-sidebar-dock__cursor {
     background: #ede8f7 !important;
-    border: 1px solid #c4b5fd !important;
+    border: 1px solid var(--color-primary-border) !important;
     box-shadow: none !important;
   }
 
@@ -1413,8 +1414,8 @@
   .bayut-segmented__btn.active {
     background: #fff;
     color: var(--color-primary);
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
-    border: 1px solid #ddd6fe;
+    box-shadow: 0 1px 4px rgba(var(--color-primary-rgb), 0.12);
+    border: 1px solid var(--color-primary);
   }
 
   .bayut-type-grid {
@@ -1441,7 +1442,7 @@
 
   .bayut-type-pill.active {
     border-color: var(--color-primary);
-    background: #faf5ff;
+    background: var(--color-primary-soft);
     color: var(--color-primary);
   }
 
