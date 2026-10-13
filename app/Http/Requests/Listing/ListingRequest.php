@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 class ListingRequest extends FormRequest
 {
     /** Property type names (lowercase) that require a plot size. Keep in sync with listingPlotSize.js. */
-    public const PLOT_SIZE_TYPES = ['villa', 'townhouse', 'twinhouse', 'twin house', 'duplex'];
+    public const PLOT_SIZE_TYPES = ['villa', 'townhouse', 'twinhouse', 'twin house'];
 
     public function authorize(): bool
     {
