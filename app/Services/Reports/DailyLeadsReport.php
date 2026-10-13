@@ -2,7 +2,6 @@
 
 namespace App\Services\Reports;
 
-use App\Models\Lead;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -12,12 +11,13 @@ use Illuminate\Support\Facades\DB;
  * on one (UAE) day, counted per source column (same columns as the team's Excel
  * "Daily Leads Report").
  *
- * Counted: a user with the branch_admin role assigned the lead that day (any `assigned`
- * history row that day by them — lead_histories.user_id), or created it that day. It is
- * credited to whoever had it at the end of that day, so a lead a branch admin gave to a
- * team lead who passed it to an agent the same day counts for that agent. Leads only
- * others assigned (team lead, auto-assign, …) are not counted. History stores the new
- * owner by name only; see the agent matching in build().
+ * Counted, only for things a user with the branch_admin role did that day:
+ *  - each `assigned` history row whose user_id (who assigned) is a branch admin — counts
+ *    for the person it was assigned to (new_person);
+ *  - each lead a branch admin created for an agent (`created` history row by them) —
+ *    counts for the agent it was created for.
+ * Assignments by anyone else (team lead, auto-assign, super admin, …) are not counted.
+ * History stores the assigned person by name only; see the agent matching in build().
  *
  * Who may run it: super_admin, user #33 (all agents) and branch_admin (their branch).
  */
@@ -107,41 +107,16 @@ class DailyLeadsReport
 
         $branchAdminIds = User::role('branch_admin')->pluck('id')->map(fn ($id) => (int) $id)->all();
 
-        // Each lead's latest "assigned" history row ever, and the latest one that day.
-        $lastEver = DB::table('lead_histories')
-            ->selectRaw('lead_id, MAX(id) as id')
-            ->where('changes->action', 'assigned')
-            ->groupBy('lead_id');
-        $lastToday = DB::table('lead_histories')
-            ->selectRaw('lead_id, MAX(id) as id')
-            ->where('changes->action', 'assigned')
-            ->whereBetween('created_at', [$start, $end])
-            ->groupBy('lead_id');
-
-        // A branch admin handed the lead out that day: any of the day's assignments was made
-        // by a branch admin — even if a team lead then passed it to an agent the same day —
-        // or a branch admin created it that day. Leads only others assigned are not counted.
-        // The agent credited is whoever had it at the end of the day (see below).
-        $leads = Lead::query()
-            ->leftJoinSub($lastToday, 'lt', 'lt.lead_id', '=', 'leads.id')
-            ->leftJoin('lead_histories as ah', 'ah.id', '=', 'lt.id')
-            ->leftJoinSub($lastEver, 'le', 'le.lead_id', '=', 'leads.id')
-            ->whereNotNull('leads.responsible_person_id')
-            ->where(function ($q) use ($start, $end, $branchAdminIds) {
-                $q->whereExists(function ($sub) use ($start, $end, $branchAdminIds) {
-                    $sub->selectRaw('1')
-                        ->from('lead_histories as bh')
-                        ->whereColumn('bh.lead_id', 'leads.id')
-                        ->where('bh.changes->action', 'assigned')
-                        ->whereBetween('bh.created_at', [$start, $end])
-                        ->whereIn('bh.user_id', $branchAdminIds ?: [0]);
-                })
-                    ->orWhere(function ($q) use ($start, $end, $branchAdminIds) {
-                        $q->whereBetween('leads.created_at', [$start, $end])
-                            ->whereIn('leads.added_by', $branchAdminIds ?: [0]);
-                    });
-            })
-            ->get(['leads.id', 'leads.responsible_person_id', 'leads.lead_source', 'lt.id as day_assign_id', 'le.id as last_assign_id', 'ah.changes as day_changes']);
+        // Only assignments made by a branch admin that day (lead_histories.user_id = the user
+        // who assigned). Each one counts for the person the branch admin assigned it to.
+        $assignments = DB::table('lead_histories as h')
+            ->join('leads', 'leads.id', '=', 'h.lead_id')
+            ->whereNull('leads.deleted_at')
+            ->where('h.changes->action', 'assigned')
+            ->whereBetween('h.created_at', [$start, $end])
+            ->whereIn('h.user_id', $branchAdminIds ?: [0])
+            ->orderBy('h.id')
+            ->get(['h.lead_id', 'h.changes', 'leads.lead_source', 'leads.responsible_person_id']);
 
         // Agents: active sales users in scope only (zeros included, like the Excel).
         $users = User::role('sales')
@@ -150,18 +125,68 @@ class DailyLeadsReport
             ->get(['id', 'name', 'display_name'])
             ->keyBy('id');
 
-        // Who got the lead that day: its current owner — unless it was re-assigned on a later
-        // day, then the owner named in that day's assignment row (matched to a unique agent name).
-        $idsByName = $users->groupBy(fn ($u) => mb_strtolower(trim((string) $u->name)))
+        // History stores who the lead was assigned to by name only. Use the lead's current
+        // owner when the name is theirs (also settles two agents with the same name),
+        // otherwise the one active agent with that name.
+        $nameKey = fn ($name) => mb_strtolower(trim((string) $name));
+        $idsByName = $users->groupBy(fn ($u) => $nameKey($u->name))
             ->filter(fn ($group) => $group->count() === 1)
             ->map(fn ($group) => (int) $group->first()->id);
-        foreach ($leads as $lead) {
-            $lead->agent_id = (int) $lead->responsible_person_id;
-            if ($lead->day_assign_id && (int) $lead->day_assign_id !== (int) $lead->last_assign_id) {
-                $changes = is_string($lead->day_changes) ? json_decode($lead->day_changes, true) : (array) $lead->day_changes;
-                $name = mb_strtolower(trim((string) ($changes['new_person'] ?? '')));
-                $lead->agent_id = $idsByName[$name] ?? 0;
+
+        $leads = collect();
+        $seen = [];
+        foreach ($assignments as $row) {
+            $changes = is_string($row->changes) ? json_decode($row->changes, true) : (array) $row->changes;
+            $assignedTo = $nameKey($changes['new_person'] ?? '');
+            if ($assignedTo === '') {
+                continue;
             }
+            $owner = $users->get((int) $row->responsible_person_id);
+            $agentId = ($owner && $nameKey($owner->name) === $assignedTo)
+                ? (int) $owner->id
+                : ($idsByName[$assignedTo] ?? 0);
+            // One lead counts once per agent per day, even if assigned to them twice.
+            if (! $agentId || isset($seen[$row->lead_id . ':' . $agentId])) {
+                continue;
+            }
+            $seen[$row->lead_id . ':' . $agentId] = true;
+            $leads->push((object) ['agent_id' => $agentId, 'lead_source' => $row->lead_source]);
+        }
+
+        // Leads a branch admin created that day with an agent already set — creating a lead
+        // for someone is assigning it, but only a "created" history row is written (by the
+        // creator). The agent is who it was created for: the current owner if it was never
+        // re-assigned, else the "old person" on its first re-assignment after creation.
+        $created = DB::table('lead_histories as h')
+            ->join('leads', 'leads.id', '=', 'h.lead_id')
+            ->whereNull('leads.deleted_at')
+            ->where('h.changes->action', 'created')
+            ->whereBetween('h.created_at', [$start, $end])
+            ->whereIn('h.user_id', $branchAdminIds ?: [0])
+            ->get(['h.id', 'h.lead_id', 'h.user_id', 'leads.lead_source', 'leads.responsible_person_id']);
+
+        $firstReassign = $created->isEmpty() ? collect() : DB::table('lead_histories')
+            ->whereIn('lead_id', $created->pluck('lead_id'))
+            ->where('changes->action', 'assigned')
+            ->orderBy('id')
+            ->get(['id', 'lead_id', 'changes'])
+            ->groupBy('lead_id');
+
+        foreach ($created as $row) {
+            $after = ($firstReassign->get($row->lead_id) ?? collect())->first(fn ($a) => (int) $a->id > (int) $row->id);
+            if ($after) {
+                $changes = is_string($after->changes) ? json_decode($after->changes, true) : (array) $after->changes;
+                $agentId = (int) ($changes['old_person_id'] ?? 0)
+                    ?: ($idsByName[$nameKey($changes['old_person'] ?? '')] ?? 0);
+            } else {
+                $agentId = (int) $row->responsible_person_id;
+            }
+            // Not a lead the branch admin created for themselves; once per lead per agent.
+            if (! $agentId || $agentId === (int) $row->user_id || isset($seen[$row->lead_id . ':' . $agentId])) {
+                continue;
+            }
+            $seen[$row->lead_id . ':' . $agentId] = true;
+            $leads->push((object) ['agent_id' => $agentId, 'lead_source' => $row->lead_source]);
         }
 
         $counts = [];
