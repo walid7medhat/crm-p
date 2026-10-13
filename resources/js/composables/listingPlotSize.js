@@ -2,7 +2,7 @@
  * Property types that need a "Plot Size" on the listing form.
  * Keep in sync with ListingRequest::PLOT_SIZE_TYPES (backend validation).
  */
-export const PLOT_SIZE_PROPERTY_TYPES = ['villa', 'townhouse', 'twinhouse', 'twin house', 'duplex'];
+export const PLOT_SIZE_PROPERTY_TYPES = ['villa', 'townhouse', 'twinhouse', 'twin house'];
 
 /** @param {object|string|null} propertyType — `{ name }` from the select, or a plain name. */
 export const requiresPlotSize = (propertyType) => {
