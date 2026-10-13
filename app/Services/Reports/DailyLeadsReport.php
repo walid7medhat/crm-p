@@ -11,13 +11,11 @@ use Illuminate\Support\Facades\DB;
  * on one (UAE) day, counted per source column (same columns as the team's Excel
  * "Daily Leads Report").
  *
- * Counted, only for things a user with the branch_admin role did that day:
- *  - each `assigned` history row whose user_id (who assigned) is a branch admin — counts
- *    for the person it was assigned to (new_person);
- *  - each lead a branch admin created for an agent (`created` history row by them) —
- *    counts for the agent it was created for.
- * Assignments by anyone else (team lead, auto-assign, super admin, …) are not counted.
- * History stores the assigned person by name only; see the agent matching in build().
+ * Counted: only assignments a user with the branch_admin role made that day — each
+ * `assigned` history row whose user_id (who assigned) is a branch admin counts for the
+ * person it was assigned to (new_person). Not counted: leads created already set to an
+ * agent (no assignment), and assignments by anyone else (team lead, auto-assign, super
+ * admin, …). History stores the assigned person by name only; see the agent matching in build().
  *
  * Who may run it: super_admin, user #33 (all agents) and branch_admin (their branch).
  */
@@ -147,42 +145,6 @@ class DailyLeadsReport
                 : ($idsByName[$assignedTo] ?? 0);
             // One lead counts once per agent per day, even if assigned to them twice.
             if (! $agentId || isset($seen[$row->lead_id . ':' . $agentId])) {
-                continue;
-            }
-            $seen[$row->lead_id . ':' . $agentId] = true;
-            $leads->push((object) ['agent_id' => $agentId, 'lead_source' => $row->lead_source]);
-        }
-
-        // Leads a branch admin created that day with an agent already set — creating a lead
-        // for someone is assigning it, but only a "created" history row is written (by the
-        // creator). The agent is who it was created for: the current owner if it was never
-        // re-assigned, else the "old person" on its first re-assignment after creation.
-        $created = DB::table('lead_histories as h')
-            ->join('leads', 'leads.id', '=', 'h.lead_id')
-            ->whereNull('leads.deleted_at')
-            ->where('h.changes->action', 'created')
-            ->whereBetween('h.created_at', [$start, $end])
-            ->whereIn('h.user_id', $branchAdminIds ?: [0])
-            ->get(['h.id', 'h.lead_id', 'h.user_id', 'leads.lead_source', 'leads.responsible_person_id']);
-
-        $firstReassign = $created->isEmpty() ? collect() : DB::table('lead_histories')
-            ->whereIn('lead_id', $created->pluck('lead_id'))
-            ->where('changes->action', 'assigned')
-            ->orderBy('id')
-            ->get(['id', 'lead_id', 'changes'])
-            ->groupBy('lead_id');
-
-        foreach ($created as $row) {
-            $after = ($firstReassign->get($row->lead_id) ?? collect())->first(fn ($a) => (int) $a->id > (int) $row->id);
-            if ($after) {
-                $changes = is_string($after->changes) ? json_decode($after->changes, true) : (array) $after->changes;
-                $agentId = (int) ($changes['old_person_id'] ?? 0)
-                    ?: ($idsByName[$nameKey($changes['old_person'] ?? '')] ?? 0);
-            } else {
-                $agentId = (int) $row->responsible_person_id;
-            }
-            // Not a lead the branch admin created for themselves; once per lead per agent.
-            if (! $agentId || $agentId === (int) $row->user_id || isset($seen[$row->lead_id . ':' . $agentId])) {
                 continue;
             }
             $seen[$row->lead_id . ':' . $agentId] = true;
