@@ -57,8 +57,8 @@ const baseRoutes = [
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
   { path: '/lead-export', component: () => import('./pages/lead-export.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  // Daily Leads Report: super_admin / admin, and branch_admin (their branch only — scoped server-side).
-  { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowBranchAdmin: true } },
+  // Daily Leads Report: super_admin, user #33 and branch_admin (their branch only — scoped server-side).
+  { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true, allowBranchAdmin: true } },
   { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue`
@@ -372,7 +372,8 @@ router.beforeEach((to, from, next) => {
     to.matched.some((r) => r.meta.requiresSuperAdmin) &&
     !isSuperAdminFromStorage() &&
     !(to.matched.some((r) => r.meta.allowUser33) && isUser33FromStorage()) &&
-    !(to.matched.some((r) => r.meta.allowUser30) && isUser30FromStorage())
+    !(to.matched.some((r) => r.meta.allowUser30) && isUser30FromStorage()) &&
+    !(to.matched.some((r) => r.meta.allowBranchAdmin) && isBranchAdminFromStorage())
   ) {
     next('/')
     return

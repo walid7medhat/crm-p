@@ -1222,10 +1222,10 @@ const mainMenuItems = computed(() => {
     items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', iconSrc: leadsIcon.value });
   }
 
-  // Daily Leads Report (ReportController::dailyLeadsReport): by role, same as the server —
-  // super_admin / admin see every agent, branch_admin their own branch.
+  // Daily Leads Report (DailyLeadsReport::canView): super_admin, user #33 (every agent)
+  // and branch_admin (their own branch).
   const roles = user.value?.roles || [];
-  if (roles.includes('super_admin') || roles.includes('admin') || roles.includes('branch_admin')) {
+  if (roles.includes('super_admin') || roles.includes('branch_admin') || Number(user.value?.id) === 33) {
     items.push({ path: '/daily-leads-report', label: 'Daily Leads Report', iconSrc: insightsIcon.value });
   }
 

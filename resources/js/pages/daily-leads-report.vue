@@ -30,8 +30,8 @@
         </div>
       </div>
       <p class="dlr-hint">
-        Leads assigned to each agent on this day (UAE time), by source. You can fix any number or agent name,
-        remove a row, then export — the Excel file has exactly what you see.
+        Leads a branch admin assigned to each active sales agent on this day (UAE time), by source.
+        You can fix any number or agent name, remove a row, then export — the Excel file has exactly what you see.
       </p>
 
       <div v-if="error" class="dlr-error">

@@ -450,12 +450,12 @@ class ReportController extends Controller
 
     /**
      * Daily Leads Report (preview): per sales agent, leads assigned to them on one UAE day,
-     * counted per source. super_admin / admin see every agent; branch_admin their branch.
+     * counted per source. super_admin / user #33 see every agent; branch_admin their branch.
      */
     public function dailyLeadsReport(Request $request)
     {
         $user = auth()->user();
-        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+        if (! \App\Services\Reports\DailyLeadsReport::canView($user)) {
             return ApiResponse::error('Unauthorized', 403);
         }
 
@@ -475,7 +475,7 @@ class ReportController extends Controller
     public function dailyLeadsReportExport(Request $request)
     {
         $user = auth()->user();
-        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+        if (! \App\Services\Reports\DailyLeadsReport::canView($user)) {
             return ApiResponse::error('Unauthorized', 403);
         }
 
