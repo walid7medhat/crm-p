@@ -250,7 +250,7 @@ onUnmounted(() => {
 <style scoped>
 .edge-dock {
   position: fixed;
-  z-index: 1105;
+  z-index: 99998;
   top: 0;
   right: 16px;
   bottom: 0;
