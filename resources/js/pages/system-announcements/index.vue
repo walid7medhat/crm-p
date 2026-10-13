@@ -478,7 +478,7 @@ onUnmounted(clearLocalPreviews)
 .sa-check input {
   width: 18px;
   height: 18px;
-  accent-color: var(--color-purple);
+  accent-color: var(--color-primary);
 }
 
 .sa-upload img {

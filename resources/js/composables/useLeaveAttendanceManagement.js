@@ -87,7 +87,7 @@ export function useLeaveAttendanceManagement() {
     { key: 'leave', label: 'On Leave', value: employeesOnLeaveToday.value, icon: 'lucide:calendar-off', bgColor: '#fff7ed', iconColor: '#ea580c' },
     { key: 'late', label: 'Late Arrivals', value: attendanceSummary.value.late_today ?? 0, icon: 'lucide:clock-alert', bgColor: '#fef3c7', iconColor: '#d97706' },
     { key: 'early', label: 'Early Departures', value: earlyDepartures.value, icon: 'lucide:log-out', bgColor: '#f4e8ff', iconColor: '#9333ea' },
-    { key: 'rate', label: 'Attendance Rate', value: `${attendanceRate.value}%`, icon: 'lucide:percent', bgColor: 'rgba(var(--color-purple-rgb), 0.12)', iconColor: 'var(--color-purple)' },
+    { key: 'rate', label: 'Attendance Rate', value: `${attendanceRate.value}%`, icon: 'lucide:percent', bgColor: 'rgba(var(--color-primary-rgb), 0.12)', iconColor: 'var(--color-primary)' },
   ])
 
   function matchesSearch(row, fields) {

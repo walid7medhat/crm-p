@@ -1815,7 +1815,7 @@ onMounted(async () => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(var(--color-purple-rgb), 0.75);
+    border-color: rgba(var(--color-primary-rgb), 0.75);
     border-image: initial;
     border-radius: 999px;
     background: var(--gradient-primary) !important;

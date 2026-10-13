@@ -390,7 +390,7 @@ const askDeleteType = async () => {
         confirmButtonText: 'Soft delete',
         denyButtonText: 'Hard delete',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: 'var(--color-purple)',
+        confirmButtonColor: 'var(--color-primary)',
         denyButtonColor: '#DC2626',
     })
     if (result.isDenied) return true

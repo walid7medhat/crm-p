@@ -111,8 +111,8 @@ function onAfterLeave() {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(var(--color-purple-rgb), 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--color-purple-rgb), 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(var(--color-primary-rgb), 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-primary-rgb), 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 20%, transparent 75%);
   opacity: 0.55;
@@ -122,7 +122,7 @@ function onAfterLeave() {
   position: absolute;
   border-radius: 50%;
   background: var(--loader-gradient);
-  box-shadow: 0 0 12px rgba(var(--color-purple-rgb), 0.45);
+  box-shadow: 0 0 12px rgba(var(--color-primary-rgb), 0.45);
   animation: loader-float linear infinite;
 }
 
@@ -161,7 +161,7 @@ function onAfterLeave() {
   inset: -8px;
   background: radial-gradient(
     circle,
-    rgba(var(--color-purple-rgb), 0.45) 0%,
+    rgba(var(--color-primary-rgb), 0.45) 0%,
     rgba(192, 38, 211, 0.2) 45%,
     transparent 70%
   );
@@ -283,7 +283,7 @@ function onAfterLeave() {
   height: 6px;
   border-radius: 50%;
   background: var(--loader-gradient);
-  box-shadow: 0 0 10px rgba(var(--color-purple-rgb), 0.55);
+  box-shadow: 0 0 10px rgba(var(--color-primary-rgb), 0.55);
   animation: loader-dot 1.2s ease-in-out infinite;
 }
 

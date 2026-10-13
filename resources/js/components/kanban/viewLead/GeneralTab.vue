@@ -878,7 +878,7 @@ watch(
     border-radius: 10px;
     background: #fff;
     padding: 8px 10px;
-    box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
+    box-shadow: 0 1px 0 rgba(var(--color-primary-rgb), 0.04);
 }
 
 .lead-created-section {

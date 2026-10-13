@@ -89,6 +89,21 @@
                 </div>
               </section>
 
+              <!-- Unit number / owner info (desktop shows these in the sidebar, which is hidden on mobile) -->
+              <section v-if="mobileShowsUnitNumber || mobileShowsOwnerInfo" class="pf-card">
+                <h3 class="pf-card__title">Unit &amp; Owner</h3>
+                <div class="pf-rows">
+                  <div v-if="mobileShowsUnitNumber" class="pf-row">
+                    <span class="pf-row__label"><i class="ri-home-4-line"></i>Unit Number</span>
+                    <span class="pf-row__value">{{ getUnitNumber() }}</span>
+                  </div>
+                  <div v-if="mobileShowsOwnerInfo" class="pf-row" style="cursor: pointer;" @click.stop="openOwnerDetailsModal">
+                    <span class="pf-row__label"><i class="ri-user-line"></i>Owner</span>
+                    <span class="pf-row__value" style="color: var(--color-primary);">View Owner Info</span>
+                  </div>
+                </div>
+              </section>
+
               <section v-if="mobileDetailRows.length" class="pf-card">
                 <h3 class="pf-card__title">Property Details</h3>
                 <div class="pf-rows">
@@ -744,10 +759,10 @@
             <!-- Loading State -->
             <div v-else-if="loading" class="property-content ">
               <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
+                <div class="spinner-border" role="status" style="color: var(--color-primary);">
                   <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-3">Loading property details...</p>
+                <p class="mt-3" style="color: var(--color-primary);">Loading property details...</p>
               </div>
             </div>
 
@@ -3076,7 +3091,7 @@ const openFloorPlanSlider = (index) => {
       title: 'No Floor Plans',
       text: 'No floor plans available for this property.',
       icon: 'warning',
-      confirmButtonColor: 'var(--color-purple)'
+      confirmButtonColor: 'var(--color-primary)'
     });
     return;
   }
@@ -3178,7 +3193,7 @@ const mobileLocationLabel = computed(() => {
   } else if (p.area?.title && p.area.title !== mobileListingTitle.value) {
     parts.push(p.area.title);
   }
-  if (p.project?.developer_name) parts.push(p.project.developer_name);
+  // Location line = area only (the developer has its own "Developer" row in the details).
   return parts.filter(Boolean).join(', ') || p.area?.area_title || p.area?.title || p.title || '';
 });
 
@@ -3332,6 +3347,12 @@ const canMarkAsConverted = computed(() => {
       return 'N/A';
     };
 
+    // Mobile mirror of the sidebar unit/owner sections (same visibility rules).
+    const mobileShowsUnitNumber = computed(() => isPropertyOwner.value
+      || (requestStatus.value?.unit_number_status === 'approved' && property.value?.canShowUnitNumber && !onlyShow.value));
+    const mobileShowsOwnerInfo = computed(() => isPropertyOwner.value
+      || (requestStatus.value?.owner_info_status === 'approved' && property.value?.canShowOwner && !onlyShow.value && !!getApprovedOwnerData()));
+
     // Area Type Methods
     const getAreaType = (area) => {
       if (!area) return 'Area';
@@ -3425,7 +3446,7 @@ const runPropertyMenuAction = (action) => {
           : 'This property will be hidden from listings.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: 'var(--color-purple)',
+        confirmButtonColor: 'var(--color-primary)',
         cancelButtonColor: '#6c757d',
         confirmButtonText: property.value.is_archived ? 'Yes, Unarchive' : 'Yes, Archive',
         cancelButtonText: 'Cancel'
@@ -3457,7 +3478,7 @@ const runPropertyMenuAction = (action) => {
           : 'This property will be marked as active.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: 'var(--color-purple)',
+        confirmButtonColor: 'var(--color-primary)',
         cancelButtonColor: '#6c757d',
         confirmButtonText: property.value.is_active ? 'Yes, Deactivate' : 'Yes, Activate',
         cancelButtonText: 'Cancel'
@@ -5290,7 +5311,7 @@ const closeCancelReasonModal = () => {
             title: 'Deleted!',
             text: 'Property has been deleted successfully.',
             icon: 'success',
-            confirmButtonColor: 'var(--color-purple)',
+            confirmButtonColor: 'var(--color-primary)',
             timer: 2000,
             showConfirmButton: false
           });
@@ -5355,7 +5376,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Phone Not Available',
           text: 'Phone number is not available for this owner.',
           icon: 'warning',
-          confirmButtonColor: 'var(--color-purple)'
+          confirmButtonColor: 'var(--color-primary)'
         });
         return;
       }
@@ -5368,7 +5389,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Email Not Available',
           text: 'Email address is not available for this owner.',
           icon: 'warning',
-          confirmButtonColor: 'var(--color-purple)'
+          confirmButtonColor: 'var(--color-primary)'
         });
         return;
       }
@@ -5381,7 +5402,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'Phone Not Available',
           text: 'Phone number is not available for WhatsApp.',
           icon: 'warning',
-          confirmButtonColor: 'var(--color-purple)'
+          confirmButtonColor: 'var(--color-primary)'
         });
         return;
       }
@@ -5428,7 +5449,7 @@ ${owner.address ? `Address: ${owner.address}` : ''}
           title: 'No Images',
           text: 'No gallery images available for this property.',
           icon: 'warning',
-          confirmButtonColor: 'var(--color-purple)'
+          confirmButtonColor: 'var(--color-primary)'
         });
         return;
       }
@@ -6827,7 +6848,7 @@ const generatePDF = async () => {
             <p><strong>Date:</strong> ${escapeOfferHtml(new Date().toLocaleString())}</p>
           </div>
         `,
-        confirmButtonColor: 'var(--color-purple)'
+        confirmButtonColor: 'var(--color-primary)'
       });
     }
 
@@ -6854,7 +6875,7 @@ const showOfferHistory = async () => {
           title: 'No Offers',
           text: 'No offers have been generated for this property yet.',
           icon: 'info',
-          confirmButtonColor: 'var(--color-purple)'
+          confirmButtonColor: 'var(--color-primary)'
         });
         return;
       }
@@ -6885,7 +6906,7 @@ const showOfferHistory = async () => {
         title: 'Offer History',
         html: html,
         width: '600px',
-        confirmButtonColor: 'var(--color-purple)',
+        confirmButtonColor: 'var(--color-primary)',
         confirmButtonText: 'Close'
       });
     }
@@ -8739,6 +8760,8 @@ const getHistoryIcon = (event) => {
       getApprovedOwnerData,
       getOwnerDataForModal,
       getUnitNumber,
+      mobileShowsUnitNumber,
+      mobileShowsOwnerInfo,
       setMainImage,
       openLightbox,
       closeLightbox,
@@ -9079,7 +9102,7 @@ const getHistoryIcon = (event) => {
 .property-actions-accordion__header:hover,
 .property-actions-accordion__header:focus,
 .property-actions-accordion__header:active {
-  background-color: #623274 !important;
+  background-color: var(--color-primary-hover) !important;
   color: #ffffff !important;
   outline: none;
 }
@@ -11843,7 +11866,7 @@ margin-top: 20px;
 @media print {
   .pdf-header {
     background: var(--gradient-primary) !important;
-    color: var(--color-primary) !important;
+    color: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -11880,7 +11903,7 @@ margin-top: 20px;
   border-color: #c4b5fd;
   background: linear-gradient(135deg, #faf8fc 0%, #f8fafc 100%);
   transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: 0 8px 22px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .option-icon {
@@ -11892,7 +11915,7 @@ margin-top: 20px;
   justify-content: center;
   font-size: 20px;
   color: var(--color-primary);
-  background: rgba(var(--color-purple-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   flex-shrink: 0;
 }
 

@@ -51,10 +51,10 @@
   /* Semantic roles. These follow the brand unless noted. */
   --color-accent: var(--color-primary);
 
-  /* Existing purple accent. Separate from the brand. */
-  --color-purple: #6b21a8;
-  --color-purple-rgb: 107, 33, 168;
-  --color-purple-light: #e9d5ff;
+  /* Legacy purple accent — now follows the brand colour. */
+  --color-purple: var(--color-primary);
+  --color-purple-rgb: var(--color-primary-rgb);
+  --color-purple-light: var(--color-primary-muted);
   --color-tab-active: var(--color-primary);
   --color-tab-inactive: var(--color-text-nav);
   --color-tab-track: var(--color-surface-muted);

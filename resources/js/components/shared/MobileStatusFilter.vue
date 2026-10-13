@@ -61,7 +61,7 @@ const open = ref(false)
 const current = computed(() => props.options.find((o) => o.value === props.modelValue))
 
 const STATUS_COLORS = {
-  all: 'var(--color-purple)',
+  all: 'var(--color-primary)',
   pending: '#f59e0b',
   in_progress: '#0ea5e9',
   approved: '#16a34a',

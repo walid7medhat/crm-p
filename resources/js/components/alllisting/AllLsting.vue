@@ -1317,13 +1317,13 @@ const decodeFiltersFromQuery = async (query) => {
 }
 
 .page-item.active .page-link {
-  background-color: #1e1e1e;
-  border-color: #1e1e1e;
-  color: white;
+  background: var(--gradient-primary);
+  border-color: var(--color-primary);
+  color: #fff;
 }
 
 .page-link {
-  color: #333;
+  color: var(--color-primary);
   border: 1px solid #dee2e6;
   padding: 8px 16px;
   margin: 0 4px;
@@ -1332,9 +1332,9 @@ const decodeFiltersFromQuery = async (query) => {
 }
 
 .page-link:hover {
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
-  color: #333;
+  background-color: var(--color-primary-soft);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
 }
 
 .page-item.disabled .page-link {

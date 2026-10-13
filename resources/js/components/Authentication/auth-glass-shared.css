@@ -176,7 +176,7 @@
   color: #ffffff !important;
   border-color: transparent;
   font-weight: 700;
-  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.28);
+  box-shadow: 0 10px 24px rgba(var(--color-primary-rgb), 0.28);
 }
 
 .auth-glass-btn--primary:hover:not(:disabled) {
@@ -549,7 +549,7 @@
     background: var(--gradient-primary) !important;
     color: #ffffff !important;
     font-weight: 700;
-    box-shadow: 0 12px 24px rgba(var(--color-purple-rgb), 0.28);
+    box-shadow: 0 12px 24px rgba(var(--color-primary-rgb), 0.28);
   }
 
   .auth-glass-btn--primary:hover:not(:disabled) {

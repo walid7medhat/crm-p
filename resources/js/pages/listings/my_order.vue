@@ -883,7 +883,7 @@ async function submitReview() {
             title: 'Missing Review',
             text: 'Please provide your review text',
             icon: 'warning',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
         return
     }
@@ -893,7 +893,7 @@ async function submitReview() {
             title: 'Review Too Long',
             text: 'Review cannot exceed 500 characters',
             icon: 'warning',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
         return
     }
@@ -912,7 +912,7 @@ async function submitReview() {
                 title: 'Success!',
                 text: isEditingReview.value ? 'Review updated successfully' : 'Review submitted successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)',
+                confirmButtonColor: 'var(--color-primary)',
                 timer: 1500,
                 showConfirmButton: false
             })
@@ -930,7 +930,7 @@ async function submitReview() {
             title: 'Error!',
             text: err.response?.data?.message || 'Failed to submit review',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -957,7 +957,7 @@ async function deleteReview() {
                 title: 'Deleted!',
                 text: 'Review deleted successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)',
+                confirmButtonColor: 'var(--color-primary)',
                 timer: 1500,
                 showConfirmButton: false
             })
@@ -971,7 +971,7 @@ async function deleteReview() {
             title: 'Error!',
             text: 'Failed to delete review',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -985,7 +985,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -999,7 +999,7 @@ function viewPropertyFromModal(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -1059,7 +1059,7 @@ async function fetchMyOrders() {
             title: 'Error!',
             text: 'Failed to load orders',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     } finally {
         loading.value = false
@@ -1162,7 +1162,7 @@ async function cancelOrder(order) {
             title: 'Error!',
             text: err?.response?.data?.message || 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -1199,7 +1199,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
             showConvertModal.value = false
             await fetchMyOrders()
@@ -1212,7 +1212,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }

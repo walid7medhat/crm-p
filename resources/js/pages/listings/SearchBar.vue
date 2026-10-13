@@ -620,7 +620,6 @@
                 <div class="bayut-price-mobile__field">
                   <label class="bayut-price-mobile__field-label">Min</label>
                   <div class="bayut-price-mobile__input-wrap">
-                    <span class="bayut-price-mobile__currency">AED</span>
                     <input
                       type="text"
                       class="bayut-price-mobile__input"
@@ -635,7 +634,6 @@
                 <div class="bayut-price-mobile__field">
                   <label class="bayut-price-mobile__field-label">Max</label>
                   <div class="bayut-price-mobile__input-wrap">
-                    <span class="bayut-price-mobile__currency">AED</span>
                     <input
                       type="text"
                       class="bayut-price-mobile__input"
@@ -681,30 +679,37 @@
           <!-- Area -->
           <section class="bayut-filter-section">
             <h6 class="bayut-filter-section__title">Area (sqft)</h6>
-            <div class="bayut-range-compact">
-              <div class="bayut-range-compact__row">
-                <span class="bayut-range-compact__key">Min</span>
-                <input
-                  type="text"
-                  class="bayut-range-compact__input"
-                  inputmode="numeric"
-                  :value="formatThousandsDisplay(sizeFrom)"
-                  @input="onSizeFromInput"
-                  @blur="handleSizeChange"
-                  placeholder="0"
-                />
-              </div>
-              <div class="bayut-range-compact__row">
-                <span class="bayut-range-compact__key">Max</span>
-                <input
-                  type="text"
-                  class="bayut-range-compact__input"
-                  inputmode="numeric"
-                  :value="formatThousandsDisplay(sizeTo)"
-                  @input="onSizeToInput"
-                  @blur="handleSizeChange"
-                  placeholder="Any"
-                />
+            <!-- Same side-by-side Min / Max boxes as Price -->
+            <div class="bayut-price-mobile">
+              <div class="bayut-price-mobile__fields">
+                <div class="bayut-price-mobile__field">
+                  <label class="bayut-price-mobile__field-label">Min</label>
+                  <div class="bayut-price-mobile__input-wrap">
+                    <input
+                      type="text"
+                      class="bayut-price-mobile__input"
+                      inputmode="numeric"
+                      :value="formatThousandsDisplay(sizeFrom)"
+                      @input="onSizeFromInput"
+                      @blur="handleSizeChange"
+                      placeholder="Any"
+                    />
+                  </div>
+                </div>
+                <div class="bayut-price-mobile__field">
+                  <label class="bayut-price-mobile__field-label">Max</label>
+                  <div class="bayut-price-mobile__input-wrap">
+                    <input
+                      type="text"
+                      class="bayut-price-mobile__input"
+                      inputmode="numeric"
+                      :value="formatThousandsDisplay(sizeTo)"
+                      @input="onSizeToInput"
+                      @blur="handleSizeChange"
+                      placeholder="Any"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -977,7 +982,6 @@
                   <div class="bayut-price-mobile__field">
                     <label class="bayut-price-mobile__field-label">Min</label>
                     <div class="bayut-price-mobile__input-wrap">
-                      <span class="bayut-price-mobile__currency">AED</span>
                       <input
                         type="text"
                         class="bayut-price-mobile__input"
@@ -992,7 +996,6 @@
                   <div class="bayut-price-mobile__field">
                     <label class="bayut-price-mobile__field-label">Max</label>
                     <div class="bayut-price-mobile__input-wrap">
-                      <span class="bayut-price-mobile__currency">AED</span>
                       <input
                         type="text"
                         class="bayut-price-mobile__input"
@@ -4301,7 +4304,7 @@ const featuresButtonLabel = computed(() => {
 }
 
 .listing-status-row .status-btn.active {
-  background: linear-gradient(135deg, var(--color-purple) 0%, #ffb224 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #ffb224 100%);
   border-color: #f1a10a;
   color: #fff;
   box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);

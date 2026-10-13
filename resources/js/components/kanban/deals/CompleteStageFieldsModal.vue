@@ -5534,8 +5534,8 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at 15% 10%, rgba(var(--color-purple-rgb), 0.12), transparent 42%),
-    radial-gradient(ellipse at 90% 90%, rgba(var(--color-purple-rgb), 0.1), transparent 40%),
+    radial-gradient(ellipse at 15% 10%, rgba(var(--color-primary-rgb), 0.12), transparent 42%),
+    radial-gradient(ellipse at 90% 90%, rgba(var(--color-primary-rgb), 0.1), transparent 40%),
     rgba(15, 23, 42, 0.45);
   display: flex;
   align-items: center;
@@ -5558,16 +5558,16 @@ onMounted(async () => {
   border: 1px solid #e9e5f5;
   box-shadow:
     0 28px 70px rgba(15, 23, 42, 0.18),
-    0 0 0 1px rgba(var(--color-purple-rgb), 0.04);
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.04);
   position: relative;
   z-index: 30010;
   color: #0f172a;
   /* Override deal-figma-ui amber/navy tokens inside this stage popup */
-  --deal-accent: var(--color-purple);
-  --deal-accent-text: var(--color-purple);
-  --deal-navy: var(--color-purple);
+  --deal-accent: var(--color-primary);
+  --deal-accent-text: var(--color-primary);
+  --deal-navy: var(--color-primary);
   --deal-navy-deep: #0f172a;
-  --deal-link: var(--color-purple);
+  --deal-link: var(--color-primary);
 }
 
 .modal-header-deal {
@@ -5714,7 +5714,7 @@ onMounted(async () => {
 
 .custom-input:focus {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.16) !important;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16) !important;
   outline: none;
 }
 
@@ -5742,7 +5742,7 @@ onMounted(async () => {
 
 .lost-reason-textarea:focus {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.16) !important;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16) !important;
   outline: none;
 }
 
@@ -5967,7 +5967,7 @@ textarea.is-invalid {
   align-items: center;
   justify-content: center;
   padding: 0 18px;
-  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.32);
+  box-shadow: 0 10px 24px rgba(var(--color-primary-rgb), 0.32);
   transition: all 0.2s ease;
 }
 

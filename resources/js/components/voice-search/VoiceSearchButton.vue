@@ -58,7 +58,7 @@ defineEmits(['click']);
 
 .voice-search-btn:hover {
   background: #f5eef8;
-  box-shadow: 0 4px 12px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .voice-search-btn--active {

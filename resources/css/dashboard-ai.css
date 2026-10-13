@@ -1,11 +1,11 @@
 /* Listings dashboard — Ai module (Figma-aligned) */
 .listings-dashboard-ai {
-  --ai-purple: var(--color-purple);
+  --ai-purple: var(--color-primary);
   --ai-purple-dark: #5b2d6e;
   --ai-purple-soft: #f3ebf7;
   --ai-text: #1a1625;
   --ai-text-muted: #64748b;
-  --ai-border: rgba(var(--color-purple-rgb), 0.12);
+  --ai-border: rgba(var(--color-primary-rgb), 0.12);
   --ai-card-bg: #ffffff;
   --ai-radius: 18px;
   --ai-radius-sm: 12px;
@@ -475,7 +475,7 @@
 .ai-select:focus {
   outline: none;
   border-color: var(--ai-purple);
-  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
 }
 
 /* Metric cards */
@@ -557,7 +557,7 @@
 }
 
 .ai-metric__icon--cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
-.ai-metric__icon--purple { background: linear-gradient(135deg, #9333ea, var(--color-purple)); }
+.ai-metric__icon--purple { background: linear-gradient(135deg, #9333ea, var(--color-primary)); }
 .ai-metric__icon--green { background: linear-gradient(135deg, #22c55e, #16a34a); }
 .ai-metric__icon--amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
 

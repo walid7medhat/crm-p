@@ -2473,7 +2473,7 @@ watch(selectedExistingClient, (client) => {
         border-radius: 10px;
         padding: 0 0 8px !important;
         margin: 0;
-        box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
+        box-shadow: 0 1px 0 rgba(var(--color-primary-rgb), 0.04);
         overflow: visible;
     }
 
@@ -3320,7 +3320,7 @@ watch(selectedExistingClient, (client) => {
     background: #f6f0fa;
     border-color: var(--color-primary);
     color: #5b2d6e;
-    box-shadow: inset 0 0 0 1px var(--color-purple);
+    box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 
 .referral-fields {
@@ -3344,7 +3344,7 @@ watch(selectedExistingClient, (client) => {
 
 .referral-search__box:focus-within {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .referral-search__icon {

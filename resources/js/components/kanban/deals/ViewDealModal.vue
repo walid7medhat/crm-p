@@ -1202,9 +1202,9 @@ function close() {
   border: 2px solid transparent !important;
   background:
     linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(145deg, #f3d7ff 0%, var(--color-purple) 38%, #d8b4fe 68%, #4c1d6e 100%) border-box !important;
+    linear-gradient(145deg, #f3d7ff 0%, var(--color-primary) 38%, #d8b4fe 68%, #4c1d6e 100%) border-box !important;
   box-shadow:
-    0 0 0 5px rgba(var(--color-purple-rgb), 0.08),
+    0 0 0 5px rgba(var(--color-primary-rgb), 0.08),
     0 28px 70px rgba(49, 16, 70, 0.22) !important;
   max-height: 88vh !important;
 }
@@ -1391,14 +1391,14 @@ function close() {
   border: 1px solid #eadff0;
   background: rgba(255, 255, 255, 0.8);
   color: var(--color-primary);
-  box-shadow: 0 1px 2px rgba(var(--color-purple-rgb), 0.08);
+  box-shadow: 0 1px 2px rgba(var(--color-primary-rgb), 0.08);
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .deal-title-edit-btn:hover .deal-title-edit-btn-inner {
   background: #fff;
   color: var(--color-primary);
-  box-shadow: 0 6px 14px rgba(var(--color-purple-rgb), 0.16);
+  box-shadow: 0 6px 14px rgba(var(--color-primary-rgb), 0.16);
   transform: translateY(-1px);
 }
 
@@ -1598,7 +1598,7 @@ function close() {
 }
 
 .deal-stage-pill.active {
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(var(--color-purple-rgb), 0.45);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(var(--color-primary-rgb), 0.45);
 }
 
 .deal-stage-pill.completed {
@@ -1934,14 +1934,14 @@ function close() {
   border-radius: 10px;
   background: #fff;
   padding: 8px 10px;
-  box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
+  box-shadow: 0 1px 0 rgba(var(--color-primary-rgb), 0.04);
 }
 
 .view-lead-modal-content :deep(.view-card) {
   background: #fff;
   border: 1px solid #efe4f3 !important;
   border-radius: 10px !important;
-  box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04) !important;
+  box-shadow: 0 1px 0 rgba(var(--color-primary-rgb), 0.04) !important;
   padding: 0 0 10px !important;
   overflow: hidden;
   margin-bottom: 8px !important;
@@ -2142,7 +2142,7 @@ function close() {
   font-size: 14px;
   line-height: 1;
   padding: 0;
-  box-shadow: 0 4px 10px rgba(var(--color-purple-rgb), 0.08);
+  box-shadow: 0 4px 10px rgba(var(--color-primary-rgb), 0.08);
   z-index: 2;
   display: flex;
   justify-content: center;

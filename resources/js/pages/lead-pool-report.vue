@@ -256,9 +256,9 @@ onMounted(fetchReport)
 </script>
 
 <style scoped>
-/* CRM purple theme (board tabs / Create button var(--color-purple)) + greys. Stage colors only as dots. */
+/* CRM theme (var(--color-primary)) + greys. Stage colors only as dots. */
 .lead-pool-report-page.lead-pool-report-page {
-  --lpr-primary: var(--color-purple);
+  --lpr-primary: var(--color-primary);
   --lpr-primary-soft: #f4eef7;
   --lpr-primary-line: #e3d6ea;
   --lpr-text: #1e1b2e;
@@ -303,7 +303,7 @@ onMounted(fetchReport)
 
 .lpr-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .lpr-kpi { border: 1px solid var(--lpr-line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: #fff; }
-.lpr-kpi--main { background: var(--lpr-primary); border-color: var(--lpr-primary); }
+.lpr-kpi--main { background: var(--gradient-primary); border-color: var(--lpr-primary); }
 .lpr-kpi--main .lpr-kpi-label { color: #eadff0; }
 .lpr-kpi--main .lpr-kpi-value { color: #fff; }
 .lpr-kpi-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--lpr-muted); font-weight: 600; }

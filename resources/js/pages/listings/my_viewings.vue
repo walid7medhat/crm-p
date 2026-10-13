@@ -877,7 +877,7 @@ onUnmounted(() => {
 :deep(.fc .fc-daygrid-day.active-day),
 :deep(.fc .fc-day.active-day) {
   background-color: rgba(72, 127, 255, 0.14) !important;
-  box-shadow: inset 0 0 0 2px var(--color-purple);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
   border-radius: 4px;
 }
 :deep(.fc .fc-daygrid-day.active-day .fc-daygrid-day-number),

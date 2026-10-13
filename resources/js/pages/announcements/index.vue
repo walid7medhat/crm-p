@@ -239,7 +239,7 @@ onUnmounted(() => {
   padding: 22px 24px;
   border-radius: 22px;
   background:
-    radial-gradient(circle at top right, rgba(var(--color-purple-rgb), 0.18), transparent 42%),
+    radial-gradient(circle at top right, rgba(var(--color-primary-rgb), 0.18), transparent 42%),
     linear-gradient(180deg, #ffffff 0%, #faf8fc 100%);
   border: 1px solid #ece7f3;
   box-shadow: 0 12px 32px rgba(11, 7, 54, 0.05);
@@ -323,7 +323,7 @@ onUnmounted(() => {
 
 .announcement-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 36px rgba(var(--color-purple-rgb), 0.14);
+  box-shadow: 0 18px 36px rgba(var(--color-primary-rgb), 0.14);
 }
 
 .announcement-card__media {
@@ -463,7 +463,7 @@ onUnmounted(() => {
     20px
     calc(20px + env(safe-area-inset-bottom, 0px));
   background:
-    radial-gradient(ellipse at center, rgba(var(--color-purple-rgb), 0.28), transparent 58%),
+    radial-gradient(ellipse at center, rgba(var(--color-primary-rgb), 0.28), transparent 58%),
     rgba(8, 6, 24, 0.78);
   backdrop-filter: blur(8px);
 }

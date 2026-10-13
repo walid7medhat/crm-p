@@ -210,7 +210,7 @@ const apply = () => {
   background-size: 18px 18px !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
-  box-shadow: 0 0 5px 4px rgba(var(--color-purple-rgb), 0.15) !important;
+  box-shadow: 0 0 5px 4px rgba(var(--color-primary-rgb), 0.15) !important;
 }
 .btn-cancel {
   background: #f4f4f4;

@@ -523,7 +523,7 @@ function onImgError(e) {
 .matching-properties-section .info-section-title {
     font-size: 12px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-primary);
     margin-bottom: 12px;
     padding-bottom: 0;
     border-bottom: none;

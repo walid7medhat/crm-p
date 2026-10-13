@@ -150,7 +150,7 @@ body.app-has-video-bg #app main.dashboard-main > .navbar-header .module-tab-btn.
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary) !important;
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.22) !important;
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.22) !important;
 }
 
 body.app-has-video-bg #app main.dashboard-main > .navbar-header.navbar-header--property-detail {

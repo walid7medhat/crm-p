@@ -314,7 +314,7 @@
     background: #faf5ff !important;
     color: var(--color-primary) !important;
     font-weight: 600 !important;
-    box-shadow: inset 3px 0 0 var(--color-purple) !important;
+    box-shadow: inset 3px 0 0 var(--color-primary) !important;
   }
 
   aside.sidebar .sidebar-submenu li.active-page a span {
@@ -331,7 +331,7 @@
   .sidebar.sidebar--mobile-drawer .sidebar-submenu__nested.dropdown-open > a {
     background: #faf5ff !important;
     color: var(--color-primary) !important;
-    box-shadow: inset 3px 0 0 var(--color-purple) !important;
+    box-shadow: inset 3px 0 0 var(--color-primary) !important;
   }
 
   /* Listings flyout — full panel in front of main menu */
@@ -422,7 +422,7 @@
   .mobile-drawer-flyout li.is-active .mobile-drawer-flyout__link {
     background: #faf5ff !important;
     color: var(--color-primary) !important;
-    box-shadow: inset 3px 0 0 var(--color-purple) !important;
+    box-shadow: inset 3px 0 0 var(--color-primary) !important;
   }
 
   .mobile-drawer-flyout__count {

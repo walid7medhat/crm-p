@@ -617,7 +617,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -631,7 +631,7 @@ function viewPropertyFromModal(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -696,7 +696,7 @@ async function fetchMyOrders() {
             title: 'Error!',
             text: 'Failed to load orders',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     } finally {
         loading.value = false
@@ -739,7 +739,7 @@ async function cancelOrder(orderId,request_type) {
                 title: 'Cancelled!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
             await fetchMyOrders() 
         } else {
@@ -751,7 +751,7 @@ async function cancelOrder(orderId,request_type) {
             title: 'Error!',
             text: 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -788,7 +788,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
             showConvertModal.value = false
             await fetchMyOrders() 
@@ -801,7 +801,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }

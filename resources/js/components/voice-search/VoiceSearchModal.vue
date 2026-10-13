@@ -475,7 +475,7 @@ body.voice-search-open {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: rgba(var(--color-purple-rgb), 0.18);
+  background: rgba(var(--color-primary-rgb), 0.18);
   opacity: 0;
 }
 
@@ -501,7 +501,7 @@ body.voice-search-open {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.35);
+  box-shadow: 0 10px 24px rgba(var(--color-primary-rgb), 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -515,7 +515,7 @@ body.voice-search-open {
 }
 
 .voice-search-stage.is-listening .voice-mic-btn {
-  background: linear-gradient(145deg, #b60f1c 0%, var(--color-purple) 100%);
+  background: linear-gradient(145deg, #b60f1c 0%, var(--color-primary) 100%);
 }
 
 .voice-status-row {

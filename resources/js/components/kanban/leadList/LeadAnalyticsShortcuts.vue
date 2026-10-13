@@ -300,7 +300,7 @@ function onChipClick(key) {
   margin-left: auto;
   padding: 4px 8px 4px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(var(--color-purple-rgb), 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   background: var(--gradient-primary);
   flex-shrink: 0;
 }
@@ -320,7 +320,7 @@ function onChipClick(key) {
 }
 
 .lfs-pill--clear {
-  border-color: rgba(var(--color-purple-rgb), 0.2);
+  border-color: rgba(var(--color-primary-rgb), 0.2);
   background: #fff;
   color: var(--color-primary);
   --pill-accent: var(--color-primary);

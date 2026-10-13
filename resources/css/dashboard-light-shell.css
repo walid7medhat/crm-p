@@ -115,7 +115,7 @@
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary) !important;
-  box-shadow: 0 6px 14px rgba(var(--color-purple-rgb), 0.28) !important;
+  box-shadow: 0 6px 14px rgba(var(--color-primary-rgb), 0.28) !important;
   transform: none !important;
 }
 
@@ -140,7 +140,7 @@
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary) !important;
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.22) !important;
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.22) !important;
 }
 
 .navbar-header .btn-create-new,
@@ -216,7 +216,7 @@
 .navbar-header .navbar-global-search:focus-within {
   background: #eeeff3 !important;
   border-color: #c4b5d9 !important;
-  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.08) !important;
 }
 
 .navbar-header .search-input,
@@ -816,7 +816,7 @@ aside.sidebar .sidebar-menu-area {
 
 aside.sidebar .sidebar-header {
   background: transparent !important;
-  border-bottom: 1px solid rgba(var(--color-purple-rgb), 0.12) !important;
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.12) !important;
   box-sizing: border-box !important;
 }
 
@@ -1057,7 +1057,7 @@ aside.sidebar .menu-count {
   height: 52px;
   border-radius: 50%;
   background:
-    conic-gradient(from 0deg, rgba(var(--color-purple-rgb), 0.08), rgba(var(--color-purple-rgb), 0.08));
+    conic-gradient(from 0deg, rgba(var(--color-primary-rgb), 0.08), rgba(var(--color-primary-rgb), 0.08));
   display: grid;
   place-items: center;
   margin-bottom: 4px;
@@ -1144,8 +1144,8 @@ body.app-has-video-bg .app-loader__gradient--c {
 
 body.app-has-video-bg .app-loader__grid {
   background-image:
-    linear-gradient(rgba(var(--color-purple-rgb), 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--color-purple-rgb), 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(var(--color-primary-rgb), 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-primary-rgb), 0.04) 1px, transparent 1px);
 }
 
 body.app-has-video-bg .app-loader__panel {

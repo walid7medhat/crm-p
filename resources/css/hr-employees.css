@@ -1,5 +1,5 @@
 :root {
-  --emp-primary: var(--color-purple);
+  --emp-primary: var(--color-primary);
   --emp-navy: #0b0736;
   --emp-bg: #f8f6fb;
   --emp-card: #ffffff;
@@ -10,7 +10,7 @@
 }
 
 .emp-mgmt {
-  --emp-primary: var(--color-purple);
+  --emp-primary: var(--color-primary);
   --emp-navy: #0b0736;
   --emp-bg: #f8f6fb;
   --emp-card: #ffffff;
@@ -435,7 +435,7 @@
   border: none;
   background: var(--emp-primary);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(var(--color-purple-rgb), 0.4);
+  box-shadow: 0 8px 24px rgba(var(--color-primary-rgb), 0.4);
   display: none;
   align-items: center;
   justify-content: center;
@@ -1151,7 +1151,7 @@
 .emp-doc-dropzone.is-dragover {
   border-color: var(--color-primary);
   background: #f4ecff;
-  box-shadow: inset 0 0 0 1px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .emp-doc-dropzone.has-file {
@@ -1519,7 +1519,7 @@
 .emp-directory-table__grid .col-check input {
   width: 14px;
   height: 14px;
-  accent-color: var(--color-purple);
+  accent-color: var(--color-primary);
 }
 
 .emp-directory-table__grid .col-id {

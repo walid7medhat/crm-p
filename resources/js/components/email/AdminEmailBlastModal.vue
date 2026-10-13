@@ -356,7 +356,7 @@ watch(show, (v) => {
 }
 .recipients-add input:focus{
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
 }
 .recipients-toolbar{
   display:flex;
@@ -382,10 +382,10 @@ watch(show, (v) => {
 .recipient-item.is-selected{
   background: #f6f0fa;
   border-color: #e4d4ee;
-  box-shadow: inset 3px 0 0 var(--color-purple);
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 .recipient-item input{
-  accent-color: var(--color-purple);
+  accent-color: var(--color-primary);
   width: 16px;
   height: 16px;
   flex-shrink: 0;

@@ -2992,10 +2992,10 @@ const employeeStats = computed(() => {
   const inactive = employeesDirectory.value.filter(e => e.status === 'in_active').length
   
   return [
-    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(var(--color-purple-rgb), 0.12)', iconColor: 'var(--color-purple)' },
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(var(--color-primary-rgb), 0.12)', iconColor: 'var(--color-primary)' },
     { key: 'applications', label: 'New Employees', value: 25, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
     { key: 'new-employees', label: 'Resigned Employees', value: 5, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(var(--color-purple-rgb), 0.1)', iconColor: 'var(--color-purple)' },
+    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(var(--color-primary-rgb), 0.1)', iconColor: 'var(--color-primary)' },
   ]
 })
 
@@ -7174,10 +7174,10 @@ onBeforeUnmount(() => {
 .hr-screen {
   padding-top: 8px;
   --hr-primary: #0b0736;
-  --hr-secondary: var(--color-purple);
+  --hr-secondary: var(--color-primary);
   --hr-gradient: linear-gradient(135deg, var(--hr-primary) 0%, var(--hr-secondary) 100%);
   --hr-gradient-vertical: linear-gradient(180deg, var(--hr-primary) 0%, var(--hr-secondary) 100%);
-  --hr-border: rgba(var(--color-purple-rgb), 0.45);
+  --hr-border: rgba(var(--color-primary-rgb), 0.45);
   --hr-surface-tint: #f4f0f8;
   --hr-surface-border: #e8ddf0;
 }
@@ -8113,7 +8113,7 @@ onBeforeUnmount(() => {
 .announcement-grid__check input {
   width: 14px;
   height: 14px;
-  accent-color: var(--color-purple);
+  accent-color: var(--color-primary);
 }
 .announcement-grid__title-cell {
   font-weight: 600;
@@ -10357,7 +10357,7 @@ onBeforeUnmount(() => {
 .hr-search-wrap--focused,
 .hr-search-wrap--filtered {
   border-color: #d4bfe0;
-  box-shadow: 0 6px 18px rgba(var(--color-purple-rgb), 0.1);
+  box-shadow: 0 6px 18px rgba(var(--color-primary-rgb), 0.1);
 }
 .hr-search-plus,
 .hr-search-icon,

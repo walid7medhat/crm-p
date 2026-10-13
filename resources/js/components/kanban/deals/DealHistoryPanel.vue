@@ -1047,7 +1047,7 @@ onUnmounted(() => {
 .history-row-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: var(--color-purple);
+  accent-color: var(--color-primary);
   cursor: pointer;
 }
 

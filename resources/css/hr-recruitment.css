@@ -1,5 +1,5 @@
 .rec-mgmt {
-  --rec-primary: var(--color-purple);
+  --rec-primary: var(--color-primary);
   --rec-navy: #0b0736;
   --rec-muted: #64748b;
   --rec-border: #e8edf3;
@@ -56,8 +56,8 @@
 }
 
 .rec-view-tab.is-active {
-  background: rgba(var(--color-purple-rgb), 0.1);
-  border-color: rgba(var(--color-purple-rgb), 0.35);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-color: rgba(var(--color-primary-rgb), 0.35);
   color: var(--rec-primary);
 }
 
@@ -67,7 +67,7 @@
   gap: 8px;
   margin: 8px 0;
   padding: 8px 12px;
-  background: rgba(var(--color-purple-rgb), 0.08);
+  background: rgba(var(--color-primary-rgb), 0.08);
   border-radius: 10px;
   font-size: 13px;
 }
@@ -98,7 +98,7 @@
 }
 
 .rec-job-card:hover {
-  border-color: rgba(var(--color-purple-rgb), 0.35);
+  border-color: rgba(var(--color-primary-rgb), 0.35);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -205,8 +205,8 @@
 }
 
 .rec-applicant-card.is-active {
-  border-color: rgba(var(--color-purple-rgb), 0.45);
-  box-shadow: 0 0 0 2px rgba(var(--color-purple-rgb), 0.12);
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .rec-applicant-card__main {
@@ -344,7 +344,7 @@
   margin-top: 4px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(var(--color-purple-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--rec-primary);
   font-size: 11px;
   font-weight: 600;
@@ -630,8 +630,8 @@
 }
 
 .rec-stage-picker button.active {
-  background: rgba(var(--color-purple-rgb), 0.12);
-  border-color: rgba(var(--color-purple-rgb), 0.4);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border-color: rgba(var(--color-primary-rgb), 0.4);
   color: var(--rec-primary);
   font-weight: 600;
 }
@@ -702,8 +702,8 @@
 }
 
 .rec-modal__actions .emp-filter-sheet__apply button.primary {
-  background: rgba(var(--color-purple-rgb), 0.12);
-  border-color: rgba(var(--color-purple-rgb), 0.4);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border-color: rgba(var(--color-primary-rgb), 0.4);
   color: var(--rec-primary);
   font-weight: 600;
 }

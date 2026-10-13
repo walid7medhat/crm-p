@@ -967,7 +967,27 @@ const moduleHeaderTabs = computed(() => {
        user: user.value,
   };
   if (activeLayoutModule.value === 'crm') {
-    return buildHeaderTabs('crm', ctx, activeCrmSection.value);
+    const tabs = buildHeaderTabs('crm', ctx, activeCrmSection.value);
+    // Mobile has no sidebar, so the section dropdown must offer All Listing for every
+    // role that can see it in the sidebar (not only super admins).
+    const canList = !proxy?.$hasPermission || proxy.$hasPermission('listings-list');
+    if (
+      isMobileViewport.value
+      && activeCrmSection.value === CRM_SECTIONS.LISTINGS
+      && !isShowOnlyListingNav.value
+      && canList
+      && !tabs.some((tab) => tab.path === '/alllisting')
+    ) {
+      tabs.unshift({
+        id: 'all-listing',
+        label: 'All Listing',
+        type: 'route',
+        path: '/alllisting',
+        matchPaths: ['/alllisting'],
+        count: listingTabCounts.value.listings || 0,
+      });
+    }
+    return tabs;
   }
   return buildHeaderTabs(activeLayoutModule.value, ctx);
 });
@@ -3029,7 +3049,7 @@ const showBackButton = computed(() => {
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.28);
 }
 
 /* Keep active CRM pill highlighted on dashboard */
@@ -3037,7 +3057,7 @@ const showBackButton = computed(() => {
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.28);
 }
 
 .navbar-header--dashboard-home .top-module-btn:hover {
@@ -3104,7 +3124,7 @@ const showBackButton = computed(() => {
 
 .navbar-global-search-btn:hover {
   color: var(--color-primary);
-  background: rgba(var(--color-purple-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .navbar-settings-btn {
@@ -4117,7 +4137,7 @@ const showBackButton = computed(() => {
   color: #ffffff !important;
   background: var(--gradient-primary) !important;
   border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.22);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.22);
 }
 
 .module-tab-count {
@@ -4187,7 +4207,7 @@ const showBackButton = computed(() => {
   margin-left: 4px;
 }
 
-/* Kanban Create Button — match tab color var(--color-purple) */
+/* Kanban Create Button — match tab color var(--color-primary) */
 .btn-create-new {
     padding: .35rem .6rem !important;
     min-height: 32px;
@@ -4383,7 +4403,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 }
 
 .search-filter-btn {
-    background: rgba(var(--color-purple-rgb), 0.08);
+    background: rgba(var(--color-primary-rgb), 0.08);
     color: var(--color-primary);
 }
 
@@ -4391,7 +4411,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 .search-filter-btn:hover,
 .search-clear-btn:hover {
     color: var(--color-primary);
-    background: rgba(var(--color-purple-rgb), 0.12);
+    background: rgba(var(--color-primary-rgb), 0.12);
 }
 
 .search-input-container {
@@ -4414,7 +4434,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    border: 2px solid rgba(var(--color-purple-rgb), 0.2);
+    border: 2px solid rgba(var(--color-primary-rgb), 0.2);
     border-top-color: var(--color-primary);
     animation: search-spin 0.7s linear infinite;
     pointer-events: none;
@@ -4928,7 +4948,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-color: rgba(183, 148, 246, 0.65);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 0 0 3px rgba(var(--color-purple-rgb), 0.35);
+      0 0 0 3px rgba(var(--color-primary-rgb), 0.35);
   }
 
   .kanban-mob-lead-select option {
@@ -4970,7 +4990,8 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary);
+    color: #fff !important;
+    -webkit-text-fill-color: #fff;
     font-size: 16px;
     font-weight: 700;
   }
@@ -5013,7 +5034,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-radius: 14px;
     border: 1px solid #ececef;
     background: #ffffff;
-    color: #111111;
+    color: var(--color-primary);
     box-shadow: none;
   }
 

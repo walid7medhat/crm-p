@@ -303,7 +303,7 @@ onMounted(() => {
     background-size: 18px 18px !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
-    box-shadow: 0px 0px 5px 4px rgba(var(--color-purple-rgb), 0.15) !important;
+    box-shadow: 0px 0px 5px 4px rgba(var(--color-primary-rgb), 0.15) !important;
     border-radius: 4px !important;
 }
 
@@ -343,7 +343,7 @@ onMounted(() => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(var(--color-purple-rgb), 0.75);
+    border-color: rgba(var(--color-primary-rgb), 0.75);
     border-image: initial;
     border-radius: 999px;
     background: var(--gradient-primary) !important;

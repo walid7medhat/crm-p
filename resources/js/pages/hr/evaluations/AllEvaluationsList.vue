@@ -122,7 +122,7 @@ onMounted(load)
 <style scoped>
 .aev-page {
   --navy: #0b0736;
-  --purple: var(--color-purple);
+  --purple: var(--color-primary);
   --border: #ece8f3;
   --muted: #6b7280;
   padding: 0;

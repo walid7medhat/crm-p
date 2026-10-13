@@ -498,7 +498,7 @@ async function onRejectMail(job) {
     input: 'textarea',
     inputPlaceholder: 'Rejection reason',
     showCancelButton: true,
-    confirmButtonColor: 'var(--color-purple)',
+    confirmButtonColor: 'var(--color-primary)',
   })
   if (!result.isConfirmed) return
   try {

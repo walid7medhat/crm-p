@@ -1,5 +1,5 @@
 .ast-mgmt {
-  --ast-primary: var(--color-purple);
+  --ast-primary: var(--color-primary);
   --ast-navy: #0b0736;
   --ast-muted: #64748b;
   --ast-border: #e8edf3;
@@ -93,7 +93,7 @@
 }
 
 .ast-card:hover {
-  border-color: rgba(var(--color-purple-rgb), 0.35);
+  border-color: rgba(var(--color-primary-rgb), 0.35);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -110,7 +110,7 @@
   width: 56px;
   height: 56px;
   border-radius: 12px;
-  background: rgba(var(--color-purple-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--ast-primary);
   display: inline-flex;
   align-items: center;
@@ -286,7 +286,7 @@
 .ast-tracking__alert--expiring_soon { border-color: #fed7aa; background: #fff7ed; }
 
 .ast-modal-overlay {
-  --ast-primary: var(--color-purple);
+  --ast-primary: var(--color-primary);
   --ast-navy: #0b0736;
   --ast-border: #e5e7eb;
   position: fixed;
@@ -433,7 +433,7 @@
 .ast-form-grid select:focus,
 .ast-form-grid textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
   border-color: #c4b5d4;
 }
 
@@ -513,7 +513,7 @@
 
 .ast-detail-page,
 .ast-detail {
-  --ast-primary: var(--color-purple);
+  --ast-primary: var(--color-primary);
   --ast-navy: #0b0736;
   --ast-muted: #64748b;
   --ast-border: #e8edf3;
@@ -557,7 +557,7 @@
   width: 72px;
   height: 72px;
   border-radius: 16px;
-  background: rgba(var(--color-purple-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--ast-primary);
   display: inline-flex;
   align-items: center;
@@ -1134,7 +1134,7 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(var(--color-purple-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--color-primary);
   display: inline-flex;
   align-items: center;

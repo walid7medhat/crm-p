@@ -7293,7 +7293,7 @@ onBeforeUnmount(() => {
 }
 
 .city-child-btn.active {
-    background: rgba(var(--color-purple-rgb), 0.1);
+    background: rgba(var(--color-primary-rgb), 0.1);
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
@@ -7493,7 +7493,7 @@ onBeforeUnmount(() => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(var(--color-purple-rgb), 0.75);
+    border-color: rgba(var(--color-primary-rgb), 0.75);
     border-image: initial;
     border-radius: 999px;
     background: var(--gradient-primary) !important;
@@ -8801,7 +8801,7 @@ onBeforeUnmount(() => {
         border-radius: 10px;
         padding: 0 0 10px;
         overflow: visible;
-        box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
+        box-shadow: 0 1px 0 rgba(var(--color-primary-rgb), 0.04);
     }
 
     .lead-search--desk .search-section-title,
@@ -8864,7 +8864,7 @@ onBeforeUnmount(() => {
     .lead-search--desk .custom-date-trigger:focus-visible {
         outline: none;
         border-color: var(--color-primary) !important;
-        box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.16) !important;
+        box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16) !important;
     }
 
     .lead-search--desk :deep(.crm-phone-input) {
@@ -8888,7 +8888,7 @@ onBeforeUnmount(() => {
 
     .lead-search--desk :deep(.crm-phone-input .vue-tel-input:focus-within) {
         border-color: var(--color-primary) !important;
-        box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.16) !important;
+        box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16) !important;
     }
 
     .lead-search--desk :deep(.crm-phone-input .vti__dropdown) {
@@ -8928,7 +8928,7 @@ onBeforeUnmount(() => {
         border: 1px solid #ddcce6;
         background: #fff;
         padding: 2px 8px;
-        box-shadow: 0 1px 2px rgba(var(--color-purple-rgb), 0.05);
+        box-shadow: 0 1px 2px rgba(var(--color-primary-rgb), 0.05);
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
@@ -8949,7 +8949,7 @@ onBeforeUnmount(() => {
 
     .lead-search--desk :deep(.custom-v-select.vs--open .vs__dropdown-toggle) {
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.16);
+        box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16);
     }
 
     .lead-search--desk :deep(.custom-v-select .vs__selected),
@@ -9228,7 +9228,7 @@ onBeforeUnmount(() => {
     }
 
     html.lead-search-desk-lock .vs__dropdown-option--selected {
-        box-shadow: inset 3px 0 0 var(--color-purple);
+        box-shadow: inset 3px 0 0 var(--color-primary);
     }
 
     html.lead-search-desk-lock .vs__dropdown-option--highlight .user-item-name,

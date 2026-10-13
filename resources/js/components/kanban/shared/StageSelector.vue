@@ -587,7 +587,7 @@ onUnmounted(() => {
 }
 
 .stage-selector--panel .stage-pill.is-current {
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(var(--color-purple-rgb), 0.45);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-primary);
 }
 
 .stage-selector--panel .stage-text {
@@ -608,7 +608,7 @@ onUnmounted(() => {
     border-color: #eadff0;
     background: #fff;
     color: var(--color-primary);
-    box-shadow: 0 4px 12px rgba(var(--color-purple-rgb), 0.12);
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .stage-selector--panel .scroll-hover-edge:hover .scroll-edge-inner {

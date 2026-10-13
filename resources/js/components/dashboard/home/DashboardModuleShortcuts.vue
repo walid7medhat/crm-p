@@ -68,7 +68,7 @@ const items = computed(() => {
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.28);
 }
 
 .dh-module-shortcuts .top-module-btn:hover {

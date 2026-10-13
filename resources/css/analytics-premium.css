@@ -1730,7 +1730,7 @@
   min-height: 0;
   padding-bottom: 12px;
   --adx-uni-gap: 8px;
-  --uni-purple: var(--color-purple);
+  --uni-purple: var(--color-primary);
   --uni-purple-mid: #7c3aed;
   --uni-purple-deep: #4c1d95;
   --uni-purple-soft: #f3e8ff;
@@ -1882,7 +1882,7 @@ body:has(.ap-dashboard--uni) .ap-dashboard--uni .adx-header__sub {
 .adx-uni-band--leads {
   background: #faf8fc;
   border-color: #ebe4f2;
-  box-shadow: 0 2px 10px rgba(var(--color-purple-rgb), 0.04);
+  box-shadow: 0 2px 10px rgba(var(--color-primary-rgb), 0.04);
 }
 
 .adx-uni-band--deals,
@@ -1937,7 +1937,7 @@ body:has(.ap-dashboard--uni) .ap-dashboard--uni .adx-header__sub {
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.28);
 }
 
 .adx-uni-band__icon--leads,
@@ -1971,7 +1971,7 @@ body:has(.ap-dashboard--uni) .ap-dashboard--uni .adx-header__sub {
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.25);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.25);
 }
 
 .adx-uni-band__link--solid:hover {
@@ -3850,7 +3850,7 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:ha
   width: 36px !important;
   height: 36px !important;
   border-radius: 10px !important;
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28) !important;
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.28) !important;
 }
 
 .adx-uni-band__icon iconify-icon {
@@ -3868,7 +3868,7 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:ha
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border-color: var(--color-primary) !important;
-  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.25) !important;
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.25) !important;
 }
 
 .adx-uni-panel-title {
@@ -4390,7 +4390,7 @@ body:has(.ap-dashboard--uni) .chat-floating-badge {
 
 .ap-dashboard--uni .adx-click:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(var(--color-purple-rgb), 0.12);
+  box-shadow: 0 4px 14px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .ap-dashboard--uni .adx-click:focus-visible {

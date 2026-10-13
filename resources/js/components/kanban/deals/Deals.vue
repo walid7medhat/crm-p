@@ -2636,9 +2636,9 @@ defineExpose({
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(var(--color-purple-rgb), 0.28) 12%,
-    rgba(var(--color-purple-rgb), 0.38) 50%,
-    rgba(var(--color-purple-rgb), 0.28) 88%,
+    rgba(var(--color-primary-rgb), 0.28) 12%,
+    rgba(var(--color-primary-rgb), 0.38) 50%,
+    rgba(var(--color-primary-rgb), 0.28) 88%,
     transparent 100%
   );
   pointer-events: none;

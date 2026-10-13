@@ -654,7 +654,7 @@ async function cancelRequest(id, requestType) {
         text: "Do you really want to cancel this request?",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: 'var(--color-purple)',
+        confirmButtonColor: 'var(--color-primary)',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, cancel it',
         cancelButtonText: 'No'
@@ -672,7 +672,7 @@ async function cancelRequest(id, requestType) {
                 title: 'Success!',
                 text: 'Request cancelled successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
 
             await fetchMyRequests()
@@ -685,7 +685,7 @@ async function cancelRequest(id, requestType) {
             title: 'Error!',
             text: err.response?.data?.message || 'Failed to cancel request',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -712,7 +712,7 @@ async function saveTimeEdit() {
                 title: 'Success!',
                 text: 'Viewing time updated successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
            
             await fetchMyRequests()
@@ -726,7 +726,7 @@ async function saveTimeEdit() {
             title: 'Error!',
             text: 'Failed to update viewing time',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -864,7 +864,7 @@ function viewProperty(propertyId) {
             title: 'Error!',
             text: 'Property not found',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -914,7 +914,7 @@ async function fetchRejectedListings() {
     } catch (err) {
         console.error('Error fetching rejected listings:', err)
         rejectedListings.value = []
-        Swal.fire({ title: 'Error!', text: 'Failed to load rejected listings', icon: 'error', confirmButtonColor: 'var(--color-purple)' })
+        Swal.fire({ title: 'Error!', text: 'Failed to load rejected listings', icon: 'error', confirmButtonColor: 'var(--color-primary)' })
     } finally {
         loading.value = false
     }
@@ -986,7 +986,7 @@ async function fetchMyRequests() {
             title: 'Error!',
             text: 'Failed to load requests',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     } finally {
         loading.value = false
@@ -1045,7 +1045,7 @@ async function confirmResponse() {
                 title: 'Success!',
                 text: `Request ${currentResponseType.value} successfully`,
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
             showResponseModal.value = false
             await fetchMyRequests()
@@ -1069,7 +1069,7 @@ async function confirmResponse() {
             title: 'Error!',
             text: errorMessage,
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }
@@ -1094,7 +1094,7 @@ async function confirmConvert() {
                 title: 'Success!',
                 text: 'Request marked as Sold Out successfully',
                 icon: 'success',
-                confirmButtonColor: 'var(--color-purple)'
+                confirmButtonColor: 'var(--color-primary)'
             })
             showConvertModal.value = false
             await fetchMyRequests()
@@ -1107,7 +1107,7 @@ async function confirmConvert() {
             title: 'Error!',
             text: 'Failed to mark as Sold Out',
             icon: 'error',
-            confirmButtonColor: 'var(--color-purple)'
+            confirmButtonColor: 'var(--color-primary)'
         })
     }
 }

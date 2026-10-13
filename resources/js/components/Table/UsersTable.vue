@@ -1224,7 +1224,7 @@ export default {
 
 .users-search:focus-within {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .users-search__icon {

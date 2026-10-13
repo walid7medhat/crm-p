@@ -35,7 +35,7 @@ const SCENE_DURATION = {
 const PALETTE = {
     navy: '#1c1730',
     navyDeep: '#0f172a',
-    purple: 'var(--color-purple)',
+    purple: 'var(--color-primary)',
     purpleDeep: '#4c1d6e',
     lilac: '#c084fc',
     orange: '#ff8a00',
@@ -260,11 +260,11 @@ function ensureStyles() {
         .lsm-card {
             margin: -14px auto 0; width: 214px; min-height: 72px; padding: 10px 12px 11px;
             border-radius: 14px; background: #fff; color: #1c1730;
-            box-shadow: 0 16px 34px rgba(28,23,48,.22), 0 0 0 1px rgba(var(--color-purple-rgb),.12);
+            box-shadow: 0 16px 34px rgba(28,23,48,.22), 0 0 0 1px rgba(var(--color-primary-rgb),.12);
             border-left: 5px solid var(--color-primary); font-family: Montserrat, sans-serif;
         }
         .lsm-card__kicker {
-            font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--color-purple);
+            font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--color-primary);
         }
         .lsm-card__name {
             margin-top: 2px; font-size: 15px; font-weight: 700; line-height: 1.25; color: #1c1730;
@@ -274,11 +274,11 @@ function ensureStyles() {
         .lsm-cargo .lsm-card { margin-top: 0; }
         .lsm-ring {
             border-radius: 16px; border: 3px solid rgba(245,197,66,.9);
-            box-shadow: 0 0 0 8px rgba(var(--color-purple-rgb),.12), inset 0 0 24px rgba(255,138,0,.18);
+            box-shadow: 0 0 0 8px rgba(var(--color-primary-rgb),.12), inset 0 0 24px rgba(255,138,0,.18);
         }
         .lsm-portal {
             border-radius: 999px;
-            background: radial-gradient(circle, rgba(245,197,66,.85) 0%, rgba(255,138,0,.35) 42%, rgba(var(--color-purple-rgb),0) 70%);
+            background: radial-gradient(circle, rgba(245,197,66,.85) 0%, rgba(255,138,0,.35) 42%, rgba(var(--color-primary-rgb),0) 70%);
         }
         .lsm-seal {
             width: 74px; height: 74px; margin-left: -37px; margin-top: -37px;

@@ -919,7 +919,7 @@
                         :class="{ 'is-selected': String(mobileListFilterDraft) === String(col.status) }"
                         @click="mobileListFilterDraft = String(col.status)"
                     >
-                        <iconify-icon :icon="mobileStageIcon(col.title)" :style="{ color: stageTextOn(col.color) === '#1c1730' ? '#1c1730' : (col.color || 'var(--color-purple)') }" />
+                        <iconify-icon :icon="mobileStageIcon(col.title)" :style="{ color: stageTextOn(col.color) === '#1c1730' ? '#1c1730' : (col.color || 'var(--color-primary)') }" />
                         <span class="mobile-stage-chip__label">{{ col.title }}</span>
                         <iconify-icon v-if="String(mobileListFilterDraft) === String(col.status)" icon="lucide:check" class="mobile-stage-chip__check" />
                     </button>
@@ -6072,9 +6072,9 @@ const fetchRevertNotifications = async () => {
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(var(--color-purple-rgb), 0.15) 20%,
-        rgba(var(--color-purple-rgb), 0.95) 50%,
-        rgba(var(--color-purple-rgb), 0.15) 80%,
+        rgba(var(--color-primary-rgb), 0.15) 20%,
+        rgba(var(--color-primary-rgb), 0.95) 50%,
+        rgba(var(--color-primary-rgb), 0.15) 80%,
         transparent 100%
     );
     background-size: 200% 100%;
@@ -6133,7 +6133,7 @@ const fetchRevertNotifications = async () => {
     padding: 11px 18px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(var(--color-purple-rgb), 0.22);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.22);
     box-shadow:
         0 10px 32px rgba(11, 7, 54, 0.14),
         0 0 0 1px rgba(255, 255, 255, 0.65) inset;
@@ -6146,7 +6146,7 @@ const fetchRevertNotifications = async () => {
     position: absolute;
     inset: -4px;
     border-radius: 999px;
-    border: 2px solid rgba(var(--color-purple-rgb), 0.35);
+    border: 2px solid rgba(var(--color-primary-rgb), 0.35);
     animation: kanban-search-ring 1.4s ease-out infinite;
 }
 
@@ -8790,10 +8790,10 @@ const fetchRevertNotifications = async () => {
 .lead-list-pager__btn {
     height: 40px;
     padding: 0 14px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-primary-border);
     border-radius: 10px;
     background: #fff;
-    color: #0f172a;
+    color: var(--color-primary);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -8802,6 +8802,18 @@ const fetchRevertNotifications = async () => {
 .lead-list-pager__btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+.lead-list-pager__btn:hover:not(:disabled),
+.lead-archive-pager .lead-select-bar__btn:hover:not(:disabled) {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.lead-list-pager__status,
+.lead-archive-pager > span {
+    color: var(--color-primary);
 }
 
 .lead-list-cards {

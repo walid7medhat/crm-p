@@ -1041,9 +1041,9 @@ export default {
     gap: 4px;
     padding: 4px;
     background: #fff;
-    border: 1px solid var(--prj-line);
+    border: 1px solid var(--color-primary-border);
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(76, 29, 149, 0.05);
+    box-shadow: 0 8px 24px rgba(var(--color-primary-rgb), 0.06);
 }
 
 .prj-views button {
@@ -1060,8 +1060,17 @@ export default {
 }
 
 .prj-views button.active {
-    background: var(--prj-purple);
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #fff !important;
+}
+
+.prj-views button.active iconify-icon {
+    color: #fff !important;
+}
+
+.prj-views button:not(.active):hover {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
 }
 
 .projects-grid {
@@ -1490,9 +1499,9 @@ export default {
     height: 36px;
     padding: 0 14px;
     border-radius: 999px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-primary-border);
     background: #fff;
-    color: #64748b;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     gap: 2px;
@@ -1509,7 +1518,7 @@ export default {
     padding: 0;
     border-radius: 50%;
     background: transparent;
-    color: #64748b;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1517,7 +1526,7 @@ export default {
 }
 
 .prj-page.is-active {
-    background: var(--prj-purple);
+    background: var(--gradient-primary);
     color: #fff;
 }
 

@@ -190,7 +190,7 @@ onUnmounted(() => {
     16px
     calc(16px + env(safe-area-inset-bottom, 0px));
   background:
-    radial-gradient(ellipse at center, rgba(var(--color-purple-rgb), 0.28), transparent 58%),
+    radial-gradient(ellipse at center, rgba(var(--color-primary-rgb), 0.28), transparent 58%),
     rgba(8, 6, 24, 0.72);
   backdrop-filter: blur(8px);
 }
@@ -207,7 +207,7 @@ onUnmounted(() => {
   position: absolute;
   inset: -12% -8%;
   border-radius: 40px;
-  background: radial-gradient(ellipse at center, rgba(var(--color-purple-rgb), 0.55), rgba(11, 7, 54, 0.15) 55%, transparent 72%);
+  background: radial-gradient(ellipse at center, rgba(var(--color-primary-rgb), 0.55), rgba(11, 7, 54, 0.15) 55%, transparent 72%);
   filter: blur(18px);
   pointer-events: none;
   animation: system-campaign-glow 2.8s ease-in-out infinite alternate;
@@ -224,7 +224,7 @@ onUnmounted(() => {
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.22),
     0 28px 70px rgba(8, 6, 24, 0.45),
-    0 0 48px rgba(var(--color-purple-rgb), 0.35);
+    0 0 48px rgba(var(--color-primary-rgb), 0.35);
 }
 
 .system-campaign-popup__picture,

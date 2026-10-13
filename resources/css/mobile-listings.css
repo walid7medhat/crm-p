@@ -173,7 +173,7 @@
 
   .bayut-status-tab.active {
     color: #1e1b2e;
-    border-bottom-color: #f59e0b;
+    border-bottom-color: var(--color-primary);
   }
 
   .bayut-results-header {
@@ -305,7 +305,7 @@
 
   .bayut-search-bar .voice-search-btn--active {
     background: var(--gradient-primary) !important;
-    color: var(--color-primary);
+    color: #fff;
   }
 
   .bayut-search-overlay__input-wrap .voice-search-btn {
@@ -381,7 +381,7 @@
     padding: 0 4px;
     border-radius: 999px;
     background: var(--gradient-primary) !important;
-    color: var(--color-primary);
+    color: #fff;
     font-size: 10px;
     font-weight: 700;
     display: inline-flex;
@@ -698,7 +698,7 @@
 
   .bayut-sheet__btn--apply {
     background: var(--gradient-primary) !important;
-    color: var(--color-primary);
+    color: #fff !important;
     border-color: var(--color-primary);
   }
 
@@ -839,7 +839,7 @@
     border: 1px solid #ece8f2 !important;
     border-radius: 12px !important;
     background: #fff;
-    color: #3f3a4a;
+    color: var(--color-primary);
     font-size: 13px;
     font-weight: 700;
     line-height: 1;
@@ -860,7 +860,7 @@
   .all-listings-mobile .page-item.active .page-link {
     background: var(--gradient-primary) !important;
     border-color: var(--color-primary) !important;
-    color: var(--color-primary) !important;
+    color: #fff !important;
   }
 
   .all-listings-mobile .page-item.disabled .page-link {
@@ -901,7 +901,7 @@
     background: #fff;
     border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 10px 28px rgba(var(--color-purple-rgb), 0.08);
+    box-shadow: 0 10px 28px rgba(var(--color-primary-rgb), 0.08);
     border: 1px solid #ebe4f2;
   }
 
@@ -1002,7 +1002,7 @@
     padding: 4px 8px;
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.55);
-    color: var(--color-primary);
+    color: #fff;
     font-size: 11px;
     font-weight: 600;
   }
@@ -1321,7 +1321,7 @@
     padding: 0 6px;
     border-radius: 999px;
     background: var(--gradient-primary) !important;
-    color: var(--color-primary);
+    color: #fff;
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
@@ -1524,7 +1524,7 @@
     padding: 10px 14px;
     border-radius: 12px;
     background: linear-gradient(135deg, #f8f4fc 0%, #f3eef8 100%);
-    border: 1px solid rgba(var(--color-purple-rgb), 0.14);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.14);
   }
 
   .bayut-price-mobile__summary-label {
@@ -1670,7 +1670,7 @@
     top: 0;
     bottom: 0;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--color-purple), #581c87);
+    background: var(--gradient-primary);
     z-index: 1;
   }
 

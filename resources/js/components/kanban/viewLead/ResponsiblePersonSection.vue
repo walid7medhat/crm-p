@@ -384,7 +384,7 @@ const updateResponsiblePerson = async () => {
   position: relative;
   padding-left: 6px; /* keep content off the accent bar */
 }
-.info-section-title { font-size: 12px; font-weight: 700; color: #0f172a; }
+.info-section-title { font-size: 12px; font-weight: 700; color: var(--color-primary); }
 .form-label-custom { font-size: 13px; font-weight: 500; color: #64748B; margin-bottom: 6px; }
 .info-value { font-size: 14px; color: #1E293B; }
 .avatar-wrapper { width: 48px; height: 48px; flex-shrink: 0; }
