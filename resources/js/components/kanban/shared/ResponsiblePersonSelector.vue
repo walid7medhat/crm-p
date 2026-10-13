@@ -398,14 +398,14 @@ const parentName = computed(() => {
 }
 
 .btn-change-person {
-    background:#733E87;
+    background: var(--gradient-primary) !important;
     border: none;
     height: 36px;
     padding: 0 16px;
     border-radius: 100px;
     font-size: 12px;
     font-weight: 600;
-    color: #FFFFFF;
+    color: #ffffff !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -479,7 +479,7 @@ const parentName = computed(() => {
 .search-icon {
     position: absolute;
     right: 15px;
-    color: #733E87;
+    color: var(--color-primary);
     font-size: 20px;
     pointer-events: none;
 }

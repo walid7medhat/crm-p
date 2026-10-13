@@ -45,7 +45,7 @@
       increase: '+200',
       increaseClass: 'bg-success-focus text-success-main',
       chartId: 'new-user-chart',
-      chartColor: '#733E87',
+      chartColor: '#6b21a8',
       bgGradient: 'bg-gradient-end-1',
       bgColor: 'bg-primary-600',
       icon: 'mingcute:user-follow-fill'

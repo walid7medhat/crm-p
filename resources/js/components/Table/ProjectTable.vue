@@ -989,7 +989,7 @@ export default {
 
 <style scoped>
 .projects-board {
-    --prj-purple: #6d28d9;
+    --prj-purple: var(--color-primary);
     --prj-purple-soft: #f3e8ff;
     --prj-ink: #1e1b4b;
     --prj-muted: #64748b;

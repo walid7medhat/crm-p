@@ -1,3 +1,4 @@
+@import './crm-theme.css';
 @import './vue-select-overrides.css';
 @import './form-placeholders.css';
 @import './listing-payment-breakdown-modal.css';
@@ -151,8 +152,8 @@ h6.ui-h-mini {
 }
 .form-control:focus,
 .form-select:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.18);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.2rem var(--color-focus-ring);
   outline: 0;
 }
 

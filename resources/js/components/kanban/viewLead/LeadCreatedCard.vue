@@ -381,7 +381,7 @@ const showCreatorCard = ref(false)
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
 }
 

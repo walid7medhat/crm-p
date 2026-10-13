@@ -1,13 +1,13 @@
 /* Home dashboard — Listify-style layout on the system lavender */
 .lf-dashboard {
-  --lf-bg: #f6f1fb;
+  --lf-bg: #f3fbf8;
   --lf-card: #ffffff;
   --lf-ink: #1c1730;
-  --lf-muted: #8b849c;
-  --lf-line: rgba(88, 48, 140, 0.08);
-  --lf-accent: #733e87;
-  --lf-accent-deep: #5f3470;
-  --lf-accent-soft: #f3e8ff;
+  --lf-muted: #5c5670;
+  --lf-line: rgba(0, 120, 84, 0.08);
+  --lf-accent: var(--color-primary);
+  --lf-accent-deep: var(--color-primary);
+  --lf-accent-soft: var(--color-primary-soft);
   --lf-up: #16a34a;
   --lf-up-bg: #e9f9ef;
   --lf-down: #e11d48;
@@ -18,7 +18,7 @@
   color: var(--lf-ink);
   width: 100%;
   min-height: 100%;
-  background: var(--lf-bg);
+  background: transparent;
   box-sizing: border-box;
   container-type: inline-size;
   container-name: lfdash;
@@ -59,7 +59,9 @@
 }
 
 #app main.dashboard-main > .dashboard-main-router--home:has(.lf-dashboard) {
-  background: #f6f1fb !important;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.88) 100%),
+    rgb(115, 62, 135) !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
 }
@@ -125,7 +127,7 @@
 .lf-nav a.is-active {
   background: var(--lf-accent);
   color: #fff;
-  box-shadow: 0 6px 14px rgba(115, 62, 135, 0.28);
+  box-shadow: 0 6px 14px rgba(var(--color-primary-rgb), 0.28);
 }
 
 .lf-nav a:hover:not(.is-active) {
@@ -321,9 +323,9 @@
   color: var(--lf-accent);
 }
 
-.lf-kpi:nth-child(2) .lf-kpi-icon { background: #f3e8ff; color: #733e87; }
-.lf-kpi:nth-child(3) .lf-kpi-icon { background: #fde7f3; color: #c026d3; }
-.lf-kpi:nth-child(4) .lf-kpi-icon { background: #efe7ff; color: #6d28d9; }
+.lf-kpi:nth-child(2) .lf-kpi-icon { background: var(--color-primary-soft); color: var(--color-primary); }
+.lf-kpi:nth-child(3) .lf-kpi-icon { background: var(--color-primary-soft); color: var(--color-primary); }
+.lf-kpi:nth-child(4) .lf-kpi-icon { background: var(--color-primary-soft); color: var(--color-primary); }
 
 .lf-kpi-label {
   font-size: 13px;
@@ -417,7 +419,7 @@
   background: var(--lf-accent);
 }
 
-.lf-legend i.is-visit { background: #d8b4fe; }
+.lf-legend i.is-visit { background: var(--color-primary-glow); }
 
 .lf-period {
   position: relative;
@@ -559,7 +561,7 @@
   overflow: hidden;
   min-height: 148px;
   background:
-    linear-gradient(160deg, #ddd6fe 0%, #f6f1fb 55%, #e9d5ff 100%);
+    linear-gradient(160deg, var(--color-primary-muted) 0%, #f3fbf8 55%, var(--color-primary-border) 100%);
 }
 
 .lf-feature-photo img {
@@ -632,7 +634,7 @@
 .lf-deals-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #e9d5ff 0%, #a78bca 45%, #733e87 100%);
+  background: var(--gradient-primary);
   min-width: 0;
 }
 
@@ -756,7 +758,7 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  border: 3px solid #e9d5ff;
+  border: 3px solid var(--color-primary-muted);
   border-right-color: var(--lf-accent);
   flex: 0 0 auto;
 }
@@ -819,7 +821,7 @@
 }
 
 .lf-days button.is-today:not(.is-selected) {
-  box-shadow: inset 0 0 0 1.5px #ddd6fe;
+  box-shadow: inset 0 0 0 1.5px var(--color-primary-muted);
 }
 
 .lf-days button.is-selected {
@@ -890,7 +892,7 @@
   display: block;
   width: 100%;
   text-align: left;
-  border: 1px solid #efe7ff;
+  border: 1px solid var(--color-primary-border);
   background: #fff;
   border-left: 3px solid var(--lf-accent);
   border-radius: 14px;
@@ -1002,7 +1004,7 @@
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: #ddd6fe;
+  background: var(--color-primary-border);
   color: var(--lf-accent-deep);
   display: inline-flex;
   align-items: center;
@@ -1016,7 +1018,7 @@
 }
 
 .lf-status.is-sold { color: var(--lf-down); }
-.lf-status.is-occupied { color: #733e87; }
+.lf-status.is-occupied { color: var(--color-primary); }
 
 .lf-call {
   width: 32px;
@@ -1064,7 +1066,7 @@
 }
 
 .lf-skel {
-  background: linear-gradient(90deg, #f6f1fb 25%, #fff 50%, #f6f1fb 75%);
+  background: linear-gradient(90deg, #f3fbf8 25%, #fff 50%, #f3fbf8 75%);
   background-size: 200% 100%;
   animation: lf-shimmer 1.2s infinite;
   border-radius: 18px;
@@ -1304,11 +1306,11 @@
   min-height: 0;
   padding: 18px 18px 16px;
   background:
-    linear-gradient(155deg, rgba(115, 62, 135, 0.2) 0%, rgba(115, 62, 135, 0.05) 46%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(155deg, rgba(var(--color-primary-rgb), 0.2) 0%, rgba(var(--color-primary-rgb), 0.05) 46%, rgba(255, 255, 255, 0) 100%),
     #f7f2fb;
   border-radius: 26px;
-  border: 1px solid rgba(115, 62, 135, 0.12);
-  box-shadow: 0 10px 24px rgba(115, 62, 135, 0.12);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.12);
+  box-shadow: 0 10px 24px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .lf-kpi-dots {
@@ -1328,33 +1330,33 @@
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(115, 62, 135, 0.28);
+  background: rgba(var(--color-primary-rgb), 0.28);
   cursor: pointer;
 }
 
 .lf-kpi-dot.is-on {
   width: 18px;
-  background: #733e87;
+  background: var(--gradient-primary) !important;
 }
 
 .lf-kpis.is-deck .lf-kpi.is-front .lf-kpi-face {
-  box-shadow: 0 18px 36px rgba(115, 62, 135, 0.18);
+  box-shadow: 0 18px 36px rgba(var(--color-primary-rgb), 0.18);
 }
 
 .lf-kpis.is-deck .lf-kpi:nth-child(2) .lf-kpi-face {
   background:
-    linear-gradient(160deg, rgba(115, 62, 135, 0.28) 0%, rgba(115, 62, 135, 0.08) 42%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(160deg, rgba(var(--color-primary-rgb), 0.28) 0%, rgba(var(--color-primary-rgb), 0.08) 42%, rgba(255, 255, 255, 0) 100%),
     #f3e9f6;
 }
 
 .lf-kpis.is-deck .lf-kpi:nth-child(3) .lf-kpi-face {
   background:
-    linear-gradient(145deg, rgba(115, 62, 135, 0.16) 0%, rgba(246, 241, 251, 0.4) 50%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(145deg, rgba(var(--color-primary-rgb), 0.16) 0%, rgba(243, 251, 248, 0.4) 50%, rgba(255, 255, 255, 0) 100%),
     #f6f0fa;
 }
 
 .lf-kpis.is-deck .lf-kpi:nth-child(4) .lf-kpi-face {
   background:
-    linear-gradient(165deg, rgba(115, 62, 135, 0.12) 0%, rgba(246, 241, 251, 0.55) 48%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(165deg, rgba(var(--color-primary-rgb), 0.12) 0%, rgba(243, 251, 248, 0.55) 48%, rgba(255, 255, 255, 0) 100%),
     #fbf8fd;
 }

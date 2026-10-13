@@ -516,7 +516,7 @@ export default {
           title: 'No Images',
           text: 'No images available.',
           icon: 'warning',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
         return;
       }
@@ -581,7 +581,7 @@ export default {
             title: 'Deleted!',
             text: 'Project has been deleted successfully.',
             icon: 'success',
-            confirmButtonColor: '#6b21a8',
+            confirmButtonColor: 'var(--color-purple)',
             timer: 2000,
             showConfirmButton: false
           });
@@ -597,7 +597,7 @@ export default {
           title: 'Error!',
           text: 'Failed to delete project.',
           icon: 'error',
-          confirmButtonColor: '#6b21a8'
+          confirmButtonColor: 'var(--color-purple)'
         });
       }
     };

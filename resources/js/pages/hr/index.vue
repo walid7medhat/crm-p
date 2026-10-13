@@ -2992,10 +2992,10 @@ const employeeStats = computed(() => {
   const inactive = employeesDirectory.value.filter(e => e.status === 'in_active').length
   
   return [
-    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(115, 62, 135, 0.12)', iconColor: '#733E87' },
+    { key: 'employees', label: 'Total Employees', value: total, icon: 'lucide:users', bgColor: 'rgba(var(--color-purple-rgb), 0.12)', iconColor: 'var(--color-purple)' },
     { key: 'applications', label: 'New Employees', value: 25, icon: 'lucide:file-text', bgColor: '#f4e8ff', iconColor: '#9333ea' },
     { key: 'new-employees', label: 'Resigned Employees', value: 5, icon: 'lucide:user-round-plus', bgColor: '#e8f8ed', iconColor: '#16a34a' },
-    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(115, 62, 135, 0.1)', iconColor: '#733E87' },
+    { key: 'attendance', label: 'Active Employees', value: active, icon: 'lucide:calendar-check-2', bgColor: 'rgba(var(--color-purple-rgb), 0.1)', iconColor: 'var(--color-purple)' },
   ]
 })
 
@@ -7174,10 +7174,10 @@ onBeforeUnmount(() => {
 .hr-screen {
   padding-top: 8px;
   --hr-primary: #0b0736;
-  --hr-secondary: #733e87;
+  --hr-secondary: var(--color-purple);
   --hr-gradient: linear-gradient(135deg, var(--hr-primary) 0%, var(--hr-secondary) 100%);
   --hr-gradient-vertical: linear-gradient(180deg, var(--hr-primary) 0%, var(--hr-secondary) 100%);
-  --hr-border: rgba(115, 62, 135, 0.45);
+  --hr-border: rgba(var(--color-purple-rgb), 0.45);
   --hr-surface-tint: #f4f0f8;
   --hr-surface-border: #e8ddf0;
 }
@@ -7315,7 +7315,7 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 .hr-generate-btn--navy {
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
 }
 .hr-generate-btn--navy iconify-icon {
   color: #f99f1c;
@@ -8113,7 +8113,7 @@ onBeforeUnmount(() => {
 .announcement-grid__check input {
   width: 14px;
   height: 14px;
-  accent-color: #733e87;
+  accent-color: var(--color-purple);
 }
 .announcement-grid__title-cell {
   font-weight: 600;
@@ -8173,7 +8173,7 @@ onBeforeUnmount(() => {
 }
 .announcement-grid__menu-btn:hover {
   background: #f4f0f8;
-  color: #733e87;
+  color: var(--color-primary);
 }
 .announcement-card__footer {
   display: flex;
@@ -9010,8 +9010,8 @@ onBeforeUnmount(() => {
   color: #9ca3af;
 }
 .attendance-create-modal .add-employee-save-btn {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .attendance-create-modal .add-employee-clear-btn {
   background: #f3f4f6;
@@ -9457,12 +9457,12 @@ onBeforeUnmount(() => {
   border-radius: 8px;
 }
 .request-doc-modal .add-field :deep(.vs__dropdown-option--highlight) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .request-doc-modal .add-field :deep(.vs__dropdown-option--selected) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 500;
 }
 .request-doc-grid .add-field textarea,
@@ -9638,12 +9638,12 @@ onBeforeUnmount(() => {
   color: #4b5563;
 }
 .employee-filter-field :deep(.vs__dropdown-option--highlight) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .employee-filter-field :deep(.vs__dropdown-option--selected) {
-  background: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 600;
 }
 .employee-filter-field :deep(.vs__clear),
@@ -9789,8 +9789,8 @@ onBeforeUnmount(() => {
 }
 
 .employee-search-filter-modal .employee-filter-btn.primary {
-  background: #000;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .add-employee-overlay {
   align-items: flex-start;
@@ -10357,7 +10357,7 @@ onBeforeUnmount(() => {
 .hr-search-wrap--focused,
 .hr-search-wrap--filtered {
   border-color: #d4bfe0;
-  box-shadow: 0 6px 18px rgba(115, 62, 135, 0.1);
+  box-shadow: 0 6px 18px rgba(var(--color-purple-rgb), 0.1);
 }
 .hr-search-plus,
 .hr-search-icon,
@@ -10367,7 +10367,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .hr-search-clear:hover {
-  color: #733e87;
+  color: var(--color-primary);
 }
 .hr-search-input {
   border: none;
@@ -10493,7 +10493,7 @@ onBeforeUnmount(() => {
   height: 28px;
   border-radius: 50%;
   background: #e0ecff;
-  color: #733E87;
+  color: var(--color-primary);
   font-size: 10px;
   display: inline-flex;
   align-items: center;

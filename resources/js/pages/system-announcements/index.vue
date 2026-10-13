@@ -462,7 +462,7 @@ onUnmounted(clearLocalPreviews)
 }
 
 .sa-audience__option.is-selected {
-  border-color: #733e87;
+  border-color: var(--color-primary);
   background: #f3ecf7;
   color: #0b0736;
 }
@@ -478,7 +478,7 @@ onUnmounted(clearLocalPreviews)
 .sa-check input {
   width: 18px;
   height: 18px;
-  accent-color: #733e87;
+  accent-color: var(--color-purple);
 }
 
 .sa-upload img {
@@ -538,7 +538,7 @@ onUnmounted(clearLocalPreviews)
 }
 
 .sa-status.is-on {
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .sa-card__actions {
@@ -568,12 +568,12 @@ onUnmounted(clearLocalPreviews)
 }
 
 .sa-btn--primary {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .sa-btn--primary:hover:not(:disabled) {
-  background: #733e87;
+  background: var(--gradient-primary) !important;
 }
 
 .sa-btn--ghost {

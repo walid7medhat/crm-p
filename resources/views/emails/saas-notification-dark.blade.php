@@ -85,7 +85,7 @@
                     <td align="center" style="padding:18px 32px 8px 32px;">
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                          <td bgcolor="#733E87" style="background:#733E87; border-radius:999px;">
+                          <td bgcolor="#e9d5ff" style="background-color:#00be83 !important; border-radius:999px;">
                             <a href="{{ $ctaUrl }}" target="_blank" rel="noopener noreferrer"
                                style="display:inline-block; padding:13px 28px; font-family:Arial, Helvetica, sans-serif; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none;">
                               {{ $ctaText }}
@@ -105,7 +105,7 @@
                         If the button doesn’t work, copy and paste this link:
                       </p>
                       <p style="margin:6px 0 0 0; font-size:12px; line-height:1.6;">
-                        <a href="{{ $fb }}" target="_blank" rel="noopener noreferrer" style="color:#733E87; text-decoration:underline; word-break:break-all;">
+                        <a href="{{ $fb }}" target="_blank" rel="noopener noreferrer" style="color:#00be83; text-decoration:underline; word-break:break-all;">
                           {{ $fb }}
                         </a>
                       </p>

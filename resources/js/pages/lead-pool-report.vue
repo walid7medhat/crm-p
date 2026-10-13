@@ -256,9 +256,9 @@ onMounted(fetchReport)
 </script>
 
 <style scoped>
-/* CRM purple theme (board tabs / Create button #733E87) + greys. Stage colors only as dots. */
+/* CRM purple theme (board tabs / Create button var(--color-purple)) + greys. Stage colors only as dots. */
 .lead-pool-report-page.lead-pool-report-page {
-  --lpr-primary: #733e87;
+  --lpr-primary: var(--color-purple);
   --lpr-primary-soft: #f4eef7;
   --lpr-primary-line: #e3d6ea;
   --lpr-text: #1e1b2e;

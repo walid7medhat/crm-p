@@ -1805,7 +1805,7 @@ onMounted(async () => {
     right: -61px;
     width: 83px;
     height: 49px;
-    color: #fff;
+    color: #ffffff !important;
     font-size: 18px;
     line-height: 1;
     box-shadow: #0f172a33 0 8px 16px;
@@ -1815,10 +1815,10 @@ onMounted(async () => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(115, 62, 135, 0.75);
+    border-color: rgba(var(--color-purple-rgb), 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
+    background: var(--gradient-primary) !important;
     padding: 0;
     transition: filter .2s;
 }
@@ -1852,9 +1852,9 @@ onMounted(async () => {
 }
 
 .deal-pill-btn.active {
-  background: #6b21a8;
-  border-color: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
 }
 
 .form-content-wrapper {
@@ -2103,8 +2103,8 @@ onMounted(async () => {
 
 :deep(.custom-v-select .vs__dropdown-option--highlight),
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-  background: #733E87 !important;
-  color: #fff !important;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 :deep(.deal-search-rp-select .vs__dropdown-menu) {
@@ -2223,8 +2223,8 @@ onMounted(async () => {
 }
 
 .btn-search {
-  background: #000;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 @media (max-width: 1199px) {
@@ -2494,9 +2494,9 @@ onMounted(async () => {
 }
 
 .lr-date-preset.active {
-    background: #6b21a8;
-    border-color: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
 }
 
 .lr-date-preset:hover:not(.active) {
@@ -2588,9 +2588,9 @@ onMounted(async () => {
 }
 
 .lr-day.selected {
-    background: #6b21a8;
-    border-color: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
 }
 
 .lr-day.inrange:not(.selected) {
@@ -2622,18 +2622,18 @@ onMounted(async () => {
 }
 
 .btn-apply {
-    background: #000;
+    background: var(--gradient-primary) !important;
     border: none;
     padding: 8px 20px;
     border-radius: 100px;
     font-size: 13px;
-    color: #fff;
+    color: #ffffff !important;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .btn-apply:hover {
-    background: #1a1a1a;
+    background: #581c87;
 }
 
 /* Responsive */

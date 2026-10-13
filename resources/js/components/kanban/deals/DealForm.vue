@@ -2259,10 +2259,10 @@ removeBudgetDropdownListeners()
 :deep(.custom-v-select .vs__search::placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.custom-v-select .vs__placeholder) { font-size: 10px !important; color: #9ca3af; }
 :deep(.buyer-language-select .vs__selected) {     height: 26px !important;background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; margin:5px !important}
-:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff; }
-:deep(.buyer-language-select .vs__dropdown-option--selected) { background: #733E87; color: #fff; font-weight: 600; }
+:deep(.buyer-language-select .vs__dropdown-option--highlight) { background: var(--gradient-primary) !important; color: #ffffff !important; }
+:deep(.buyer-language-select .vs__dropdown-option--selected) { background: var(--gradient-primary) !important; color: #ffffff !important; font-weight: 600; }
 /* Hovered option: white text (incl. custom option templates like nationality flag rows). */
-:deep(.custom-v-select .vs__dropdown-option--highlight) { background: #733E87; color: #fff !important; }
+:deep(.custom-v-select .vs__dropdown-option--highlight) { background: var(--gradient-primary) !important; color: #ffffff !important; }
 :deep(.custom-v-select .vs__dropdown-option--highlight *) { color: #fff !important; }
 :deep(.custom-v-select-inline) { min-width: 120px; }
 :deep(.custom-v-select-inline .vs__dropdown-toggle) { height: 42px !important; min-height: 42px; border: none; border-left: 1px solid #e5e7eb; border-radius: 0 8px 8px 0; font-size: 11px; }
@@ -2449,7 +2449,7 @@ removeBudgetDropdownListeners()
 
 .btn-add-property {
   background: transparent;
-  border: 1px solid #6b21a8;
+  border: 1px solid var(--color-primary);
   border-radius: 100px;
   padding: 8px 20px;
   font-size: 13px;
@@ -2462,8 +2462,8 @@ removeBudgetDropdownListeners()
 }
 
 .btn-add-property:hover {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 /* Budget Dropdown Styles - نفس نظام Lead Search */
 .budget-field-wrap {

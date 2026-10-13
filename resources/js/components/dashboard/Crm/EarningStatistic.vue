@@ -93,7 +93,7 @@
           },
           fill: {
             type: 'gradient',
-            colors: ['#733E87'],
+            colors: ['#6b21a8'],
             gradient: {
               shade: 'light',
               type: 'vertical',

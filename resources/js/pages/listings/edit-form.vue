@@ -4658,7 +4658,7 @@ onUnmounted(() => {
 }
 
 .payment-validation-summary-list .payment-val-ok {
-  color: #047857;
+  color: var(--color-primary-ink);
 }
 
 .payment-validation-summary-list .payment-val-warn {
@@ -4696,7 +4696,7 @@ onUnmounted(() => {
 }
 
 .text-primary {
-  color: #0d6efd !important;
+  color: var(--color-primary) !important;
 }
 
 .text-success {
@@ -4818,16 +4818,16 @@ onUnmounted(() => {
 
 .v-select.project-areas .vs__dropdown-toggle {
   background-color: #e8f4fd !important;
-  border-color: #0d6efd !important;
+  border-color: var(--color-primary) !important;
 }
 
 .v-select.project-areas .vs__selected {
-  color: #0d6efd !important;
+  color: var(--color-primary) !important;
   font-weight: 600;
 }
 
 .v-select.project-areas .vs__dropdown-menu {
-  border-color: #0d6efd;
+  border-color: var(--color-primary);
 }
 
 .footer-pt {
@@ -4894,7 +4894,7 @@ body.swal2-toast-shown  {
 .project-floor-plan-item .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
-  border-color: #0d6efd;
+  border-color: var(--color-primary);
 }
 
 .project-floor-plan-item .btn-success {
@@ -4920,15 +4920,15 @@ body.swal2-toast-shown  {
 }
 
 .nav-tabs .nav-link:hover {
-  color: #0d6efd;
+  color: var(--color-primary);
   border: none;
 }
 
 .nav-tabs .nav-link.active {
-  color: #0d6efd;
+  color: var(--color-primary);
   background-color: transparent;
   border: none;
-  border-bottom: 3px solid #0d6efd;
+  border-bottom: 3px solid var(--color-primary);
   font-weight: 600;
 }
 
@@ -4990,7 +4990,7 @@ body.swal2-toast-shown  {
 .floor-plan-item .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border-color: #0d6efd;
+  border-color: var(--color-primary);
 }
 
 .project-floor-plan-item .card {
@@ -5053,16 +5053,16 @@ body.swal2-toast-shown  {
 }
 
 .nav-tabs .nav-item .nav-link:hover {
-  color: #0d6efd;
+  color: var(--color-primary);
   background-color: rgba(13, 110, 253, 0.05);
   border: none;
 }
 
 .nav-tabs .nav-item .nav-link.active {
-  color: #0d6efd;
+  color: var(--color-primary);
   background-color: #fff;
   border: none;
-  border-bottom: 3px solid #0d6efd;
+  border-bottom: 3px solid var(--color-primary);
   font-weight: 600;
 }
 
@@ -5279,7 +5279,7 @@ body.swal2-toast-shown  {
 .floor-plan-card:hover .card {
   transform: translateY(-5px);
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  border-color: #0d6efd;
+  border-color: var(--color-primary);
 }
 
 .floor-plan-card.selected .card {
@@ -5303,7 +5303,7 @@ body.swal2-toast-shown  {
 }
 
 .border-primary {
-  border-color: #0d6efd !important;
+  border-color: var(--color-primary) !important;
 }
 
 .border-success {

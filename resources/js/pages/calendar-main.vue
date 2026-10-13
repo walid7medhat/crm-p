@@ -140,7 +140,7 @@
   }
   
   .fc-button {
-    color: #733E87;
+    color: var(--color-primary);
     border: none;
     padding: 0 12px;
     font-size: 15px;
@@ -159,14 +159,14 @@
   }
   
   .fc-button.active {
-    background-color: #733E87;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
   }
   
   /* Navigation Buttons Group */
   .nav-buttons {
     display: flex;
-    border: 1px solid #733E87;
+    border: 1px solid var(--color-primary);
     border-radius: 6px;
     overflow: hidden;
     height: 32px;
@@ -179,8 +179,8 @@
   
   /* Today Button */
   .today-button {
-    background-color: #733E87;
-    color: white;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     border-radius: 6px;
     border: none;
   }

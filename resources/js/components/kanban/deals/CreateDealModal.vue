@@ -1241,7 +1241,7 @@ onMounted(() => {
     width: 83px;
     height: 49px;
     position: absolute;
-    color: #fff;
+    color: #ffffff !important;
     font-size: 18px;
     line-height: 1;
     box-shadow: #0f172a33 0 8px 16px;
@@ -1251,10 +1251,10 @@ onMounted(() => {
     align-items: center;
     border-width: 1px;
     border-style: solid;
-    border-color: rgba(115, 62, 135, 0.75);
+    border-color: rgba(var(--color-purple-rgb), 0.75);
     border-image: initial;
     border-radius: 999px;
-    background: var(--gradient-crm, linear-gradient(135deg, #6b21a8 0%, #733e87 100%));
+    background: var(--gradient-primary) !important;
     padding: 0;
     transition: filter .2s;
 }
@@ -1380,14 +1380,14 @@ onMounted(() => {
 }
 
 .btn-next-step {
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   border: none;
   width: 110px;
   height: 40px;
   padding: 0;
   border-radius: 100px;
   font-size: 14px;
-  color: #fff;
+  color: #ffffff !important;
   font-weight: 500;
   display: inline-flex;
   align-items: center;

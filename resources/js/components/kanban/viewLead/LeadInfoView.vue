@@ -5,7 +5,7 @@
                 <div class="info-section-title mb-0">Lead Information</div>
                 <!-- emit(edit-request) for all info-->
                 <button v-if="showEditIcon && canEdit" class="lead-edit-inline-btn" @click="emit('edit-section', 'leadInfo')">
-                    <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
+                    <iconify-icon class="edit-icon-btn" color="var(--color-purple)" icon="lucide:pencil"></iconify-icon>
                 </button>
             </div>
             <div class="lead-info-grid">
@@ -192,7 +192,7 @@
                         title="Add client requirement"
                         @click="openClientReqModal(null)"
                     >
-                        <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:plus"></iconify-icon>
+                        <iconify-icon class="edit-icon-btn" color="var(--color-purple)" icon="lucide:plus"></iconify-icon>
                     </button>
                 </div>
             </div>
@@ -220,7 +220,7 @@
                                 title="Edit primary requirement"
                                 @click="emit('edit-section', 'clientRequirement')"
                             >
-                                <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
+                                <iconify-icon class="edit-icon-btn" color="var(--color-purple)" icon="lucide:pencil"></iconify-icon>
                             </button>
                         </div>
                         <div v-if="hasPrimaryClientCoreContent" class="client-requirement-list">
@@ -428,7 +428,7 @@
                                 title="Edit this requirement"
                                 @click="openClientReqModal(idx)"
                             >
-                                <iconify-icon class="edit-icon-btn" color="#733E87" icon="lucide:pencil"></iconify-icon>
+                                <iconify-icon class="edit-icon-btn" color="var(--color-purple)" icon="lucide:pencil"></iconify-icon>
                             </button>
                         </div>
                         <div class="client-requirement-list">
@@ -1948,7 +1948,7 @@ const saveClientRequirement = async () => {
     border-radius: 10px;
     background: #fff;
     overflow: hidden;
-    box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+    box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
 }
 
 .client-requirement-header-row {
@@ -2146,13 +2146,13 @@ const saveClientRequirement = async () => {
 }
 
 :deep(.client-req-vselect .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.client-req-vselect .vs__dropdown-option--selected) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.client-req-modal .modal-content) {
@@ -2244,7 +2244,7 @@ const saveClientRequirement = async () => {
     margin-bottom: 8px;
     background: #ffffff;
     overflow: hidden;
-    box-shadow: 0 1px 0 rgba(115, 62, 135, 0.04);
+    box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
 }
 
 .info-section-head {
@@ -2275,7 +2275,7 @@ const saveClientRequirement = async () => {
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #733e87;
+    color: var(--color-primary);
 }
 
 .info-section-title::before {
@@ -2283,7 +2283,7 @@ const saveClientRequirement = async () => {
     width: 6px;
     height: 6px;
     border-radius: 1px;
-    background: #733e87;
+    background: var(--gradient-primary) !important;
     transform: rotate(45deg);
     flex-shrink: 0;
 }
@@ -2410,13 +2410,13 @@ const saveClientRequirement = async () => {
 }
 
 .phone-call-btn {
-    background: rgba(115, 62, 135, 0.12);
-    color: #733E87;
+    background: rgba(var(--color-purple-rgb), 0.12);
+    color: var(--color-primary);
 }
 
 .phone-call-btn:hover {
-    background: rgba(115, 62, 135, 0.22);
-    color: #733E87;
+    background: rgba(var(--color-purple-rgb), 0.22);
+    color: var(--color-primary);
 }
 
 .whatsapp-chat-btn {
@@ -2624,7 +2624,7 @@ const saveClientRequirement = async () => {
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
 }
 
@@ -2691,7 +2691,7 @@ const saveClientRequirement = async () => {
 /* Edit Person Button */
 .edit-person-btn {
     text-decoration: none;
-    color: #733E87;
+    color: var(--color-primary);
     font-size: 12px;
     font-weight: 500;
     display: flex;
@@ -2764,7 +2764,7 @@ const saveClientRequirement = async () => {
 .search-icon {
     position: absolute;
     right: 15px;
-    color: #733E87;
+    color: var(--color-primary);
     font-size: 20px;
 }
 
@@ -2800,12 +2800,12 @@ const saveClientRequirement = async () => {
 
 .person-item:hover {
     background: #F8FAFC;
-    border-color: #733E87;
+    border-color: var(--color-primary);
 }
 
 .person-item.selected {
     background: #FFFBEB;
-    border-color: #733E87;
+    border-color: var(--color-primary);
 }
 
 .person-item.current {
@@ -2881,7 +2881,7 @@ const saveClientRequirement = async () => {
 }
 
 .text-warning {
-    color: #733E87 !important;
+    color: var(--color-primary) !important;
 }
 
 /* Modal Footer */
@@ -2912,9 +2912,9 @@ const saveClientRequirement = async () => {
 }
 
 .modal-footer-custom .btn-warning {
-    background: #733E87;
+    background: var(--gradient-primary) !important;
     border: none;
-    color: #fff;
+    color: #ffffff !important;
 }
 
 .modal-footer-custom .btn-warning:hover:not(:disabled) {
@@ -2996,7 +2996,7 @@ const saveClientRequirement = async () => {
 /* تأثير الـ highlight */
 .section-highlight {
     animation: highlight-pulse 0.5s ease-in-out 3;
-    border: 2px solid #733E87 !important;
+    border: 2px solid var(--color-primary) !important;
     background: linear-gradient(90deg, #FFF8E7, #FFFFFF) !important;
     box-shadow: 0 0 0 2px rgba(250, 163, 0, 0.2) !important;
     transition: all 0.3s ease;
@@ -3004,7 +3004,7 @@ const saveClientRequirement = async () => {
 
 @keyframes highlight-pulse {
     0% {
-        border-color: #733E87;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 0 rgba(250, 163, 0, 0.4);
     }
     50% {
@@ -3012,7 +3012,7 @@ const saveClientRequirement = async () => {
         box-shadow: 0 0 0 4px rgba(250, 163, 0, 0.2);
     }
     100% {
-        border-color: #733E87;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 0 rgba(250, 163, 0, 0);
     }
 }

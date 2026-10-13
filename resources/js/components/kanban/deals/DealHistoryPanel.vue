@@ -879,7 +879,7 @@ onUnmounted(() => {
 }
 
 .clear-search-icon {
-  color: #733E87;
+  color: var(--color-primary);
   font-size: 16px;
   cursor: pointer;
   padding: 2px;
@@ -1047,7 +1047,7 @@ onUnmounted(() => {
 .history-row-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: #733E87;
+  accent-color: var(--color-purple);
   cursor: pointer;
 }
 
@@ -1104,7 +1104,7 @@ onUnmounted(() => {
 }
 
 .spinner-border {
-  color: #733E87 !important;
+  color: var(--color-primary) !important;
 }
 
 .search-empty-state {

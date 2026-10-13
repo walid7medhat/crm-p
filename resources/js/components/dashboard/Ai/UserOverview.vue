@@ -89,7 +89,7 @@ export default {
           width: 240,
           fontFamily: 'Inter, system-ui, sans-serif',
         },
-        colors: ['#733E87', '#00BE23', '#DC3645'],
+        colors: ['#6b21a8', '#00BE23', '#DC3645'],
         labels: ['New', 'Approved', 'Rejected'],
         legend: { show: false },
         plotOptions: {

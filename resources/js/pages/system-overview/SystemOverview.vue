@@ -901,7 +901,7 @@ watch(mapMode, (v) => {
 }
 .so-meta-pill.ok {
   background: rgba(16, 185, 129, 0.12);
-  color: #047857;
+  color: var(--color-success);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -970,7 +970,7 @@ watch(mapMode, (v) => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #047857;
+  color: var(--color-primary-ink);
   margin-bottom: 8px;
 }
 .so-hl-box ul {

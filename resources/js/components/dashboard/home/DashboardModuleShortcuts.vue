@@ -65,19 +65,19 @@ const items = computed(() => {
 
 <style scoped>
 .dh-module-shortcuts .top-module-btn.active {
-  background: #6b21a8;
-  color: #fff;
-  border-color: #6b21a8;
-  box-shadow: 0 2px 8px rgba(107, 33, 168, 0.28);
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
 }
 
 .dh-module-shortcuts .top-module-btn:hover {
-  color: #6b21a8;
-  background: #f3e8ff;
+  color: #ffffff;
+  background: var(--gradient-primary);
 }
 
 .dh-module-shortcuts .top-module-btn.active:hover {
-  color: #fff;
-  background: #5b21b6;
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
 }
 </style>

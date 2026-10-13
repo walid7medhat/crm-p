@@ -313,7 +313,7 @@ onBeforeUnmount(() => {
   height: 36px;
   border-radius: 50%;
   background: var(--dh-purple-100, #ede8f7);
-  color: var(--dh-purple-700, #5b3d8f);
+  color: var(--dh-purple-700, #581c87);
   font-size: 13px;
   font-weight: 700;
   display: flex;

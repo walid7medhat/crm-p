@@ -49,7 +49,7 @@ const emit = defineEmits(['close'])
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #fcfbfe 0%, #ffffff 72px);
-  border: 1px solid rgba(115, 62, 135, 0.08);
+  border: 1px solid rgba(var(--color-purple-rgb), 0.08);
   border-radius: 26px;
   box-shadow:
     0 20px 50px rgba(49, 20, 72, 0.22),

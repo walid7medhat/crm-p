@@ -48,20 +48,12 @@ function onAfterLeave() {
 
 <style scoped>
 .app-loader {
-  /* Light shell tokens — readable on white / lavender */
-  --loader-bg: #f3f2f6;
-  --loader-bg-mid: #ebe6f2;
-  --loader-primary: #6b21a8;
-  --loader-secondary: #7c3aed;
-  --loader-accent: #a855f7;
-  --loader-white: #1a1528;
-  --loader-gradient: linear-gradient(135deg, #6b21a8 0%, #a855f7 100%);
-  --loader-glass: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.94) 0%,
-    rgba(250, 245, 255, 0.9) 100%
-  );
-  --loader-border: rgba(107, 33, 168, 0.14);
+  --loader-primary: var(--color-primary);
+  --loader-secondary: var(--color-primary);
+  --loader-accent: var(--color-primary-bright);
+  --loader-white: #171717;
+  --loader-gradient: var(--gradient-primary);
+  --loader-border: rgba(var(--color-primary-rgb), 0.16);
 
   position: fixed;
   inset: 0;
@@ -69,7 +61,7 @@ function onAfterLeave() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7f4fb;
+  background: #f6f7f6;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -119,8 +111,8 @@ function onAfterLeave() {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(107, 33, 168, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(107, 33, 168, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(var(--color-purple-rgb), 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-purple-rgb), 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 20%, transparent 75%);
   opacity: 0.55;
@@ -130,7 +122,7 @@ function onAfterLeave() {
   position: absolute;
   border-radius: 50%;
   background: var(--loader-gradient);
-  box-shadow: 0 0 12px rgba(115, 62, 135, 0.45);
+  box-shadow: 0 0 12px rgba(var(--color-purple-rgb), 0.45);
   animation: loader-float linear infinite;
 }
 
@@ -141,12 +133,13 @@ function onAfterLeave() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  animation: loader-panel-in 0.5s ease both;
+  gap: 8px;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  animation: loader-panel-in 0.28s ease both;
   max-width: calc(100vw - 2rem);
 }
 
@@ -168,7 +161,7 @@ function onAfterLeave() {
   inset: -8px;
   background: radial-gradient(
     circle,
-    rgba(115, 62, 135, 0.45) 0%,
+    rgba(var(--color-purple-rgb), 0.45) 0%,
     rgba(192, 38, 211, 0.2) 45%,
     transparent 70%
   );
@@ -199,50 +192,50 @@ function onAfterLeave() {
 
 .alt-boot__mark {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .alt-boot__ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(115, 62, 135, 0.08), #733e87 40%, rgba(115, 62, 135, 0));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  background: conic-gradient(from 0deg, rgba(var(--color-primary-rgb), 0.08), var(--color-primary) 40%, rgba(var(--color-primary-rgb), 0));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   animation: alt-boot-spin 0.7s linear infinite;
 }
 
 .alt-boot__core {
-  width: 46px;
-  height: 46px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #fff;
-  color: #733e87;
-  font-size: 20px !important;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 12px !important;
   font-weight: 800;
   letter-spacing: -0.04em;
-  box-shadow: 0 8px 24px rgba(115, 62, 135, 0.16);
+  box-shadow: none;
 }
 
 .app-loader__brand {
-  margin: 0 0 0.25rem;
-  font-size: 15px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.22em;
+  margin: 0;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #1a1528;
+  color: #171717;
   line-height: 1.2;
   animation: loader-text-in 0.28s ease both;
 }
 
 .app-loader__brand span {
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 @keyframes alt-boot-spin {
@@ -250,22 +243,22 @@ function onAfterLeave() {
 }
 
 .app-loader__text {
-  margin: 0 0 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #52525b;
-  letter-spacing: 0.02em;
-  animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.04em;
+  animation: loader-text-in 0.28s ease both;
 }
 
 .app-loader__progress {
-  width: min(220px, 70vw);
-  height: 3px;
+  width: 64px;
+  height: 2px;
   border-radius: 999px;
-  background: rgba(107, 33, 168, 0.1);
+  background: var(--color-primary-soft);
   overflow: hidden;
-  margin-bottom: 1rem;
-  animation: loader-text-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+  margin: 0;
+  animation: loader-text-in 0.28s ease both;
 }
 
 .app-loader__progress-line {
@@ -273,14 +266,8 @@ function onAfterLeave() {
   height: 100%;
   width: 40%;
   border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--loader-secondary),
-    var(--loader-accent),
-    transparent
-  );
-  animation: loader-progress 1.6s ease-in-out infinite;
+  background: var(--gradient-primary);
+  animation: loader-progress 1.1s ease-in-out infinite;
 }
 
 .app-loader__dots {
@@ -296,7 +283,7 @@ function onAfterLeave() {
   height: 6px;
   border-radius: 50%;
   background: var(--loader-gradient);
-  box-shadow: 0 0 10px rgba(115, 62, 135, 0.55);
+  box-shadow: 0 0 10px rgba(var(--color-purple-rgb), 0.55);
   animation: loader-dot 1.2s ease-in-out infinite;
 }
 
@@ -451,8 +438,10 @@ function onAfterLeave() {
 
 @media (max-width: 768px) {
   .app-loader__panel {
-    padding: 2rem 1.75rem 1.75rem;
-    border-radius: 22px;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
   .app-loader__logo-stage {
@@ -461,12 +450,12 @@ function onAfterLeave() {
   }
 
   .app-loader__brand {
-    font-size: 1rem;
-    letter-spacing: 0.16em;
+    font-size: 12px !important;
+    letter-spacing: 0.14em;
   }
 
   .app-loader__text {
-    font-size: 0.8125rem;
+    font-size: 11px;
   }
 }
 

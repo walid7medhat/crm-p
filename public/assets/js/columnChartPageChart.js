@@ -7,7 +7,7 @@
             name: 'Revenue',
             data: [15000, 18000, 19000, 20000, 35000, 20000, 18000, 13000, 18000, 38000, 14000, 16000]
         }],
-        colors: ['#733E87', '#FF9F29'],
+        colors: ['#6b21a8', '#FF9F29'],
         labels: ['Active', 'New', 'Total'],
         legend: {
             show: false 
@@ -135,7 +135,7 @@
       },
       fill: {
           type: 'gradient',
-          colors: ['#733E87'], // Set the starting color (top color) here
+          colors: ['#6b21a8'], // Set the starting color (top color) here
           gradient: {
               shade: 'light', // Gradient shading type
               type: 'vertical',  // Gradient direction (vertical)
@@ -215,7 +215,7 @@
                 }
             }
         }],
-        colors: ['#733E87', '#FF9F29', '#48AB69', '#45B369'],
+        colors: ['#6b21a8', '#FF9F29', '#48AB69', '#45B369'],
         plotOptions: {
             bar: {
                 horizontal: false,
@@ -290,7 +290,7 @@
                 show: false,
             },
         }, 
-        colors: ["#733E87", "#EF4A00"],
+        colors: ["#6b21a8", "#EF4A00"],
         plotOptions: {
             bar: {
                 columnWidth: "8",

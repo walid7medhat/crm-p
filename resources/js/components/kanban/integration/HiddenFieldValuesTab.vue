@@ -472,13 +472,13 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 :deep(.custom-v-select .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.custom-v-select .vs__dropdown-option--selected) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 /* Meta Ads Select Specific Styling */
@@ -515,14 +515,14 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 :deep(.meta-ads-select .vs__dropdown-option--highlight) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-weight: 400;
 }
 
 :deep(.meta-ads-select .vs__dropdown-option--selected) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 /* Remove border and special styles from last option in Meta Ads select */
@@ -607,7 +607,7 @@ watch(selectedLeadValue, (newVal) => {
 
 .add-project-icon {
     font-size: 16px;
-    color: #733E87;
+    color: var(--color-primary);
     flex-shrink: 0;
 }
 
@@ -620,7 +620,7 @@ watch(selectedLeadValue, (newVal) => {
 
 .add-project-option .add-project-icon {
     font-size: 16px;
-    color: #733E87;
+    color: var(--color-primary);
     flex-shrink: 0;
 }
 
@@ -655,7 +655,7 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 .add-project-input:focus {
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(1, 6, 44, 0.1);
     outline: none;
 }
@@ -791,8 +791,8 @@ watch(selectedLeadValue, (newVal) => {
 }
 
 .add-project-modal-content .footer-btn.apply-btn {
-    background: #6b21a8;
-    color: #FFFFFF;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 .add-project-modal-content .footer-btn.apply-btn:hover {

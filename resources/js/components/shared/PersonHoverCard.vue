@@ -186,7 +186,7 @@ function hideCard() {
     align-items: center;
     justify-content: center;
     background: #f7f1fa;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 13px;
 }
 
@@ -208,7 +208,7 @@ function hideCard() {
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;

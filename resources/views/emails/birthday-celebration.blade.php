@@ -26,7 +26,7 @@
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(11, 7, 54, 0.12);">
                     <!-- Header -->
                     <tr>
-                        <td style="padding: 48px 40px; text-align: center; background: linear-gradient(135deg, #0B0736 0%, #733E87 100%);">
+                        <td style="padding: 48px 40px; text-align: center; background: linear-gradient(135deg, #0B0736 0%, #6b21a8 100%);">
                             <div style="font-size: 44px; line-height: 1; margin: 0 0 12px 0;">🎉🎂🎈</div>
                             <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Happy Birthday, {{ $userName }}!</h1>
                             <p style="margin: 10px 0 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.85);">From all of us at Oia Properties</p>
@@ -41,7 +41,7 @@
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 28px 0;">
                                 <tr>
                                     <td style="text-align: center; padding: 20px; background: #f3ecf7; border-radius: 12px;">
-                                        <p style="margin: 0; font-size: 18px; font-weight: 700; color: #733E87;">🥳 Have a wonderful day! 🥳</p>
+                                        <p style="margin: 0; font-size: 18px; font-weight: 700; color: #00be83;">🥳 Have a wonderful day! 🥳</p>
                                     </td>
                                 </tr>
                             </table>

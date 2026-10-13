@@ -26,7 +26,7 @@ const EXACT = {
     'land line': { icon: 'lucide:phone', bg: '#334155' },
     'mobile marketing': { icon: 'lucide:smartphone', bg: '#ea580c' },
     'self leads': { icon: 'lucide:user', bg: '#7c3aed' },
-    'my self network': { icon: 'lucide:user', bg: '#6d28d9' },
+    'my self network': { icon: 'lucide:user', bg: 'var(--color-primary)' },
     'via references': { icon: 'lucide:users', bg: '#0f766e' },
     referral: { icon: 'lucide:users', bg: '#0f766e' },
     'my social media app': { icon: 'lucide:share-2', bg: '#db2777' },

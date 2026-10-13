@@ -1,5 +1,5 @@
 .ast-mgmt {
-  --ast-primary: #733e87;
+  --ast-primary: var(--color-purple);
   --ast-navy: #0b0736;
   --ast-muted: #64748b;
   --ast-border: #e8edf3;
@@ -72,10 +72,10 @@
 }
 
 .ast-view-tab.is-active {
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
   border: none;
   box-shadow: none;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .ast-grid {
@@ -93,7 +93,7 @@
 }
 
 .ast-card:hover {
-  border-color: rgba(115, 62, 135, 0.35);
+  border-color: rgba(var(--color-purple-rgb), 0.35);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -110,7 +110,7 @@
   width: 56px;
   height: 56px;
   border-radius: 12px;
-  background: rgba(115, 62, 135, 0.1);
+  background: rgba(var(--color-purple-rgb), 0.1);
   color: var(--ast-primary);
   display: inline-flex;
   align-items: center;
@@ -286,7 +286,7 @@
 .ast-tracking__alert--expiring_soon { border-color: #fed7aa; background: #fff7ed; }
 
 .ast-modal-overlay {
-  --ast-primary: #733e87;
+  --ast-primary: var(--color-purple);
   --ast-navy: #0b0736;
   --ast-border: #e5e7eb;
   position: fixed;
@@ -433,7 +433,7 @@
 .ast-form-grid select:focus,
 .ast-form-grid textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.12);
   border-color: #c4b5d4;
 }
 
@@ -467,8 +467,8 @@
 }
 
 .ast-modal__btn--primary {
-  background: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .ast-modal__btn--primary:hover {
@@ -513,7 +513,7 @@
 
 .ast-detail-page,
 .ast-detail {
-  --ast-primary: #733e87;
+  --ast-primary: var(--color-purple);
   --ast-navy: #0b0736;
   --ast-muted: #64748b;
   --ast-border: #e8edf3;
@@ -557,7 +557,7 @@
   width: 72px;
   height: 72px;
   border-radius: 16px;
-  background: rgba(115, 62, 135, 0.1);
+  background: rgba(var(--color-purple-rgb), 0.1);
   color: var(--ast-primary);
   display: inline-flex;
   align-items: center;
@@ -717,7 +717,7 @@
 }
 
 .ast-req-table .emp-directory-table__export {
-  border-color: #6b21a8;
+  border-color: var(--color-primary);
   color: #0b0736;
 }
 
@@ -986,7 +986,7 @@
 
 .ast-req-cancel {
   background: #fff !important;
-  border: 1px solid #6b21a8 !important;
+  border: 1px solid var(--color-primary) !important;
   color: #0b0736 !important;
 }
 
@@ -1134,8 +1134,8 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(115, 62, 135, 0.1);
-  color: #733e87;
+  background: rgba(var(--color-purple-rgb), 0.1);
+  color: var(--color-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;

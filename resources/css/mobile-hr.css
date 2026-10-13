@@ -110,11 +110,11 @@
   }
 
   .hr-tab.active {
-    color: #733e87;
+    color: var(--color-primary);
     background: #faf5ff;
     font-weight: 700;
     border-bottom: none;
-    box-shadow: inset 0 -2px 0 #733e87;
+    box-shadow: inset 0 -2px 0 var(--color-purple);
     border-radius: 10px 10px 0 0;
   }
 
@@ -124,7 +124,7 @@
   }
 
   .hr-tab.active .hr-tab-chevron {
-    color: #733e87;
+    color: var(--color-primary);
   }
 
   .hr-content-card {
@@ -185,7 +185,7 @@
 
   .hr-inner-tab.active {
     background: #faf5ff;
-    color: #733e87;
+    color: var(--color-primary);
     border-color: #d4bfe0;
   }
 
@@ -320,7 +320,7 @@
 
   .hr-mob-nav-sheet__item-left iconify-icon {
     font-size: 18px;
-    color: #733e87;
+    color: var(--color-primary);
   }
 
   .hr-mob-nav-sheet__item > iconify-icon {

@@ -414,7 +414,7 @@ async function setDecision(decision) {
       input: 'textarea',
       inputPlaceholder: 'Rejection reason',
       showCancelButton: true,
-      confirmButtonColor: '#6b21a8',
+      confirmButtonColor: 'var(--color-purple)',
     })
     if (!result.isConfirmed) return
     reason = result.value || 'Rejected by HR'
@@ -433,7 +433,7 @@ async function sendRejection(item) {
     input: 'textarea',
     inputPlaceholder: 'Rejection reason',
     showCancelButton: true,
-    confirmButtonColor: '#6b21a8',
+    confirmButtonColor: 'var(--color-purple)',
   })
   if (!result.isConfirmed) return
   try {

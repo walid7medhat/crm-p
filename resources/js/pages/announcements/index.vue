@@ -239,7 +239,7 @@ onUnmounted(() => {
   padding: 22px 24px;
   border-radius: 22px;
   background:
-    radial-gradient(circle at top right, rgba(115, 62, 135, 0.18), transparent 42%),
+    radial-gradient(circle at top right, rgba(var(--color-purple-rgb), 0.18), transparent 42%),
     linear-gradient(180deg, #ffffff 0%, #faf8fc 100%);
   border: 1px solid #ece7f3;
   box-shadow: 0 12px 32px rgba(11, 7, 54, 0.05);
@@ -250,7 +250,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  color: #733e87;
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -275,7 +275,7 @@ onUnmounted(() => {
 
 .announcement-board__count {
   margin: 0;
-  color: #733e87;
+  color: var(--color-primary);
   font-size: 13px;
   font-weight: 700;
 }
@@ -323,7 +323,7 @@ onUnmounted(() => {
 
 .announcement-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 36px rgba(115, 62, 135, 0.14);
+  box-shadow: 0 18px 36px rgba(var(--color-purple-rgb), 0.14);
 }
 
 .announcement-card__media {
@@ -435,7 +435,7 @@ onUnmounted(() => {
   margin-bottom: 4px;
   border-radius: 16px;
   background: #f6f0fa;
-  color: #733e87;
+  color: var(--color-primary);
   font-size: 24px;
 }
 
@@ -444,8 +444,8 @@ onUnmounted(() => {
   border: 0;
   border-radius: 999px;
   padding: 8px 14px;
-  background: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 600;
   cursor: pointer;
 }
@@ -463,7 +463,7 @@ onUnmounted(() => {
     20px
     calc(20px + env(safe-area-inset-bottom, 0px));
   background:
-    radial-gradient(ellipse at center, rgba(115, 62, 135, 0.28), transparent 58%),
+    radial-gradient(ellipse at center, rgba(var(--color-purple-rgb), 0.28), transparent 58%),
     rgba(8, 6, 24, 0.78);
   backdrop-filter: blur(8px);
 }

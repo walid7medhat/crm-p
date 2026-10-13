@@ -41,6 +41,7 @@ import '../css/crm-toast.css'
 import '../css/project-page.css'
 import '../css/auth-landing.css'
 import './components/Authentication/auth-glass-shared.css'
+import '../css/popup-close.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
 import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
@@ -56,7 +57,7 @@ const addCSS = (url) => {
   link.href = url
   document.head.appendChild(link)
 }
-addCSS('/assets/css/style14.css')
+addCSS('/assets/css/style14.css?v=20261013c')
 addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
 
 // Single shared API client (token + /api base URL) for the whole app

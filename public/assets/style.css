@@ -330,7 +330,7 @@
 
   --primary-500: #458EFF;
 
-  --primary-600: #733E87;
+  --primary-600: var(--color-purple);
 
   --primary-700: #486CEA;
 
@@ -476,7 +476,7 @@
 
   --lilac-500: #b66dff;
 
-  --lilac-600: #733E87;
+  --lilac-600: var(--color-purple);
 
   --lilac-700: #6f37e6;
 
@@ -544,7 +544,7 @@
 
   --indigo: #7F27FF;
 
-  --purple: #733E87;
+  --purple: var(--color-purple);
 
   --red: #E30A0A;
 
@@ -7226,7 +7226,7 @@ html[data-theme=dark] .bg-warning-light-two {
 
 .stroke-blue {
 
-  stroke: #733E87 !important;
+  stroke: var(--color-purple) !important;
 
 }
 
@@ -31184,7 +31184,7 @@ td.fc-header-center {
 
   background: none;
 
-  color: #733E87;
+  color: var(--color-primary);
 
 }
 
@@ -31396,11 +31396,11 @@ td.fc-header-center {
 
 .btn-primary{
 
-  background-color: #733E87;
+  background-color: var(--color-primary) !important;
 
-  color: #FFFFFF;
+  color: #ffffff !important;
 
-  border: 1px solid #733E87;
+  border: 1px solid var(--color-primary);
 
 }
 
@@ -31442,14 +31442,14 @@ main.dashboard-main > .row>* {
     color: #fff;
 }
 .card-footer.text-end .btn.btn-outline-primary:hover {
-    border-color: #733E87 !important;
+    border-color: var(--color-primary) !important;
     background: transparent !important;
-    color:#733E87  !important;
+    color:var(--color-primary)  !important;
 }
 .card-footer.text-end .btn.btn-primary:hover {
-    border-color: #733E87 !important;
-    background: #733E87 !important;
-    color: #fff !important;
+    border-color: var(--color-primary) !important;
+    background-color: var(--color-primary) !important;
+    color: #ffffff !important;
 }
 .btn-primary:hover{
   border-color: #0B0736 !important;

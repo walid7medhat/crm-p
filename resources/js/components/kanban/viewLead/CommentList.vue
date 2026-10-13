@@ -415,7 +415,7 @@ const askDeleteType = async (alreadySoftDeleted = false) => {
         confirmButtonText: 'Soft delete',
         denyButtonText: 'Hard delete',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#733E87',
+        confirmButtonColor: 'var(--color-purple)',
         denyButtonColor: '#DC2626',
     })
     if (result.isDenied) return true
@@ -695,7 +695,7 @@ defineExpose({
 }
 
 .timeline-icon-orange {
-    background: #733E87;
+    background: var(--gradient-primary) !important;
 }
 
 .timeline-icon-content {
@@ -858,7 +858,7 @@ defineExpose({
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
 }
 
@@ -929,7 +929,7 @@ defineExpose({
 
 .comment-icon-content {
     font-size: 16px;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .comment-text {
@@ -1129,7 +1129,7 @@ defineExpose({
 
 .comment-translate-icon {
     font-size: 15px;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .comment-translate-icon.spinning {
@@ -1143,7 +1143,7 @@ defineExpose({
 .comment-translation {
     margin: 10px 0 0 44px;
     padding: 8px 10px;
-    border-left: 3px solid #733E87;
+    border-left: 3px solid var(--color-primary);
     border-radius: 6px;
     background: #FAF7FC;
 }
@@ -1154,7 +1154,7 @@ defineExpose({
     gap: 4px;
     font-size: 11px;
     font-weight: 500;
-    color: #733E87;
+    color: var(--color-primary);
     margin-bottom: 4px;
 }
 

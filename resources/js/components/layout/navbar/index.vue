@@ -2696,7 +2696,7 @@ const showBackButton = computed(() => {
   margin: 0 auto 14px;
   border-radius: 50%;
   background: #f3ecf7;
-  color: #733E87;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2726,15 +2726,15 @@ const showBackButton = computed(() => {
   padding: 0 20px;
   border: none;
   border-radius: 10px;
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 .announcement-popup__btn:hover:not(:disabled) {
-  background: #733E87;
+  background: var(--gradient-primary) !important;
 }
 .announcement-popup__btn:disabled {
   opacity: 0.6;
@@ -2785,7 +2785,7 @@ const showBackButton = computed(() => {
 }
 .birthday-popup {
   width: min(400px, 92vw);
-  background: linear-gradient(160deg, #6b21a8 0%, #733E87 100%);
+  background: var(--gradient-primary) !important;
   border-radius: 20px;
   padding: 32px 28px 26px;
   text-align: center;
@@ -3020,33 +3020,33 @@ const showBackButton = computed(() => {
 }
 
 .top-module-btn:hover {
-  color: #733E87;
-  background: #f3e8ff;
+  color: #ffffff;
+  background: var(--gradient-primary);
 }
 
 .top-module-btn.active {
-  background: #733E87;
-  color: #fff;
-  border-color: #733E87;
-  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.28);
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
 }
 
 /* Keep active CRM pill highlighted on dashboard */
 .navbar-header--dashboard-home .top-module-btn.active {
-  background: #733E87;
-  color: #fff;
-  border-color: #733E87;
-  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.28);
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.28);
 }
 
 .navbar-header--dashboard-home .top-module-btn:hover {
-  color: #733E87;
-  background: #f3e8ff;
+  color: #ffffff;
+  background: var(--gradient-primary);
 }
 
 .navbar-header--dashboard-home .top-module-btn.active:hover {
-  color: #fff;
-  background: #5f3470;
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
 }
 
 .module-tabs-nav--sub {
@@ -3102,8 +3102,8 @@ const showBackButton = computed(() => {
 }
 
 .navbar-global-search-btn:hover {
-  color: #6b21a8;
-  background: rgba(107, 33, 168, 0.1);
+  color: var(--color-primary);
+  background: rgba(var(--color-purple-rgb), 0.1);
 }
 
 .navbar-settings-btn {
@@ -3231,16 +3231,16 @@ const showBackButton = computed(() => {
 
 .create-property-btn,
 .navbar-create-listing {
-  background: #733E87 !important;
-  border: 1px solid #733E87 !important;
+  background: var(--gradient-primary) !important;
+  border: 1px solid var(--color-primary) !important;
   color: #ffffff !important;
   box-shadow: none !important;
 }
 
 .create-property-btn:hover,
 .navbar-create-listing:hover {
-  background: #5f3470 !important;
-  border-color: #5f3470 !important;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary) !important;
   color: #ffffff !important;
   transform: none;
   box-shadow: none !important;
@@ -3404,7 +3404,7 @@ const showBackButton = computed(() => {
   bottom: -1px;
   width: 28px;
   height: 28px;
-  background: #22c55e;
+  background: var(--gradient-primary);
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -4105,18 +4105,18 @@ const showBackButton = computed(() => {
 
 .module-tab-btn:hover,
 .kanban-tab-btn:hover {
-  color: #733E87;
+  color: var(--color-primary);
   background: #faf5ff;
-  border-color: #e9d5ff;
+  border-color: var(--color-purple-light);
 }
 
 /* Unified pill highlight — no underline (CRM, Listings, Settings, Agents) */
 .module-tab-btn.active,
 .kanban-tab-btn.active {
-  color: #fff;
-  background: #733E87;
-  border-color: #733E87;
-  box-shadow: 0 2px 8px rgba(115, 62, 135, 0.22);
+  color: #ffffff !important;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(var(--color-purple-rgb), 0.22);
 }
 
 .module-tab-count {
@@ -4136,7 +4136,7 @@ const showBackButton = computed(() => {
 
 .module-tab-btn.active .module-tab-count {
   background: #fff;
-  color: #5b3d8f;
+  color: #581c87;
 }
 
 .active-indicator {
@@ -4177,7 +4177,7 @@ const showBackButton = computed(() => {
 }
 
 .search-badge {
-  background: #22c55e;
+  background: var(--gradient-primary);
   color: white;
   font-size: 10px;
   font-weight: bold;
@@ -4186,7 +4186,7 @@ const showBackButton = computed(() => {
   margin-left: 4px;
 }
 
-/* Kanban Create Button — match tab color #733E87 */
+/* Kanban Create Button — match tab color var(--color-purple) */
 .btn-create-new {
     padding: .35rem .6rem !important;
     min-height: 32px;
@@ -4196,15 +4196,15 @@ const showBackButton = computed(() => {
     border-radius: 6px;
     text-decoration: none;
     transition: all .3s ease;
-    background: #733E87 !important;
-    border: 1px solid #733E87 !important;
+    background: var(--gradient-primary) !important;
+    border: 1px solid var(--color-primary) !important;
     color: #ffffff !important;
     box-shadow: none !important;
 }
 
 .btn-create-new:hover {
-  background: #5f3470 !important;
-  border-color: #5f3470 !important;
+  background: var(--gradient-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
   color: #ffffff !important;
   transform: none;
 }
@@ -4381,15 +4381,15 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 }
 
 .search-filter-btn {
-    background: rgba(107, 33, 168, 0.08);
-    color: #6b21a8;
+    background: rgba(var(--color-purple-rgb), 0.08);
+    color: var(--color-primary);
 }
 
 .search-icon-btn:hover,
 .search-filter-btn:hover,
 .search-clear-btn:hover {
-    color: #6b21a8;
-    background: rgba(107, 33, 168, 0.12);
+    color: var(--color-primary);
+    background: rgba(var(--color-purple-rgb), 0.12);
 }
 
 .search-input-container {
@@ -4412,8 +4412,8 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    border: 2px solid rgba(107, 33, 168, 0.2);
-    border-top-color: #6b21a8;
+    border: 2px solid rgba(var(--color-purple-rgb), 0.2);
+    border-top-color: var(--color-primary);
     animation: search-spin 0.7s linear infinite;
     pointer-events: none;
 }
@@ -4457,7 +4457,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 }
 
 .search-input--has-selection {
-    color: #6b21a8 !important;
+    color: var(--color-primary) !important;
     font-weight: 600;
 }
 
@@ -4567,9 +4567,9 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 }
 
 .action-icon-btn:hover {
-    background: #f3e8ff;
-    border-color: #e9d5ff !important;
-    color: #6b21a8;
+    background: var(--gradient-primary);
+    border-color: var(--color-purple-light) !important;
+    color: #ffffff;
 }
 
 .action-icon-btn:focus {
@@ -4787,7 +4787,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
-    color: #fff;
+    color: var(--color-primary);
     font-size: 15px;
     font-weight: 700;
     font-family: Montserrat, Inter, system-ui, sans-serif;
@@ -4820,7 +4820,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    color: var(--color-primary);
     font-size: 22px;
     cursor: pointer;
     transition: background 0.15s ease;
@@ -4843,7 +4843,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    color: var(--color-primary);
     font-size: 24px;
     cursor: pointer;
     transition: background 0.15s ease;
@@ -4904,7 +4904,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
-    color: #fff;
+    color: var(--color-primary);
     font-size: 16px;
     font-weight: 700;
     font-family: Montserrat, Inter, system-ui, sans-serif;
@@ -4926,7 +4926,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-color: rgba(183, 148, 246, 0.65);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 0 0 3px rgba(115, 62, 135, 0.35);
+      0 0 0 3px rgba(var(--color-purple-rgb), 0.35);
   }
 
   .kanban-mob-lead-select option {
@@ -4961,14 +4961,14 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    background: #e9d5ff;
+    background: var(--gradient-primary) !important;
   }
 
   .lead-board-id__avatar--letter {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #6b21a8;
+    color: var(--color-primary);
     font-size: 16px;
     font-weight: 700;
   }
@@ -4991,8 +4991,9 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border: 0;
     border-radius: 12px;
     /* Theme purple — same as the desktop "Create New" button. */
-    background: #733E87;
-    color: #ffffff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     font-size: 14px;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -5037,10 +5038,10 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #12b981 0%, #22c55e 100%);
-    color: #fff;
+    background: var(--gradient-primary);
+    color: var(--color-on-primary);
     font-size: 20px;
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.45);
+    box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.45);
     cursor: pointer;
   }
 
@@ -5053,7 +5054,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.28);
     background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5347,7 +5348,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 
   .kanban-switch-option.is-active {
     background: #f6f1fb;
-    color: #6b21a8;
+    color: var(--color-primary);
   }
 
   .kanban-switch-option__icon {
@@ -5355,7 +5356,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     height: 28px;
     border-radius: 10px;
     background: #f6f1fa;
-    color: #733e87;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5373,7 +5374,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   }
 
   .kanban-switch-option__check {
-    color: #6b21a8;
+    color: var(--color-primary);
     font-size: 16px;
   }
 }

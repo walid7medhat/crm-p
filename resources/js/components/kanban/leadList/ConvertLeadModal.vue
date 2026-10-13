@@ -418,8 +418,8 @@ defineExpose({
     justify-content: center;
     padding: 20px;
     background:
-        radial-gradient(ellipse at 15% 10%, rgba(115, 62, 135, 0.12), transparent 42%),
-        radial-gradient(ellipse at 90% 90%, rgba(115, 62, 135, 0.1), transparent 40%),
+        radial-gradient(ellipse at 15% 10%, rgba(var(--color-purple-rgb), 0.12), transparent 42%),
+        radial-gradient(ellipse at 90% 90%, rgba(var(--color-purple-rgb), 0.1), transparent 40%),
         rgba(15, 23, 42, 0.45);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -463,7 +463,7 @@ defineExpose({
     background: #ffffff;
     box-shadow:
         0 28px 70px rgba(15, 23, 42, 0.18),
-        0 0 0 1px rgba(115, 62, 135, 0.04);
+        0 0 0 1px rgba(var(--color-purple-rgb), 0.04);
     pointer-events: auto;
     color: #0f172a;
 }
@@ -493,10 +493,10 @@ defineExpose({
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    color: #fff;
-    background: #733E87;
-    border: 1px solid rgba(115, 62, 135, 0.25);
-    box-shadow: 0 8px 18px rgba(115, 62, 135, 0.28);
+    color: #ffffff !important;
+    background: var(--gradient-primary) !important;
+    border: 1px solid rgba(var(--color-purple-rgb), 0.25);
+    box-shadow: 0 8px 18px rgba(var(--color-purple-rgb), 0.28);
 }
 
 .convert-lead-heading-text {
@@ -537,9 +537,9 @@ defineExpose({
 }
 
 .convert-lead-close:hover {
-    background: #f3e8ff;
+    background: var(--gradient-primary);
     border-color: #d8b4fe;
-    color: #733E87;
+    color: #ffffff;
 }
 
 /* Sidebar ~32% | cards 68% — same height as design */
@@ -560,7 +560,7 @@ defineExpose({
     height: 100%;
     min-height: 0;
     border: 1px solid rgba(167, 139, 250, 0.35);
-    background: #733E87;
+    background: var(--gradient-primary) !important;
 }
 
 .aside-skyline {
@@ -603,7 +603,7 @@ defineExpose({
 }
 
 .aside-accent {
-    background: linear-gradient(90deg, #fce7f3, #f0abfc 40%, #e9d5ff);
+    background: linear-gradient(90deg, #fce7f3, #f0abfc 40%, var(--color-purple-light));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -657,8 +657,8 @@ defineExpose({
 }
 
 .deal-name-input:focus {
-    border-color: #733E87;
-    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.15);
 }
 
 .deal-name-input.is-invalid {
@@ -705,15 +705,15 @@ defineExpose({
 .deal-type-option:not(.selected):hover {
     border-color: #d8b4fe;
     background: #f8f5ff;
-    box-shadow: 0 8px 20px rgba(115, 62, 135, 0.08);
+    box-shadow: 0 8px 20px rgba(var(--color-purple-rgb), 0.08);
 }
 
 .deal-type-option.selected {
-    border-color: #733E87;
-    background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
+    border-color: var(--color-primary);
+    background: linear-gradient(180deg, #faf5ff 0%, var(--color-primary) 100%);
     box-shadow:
-        0 0 0 1px rgba(115, 62, 135, 0.35),
-        0 12px 28px rgba(115, 62, 135, 0.18);
+        0 0 0 1px rgba(var(--color-purple-rgb), 0.35),
+        0 12px 28px rgba(var(--color-purple-rgb), 0.18);
 }
 
 .option-icon {
@@ -724,18 +724,18 @@ defineExpose({
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    color: #733E87;
-    background: #f3e8ff;
-    border: 1px solid #e9d5ff;
+    color: #ffffff;
+    background: var(--gradient-primary);
+    border: 1px solid var(--color-purple-light);
     pointer-events: none;
     flex-shrink: 0;
 }
 
 .deal-type-option.selected .option-icon {
-    color: #fff;
-    background: #733E87;
+    color: #ffffff !important;
+    background: var(--gradient-primary) !important;
     border-color: transparent;
-    box-shadow: 0 6px 14px rgba(115, 62, 135, 0.3);
+    box-shadow: 0 6px 14px rgba(var(--color-purple-rgb), 0.3);
 }
 
 .option-text {
@@ -767,15 +767,15 @@ defineExpose({
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
-    color: #6b21a8;
-    background: #f3e8ff;
-    border: 1px solid #e9d5ff;
+    color: #ffffff;
+    background: var(--gradient-primary);
+    border: 1px solid var(--color-purple-light);
     pointer-events: none;
 }
 
 .most-common-badge iconify-icon {
     font-size: 11px;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .option-arrow {
@@ -797,10 +797,10 @@ defineExpose({
 }
 
 .deal-type-option.selected .option-arrow {
-    color: #fff;
-    background: #733E87;
+    color: #ffffff !important;
+    background: var(--gradient-primary) !important;
     border-color: transparent;
-    box-shadow: 0 8px 16px rgba(115, 62, 135, 0.35);
+    box-shadow: 0 8px 16px rgba(var(--color-purple-rgb), 0.35);
 }
 
 .convert-lead-footer {
@@ -825,7 +825,7 @@ defineExpose({
 
 .convert-lead-tip iconify-icon {
     font-size: 15px;
-    color: #733E87;
+    color: var(--color-primary);
     flex-shrink: 0;
 }
 
@@ -866,9 +866,9 @@ defineExpose({
 }
 
 .btn-add-deal {
-    background: #733E87;
-    color: #fff;
-    box-shadow: 0 10px 24px rgba(115, 62, 135, 0.32);
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.32);
 }
 
 .btn-add-deal:hover:not(:disabled) {

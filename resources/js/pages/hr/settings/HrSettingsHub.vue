@@ -857,8 +857,8 @@ function saveCareerDefaults() {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  background: #6b21a8;
-  color: #ffffff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .hr-set-top__copy {
   min-width: 0;
@@ -934,8 +934,8 @@ function saveCareerDefaults() {
   flex-shrink: 0;
 }
 .hr-set-nav__item.is-active .hr-set-nav__icon {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 .hr-set-nav__item strong,
 .hr-set-nav__item small {
@@ -969,9 +969,9 @@ function saveCareerDefaults() {
   font-weight: 600;
 }
 .hr-set-subnav button.is-active {
-  background: #6b21a8;
-  border-color: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
 }
 .hr-set-panel,
 :deep(.hr-set-catalog) {
@@ -1037,9 +1037,9 @@ function saveCareerDefaults() {
 }
 .hr-set-btn--primary,
 :deep(.hr-set-btn--primary) {
-  background: #6b21a8;
-  border-color: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary);
+  color: #ffffff !important;
 }
 .hr-set-form,
 :deep(.hr-set-form) {
@@ -1133,7 +1133,7 @@ function saveCareerDefaults() {
   padding: 4px 8px;
   border-radius: 999px;
   background: #f4f0f8;
-  color: #733e87;
+  color: var(--color-primary);
 }
 :deep(.hr-set-badge.is-info) { background: #eef2ff; color: #3730a3; }
 :deep(.hr-set-badge.is-muted) { background: #f3f4f6; color: #6b7280; }
@@ -1181,7 +1181,7 @@ function saveCareerDefaults() {
   transition: transform 0.15s ease;
 }
 :deep(.hr-set-switch input:checked + .hr-set-switch__track) {
-  background: #6b21a8;
+  background: var(--gradient-primary) !important;
 }
 :deep(.hr-set-switch input:checked + .hr-set-switch__track::after) {
   transform: translateX(20px);

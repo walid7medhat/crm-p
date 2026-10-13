@@ -475,7 +475,7 @@ body.voice-search-open {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: rgba(115, 62, 135, 0.18);
+  background: rgba(var(--color-purple-rgb), 0.18);
   opacity: 0;
 }
 
@@ -494,14 +494,14 @@ body.voice-search-open {
   height: 72px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(145deg, #733e87 0%, #6b21a8 100%);
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-size: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(115, 62, 135, 0.35);
+  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -515,7 +515,7 @@ body.voice-search-open {
 }
 
 .voice-search-stage.is-listening .voice-mic-btn {
-  background: linear-gradient(145deg, #b60f1c 0%, #733e87 100%);
+  background: linear-gradient(145deg, #b60f1c 0%, var(--color-purple) 100%);
 }
 
 .voice-status-row {
@@ -538,7 +538,7 @@ body.voice-search-open {
 }
 
 .voice-status-dot.is-processing {
-  background: #733e87;
+  background: var(--gradient-primary) !important;
 }
 
 .voice-status-dot.is-completed {
@@ -618,8 +618,8 @@ body.voice-search-open {
 }
 
 .voice-btn--primary {
-  background: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 @keyframes voice-modal-in {

@@ -505,7 +505,7 @@ onMounted(() => {
 <style scoped>
 .ev-page {
   --navy: #0b0736;
-  --purple: #733e87;
+  --purple: var(--color-purple);
   --border: #ece8f3;
   --muted: #6b7280;
   padding: 0;

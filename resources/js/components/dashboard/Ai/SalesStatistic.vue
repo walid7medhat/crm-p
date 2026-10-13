@@ -69,9 +69,9 @@ export default {
           zoom: { enabled: false },
           fontFamily: 'Inter, system-ui, sans-serif',
         },
-        colors: ['#733E87'],
+        colors: ['#6b21a8'],
         dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 3, colors: ['#733E87'] },
+        stroke: { curve: 'smooth', width: 3, colors: ['#6b21a8'] },
         fill: {
           type: 'gradient',
           gradient: {
@@ -82,13 +82,13 @@ export default {
             stops: [0, 85, 100],
             colorStops: [
               { offset: 0, color: '#A78BFA', opacity: 0.55 },
-              { offset: 100, color: '#733E87', opacity: 0.05 },
+              { offset: 100, color: '#6b21a8', opacity: 0.05 },
             ],
           },
         },
         markers: {
           size: 4,
-          colors: ['#733E87'],
+          colors: ['#6b21a8'],
           strokeColors: '#fff',
           strokeWidth: 2,
           hover: { size: 6 },

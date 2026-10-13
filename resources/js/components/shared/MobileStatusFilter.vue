@@ -61,7 +61,7 @@ const open = ref(false)
 const current = computed(() => props.options.find((o) => o.value === props.modelValue))
 
 const STATUS_COLORS = {
-  all: '#6b21a8',
+  all: 'var(--color-purple)',
   pending: '#f59e0b',
   in_progress: '#0ea5e9',
   approved: '#16a34a',
@@ -143,8 +143,8 @@ body.msf-sheet-open {
 }
 
 .msf-count {
-  background: #f3e8ff;
-  color: #6b21a8;
+  background: var(--gradient-primary);
+  color: #ffffff;
   border-radius: 999px;
   padding: 1px 8px;
   font-size: 12px;
@@ -237,7 +237,7 @@ body.msf-sheet-open {
 .msf-option--active {
   background: #f5f3ff;
   font-weight: 600;
-  color: #6b21a8;
+  color: var(--color-primary);
 }
 
 .msf-option__label {
@@ -256,13 +256,13 @@ body.msf-sheet-open {
 }
 
 .msf-option--active .msf-option__count {
-  background: #6b21a8;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .msf-option__check {
   font-size: 18px;
-  color: #6b21a8;
+  color: var(--color-primary);
 }
 
 .msf-fade-enter-active,

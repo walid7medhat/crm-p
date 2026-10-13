@@ -1284,8 +1284,8 @@ watch(() => route.query, (newQuery, oldQuery) => {
 }
 
 .export-active-btn {
-  border: 1px solid #0d6efd;
-  background: #0d6efd;
+  border: 1px solid var(--color-primary);
+  background: var(--gradient-primary);
   color: #fff;
   border-radius: 10px;
   height: 40px;
@@ -1409,13 +1409,13 @@ watch(() => route.query, (newQuery, oldQuery) => {
 }
 
 .status-btn:hover {
-  border-color: #733E87;
-  color: #733E87;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
   background: #fff9ef;
 }
 
 .status-btn.active {
-  background: linear-gradient(135deg, #733E87 0%, #ffb224 100%);
+  background: linear-gradient(135deg, var(--color-purple) 0%, #ffb224 100%);
   border-color: #f1a10a;
   color: white;
   box-shadow: 0 4px 10px rgba(250, 163, 0, 0.22);
@@ -1468,8 +1468,8 @@ watch(() => route.query, (newQuery, oldQuery) => {
 .view-more-btn {
   display: inline-block;
   text-align: center;
-  background: #733E87;
-  color: #ffffff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-weight: 500;
   border-radius: 10px;
   padding: 8px 0;
@@ -1481,7 +1481,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
 }
 
 .view-more-btn:hover {
-  background: #111;
+  background: #581c87;
   color: #fff;
 }
 
@@ -1793,8 +1793,8 @@ watch(() => route.query, (newQuery, oldQuery) => {
 
 
 .status-badge {
-   background: #6b21a8 ;
-  color: white;
+   background: var(--gradient-primary) !important ;
+  color: #ffffff !important;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.7rem;
@@ -1814,7 +1814,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
 
 .property-listed-date i {
   font-size: 0.8rem;
-  color: #733E87;
+  color: var(--color-primary);
 }
 
 .justify-between{

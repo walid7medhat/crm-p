@@ -988,11 +988,11 @@ defineExpose({
     padding: 10px 12px;
     border-radius: 12px;
     background: #ffffff;
-    border: 1px solid rgba(115, 62, 135, 0.18);
+    border: 1px solid rgba(var(--color-purple-rgb), 0.18);
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.9) inset,
         0 1px 2px rgba(15, 23, 42, 0.05),
-        0 6px 16px rgba(115, 62, 135, 0.08);
+        0 6px 16px rgba(var(--color-purple-rgb), 0.08);
 }
 
 .lead-pool-toolbar__btn {
@@ -1016,25 +1016,25 @@ defineExpose({
 
 .lead-pool-toolbar__btn--primary {
     color: #fff;
-    background: linear-gradient(135deg, #00a7fa 0%, #733e87 100%);
+    background: linear-gradient(135deg, #00a7fa 0%, var(--color-purple) 100%);
     border-color: transparent;
 }
 
 .lead-pool-toolbar__btn--ghost {
     color: #0B0736;
     background: #f6f2f9;
-    border-color: rgba(115, 62, 135, 0.28);
+    border-color: rgba(var(--color-purple-rgb), 0.28);
 }
 
 .lead-pool-toolbar__btn--ghost:hover {
     background: #efe6f5;
-    border-color: rgba(115, 62, 135, 0.42);
+    border-color: rgba(var(--color-purple-rgb), 0.42);
 }
 
 .lead-pool-toolbar__btn--assign {
     margin-left: auto;
     color: #fff;
-    background: linear-gradient(135deg, #00a7fa 0%, #733e87 100%);
+    background: linear-gradient(135deg, #00a7fa 0%, var(--color-purple) 100%);
     border-color: transparent;
 }
 
@@ -1070,15 +1070,15 @@ defineExpose({
     width: 16px;
     height: 16px;
     margin: 0;
-    accent-color: #733e87;
+    accent-color: var(--color-purple);
     cursor: pointer;
 }
 
 .lead-pool-toolbar__count {
     font-size: 12px;
     font-weight: 700;
-    color: #733e87;
-    background: rgba(115, 62, 135, 0.1);
+    color: var(--color-primary);
+    background: rgba(var(--color-purple-rgb), 0.1);
     border-radius: 999px;
     padding: 4px 10px;
 }
@@ -1090,7 +1090,7 @@ defineExpose({
     padding: 6px 12px;
     border-radius: 8px;
     background: #ffffff;
-    border: 1px solid rgba(115, 62, 135, 0.14);
+    border: 1px solid rgba(var(--color-purple-rgb), 0.14);
     font-size: 12px;
     font-weight: 500;
     line-height: 1.4;
@@ -1108,11 +1108,11 @@ defineExpose({
     border-radius: 11px !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     color: #1e293b;
-    border: 1.5px solid rgba(107, 33, 168, 0.16) !important;
+    border: 1.5px solid rgba(var(--color-purple-rgb), 0.16) !important;
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.9) inset,
         0 1px 2px rgba(30, 27, 46, 0.04),
-        0 4px 14px rgba(107, 33, 168, 0.07) !important;
+        0 4px 14px rgba(var(--color-purple-rgb), 0.07) !important;
     background: linear-gradient(160deg, #ffffff 0%, #fbf7fc 52%, #f5eef8 100%) !important;
     width: 100%;
     display: flex;
@@ -1126,12 +1126,12 @@ defineExpose({
 
 .lead-pool-wrapper .kanban-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(107, 33, 168, 0.32) !important;
+    border-color: rgba(var(--color-purple-rgb), 0.32) !important;
     background: linear-gradient(160deg, #ffffff 0%, #f8f2fb 50%, #f0e6f7 100%) !important;
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.95) inset,
         0 4px 10px rgba(30, 27, 46, 0.08),
-        0 8px 22px rgba(107, 33, 168, 0.14) !important;
+        0 8px 22px rgba(var(--color-purple-rgb), 0.14) !important;
 }
 
 .lead-pool-wrapper .task-title {
@@ -1317,7 +1317,7 @@ defineExpose({
     align-items: center;
     justify-content: center;
     background: #f7f1fa;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 13px;
 }
 
@@ -1335,7 +1335,7 @@ defineExpose({
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
 }
 
@@ -1427,9 +1427,9 @@ defineExpose({
 }
 
 .lead-pool-pagination .page-btn.active {
-    background: #6b21a8;
-    border-color: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    border-color: var(--color-primary);
+    color: #ffffff !important;
 }
 
 .lead-pool-pagination .page-btn.ellipsis {

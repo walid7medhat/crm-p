@@ -183,7 +183,7 @@ async function downloadExcel() {
 
 <style scoped>
 .lead-export-page.lead-export-page {
-  --lex-primary: #733e87;
+  --lex-primary: var(--color-purple);
   --lex-primary-soft: #f4eef7;
   --lex-text: #1e1b2e;
   --lex-muted: #8b8798;

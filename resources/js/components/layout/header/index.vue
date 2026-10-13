@@ -2183,17 +2183,17 @@ aside.sidebar {
   inset-inline-end: -12px;
   transform: none;
   z-index: 40;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 1px solid #ece7f6;
+  border: 1px solid #eceef2;
   background: #fff;
-  color: #5b21b6;
+  color: #171717;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(76, 29, 149, 0.16);
+  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.08);
   padding: 0;
   pointer-events: auto;
 }
@@ -2205,8 +2205,9 @@ aside.sidebar {
 }
 
 .sidebar-edge-toggle:hover {
-  color: #6d28d9;
-  border-color: #ddd6fe;
+  color: #171717;
+  border-color: #e5e7eb;
+  background: #f3f4f6;
 }
 
 .sidebar-menu-area {
@@ -2220,10 +2221,10 @@ aside.sidebar {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 8px 12px 14px;
+  margin: 8px 10px 14px;
   padding: 8px 10px;
-  border-radius: 16px;
-  background: #f8f6fc;
+  border-radius: 14px;
+  background: #f3f4f6;
 }
 
 .sidebar-user--collapsed {
@@ -2245,8 +2246,8 @@ aside.sidebar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #ede9fe;
-  color: #6d28d9;
+  background: var(--gradient-primary);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 700;
 }
@@ -2266,7 +2267,7 @@ aside.sidebar {
 .sidebar-user__name {
   font-size: 13px;
   font-weight: 700;
-  color: #1e1b4b;
+  color: #171717;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2275,25 +2276,20 @@ aside.sidebar {
 aside.sidebar .sidebar-menu > li > a.active,
 aside.sidebar .sidebar-menu .nav-link.active-page > a {
   position: relative;
-  color: #6d28d9 !important;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  border-radius: 12px;
 }
 
 aside.sidebar .sidebar-menu > li > a.active span,
 aside.sidebar .sidebar-menu .nav-link.active-page > a span {
-  color: #6d28d9 !important;
+  color: #ffffff !important;
   font-weight: 600;
 }
 
 aside.sidebar .sidebar-menu > li > a.active::before,
 aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
-  content: '';
-  position: absolute;
-  inset-inline-start: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 0 4px 4px 0;
-  background: #6d28d9;
+  content: none;
 }
 .sidebar-menu li a {
     padding: 0.28rem 0.4rem !important;
@@ -2571,13 +2567,13 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
   line-height: 1;
 }
 .sidebar-toggle:hover .sidebar-menu-icon {
-  color: #6b21a8 !important;
+  color: var(--color-primary) !important;
 }
 [data-theme="dark"] .sidebar-menu-icon {
   color: #4b4568 !important;
 }
 [data-theme="dark"] .sidebar-toggle:hover .sidebar-menu-icon {
-  color: #6b21a8 !important;
+  color: var(--color-primary) !important;
 }
 /* Ensure Iconify icon inherits color (SVG fill) */
 .sidebar-menu-icon :deep(svg),
@@ -2664,12 +2660,12 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 }
 .sidebar-menu li a.active,
 .sidebar-menu li a.sidebar-nav-link.active {
-  background: transparent;
+  background: var(--gradient-primary);
   border: 1px solid transparent;
   box-shadow: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 10px;
-  color: #4b4568;
+  color: #ffffff;
 }
 
 /* Main dashboard: only Dashboard may appear active in the sidebar */
@@ -2683,9 +2679,9 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 }
 
 .sidebar--dashboard-home {
-  background: rgba(255, 255, 255, 0.72) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-color: rgba(232, 234, 239, 0.8) !important;
 }
 
@@ -2705,12 +2701,19 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 .sidebar--dashboard-home .sidebar-menu li a,
 .sidebar--dashboard-home .sidebar-submenu li a,
 .sidebar--dashboard-home .menu-icon {
-  color: #4b4568 !important;
+  color: #171717 !important;
 }
 
 .sidebar--dashboard-home .sidebar-menu li a:hover {
-  background: #f4f5f7 !important;
-  color: #6b21a8 !important;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a:hover span,
+.sidebar--dashboard-home .sidebar-submenu li a:hover span,
+.sidebar--dashboard-home .sidebar-menu li a:hover .menu-icon,
+.sidebar--dashboard-home .sidebar-submenu li a:hover .menu-icon {
+  color: #ffffff !important;
 }
 
 .sidebar--dashboard-home .sidebar-menu li a {
@@ -2721,17 +2724,24 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 }
 
 .sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link--dashboard.active {
-  background: transparent !important;
+  background: var(--gradient-primary) !important;
   border: 1px solid transparent !important;
   box-shadow: none !important;
-  color: #4b4568 !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
 }
 
 .sidebar--dashboard-home .sidebar-menu li a span,
 .sidebar--dashboard-home .sidebar-submenu li a span {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.25;
-  color: inherit !important;
+  color: #171717 !important;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a.active span,
+.sidebar--dashboard-home .sidebar-menu .nav-link.active-page > a span {
+  color: #ffffff !important;
+  font-weight: 600;
 }
 
 .sidebar--dashboard-home .menu-icon,
@@ -2741,13 +2751,17 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 }
 
 .sidebar--dashboard-home .imgicon {
-  filter: brightness(0) saturate(100%) invert(28%) sepia(8%) saturate(900%) hue-rotate(210deg) brightness(95%);
-  opacity: 0.9;
+  filter: brightness(0) saturate(100%);
+  opacity: 1;
 }
 
-.sidebar--dashboard-home .sidebar-menu li a.active .imgicon,
+.sidebar--dashboard-home .sidebar-menu li a.active .imgicon {
+  filter: brightness(0) invert(1) !important;
+  opacity: 1;
+}
+
 .sidebar--dashboard-home .sidebar-menu li a:hover .imgicon {
-  filter: brightness(0) saturate(100%) invert(28%) sepia(8%) saturate(900%) hue-rotate(210deg) brightness(95%);
+  filter: brightness(0) invert(1) !important;
   opacity: 1;
 }
 

@@ -1775,8 +1775,8 @@ export default {
 }
 
 .form-control:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.25rem var(--color-focus-ring);
 }
 
 .form-control-lg {
@@ -1806,8 +1806,8 @@ export default {
 }
 
 .file-upload-area:hover {
-    border-color: #0d6efd;
-    background-color: #f0f8ff;
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-soft);
 }
 
 .file-upload-area.has-preview {
@@ -1879,14 +1879,14 @@ export default {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    background: var(--gradient-primary);
     border: none;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+    background: var(--gradient-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.25);
 }
 
 .btn-primary:disabled {
@@ -1934,12 +1934,12 @@ export default {
 }
 
 :deep(.vs__dropdown-toggle:hover) {
-    border-color: #86b7fe !important;
+    border-color: var(--color-primary) !important;
 }
 
 :deep(.vs--open .vs__dropdown-toggle) {
-    border-color: #86b7fe !important;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15) !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 0.25rem var(--color-focus-ring) !important;
 }
 
 /*:deep(.vs__selected) {*/
@@ -1971,13 +1971,13 @@ export default {
 }
 
 :deep(.vs__dropdown-option:hover) {
-    background-color: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.vs__dropdown-option--highlight) {
-    background: #733E87 !important;
-    color: #fff !important;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
 }
 
 :deep(.vs__clear) {
@@ -2097,7 +2097,7 @@ export default {
 .image-card.combined:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    border-color: #0d6efd;
+    border-color: var(--color-primary);
 }
 
 .image-card.combined.marked-for-delete {
@@ -2183,7 +2183,7 @@ export default {
 }
 
 .image-badge.existing {
-    background: rgba(13, 110, 253, 0.9);
+    background: rgba(var(--color-primary-rgb), 0.9);
     color: white;
 }
 
@@ -2250,8 +2250,8 @@ export default {
 }
 
 .add-more-card:hover {
-    border-color: #0d6efd;
-    background-color: #f0f8ff;
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-soft);
     transform: translateY(-2px);
 }
 
@@ -2290,7 +2290,7 @@ export default {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(13, 110, 253, 0.9);
+    background: rgba(var(--color-primary-rgb), 0.9);
     border: 3px dashed white;
     border-radius: 12px;
     display: none;
@@ -2423,8 +2423,8 @@ export default {
 }
 
 .floor-plan-name input:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem var(--color-focus-ring);
     outline: none;
 }
 
@@ -2521,8 +2521,8 @@ export default {
     position: absolute;
     top: 8px;
     left: 8px;
-    background: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 8px;

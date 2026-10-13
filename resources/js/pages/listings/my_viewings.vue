@@ -742,14 +742,14 @@ onUnmounted(() => {
 
 .view-buttons {
   display: flex;
-  border: 1px solid #733E87;
+  border: 1px solid var(--color-primary);
   border-radius: 6px;
   overflow: hidden;
   height: 32px;
 }
 
 .fc-button {
-  color: #733E87;
+  color: var(--color-primary);
   border: none;
   padding: 0 12px;
   font-size: 15px !important;
@@ -769,13 +769,13 @@ onUnmounted(() => {
 }
 
 .fc-button.active {
-  background-color: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .nav-buttons {
   display: flex;
-  border: 1px solid #733E87;
+  border: 1px solid var(--color-primary);
   border-radius: 6px;
   overflow: hidden;
   height: 32px;
@@ -786,8 +786,8 @@ onUnmounted(() => {
 }
 
 .today-button {
-  background-color: #733E87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   border-radius: 6px;
   border: none;
 }
@@ -822,7 +822,7 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 .sidebar-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: #733E87;
+  background: var(--gradient-primary) !important;
 }
 
 .viewing-card {
@@ -877,7 +877,7 @@ onUnmounted(() => {
 :deep(.fc .fc-daygrid-day.active-day),
 :deep(.fc .fc-day.active-day) {
   background-color: rgba(72, 127, 255, 0.14) !important;
-  box-shadow: inset 0 0 0 2px #733E87;
+  box-shadow: inset 0 0 0 2px var(--color-purple);
   border-radius: 4px;
 }
 :deep(.fc .fc-daygrid-day.active-day .fc-daygrid-day-number),

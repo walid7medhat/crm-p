@@ -123,13 +123,13 @@
     var chart = new ApexCharts(document.querySelector(`#${chartId}`), options);
     chart.render();
   }
-  createChartTwo('recent-orders', '#733E87');
+  createChartTwo('recent-orders', '#6b21a8');
   // ================================ Recent Orders Chart End ================================ 
 
   // ================================ Custom Statistics Donut chart Start ================================ 
     var options = { 
       series: [30, 25],
-      colors: ['#FF9F29', '#733E87'],
+      colors: ['#FF9F29', '#6b21a8'],
       labels: ['Female', 'Male'] ,
       legend: {
           show: false 
@@ -185,7 +185,7 @@
         name: 'Revenue',
         data: [15000, 18000, 19000, 20000, 35000, 20000, 18000, 13000, 18000, 38000, 14000, 16000]
       }],
-      colors: ['#733E87', '#FF9F29'],
+      colors: ['#6b21a8', '#FF9F29'],
       labels: ['Active', 'New', 'Total'],
       legend: {
           show: false 
@@ -285,11 +285,11 @@
       series: {
           regions: [{
               values: {
-                  "US": '#733E87 ',
+                  "US": '#6b21a8 ',
                   "SA": '#FF9F29',
                   "AU": '#45B369',
                   "CN": '#F86624',
-                  "GB": '#733E87',
+                  "GB": '#6b21a8',
               },
               attribute: 'fill'
           }]

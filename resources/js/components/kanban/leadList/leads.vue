@@ -227,14 +227,20 @@
                             <div
                                 class="column-header d-flex align-items-center justify-content-between flex-shrink-0"
                                 :class="{ 'column-header--mobile': kanbanIsMobile, 'cursor-move': !kanbanIsMobile }"
-                                :style="{ backgroundColor: column.color, color: kanbanIsMobile ? stageTextOn(column.color) : undefined }"
+                                :style="stageFlowStyle(column)"
                             >
                                 <div class="d-flex align-items-center gap-2 column-header__title-block">
+                                    <iconify-icon
+                                        v-if="!kanbanIsMobile"
+                                        :icon="stageFlowIcon(column.title)"
+                                        class="column-header__icon"
+                                        aria-hidden="true"
+                                    />
                                     <span v-if="kanbanIsMobile" class="column-header__dot" aria-hidden="true" />
                                     <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
                                         <p class="header-title">{{ column.title }}</p>
                                         <small class="leads-count-badge">
-                                            {{ stageCountForColumn(column) }}
+                                            {{ formatStageCount(stageCountForColumn(column)) }}
                                         </small>
                                     </div>
                                     <input 
@@ -913,7 +919,7 @@
                         :class="{ 'is-selected': String(mobileListFilterDraft) === String(col.status) }"
                         @click="mobileListFilterDraft = String(col.status)"
                     >
-                        <iconify-icon :icon="mobileStageIcon(col.title)" :style="{ color: stageTextOn(col.color) === '#1c1730' ? '#1c1730' : (col.color || '#6b21a8') }" />
+                        <iconify-icon :icon="mobileStageIcon(col.title)" :style="{ color: stageTextOn(col.color) === '#1c1730' ? '#1c1730' : (col.color || 'var(--color-purple)') }" />
                         <span class="mobile-stage-chip__label">{{ col.title }}</span>
                         <iconify-icon v-if="String(mobileListFilterDraft) === String(col.status)" icon="lucide:check" class="mobile-stage-chip__check" />
                     </button>
@@ -1855,6 +1861,41 @@ function stageCountForColumn(col) {
         return stagePagination.value[col.status].total
     }
     return col.leads?.length ?? 0
+}
+
+const STAGE_FLOW_LOOK = [
+    { test: /new\s*lead/, color: '#f6c445', ink: '#1f2937', icon: 'lucide:folder' },
+    { test: /assign/, color: '#f5a524', ink: '#1f2937', icon: 'lucide:user' },
+    { test: /contact/, color: '#7c5cbf', ink: '#ffffff', icon: 'lucide:phone' },
+    { test: /qualif/, color: '#3dcf8e', ink: '#14532d', icon: 'lucide:badge-check' },
+    { test: /convert/, color: '#14b8a6', ink: '#042f2e', icon: 'lucide:check' },
+    { test: /shared/, color: '#22c55e', ink: '#052e16', icon: 'lucide:share-2' },
+    { test: /lost|unqualif/, color: '#ef4444', ink: '#ffffff', icon: 'lucide:x' },
+    { test: /pool/, color: '#94a3b8', ink: '#1f2937', icon: 'lucide:inbox' },
+]
+
+function stageFlowMeta(title) {
+    const name = String(title || '').toLowerCase()
+    return STAGE_FLOW_LOOK.find((item) => item.test.test(name)) || null
+}
+
+function stageFlowStyle(column) {
+    const meta = stageFlowMeta(column?.title)
+    if (meta) {
+        return { backgroundColor: meta.color, color: meta.ink }
+    }
+    const backgroundColor = column?.color || 'var(--color-primary)'
+    return { backgroundColor, color: stageTextOn(backgroundColor) }
+}
+
+function stageFlowIcon(title) {
+    return stageFlowMeta(title)?.icon || 'lucide:circle-dot'
+}
+
+function formatStageCount(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return '0'
+    return n.toLocaleString()
 }
 
 const totalLeadsCount = computed(() => {
@@ -5982,7 +6023,7 @@ const fetchRevertNotifications = async () => {
     width: 44px;
     height: 44px;
     border: 3px solid #efeaf7;
-    border-top-color: #6b21a8;
+    border-top-color: var(--color-primary);
     border-right-color: #a855f7;
     border-radius: 50%;
     animation: kanban-spin 0.85s linear infinite;
@@ -6025,9 +6066,9 @@ const fetchRevertNotifications = async () => {
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(115, 62, 135, 0.15) 20%,
-        rgba(115, 62, 135, 0.95) 50%,
-        rgba(115, 62, 135, 0.15) 80%,
+        rgba(var(--color-purple-rgb), 0.15) 20%,
+        rgba(var(--color-purple-rgb), 0.95) 50%,
+        rgba(var(--color-purple-rgb), 0.15) 80%,
         transparent 100%
     );
     background-size: 200% 100%;
@@ -6086,7 +6127,7 @@ const fetchRevertNotifications = async () => {
     padding: 11px 18px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(115, 62, 135, 0.22);
+    border: 1px solid rgba(var(--color-purple-rgb), 0.22);
     box-shadow:
         0 10px 32px rgba(11, 7, 54, 0.14),
         0 0 0 1px rgba(255, 255, 255, 0.65) inset;
@@ -6099,7 +6140,7 @@ const fetchRevertNotifications = async () => {
     position: absolute;
     inset: -4px;
     border-radius: 999px;
-    border: 2px solid rgba(115, 62, 135, 0.35);
+    border: 2px solid rgba(var(--color-purple-rgb), 0.35);
     animation: kanban-search-ring 1.4s ease-out infinite;
 }
 
@@ -6120,7 +6161,7 @@ const fetchRevertNotifications = async () => {
 
 .kanban-search-overlay__icon {
     font-size: 16px;
-    color: #733e87;
+    color: var(--color-primary);
     animation: kanban-search-icon 1.2s ease-in-out infinite;
 }
 
@@ -6146,7 +6187,7 @@ const fetchRevertNotifications = async () => {
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: #733e87;
+    background: var(--gradient-primary) !important;
     animation: kanban-search-dot 1s ease-in-out infinite;
 }
 
@@ -6571,7 +6612,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .lead-bulk-search:focus-within {
-    border-color: #6b21a8;
+    border-color: var(--color-primary);
     background: #fff;
 }
 
@@ -6622,8 +6663,8 @@ const fetchRevertNotifications = async () => {
     width: 32px;
     height: 32px;
     border-radius: 999px;
-    background: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-size: 13px;
     font-weight: 700;
     display: inline-flex;
@@ -6916,7 +6957,7 @@ const fetchRevertNotifications = async () => {
     align-items: center;
     justify-content: center;
     background: #f7f1fa;
-    color: #733e87;
+    color: var(--color-primary);
     font-size: 13px;
 }
 
@@ -6939,7 +6980,7 @@ const fetchRevertNotifications = async () => {
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
     background: transparent;
     border: none;
@@ -7219,11 +7260,13 @@ const fetchRevertNotifications = async () => {
 }
 
 .header-title {
-    font-weight: 600;
+    font-weight: 700;
     font-style: normal;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.2;
-    color: #0f0f12 !important;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: inherit !important;
     margin: 0;
 }
 
@@ -7276,11 +7319,16 @@ const fetchRevertNotifications = async () => {
     width: 400px;
 }
 .leads-count-badge {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.1;
-    color: #0f0f12 !important;
+    color: inherit !important;
     margin-left: 2px;
-    font-weight: 600 !important;
+    font-weight: 800 !important;
+}
+
+.column-header__icon {
+    font-size: 15px;
+    flex-shrink: 0;
 }
 
 /* —— Mobile Kanban (injected kanbanIsMobile) —— */
@@ -7482,7 +7530,7 @@ const fetchRevertNotifications = async () => {
 .kanban-outer--mobile .kanban-card--mobile {
     position: relative;
     overflow: hidden;
-    border: 1px solid #e9d5ff !important;
+    border: 1px solid var(--color-purple-light) !important;
     border-radius: 16px !important;
     background: #fff !important;
     box-shadow: none !important;
@@ -7579,7 +7627,7 @@ const fetchRevertNotifications = async () => {
     padding: 6px;
     overflow-x: auto;
     overflow-y: hidden;
-    border: 1px solid #e9d5ff;
+    border: 1px solid var(--color-purple-light);
     border-radius: 16px;
     background: #ffffff;
     -webkit-overflow-scrolling: touch;
@@ -7728,8 +7776,8 @@ const fetchRevertNotifications = async () => {
     padding: 0 16px;
     border: none;
     border-radius: 999px;
-    background: #6b21a8;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-size: 15px;
     font-weight: 700;
     line-height: 1;

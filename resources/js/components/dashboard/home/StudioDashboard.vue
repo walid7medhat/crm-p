@@ -135,26 +135,26 @@
                 x2="630"
                 :y1="chartY(tick - 1)"
                 :y2="chartY(tick - 1)"
-                stroke="#efeaf6"
+                stroke="#e7f6f1"
                 stroke-dasharray="4 6"
               />
               <path :d="areaPath" fill="url(#lfArea)" />
-              <path :d="visitPath" fill="none" stroke="#d8b4fe" stroke-width="2.5" stroke-linecap="round" />
-              <path :d="revenuePath" fill="none" stroke="#733e87" stroke-width="2.5" stroke-linecap="round" />
+              <path :d="visitPath" fill="none" stroke="var(--color-primary-glow)" stroke-width="2.5" stroke-linecap="round" />
+              <path :d="revenuePath" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" />
               <line
                 v-if="activePoint"
                 :x1="activePoint.x"
                 :x2="activePoint.x"
                 y1="12"
                 y2="150"
-                stroke="#c4b5fd"
+                stroke="var(--color-primary-glow)"
                 stroke-dasharray="3 4"
               />
-              <circle v-if="activePoint" :cx="activePoint.x" :cy="activePoint.y" r="5" fill="#fff" stroke="#733e87" stroke-width="2.5" />
+              <circle v-if="activePoint" :cx="activePoint.x" :cy="activePoint.y" r="5" fill="#fff" stroke="var(--color-primary)" stroke-width="2.5" />
               <defs>
                 <linearGradient id="lfArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#733e87" stop-opacity="0.22" />
-                  <stop offset="100%" stop-color="#733e87" stop-opacity="0" />
+                  <stop offset="0%" stop-color="var(--color-primary)" stop-opacity="0.22" />
+                  <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0" />
                 </linearGradient>
               </defs>
             </svg>

@@ -2,11 +2,30 @@
   <div class="dashboard-main-body property-form-page">
   <div class="row gy-4 mt-2 property-form-root">
 
+    <div class="col-lg-12">
+      <header class="listing-create-hero">
+        <p class="listing-create-kicker">New listing</p>
+        <p class="listing-create-title">Create a property</p>
+        <p class="listing-create-lead">Fill each section in order. Required marks, dependent fields, and publish checks stay exactly as they are.</p>
+      </header>
+      <nav class="listing-create-nav" aria-label="Create listing sections">
+        <a href="#listing-section-details">Details</a>
+        <a href="#listing-section-specs">Specifications</a>
+        <a href="#listing-section-payment">Payment</a>
+        <a href="#listing-section-mortgage">Mortgage</a>
+        <a href="#listing-section-gallery">Gallery</a>
+        <a v-if="selectedProject && filteredFloorPlans.length" href="#listing-section-plans">Floor plans</a>
+        <a href="#listing-section-documents">Documents</a>
+        <a href="#listing-section-owner">Owner</a>
+      </nav>
+    </div>
+
     <!-- 🏡 Property Details -->
     <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Property Details</h6>
+      <div class="card" id="listing-section-details">
+        <div class="card-header listing-section-head">
+          <h6 class="card-title listing-section-title mb-0">Property Details</h6>
+          <p class="listing-section-desc">Purpose, type, project, and the address shown on the listing.</p>
         </div>
         <div class="card-body">
           <div class="row gy-3">
@@ -146,9 +165,10 @@
 
     <!-- 🏠 Unit Specifications -->
     <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Unit Specifications</h6>
+      <div class="card" id="listing-section-specs">
+        <div class="card-header listing-section-head">
+          <h6 class="card-title listing-section-title mb-0">Unit Specifications</h6>
+          <p class="listing-section-desc">Size, rooms, and the features that describe this unit.</p>
         </div>
         <div class="card-body">
           <div class="row gy-3">
@@ -236,9 +256,10 @@
 
     <!-- 💳 Payment breakdown & NOC (off-plan; fields enabled when completion = Under Construction) -->
     <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Payment Breakdown &amp; NOC</h6>
+      <div class="card" id="listing-section-payment">
+        <div class="card-header listing-section-head">
+          <h6 class="card-title listing-section-title mb-0">Payment Breakdown &amp; NOC</h6>
+          <p class="listing-section-desc">Selling price, payment plan, and the amounts required before publish.</p>
         </div>
         <div class="card-body payment-breakdown-card-body">
           <div class="row gy-3 payment-breakdown-prices">
@@ -849,9 +870,10 @@
 
     <!-- 💰 Mortgage & Rent Info -->
           <div class="col-lg-12">
-          <div class="card">
-            <div class="card-header">
-              <h6 class="card-title mb-0">Mortgage & Rent Info</h6>
+          <div class="card" id="listing-section-mortgage">
+            <div class="card-header listing-section-head">
+              <h6 class="card-title listing-section-title mb-0">Mortgage &amp; Rent Info</h6>
+              <p class="listing-section-desc">Mortgage and occupancy. Rent fields appear only when the unit is rented.</p>
             </div>
             <div class="card-body">
               <div class="row gy-3">
@@ -903,9 +925,10 @@
 
     <!-- 🖼️ Gallery Section -->
     <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Property Gallery</h6>
+      <div class="card" id="listing-section-gallery">
+        <div class="card-header listing-section-head">
+          <h6 class="card-title listing-section-title mb-0">Property Gallery</h6>
+          <p class="listing-section-desc">Upload photos and drag them into order. The first image is the hero.</p>
         </div>
         <div class="card-body">
           <div class="row gy-3">
@@ -1039,9 +1062,10 @@
     <!-- Floor Plans Section -->
         <!-- Floor Plans Section -->
 <div class="col-lg-12"  v-if="selectedProject && filteredFloorPlans.length > 0">
-  <div class="card">
-    <div class="card-header">
-      <h6 class="card-title mb-0">Floor Plans</h6>
+  <div class="card" id="listing-section-plans">
+    <div class="card-header listing-section-head">
+      <h6 class="card-title listing-section-title mb-0">Floor Plans</h6>
+      <p class="listing-section-desc">Choose one plan from this project. Only one plan can be attached.</p>
     </div>
     <div class="card-body">
       <div class="row gy-3">
@@ -1391,9 +1415,10 @@
 </div>
    <!-- 📄 Property Documents Section -->
     <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Property Documents</h6>
+      <div class="card" id="listing-section-documents">
+        <div class="card-header listing-section-head">
+          <h6 class="card-title listing-section-title mb-0">Property Documents</h6>
+          <p class="listing-section-desc">Attach supporting files. PDF and image types stay within the existing size limit.</p>
         </div>
         <div class="card-body">
           <div class="row gy-3">
@@ -1463,9 +1488,10 @@
     </div>
     <!-- Owner Section -->
     <div class="col-lg-12">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title mb-0">Owner Details</h6>
+      <div class="card" id="listing-section-owner">
+        <div class="card-header listing-section-head">
+          <h6 class="card-title listing-section-title mb-0">Owner Details</h6>
+          <p class="listing-section-desc">Search an existing owner, or add one if you have permission.</p>
         </div>
         <div class="card-body">
           <div class="row align-items-end gy-3">
@@ -1552,8 +1578,11 @@
     <div v-if="showAddOwner" class="modal-backdrop owner-modal">
       <div class="modal-container">
         <!-- Modal Header -->
-        <div class="modal-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Add New Owner</h5>
+        <div class="modal-header owner-modal-header">
+          <div>
+            <p class="owner-modal-kicker">New owner</p>
+            <h5 class="owner-modal-title">Add New Owner</h5>
+          </div>
           <button type="button" class="owner-modal-close" aria-label="Close" @click="showAddOwner = false">
             <i class="fas fa-times"></i>
           </button>
@@ -1565,9 +1594,8 @@
           <!-- Section 1: Personal Information -->
           <div class="section">
             <div class="section-title">
-              <i class="fas fa-id-card"></i>
               <span>Personal Information</span>
-              <span class="badge badge-primary ms-2">Required</span>
+              <span class="badge badge-primary">Required</span>
             </div>
             
             <div class="row">
@@ -1624,9 +1652,8 @@
           <!-- Section 2: Contact Information -->
           <div class="section">
             <div class="section-title">
-              <i class="fas fa-phone-alt"></i>
               <span>Contact Information</span>
-              <span class="badge badge-primary ms-2">Required</span>
+              <span class="badge badge-primary">Required</span>
             </div>
             
             <div class="row">
@@ -1678,8 +1705,7 @@
           <!-- Section 3: Nationality & Residence -->
           <div class="section">
             <div class="section-title">
-              <i class="fas fa-globe"></i>
-              <span>Nationality & Residence</span>
+              <span>Nationality &amp; Residence</span>
             </div>
             
             <div class="row">
@@ -1735,9 +1761,8 @@
           <!-- Section 4: Document Upload -->
           <div class="section">
             <div class="section-title">
-              <i class="fas fa-file-upload"></i>
               <span>Document Upload</span>
-              <span class="badge badge-warning ms-2">Optional</span>
+              <span class="badge badge-warning">Optional</span>
             </div>
             
             <div class="row">
@@ -1881,16 +1906,15 @@
           <!-- Section 5: Additional Notes -->
           <div class="section">
             <div class="section-title">
-              <i class="fas fa-sticky-note"></i>
               <span>Additional Notes</span>
-              <span class="badge badge-warning ms-2">Optional</span>
+              <span class="badge badge-warning">Optional</span>
             </div>
             
             <div class="col-md-12">
               <label class="form-label">Owner Notes</label>
               <textarea 
                 v-model="newOwner.notes" 
-                rows="4" 
+                rows="2" 
                 class="form-control" 
                 placeholder="Add any additional notes about the owner..."
               ></textarea>
@@ -4918,12 +4942,11 @@ body {
   background-color: #f8f9fa;
 }
 
-/* 🔹 Dark Blue Gradient Colors */
 :root {
-  --dark-blue-gradient: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
-  --dark-blue-light: #1e3799;
-  --dark-blue-dark: #0c2461;
-  --dark-blue-hover: #2a3db0;
+  --dark-blue-gradient: var(--gradient-primary);
+  --dark-blue-light: var(--color-primary);
+  --dark-blue-dark: var(--color-primary-hover);
+  --dark-blue-hover: var(--color-primary-active);
 }
 
 /* 🔹 Modal Styles */
@@ -4969,14 +4992,54 @@ body {
 
 .modal-header {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   color: #111111;
-  background: #ffffff;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eaeaea;
+  background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-primary-border);
   border-radius: 16px 16px 0 0;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.owner-modal-kicker {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.owner-modal-title {
+  margin: 1px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #171717;
+  line-height: 1.2;
+}
+
+.owner-modal-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  box-shadow:
+    0 0 0 3px rgba(var(--color-primary-rgb), 0.22),
+    0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .modal-header h5 {
@@ -5009,7 +5072,7 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 30px;
+  padding: 14px;
 }
 
 .modal-footer {
@@ -5024,40 +5087,110 @@ body {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
+}
+
+.owner-modal .owner-modal-actions .btn {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.owner-modal .owner-modal-actions .btn-primary {
+  background: var(--gradient-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.owner-modal .owner-modal-actions .btn-secondary {
+  background: #f4f5f7;
+  border-color: #e2e8f0;
+  color: #171717;
+}
+
+.owner-modal .owner-modal-actions .btn-primary:hover,
+.owner-modal .owner-modal-actions .btn-outline-primary:hover {
+  background: var(--gradient-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.owner-modal .owner-modal-actions .btn-secondary:hover {
+  background: #e8eaef !important;
+  border-color: #e2e8f0 !important;
+  color: #171717 !important;
+  -webkit-text-fill-color: #171717 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* 🔹 Section Styles */
 .section {
   background: white;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  border: 1px solid #eaeaea;
-  transition: all 0.3s ease;
+  border-radius: 14px;
+  padding: 0 0 10px;
+  margin-bottom: 10px;
+  border: 1px solid #efe4f3;
+  overflow: hidden;
 }
 
 .section:hover {
-  border-color: var(--dark-blue-light);
-  box-shadow: 0 8px 25px rgba(30, 55, 153, 0.1);
+  border-color: var(--color-primary-border);
+  box-shadow: none;
 }
 
 .section-title {
-  color: #2d3748;
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--dark-blue-light);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-primary-border);
+  background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.section-title i {
-  color: var(--dark-blue-light);
-  font-size: 1.2rem;
+.section-title::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--gradient-primary);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.section-title .badge {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+}
+
+.owner-modal .form-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.owner-modal .section > .row,
+.owner-modal .section > .col-md-12 {
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 /* 🔹 Form Styles */
@@ -5078,8 +5211,8 @@ body {
 /*}*/
 
 .form-control:focus, .v-select:focus {
-  border-color: var(--dark-blue-light);
-  box-shadow: 0 0 0 3px rgba(30, 55, 153, 0.15);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16);
   outline: none;
 }
 
@@ -5099,17 +5232,17 @@ body {
 }
 
 .v-select.project-areas .vs__dropdown-toggle {
-  background-color: #e8f4fd !important;
-  border-color: #0d6efd !important;
+  background-color: var(--color-primary-soft) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .v-select.project-areas .vs__selected {
-  color: #0d6efd !important;
+  color: var(--color-primary-ink) !important;
   font-weight: 600;
 }
 
 .v-select.project-areas .vs__dropdown-menu {
-  border-color: #0d6efd;
+  border-color: var(--color-primary);
 }
 
 /* 🔹 Button Styles */
@@ -5127,20 +5260,18 @@ body {
   gap: 8px;
 }
 .btn-primary {
-  background: rgba(12, 36, 97, 0.9); /* Solid dark blue */
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--gradient-primary);
+  color: #ffffff;
+  border: 1px solid var(--color-primary);
+  -webkit-text-fill-color: #ffffff;
 }
 
 .btn-primary:hover {
-  background: rgba(12, 36, 97, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(12, 36, 97, 0.3);
-}
-
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #1a3db0 0%, #2540c7 100%);
+  background: var(--gradient-primary-hover);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  transform: none;
+  box-shadow: none;
 }
 .btn-secondary {
   background: #6c757d;
@@ -5149,20 +5280,23 @@ body {
 
 .btn-secondary:hover {
   background: #5a6268;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-outline-primary {
-  border: 2px solid rgba(5, 10, 40, 0.95);
-  color: rgba(5, 10, 40, 0.95);
-  background: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary-ink);
+  background: #ffffff;
 }
 
 .btn-outline-primary:hover {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.25) 0%, rgba(20, 30, 80, 0.79) 0%, rgba(5, 10, 40, 0.95) 100%);
-  color: white;
-  transform: translateY(-2px);
+  background: var(--gradient-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-danger {
@@ -5184,12 +5318,12 @@ body {
 
 /* 🔹 File Upload Styles */
 .file-upload-area {
-  border: 2px dashed #cbd5e0;
-  border-radius: 12px;
-  padding: 40px 20px;
+  border: 1px dashed var(--color-primary-muted);
+  border-radius: 10px;
+  padding: 12px 8px;
   text-align: center;
-  background: #f8fafc;
-  transition: all 0.3s ease;
+  background: #f6fbf9;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
   cursor: pointer;
 }
 
@@ -5205,19 +5339,21 @@ body {
 }
 
 .file-upload-icon {
-  font-size: 3rem;
-  color: var(--dark-blue-light);
-  margin-bottom: 15px;
+  font-size: 16px;
+  color: var(--color-primary);
+  margin-bottom: 4px;
 }
 
 .file-upload-text {
-  color: #4a5568;
-  margin-bottom: 10px;
+  color: #171717;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 
 .file-upload-hint {
-  color: #718096;
-  font-size: 0.875rem;
+  color: #94a3b8;
+  font-size: 10px;
 }
 
 /* 🔹 Gallery & Floor Plan Styles */
@@ -5612,6 +5748,14 @@ body {
   margin: -10px;
 }
 
+.owner-modal .row {
+  margin: 0 -4px !important;
+}
+
+.owner-modal .row > [class*="col-"] {
+  padding: 4px 6px;
+}
+
 /* Section cards: keep clear vertical space (custom .row margin breaks Bootstrap gy-*) */
 .property-form-root.row {
   margin: 0 !important;
@@ -5854,7 +5998,7 @@ body {
 }
 
 .payment-validation-summary-list .payment-val-ok {
-  color: #047857;
+  color: var(--color-primary-ink);
 }
 
 .payment-validation-summary-list .payment-val-warn {
@@ -5909,9 +6053,13 @@ body {
 }
 
 .listing-feature-item.is-selected {
-  border-color: #f59e0b;
-  background: #fff7e6;
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15);
+  border-color: var(--color-primary);
+  background: var(--gradient-primary);
+  box-shadow: none;
+}
+
+.listing-feature-item.is-selected .listing-feature-label {
+  color: #ffffff;
 }
 
 .listing-feature-label {
@@ -5971,7 +6119,7 @@ body {
 }
 
 .project-areas-label {
-  color: #0d6efd;
+  color: var(--color-primary);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -6025,13 +6173,13 @@ body.swal2-toast-shown  {
   color: #198754;
 }
 .project-floor-plan-tag {
-  background-color: #e8f4fd !important;
-  border-color: #0d6efd !important;
-  color: #0d6efd !important;
+  background-color: var(--color-primary-soft) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
 }
 
 .project-floor-plan-tag .tag-close {
-  color: #0d6efd !important;
+  color: var(--color-primary) !important;
 }
 
 .floor-plan-source-badge {
@@ -6063,7 +6211,7 @@ body.swal2-toast-shown  {
 }
 
 .floor-plan-card.selected {
-  border-color: #0d6efd !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
 }
 
@@ -6124,7 +6272,7 @@ body.swal2-toast-shown  {
 
 /* Selected Plans Summary */
 .selected-plans-summary {
-  border-left: 4px solid #0d6efd;
+  border-left: 4px solid var(--color-primary);
 }
 
 .selected-plan-item {
@@ -6294,9 +6442,12 @@ body.swal2-toast-shown  {
 
 /* Button hover effects */
 .btn-outline-primary:hover {
-  background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
-  color: white;
-  border-color: #0c2461;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  border-color: var(--color-primary);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-danger:hover {
@@ -6451,6 +6602,226 @@ body.swal2-toast-shown  {
 }
 .listing-gallery-drag {
   transform: rotate(2deg);
+}
+
+.listing-create-hero {
+  padding: 4px 4px 0;
+}
+
+.listing-create-kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.listing-create-title {
+  margin: 0;
+  font-size: 16px !important;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #171717;
+  line-height: 1.25;
+}
+
+.listing-create-lead {
+  margin: 4px 0 0;
+  max-width: 640px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.listing-create-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 4px;
+  border: 1px solid rgba(17, 17, 17, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 12px rgba(17, 17, 17, 0.04);
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+}
+
+.listing-create-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: #171717;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.listing-create-nav a:hover,
+.listing-create-nav a:focus-visible {
+  background: var(--gradient-primary);
+  color: #ffffff;
+  outline: none;
+}
+
+.property-form-page .card {
+  border: 1px solid #efe4f3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(17, 17, 17, 0.04);
+  overflow: hidden;
+  scroll-margin-top: 72px;
+}
+
+.property-form-page .card-header.listing-section-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 18px;
+  background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+  border-bottom: 1px solid var(--color-primary-border);
+}
+
+.property-form-page .card-header h6.listing-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: var(--color-primary) !important;
+}
+
+.listing-section-title::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--gradient-primary);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.listing-section-desc {
+  margin: 0 0 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.property-form-page .card-body .form-label {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  margin-bottom: 6px;
+}
+
+.property-form-page .form-control {
+  min-height: 42px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #171717;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.property-form-page .form-control:hover {
+  border-color: #cbd5e1;
+}
+
+.property-form-page .form-control:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.property-form-page :deep(.vs__dropdown-toggle) {
+  min-height: 42px;
+  border-radius: 10px;
+  border-color: #e2e8f0;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.property-form-page :deep(.vs--open .vs__dropdown-toggle),
+.property-form-page :deep(.vs__dropdown-toggle:focus-within) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16);
+}
+
+.property-form-page .payment-calc-summary {
+  background: #f6fbf9;
+  border: 1px solid var(--color-primary-border) !important;
+  border-radius: 14px !important;
+}
+
+.property-form-page .gallery-item .bg-primary,
+.property-form-page .badge.bg-primary {
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.property-form-page .card-footer.property-form-actions {
+  background: rgba(255, 255, 255, 0.92);
+  border-top: 1px solid #e8eaef;
+  padding: 14px 16px;
+}
+
+.property-form-page .property-form-actions .btn {
+  min-height: 40px;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-weight: 650;
+}
+
+.property-form-page .property-form-actions .btn-outline-secondary {
+  border: 1px solid #e2e8f0;
+  background: #f4f5f7;
+  color: #171717;
+}
+
+.property-form-page .property-form-actions .btn-primary {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listing-create-nav a,
+  .property-form-page .form-control,
+  .listing-feature-item,
+  .property-form-page .btn {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .listing-create-title {
+    font-size: 15px !important;
+  }
+
+  .listing-create-nav {
+    top: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    border-radius: 14px;
+  }
+
+  .listing-create-nav a {
+    flex: 0 0 auto;
+  }
+
+  .listing-section-desc {
+    margin-left: 0;
+  }
 }
 </style>
 

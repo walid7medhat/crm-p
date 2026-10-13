@@ -64,3 +64,11 @@ input.form-control {
 .v-select .vs__selected-options:has(.vs__placeholder) {
   justify-content: flex-start;
 }
+
+/* Loaded again after Bootstrap, so this wins over Bootstrap's blue focus. */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.2rem var(--color-focus-ring);
+  outline: 0;
+}

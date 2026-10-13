@@ -917,14 +917,14 @@ onBeforeUnmount(() => {
 }
 
 .calendar-day.selected {
-    background: #733E87;
-    color: #fff;
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
     font-weight: 500;
     border-radius: 50%;
 }
 
 .calendar-day.selected:hover {
-    background: #733E87;
+    background: var(--gradient-primary) !important;
     opacity: 0.9;
 }
 
@@ -981,7 +981,7 @@ onBeforeUnmount(() => {
 
 .time-dropdown:focus {
     outline: none;
-    border-color: #733E87;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(250, 163, 0, 0.1);
 }
 

@@ -276,9 +276,9 @@ onUnmounted(removeListeners)
 /* One app theme for every card: brand purple accent on a soft lilac tint, navy text
    (same palette as the lead header "Deals" chip and the deal popups). */
 .lead-deal-card {
-    --accent: #733E87;
+    --accent: var(--color-purple);
     --accent-soft: #FAF5FF;
-    --accent-border: #E9D5FF;
+    --accent-border: var(--color-purple-light);
     position: relative;
     margin: 12px 0;
     padding: 14px 40px 14px 18px;
@@ -308,7 +308,7 @@ onUnmounted(removeListeners)
 }
 
 .lead-deal-card:focus-visible {
-    box-shadow: 0 0 0 3px rgba(115, 62, 135, 0.25), 0 8px 20px rgba(15, 23, 42, 0.10);
+    box-shadow: 0 0 0 3px rgba(var(--color-purple-rgb), 0.25), 0 8px 20px rgba(15, 23, 42, 0.10);
 }
 
 .deal-card-head {
@@ -330,7 +330,7 @@ onUnmounted(removeListeners)
     background: var(--accent);
     color: #FFFFFF;
     font-size: 17px;
-    box-shadow: 0 4px 10px rgba(115, 62, 135, 0.30);
+    box-shadow: 0 4px 10px rgba(var(--color-purple-rgb), 0.30);
 }
 
 .deal-card-heading {
@@ -389,7 +389,7 @@ onUnmounted(removeListeners)
 }
 
 .deal-stage-badge {
-    background: #F3E8FF;
+    background: var(--gradient-primary);
     border: 1px solid var(--accent-border);
     color: #0B0736;
 }

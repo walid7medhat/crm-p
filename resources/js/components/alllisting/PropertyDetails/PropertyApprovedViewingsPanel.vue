@@ -147,7 +147,7 @@ function displayWhen(viewing) {
 
 .approved-viewings-panel__title-row i {
   font-size: 14px;
-  color: #733e87;
+  color: var(--color-primary);
 }
 
 .approved-viewings-panel__count {
@@ -155,8 +155,8 @@ function displayWhen(viewing) {
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #733e87;
-  color: #fff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
   font-size: 9px;
   font-weight: 700;
   display: inline-flex;
@@ -268,7 +268,7 @@ function displayWhen(viewing) {
 
 .approved-viewings-panel__time i {
   font-size: 10px;
-  color: #733e87;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 </style>

@@ -587,7 +587,7 @@ onUnmounted(() => {
 }
 
 .stage-selector--panel .stage-pill.is-current {
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(115, 62, 135, 0.45);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(var(--color-purple-rgb), 0.45);
 }
 
 .stage-selector--panel .stage-text {
@@ -607,14 +607,14 @@ onUnmounted(() => {
     height: 28px;
     border-color: #eadff0;
     background: #fff;
-    color: #733e87;
-    box-shadow: 0 4px 12px rgba(115, 62, 135, 0.12);
+    color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(var(--color-purple-rgb), 0.12);
 }
 
 .stage-selector--panel .scroll-hover-edge:hover .scroll-edge-inner {
-    border-color: #733e87;
+    border-color: var(--color-primary);
     background: #fff;
-    color: #733e87;
+    color: var(--color-primary);
 }
 
 @media (max-width: 768px) {

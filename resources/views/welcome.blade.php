@@ -137,6 +137,17 @@
                 background: transparent;
             }
 
+            /* Scoped to the splash. A :root block here is parsed after the Vite
+               CSS and would override resources/css/crm-theme.css for the whole app. */
+            #boot-splash {
+                --color-primary: #733E87;
+                --color-primary-rgb: 115, 62, 135;
+                --color-background-plain: #f6f7f6;
+                --color-text-primary: #171717;
+                --color-primary-soft: #f7f2f8;
+                --gradient-primary: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(212, 175, 55, 0.38) 100%), rgb(115, 62, 135);
+            }
+
             #boot-splash {
                 position: fixed;
                 inset: 0;
@@ -144,7 +155,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: #f7f4fb;
+                background: var(--color-background-plain);
                 transition: opacity 0.22s ease;
             }
 
@@ -152,13 +163,13 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 16px;
+                gap: 8px;
             }
 
             .alt-boot__mark {
                 position: relative;
-                width: 64px;
-                height: 64px;
+                width: 36px;
+                height: 36px;
                 display: grid;
                 place-items: center;
             }
@@ -167,46 +178,46 @@
                 position: absolute;
                 inset: 0;
                 border-radius: 50%;
-                background: conic-gradient(from 0deg, rgba(115, 62, 135, 0.08), #733e87 40%, rgba(115, 62, 135, 0));
-                -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-                mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+                background: conic-gradient(from 0deg, rgba(var(--color-primary-rgb), 0.08), var(--color-primary) 40%, rgba(var(--color-primary-rgb), 0));
+                -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+                mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
                 animation: alt-boot-spin 0.7s linear infinite;
             }
 
             .alt-boot__core {
-                width: 46px;
-                height: 46px;
+                width: 22px;
+                height: 22px;
                 border-radius: 50%;
                 display: grid;
                 place-items: center;
-                background: #fff;
-                color: #733e87;
+                background: transparent;
+                color: var(--color-primary);
                 font-family: Inter, Montserrat, system-ui, sans-serif;
-                font-size: 20px !important;
+                font-size: 12px !important;
                 font-weight: 800;
                 letter-spacing: -0.04em;
-                box-shadow: 0 8px 24px rgba(115, 62, 135, 0.16);
+                box-shadow: none;
             }
 
             .alt-boot__name {
                 margin: 0;
                 font-family: Inter, Montserrat, system-ui, sans-serif;
-                font-size: 15px !important;
-                font-weight: 800;
-                letter-spacing: 0.22em;
-                color: #1a1528;
+                font-size: 12px !important;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                color: var(--color-text-primary);
                 line-height: 1;
             }
 
             .alt-boot__name span {
-                color: #733e87;
+                color: var(--color-primary);
             }
 
             .alt-boot__bar {
-                width: 92px;
-                height: 3px;
+                width: 64px;
+                height: 2px;
                 border-radius: 999px;
-                background: rgba(115, 62, 135, 0.12);
+                background: var(--color-primary-soft);
                 overflow: hidden;
             }
 
@@ -215,7 +226,7 @@
                 width: 40%;
                 height: 100%;
                 border-radius: inherit;
-                background: #733e87;
+                background: var(--gradient-primary) !important;
                 animation: alt-boot-bar 0.7s ease-in-out infinite;
             }
 

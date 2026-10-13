@@ -374,7 +374,7 @@ onMounted(() => {
     width: 2rem;
     height: 2rem;
     border-width: 0.2em;
-    color: #733E87;
+    color: var(--color-primary);
 }
 
 .empty-icon {
@@ -689,7 +689,7 @@ onMounted(() => {
     margin-top: 1px;
     font-size: 10px;
     font-weight: 600;
-    color: #733e87;
+    color: var(--color-primary);
     line-height: 1.15;
 }
 
