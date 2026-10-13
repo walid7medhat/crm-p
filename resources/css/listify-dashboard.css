@@ -416,7 +416,7 @@
   height: 8px;
   border-radius: 999px;
   margin-right: 6px;
-  background: var(--lf-accent);
+  background: var(--gradient-primary);
 }
 
 .lf-legend i.is-visit { background: var(--color-primary-glow); }
@@ -475,7 +475,7 @@
 }
 
 .lf-chart-x span.is-on {
-  background: var(--lf-accent);
+  background: var(--gradient-primary) !important;
   color: #fff;
   font-weight: 700;
 }
@@ -825,7 +825,7 @@
 }
 
 .lf-days button.is-selected {
-  background: var(--lf-accent);
+  background: var(--gradient-primary) !important;
   color: #fff;
   font-weight: 700;
 }
@@ -838,7 +838,7 @@
   width: 4px;
   height: 4px;
   border-radius: 999px;
-  background: var(--lf-accent);
+  background: var(--color-primary);
   transform: translateX(-50%);
 }
 

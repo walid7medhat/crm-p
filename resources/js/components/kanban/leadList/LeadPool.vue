@@ -1016,7 +1016,8 @@ defineExpose({
 
 .lead-pool-toolbar__btn--primary {
     color: #fff;
-    background: linear-gradient(135deg, #00a7fa 0%, var(--color-purple) 100%);
+    -webkit-text-fill-color: #fff;
+    background: var(--gradient-primary);
     border-color: transparent;
 }
 
@@ -1034,7 +1035,8 @@ defineExpose({
 .lead-pool-toolbar__btn--assign {
     margin-left: auto;
     color: #fff;
-    background: linear-gradient(135deg, #00a7fa 0%, var(--color-purple) 100%);
+    -webkit-text-fill-color: #fff;
+    background: var(--gradient-primary);
     border-color: transparent;
 }
 

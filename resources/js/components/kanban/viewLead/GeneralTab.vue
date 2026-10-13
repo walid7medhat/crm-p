@@ -72,7 +72,7 @@
                 v-if="canViewCommentsAndActivities"
                 :id="activeViewTab === 'activity' ? 'lead-section-activity' : 'lead-section-comments'"
               >
-              <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="lead-feed-toolbar d-flex justify-content-between align-items-center mb-2">
 
                 <!-- Activity/Comments Toggle -->
                 <div class="d-flex gap-1 p-1 radius-100 w-fit-content toggle-buttons-container">
@@ -968,6 +968,40 @@ watch(
 }
 
 @media (max-width: 768px) {
+    .lead-feed-toolbar {
+        width: 100%;
+        min-width: 0;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .lead-feed-toolbar .toggle-buttons-container {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .lead-feed-toolbar .btn-toggle {
+        padding: 4px 10px !important;
+        gap: 4px !important;
+        font-size: 12px !important;
+        white-space: nowrap;
+    }
+
+    .lead-feed-toolbar .admin-controls {
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
+    .lead-feed-toolbar .btn-delete-all {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 6px 10px;
+        font-size: 12px;
+        line-height: 1.1;
+        border-radius: 12px;
+    }
+
     .edit-lead-bar-spacer {
         height: calc(72px + env(safe-area-inset-bottom, 0px));
     }

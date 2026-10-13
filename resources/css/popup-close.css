@@ -29,8 +29,7 @@ button.mobile-filter-close.mobile-filter-close,
   padding: 0 !important;
   border: 2px solid #ffffff !important;
   border-radius: 50% !important;
-  background-color: var(--color-button-primary) !important;
-  background-image: none !important;
+  background: var(--gradient-primary) !important;
   color: var(--color-on-primary) !important;
   -webkit-text-fill-color: var(--color-on-primary) !important;
   box-shadow:
@@ -57,7 +56,6 @@ button.email-modal-close.email-modal-close:hover,
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   background: var(--gradient-primary-hover) !important;
-  background-image: none !important;
   transform: scale(1.06);
 }
 
@@ -76,7 +74,9 @@ button.owner-modal-close.owner-modal-close svg,
 
 .modal-header > button.btn-close.btn-close,
 .swal2-popup button.swal2-close.swal2-close {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M3.1 1.7 8 6.6l4.9-4.9 1.4 1.4L9.4 8l4.9 4.9-1.4 1.4L8 9.4l-4.9 4.9-1.4-1.4L6.6 8 1.7 3.1z'/%3E%3C/svg%3E") !important;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M3.1 1.7 8 6.6l4.9-4.9 1.4 1.4L9.4 8l4.9 4.9-1.4 1.4L8 9.4l-4.9 4.9-1.4-1.4L6.6 8 1.7 3.1z'/%3E%3C/svg%3E"),
+    var(--gradient-primary) !important;
   background-repeat: no-repeat !important;
   background-position: center !important;
   background-size: 12px 12px, auto !important;

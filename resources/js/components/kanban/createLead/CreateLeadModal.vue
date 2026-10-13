@@ -48,7 +48,7 @@
     
                             <!-- Contact Details Section -->
                                 <div class="contact-details-card">
-                                    <span class="section-title">Lead Information</span>
+                                    <span class="section-title"><span>Lead Information</span></span>
                                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                                                       <!-- Salutation, First Name, Last Name, Position -->
                                         <div class="col">
@@ -179,7 +179,7 @@
                             <!-- Additional Fields Builder -->
                             <div class="col-12" v-if="currentStageOrder !== 0">
                                 <div class="additional-fields-card">
-                                    <span class="section-title">Client Requirement</span>
+                                    <span class="section-title"><span>Client Requirement</span></span>
     
                                     <div class="row gy-2 gx-2 mt-0 client-requirements-grid">
                                       
@@ -2075,6 +2075,14 @@ watch(selectedExistingClient, (client) => {
         background: var(--gradient-primary) !important;
         transform: rotate(45deg);
         flex-shrink: 0;
+    }
+
+    .section-title > span {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent !important;
+        -webkit-text-fill-color: transparent !important;
     }
     
     .custom-textarea {

@@ -1,8 +1,8 @@
 /* ROI Calculator — light CRM glass theme (matches profile & analytics) */
 .roi-calculator-page {
-  --roi-brand: #7c5cbf;
-  --roi-brand-dark: #581c87;
-  --roi-brand-deep: #2a1548;
+  --roi-brand: var(--color-primary);
+  --roi-brand-dark: var(--color-primary-hover);
+  --roi-brand-deep: var(--color-primary-active);
   --roi-navy: #0b0736;
   --roi-gold: #f59e0b;
   --roi-gold-dark: #d97706;
@@ -83,7 +83,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, var(--roi-brand-deep) 0%, var(--roi-brand-dark) 55%, #4a2f75 100%);
+  background: var(--gradient-primary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-wrap: wrap;
 }
@@ -368,7 +368,7 @@
 }
 
 .roi-calc__tg--on {
-  background: linear-gradient(145deg, var(--roi-brand-deep), var(--roi-brand-dark));
+  background: var(--gradient-primary);
   border-color: transparent;
   color: #fff;
   box-shadow: 0 6px 20px rgba(42, 21, 72, 0.25);
@@ -444,10 +444,11 @@
 .roi-calc__btn {
   width: 100%;
   padding: 11px 14px;
-  background: linear-gradient(135deg, var(--roi-brand) 0%, var(--roi-brand-dark) 100%);
+  background: var(--gradient-primary);
   border: none;
   border-radius: var(--roi-radius-sm);
   color: #fff;
+  -webkit-text-fill-color: #fff;
   font-size: 0.8125rem;
   letter-spacing: 0.01em;
   font-weight: 700;
@@ -615,7 +616,7 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(145deg, var(--roi-brand-deep), var(--roi-brand-dark));
+  background: var(--gradient-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -649,7 +650,7 @@
 }
 
 .roi-calc__kpi--acc {
-  background: linear-gradient(145deg, var(--roi-brand-deep) 0%, var(--roi-brand-dark) 100%);
+  background: var(--gradient-primary);
   border-color: transparent;
   color: #fff;
 }
@@ -981,7 +982,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(145deg, var(--roi-brand), var(--roi-brand-dark));
+  background: var(--gradient-primary);
   color: #fff;
   font-size: 0.625rem;
   font-weight: 800;

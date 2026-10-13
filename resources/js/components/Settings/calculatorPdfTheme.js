@@ -2,9 +2,9 @@
 export const PDF_WIDTH = 1123
 
 export const C = {
-  deep: '#2a1548',
-  dark: '#581c87',
-  purple: '#7c5cbf',
+  deep: '#4a285c',
+  dark: '#5c3270',
+  purple: '#733E87',
   gold: '#f59e0b',
   goldDark: '#d97706',
   goldBg: '#fffbeb',

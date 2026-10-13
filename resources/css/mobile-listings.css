@@ -968,12 +968,12 @@
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
   }
-  .ml-card__badge--rent { background: #ecfeff; color: #0f766e; }
-  .ml-card__badge--hot { background: #fff7ed; color: #c2410c; }
-  .ml-card__badge--offplan { background: #eff6ff; color: #1d4ed8; }
-  .ml-card__badge--ready { background: #dcfce7; color: #16a34a; }
-  .ml-card__badge--occupancy { background: #fef3c7; color: #d97706; }
-  .ml-card__badge--sold { background: #dcfce7; color: #166534; }
+  .ml-card__badge--rent { background: #ecfeff; color: #0f766e; -webkit-text-fill-color: #0f766e; }
+  .ml-card__badge--hot { background: #fff7ed; color: #c2410c; -webkit-text-fill-color: #c2410c; }
+  .ml-card__badge--offplan { background: #dbeafe; color: #1d4ed8; -webkit-text-fill-color: #1d4ed8; }
+  .ml-card__badge--ready { background: #dcfce7; color: #15803d; -webkit-text-fill-color: #15803d; }
+  .ml-card__badge--occupancy { background: #fef3c7; color: #d97706; -webkit-text-fill-color: #d97706; }
+  .ml-card__badge--sold { background: #dcfce7; color: #166534; -webkit-text-fill-color: #166534; }
 
   .ml-card__fav {
     position: absolute;

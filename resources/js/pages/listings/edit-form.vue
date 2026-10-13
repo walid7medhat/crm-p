@@ -1463,8 +1463,8 @@
     <Teleport to="body">
     <div v-if="showAddOwner" class="modal-backdrop owner-modal">
       <div class="modal-container">
-        <div class="modal-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New Owner</h5>
+        <div class="modal-header owner-modal-header">
+          <p class="owner-modal-kicker">New owner</p>
           <button type="button" class="owner-modal-close" aria-label="Close" @click="closeAddOwner">
             <i class="fas fa-times"></i>
           </button>
@@ -1479,6 +1479,7 @@
                 v-model="newOwner.salutation" 
                 :options="salutationOptions" 
                 placeholder="Select Salutation"
+                :append-to-body="true"
               />
             </div>
 
@@ -1555,6 +1556,7 @@
                 v-model="newOwner.nationality" 
                 :options="nationalities" 
                 placeholder="Select nationality" 
+                :append-to-body="true"
                 @update:modelValue="handleNationalityChange"
               />
             </div>
@@ -1567,6 +1569,7 @@
                 :options="residencyStatusOptions"
                 :reduce="option => option.value"
                 placeholder="Select Residency Status"
+                :append-to-body="true"
                 :disabled="newOwner.nationality === 'UAE'"
               />
             </div>
@@ -1579,6 +1582,7 @@
                 :options="locations"
                 label="name"
                 :reduce="(loc) => loc.id"
+                :append-to-body="true"
                 :placeholder="getLocationPlaceholder()"
                 :disabled="!newOwner.residency_status"
                 :loading="isLoadingLocations"
@@ -4861,6 +4865,111 @@ onUnmounted(() => {
 }
 .modal-backdrop .modal-container .modal-header{
     top:-10px;
+}
+
+.owner-modal .modal-container {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  max-height: min(90vh, 820px);
+}
+
+.owner-modal .modal-header {
+  position: static;
+  top: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+  border-bottom: 1px solid var(--color-primary-border);
+}
+
+.owner-modal-kicker {
+  margin: 0;
+  width: fit-content;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.owner-modal-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.owner-modal-close i {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.owner-modal .modal-body {
+  position: static;
+  top: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px 8px;
+}
+
+.owner-modal .modal-footer {
+  position: static;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-top: 1px solid #eaeaea;
+}
+
+.owner-modal .owner-modal-actions .btn {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.owner-modal .owner-modal-actions .btn-primary {
+  background: var(--gradient-primary) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.owner-modal input[type="file"].form-control {
+  width: 100%;
+  max-width: 100%;
+  min-height: 38px;
+  overflow: hidden;
+}
+
+.owner-modal .v-select {
+  width: 100%;
 }
 .modal-body {
   padding: 30px;

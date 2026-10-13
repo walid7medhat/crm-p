@@ -8417,9 +8417,14 @@ const fetchRevertNotifications = async () => {
 }
 
 .board-view-switch__btn.is-active {
-    background: #0f172a;
+    background: var(--gradient-primary);
     color: #fff;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+    -webkit-text-fill-color: #fff;
+    box-shadow: 0 6px 16px rgba(var(--color-primary-rgb), 0.28);
+}
+
+.board-view-switch__btn.is-active iconify-icon {
+    color: #fff;
 }
 
 .kanban-outer--list {

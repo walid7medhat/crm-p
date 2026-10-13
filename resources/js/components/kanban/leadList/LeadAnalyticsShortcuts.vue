@@ -187,7 +187,7 @@ function onChipClick(key) {
 }
 
 .lfs-pill {
-  --pill-accent: var(--color-purple);
+  --pill-accent: var(--color-primary);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -235,7 +235,7 @@ function onChipClick(key) {
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #4c1d95;
+  color: var(--color-primary-ink);
   min-width: 0;
   text-align: left;
 }
@@ -289,7 +289,7 @@ function onChipClick(key) {
 }
 
 .lfs-pill.is-active .lfs-pill__count {
-  color: #4c1d95;
+  color: var(--color-primary-ink);
   opacity: 1;
 }
 
@@ -308,12 +308,14 @@ function onChipClick(key) {
 .lfs-active-banner__text {
   font-size: 12px;
   font-weight: 600;
-  color: #5b21b6;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   white-space: nowrap;
 }
 
 .lfs-active-banner__text strong {
-  color: var(--color-primary);
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-weight: 700;
 }
 
@@ -321,7 +323,7 @@ function onChipClick(key) {
   border-color: rgba(var(--color-purple-rgb), 0.2);
   background: #fff;
   color: var(--color-primary);
-  --pill-accent: var(--color-purple);
+  --pill-accent: var(--color-primary);
   gap: 4px;
   padding: 5px 10px;
   font-size: 12px;

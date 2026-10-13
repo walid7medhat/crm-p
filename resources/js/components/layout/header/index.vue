@@ -502,10 +502,6 @@
       @click.self="closeMoreSheet"
     >
       <div class="mobile-more-sheet__panel" role="dialog" aria-modal="true" aria-label="More">
-        <span class="mobile-more-sheet__grab" aria-hidden="true"></span>
-        <button type="button" class="mobile-more-sheet__close" aria-label="Close" @click="closeMoreSheet">
-          <iconify-icon icon="lucide:x" />
-        </button>
         <div class="mobile-more-sheet__scroll">
           <div class="mobile-more-card">
             <button type="button" class="mobile-more-row" :class="{ 'is-active': isHomeTabActive }" @click="onMoreHome">
@@ -666,6 +662,10 @@
           <button type="button" class="mobile-more-logout" @click="logoutFromMore">
             <iconify-icon icon="lucide:log-out" />
             <span>Log out</span>
+          </button>
+          <button type="button" class="mobile-more-sheet__close" aria-label="Close" @click="closeMoreSheet">
+            <iconify-icon icon="lucide:x" />
+            <span>Close</span>
           </button>
         </div>
       </div>

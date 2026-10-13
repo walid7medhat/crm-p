@@ -24,7 +24,7 @@
     <div class="col-lg-12">
       <div class="card" id="listing-section-details">
         <div class="card-header listing-section-head">
-          <h6 class="card-title listing-section-title mb-0">Property Details</h6>
+          <h6 class="card-title listing-section-title mb-0"><span>Property Details</span></h6>
           <p class="listing-section-desc">Purpose, type, project, and the address shown on the listing.</p>
         </div>
         <div class="card-body">
@@ -167,7 +167,7 @@
     <div class="col-lg-12">
       <div class="card" id="listing-section-specs">
         <div class="card-header listing-section-head">
-          <h6 class="card-title listing-section-title mb-0">Unit Specifications</h6>
+          <h6 class="card-title listing-section-title mb-0"><span>Unit Specifications</span></h6>
           <p class="listing-section-desc">Size, rooms, and the features that describe this unit.</p>
         </div>
         <div class="card-body">
@@ -258,7 +258,7 @@
     <div class="col-lg-12">
       <div class="card" id="listing-section-payment">
         <div class="card-header listing-section-head">
-          <h6 class="card-title listing-section-title mb-0">Payment Breakdown &amp; NOC</h6>
+          <h6 class="card-title listing-section-title mb-0"><span>Payment Breakdown &amp; NOC</span></h6>
           <p class="listing-section-desc">Selling price, payment plan, and the amounts required before publish.</p>
         </div>
         <div class="card-body payment-breakdown-card-body">
@@ -872,7 +872,7 @@
           <div class="col-lg-12">
           <div class="card" id="listing-section-mortgage">
             <div class="card-header listing-section-head">
-              <h6 class="card-title listing-section-title mb-0">Mortgage &amp; Rent Info</h6>
+              <h6 class="card-title listing-section-title mb-0"><span>Mortgage &amp; Rent Info</span></h6>
               <p class="listing-section-desc">Mortgage and occupancy. Rent fields appear only when the unit is rented.</p>
             </div>
             <div class="card-body">
@@ -927,7 +927,7 @@
     <div class="col-lg-12">
       <div class="card" id="listing-section-gallery">
         <div class="card-header listing-section-head">
-          <h6 class="card-title listing-section-title mb-0">Property Gallery</h6>
+          <h6 class="card-title listing-section-title mb-0"><span>Property Gallery</span></h6>
           <p class="listing-section-desc">Upload photos and drag them into order. The first image is the hero.</p>
         </div>
         <div class="card-body">
@@ -1064,7 +1064,7 @@
 <div class="col-lg-12"  v-if="selectedProject && filteredFloorPlans.length > 0">
   <div class="card" id="listing-section-plans">
     <div class="card-header listing-section-head">
-      <h6 class="card-title listing-section-title mb-0">Floor Plans</h6>
+      <h6 class="card-title listing-section-title mb-0"><span>Floor Plans</span></h6>
       <p class="listing-section-desc">Choose one plan from this project. Only one plan can be attached.</p>
     </div>
     <div class="card-body">
@@ -1417,7 +1417,7 @@
     <div class="col-lg-12">
       <div class="card" id="listing-section-documents">
         <div class="card-header listing-section-head">
-          <h6 class="card-title listing-section-title mb-0">Property Documents</h6>
+          <h6 class="card-title listing-section-title mb-0"><span>Property Documents</span></h6>
           <p class="listing-section-desc">Attach supporting files. PDF and image types stay within the existing size limit.</p>
         </div>
         <div class="card-body">
@@ -1490,7 +1490,7 @@
     <div class="col-lg-12">
       <div class="card" id="listing-section-owner">
         <div class="card-header listing-section-head">
-          <h6 class="card-title listing-section-title mb-0">Owner Details</h6>
+          <h6 class="card-title listing-section-title mb-0"><span>Owner Details</span></h6>
           <p class="listing-section-desc">Search an existing owner, or add one if you have permission.</p>
         </div>
         <div class="card-body">
@@ -1579,10 +1579,7 @@
       <div class="modal-container">
         <!-- Modal Header -->
         <div class="modal-header owner-modal-header">
-          <div>
-            <p class="owner-modal-kicker">New owner</p>
-            <h5 class="owner-modal-title">Add New Owner</h5>
-          </div>
+          <p class="owner-modal-kicker">New owner</p>
           <button type="button" class="owner-modal-close" aria-label="Close" @click="showAddOwner = false">
             <i class="fas fa-times"></i>
           </button>
@@ -5008,21 +5005,17 @@ body {
 
 .owner-modal-kicker {
   margin: 0;
-  font-size: 10px;
+  width: fit-content;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-primary);
   line-height: 1.2;
-}
-
-.owner-modal-title {
-  margin: 1px 0 0;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #171717;
-  line-height: 1.2;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 .owner-modal-close {
@@ -5031,8 +5024,9 @@ body {
   flex: 0 0 34px;
   border: 2px solid #ffffff;
   border-radius: 50%;
-  background: var(--gradient-primary);
-  color: #ffffff;
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   box-shadow:
     0 0 0 3px rgba(var(--color-primary-rgb), 0.22),
     0 8px 16px rgba(var(--color-primary-hover-rgb), 0.28);
@@ -5040,6 +5034,11 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.owner-modal-close i {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .modal-header h5 {
@@ -5169,6 +5168,14 @@ body {
   background: var(--gradient-primary);
   transform: rotate(45deg);
   flex-shrink: 0;
+}
+
+.owner-modal .section-title > span:not(.badge) {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 .section-title .badge {
@@ -6610,11 +6617,16 @@ body.swal2-toast-shown  {
 
 .listing-create-kicker {
   margin: 0 0 4px;
+  width: fit-content;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-primary);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 .listing-create-title {
@@ -6693,11 +6705,21 @@ body.swal2-toast-shown  {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: fit-content;
   font-size: 12px !important;
   font-weight: 700 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
-  color: var(--color-primary) !important;
+  color: #733E87 !important;
+  -webkit-text-fill-color: #733E87 !important;
+}
+
+.property-form-page .card-header h6.listing-section-title span {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 .listing-section-title::before {
@@ -6837,17 +6859,37 @@ body.swal2-toast-shown  {
   flex: 0 0 auto !important;
 }
 
-/* Phones and iPad: owner fields stay above the actions, and the actions clear the tab bar */
+/* Phones and iPad: keep draft / preview / publish above the floating menu */
 @media (max-width: 1024px) {
+  body.app-has-video-bg .dashboard-main-body.property-form-page,
   .property-form-page {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(360px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .property-form-page #listing-section-owner {
+    scroll-margin-bottom: calc(240px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .property-form-page #listing-section-owner .card-body {
+    padding-bottom: 28px;
+  }
+
+  body:has(.property-form-page) .chat-floating-btn {
+    bottom: calc(210px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 10300 !important;
   }
 
   .property-form-page .property-form-actions {
-    position: static;
-    margin-top: 8px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    z-index: 10400;
+    margin: 0;
+    border-radius: 16px;
     background: #ffffff;
     border-top: 1px solid #e6e2ee;
+    box-shadow: 0 8px 24px rgba(17, 17, 17, 0.12);
     padding: 12px 10px;
   }
 

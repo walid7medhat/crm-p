@@ -691,6 +691,8 @@ async function submit() {
 
 @media (max-width: 768px) {
   .notifyme-overlay {
+    top: 4rem;
+    height: auto;
     padding: 0;
     align-items: stretch;
   }
@@ -698,15 +700,14 @@ async function submit() {
   .notifyme-modal {
     width: 100%;
     max-width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: 100%;
+    max-height: none;
     border-radius: 0;
     overflow: hidden;
   }
 
   .notifyme-header {
-    flex-shrink: 0;
-    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px 12px;
+    display: none;
   }
 
   .notifyme-body {
@@ -715,7 +716,7 @@ async function submit() {
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px;
+    padding: 8px 12px 12px;
     overscroll-behavior: contain;
   }
 

@@ -2309,10 +2309,10 @@ textarea, input, select {
         right: auto !important;
         left: auto !important;
         transform: none;
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-        min-height: 32px !important;
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px !important;
+        min-height: 26px !important;
         margin-left: 0;
         padding: 0;
         display: flex !important;
@@ -2320,9 +2320,9 @@ textarea, input, select {
         align-items: center;
         flex-shrink: 0;
         box-shadow: none;
-        border-radius: 10px;
+        border-radius: 8px;
         border: none;
-        background: #111111;
+        background: var(--gradient-primary) !important;
         color: #ffffff !important;
         z-index: 10 !important;
     }
@@ -2352,9 +2352,9 @@ textarea, input, select {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 8px 10px;
+        gap: 6px 8px;
         width: 100%;
-        padding: 8px 12px;
+        padding: 6px 10px;
     }
 
     .lead-header-identity {
@@ -2369,11 +2369,13 @@ textarea, input, select {
     }
 
     .lead-header-mark {
-        width: 32px;
-        height: 32px;
-        flex-basis: 32px;
-        border-radius: 10px;
-        font-size: 16px;
+        width: 26px;
+        height: 26px;
+        flex-basis: 26px;
+        border-radius: 8px;
+        font-size: 14px;
+        background: var(--gradient-primary);
+        color: #ffffff;
     }
 
     .lead-header-actions {
@@ -2402,8 +2404,8 @@ textarea, input, select {
     }
 
     .modal-title {
-        font-size: 15px;
-        line-height: 1.25;
+        font-size: 13px;
+        line-height: 1.2;
         padding-right: 4px;
     }
 
@@ -2497,19 +2499,23 @@ textarea, input, select {
     }
 
     .lead-header-mark {
-        width: 40px;
-        height: 40px;
-        flex-basis: 40px;
-        border-radius: 14px;
-        font-size: 18px;
-        background: #01062d;
-        color: #FAA300;
+        width: 26px;
+        height: 26px;
+        flex-basis: 26px;
+        border-radius: 8px;
+        font-size: 14px;
+        background: var(--gradient-primary);
+        color: #ffffff;
+    }
+
+    .lead-header-mark iconify-icon {
+        color: #ffffff !important;
     }
 
     .modal-title {
-        font-size: 18px;
+        font-size: 13px;
         font-weight: 700;
-        color: #01062d;
+        color: #1c1424;
     }
 
     .stage-selector-wrapper {
@@ -2728,19 +2734,19 @@ textarea, input, select {
         top: auto !important;
         right: auto !important;
         left: auto !important;
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-        min-height: 32px !important;
-        flex: 0 0 32px !important;
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px !important;
+        min-height: 26px !important;
+        flex: 0 0 26px !important;
         margin-left: 0 !important;
         z-index: 20 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         border: none !important;
-        border-radius: 10px !important;
-        background: #111111 !important;
+        border-radius: 8px !important;
+        background: var(--gradient-primary) !important;
         color: #fff !important;
         box-shadow: none !important;
     }

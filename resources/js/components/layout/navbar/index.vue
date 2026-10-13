@@ -184,6 +184,7 @@
               @click.stop="openSearchModal()"
             >
               <iconify-icon :icon="showLeadBoardHeader ? 'lucide:sliders-horizontal' : 'lucide:layout-grid'" />
+              <span v-if="resolvedActiveFilters.length" class="kanban-mob-search-grid__count">{{ resolvedActiveFilters.length }}</span>
             </button>
             </div>
             <div
@@ -1323,7 +1324,7 @@ const searchInputPlaceholder = computed(() => {
     if (isDealRoute.value || activeKanbanTab.value === 'deals') {
         return 'Search deals, client, phone…';
     }
-    return isMobileViewport.value ? 'Search leads...' : 'Search Leads';
+    return isMobileViewport.value ? 'Search Leads' : 'Search Leads';
 });
 
 const visibleFilterPills = computed(() => {
@@ -4323,13 +4324,14 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 }
 
 .search-tag {
-    background: rgba(251, 191, 36, 0.24);
-    border: 1px solid rgba(251, 191, 36, 0.58);
+    background: #fff7e6;
+    border: 1px solid #f5d48a;
     border-radius: 999px;
     padding: 3px 8px;
     font-size: 11px;
     font-weight: 600;
-    color: #fef9c3;
+    color: #78350f !important;
+    -webkit-text-fill-color: #78350f !important;
     white-space: nowrap;
     width: fit-content;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
@@ -5016,14 +5018,14 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   }
 
   .navbar-header--lead-board .kanban-mob-search-glyph {
-    left: 12px;
-    right: auto;
-    color: #111111;
+    left: auto;
+    right: 10px;
+    color: var(--color-primary);
   }
 
   .navbar-header--lead-board .kanban-mob-search-field input {
-    padding-left: 34px !important;
-    padding-right: 12px !important;
+    padding-left: 14px !important;
+    padding-right: 34px !important;
   }
 
   .kanban-mob-create {
@@ -5210,17 +5212,40 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   }
 
   .kanban-mob-search-grid {
-    flex: 0 0 44px;
-    width: 44px;
-    height: 44px;
-    border: 0;
+    position: relative;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ece7f2;
     border-radius: 50%;
     background: #ffffff;
-    color: #01062d;
-    box-shadow: 0 6px 16px rgba(1, 6, 45, 0.08);
+    color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(115, 62, 135, 0.08);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .kanban-mob-search-grid iconify-icon {
+    color: var(--color-primary) !important;
+    font-size: 18px;
+  }
+
+  .kanban-mob-search-grid__count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--gradient-primary);
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
   }
 
   .kanban-mob-search-row .search-wrapper {
@@ -5234,7 +5259,8 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 
   .kanban-mob-search-glyph {
     position: absolute;
-    right: 4px;
+    left: auto;
+    right: 2px;
     top: 50%;
     transform: translateY(-50%);
     display: inline-flex;
@@ -5242,7 +5268,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     justify-content: center;
     width: 22px;
     height: 22px;
-    color: #f5a524;
+    color: var(--color-primary);
     font-size: 18px;
     pointer-events: none;
   }

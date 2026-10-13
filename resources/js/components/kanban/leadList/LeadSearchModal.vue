@@ -176,6 +176,38 @@
 
                             </button>
 
+                            <div v-else-if="isMobileSheet && isSheetChipField(field)" class="sheet-chip-row">
+                                <button
+                                    v-for="opt in sheetChipOptions(field)"
+                                    :key="`${field.id}-${opt.value}`"
+                                    type="button"
+                                    class="sheet-chip"
+                                    :class="{ 'is-on': form[field.formKey] === opt.value }"
+                                    @click="toggleSheetChip(field, opt.value)"
+                                >{{ opt.text }}</button>
+                            </div>
+                            <div v-else-if="isMobileSheet && field.id === 'budget_from'" class="sheet-budget">
+                                <label class="sheet-budget__box">
+                                    <span>Minimum</span>
+                                    <input
+                                        :value="form.budgetFrom"
+                                        inputmode="numeric"
+                                        class="sheet-budget__input"
+                                        placeholder="AED 0"
+                                        @input="(e) => setBudgetValue('budgetFrom', e.target.value)"
+                                    />
+                                </label>
+                                <label class="sheet-budget__box">
+                                    <span>Maximum</span>
+                                    <input
+                                        :value="form.budgetTo"
+                                        inputmode="numeric"
+                                        class="sheet-budget__input"
+                                        placeholder="AED 0"
+                                        @input="(e) => setBudgetValue('budgetTo', e.target.value)"
+                                    />
+                                </label>
+                            </div>
                             <div
 
                                 v-else-if="field.id === 'budget_from'"
@@ -963,7 +995,6 @@
             <button type="button" class="lead-search-sheet-clear" :disabled="searching" @click="resetForm">Clear</button>
         </header>
 
-        <div v-if="isMobileSheet" id="lead-search-mobile-chips" class="lead-search-sheet-chips"></div>
 
         <div v-if="!isMobileSheet" class="lead-search-desk-head">
             <div class="lead-search-desk-head__copy">
@@ -1055,7 +1086,9 @@
 
                 <div class="search-sections-wrap">
 
-                    <div v-for="section in visibleSearchSections" :key="`dropdown_${section.id}`" class="search-section-card">
+                    <div v-if="isMobileSheet" id="lead-search-mobile-chips" class="lead-search-sheet-chips"></div>
+
+                    <div v-for="section in visibleSearchSections" :key="`dropdown_${section.id}`" class="search-section-card" :class="`search-section-card--${section.id}`">
 
                         <div class="search-section-title">{{ section.title }}</div>
 
@@ -1115,6 +1148,38 @@
 
                             </button>
 
+                            <div v-else-if="isMobileSheet && isSheetChipField(field)" class="sheet-chip-row">
+                                <button
+                                    v-for="opt in sheetChipOptions(field)"
+                                    :key="`${field.id}-${opt.value}`"
+                                    type="button"
+                                    class="sheet-chip"
+                                    :class="{ 'is-on': form[field.formKey] === opt.value }"
+                                    @click="toggleSheetChip(field, opt.value)"
+                                >{{ opt.text }}</button>
+                            </div>
+                            <div v-else-if="isMobileSheet && field.id === 'budget_from'" class="sheet-budget">
+                                <label class="sheet-budget__box">
+                                    <span>Minimum</span>
+                                    <input
+                                        :value="form.budgetFrom"
+                                        inputmode="numeric"
+                                        class="sheet-budget__input"
+                                        placeholder="AED 0"
+                                        @input="(e) => setBudgetValue('budgetFrom', e.target.value)"
+                                    />
+                                </label>
+                                <label class="sheet-budget__box">
+                                    <span>Maximum</span>
+                                    <input
+                                        :value="form.budgetTo"
+                                        inputmode="numeric"
+                                        class="sheet-budget__input"
+                                        placeholder="AED 0"
+                                        @input="(e) => setBudgetValue('budgetTo', e.target.value)"
+                                    />
+                                </label>
+                            </div>
                             <div
 
                                 v-else-if="field.id === 'budget_from'"
@@ -4360,6 +4425,20 @@ const visibleSearchSections = computed(() => {
 
 
 
+const CHIP_FIELD_IDS = ['lead_type', 'property_status', 'bedrooms']
+
+function isSheetChipField(field) {
+    return CHIP_FIELD_IDS.includes(field?.id) && Array.isArray(field.options)
+}
+
+function sheetChipOptions(field) {
+    return (field.options || []).filter((opt) => opt.value !== null && opt.value !== undefined && opt.value !== '')
+}
+
+function toggleSheetChip(field, value) {
+    form[field.formKey] = form[field.formKey] === value ? null : value
+}
+
 const searchFieldSections = [
 
     {
@@ -7271,20 +7350,37 @@ onBeforeUnmount(() => {
 
 .search-section-card {
     background: #fff;
-    border: 1px solid #F1F5F9;
-    border-radius: 14px;
-    padding: 10px 10px 6px;
-    box-shadow: 1px 1px 5px 5px #00000005;
+    border: 1px solid var(--color-primary-border);
+    border-radius: 12px;
+    padding: 0 0 10px;
+    overflow: hidden;
+    box-shadow: none;
 }
 
 .search-section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0B0736;
-    margin-bottom: 10px;
-    padding-bottom: 0;
-    border-bottom: none;
-    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-primary-border);
+    background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+    color: #733E87 !important;
+    -webkit-text-fill-color: #733E87 !important;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.search-section-title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: var(--gradient-primary);
+    transform: rotate(45deg);
+    flex-shrink: 0;
 }
 
 @media (max-width: 1199px) {
@@ -8114,8 +8210,10 @@ onBeforeUnmount(() => {
 .lead-search-sheet-clear {
     min-width: 44px;
     height: 36px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
+    color: var(--color-primary) !important;
+    -webkit-text-fill-color: var(--color-primary) !important;
 }
 
 .lead-search-sheet-clear:disabled {
@@ -8160,11 +8258,20 @@ onBeforeUnmount(() => {
 }
 
 .lead-search-sheet-chips :deep(.lfs-pill) {
-    min-height: 26px;
-    padding: 2px 8px;
-    gap: 4px;
-    font-size: 11px;
+    min-height: 36px;
+    padding: 6px 12px;
+    gap: 6px;
+    font-size: 13px;
+    border-radius: 999px;
+    border: 1px solid #ece7f2;
+    background: #ffffff;
     box-shadow: none;
+}
+
+.lead-search-sheet-chips :deep(.lfs-pill.is-active) {
+    background: var(--color-primary-soft) !important;
+    border-color: var(--color-primary-muted) !important;
+    color: var(--color-primary) !important;
 }
 
 .lead-search-sheet-chips :deep(.lfs-pill__icon) {
@@ -8208,18 +8315,28 @@ onBeforeUnmount(() => {
 }
 
 .lead-search-dropdown-panel--sheet .pill-btn {
-    min-height: 32px;
-    padding: 0 12px;
-    font-size: 12px;
-    background: #f4f2f7;
-    border: none;
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+    background: #ffffff;
+    border: 1px solid #ece7f2;
+    border-radius: 999px;
     color: #3f3a4d;
     touch-action: manipulation;
 }
 
 .lead-search-dropdown-panel--sheet .pill-btn.active {
-    background: var(--gradient-primary);
-    color: #ffffff;
+    background: var(--gradient-primary) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+.lead-search-dropdown-panel--sheet .pill-btn.active .pill-count,
+.lead-search-dropdown-panel--sheet .pill-btn.active .selected-indicator {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
 .lead-search-dropdown-panel--sheet .city-children-wrap {
@@ -8240,22 +8357,71 @@ onBeforeUnmount(() => {
 }
 
 .lead-search-dropdown-panel--sheet .search-sections-wrap {
-    max-height: none;
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding: 4px 2px 16px;
-    gap: 12px;
     background: transparent;
 }
 
-.lead-search-dropdown-panel--sheet .search-section-card {
-    border-radius: 16px;
-    padding: 14px 12px 10px;
+.lead-search-dropdown-panel--sheet .search-section-card--client-requirement {
+    order: -2;
+}
+
+.lead-search-dropdown-panel--sheet .search-sections-wrap > .lead-search-sheet-chips {
+    order: -1;
     margin: 0;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-card {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 18px;
+    border: 1px solid #f0eaf6;
+    padding: 4px 12px 14px;
+    margin: 0 0 12px;
     max-width: 100%;
     box-sizing: border-box;
+    background: #ffffff;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-card .row,
+.lead-search-dropdown-panel--sheet .search-section-card [class*="col-"] {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: none !important;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-title {
+    display: block;
+    margin: 0 0 10px;
+    padding: 12px 2px 0;
+    border: none;
+    background: transparent;
+    color: #3f3a4d !important;
+    -webkit-text-fill-color: #3f3a4d !important;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-title::before {
+    display: none;
 }
 
 .lead-search-dropdown-panel--sheet .search-section-card .row {
@@ -8285,11 +8451,76 @@ onBeforeUnmount(() => {
 .lead-search-dropdown-panel--sheet .custom-input,
 .lead-search-dropdown-panel--sheet .custom-date-trigger,
 .lead-search-dropdown-panel--sheet :deep(.vs__dropdown-toggle) {
-    min-height: 44px;
-    height: 44px !important;
+    display: block !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    height: 48px !important;
     font-size: 16px !important;
     max-width: 100%;
     box-sizing: border-box;
+    border-radius: 14px !important;
+    border: 1px solid #ece7f2 !important;
+    background: #f7f4fa !important;
+    color: #1c1730 !important;
+    -webkit-text-fill-color: #1c1730 !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    padding: 0 14px !important;
+}
+
+.sheet-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sheet-chip {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid #ece7f2;
+    background: #ffffff;
+    color: #3f3a4d;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sheet-chip.is-on {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary-muted);
+    color: var(--color-primary);
+    -webkit-text-fill-color: var(--color-primary);
+}
+
+.sheet-budget {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.sheet-budget__box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #f7f4fa;
+    border: 1px solid #ece7f2;
+    color: #8b8498;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sheet-budget__input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #1c1730;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 0;
+    outline: none;
 }
 
 .lead-search-dropdown-panel--sheet :deep(.vs__search),
@@ -8339,6 +8570,9 @@ onBeforeUnmount(() => {
     font-size: 15px;
     font-weight: 700;
     background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: none !important;
     touch-action: manipulation;
 }
 
@@ -8482,7 +8716,8 @@ onBeforeUnmount(() => {
     .lead-search--desk .pill-btn.active {
         background: var(--gradient-primary) !important;
         border-color: var(--color-primary);
-        color: var(--color-primary);
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     .lead-search--desk .pill-count {
@@ -8492,8 +8727,9 @@ onBeforeUnmount(() => {
 
     .lead-search--desk .pill-btn.active .pill-count,
     .lead-search--desk .pill-btn.active .selected-indicator {
-        background: rgba(255, 255, 255, 0.2);
-        color: var(--color-primary);
+        background: rgba(255, 255, 255, 0.22);
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     .lead-search--desk .city-children-wrap {
@@ -8521,7 +8757,8 @@ onBeforeUnmount(() => {
     .lead-search--desk .city-child-btn.active {
         background: var(--gradient-primary) !important;
         border-color: var(--color-primary);
-        color: var(--color-primary);
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     .lead-search--desk .form-content-wrapper {
@@ -8567,34 +8804,19 @@ onBeforeUnmount(() => {
         box-shadow: 0 1px 0 rgba(var(--color-purple-rgb), 0.04);
     }
 
-    .lead-search--desk .search-section-title {
+    .lead-search--desk .search-section-title,
+    .lead-search--desk .search-section-card:nth-child(even) .search-section-title {
         display: flex;
         align-items: center;
-        gap: 7px;
-        margin: 0 0 8px;
-        padding: 6px 10px;
-        border: none;
-        border-bottom: 1px solid #f3eaf6;
-        background: linear-gradient(90deg, #f7eef9 0%, #fff 68%);
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--color-primary);
-    }
-
-    .lead-search--desk .search-section-title::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        border-radius: 1px;
-        background: var(--gradient-primary) !important;
-        transform: rotate(45deg);
-        flex-shrink: 0;
-    }
-
-    .lead-search--desk .search-section-card:nth-child(even) .search-section-title {
-        background: linear-gradient(90deg, #f3e8f7 0%, #fff 78%);
+        width: auto;
+        margin: 0 0 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--color-primary-border);
+        background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+        -webkit-background-clip: border-box;
+        background-clip: border-box;
+        color: #733E87 !important;
+        -webkit-text-fill-color: #733E87 !important;
     }
 
     .lead-search--desk .search-section-card .row {
@@ -9066,5 +9288,70 @@ onBeforeUnmount(() => {
     html.lead-search-sheet-lock .vs__dropdown-menu {
         z-index: 100010 !important;
         max-height: min(240px, 40dvh);
+    }
+
+    .lead-search-dropdown-panel--sheet .search-sections-wrap,
+    .lead-search-dropdown-panel--sheet .search-section-card,
+    .lead-search-dropdown-panel--sheet .search-section-card .row,
+    .lead-search-dropdown-panel--sheet .search-section-card [class*="col-"] {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-sections-wrap {
+        overflow-y: auto !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .v-select,
+    .lead-search-dropdown-panel--sheet .search-section-card .crm-phone-input,
+    .lead-search-dropdown-panel--sheet .search-section-card .budget-field-wrap,
+    .lead-search-dropdown-panel--sheet .search-section-card .custom-date-trigger,
+    .lead-search-dropdown-panel--sheet .search-section-card input.form-control,
+    .lead-search-dropdown-panel--sheet .search-section-card input.custom-input {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        max-height: none !important;
+        margin: 0 0 8px !important;
+        overflow: visible !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 1 !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .v-select .vs__dropdown-toggle,
+    .lead-search-dropdown-panel--sheet .search-section-card input.form-control,
+    .lead-search-dropdown-panel--sheet .search-section-card input.custom-input,
+    .lead-search-dropdown-panel--sheet .search-section-card .custom-date-trigger,
+    .lead-search-dropdown-panel--sheet .search-section-card .vue-tel-input {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        max-height: none !important;
+        box-sizing: border-box !important;
+        border: 1px solid #ddd4e8 !important;
+        border-radius: 14px !important;
+        background: #ffffff !important;
+        color: #1c1730 !important;
+        -webkit-text-fill-color: #1c1730 !important;
+        font-size: 16px !important;
+        padding: 0 12px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card input.form-control::placeholder,
+    .lead-search-dropdown-panel--sheet .search-section-card input.custom-input::placeholder,
+    .lead-search-dropdown-panel--sheet .search-section-card .vs__search::placeholder,
+    .lead-search-dropdown-panel--sheet .search-section-card .vs__placeholder {
+        color: #8b8498 !important;
+        -webkit-text-fill-color: #8b8498 !important;
+        opacity: 1 !important;
     }
 </style>
