@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\MyDayController;
 use App\Http\Controllers\Api\StageController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserRoleController;
@@ -600,6 +601,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/kanban-task-summary', [DashboardController::class, 'getKanbanTaskSummary']);
     Route::get('/dashboard/schedule', [DashboardController::class, 'getDashboardSchedule']);
     Route::get('/dashboard/studio', [DashboardController::class, 'getStudio']);
+    Route::get('/dashboard/my-day', [MyDayController::class, 'show']);
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 
@@ -806,9 +808,6 @@ Route::prefix('leads')->group(function(){
             // "Export Leads" page (super_admin): search text → preview / Excel.
             Route::get('/lead-search', [ReportController::class, 'leadSearchPreview']);
             Route::get('/lead-search/export', [ReportController::class, 'leadSearchExport']);
-            // Daily Leads Report (super_admin / admin / branch_admin): preview, then Excel of the edited preview.
-            Route::get('/daily-leads', [ReportController::class, 'dailyLeadsReport']);
-            Route::post('/daily-leads/export', [ReportController::class, 'dailyLeadsReportExport']);
         });
 });
   // =================sources=============
