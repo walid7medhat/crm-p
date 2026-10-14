@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\LeadUpdated;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\Lead\LeadRequest;
@@ -292,6 +293,10 @@ class LeadController extends Controller
                                     $q->whereNull('responsible_person_id')
                                         ->orWhere('responsible_person_id', '!=', $user->id);
                                 });
+
+                            // …nor a lead this user owned when it (last) entered the pool, even if
+                            // its owner changed since — they released it / it reverted from them.
+                            $this->excludeLeadsUserSentToPool($leadsQuery, (int) $user->id, 10);
 
                         } else {
 
@@ -1828,7 +1833,10 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 'old_stage_id' => $oldStage->id,
                 'new_stage_id' => $newStage->id,
                 'from_lead_pool' => $assigningSelfFromLeadPool,
-            ]
+            ] + ($this->isLeadPoolStage($newStage) && ! $this->isLeadPoolStage($oldStage)
+                // Who owned it when it entered the pool — they must not see it in the pool.
+                ? ['old_person_id' => $old['responsible_person_id'] ?? null]
+                : [])
         );
 
         // تسجيل تغييرات الحقول الأخرى (history only — one broadcast below)
@@ -2367,6 +2375,39 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     /**
      * Whether a stage is the Lead Pool column (name or kanban order 9).
      */
+    private function excludeLeadsUserSentToPool($query, int $userId, int $poolStageId): void
+    {
+        // The lead's latest entry into the pool: an automatic revert to the pool stage, or a
+        // manual stage change into it.
+        $latestEntry = DB::table('lead_histories')
+            ->selectRaw('lead_id, MAX(id) as id')
+            ->where(function ($q) use ($poolStageId) {
+                $q->where(function ($r) use ($poolStageId) {
+                    $r->where('changes->action', 'revert')->where('changes->target_stage_id', $poolStageId);
+                })->orWhere(function ($s) use ($poolStageId) {
+                    $s->where('changes->action', 'stage_changed')->where('changes->new_stage_id', $poolStageId);
+                });
+            })
+            ->groupBy('lead_id');
+
+        $query->whereNotExists(function ($sub) use ($latestEntry, $userId) {
+            $sub->selectRaw('1')
+                ->fromSub($latestEntry, 'pe')
+                ->join('lead_histories as ph', 'ph.id', '=', 'pe.id')
+                ->whereColumn('pe.lead_id', 'leads.id')
+                ->where(function ($q) use ($userId) {
+                    // Owner at that moment (recorded on reverts, and on manual moves from now on)…
+                    $q->where('ph.changes->old_person_id', $userId)
+                        // …or, for older manual moves without it, whoever moved it.
+                        ->orWhere(function ($w) use ($userId) {
+                            $w->whereNull('ph.changes->old_person_id')
+                                ->where('ph.changes->action', 'stage_changed')
+                                ->where('ph.user_id', $userId);
+                        });
+                });
+        });
+    }
+
     private function isLeadPoolStage(?Stage $stage): bool
     {
         if (! $stage) {
