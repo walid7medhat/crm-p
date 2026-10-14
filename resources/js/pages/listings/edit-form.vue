@@ -4214,7 +4214,15 @@ const handleSubmit = async (action = 'draft') => {
       'mortgage_comment': form.value.mortgageComment,
     };
 
+    // Free-text notes the user can clear: always send them (empty → null on the server),
+    // otherwise an emptied field is skipped below and the old text stays saved.
+    const clearableTextFields = ['comment', 'mortgage_comment'];
+
     Object.entries(textFields).forEach(([key, value]) => {
+      if (clearableTextFields.includes(key)) {
+        formData.append(key, value == null ? '' : String(value));
+        return;
+      }
       if (value !== null && value !== undefined && value !== '') {
         formData.append(key, value);
       }
