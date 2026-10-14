@@ -11,6 +11,7 @@ namespace App\Support;
  *   portal   → propertyfinder, bayut
  *   whatsapp → Whatsapp Oia Properties, Whatsapp All Properties
  *   Lead Form (Meta) → Lead Form, Meta Ads - Lead Form
+ *   snapchat / tiktok → any lead_source containing the name (SOURCE_PATTERNS)
  *
  * Most sources match `lead_source` exactly (indexed, fast).
  *
@@ -68,6 +69,15 @@ class LeadSourceFilter
         'bayut'          => ['%bayut%'],
     ];
 
+    /**
+     * Social sources saved with varying wording ("Snapchat", "Snapchat Ads", "TikTok Lead",
+     * "Tik Tok", ...) → LIKE patterns on lead_source only.
+     */
+    private const SOURCE_PATTERNS = [
+        'snapchat' => ['%snapchat%', '%snap chat%'],
+        'tiktok'   => ['%tiktok%', '%tik tok%', '%tik-tok%'],
+    ];
+
     /** @param  mixed  $source  request('source') — string or array */
     public static function apply($query, $source): void
     {
@@ -110,13 +120,24 @@ class LeadSourceFilter
         }
         $patterns = array_values(array_unique($patterns));
 
-        $query->where(function ($q) use ($exact, $patterns, $microSites) {
+        $sourcePatterns = [];
+        foreach ($exact as $entry) {
+            foreach (self::SOURCE_PATTERNS[strtolower($entry)] ?? [] as $pattern) {
+                $sourcePatterns[] = $pattern;
+            }
+        }
+        $sourcePatterns = array_values(array_unique($sourcePatterns));
+
+        $query->where(function ($q) use ($exact, $patterns, $sourcePatterns, $microSites) {
             if ($exact) {
                 $q->whereIn('lead_source', $exact);
             }
             foreach ($patterns as $pattern) {
                 $q->orWhere('lead_source', 'like', $pattern)
                     ->orWhere('more_information', 'like', $pattern);
+            }
+            foreach ($sourcePatterns as $pattern) {
+                $q->orWhere('lead_source', 'like', $pattern);
             }
             foreach ($microSites as $site) {
                 $like = '%' . $site . '%';

@@ -3525,6 +3525,9 @@ const sourceOptions = ref([
 
     { value: 'portal', text: 'Portal' },
     { value: 'whatsapp', text: 'Whatsapp' },
+    // Matched by name on the API side (any lead_source containing it) — App\Support\LeadSourceFilter.
+    { value: 'snapchat', text: 'Snapchat' },
+    { value: 'tiktok', text: 'TikTok' },
 
 ])
 
