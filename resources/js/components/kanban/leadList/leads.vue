@@ -3428,9 +3428,14 @@ const getPriorityBudget = (task) => {
     const priorityReq = getPriorityRequirement(task)
     if (!priorityReq) return null
     
-    const from = priorityReq.budget_from
-    const to = priorityReq.budget_to
-    
+    // Thousands separators on the card: 2000000 / "2000000.00" / "2,000,000" → 2,000,000.
+    const money = (value) => {
+        const n = Number(String(value ?? '').replace(/,/g, '').trim())
+        return Number.isFinite(n) && n > 0 ? Math.round(n).toLocaleString('en-US') : ''
+    }
+    const from = money(priorityReq.budget_from)
+    const to = money(priorityReq.budget_to)
+
     if (from && to) return `${from} - ${to}`
     if (from) return `From ${from}`
     if (to) return `To ${to}`
