@@ -161,6 +161,23 @@
                                     </div>
                                 </div>
     
+                            <!-- Link (saved on the lead itself — shown as a link chip, not as a comment) -->
+                            <div class="col-12">
+                                <label class="form-label-custom">Link</label>
+                                <b-form-input
+                                    v-model="form.website"
+                                    type="url"
+                                    inputmode="url"
+                                    placeholder="e.g. https://www.bayut.com/property/details-..."
+                                    class="custom-input"
+                                    :class="{ 'is-invalid': validationErrors.website }"
+                                    @blur="form.website = normalizeLink(form.website)"
+                                />
+                                <div v-if="validationErrors.website" class="invalid-feedback d-block">
+                                    {{ validationErrors.website[0] }}
+                                </div>
+                            </div>
+
                             <!-- Comments -->
                             <div class="col-12">
                                 <label class="form-label-custom">Notes</label>
@@ -1030,6 +1047,7 @@ watch(selectedExistingClient, (client) => {
         email: '',
         secondary_email: '',
         work_phone_2: '',
+        website: '',
         comment: '',
         lead_source: '',
         source_information: '',
@@ -1213,6 +1231,7 @@ watch(selectedExistingClient, (client) => {
             ['Property Status', previewOptionLabel(propertyStatusOptions, form.value.property_status)],
             ['Purpose', previewOptionLabel(purposeOptions, form.value.purpose_buying)],
             ['Budget', budgetText],
+            ['Link', form.value.website],
             ['Notes', form.value.comment],
             ['More Information', form.value.source_information],
             ['Responsible', form.value.responsible_person?.name || ''],
@@ -1608,6 +1627,12 @@ watch(selectedExistingClient, (client) => {
         if (!open) phoneDuplicates.value = { work_phone: null, work_phone_2: null }
     })
     
+    watch(() => form.value.website, () => {
+        if (validationErrors.value.website) {
+            delete validationErrors.value.website
+        }
+    })
+
     watch(() => form.value.comment, () => {
         if (validationErrors.value.comment) {
             delete validationErrors.value.comment
@@ -1714,6 +1739,21 @@ watch(selectedExistingClient, (client) => {
             }
         }
     })
+    // "www.bayut.com/…" → "https://www.bayut.com/…" (the API requires a full URL).
+    const normalizeLink = (value) => {
+        const link = String(value ?? '').trim()
+        if (!link) return ''
+        return /^https?:\/\//i.test(link) ? link : `https://${link.replace(/^\/+/, '')}`
+    }
+    const isValidLink = (value) => {
+        try {
+            const url = new URL(value)
+            return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname.includes('.') && value.length <= 255
+        } catch (_) {
+            return false
+        }
+    }
+
     const resetForm = () => {
         const defaultUser = users.value.find((user) => Number(user.id) === Number(loggedInUserId)) || null
         form.value = {
@@ -1726,6 +1766,7 @@ watch(selectedExistingClient, (client) => {
             email: '',
             secondary_email:'',
             work_phone_2: '',
+            website: '',
             comment: '',
             lead_source: '',
             source_information: '',
@@ -1813,11 +1854,20 @@ watch(selectedExistingClient, (client) => {
                 }
             }
             
+            // Link is saved on the lead (website), never as a comment.
+            form.value.website = normalizeLink(form.value.website)
+            if (form.value.website && !isValidLink(form.value.website)) {
+                validationErrors.value.website = ['Enter a valid link, e.g. https://www.bayut.com/...']
+                $showNotification('The link is not valid', 'warning')
+                return
+            }
+
             const payload = {
                 ...form.value,
                 responsible_person_id: form.value.responsible_person_id,
                 stage_id: form.value.stage_id
             }
+            if (!payload.website) delete payload.website
             if (isSalesUser.value && form.value.lead_source === 'referral') {
                     payload.referral_type = form.value.referral_type
                     payload.source_client_name = form.value.source_client_name

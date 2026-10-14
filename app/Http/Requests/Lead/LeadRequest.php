@@ -11,6 +11,17 @@ class LeadRequest extends FormRequest
         return true;
     }
 
+    /** Link typed without a scheme ("www.bayut.com/…") gets https:// so the url rule accepts it. */
+    protected function prepareForValidation(): void
+    {
+        $link = trim((string) $this->input('website', ''));
+        if ($link !== '' && ! preg_match('~^https?://~i', $link)) {
+            $this->merge(['website' => 'https://' . ltrim($link, '/')]);
+        } elseif ($this->has('website') && $link === '') {
+            $this->merge(['website' => null]);
+        }
+    }
+
     public function rules(): array
     {
         $rules = [
@@ -39,7 +50,8 @@ class LeadRequest extends FormRequest
             ],
             'secondary_email' => 'nullable|email',
             'email' => 'nullable|email',
-            'website' => 'nullable|url',
+            // "Link" on the create/edit lead form — saved on the lead, shown as a link chip.
+            'website' => 'nullable|url|max:255',
             'messenger' => 'nullable|string|max:255',
             'facebook' => 'nullable|string|max:255',
             
@@ -169,6 +181,7 @@ class LeadRequest extends FormRequest
             'work_phone_2' => 'Secondary Phone',
             'email' => 'Primary Email',
             'secondary_email' => 'Secondary Email',
+            'website' => 'link',
             // الحقول الجديدة
             'source_client_name' => 'Source Client Name',
             'source_client_phone' => 'Source Client Phone',
