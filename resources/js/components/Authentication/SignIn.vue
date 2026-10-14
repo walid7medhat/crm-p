@@ -61,9 +61,47 @@
           <router-link to="/forgot-password" class="auth-glass-link">Forgot Password ?</router-link>
         </div>
 
-        <div v-if="errorMessage" class="auth-glass-error" role="alert">
-          {{ errorMessage }}
-        </div>
+        <Transition name="auth-alert">
+          <div
+            v-if="authNoticeContent && !errorMessage"
+            class="auth-glass-error auth-alert auth-alert--location auth-alert--notice"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="auth-alert__icon" aria-hidden="true">
+              <iconify-icon :icon="authNoticeContent.icon" />
+            </span>
+            <span class="auth-alert__body">
+              <strong class="auth-alert__title">{{ authNoticeContent.title }}</strong>
+              <span class="auth-alert__text">{{ authNoticeContent.text }}</span>
+            </span>
+            <button type="button" class="auth-alert__close" aria-label="Dismiss" @click="authNotice = ''">
+              <iconify-icon icon="lucide:x" />
+            </button>
+          </div>
+        </Transition>
+
+        <Transition name="auth-alert">
+          <div
+            v-if="errorMessage"
+            :key="errorMessage"
+            class="auth-glass-error auth-alert"
+            :class="{ 'auth-alert--location': isLocationError }"
+            role="alert"
+            aria-live="assertive"
+          >
+            <span class="auth-alert__icon" aria-hidden="true">
+              <iconify-icon :icon="isLocationError ? 'lucide:map-pin-off' : 'lucide:shield-alert'" />
+            </span>
+            <span class="auth-alert__body">
+              <strong class="auth-alert__title">{{ isLocationError ? 'Location needed' : "Couldn't sign you in" }}</strong>
+              <span class="auth-alert__text">{{ errorMessage }}</span>
+            </span>
+            <button type="button" class="auth-alert__close" aria-label="Dismiss" @click="errorMessage = ''">
+              <iconify-icon icon="lucide:x" />
+            </button>
+          </div>
+        </Transition>
 
         <div class="auth-glass-actions">
           <button type="button" class="auth-glass-btn auth-glass-btn--ghost" @click="clearForm">
@@ -109,6 +147,7 @@ export default {
       showPassword: false,
       loading: false,
       errorMessage: '',
+      authNotice: '',
     };
   },
   setup() {
@@ -116,6 +155,13 @@ export default {
     return { router };
   },
   mounted() {
+    // Why the user was sent here (set by the 401 handler / expired-token guard). Read once.
+    try {
+      this.authNotice = sessionStorage.getItem('authNotice') || '';
+      sessionStorage.removeItem('authNotice');
+    } catch {
+      this.authNotice = '';
+    }
     // Fresh sign-in page: drop stale tokens so background API calls do not 401-loop.
     clearAuthToken();
     try {
@@ -124,6 +170,28 @@ export default {
     } catch {
       /* ignore */
     }
+  },
+  computed: {
+    isLocationError() {
+      return /location|geolocation|gps/i.test(this.errorMessage || '');
+    },
+    authNoticeContent() {
+      if (this.authNotice === 'session_expired') {
+        return {
+          icon: 'lucide:clock-alert',
+          title: 'Your session has ended',
+          text: 'For your security, you were signed out. Please log in again to continue.',
+        };
+      }
+      if (this.authNotice === 'account_inactive') {
+        return {
+          icon: 'lucide:user-x',
+          title: 'Account inactive',
+          text: 'Your account has been deactivated. Please contact your administrator.',
+        };
+      }
+      return null;
+    },
   },
   methods: {
     togglePassword() {
@@ -245,6 +313,7 @@ export default {
 
     async login() {
       this.loading = true;
+      this.authNotice = '';
       this.errorMessage = '';
 
       try {

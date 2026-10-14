@@ -1584,8 +1584,8 @@ export default {
     content: "";
     height: 14px;
     width: 14px;
-    left: 2px;
-    bottom: 4px;
+    left: 3px;
+    bottom: 3px;
     background: var(--gradient-primary) !important;
     transition: .4s;
     border-radius: 50%;
@@ -1598,8 +1598,8 @@ export default {
 }
 
 .toggle-input:checked + .toggle-slider:before {
-    transform: translateX(22px);
-     background-color: white;
+    transform: translateX(16px);
+    background: #ffffff !important;
 }
 
 .toggle-input:disabled + .toggle-slider {

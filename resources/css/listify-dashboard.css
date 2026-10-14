@@ -58,12 +58,18 @@
   white-space: nowrap;
 }
 
-#app main.dashboard-main > .dashboard-main-router--home:has(.lf-dashboard) {
+/* One scroll only: the home router is pinned to 100dvh in dashboard-home.css, and the
+   shell's margins push the page past the viewport too — so let the router grow with
+   its content and the page scroll, like every other route. */
+#app main.dashboard-main > .dashboard-main-router--home:has(.lf-dashboard),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:has(.lf-dashboard) {
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.88) 100%),
     rgb(115, 62, 135) !important;
+  height: auto !important;
+  max-height: none !important;
   overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-y: visible !important;
 }
 
 .lf-frame {

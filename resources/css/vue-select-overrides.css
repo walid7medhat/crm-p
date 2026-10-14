@@ -10,6 +10,43 @@
   --vs-actions-padding: 0 6px;
 }
 
+/* Theme hover/selected for every dropdown (the library default is bright blue + white,
+   which clashed with the theme and left coloured option text unreadable). Menus
+   appended to <body> are outside .v-select, so these target the option classes directly.
+   Component-specific overrides with higher specificity still win. */
+/* All app CSS ships in one bundle, so LeadSearchModal's global gradient highlight already
+   applies everywhere — while DealSearchModal's unscoped `.custom-v-select .vs__dropdown-option
+   { color: #475569 !important }` out-ranked its white text, leaving grey on purple. One
+   rule, specific enough to win both: gradient + white for the whole highlighted option. */
+.vs__dropdown-menu li.vs__dropdown-option.vs__dropdown-option--highlight,
+.v-select .vs__dropdown-menu li.vs__dropdown-option.vs__dropdown-option--highlight {
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
+}
+
+/* Everything inside a highlighted option follows the option's own text colour — dark ink on
+   the soft tint here, white where a component paints the highlight with the gradient. Without
+   this, option templates (name + .text-muted subtitle + pin icon) kept their grey and became
+   unreadable on the purple gradient. */
+.vs__dropdown-menu .vs__dropdown-option--highlight *,
+.v-select .vs__dropdown-menu .vs__dropdown-option--highlight *,
+.vs__dropdown-menu .vs__dropdown-option--highlight .text-muted,
+.vs__dropdown-menu .vs__dropdown-option--highlight .text-secondary,
+.vs__dropdown-menu .vs__dropdown-option--highlight .text-primary {
+  color: inherit !important;
+}
+
+.vs__dropdown-menu .vs__dropdown-option--highlight .text-muted,
+.vs__dropdown-menu .vs__dropdown-option--highlight small {
+  opacity: 0.85;
+}
+
+.vs__dropdown-menu .vs__dropdown-option--selected {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 /* High-specificity: beats scoped SFC :deep(.custom-v-select .vs__clear) { display: flex } */
 .v-select .vs__clear,
 .v-select button.vs__clear,

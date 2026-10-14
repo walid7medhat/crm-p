@@ -82,20 +82,24 @@ async function handleUnauthorized(error) {
   }
   handlingUnauthorized = true
 
-  const message = error?.response?.data?.message || 'Your session has expired. Please login again.'
-
+  // Always a plain-language message — the API's own text ("Unauthenticated.",
+  // "Token has expired") means nothing to the user.
   try {
     await Swal.fire({
-      icon: 'warning',
-      title: 'Session Expired',
-      text: message,
-      confirmButtonText: 'Login',
+      iconHtml: '<iconify-icon icon="lucide:clock-alert" style="font-size:34px;color:var(--color-primary)"></iconify-icon>',
+      customClass: { icon: 'crm-session-icon' },
+      title: 'Your session has ended',
+      html: 'For your security, you were signed out because your login session finished.<br><strong>Please log in again to continue.</strong>',
+      confirmButtonText: 'Log in again',
       allowOutsideClick: false,
+      allowEscapeKey: false,
     })
     const { resetSidebarLayout } = await import('../composables/useSidebar.js')
     resetSidebarLayout()
     localStorage.clear()
     sessionStorage.clear()
+    // Tell the sign-in page why the user landed there.
+    try { sessionStorage.setItem('authNotice', 'session_expired') } catch { /* ignore */ }
     window.location.href = '/sign-in'
   } finally {
     handlingUnauthorized = false
@@ -132,6 +136,7 @@ export async function forceInactiveLogout(message) {
     }
     localStorage.clear()
     sessionStorage.clear()
+    try { sessionStorage.setItem('authNotice', 'account_inactive') } catch { /* ignore */ }
     window.location.href = '/sign-in'
   }
 }
