@@ -1,0 +1,159 @@
+/* Marketing workspace — shared controls (all prefixed .mk- so nothing leaks into the app). */
+
+.mk-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.mk-field > label,
+.mk-label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary-light);
+}
+.mk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 576px) { .mk-row { grid-template-columns: 1fr; } }
+
+.mk-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--text-primary-light);
+  font-size: 14px !important;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mk-input::placeholder { color: var(--text-secondary-light); opacity: 0.8; }
+.mk-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-focus-ring); }
+textarea.mk-input { resize: vertical; min-height: 80px; }
+.mk-input--error { border-color: #dc2626; }
+
+/* Shared date picker (AdvancedDatePicker, same as leads/listings) styled like .mk-input */
+.mk-date.advanced-date-picker .advanced-date-trigger {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mk-date.advanced-date-picker .advanced-date-trigger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--border-color));
+  background: var(--white);
+}
+.mk-date.advanced-date-picker .advanced-date-trigger:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+.mk-date.advanced-date-picker .advanced-date-trigger.is-invalid { border-color: #dc2626; }
+.mk-date.advanced-date-picker .advanced-date-icon { color: var(--color-primary); }
+.mk-date.advanced-date-picker .advanced-date-text { font-size: 14px !important; color: var(--text-primary-light); }
+.mk-date.advanced-date-picker .advanced-date-text.is-empty { font-size: 13px !important; color: var(--text-secondary-light); }
+.mk-error { font-size: 12px !important; color: #dc2626; }
+
+.mk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.15s, background 0.15s, opacity 0.15s;
+}
+.mk-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.mk-btn:not(:disabled):active { transform: scale(0.97); }
+.mk-btn--primary {
+  color: var(--color-on-primary);
+  background: var(--gradient-primary);
+  box-shadow: 0 8px 20px -8px rgba(var(--color-primary-rgb), 0.7);
+}
+.mk-btn--primary:not(:disabled):hover { background: var(--gradient-primary-hover); }
+.mk-btn--ghost {
+  color: var(--text-primary-light);
+  background: var(--white);
+  border-color: var(--border-color);
+}
+.mk-btn--ghost:not(:disabled):hover { border-color: var(--color-primary); color: var(--color-primary); }
+.mk-btn--danger { color: #fff; background: #dc2626; }
+.mk-btn--danger:not(:disabled):hover { background: #b91c1c; }
+.mk-btn--success { color: #fff; background: #16a34a; }
+.mk-btn--sm { min-height: 32px; padding: 5px 11px; font-size: 13px !important; border-radius: 10px; }
+.mk-btn--icon { width: 40px; padding: 0; }
+.mk-btn--icon.mk-btn--sm { width: 32px; }
+
+/* Toggle chips (types, deliverables, channels, platforms) */
+.mk-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mk-chip {
+  --chip: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-color);
+  background: var(--white);
+  color: var(--text-primary-light);
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+}
+/* Unselected: the icon wears the channel/type color so chips are recognisable at a glance */
+.mk-chip svg { color: var(--chip); transition: color 0.15s, transform 0.2s; }
+.mk-chip:hover {
+  border-color: color-mix(in srgb, var(--chip) 55%, var(--border-color));
+  background: color-mix(in srgb, var(--chip) 6%, var(--white));
+}
+.mk-chip:hover svg { transform: scale(1.12); }
+/* Selected: brand gradient fill (Instagram sunset, YouTube red…), text in --chip-ink */
+.mk-chip.is-on {
+  color: var(--chip-ink, #fff);
+  border-color: transparent;
+  background: var(--chip-grad, var(--chip));
+  box-shadow:
+    0 8px 18px -8px color-mix(in srgb, var(--chip) 85%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.mk-chip.is-on svg { color: var(--chip-ink, #fff); }
+
+/* Small pills used on cards & lists */
+.mk-pill {
+  --pill: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  color: var(--pill);
+  background: color-mix(in srgb, var(--pill) 13%, transparent);
+  white-space: nowrap;
+}
+.mk-pill--solid { color: #fff; background: var(--pill); }
+
+.mk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--text-secondary-light);
+  font-size: 13px !important;
+}
+.mk-empty iconify-icon, .mk-empty svg { font-size: 28px !important; opacity: 0.6; }
+
+.mk-spin { animation: mk-spin 0.9s linear infinite; }
+@keyframes mk-spin { to { transform: rotate(360deg); } }

@@ -348,6 +348,15 @@
                 {{ tab.label }}
                 <span v-if="tab.count > 0" class="module-tab-count">{{ tab.count }}</span>
               </button>
+              <button
+                v-else-if="tab.type === 'marketing-tab'"
+                type="button"
+                class="module-tab-btn"
+                :class="{ active: activeMarketingTab === tab.id }"
+                @click="setActiveMarketingTab(tab.id)"
+              >
+                {{ tab.label }}
+              </button>
               <router-link
                 v-else
                 :to="tab.path"
@@ -808,6 +817,8 @@ import {
   isTabActive,
   KANBAN_ACTIVE_TAB_KEY,
   DEAL_TYPE_KEY,
+  MARKETING_TAB_KEY,
+  MARKETING_TAB_IDS,
   CRM_PREFIXES,
   CRM_SECTIONS,
   resolveCrmSection,
@@ -1180,6 +1191,7 @@ const mobileModuleLabel = computed(() => {
     dashboard: 'Home',
     crm: 'CRM',
     hr: 'HR',
+    marketing: 'Marketing',
     agents: 'Agents',
     listings: 'Listings',
     settings: 'Settings',
@@ -1191,6 +1203,7 @@ const mobileHeaderTabValue = computed(() => {
   if (!moduleHeaderTabs.value.length) return '';
   if (isDealRoute.value) return activeDealType.value;
   if (isLeadRoute.value) return activeKanbanTab.value;
+  if (activeLayoutModule.value === 'marketing') return activeMarketingTab.value;
   const active = moduleHeaderTabs.value.find((tab) => isModuleTabActive(tab));
   return active?.id ?? moduleHeaderTabs.value[0]?.id ?? '';
 });
@@ -1225,6 +1238,7 @@ function kanbanSwitchIcon(tab) {
   if (tab?.id === 'leads' || tab?.id === 'list') return 'lucide:users';
   if (tab?.id === 'create') return 'lucide:user-plus';
   if (tab?.type === 'deal-type') return 'lucide:briefcase';
+  if (tab?.icon) return tab.icon;
   return 'lucide:layout-grid';
 }
 
@@ -1262,6 +1276,34 @@ const onDealTypeChangeFromPage = (e) => {
   const next = e?.detail
   if (!next || activeDealType.value === next) return
   activeDealType.value = next
+}
+
+// ========== MARKETING TABS (Production / Design / Content / Calendar / Analytics) ==========
+function readStoredMarketingTab() {
+  try {
+    const stored = localStorage.getItem(MARKETING_TAB_KEY)
+    if (stored && MARKETING_TAB_IDS.includes(stored)) return stored
+  } catch {
+    /* ignore */
+  }
+  return 'production'
+}
+
+const activeMarketingTab = ref(readStoredMarketingTab())
+
+const setActiveMarketingTab = (tabId) => {
+  activeMarketingTab.value = tabId
+  try {
+    localStorage.setItem(MARKETING_TAB_KEY, tabId)
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new CustomEvent('marketing-tab-change', { detail: tabId }))
+}
+
+const onMarketingTabChangeFromPage = (e) => {
+  const next = e?.detail
+  if (next && MARKETING_TAB_IDS.includes(next)) activeMarketingTab.value = next
 }
 
 // Sync from kanban_deal.vue when its activeTab changes (route-forced or in-page tab switch).
@@ -2532,6 +2574,7 @@ onMounted(() => {
 
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.addEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.addEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
   loadStoredDealType()
 
@@ -2569,6 +2612,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-deal-search-update', () => {})
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
@@ -2640,6 +2684,10 @@ function onMobileModuleTabChange(event) {
   if (!tabId) return;
   if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'deal-type')) {
     setActiveDealType(tabId);
+    return;
+  }
+  if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'marketing-tab')) {
+    setActiveMarketingTab(tabId);
     return;
   }
   if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'event')) {

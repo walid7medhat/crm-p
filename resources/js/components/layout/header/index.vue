@@ -208,6 +208,36 @@
           </router-link>
         </li>
 
+        <li v-if="canSeeMarketing">
+          <router-link to="/marketing" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarModuleActive('marketing') }"
+              @mouseenter="prefetchRoute('/marketing')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:clapperboard" class="menu-icon" />
+              <span>Marketing</span>
+            </a>
+          </router-link>
+        </li>
+
+        <li v-if="canBookPhotoshoot">
+          <router-link to="/photo-shoots" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarSubItemActive('/photo-shoots') }"
+              @mouseenter="prefetchRoute('/photo-shoots')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:camera" class="menu-icon" />
+              <span>Photo Shoots</span>
+            </a>
+          </router-link>
+        </li>
+
         <li
           v-if="filteredUsersItems.length > 0"
           :class="{ dropdown: true, open: activeDropdown === 'users', 'active-parent': isSidebarModuleActive('agents') }"
@@ -590,6 +620,18 @@
             <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
           </button>
 
+          <button v-if="canSeeMarketing" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('marketing') }" @click="onMoreGo('/marketing')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:clapperboard" /></span>
+            <span class="mobile-more-row__label">Marketing</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
+          <button v-if="canBookPhotoshoot" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/photo-shoots') }" @click="onMoreGo('/photo-shoots')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:camera" /></span>
+            <span class="mobile-more-row__label">Photo Shoots</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
           <template v-if="filteredUsersItems.length">
             <button type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('agents') }" :aria-expanded="moreOpenGroup === 'agents' ? 'true' : 'false'" @click="toggleMoreGroup('agents')">
               <span class="mobile-more-row__icon"><img :src="agentsIcon" alt="" /></span>
@@ -937,6 +979,17 @@ const isSuperAdmin = computed(() => {
 });
 const isHr =computed(() => {
   return user.value?.roles?.includes('hr') ?? false;
+});
+// Marketing workspace: anyone holding the `marketing` permission — admins included
+// (the admin role alone isn't enough). Super admins always see it.
+const canSeeMarketing = computed(() => {
+  if (!user.value) return false;
+  return isSuperAdmin.value || proxy.$hasPermission('marketing');
+});
+// Photo Shoots: request a photoshoot — `photo-booking` permission (super admins always).
+const canBookPhotoshoot = computed(() => {
+  if (!user.value) return false;
+  return isSuperAdmin.value || proxy.$hasPermission('photo-booking');
 });
 
 const canManageAnnouncements = computed(() => {

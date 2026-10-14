@@ -7,6 +7,16 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
 use App\Http\Controllers\Api\StageController;
+use App\Http\Controllers\Api\Marketing\BoardController as MarketingBoardController;
+use App\Http\Controllers\Api\Marketing\TaskController as MarketingTaskController;
+use App\Http\Controllers\Api\Marketing\TaskLinkController as MarketingTaskLinkController;
+use App\Http\Controllers\Api\Marketing\TaskCommentController as MarketingTaskCommentController;
+use App\Http\Controllers\Api\Marketing\CalendarController as MarketingCalendarController;
+use App\Http\Controllers\Api\Marketing\StageController as MarketingStageController;
+use App\Http\Controllers\Api\Marketing\AnalyticsController as MarketingAnalyticsController;
+use App\Http\Controllers\Api\Marketing\ReportController as MarketingReportController;
+use App\Http\Controllers\Api\Marketing\BookingController as MarketingBookingController;
+use App\Http\Controllers\Api\Marketing\MyBookingController as MarketingMyBookingController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserRoleController;
 use App\Http\Controllers\Api\LeadController;
@@ -977,4 +987,53 @@ Route::middleware('jwt.auth')->group(function () {
 // Public routes for invitation registration
 Route::get('/invitation/{token}', [UserInvitationController::class, 'validateInvitation']);
 Route::post('/register', [UserInvitationController::class, 'registerWithInvitation']);
+
+// ================= Photo Shoots (request a photoshoot) =================
+// Logged-in users with the `photo-booking` permission (or super_admin) request shoots and
+// follow their own requests; the marketing team handles them in Marketing → Bookings.
+Route::middleware(['jwt.auth', 'role_or_permission:super_admin|photo-booking'])->prefix('photo-bookings')->group(function () {
+    Route::get('/', [MarketingMyBookingController::class, 'index']);
+    Route::post('/', [MarketingMyBookingController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('/{booking}/cancel', [MarketingMyBookingController::class, 'cancel']);
+});
+
+// ================= Marketing workspace =================
+// `marketing` permission (or super_admin) => boards, cards, links, comments, calendar, analytics.
+// Admins are NOT let in by role alone — an admin needs the `marketing` permission like anyone else.
+// Stage management, deleting cards and the daily report => admin / super_admin (inside the gate above).
+Route::middleware(['jwt.auth', 'role_or_permission:super_admin|marketing'])->prefix('marketing')->group(function () {
+    Route::get('/board', [MarketingBoardController::class, 'board']);
+    Route::get('/members', [MarketingBoardController::class, 'members']);
+    Route::get('/analytics', [MarketingAnalyticsController::class, 'index']);
+
+    Route::post('/tasks', [MarketingTaskController::class, 'store']);
+    Route::get('/tasks/{task}', [MarketingTaskController::class, 'show']);
+    Route::put('/tasks/{task}', [MarketingTaskController::class, 'update']);
+    Route::post('/tasks/{task}/move', [MarketingTaskController::class, 'move']);
+    Route::post('/tasks/{task}/approve', [MarketingTaskController::class, 'approve']);
+    Route::post('/tasks/{task}/links', [MarketingTaskLinkController::class, 'store']);
+    Route::delete('/tasks/{task}/links/{link}', [MarketingTaskLinkController::class, 'destroy']);
+    Route::post('/tasks/{task}/comments', [MarketingTaskCommentController::class, 'store']);
+
+    Route::get('/bookings', [MarketingBookingController::class, 'index']);
+    Route::put('/bookings/{booking}', [MarketingBookingController::class, 'update']);
+    Route::post('/bookings/{booking}/convert', [MarketingBookingController::class, 'convert']);
+
+    Route::get('/calendar', [MarketingCalendarController::class, 'index']);
+    Route::post('/calendar', [MarketingCalendarController::class, 'store']);
+    Route::put('/calendar/{post}', [MarketingCalendarController::class, 'update']);
+    Route::post('/calendar/{post}/posted', [MarketingCalendarController::class, 'togglePosted']);
+    Route::delete('/calendar/{post}', [MarketingCalendarController::class, 'destroy']);
+
+    Route::middleware('role:super_admin|admin')->group(function () {
+        Route::delete('/tasks/{task}', [MarketingTaskController::class, 'destroy']);
+        Route::post('/stages', [MarketingStageController::class, 'store']);
+        Route::post('/stages/reorder', [MarketingStageController::class, 'reorder']);
+        Route::put('/stages/{stage}', [MarketingStageController::class, 'update']);
+        Route::delete('/stages/{stage}', [MarketingStageController::class, 'destroy']);
+        Route::get('/reports/daily', [MarketingReportController::class, 'daily']);
+        Route::get('/reports/daily/pdf', [MarketingReportController::class, 'pdf']);
+        Route::delete('/bookings/{booking}', [MarketingBookingController::class, 'destroy']);
+    });
+});
 });

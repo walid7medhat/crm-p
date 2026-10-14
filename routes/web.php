@@ -74,6 +74,10 @@ Route::get('preview-email/account-activated', function () {
 Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads'])
     ->middleware(['jwt.auth', 'role:super_admin|admin']);
 
+// The old public photoshoot booking page was retired (requests are made from "Photo Shoots"
+// inside the CRM). Answer a real 404 instead of loading the app shell.
+Route::get('book-photoshoot', fn () => abort(404));
+
 Route::get('{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api).*$');

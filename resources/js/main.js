@@ -47,6 +47,7 @@ import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoa
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 import { initLeadViewModal, leadIdFromNotification, openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { dealIdFromNotification, openDealFromNotification } from '@/composables/useDealViewModal.js'
+import { marketingFromNotification, openMarketingFromNotification, photoBookingFromNotification } from '@/composables/useMarketingNotification.js'
 
 syncMobileViewport()
 initLeadViewModal(router, router.currentRoute)
@@ -435,6 +436,8 @@ function scheduleEchoInit() {
                 onClick = () => openLeadFromNotification(notification)
               } else if (dealIdFromNotification(notification)) {
                 onClick = () => openDealFromNotification(notification)
+              } else if (marketingFromNotification(notification) || photoBookingFromNotification(notification)) {
+                onClick = () => openMarketingFromNotification(notification)
               }
               showNotificationDeferred(notification.message || 'New notification', type, onClick)
             }

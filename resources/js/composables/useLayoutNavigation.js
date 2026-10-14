@@ -6,6 +6,7 @@ export const LAYOUT_MODULES = {
   CRM: 'crm',
   CALCULATOR: 'calculator',
   HR: 'hr',
+  MARKETING: 'marketing',
   AGENTS: 'agents',
   LISTINGS: 'listings',
   SETTINGS: 'settings',
@@ -27,6 +28,8 @@ export const CRM_SECTIONS = {
 export const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab';
 export const CRM_SECTION_KEY = 'crm_active_section';
 export const DEAL_TYPE_KEY = 'kanban_deal_type';
+export const MARKETING_TAB_KEY = 'marketing_active_tab';
+export const MARKETING_TAB_IDS = ['production', 'design', 'content', 'bookings', 'calendar', 'analytics'];
 export const LAST_LISTINGS_PATH_KEY = 'layout_last_listings_path';
 
 const LISTINGS_INVENTORY_PATHS = [
@@ -76,6 +79,8 @@ const ALL_LISTINGS_MATCH_PATHS = [
 ];
 
 const HR_PREFIXES = ['/hr'];
+
+const MARKETING_PREFIXES = ['/marketing'];
 
 const AGENTS_PREFIXES = ['/users', '/add-user', '/team-tree', '/view-profile', '/invited'];
 
@@ -247,6 +252,7 @@ export function resolveActiveModule(path) {
   }
   if (pathMatches(path, CALCULATOR_PREFIXES)) return LAYOUT_MODULES.CALCULATOR;
   if (pathMatches(path, HR_PREFIXES)) return LAYOUT_MODULES.HR;
+  if (pathMatches(path, MARKETING_PREFIXES)) return LAYOUT_MODULES.MARKETING;
   if (pathMatches(path, AGENTS_PREFIXES)) return LAYOUT_MODULES.AGENTS;
   if (pathMatches(path, SETTINGS_PREFIXES)) return LAYOUT_MODULES.SETTINGS;
   return null;
@@ -292,6 +298,18 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       });
     }
     return tabs;
+  }
+
+  // Marketing boards switch in-page (like Deal types): the page listens for `marketing-tab-change`.
+  if (module === LAYOUT_MODULES.MARKETING) {
+    return [
+      { id: 'production', label: 'Production', type: 'marketing-tab', icon: 'lucide:clapperboard' },
+      { id: 'design', label: 'Design', type: 'marketing-tab', icon: 'lucide:palette' },
+      { id: 'content', label: 'Content', type: 'marketing-tab', icon: 'lucide:file-text' },
+      { id: 'bookings', label: 'Bookings', type: 'marketing-tab', icon: 'lucide:calendar-check-2' },
+      { id: 'calendar', label: 'Calendar', type: 'marketing-tab', icon: 'lucide:calendar-days' },
+      { id: 'analytics', label: 'Analytics', type: 'marketing-tab', icon: 'lucide:bar-chart-3' },
+    ];
   }
 
   if (module === LAYOUT_MODULES.CALCULATOR) {

@@ -58,6 +58,7 @@
 import api from '@/plugins/axios'
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
+import { openMarketingFromNotification } from '@/composables/useMarketingNotification.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import MobilePushToggle from '@/components/layout/MobilePushToggle.vue'
 
@@ -188,7 +189,7 @@ export default {
       if (!notification.read_at) this.markAsRead(notification.id)
       this.showDropdown = false
 
-      if (openLeadFromNotification(notification) || openDealFromNotification(notification)) {
+      if (openLeadFromNotification(notification) || openDealFromNotification(notification) || openMarketingFromNotification(notification)) {
         return
       }
 

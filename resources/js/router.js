@@ -65,6 +65,13 @@ const baseRoutes = [
   { path: '/hr', component: () => import('./pages/hr/index.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
   { path: '/hr/employees/:id', component: () => import('./pages/hr/employees/EmployeeProfilePage.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
   { path: '/hr/assets/:id', component: () => import('./pages/hr/assets/AssetDetailsPage.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
+  // Retired public booking page — never opens (the server also answers 404 for it).
+  { path: '/book-photoshoot', redirect: '/' },
+  // Photo Shoots — request a photoshoot and follow your requests (`photo-booking` permission).
+  { path: '/photo-shoots', component: () => import('./pages/photo-shoots/index.vue'), meta: { requiresAuth: true, requiresPermission: 'photo-booking', strictPermission: true } },
+  // Marketing workspace — `marketing` permission required even for admins (strictPermission);
+  // only super_admin gets in without it.
+  { path: '/marketing', component: () => import('./pages/marketing/index.vue'), meta: { requiresAuth: true, requiresPermission: 'marketing', strictPermission: true } },
   { path: '/suggestion', component: () => import('./pages/suggestions/index.vue'), meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: () => import('./pages/dashboard/investment.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: () => import('./pages/dashboard/city-settings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
@@ -88,6 +95,7 @@ const baseRoutes = [
 
   { path: '/assign-role', component: () => import('./pages/roleAccess/assign-role.vue'), meta: { requiresAuth: true } },
   { path: '/role-access', component: () => import('./pages/roleAccess/role-access.vue'), meta: { requiresAuth: true } },
+
 
   { path: '/sign-in', component: () => import('./pages/authentication/sign-in.vue'), name: 'login', meta: { layout: false, requiresAuth: false } },
   { path: '/sign-up', component: () => import('./pages/authentication/sign-up.vue'), meta: { layout: false, requiresAuth: false } },
@@ -358,6 +366,8 @@ router.beforeEach((to, from, next) => {
   }
 
   if (token && !isValidToken) {
+    // Expired token → the sign-in page explains why the user was signed out.
+    try { sessionStorage.setItem('authNotice', 'session_expired') } catch { /* ignore */ }
     logout()
     next('/sign-in')
     return
@@ -388,7 +398,10 @@ router.beforeEach((to, from, next) => {
       }
 
   const requiredPermission = to.matched.find((r) => r.meta.requiresPermission)?.meta.requiresPermission
-  if (requiredPermission && !isAdminFromStorage() && !hasPermissionFromStorage(requiredPermission)) {
+  // strictPermission: the admin role doesn't bypass the permission (only super_admin does).
+  const strict = to.matched.some((r) => r.meta.strictPermission)
+  const bypass = strict ? isSuperAdminFromStorage() : isAdminFromStorage()
+  if (requiredPermission && !bypass && !hasPermissionFromStorage(requiredPermission)) {
     console.log(`Permission "${requiredPermission}" required — redirecting home`)
     next('/')
     return

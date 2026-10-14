@@ -182,6 +182,7 @@
 <script>
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
+import { openMarketingFromNotification } from '@/composables/useMarketingNotification.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 
 export default {
@@ -410,7 +411,7 @@ export default {
     handleNotificationClick(notification) {
       if (!notification.read_at) this.markAsRead(notification.id)
 
-      if (openLeadFromNotification(notification) || openDealFromNotification(notification)) {
+      if (openLeadFromNotification(notification) || openDealFromNotification(notification) || openMarketingFromNotification(notification)) {
         return
       }
 

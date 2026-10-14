@@ -208,6 +208,15 @@ function openAction(item) {
     openPropertyDetails(listingId)
     return
   }
+  // Marketing: open the card on its board (or the calendar for a free calendar post).
+  if (item?.marketing_task_id) {
+    router.push({ path: '/marketing', query: { task: String(item.marketing_task_id), tab: item.marketing_category || undefined } })
+    return
+  }
+  if (item?.kind === 'Calendar') {
+    router.push({ path: '/marketing', query: { tab: 'calendar' } })
+    return
+  }
   if (item?.kind === 'Deal' && dealId) {
     router.push({ path: '/kanban_deal', query: { deal: String(dealId) } })
     return

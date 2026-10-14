@@ -7,6 +7,10 @@ use App\Models\Lead;
 use App\Models\LeadHistory;
 use App\Models\Listing;
 use App\Models\ListingComment;
+use App\Models\MarketingCalendarPost;
+use App\Models\MarketingTask;
+use App\Models\MarketingTaskHistory;
+use App\Services\Marketing\MarketingHistoryRecorder;
 use App\Models\Stage;
 use App\Models\User;
 use Carbon\Carbon;
@@ -23,6 +27,9 @@ class MyDayService
     public const TIMEZONE = 'Asia/Dubai';
 
     private const CLUSTER_SECONDS = 2;
+
+    /** Stage moves of one marketing card within this window show as a single move. */
+    private const MARKETING_MOVE_MERGE_SECONDS = 300;
 
     /** @var list<string> */
     private const LISTING_NOISE = [
@@ -64,6 +71,7 @@ class MyDayService
 
         $actions = $this->toActions($rows, $user, $convertedDealIds)
             ->concat($this->listingActions($user, $start, $end))
+            ->concat($this->marketingActions($user, $start, $end))
             ->sortByDesc('sort_at')
             ->take(20)
             ->map(function (array $action) {
@@ -191,8 +199,178 @@ class MyDayService
             'lead_id' => $leadId,
             'deal_id' => $row->deal_id ? (int) $row->deal_id : null,
             'listing_id' => null,
+            'marketing_task_id' => null,
+            'marketing_category' => null,
             'sort_at' => $row->created_at?->getTimestamp() ?? 0,
         ];
+    }
+
+    /**
+     * Marketing workspace: today's card history written by this user (create, edit, stage move,
+     * link, approval, comment, schedule, posted) plus free calendar posts they marked as posted.
+     * Shown only to users who can open the Marketing workspace.
+     */
+    private function marketingActions(User $user, Carbon $start, Carbon $end): Collection
+    {
+        if (! $this->canSeeMarketing($user)) {
+            return collect();
+        }
+
+        $histories = MarketingTaskHistory::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$start, $end])
+            ->with(['task' => fn ($q) => $q->withTrashed()->select('id', 'title', 'category')])
+            ->orderByDesc('id')
+            ->limit(60)
+            ->get();
+
+        // Rows arrive newest first. Several edits to the same card in a row collapse into the
+        // latest one, and back-to-back stage moves of a card (dragging it around) merge into a
+        // single "moved from <first stage> to <last stage>".
+        $seen = [];
+        $moveGroup = [];   // task_id => ['index' => position in $actions, 'at' => oldest timestamp, 'new' => final stage]
+        $actions = [];
+        foreach ($histories as $history) {
+            $task = $history->task;
+            if (! $task) {
+                continue;
+            }
+            $ts = $history->created_at->getTimestamp();
+
+            if ($history->action === 'moved') {
+                $change = collect($history->changes ?? [])->firstWhere('field', 'stage_id') ?? [];
+                $group = $moveGroup[$task->id] ?? null;
+                if ($group && $group['at'] - $ts <= self::MARKETING_MOVE_MERGE_SECONDS) {
+                    // Older move in the same burst: extend the merged card's starting stage.
+                    $old = $change['old'] ?? 'another stage';
+                    $actions[$group['index']] = $this->marketingCard(
+                        $actions[$group['index']]['id'],
+                        $task->title,
+                        $old === $group['new'] ? null : 'Moved from '.$old.' to '.$group['new'],
+                        $actions[$group['index']]['_at'],
+                        (int) $task->id,
+                        $task->category
+                    );
+                    $moveGroup[$task->id]['at'] = $ts;
+                    continue;
+                }
+                $moveGroup[$task->id] = ['index' => count($actions), 'at' => $ts, 'new' => $change['new'] ?? 'another stage'];
+            } else {
+                $bucket = $history->task_id.'|'.$history->action.'|'.intdiv($ts, 120);
+                if (in_array($history->action, ['updated', 'link_added', 'commented'], true) && isset($seen[$bucket])) {
+                    continue;
+                }
+                $seen[$bucket] = true;
+            }
+
+            $actions[] = $this->marketingCard(
+                'marketing-history-'.$history->id,
+                $task->title,
+                $this->marketingDetail($history, $task),
+                $history->created_at,
+                (int) $task->id,
+                $task->category
+            );
+        }
+
+        // A burst that ended where it started (e.g. dragged away and back) is dropped.
+        $actions = collect($actions)->filter(fn ($a) => $a['detail'] !== null);
+
+        // Calendar posts not tied to a card have no card history — pick them up directly.
+        $posts = MarketingCalendarPost::query()
+            ->whereNull('task_id')
+            ->where('posted_by', $user->id)
+            ->whereBetween('posted_at', [$start, $end])
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get();
+
+        foreach ($posts as $post) {
+            $actions->push($this->marketingCard(
+                'marketing-post-'.$post->id,
+                $post->title,
+                'You marked it posted on '.MarketingHistoryRecorder::humanize($post->platform),
+                $post->posted_at,
+                null,
+                'calendar'
+            ));
+        }
+
+        return $actions->map(function ($a) {
+            unset($a['_at']);
+
+            return $a;
+        })->values();
+    }
+
+    private function marketingDetail(MarketingTaskHistory $history, MarketingTask $task): ?string
+    {
+        $changes = collect($history->changes ?? []);
+        $first = $changes->first() ?? [];
+
+        return match ($history->action) {
+            'created' => 'You created this '.$task->category.' card',
+            'moved' => 'Moved from '.($first['old'] ?? 'another stage').' to '.($first['new'] ?? 'another stage'),
+            'updated' => $changes->isEmpty() ? null : 'You updated '.Str::lower($changes->pluck('label')->take(3)->implode(', ')),
+            'link_added' => 'You added a link'.(! empty($first['new']) ? ' ('.$first['new'].')' : ''),
+            'link_removed' => 'You removed a link',
+            'approved' => 'You approved this design',
+            'unapproved' => 'You removed the approval',
+            'commented' => 'You added a comment',
+            'scheduled' => 'You scheduled it for '.($first['new'] ?? 'the calendar'),
+            'posted' => 'You marked it posted on '.($first['label'] ?? 'a platform'),
+            'unposted' => 'You unmarked a post on '.($first['label'] ?? 'a platform'),
+            'deleted' => 'You deleted this card',
+            default => null,
+        };
+    }
+
+    private function marketingCard(string $id, string $title, ?string $detail, ?Carbon $at, ?int $taskId, string $category): array
+    {
+        $kind = match ($category) {
+            'production' => 'Production',
+            'design' => 'Design',
+            'content' => 'Content',
+            default => 'Calendar',
+        };
+
+        $quoted = '“'.$title.'”';
+        $label = match (true) {
+            $detail === null => '',
+            str_starts_with($detail, 'Moved from ') => 'You moved '.$quoted.' from '.Str::after($detail, 'Moved from '),
+            // "You created this design card" → "You created design card “X”"
+            str_contains($detail, 'this ') => Str::replaceFirst('this ', '', $detail).' '.$quoted,
+            default => $detail.' on '.$quoted,
+        };
+
+        return [
+            'id' => $id,
+            '_at' => $at,
+            'label' => $label,
+            'title' => $title,
+            'detail' => $detail,
+            'kind' => $kind,
+            'time' => $at?->timezone(self::TIMEZONE)->format('g:i A'),
+            'lead_id' => null,
+            'deal_id' => null,
+            'listing_id' => null,
+            'marketing_task_id' => $taskId,
+            'marketing_category' => in_array($category, ['production', 'design', 'content'], true) ? $category : null,
+            'sort_at' => $at?->getTimestamp() ?? 0,
+        ];
+    }
+
+    private function canSeeMarketing(User $user): bool
+    {
+        if ($user->hasAnyRole(['super_admin'])) {
+            return true;
+        }
+        try {
+            return $user->hasPermissionTo('marketing');
+        } catch (\Throwable) {
+            // Permission not created yet on this install.
+            return false;
+        }
     }
 
     private function listingActions(User $user, Carbon $start, Carbon $end): Collection
@@ -343,6 +521,8 @@ class MyDayService
             'lead_id' => null,
             'deal_id' => null,
             'listing_id' => $listingId,
+            'marketing_task_id' => null,
+            'marketing_category' => null,
             'sort_at' => $at?->getTimestamp() ?? 0,
         ];
     }
