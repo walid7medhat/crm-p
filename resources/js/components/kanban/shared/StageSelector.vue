@@ -1,6 +1,6 @@
 <template>
     <div class="stage-selector-wrapper py-3 pt-0 pb-0" :class="{ 'stage-selector-disabled': disabled, 'stage-selector--panel': appearance === 'panel' }" :title="disabled ? 'Stage cannot be changed from here' : undefined">
-        <div v-if="appearance === 'panel'" class="stage-current-bar">
+        <div v-if="appearance === 'panel' && isMobile" class="stage-current-bar">
             <div
                 class="stage-current"
                 :style="currentStage ? { backgroundColor: currentStage.color, borderColor: currentStage.color } : undefined"
@@ -740,7 +740,7 @@ onUnmounted(() => {
 .stage-picker__title {
     margin: 2px 0 0;
     color: #0b0736;
-    font-size: 22px;
+    font-size: 22px !important;
     font-weight: 750;
 }
 

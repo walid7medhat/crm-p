@@ -225,6 +225,7 @@
                                     <template v-else>
                                         <label class="form-label ">Quality Status</label>
                                         <v-select append-to-body
+  :calculate-position="calculatePosition"
                                             v-if="targetStageOrder === 9"
                                             ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
@@ -243,6 +244,7 @@
                                         </v-select>
                                 
                                         <v-select append-to-body
+  :calculate-position="calculatePosition"
                                             v-else-if="targetStageOrder === 10"
                                             ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
@@ -261,6 +263,7 @@
                                         </v-select>
                                 
                                         <v-select append-to-body
+  :calculate-position="calculatePosition"
                                             v-else
                                             ref="leadStatusSelectRef"
                                             v-model="formData.lead_status"
@@ -283,6 +286,7 @@
                         <div v-if="missingFields.includes('lead_type')" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Lead Type <span class="text-danger">*</span></label>
                             <v-select append-to-body
+  :calculate-position="calculatePosition"
                                 ref="leadTypeSelectRef"
                                 v-model="formData.lead_type"
                                 :options="leadTypeOptions"
@@ -305,6 +309,7 @@
                         <div v-if="missingFields.includes('property_status')  && !isRentOnly" class="form-group mb-0 lead-qual-field">
                             <label class="form-label ">Property Status <span class="text-danger">*</span></label>
                             <v-select append-to-body
+  :calculate-position="calculatePosition"
                                 ref="propertyStatusSelectRef"
                                 v-model="formData.property_status"
                                 :options="propertyStatusOptions"
@@ -338,6 +343,7 @@
                             <div v-if="missingFields.includes('branch')" class="form-group mb-3">
                                 <label class="form-label">Branch</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="branchSelectRef"
                                     v-model="formData.branch"
                                     :options="branchOptions"
@@ -359,6 +365,7 @@
                             <div v-if="missingFields.includes('why_lost_lead') || missingFields.includes('lost_reason')" class="form-group mb-3 lost-reason-field">
                                 <label class="form-label">Why Lost</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="lostReasonSelectRef"
                                     v-model="formData.lost_reason"
                                     :options="lostReasonOptions"
@@ -384,6 +391,7 @@
                             <div v-if="missingFields.includes('salutation')" class="form-group mb-3">
                                 <label class="form-label">Salutation</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="salutationSelectRef"
                                     v-model="formData.salutation"
                                     :options="salutationOptions"
@@ -428,6 +436,7 @@
                             <div v-if="missingFields.includes('area_id')" class="form-group mb-3" style="order: 1;">
                                 <label class="form-label">Location / Area</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="areaSelectRef"
                                     v-model="formData.area_id"
                                     :options="areaOptions"
@@ -462,6 +471,7 @@
                             <div v-if="missingFields.includes('bedrooms') && !isPlotsOrLand" class="form-group mb-3" style="order: 5;">
                                 <label class="form-label">How Many Bedrooms?</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="bedroomsSelectRef"
                                     v-model="formData.bedrooms"
                                     :options="bedroomOptions"
@@ -481,6 +491,7 @@
                             <div v-if="missingFields.includes('property_type_id')" class="form-group mb-3" style="order: 2;">
                                 <label class="form-label">Property Type</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="propertyTypeSelectRef"
                                     v-model="formData.property_type_id"
                                     :options="propertyTypeOptions"
@@ -503,6 +514,7 @@
                             <div v-if="missingFields.includes('purpose_buying')  && !isRentOnly" class="form-group mb-3" style="order: 8;">
                                 <label class="form-label">Purpose Of Purchase</label>
                                 <v-select append-to-body
+  :calculate-position="calculatePosition"
                                     ref="purposeSelectRef"
                                     v-model="formData.purpose_buying"
                                     :options="purposeOptions"
@@ -1702,6 +1714,14 @@ watch(visible, (newVal) => {
         }
     }
 }, { immediate: true })
+const calculatePosition = (dropdownList, component, { width }) => {
+    const rect = component.$refs.toggle.getBoundingClientRect()
+    dropdownList.style.position = 'fixed'
+    dropdownList.style.width = width
+    dropdownList.style.left = `${Math.round(rect.left)}px`
+    dropdownList.style.top = `${Math.round(rect.bottom + 4)}px`
+    dropdownList.style.zIndex = '15000'
+}
 onMounted(() => {
     console.log(props.targetStageOrder);
     // Capture phase: several triggers in this form (reminder, date-time, the budget
@@ -3166,7 +3186,7 @@ defineExpose({
 
 /* append-to-body menus must sit above the stage-change overlay */
 body.stage-change-modal-open .vs__dropdown-menu {
-    z-index: 13000 !important;
+    z-index: 15000 !important;
 }
 body.stage-change-modal-open .vs__dropdown-menu .location-option-name,
 body.stage-change-modal-open .vs__dropdown-menu .location-option-subtitle,
