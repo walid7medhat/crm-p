@@ -1787,7 +1787,7 @@ defineExpose({
 }
 
 .modal-header-custom.is-above-requirement {
-    z-index: 13000;
+    z-index: 2;
 }
 
 .lead-converted-deal-link,
@@ -2274,7 +2274,7 @@ defineExpose({
 }
 
 .stage-change-modal-overlay {
-    z-index: 9999 !important;
+    z-index: 14000 !important;
     pointer-events: auto !important;
 }
 
@@ -2465,10 +2465,10 @@ textarea, input, select {
         font-size: 11px !important;
     }
     .stage-selector-wrapper {
-        border-color: var(--color-primary) !important;
-    }
-    :deep(.stage-selector--panel .stage-container) {
-        border-color: rgba(var(--color-primary-rgb), 0.35) !important;
+        border: 0 !important;
+        background: transparent !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
     .tabs-container {
         margin-top: 8px;

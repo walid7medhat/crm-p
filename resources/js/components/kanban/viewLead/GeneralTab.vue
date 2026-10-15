@@ -780,12 +780,6 @@ watch(
     line-height: 1.15;
 }
 
-@media (max-width: 768px) {
-    .compact-status-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
 .status-badge--hot { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
 .status-badge--warm { color: #b45309; background: #fffbeb; border-color: #fde68a; }
 .status-badge--cold { color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }

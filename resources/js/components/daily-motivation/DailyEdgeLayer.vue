@@ -56,9 +56,16 @@
     </button>
     <button
       v-if="showDayPill"
+      ref="dayPillEl"
       type="button"
       class="edge-pill edge-pill--day"
-      @click="openMyDay"
+      :class="{ 'edge-pill--dragging': dayDragging }"
+      :style="dayPillStyle"
+      @pointerdown="onDayPointerDown"
+      @pointermove="onDayPointerMove"
+      @pointerup="onDayPointerUp"
+      @pointercancel="onDayPointerUp"
+      @click="onDayClick"
     >
       <span class="edge-pill__mark" aria-hidden="true"></span>
       My Day
@@ -87,7 +94,27 @@ const dayDate = ref('')
 const myDayOpen = ref(false)
 const sessionReady = ref(false)
 const lastClosed = ref(null)
+const dayPillEl = ref(null)
+const dayPillTop = ref(null)
+const dayDragging = ref(false)
+const viewportHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 0)
 let dismissing = false
+let dayPointerId = null
+let dayDragStartY = 0
+let dayDragStartTop = 0
+let dayDragMoved = false
+let ignoreDayClick = false
+const DAY_PILL_KEY = 'edge-pill-day-top'
+const DAY_PILL_MARGIN = 12
+
+const dayPillStyle = computed(() => {
+  if (dayPillTop.value == null) return null
+  const px = clampDayTop(dayPillTop.value * (viewportHeight.value || window.innerHeight))
+  return {
+    top: `${px}px`,
+    bottom: 'auto',
+  }
+})
 
 const showingTest = computed(() => testOpen.value && !!testPayload.value?.message)
 const showingProduction = computed(() => !showingTest.value && productionOpen.value && !!production.value?.message)
@@ -209,6 +236,10 @@ function openAction(item) {
     return
   }
   // Marketing: open the card on its board (or the calendar for a free calendar post).
+  if (item?.marketing_booking_id && !item?.marketing_task_id) {
+    router.push({ path: '/marketing', query: { tab: 'bookings', booking: String(item.marketing_booking_id) } })
+    return
+  }
   if (item?.marketing_task_id) {
     router.push({ path: '/marketing', query: { task: String(item.marketing_task_id), tab: item.marketing_category || undefined } })
     return
@@ -222,6 +253,74 @@ function openAction(item) {
     return
   }
   if (leadId) openLeadView(leadId, { id: leadId, lead_name: item.title || '' })
+}
+
+function clampDayTop(px) {
+  const height = dayPillEl.value?.offsetHeight || 40
+  const max = Math.max(DAY_PILL_MARGIN, window.innerHeight - height - DAY_PILL_MARGIN)
+  return Math.min(max, Math.max(DAY_PILL_MARGIN, px))
+}
+
+function rememberDayTop(px) {
+  const ratio = clampDayTop(px) / window.innerHeight
+  dayPillTop.value = ratio
+  try {
+    localStorage.setItem(DAY_PILL_KEY, String(ratio))
+  } catch {
+    // Position still applies for this visit if storage is blocked.
+  }
+}
+
+function restoreDayTop() {
+  try {
+    const ratio = Number(localStorage.getItem(DAY_PILL_KEY))
+    if (!Number.isFinite(ratio)) return
+    dayPillTop.value = ratio
+    requestAnimationFrame(() => {
+      if (dayPillTop.value == null) return
+      rememberDayTop(dayPillTop.value * window.innerHeight)
+    })
+  } catch {
+    dayPillTop.value = null
+  }
+}
+
+function onDayPointerDown(event) {
+  if (event.button != null && event.button !== 0) return
+  const el = event.currentTarget
+  ignoreDayClick = false
+  dayPointerId = event.pointerId
+  dayDragStartY = event.clientY
+  dayDragStartTop = el.getBoundingClientRect().top
+  dayDragMoved = false
+  dayDragging.value = true
+  el.setPointerCapture?.(event.pointerId)
+}
+
+function onDayPointerMove(event) {
+  if (dayPointerId !== event.pointerId) return
+  const next = dayDragStartTop + (event.clientY - dayDragStartY)
+  if (Math.abs(event.clientY - dayDragStartY) > 4) dayDragMoved = true
+  if (!dayDragMoved) return
+  dayPillTop.value = clampDayTop(next) / window.innerHeight
+}
+
+function onDayPointerUp(event) {
+  if (dayPointerId !== event.pointerId) return
+  dayPointerId = null
+  dayDragging.value = false
+  if (!dayDragMoved || dayPillTop.value == null) return
+  ignoreDayClick = true
+  rememberDayTop(dayPillTop.value * window.innerHeight)
+}
+
+function onDayClick() {
+  if (ignoreDayClick || dayDragMoved) {
+    ignoreDayClick = false
+    dayDragMoved = false
+    return
+  }
+  openMyDay()
 }
 
 function openMyDay() {
@@ -242,17 +341,26 @@ function reopen() {
   if (testPayload.value?.message) testOpen.value = true
 }
 
+function onResize() {
+  viewportHeight.value = window.innerHeight
+  if (dayPillTop.value == null || dayDragging.value) return
+  rememberDayTop(dayPillTop.value * window.innerHeight)
+}
+
 onMounted(() => {
+  restoreDayTop()
   load()
   window.addEventListener('daily-edge:test', onTestEvent)
   window.addEventListener('daily-edge:open', onDelivered)
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('resize', onResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('daily-edge:test', onTestEvent)
   window.removeEventListener('daily-edge:open', onDelivered)
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', onResize)
 })
 </script>
 
@@ -436,6 +544,13 @@ onUnmounted(() => {
 
 .edge-pill--day {
   top: calc(50% + 198px);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.edge-pill--dragging {
+  cursor: grabbing;
 }
 
 .edge-pill__mark {

@@ -1,49 +1,42 @@
 <template>
-    <div v-if="!shouldHideSection" class="responsible-card bg-white p-3 radius-12 shadow-sm mt-3">
-        
+    <div v-if="!shouldHideSection" class="responsible-card">
         <div class="info-group">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="info-section-title mb-3">Responsible Person</div>
-                <b-button
-                    variant="link"
-                    class="p-0 edit-person-btn"
-                    @click="openPersonModal"
-                    :disabled="isUpdatingPerson"
-                >
-                    <iconify-icon icon="lucide:edit" class="edit-icon"></iconify-icon>
-                    <span>Change</span>
-                </b-button>
-            </div>
             <div
                 ref="personHoverAnchor"
-                class="d-flex align-items-center gap-3 person-hover-anchor"
+                class="rp-row person-hover-anchor"
                 @mouseenter="openPersonHover"
                 @mouseleave="closePersonHover"
             >
-                <div class="avatar-wrapper" @click.stop="openPersonProfile(lead, 'responsible', $event)">
+                <button type="button" class="rp-person" @click.stop="openPersonProfile(lead, 'responsible', $event)">
                     <img
                         v-if="lead?.responsible_person?.avatar"
                         :src="lead?.responsible_person?.avatar"
-                        class="avatar-md rounded-circle"
+                        alt=""
+                        class="rp-avatar"
                     />
-                    <div v-else class="avatar-placeholder">
-                        <iconify-icon icon="lucide:user" class="avatar-icon"></iconify-icon>
-                    </div>
-                </div>
-                <div class="flex-grow-1">
-                    <div class="info-value">{{ lead?.responsible_person?.name || '—' }}
-                             <!-- Same as the hover card: job position, else the role. -->
-                             <span v-if="lead?.responsible_person?.position || lead?.responsible_person?.role_name" class="user-position-badge">{{ lead?.responsible_person?.position || lead?.responsible_person?.role_name }}</span>
-                    </div>
-                    <div class="info-subline">
-                           <span class="sub-key">Reports To: </span>
-                           <span class="sub-value"> {{ lead?.responsible_person?.parent_name || lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</span>
-                       </div>
-                    <div class="info-subline">
-                        <span class="sub-key">Branch: </span>
-                        <span class="sub-value"> {{ lead?.responsible_person?.office_name || lead?.responsible_person?.admin_parent_name || lead?.lead_branch_source || 'Not specified' }}</span>
-                    </div>
-                </div>
+                    <span v-else class="rp-avatar rp-avatar--fallback" aria-hidden="true">
+                        <iconify-icon icon="lucide:user"></iconify-icon>
+                    </span>
+                    <span class="rp-copy">
+                        <span class="rp-kicker">Responsible</span>
+                        <span class="rp-name">
+                            <span class="rp-name-text">{{ lead?.responsible_person?.name || 'Unassigned' }}</span>
+                            <span v-if="personRole" class="user-position-badge">{{ personRole }}</span>
+                        </span>
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="rp-change"
+                    :disabled="isUpdatingPerson"
+                    @click="openPersonModal"
+                >
+                    Change
+                </button>
+            </div>
+            <div v-if="reportsToLabel || branchLabel" class="rp-meta">
+                <span v-if="reportsToLabel">Reports to {{ reportsToLabel }}</span>
+                <span v-if="branchLabel">{{ branchLabel }}</span>
             </div>
             <Teleport to="body">
                 <transition name="person-card-pop">
@@ -70,13 +63,13 @@
                                 <div class="person-hover-role">{{ lead?.responsible_person?.position || lead?.responsible_person?.role_name || 'Team Member' }}</div>
                             </div>
                         </div>
-                        <div class="person-hover-line">
+                        <div v-if="reportsToLabel" class="person-hover-line">
                             <span>Reports to</span>
-                            <b>{{ lead?.responsible_person?.parent_name || lead?.responsible_person?.manager_name || lead?.responsible_person?.team_lead_name || 'Not specified' }}</b>
+                            <b>{{ reportsToLabel }}</b>
                         </div>
-                        <div class="person-hover-line">
+                        <div v-if="branchLabel" class="person-hover-line">
                             <span>Branch</span>
-                            <b>{{ lead?.responsible_person?.office_name || lead?.responsible_person?.admin_parent_name || lead?.responsible_person?.branch_name || lead?.lead_branch_source || 'Not specified' }}</b>
+                            <b>{{ branchLabel }}</b>
                         </div>
                     </div>
                 </transition>
@@ -194,6 +187,26 @@ const shouldHideSection = computed(() => {
     return isLeadPoolLead.value && !isAdminOrSuperAdmin.value
 })
 
+function presentLabel(...values) {
+    for (const value of values) {
+        const text = String(value ?? '').trim()
+        if (text && text.toLowerCase() !== 'not specified' && text !== '—') return text
+    }
+    return ''
+}
+
+const personRole = computed(() => presentLabel(props.lead?.responsible_person?.position, props.lead?.responsible_person?.role_name))
+const reportsToLabel = computed(() => presentLabel(
+    props.lead?.responsible_person?.parent_name,
+    props.lead?.responsible_person?.admin_parent_name,
+    props.lead?.responsible_person?.team_lead_name,
+))
+const branchLabel = computed(() => presentLabel(
+    props.lead?.responsible_person?.office_name,
+    props.lead?.responsible_person?.branch_name,
+    props.lead?.lead_branch_source,
+))
+
 const showPersonModal = ref(false)
 const isLoadingPersons = ref(false)
 const isUpdatingPerson = ref(false)
@@ -232,6 +245,7 @@ function placePersonHover() {
 }
 
 function openPersonHover() {
+    if (window.matchMedia('(hover: none)').matches) return
     if (personHoverTimer) clearTimeout(personHoverTimer)
     showPersonCard.value = true
     nextTick(() => placePersonHover())
@@ -344,45 +358,122 @@ const updateResponsiblePerson = async () => {
 <style scoped>
 .responsible-card {
   position: relative;
-  border: 1px solid rgba(250, 163, 0, 0.18);
-  margin-bottom: 12px;
-  overflow: hidden;
-  background:
-    linear-gradient(90deg, rgba(250, 163, 0, 0.06), rgba(255, 255, 255, 0) 58%),
-    #ffffff;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.05),
-    0 10px 24px rgba(15, 23, 42, 0.06);
-}
-
-.responsible-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(180deg, #f8dca6, #f2b84b);
-  opacity: 1;
-}
-
-.responsible-card:hover {
-  border-color: rgba(250, 163, 0, 0.28);
-  box-shadow:
-    0 2px 4px rgba(15, 23, 42, 0.06),
-    0 14px 32px rgba(15, 23, 42, 0.08);
-}
-
-.responsible-card:focus-within {
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 1),
-    0 0 0 4px rgba(250, 163, 0, 0.24),
-    0 14px 32px rgba(15, 23, 42, 0.08);
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid #efe4f3;
+  border-radius: 12px;
+  background: #fff;
 }
 
 .responsible-card .info-group {
   position: relative;
-  padding-left: 6px; /* keep content off the accent bar */
+}
+
+.rp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rp-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rp-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.rp-avatar--fallback {
+  display: grid;
+  place-items: center;
+  background: #f4eef7;
+  color: var(--color-primary);
+  font-size: 16px;
+}
+
+.rp-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rp-kicker {
+  color: #8b8498;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.rp-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #1c1424;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.rp-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-name .user-position-badge {
+  margin-left: 0;
+  flex: 0 1 auto;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-change {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #f7f1fa;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rp-change:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 6px;
+  padding-left: 40px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
 }
 .info-section-title { font-size: 12px; font-weight: 700; color: var(--color-primary); }
 .form-label-custom { font-size: 13px; font-weight: 500; color: #64748B; margin-bottom: 6px; }

@@ -1,6 +1,7 @@
 <!-- StageChangeReasonModal.vue -->
 <template>
 
+    <Teleport to="body">
     <div v-if="visible" class="stage-change-modal-overlay" :class="{ 'stage-change-modal-overlay--clear': mandatory }" @click.self="onOverlayClick">
         <div class="stage-change-modal" :class="{ 'modal-wide': missingFields.length > 0 || interactionMode }">
             <div class="modal-header">
@@ -660,6 +661,7 @@
             @cancel="handleCustomDateCancel"
         />
     </div>
+    </Teleport>
 </template>
 
 <script setup>
@@ -1771,7 +1773,7 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 12060 !important;
+    z-index: 14000 !important;
     pointer-events: auto !important;
 }
 
@@ -2537,6 +2539,19 @@ defineExpose({
     border-radius: 999px;
 }
 
+@media (min-width: 769px) and (max-width: 1180px) {
+    .stage-change-modal-overlay {
+        align-items: flex-start;
+        padding: 28px 20px 20px;
+        overflow: auto;
+    }
+
+    .stage-change-modal,
+    .stage-change-modal.modal-wide {
+        margin-top: 8px;
+    }
+}
+
 @media (max-width: 768px) {
     .stage-change-modal-overlay {
         align-items: flex-end;
@@ -2545,7 +2560,7 @@ defineExpose({
         background:
             radial-gradient(ellipse at 15% 10%, rgba(var(--color-primary-rgb), 0.12), transparent 42%),
             rgba(15, 23, 42, 0.45);
-        z-index: 12060 !important;
+        z-index: 14000 !important;
     }
 
     .stage-change-modal-overlay.stage-change-modal-overlay--clear {

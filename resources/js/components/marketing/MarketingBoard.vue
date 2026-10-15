@@ -254,12 +254,9 @@ function onChange(evt, stage) {
   height: 100%;
   min-height: 0;
   position: relative;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  /* Faint dot-grid "work surface" — texture instead of color. */
-  background-color: var(--neutral-50);
-  background-image: radial-gradient(color-mix(in srgb, var(--text-secondary-light) 16%, transparent) 1px, transparent 1px);
-  background-size: 14px 14px;
+  border-radius: 18px;
+  border: 1px solid #eceaf2;
+  background: #f7f6f9;
   scroll-snap-align: start;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -440,8 +437,9 @@ function onChange(evt, stage) {
 .mk-col:has(.mk-ghost) .mk-col__icon { animation: mk-wiggle 0.5s ease infinite; }
 
 :deep(.mk-ghost) {
-  opacity: 0.45;
-  border: 2px dashed var(--color-primary) !important;
+  opacity: 1;
+  border: 1.5px dashed #c4b6e0 !important;
+  background: repeating-linear-gradient(-45deg, #f7f4fb, #f7f4fb 6px, #f1ebf8 6px, #f1ebf8 12px) !important;
   box-shadow: none !important;
 }
 :deep(.mk-ghost > *) { visibility: hidden; }

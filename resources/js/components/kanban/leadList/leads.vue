@@ -267,9 +267,11 @@
                                     :group="'tasks'"
                                     item-key="id"
                                     class="tasks-list flex-grow-1"
+                                    :data-stage-id="column.status"
                                     :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
-                                    :disabled="kanbanIsMobile || leadSelectionActive"
+                                    :disabled="kanbanIsMobile"
+                                    :move="canDragLeadToColumn"
                                     :force-fallback="kanbanIsMobile"
                                     :delay="200"
                                     :delay-on-touch-only="true"
@@ -2250,9 +2252,64 @@ function stepDragAutoScroll() {
     dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
 }
 
+function stageNameKey(column) {
+    return String(column?.title || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function isNewLeadColumn(column) {
+    if (!column) return false
+    const order = Number(column.order ?? stageOrderMap.value[column.status])
+    return stageNameKey(column).includes('newlead') || order === 1
+}
+
+function isAssignColumn(column) {
+    if (!column) return false
+    const order = Number(column.order ?? stageOrderMap.value[column.status])
+    const name = stageNameKey(column)
+    return name.includes('assign') || order === 2
+}
+
+function columnFromDragList(el) {
+    const id = el?.getAttribute?.('data-stage-id')
+    if (id == null || id === '') return null
+    return columns.value.find((column) => String(column.status) === String(id)) || null
+}
+
+function canDragLeadToColumn(evt) {
+    if (!leadSelectionActive.value) return true
+    const lead = evt?.draggedContext?.element
+    if (!lead || !isLeadSelected(lead.id)) return false
+    const from = columnFromDragList(evt.from)
+    const to = columnFromDragList(evt.to)
+    if (!from || !to) return false
+    if (String(from.status) === String(to.status)) return false
+    return isNewLeadColumn(from) && isAssignColumn(to)
+}
+
+function markPackDropTargets(active) {
+    document.querySelectorAll('.tasks-list[data-stage-id]').forEach((el) => {
+        const column = columnFromDragList(el)
+        const allow = active && isAssignColumn(column)
+        el.classList.toggle('lead-pack-target', allow)
+        el.classList.toggle('lead-pack-blocked', active && !allow && !isNewLeadColumn(column))
+    })
+}
+
 function onLeadDragStart(event) {
     noteLeadDragOrigin(event)
     isLeadDragging.value = true
+    const item = event?.item
+    if (leadSelectionActive.value && item) {
+        const from = columnFromDragList(event.from)
+        const count = isNewLeadColumn(from)
+            ? from.leads.filter((lead) => lead && isLeadSelected(lead.id)).length
+            : 0
+        if (count > 1) {
+            item.classList.add('lead-pack-drag')
+            item.setAttribute('data-pack-count', String(count))
+            markPackDropTargets(true)
+        }
+    }
     onGlobalPointerMove(event?.originalEvent || event)
 
     document.addEventListener('pointermove', onGlobalPointerMove, { passive: true })
@@ -2268,6 +2325,11 @@ function onLeadDragStart(event) {
 function onLeadDragEnd() {
     isLeadDragging.value = false
     dragPointerX.value = null
+    document.querySelectorAll('.lead-pack-drag').forEach((el) => {
+        el.classList.remove('lead-pack-drag')
+        el.removeAttribute('data-pack-count')
+    })
+    markPackDropTargets(false)
     stopScroll()
 
     document.removeEventListener('pointermove', onGlobalPointerMove)
@@ -5080,10 +5142,90 @@ function restoreLeadToColumn(sourceColumn, lead) {
     sortLeadsByUpdatedAt(sourceColumn.leads)
 }
 
+function flyLeadCard(leadId, fromRect) {
+    const el = document.querySelector(`[data-lead-id="${leadId}"]`)
+    if (!el || !fromRect) return
+    const to = el.getBoundingClientRect()
+    const dx = fromRect.left - to.left
+    const dy = fromRect.top - to.top
+    el.style.transition = 'none'
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(0.94)`
+    el.style.zIndex = '6'
+    requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.62s cubic-bezier(0.22, 1, 0.36, 1)'
+        el.style.transform = 'translate(0, 0) scale(1)'
+        const clear = () => {
+            el.style.transition = ''
+            el.style.transform = ''
+            el.style.zIndex = ''
+            el.removeEventListener('transitionend', clear)
+        }
+        el.addEventListener('transitionend', clear)
+    })
+}
+
+async function moveSelectedLeadsToAssign(draggedLead, sourceColumn, targetColumn) {
+    const selected = new Set(selectedLeadIds.value.map((id) => Number(id)))
+    const extras = (sourceColumn?.leads || []).filter((lead) => lead && selected.has(Number(lead.id)) && String(lead.id) !== String(draggedLead.id))
+    const fromRects = new Map()
+    extras.forEach((lead) => {
+        const el = document.querySelector(`[data-lead-id="${lead.id}"]`)
+        if (el) fromRects.set(String(lead.id), el.getBoundingClientRect())
+    })
+    extras.forEach((lead) => {
+        const index = sourceColumn.leads.findIndex((item) => String(item.id) === String(lead.id))
+        if (index !== -1) sourceColumn.leads.splice(index, 1)
+    })
+    const insertAt = targetColumn.leads.findIndex((item) => String(item.id) === String(draggedLead.id))
+    const at = insertAt === -1 ? targetColumn.leads.length : insertAt + 1
+    targetColumn.leads.splice(at, 0, ...extras)
+    const moving = [draggedLead, ...extras]
+    moving.forEach((lead) => {
+        lead.stage_id = targetColumn.status
+    })
+    await nextTick()
+    extras.forEach((lead, index) => {
+        window.setTimeout(() => flyLeadCard(lead.id, fromRects.get(String(lead.id))), index * 46)
+    })
+    clearLeadSelection()
+    const results = await Promise.all(moving.map(async (lead) => {
+        try {
+            const response = await api.post(`/leads/${lead.id}/change-stage`, { stage_id: targetColumn.status })
+            const fresh = response?.data?.data
+            if (fresh) Object.assign(lead, fresh)
+            lead.stage_id = targetColumn.status
+            return true
+        } catch {
+            return false
+        }
+    }))
+    const failed = results.filter((ok) => !ok).length
+    if (failed) {
+        window.$showNotification?.('Some leads could not move to Assign.', 'error')
+        if (!isFetching.value) fetchLeads(true)
+        return
+    }
+    window.$showNotification?.(moving.length === 1 ? 'Lead moved to Assign.' : `${moving.length} leads moved to Assign.`, 'success')
+}
+
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
         const lead = evt.added.element
         const newStageId = column.status
+        if (leadSelectionActive.value && isLeadSelected(lead.id)) {
+            const sourceColumn = columns.value.find((item) => String(item.status) === String(lead.stage_id))
+            if (!isNewLeadColumn(sourceColumn) || !isAssignColumn(column)) {
+                const targetColumnIndex = columns.value.findIndex((item) => item.status === newStageId)
+                if (targetColumnIndex !== -1) {
+                    columns.value[targetColumnIndex].leads = columns.value[targetColumnIndex].leads.filter((item) => item.id !== lead.id)
+                }
+                if (sourceColumn) restoreLeadToColumn(sourceColumn, lead)
+                window.$showNotification?.('Selected leads can only move from New Lead to Assign.', 'error')
+                return
+            }
+            await moveSelectedLeadsToAssign(lead, sourceColumn, column)
+            return
+        }
         const newStageOrder = stageOrderMap.value[newStageId] ?? column.order ?? 0
         const sourceColumn = columns.value.find(c => String(c.status) === String(lead.stage_id))
         const normalizeStageName = (name) => String(name || '').toLowerCase().replace(/[^a-z]/g, '')
@@ -7136,6 +7278,41 @@ const fetchRevertNotifications = async () => {
     transform: rotate(1.25deg) scale(1.015);
     box-shadow: 0 14px 28px rgba(1, 6, 45, 0.16) !important;
     transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 140ms ease;
+}
+
+.lead-pack-drag {
+    box-shadow:
+        0 16px 30px rgba(76, 29, 110, 0.22),
+        10px 12px 0 rgba(115, 62, 135, 0.28),
+        18px 22px 0 rgba(115, 62, 135, 0.16) !important;
+}
+
+.lead-pack-drag::after {
+    content: attr(data-pack-count);
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--gradient-primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 22px;
+    text-align: center;
+    box-shadow: 0 6px 14px rgba(76, 29, 110, 0.28);
+}
+
+.tasks-list.lead-pack-target {
+    border-radius: 14px;
+    background: rgba(115, 62, 135, 0.08);
+    box-shadow: inset 0 0 0 2px rgba(115, 62, 135, 0.45);
+}
+
+.tasks-list.lead-pack-blocked {
+    opacity: 0.55;
 }
 
 @media (prefers-reduced-motion: reduce) {
