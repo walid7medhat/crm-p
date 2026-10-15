@@ -994,7 +994,7 @@ Route::post('/register', [UserInvitationController::class, 'registerWithInvitati
 // follow their own requests; the marketing team handles them in Marketing → Bookings.
 Route::middleware(['jwt.auth', 'role_or_permission:super_admin|photo-booking'])->prefix('photo-bookings')->group(function () {
     Route::get('/', [MarketingMyBookingController::class, 'index']);
-    Route::post('/', [MarketingMyBookingController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('/', [MarketingMyBookingController::class, 'store']);
     Route::post('/{booking}/cancel', [MarketingMyBookingController::class, 'cancel']);
 });
 

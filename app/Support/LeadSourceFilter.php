@@ -57,7 +57,7 @@ class LeadSourceFilter
         'portal'    => ['portal', 'propertyfinder', 'bayut'],
         'whatsapp'  => ['whatsapp', 'Whatsapp Oia Properties', 'Whatsapp All Properties'],
         // "Meta" in the search UI — Meta leads are stored under both spellings.
-        'lead form' => ['Lead Form', 'Meta Ads - Lead Form'],
+        'lead form' => ['Lead Form', 'Meta Ads - Lead Form', 'Social Media-Facebook', 'Social Media - LinkedIn','Meta - Comments and Direct Messages'],
     ];
 
     /**
@@ -78,6 +78,10 @@ class LeadSourceFilter
         'tiktok'   => ['%tiktok%', '%tik tok%', '%tik-tok%'],
     ];
 
+    public const META_CHILDREN = [
+        'Social Media-Facebook',
+        'Social Media - LinkedIn',
+    ];
     /** @param  mixed  $source  request('source') — string or array */
     public static function apply($query, $source): void
     {
@@ -92,7 +96,9 @@ class LeadSourceFilter
         $exact = [];
         $microSites = [];
         foreach ($values as $value) {
+                
             $key = strtolower((string) $value);
+    
             // "Micro Websites (all)" → every micro website; a single domain → just that one.
             // "Website (all)" covers the micro websites too (they sit under Website).
             if ($key === 'micro_websites' || $key === 'website') {

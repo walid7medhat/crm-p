@@ -3588,7 +3588,10 @@ const websiteSourceOptionsForMulti = computed(() =>
     websiteSourceOptions.value.filter(o => o.value != null)
 
 )
-
+const metaSourceOptions = ref([
+    { value: 'Social Media-Facebook', text: 'Social Media-Facebook' },
+    { value: 'Social Media - LinkedIn', text: 'Social Media - LinkedIn' },
+])
 // ================= Source: ONE multi-select with parents + their children =================
 // form.source is a single list that can mix parents ("website" = every website) and
 // children ("Allproperties.ae"). It's sent as-is; the backend expands parents
@@ -3596,6 +3599,7 @@ const websiteSourceOptionsForMulti = computed(() =>
 const SOURCE_CHILD_GROUPS = {
     // Website also holds "Micro Websites (all)" + each micro site one level deeper
     // (sourceSelectOptions); "Website (all)" covers them on the API side too.
+    'Lead Form': { label: 'Meta', options: metaSourceOptions },
     website: { label: 'Website', options: websiteSourceOptions, sub: { value: 'micro_websites', label: 'Micro Websites', options: microWebsiteSourceOptions } },
     portal: { label: 'Portal', options: portalSourceOptions },
     whatsapp: { label: 'Whatsapp', options: whatsappSourceOptions },
