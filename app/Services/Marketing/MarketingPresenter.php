@@ -51,6 +51,7 @@ class MarketingPresenter
             'category' => $task->category,
             'type' => $task->type,
             'title' => $task->title,
+            'department' => $task->department,
             'stage_id' => $task->stage_id,
             'position' => $task->position,
             'assignee' => self::user($task->assignee),

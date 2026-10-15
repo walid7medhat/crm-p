@@ -26,6 +26,21 @@
       <!-- PRODUCTION -->
       <template v-if="category === 'production'">
         <div class="mk-field">
+          <span class="mk-label">Department</span>
+          <div class="mk-chips">
+            <button
+              v-for="(d, key) in DEPARTMENTS"
+              :key="key"
+              type="button"
+              class="mk-chip"
+              :class="{ 'is-on': form.department === key }"
+              :style="chipStyle(d)"
+              @click="form.department = key; errors.department = ''"
+            ><iconify-icon :icon="d.icon" /> {{ d.label }}</button>
+          </div>
+          <span v-if="errors.department" class="mk-error">{{ errors.department }}</span>
+        </div>
+        <div class="mk-field">
           <span class="mk-label">Content type</span>
           <div class="mk-chips">
             <button
@@ -151,7 +166,7 @@ import MemberPicker from './shared/MemberPicker.vue'
 import MkSelect from './shared/MkSelect.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import { showCrmToast } from '@/utils/crmToast.js'
-import { MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, apiError, chipStyle } from '@/config/marketingConfig.js'
+import { MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, apiError, chipStyle,DEPARTMENTS } from '@/config/marketingConfig.js'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -173,7 +188,7 @@ const titlePlaceholder = computed(() => ({
 
 const saving = ref(false)
 const titleInput = ref(null)
-const errors = reactive({ title: '', link: '' })
+const errors = reactive({ title: '', link: '',department: '' })
 const form = reactive(blankForm())
 
 function blankForm() {
@@ -192,6 +207,8 @@ function blankForm() {
     stage_id: null,
     link_url: '',
     link_label: '',
+    department: '',
+
   }
 }
 
@@ -214,6 +231,8 @@ watch(() => props.modelValue, (open) => {
       reference: t.reference || '',
       notes: t.notes || '',
       due_date: t.due_date || '',
+      department: t.department || '',
+
     })
   } else {
     form.stage_id = props.initialStageId ?? props.stages[0]?.id ?? null
@@ -233,6 +252,8 @@ function payload() {
     reference: form.reference || null,
     notes: form.notes?.trim() || null,
     due_date: form.due_date || null,
+    department: form.department,
+
   }
   if (props.category === 'production') {
     Object.assign(base, { type: form.type, shooting_by: form.shooting_by, editing_by: form.editing_by, channels: form.channels })
@@ -251,7 +272,8 @@ function payload() {
 async function submit() {
   errors.title = form.title ? '' : 'Title is required.'
   errors.link = form.link_url && !/^https?:\/\//i.test(form.link_url) ? 'Links must start with http:// or https://' : ''
-  if (errors.title || errors.link) return
+  errors.department = form.department ? '' : 'Choose a department.'
+  if (errors.title || errors.link || errors.department) return
 
   saving.value = true
   try {

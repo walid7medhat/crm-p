@@ -21,6 +21,8 @@ export const CONTENT_TYPES = {
   photo: { label: 'Photo', color: '#4A63D8', grad: 'linear-gradient(135deg, #6E86F0 0%, #3F51C4 100%)', icon: 'lucide:camera' },
   reel: { label: 'Reel', color: '#9B4DCA', grad: 'linear-gradient(135deg, #B970E0 0%, #7E3BAF 100%)', icon: 'lucide:film' },
   event: { label: 'Event', color: '#C2902B', grad: 'linear-gradient(135deg, #E2B755 0%, #B0801F 100%)', icon: 'lucide:party-popper' },
+  unit_shoot: { label: 'Unit Photo Shoot', color: '#0F8B8D', grad: 'linear-gradient(135deg, #2FB5B7 0%, #0B6E70 100%)', icon: 'lucide:building-2' },
+
 };
 
 export const DELIVERABLES = {
@@ -121,4 +123,10 @@ export function apiError(err, fallback = 'Something went wrong. Please try again
   const data = err?.response?.data;
   const firstFieldError = data?.errors && Object.values(data.errors)[0];
   return (Array.isArray(firstFieldError) ? firstFieldError[0] : null) || data?.message || fallback;
+}
+export const DEPARTMENTS = {
+  listing:   { label: 'Listing',   icon: 'lucide:list',       color: '#2563eb' },
+  leasing:   { label: 'Leasing',   icon: 'lucide:key-round',  color: '#16a34a' },
+  homya:     { label: 'Homya',     icon: 'lucide:home',       color: '#db2777' },
+  marketing: { label: 'Marketing', icon: 'lucide:megaphone',  color: '#9333ea' },
 }

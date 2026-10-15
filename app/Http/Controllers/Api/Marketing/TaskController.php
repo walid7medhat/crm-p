@@ -17,12 +17,12 @@ class TaskController extends MarketingBaseController
 {
     /** Fields each category is allowed to keep; everything else is cleared on save. */
     private const CATEGORY_FIELDS = [
-        'production' => ['type', 'shooting_by', 'editing_by', 'channels', 'reference', 'notes', 'due_date'],
-        'design' => ['assigned_to', 'deliverables', 'tov', 'reference', 'notes', 'due_date'],
-        'content' => ['assigned_to', 'reference', 'notes', 'due_date'],
+        'production' => ['department', 'type', 'shooting_by', 'editing_by', 'channels', 'reference', 'notes', 'due_date'],
+        'design' => ['department', 'assigned_to', 'deliverables', 'tov', 'reference', 'notes', 'due_date'],
+        'content' => ['department', 'assigned_to', 'reference', 'notes', 'due_date'],
     ];
 
-    private const OPTIONAL_FIELDS = ['type', 'assigned_to', 'shooting_by', 'editing_by', 'deliverables', 'channels', 'tov', 'reference', 'notes', 'due_date'];
+    private const OPTIONAL_FIELDS = ['department','type', 'assigned_to', 'shooting_by', 'editing_by', 'deliverables', 'channels', 'tov', 'reference', 'notes', 'due_date'];
 
     public function show(MarketingTask $task): JsonResponse
     {
@@ -223,6 +223,7 @@ class TaskController extends MarketingBaseController
             'reference' => ['nullable', 'string', 'max:5000'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'due_date' => ['nullable', 'date'],
+            'department' => [$req, Rule::in(MarketingTask::DEPARTMENTS)],
         ]);
     }
 

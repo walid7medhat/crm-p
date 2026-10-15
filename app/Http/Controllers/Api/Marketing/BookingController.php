@@ -15,11 +15,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use App\Notifications\MarketingBookingStatusNotification;
 use App\Events\PhotoBookingChanged;
-
+use App\Models\User;
 /** Marketing → Bookings tab. */
 class BookingController extends MarketingBaseController
 {
-    private const WITH = ['handler:id,name', 'task:id,title,category', 'user:id,name,avatar'];
+    private const WITH = ['handler:id,name', 'task:id,title,category', 'user:id,name,avatar,parent_id',    'user.employeeProfile.department'];
 
     public function index(Request $request): JsonResponse
     {
@@ -51,6 +51,7 @@ class BookingController extends MarketingBaseController
                 ->orWhere('reference', 'like', $like)
                 ->orWhere('location_label', 'like', $like)
                 ->orWhere('unit_number', 'like', $like)
+                ->orWhereHas('user.employeeProfile.department', fn ($d) => $d->where('name', 'like', $like))
                 ->orWhereRaw('CAST(units AS CHAR) like ?', [$like]));
         }
 
@@ -207,7 +208,7 @@ class BookingController extends MarketingBaseController
         return [
             'id' => $b->id,
             'reference' => $b->reference,
-            'name' => $b->user?->name ?? $b->name,
+            'name' => User::resolveDisplayName($b->user)  ?? $b->name,
             'email' => $b->email,
             'phone' => $b->phone,
             'requester' => $b->user ? \App\Services\Marketing\MarketingPresenter::user($b->user) : null,
@@ -230,6 +231,8 @@ class BookingController extends MarketingBaseController
             'status_changed_at' => $b->status_changed_at?->toIso8601String(),
             'task' => $b->task ? ['id' => $b->task->id, 'title' => $b->task->title, 'category' => $b->task->category] : null,
             'created_at' => $b->created_at?->toIso8601String(),
+             'department' => $b->user?->employeeProfile?->department?->name
+                ?: User::resolveDisplayName($b->user?->office),
         ];
     }
 }

@@ -55,6 +55,9 @@
             </span>
             <div class="tk__who">
               <b>{{ b.name }}</b>
+              <small v-if="b.department" class="tk__dept">
+                <iconify-icon icon="lucide:building-2" /> {{ b.department }}
+              </small>
               <small>{{ b.reference }} · requested {{ timeAgo(b.created_at) }}</small>
             </div>
             <span class="tk__status"><span class="tk__status-dot" /> {{ STATUS_LABEL[b.status] }}</span>
@@ -597,4 +600,5 @@ a.tk__chip:hover, .tk__chip--btn:hover { border-color: #d8ccea; color: var(--col
 }
 
 .tk__units { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk__dept { display: inline-flex; align-items: center; gap: 4px; color: var(--color-primary) !important; font-weight: 600 !important; }
 </style>

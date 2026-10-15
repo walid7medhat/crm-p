@@ -32,7 +32,10 @@
     </div>
 
     <footer class="mk-card__foot">
-      <span class="mk-card__date" :class="{ 'is-late': overdue }">{{ task.due_date ? formatDate(task.due_date) : tagLabel }}</span>
+      <span class="mk-card__date" :class="{ 'is-late': overdue }">
+        {{ task.due_date ? formatDate(task.due_date) : tagLabel }}
+        <template v-if="dept"> · {{ dept.label }}</template>
+      </span>
       <div class="mk-card__people">
         <template v-if="task.category === 'production'">
           <MkAvatar v-if="task.shooter" :user="task.shooter" :size="26" />
@@ -48,7 +51,7 @@
 import { computed } from 'vue'
 import MkAvatar from './shared/MkAvatar.vue'
 import {
-  MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, formatDate, isoDate,
+  MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, formatDate, isoDate,DEPARTMENTS
 } from '@/config/marketingConfig.js'
 
 const props = defineProps({
@@ -59,6 +62,7 @@ defineEmits(['open'])
 
 const category = computed(() => MARKETING_CATEGORIES[props.task.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => (props.task.category === 'production' ? CONTENT_TYPES[props.task.type] : null))
+const dept = computed(() => DEPARTMENTS[props.task.department])
 // The tag is the card's only color hint: a small colored icon on a neutral pill.
 const tagLabel = computed(() => (type.value ? type.value.label : category.value.label))
 const tagColor = computed(() => (type.value ? type.value.color : category.value.color))

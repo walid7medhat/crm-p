@@ -9,9 +9,10 @@ class MarketingTask extends Model
 {
     use SoftDeletes;
 
-    public const TYPES = ['video', 'photo', 'reel', 'event'];
+    public const TYPES = ['video', 'photo', 'reel', 'event','unit_shoot'];
     public const DELIVERABLES = ['campaign', 'post', 'story', 'linkedin', 'cover', 'sales_story'];
     public const CHANNELS = ['instagram', 'story', 'youtube', 'linkedin', 'unit_video', 'campaigns'];
+    public const DEPARTMENTS = ['listing', 'leasing', 'homya', 'marketing'];
 
     protected $guarded = [];
 

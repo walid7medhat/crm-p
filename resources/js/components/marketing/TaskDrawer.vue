@@ -104,6 +104,7 @@
 
                 <dl class="mk-details__grid">
                   <div><dt>Due date</dt><dd>{{ task.due_date ? formatDate(task.due_date, { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }}</dd></div>
+                  <div v-if="task.department"><dt>Department</dt><dd>{{ DEPARTMENTS[task.department]?.label || task.department }}</dd></div>
                   <div><dt>Completed</dt><dd>{{ task.completed_at ? formatDate(task.completed_at, { day: '2-digit', month: 'short', year: 'numeric' }) : '—' }}</dd></div>
                   <div><dt>Created by</dt><dd>{{ task.created_by || '—' }}</dd></div>
                   <div><dt>Created</dt><dd>{{ timeAgo(task.created_at) }}</dd></div>
@@ -213,7 +214,7 @@ import MkSelect from './shared/MkSelect.vue'
 import { showCrmToast } from '@/utils/crmToast.js'
 import {
   MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, PLATFORMS, LINK_KINDS, HISTORY_ACTIONS,
-  formatDate, timeAgo, apiError, chipStyle,
+  formatDate, timeAgo, apiError, chipStyle,DEPARTMENTS
 } from '@/config/marketingConfig.js'
 
 const props = defineProps({
