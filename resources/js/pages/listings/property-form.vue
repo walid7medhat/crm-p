@@ -6688,7 +6688,7 @@ body.swal2-toast-shown  {
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 10px 28px rgba(17, 17, 17, 0.04);
-  overflow: hidden;
+  /* overflow: hidden; */
   scroll-margin-top: 72px;
 }
 
