@@ -149,7 +149,7 @@ class LeadRequest extends FormRequest
             return false;
         }
 
-        return $user->hasRole('branch_admin')
+        return $user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('branch_admin')
             || ($user->hasRole('sales') && $user->is_listing_team);
     }
 

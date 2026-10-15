@@ -1076,7 +1076,7 @@ watch(selectedExistingClient, (client) => {
     const nameAndPhoneOptional = computed(() => {
         try {
             const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
-            return roles.includes('branch_admin') || (isSalesUser.value && isListingTeamUser.value)
+            return roles.includes('super_admin') || roles.includes('admin') || roles.includes('branch_admin') || (isSalesUser.value && isListingTeamUser.value)
         } catch {
             return false
         }
