@@ -1053,12 +1053,23 @@ const updateBudgetDropdownPosition = () => {
     const el = budgetTriggerRef.value?.$el || budgetTriggerRef.value
     if (!el || typeof el.getBoundingClientRect !== 'function') return
     const r = el.getBoundingClientRect()
+
+    const width = Math.min(Math.max(Math.round(r.width), 260), window.innerWidth - 16)
+    const left = Math.min(Math.max(8, Math.round(r.left)), window.innerWidth - width - 8)
+
+    // Open above the trigger if there isn't enough room below (mobile bottom sheet / keyboard)
+    const panelHeight = 110
+    const spaceBelow = window.innerHeight - r.bottom
+    const top = spaceBelow < panelHeight + 16
+        ? Math.round(r.top - panelHeight - 8)
+        : Math.round(r.bottom + 8)
+
     budgetDropdownStyle.value = {
         position: 'fixed',
-        top: `${Math.round(r.bottom + 8)}px`,
-        left: `${Math.round(r.left)}px`,
-        minWidth: `${Math.max(Math.round(r.width), 260)}px`,
-        zIndex: '12060'
+        top: `${top}px`,
+        left: `${left}px`,
+        width: `${width}px`,
+        zIndex: '15000',
     }
 }
 
@@ -2463,6 +2474,7 @@ defineExpose({
     border-radius: 10px;
     box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
     padding: 10px;
+   z-index: 15000 !important;
 }
 
 .budget-from-to-row {
@@ -2849,7 +2861,7 @@ defineExpose({
 }
 
 .reminder-dropdown--portal {
-    z-index: 12050;
+    z-index: 15000;
 }
 
 .reminder-options {
