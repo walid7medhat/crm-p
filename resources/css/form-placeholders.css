@@ -44,6 +44,10 @@ input.form-control {
   font-size: 12px !important;
 }
 
+.form-select {
+  background-size: 10px 7px !important;
+}
+
 /* vue-select: search placeholder + empty label — left */
 .v-select .vs__search::placeholder,
 .vs__search::placeholder,

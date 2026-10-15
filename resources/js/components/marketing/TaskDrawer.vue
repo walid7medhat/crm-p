@@ -407,44 +407,47 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   inset: 0;
   z-index: 2040;
   display: flex;
-  justify-content: flex-end;
-  background: rgba(15, 10, 30, 0.35);
-  backdrop-filter: blur(2px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(28, 20, 48, 0.28);
+  backdrop-filter: blur(3px);
 }
 .mk-drawer {
   --accent: var(--color-primary);
-  width: min(560px, 100vw);
-  height: 100%;
+  width: min(460px, 100%);
+  max-height: min(78vh, 640px);
   display: flex;
   flex-direction: column;
-  background: var(--white);
-  color: var(--text-primary-light);
-  box-shadow: -30px 0 60px -30px rgba(15, 10, 30, 0.5);
+  background: #fff;
+  color: #241c30;
+  border: 1px solid #eceaf2;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 28px 70px -24px rgba(28, 20, 48, 0.45);
 }
 .mk-drawer__loading { flex: 1; display: grid; place-items: center; font-size: 30px !important; color: var(--color-primary); }
 
 /* Header in the CRM theme color, matching the pop-up headers. */
 .mk-drawer__head {
-  padding: 18px 22px 14px;
-  color: var(--color-on-primary);
-  background: var(--gradient-primary);
+  padding: 16px 16px 12px;
+  color: #241c30;
+  background: #fff;
+  border-bottom: 1px solid #f0eef4;
 }
-.mk-drawer__head .mk-drawer__title { color: var(--color-on-primary); }
-.mk-drawer__head .mk-pill:not(.mk-pill--solid) { color: #fff; background: rgba(255, 255, 255, 0.16); }
-.mk-drawer__head .mk-pill--solid { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); }
-/* Edit / delete / close icons sit directly on the brand fill */
+.mk-drawer__head .mk-drawer__title { color: #241c30; }
 .mk-drawer__head-top .mk-btn--ghost {
-  color: var(--color-on-primary);
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  color: #6f6880;
+  background: #fff;
+  border-color: #eceaf2;
 }
-.mk-drawer__head-top .mk-btn--ghost:not(:disabled):hover { color: #fff; background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.4); }
+.mk-drawer__head-top .mk-btn--ghost:not(:disabled):hover { color: var(--color-primary); border-color: #ddd6ea; background: #faf8fc; }
 .mk-drawer__head-top .mk-drawer__del:hover { color: #fff !important; background: #dc2626 !important; border-color: #dc2626 !important; }
 .mk-drawer__head-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .mk-drawer__tov { display: inline-block; min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
 .mk-drawer__spacer { flex: 1; }
 .mk-drawer__del:hover { color: #dc2626 !important; border-color: #dc2626 !important; }
-.mk-drawer__title { margin: 12px 0 14px; font-size: 16px !important; font-weight: 700 !important; line-height: 1.3; word-break: break-word; }
+.mk-drawer__title { margin: 10px 0 12px; font-size: 18px !important; font-weight: 650 !important; line-height: 1.3; word-break: break-word; }
 .mk-drawer__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 .mk-drawer__tabs {
@@ -485,11 +488,11 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 .mk-person {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 8px 10px;
   border-radius: 14px;
-  background: var(--neutral-50);
-  border: 1px solid var(--border-color);
+  background: #faf8fc;
+  border: 1px solid #f0eef4;
 }
 .mk-person small { display: block; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary-light); }
 .mk-person b { font-size: 14px !important; }
@@ -599,7 +602,7 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 .mk-drawer-enter-active, .mk-drawer-leave-active { transition: opacity 0.2s ease; }
 .mk-drawer-enter-active .mk-drawer, .mk-drawer-leave-active .mk-drawer { transition: transform 0.28s cubic-bezier(.2,.8,.2,1); }
 .mk-drawer-enter-from, .mk-drawer-leave-to { opacity: 0; }
-.mk-drawer-enter-from .mk-drawer, .mk-drawer-leave-to .mk-drawer { transform: translateX(40px); }
+.mk-drawer-enter-from .mk-drawer, .mk-drawer-leave-to .mk-drawer { transform: translateY(12px) scale(0.98); }
 @media (prefers-reduced-motion: reduce) {
   .mk-drawer-enter-active .mk-drawer, .mk-drawer-leave-active .mk-drawer { transition: none; }
   .mk-tab-enter-active, .mk-tab-leave-active { transition: none; }

@@ -76,8 +76,10 @@
                 <iconify-icon icon="lucide:copy" />
               </button>
             </template>
-            <a v-if="b.email" class="tk__chip" :href="`mailto:${b.email}`" title="Email"><iconify-icon icon="lucide:mail" /> {{ b.email }}</a>
           </div>
+          <a v-if="b.email" class="tk__mail" :href="`mailto:${b.email}`" title="Email">
+            <iconify-icon icon="lucide:mail" /> {{ b.email }}
+          </a>
 
           <blockquote v-if="b.notes" class="tk__notes">
             <iconify-icon icon="lucide:quote" />
@@ -403,11 +405,11 @@ onBeforeUnmount(() => {
   --st-soft: rgba(37, 99, 235, 0.1);
   position: relative;
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  border-radius: 18px;
-  background: var(--white);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 1px 2px rgba(15, 10, 30, 0.04);
+  grid-template-columns: 108px minmax(0, 1fr);
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #eceaf2;
+  box-shadow: 0 10px 28px -22px rgba(28, 20, 48, 0.45);
   /* No overflow:hidden — it would clip the status dropdown. The stub rounds its own corners. */
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
 }
@@ -415,8 +417,8 @@ onBeforeUnmount(() => {
 .tk:has(.mk-select.is-open) { z-index: 20; }
 .tk:hover {
   transform: translateY(-2px);
-  border-color: rgba(var(--color-primary-rgb), 0.3);
-  box-shadow: 0 18px 36px -24px rgba(var(--color-primary-rgb), 0.55);
+  border-color: #ddd6ea;
+  box-shadow: 0 18px 36px -20px rgba(var(--color-primary-rgb), 0.4);
 }
 .tk.is-contacted { --st: #d97706; --st-soft: rgba(217, 119, 6, 0.12); }
 .tk.is-confirmed { --st: #16a34a; --st-soft: rgba(22, 163, 74, 0.12); }
@@ -458,7 +460,7 @@ onBeforeUnmount(() => {
   /* the two half-circle notches cut into the ticket edge */
   content: '';
   position: absolute;
-  left: 112px;
+  left: 108px;
   width: 16px;
   height: 16px;
   margin-left: -8px;
@@ -479,30 +481,29 @@ onBeforeUnmount(() => {
 .tk__rel { margin-top: 6px; font-size: 10.5px !important; font-weight: 600 !important; opacity: 0.85; }
 
 /* Details */
-.tk__main { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px 12px 22px; }
+.tk__main { display: flex; flex-direction: column; gap: 9px; min-width: 0; padding: 14px 16px 12px 20px; }
 .tk__head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tk__avatar {
-  width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center;
-  font-size: 13px !important; font-weight: 800 !important; color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.1);
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  font-size: 12px !important; font-weight: 700 !important; letter-spacing: 0.02em; color: var(--color-primary);
+  background: #f3eefb;
 }
 .tk__avatar { position: relative; overflow: hidden; }
 .tk__avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .tk__place {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  padding: 8px 10px; border-radius: 11px; background: rgba(var(--color-primary-rgb), 0.05);
-  font-size: 13px !important; color: var(--text-primary-light);
+  font-size: 13px !important; color: #241c30;
 }
 .tk__place > svg { color: var(--color-primary); }
-.tk__place b { font-weight: 700 !important; }
+.tk__place b { font-weight: 650 !important; }
 .tk__tag {
-  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 7px;
-  font-size: 11.5px !important; font-weight: 600 !important; color: var(--text-primary-light);
-  background: var(--white); border: 1px solid var(--border-color);
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px;
+  font-size: 11.5px !important; font-weight: 600 !important; color: #5c5470;
+  background: #f7f5fa; border: 1px solid #eeeaf3;
 }
-.tk__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tk__who b { font-size: 15px !important; font-weight: 700 !important; color: var(--text-primary-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tk__who small { font-size: 11.5px !important; color: var(--text-secondary-light); font-variant-numeric: tabular-nums; }
+.tk__who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tk__who b { font-size: 15px !important; font-weight: 700 !important; color: #241c30; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk__who small { font-size: 12px !important; color: #8d869c; font-variant-numeric: tabular-nums; }
 .tk__status {
   display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 4px 10px; border-radius: 999px;
   font-size: 11.5px !important; font-weight: 700 !important; color: var(--st); background: var(--st-soft);
@@ -516,15 +517,20 @@ onBeforeUnmount(() => {
 
 .tk__chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .tk__chip {
-  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 5px 10px; border-radius: 9px;
-  font-size: 12.5px !important; font-weight: 500 !important; color: var(--text-primary-light); text-decoration: none;
-  background: var(--neutral-50); border: 1px solid var(--border-color);
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 5px 10px; border-radius: 999px;
+  font-size: 12.5px !important; font-weight: 600 !important; color: #3d3550; text-decoration: none;
+  background: #fff; border: 1px solid #eceaf2;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-a.tk__chip:hover, .tk__chip--btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.05); }
-.tk__chip--type { font-weight: 700 !important; color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.08); border-color: transparent; }
-.tk__chip--btn { cursor: pointer; padding: 5px 8px; }
+a.tk__chip:hover, .tk__chip--btn:hover { border-color: #d8ccea; color: var(--color-primary); background: #faf8fc; }
+.tk__chip--type { font-weight: 650 !important; color: #5b3d91; background: #f3eefb; border-color: transparent; }
+.tk__chip--btn { cursor: pointer; padding: 5px 9px; border-radius: 10px; }
+.tk__mail {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%;
+  font-size: 12.5px !important; font-weight: 500 !important; color: #6f6880; text-decoration: none;
+}
+.tk__mail:hover { color: var(--color-primary); }
 
 .tk__notes {
   display: flex; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px;
@@ -535,11 +541,11 @@ a.tk__chip:hover, .tk__chip--btn:hover { border-color: var(--color-primary); col
 .tk__notes span { white-space: pre-wrap; word-break: break-word; }
 
 .tk__team {
-  display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 10px;
-  border: 1px dashed var(--border-color); color: var(--text-secondary-light);
-  transition: border-color 0.15s;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 12px;
+  border: 1px dashed #e4deee; background: #fcfbfe; color: #8d869c;
+  transition: border-color 0.15s, background 0.15s;
 }
-.tk__team:focus-within { border-style: solid; border-color: var(--color-primary); }
+.tk__team:focus-within { border-style: solid; border-color: var(--color-primary); background: #fff; }
 .tk__team input {
   flex: 1; min-width: 0; min-height: 34px; border: 0; outline: 0; background: transparent;
   font-size: 12.5px !important; color: var(--text-primary-light);
@@ -547,12 +553,13 @@ a.tk__chip:hover, .tk__chip--btn:hover { border-color: var(--color-primary); col
 .tk__team input::placeholder { color: var(--text-secondary-light); opacity: 0.8; }
 
 .tk__foot {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
-  padding-top: 10px; border-top: 1px solid var(--border-color);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px;
+  margin-top: 2px; padding-top: 10px; border-top: 1px solid #f0eef4;
 }
-.tk__handled { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px !important; color: var(--text-secondary-light); }
-.tk__handled--new { color: #2563eb; font-weight: 600 !important; }
-.tk__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tk__handled { display: inline-flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px !important; color: #8d869c; }
+.tk__handled--new { color: var(--color-primary); font-weight: 600 !important; }
+.tk__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.tk__actions :deep(.mk-btn--primary) { box-shadow: none; border-radius: 10px; }
 .tk__del:hover { color: #dc2626 !important; border-color: #dc2626 !important; }
 
 @media (max-width: 560px) {

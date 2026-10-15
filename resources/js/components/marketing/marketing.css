@@ -4,10 +4,10 @@
 .mk-field > label,
 .mk-label {
   font-size: 12px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary-light);
+  font-weight: 600 !important;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #8d869c;
 }
 .mk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 576px) { .mk-row { grid-template-columns: 1fr; } }
@@ -117,14 +117,12 @@ textarea.mk-input { resize: vertical; min-height: 80px; }
 .mk-chip:hover svg { transform: scale(1.12); }
 /* Selected: brand gradient fill (Instagram sunset, YouTube red…), text in --chip-ink */
 .mk-chip.is-on {
-  color: var(--chip-ink, #fff);
-  border-color: transparent;
-  background: var(--chip-grad, var(--chip));
-  box-shadow:
-    0 8px 18px -8px color-mix(in srgb, var(--chip) 85%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #5b3d91;
+  border-color: #e4d8f6;
+  background: #f3eefb;
+  box-shadow: none;
 }
-.mk-chip.is-on svg { color: var(--chip-ink, #fff); }
+.mk-chip.is-on svg { color: var(--color-primary); }
 
 /* Small pills used on cards & lists */
 .mk-pill {

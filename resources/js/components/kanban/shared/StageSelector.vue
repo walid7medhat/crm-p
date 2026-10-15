@@ -1,7 +1,25 @@
 <template>
     <div class="stage-selector-wrapper py-3 pt-0 pb-0" :class="{ 'stage-selector-disabled': disabled, 'stage-selector--panel': appearance === 'panel' }" :title="disabled ? 'Stage cannot be changed from here' : undefined">
+        <div v-if="appearance === 'panel'" class="stage-current-bar">
+            <div
+                class="stage-current"
+                :style="currentStage ? { backgroundColor: currentStage.color, borderColor: currentStage.color } : undefined"
+            >
+                <span class="stage-current__label">Current</span>
+                <span class="stage-text">{{ currentStage?.name || 'Stage' }}</span>
+            </div>
+            <button
+                v-if="!disabled"
+                type="button"
+                class="stage-change-btn"
+                @click="openStagePicker"
+            >
+                Change stage
+                <iconify-icon icon="lucide:chevron-right" aria-hidden="true" />
+            </button>
+        </div>
         <!-- Track = exact height of pills row so arrows align vertically in the middle -->
-        <div class="stage-selector-track">
+        <div v-else class="stage-selector-track">
             <div
                 ref="scrollContainerRef"
                 class="stage-container"
@@ -54,6 +72,38 @@
             </button>
         </div>
     </div>
+    <Teleport to="body">
+        <div v-if="pickerOpen" class="stage-picker-overlay" @click.self="closeStagePicker">
+            <div class="stage-picker" role="dialog" aria-modal="true" aria-label="Change stage">
+                <header class="stage-picker__top">
+                    <div>
+                        <p class="stage-picker__kicker">Lead stage</p>
+                        <h2 class="stage-picker__title">Change stage</h2>
+                    </div>
+                    <button type="button" class="stage-picker__close" aria-label="Close" @click="closeStagePicker">
+                        <iconify-icon icon="lucide:x" />
+                    </button>
+                </header>
+                <p class="stage-picker__hint">Choose the stage this lead should move to.</p>
+                <div class="stage-picker__list">
+                    <button
+                        v-for="(stage, index) in stages"
+                        :key="stage.id"
+                        type="button"
+                        class="stage-picker__option"
+                        :class="{ 'is-current': index === selectedStageIndex, 'is-blocked': isStageBlocked(stage) }"
+                        :disabled="isStageBlocked(stage)"
+                        @click="pickStage(index)"
+                    >
+                        <span class="stage-picker__swatch" :style="{ backgroundColor: stage.color }" />
+                        <span class="stage-picker__name">{{ stage.name }}</span>
+                        <span v-if="index === selectedStageIndex" class="stage-picker__badge">Current</span>
+                        <iconify-icon v-else icon="lucide:arrow-right" class="stage-picker__go" aria-hidden="true" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
 
 <script setup>
@@ -321,6 +371,35 @@ const selectedStageIndex = computed(() => {
     return index >= 0 ? index : -1
 })
 
+const currentStage = computed(() => {
+    if (selectedStageIndex.value < 0) return null
+    return stages.value[selectedStageIndex.value] || null
+})
+
+const pickerOpen = ref(false)
+
+const openStagePicker = () => {
+    if (props.disabled) return
+    pickerOpen.value = true
+}
+
+const closeStagePicker = () => {
+    pickerOpen.value = false
+}
+
+const pickStage = (index) => {
+    if (index === selectedStageIndex.value) {
+        closeStagePicker()
+        return
+    }
+    selectStage(index)
+    closeStagePicker()
+}
+
+const onPickerKeydown = (event) => {
+    if (event.key === 'Escape' && pickerOpen.value) closeStagePicker()
+}
+
 const selectStage = (index) => {
     if (props.disabled) return
     if (stages.value[index] && isStageBlocked(stages.value[index])) return
@@ -367,6 +446,7 @@ watch(() => stages.value.length, () => {
 
 onMounted(() => {
     console.log('StageSelector mounted')
+    window.addEventListener('keydown', onPickerKeydown)
     fetchStages()
     nextTick(() => {
         scrollSelectedIntoView()
@@ -378,6 +458,7 @@ onMounted(() => {
 onUnmounted(() => {
     stopEdgeScroll()
     window.removeEventListener('resize', updateScrollAffordance)
+    window.removeEventListener('keydown', onPickerKeydown)
 })
 </script>
 
@@ -553,8 +634,204 @@ onUnmounted(() => {
 }
 
 .stage-selector--panel {
-    padding: 4px 12px 6px !important;
-    background: linear-gradient(180deg, #ffffff 0%, #f7f3f8 100%);
+    padding: 0 !important;
+    background: transparent;
+}
+
+.stage-current-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.35);
+    border-radius: 16px;
+    background: #fff;
+}
+
+.stage-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 36px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.stage-current__label {
+    flex: 0 0 auto;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #3b3558;
+}
+
+.stage-current .stage-text {
+    width: auto;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 750;
+    color: #0b0736;
+}
+
+.stage-change-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-primary);
+    font-family: Montserrat, system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.stage-change-btn:hover {
+    background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+.stage-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(11, 7, 54, 0.45);
+    backdrop-filter: blur(8px);
+}
+
+.stage-picker {
+    width: min(420px, 100%);
+    max-height: min(78vh, 640px);
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(11, 7, 54, 0.28);
+    font-family: Montserrat, system-ui, sans-serif;
+}
+
+.stage-picker__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.stage-picker__kicker {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.stage-picker__title {
+    margin: 2px 0 0;
+    color: #0b0736;
+    font-size: 22px;
+    font-weight: 750;
+}
+
+.stage-picker__close {
+    margin-left: auto;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 999px;
+    background: #f4f1f7;
+    color: #3b3558;
+    cursor: pointer;
+}
+
+.stage-picker__hint {
+    margin: 4px 0 10px;
+    color: #6b6580;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.stage-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overflow: auto;
+}
+
+.stage-picker__option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 1px solid #efe8f4;
+    border-radius: 14px;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.stage-picker__option:hover {
+    border-color: rgba(var(--color-primary-rgb), 0.45);
+    background: #fbf8fc;
+}
+
+.stage-picker__option.is-current {
+    border-color: var(--color-primary);
+    background: #faf5ff;
+}
+
+.stage-picker__option.is-blocked {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.stage-picker__swatch {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+}
+
+.stage-picker__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1c1424;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.stage-picker__badge {
+    margin-left: auto;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--gradient-primary);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.stage-picker__go {
+    margin-left: auto;
+    color: #b7a8c4;
 }
 
 .stage-selector--panel .stage-container {

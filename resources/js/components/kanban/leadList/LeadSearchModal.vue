@@ -9228,10 +9228,13 @@ onBeforeUnmount(() => {
         white-space: normal !important;
     }
 
+    html.lead-search-desk-lock .vs__dropdown-menu li.vs__dropdown-option.vs__dropdown-option--highlight,
+    html.lead-search-desk-lock .vs__dropdown-menu li.vs__dropdown-option.vs__dropdown-option--selected,
     html.lead-search-desk-lock .vs__dropdown-option--highlight,
     html.lead-search-desk-lock .vs__dropdown-option--selected {
         background: #f6eef9 !important;
         color: #2a2230 !important;
+        -webkit-text-fill-color: #2a2230;
     }
 
     html.lead-search-desk-lock .vs__dropdown-option--selected {
@@ -9263,6 +9266,7 @@ onBeforeUnmount(() => {
         background: #fff !important;
         border-color: #e4d3ee !important;
         color: var(--color-primary) !important;
+        -webkit-text-fill-color: var(--color-primary) !important;
     }
 
     html.lead-search-desk-lock .vs__dropdown-option--highlight .meta-divider,

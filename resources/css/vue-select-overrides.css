@@ -35,6 +35,7 @@
 .vs__dropdown-menu .vs__dropdown-option--highlight .text-secondary,
 .vs__dropdown-menu .vs__dropdown-option--highlight .text-primary {
   color: inherit !important;
+  -webkit-text-fill-color: currentColor;
 }
 
 .vs__dropdown-menu .vs__dropdown-option--highlight .text-muted,
@@ -286,5 +287,21 @@ body.complete-stage-open .complete-fields-modal {
   box-shadow: none !important;
   outline: none !important;
   border-color: #cbd5e1 !important;
+}
+
+/* Compact dropdown carets on every vue-select in the app. */
+.v-select .vs__open-indicator svg,
+.vs__open-indicator svg {
+  width: 8px !important;
+  height: 6px !important;
+}
+
+.v-select .vs__open-indicator-icon,
+.vs__actions .vs__open-indicator-icon,
+iconify-icon.vs__open-indicator-icon {
+  font-size: 11px !important;
+  width: 11px !important;
+  height: 11px !important;
+  line-height: 1 !important;
 }
 
