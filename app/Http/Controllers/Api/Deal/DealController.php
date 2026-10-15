@@ -30,7 +30,7 @@ use App\Http\Resources\Deal\PropertyDocumentResource;
 use App\Models\DealProperty;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
-
+use Carbon\Carbon;
 class DealController extends Controller
 {
     /**
@@ -2433,4 +2433,102 @@ private function extractPropertyFiles(Request $request, string $key, int $index)
             ]);
         }
     }
+
+
+    /**
+ * Change a deal's type (primary / secondary / rental). Admin & super_admin only.
+ * Stages are per deal type, so the deal is moved to the equivalent stage of the new type.
+ */
+public function changeDealType(Request $request, Deal $deal): JsonResponse
+{
+    $user = auth()->user();
+
+    if (!$user->hasRole(['super_admin', 'admin'])) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Only admins can change the deal type',
+        ], 403);
+    }
+
+    if (!$this->authorizeAccess($deal)) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
+
+    $validated = $request->validate([
+        'deal_type' => 'required|in:primary,secondary,rental',
+    ]);
+
+    $oldType = $deal->deal_type;
+    $newType = $validated['deal_type'];
+
+    if ($oldType === $newType) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Deal type is unchanged',
+            'data' => new DealResource($deal->load(['lead', 'stage', 'parties.documents', 'documents', 'responsiblePerson', 'properties'])),
+        ]);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $oldStageId = $deal->stage_id;
+        $newStage = $this->resolveStageForDealType($newType);
+
+        if (!$newStage) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => "No stages are configured for deal type '{$newType}'",
+            ], 422);
+        }
+
+        $deal->deal_type = $newType;
+        $deal->stage_id = $newStage->id;
+        $deal->save();
+
+        // Keep the linked lead in sync if the deal landed on the Lost stage.
+        $this->syncLeadStageOnDealLost($deal, (int) $newStage->id);
+
+        DealHistoryHelper::log($deal->id, [
+            'action' => 'updated',
+            'changes' => [
+                'deal_type' => ['old' => $oldType, 'new' => $newType],
+                'stage' => ['old' => $oldStageId, 'new' => $newStage->id],
+            ],
+            'user_id' => $user->id,
+        ]);
+
+        DB::commit();
+
+        $deal->load(['lead', 'stage', 'parties.documents', 'documents', 'responsiblePerson', 'properties']);
+        $this->broadcastDealUpdate($deal, 'updated');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deal type changed successfully',
+            'data' => new DealResource($deal),
+        ]);
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        Log::error('Error in changeDealType', ['deal_id' => $deal->id, 'error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to change deal type',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+/**
+ * Always land on the first stage (lowest order) of the target deal type.
+ */
+private function resolveStageForDealType(string $newType): ?Stage
+{
+    return Stage::where('stage_type', 'deal')
+        ->where('deal_type', $newType)
+        ->orderBy('order')
+        ->orderBy('id')
+        ->first();
+}
 }

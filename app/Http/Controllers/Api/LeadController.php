@@ -1244,6 +1244,7 @@ class LeadController extends Controller
         }
 
         $responsiblePersons = $listQuery
+            ->where('status','active')
             ->with($responsiblePersonRelations)
             ->orderBy('users.name')
             ->limit($limit)

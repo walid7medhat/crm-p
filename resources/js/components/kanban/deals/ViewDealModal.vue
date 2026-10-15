@@ -62,10 +62,39 @@
             </div>
           </div>
           <div class="lead-header-actions">
-            <button class="close-btn" type="button" aria-label="Close" @click="close">
-              <iconify-icon icon="lucide:x"></iconify-icon>
-            </button>
-          </div>
+              <!-- Admin / super admin: editable -->
+              <BDropdown
+                v-if="canEditDealType"
+                right
+                no-caret
+                :disabled="dealTypeSaving || isEditingDeal"
+                toggle-class="deal-type-dropdown-toggle"
+                menu-class="deal-type-dropdown-menu"
+              >
+                <template #button-content>
+                  <span class="deal-type-dropdown-label">
+                    {{ dealTypeSaving ? 'Saving...' : selectedDealTypeName }}
+                  </span>
+                  <iconify-icon icon="lucide:chevron-down" class="deal-type-dropdown-chevron" />
+                </template>
+                <BDropdownItem
+                  v-for="tab in dealTypeTabs"
+                  :key="tab.id"
+                  :active="dealType === tab.id"
+                  link-class="deal-type-dropdown-item"
+                  @click="changeDealType(tab.id)"
+                >
+                  {{ tab.name }}
+                </BDropdownItem>
+              </BDropdown>
+
+              <!-- Everyone else: read-only tag -->
+              <!-- <span v-else class="deal-type-tag-pill">{{ selectedDealTypeName }}</span> -->
+
+              <button class="close-btn" type="button" aria-label="Close" @click="close">
+                <iconify-icon icon="lucide:x"></iconify-icon>
+              </button>
+            </div>
         </div>
       </div>
 
@@ -306,6 +335,7 @@
 
 <script setup>
 import { ref, watch, computed, nextTick } from 'vue'
+import Swal from 'sweetalert2'
 import { BModal, BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 import ViewPrimaryDeal from './ViewPrimaryDeal.vue'
 import ViewSecondaryDeal from './ViewSecondaryDeal.vue'
@@ -330,7 +360,7 @@ const props = defineProps({
   autoEditSection: { type: String, default: null } 
 })
 
-const emit = defineEmits(['update:modelValue', 'deal-updated', 'stage-change-request'])
+const emit = defineEmits(['update:modelValue', 'deal-updated', 'stage-change-request', 'deal-type-changed'])
 
 const show = ref(props.modelValue)
 const dealType = ref('primary')
@@ -371,6 +401,25 @@ const dealTitle = computed(() => {
   return deal.value.id ? `Deal #${deal.value.id}` : 'View Deal'
 })
 
+
+const currentUser = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null')
+  } catch {
+    return null
+  }
+})()
+
+const canEditDealType = computed(() => {
+  const roles = (currentUser?.roles || []).map((r) =>
+    String(typeof r === 'string' ? r : r?.name).toLowerCase()
+  )
+  return roles.includes('super_admin') || roles.includes('admin')
+})
+const dealTypeSaving = ref(false)
+
+
+
 const dealEntityId = computed(() => deal.value?.id ?? null)
 
 /** Present when deal was converted from a lead (API `lead_id` or nested `lead.id`). */
@@ -384,7 +433,7 @@ const linkedLeadId = computed(() => {
 
 const selectedDealTypeName = computed(() => {
   const tab = dealTypeTabs.find(t => t.id === dealType.value)
-  return tab ? tab.name : 'Primary / Off Plan'
+  return tab ? tab.name : 'Primary'
 })
 
 const activityListRef = ref(null)
@@ -415,6 +464,57 @@ async function handlePersonUpdated(updatedPerson) {
   await hydrateDealForView()
   emit('deal-updated', deal.value)
 }
+
+
+async function changeDealType(newType) {
+  if (!canEditDealType.value || !deal.value?.id || newType === dealType.value) return
+
+  const label = dealTypeTabs.find(t => t.id === newType)?.name
+
+ const fromLabel = dealTypeTabs.find(t => t.id === dealType.value)?.name
+  const toLabel = dealTypeTabs.find(t => t.id === newType)?.name
+
+  const result = await Swal.fire({
+    title: 'Change deal type?',
+    iconHtml: `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
+    html: `
+     
+      <p class="deal-swal-note">The deal will be moved to the first stage of the new type.</p>
+    `,
+    showCancelButton: true,
+    showCloseButton: false,
+    confirmButtonText: 'Yes, change it',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    heightAuto: false,
+    customClass: {
+      popup: 'deal-swal-popup',
+      icon: 'deal-swal-icon',
+      title: 'deal-swal-title',
+      htmlContainer: 'deal-swal-html',
+      actions: 'deal-swal-actions',
+      confirmButton: 'deal-swal-confirm',
+      cancelButton: 'deal-swal-cancel',
+    },
+  })
+  if (!result.isConfirmed) return
+
+  dealTypeSaving.value = true
+  try {
+    await axios.put(`/deals/${deal.value.id}/deal-type`, { deal_type: newType })
+    await hydrateDealForView()
+    emit('deal-updated', deal.value)
+    emit('deal-type-changed', deal.value)
+    window.$showNotification?.('Deal type updated', 'success')
+  } catch (e) {
+    console.error('Failed to change deal type', e)
+    window.$showNotification?.(e?.response?.data?.message || 'Failed to change deal type', 'error')
+  } finally {
+    dealTypeSaving.value = false
+  }
+}
+
+
 async function handleRefreshDeal() {
   await hydrateDealForView()
 }
@@ -1311,7 +1411,7 @@ function close() {
   align-items: stretch;
   position: relative;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   background:
     radial-gradient(120% 140% at 0% 0%, rgba(196, 132, 232, 0.28) 0%, rgba(255, 255, 255, 0) 46%),
     linear-gradient(180deg, #fbf7fd 0%, #ffffff 100%);
@@ -2427,6 +2527,153 @@ function close() {
     align-items: flex-start;
   }
 }
+:deep(.deal-type-dropdown-toggle) {
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #eadff0;
+  background: #fff;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+:deep(.deal-type-dropdown-toggle:hover),
+:deep(.deal-type-dropdown-toggle.show),
+:deep(.deal-type-dropdown-toggle:focus) {
+  background: #fff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
+}
+
+.deal-type-dropdown-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.deal-type-dropdown-chevron {
+  font-size: 12px;
+  color: var(--color-primary);
+}
+
+:deep(.deal-type-dropdown-menu) {
+  border: 1px solid #efe4f3;
+  border-radius: 12px;
+  padding: 4px;
+  min-width: 190px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(var(--color-primary-rgb), 0.16);
+  z-index: 2000 !important;
+}
+
+:deep(.deal-type-dropdown-menu .dropdown-item) {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5c5366;
+  border-radius: 8px;
+  padding: 7px 12px;
+}
+
+:deep(.deal-type-dropdown-menu .dropdown-item:hover),
+:deep(.deal-type-dropdown-menu .dropdown-item:focus) {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+}
+
+:deep(.deal-type-dropdown-menu .dropdown-item.active),
+:deep(.deal-type-dropdown-menu .dropdown-item:active) {
+  background: var(--gradient-primary);
+  color: #fff;
+}
+.swal2-container {
+  z-index: 3000 !important;
+}
+
+.swal2-popup.deal-swal-popup {
+  width: min(400px, 92vw) !important;
+  padding: 28px 24px 22px !important;
+  border-radius: 20px !important;
+  font-family: 'Montserrat', sans-serif !important;
+  box-shadow: 0 24px 60px rgba(49, 16, 70, 0.28) !important;
+}
+
+/* Icon */
+.deal-swal-popup .swal2-icon.deal-swal-icon {
+  width: 64px !important;
+  height: 64px !important;
+  margin: 0 auto 14px !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: var(--gradient-primary) !important;
+  color: #fff !important;
+  font-size: 28px !important;
+  box-shadow: 0 8px 18px rgba(var(--color-primary-rgb), 0.3);
+}
+
+.deal-swal-popup .swal2-icon .swal2-icon-content {
+  font-size: 28px !important;
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Title & body */
+.deal-swal-popup .swal2-title.deal-swal-title {
+  padding: 0 !important;
+  margin: 0 0 12px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #1c1424 !important;
+}
+
+.deal-swal-popup .swal2-html-container.deal-swal-html {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #5c5366 !important;
+}
+
+.deal-swal-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.deal-swal-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #eadff0;
+  background: #faf6fb;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5c5366;
+}
+
+.deal-swal-chip--to {
+  border-color: transparent;
+  background: var(--gradient-primary);
+  color: #fff;
+}
+
+.deal-swal-arrow {
+  font-size: 16px;
+  color: var(--color-primary);
+}
+
+.deal-swal-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8a8095;
+}
+
 
 </style>
 

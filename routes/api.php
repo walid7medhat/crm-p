@@ -544,6 +544,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/bitrix24/sync-responsible/progress', [Bitrix24SyncController::class, 'responsibleProgress']);
     // === Deals API ===
     Route::prefix('deals')->group(function () {
+        Route::put('/{deal}/deal-type', [DealController::class, 'changeDealType']);
         Route::get('/', [DealController::class, 'index']);
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
         Route::get('/get-more/by-stage', [DealController::class, 'getDealsByStage']);
