@@ -45,6 +45,7 @@ import '../css/popup-close.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
 import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
+import { prefetchLeadPool } from './composables/leadPoolPrefetch.js'
 import { initLeadViewModal, leadIdFromNotification, openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { dealIdFromNotification, openDealFromNotification } from '@/composables/useDealViewModal.js'
 import { marketingFromNotification, openMarketingFromNotification, photoBookingFromNotification } from '@/composables/useMarketingNotification.js'
@@ -73,6 +74,8 @@ if (window.location.pathname === '/kanban' && initialToken) {
   const hasBoardQuery = [...params.keys()].some((key) => key !== 'lead' && params.get(key))
   import('./pages/kanban.vue')
   import('./components/kanban/leadList/leads.vue')
+  import('./components/kanban/leadList/LeadPool.vue')
+  prefetchLeadPool()
   if (!hasBoardQuery) {
     holdBackgroundApis(700)
     prefetchLeadBoard().finally(() => releaseBackgroundApis())

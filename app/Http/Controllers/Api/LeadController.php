@@ -66,7 +66,50 @@ class LeadController extends Controller
 
                 // Lead Pool cards only need light relations — avoid heavy graph loads.
                 // Grouped list path needs relations LeadResource reads (propertyType/area/createdHistory).
-                $leadsQuery = Lead::with($isPaginatedPool
+                $leadsQuery = Lead::query();
+                if ($isPaginatedPool) {
+                    // Skip raw_meta_data / bitrix blobs. Reading those for a page of pool
+                    // cards pulls megabytes and is what made the tab sit on the spinner.
+                    $leadsQuery->select([
+                        'id',
+                        'added_by',
+                        'responsible_person_id',
+                        'lead_name',
+                        'lead_number',
+                        'stage_id',
+                        'salutation',
+                        'first_name',
+                        'second_name',
+                        'last_name',
+                        'whatsapp_number',
+                        'work_phone',
+                        'work_phone_2',
+                        'email',
+                        'lead_source',
+                        'lead_branch_source',
+                        'source_information',
+                        'status_lead',
+                        'interaction_result',
+                        'bedrooms',
+                        'purpose_buying',
+                        'extra_client_requirements',
+                        'budget',
+                        'budget_from',
+                        'budget_to',
+                        'property_status',
+                        'lead_type',
+                        'property_type_id',
+                        'area_id',
+                        'created_at',
+                        'updated_at',
+                        'revert',
+                        'score',
+                        'priority',
+                        'intent',
+                        'next_action',
+                    ]);
+                }
+                $leadsQuery->with($isPaginatedPool
                     ? [
                         'addedBy:id,name,display_name,avatar,email,parent_id,status',
                         'responsiblePerson:id,name,display_name,avatar,email,parent_id,status',
@@ -342,8 +385,11 @@ class LeadController extends Controller
                             $serviceDupFlags,
                             []
                         );
+                        // Pool cards do not show the activity avatar. Priming an empty map
+                        // stops the resource from running the comments/activities window query
+                        // once per card.
                         KanbanLeadCardResource::setEngagementUsersByLeadId(
-                            KanbanLeadCardResource::engagementUsersForLeads($items)
+                            array_fill_keys($items->pluck('id')->map(fn ($id) => (int) $id)->all(), null)
                         );
 
                         $payload = KanbanLeadCardResource::collection($items)->resolve();

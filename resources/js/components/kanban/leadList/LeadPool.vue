@@ -325,6 +325,12 @@ import LeadPoolCard from './LeadPoolCard.vue'
 import LeadSourceMark from './LeadSourceMark.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
 import { useLeadPoolBulkActions } from './composables/useLeadPoolBulkActions.js'
+import {
+    isDefaultLeadPoolParams,
+    prefetchLeadPool,
+    readLeadPoolCache,
+    rememberLeadPoolResponse,
+} from '@/composables/leadPoolPrefetch.js'
 
 const route = useRoute()
 
@@ -335,6 +341,44 @@ const emit = defineEmits(['lead-clicked'])
 const leads = ref([])
 const loading = ref(true)
 const searching = ref(false)
+
+const currentPage = ref(1)
+const perPage = ref(24)
+const lastPage = ref(1)
+const total = ref(0)
+
+function applyPoolBody(body) {
+    const data = body?.data || []
+    if (Array.isArray(data) && body?.pagination) {
+        leads.value = data
+        lastPage.value = Number(body.pagination.last_page) || 1
+        total.value = Number(body.pagination.total) || data.length
+        perPage.value = Number(body.pagination.per_page) || perPage.value
+        currentPage.value = Number(body.pagination.current_page) || currentPage.value
+        return
+    }
+    if (data && data.length > 0 && data[0]?.leads) {
+        leads.value = data[0].leads
+        lastPage.value = 1
+        total.value = leads.value.length
+        return
+    }
+    if (Array.isArray(data)) {
+        leads.value = data
+        lastPage.value = 1
+        total.value = data.length
+        return
+    }
+    leads.value = []
+    lastPage.value = 1
+    total.value = 0
+}
+
+const cachedPool = readLeadPoolCache()
+if (cachedPool?.data?.length) {
+    applyPoolBody(cachedPool)
+    loading.value = false
+}
 
 const hasActivePoolSearch = computed(() => {
     const q = currentQuery.value
@@ -441,7 +485,7 @@ async function handleBulkAssignToMe() {
         'success',
       )
       exitSelectMode()
-      await fetchLeadPool()
+      await fetchLeadPool({ force: true })
       await fetchAssignmentStatus()
 
     }
@@ -474,7 +518,7 @@ async function handleBulkAssignToMe() {
         )
 
         if (ok.length) {
-            await fetchLeadPool()
+            await fetchLeadPool({ force: true })
         }
 
         await fetchAssignmentStatus()
@@ -499,12 +543,6 @@ function onLeadPoolKeydown(event) {
     selection.selectAllOnPage()
   }
 }
-
-// Pagination
-const currentPage = ref(1)
-const perPage = ref(24)
-const lastPage = ref(1)
-const total = ref(0)
 
 // Filters applied from the navbar search modal — merged into every fetch.
 const currentQuery = ref({})
@@ -577,43 +615,37 @@ const fetchLeadPool = async ({ force = false } = {}) => {
     const generation = ++fetchGeneration
     const controller = new AbortController()
     fetchAbortController = controller
+    const useSharedFirstPage = isDefaultLeadPoolParams(params)
+    if (useSharedFirstPage && leads.value.length === 0) {
+        const cached = readLeadPoolCache()
+        if (cached?.data?.length) {
+            applyPoolBody(cached)
+            loading.value = false
+        }
+    }
     const isFirstLoad = leads.value.length === 0
     if (isFirstLoad) {
         loading.value = true
-    } else {
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+    } else if (!useSharedFirstPage) {
         searching.value = true
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     }
-    window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
 
     const run = (async () => {
         try {
-            const response = await api.get('/leads', {
-                params,
-                signal: controller.signal,
-            })
+            const response = isDefaultLeadPoolParams(params)
+                ? await prefetchLeadPool({ force })
+                : await api.get('/leads', {
+                    params,
+                    signal: controller.signal,
+                })
             if (generation !== fetchGeneration) return
 
             const body = response.data || {}
-            const data = body.data || []
-
-            if (Array.isArray(data) && body.pagination) {
-                leads.value = data
-                lastPage.value = Number(body.pagination.last_page) || 1
-                total.value = Number(body.pagination.total) || data.length
-                perPage.value = Number(body.pagination.per_page) || perPage.value
-                currentPage.value = Number(body.pagination.current_page) || currentPage.value
-            } else if (data && data.length > 0 && data[0]?.leads) {
-                leads.value = data[0].leads
-                lastPage.value = 1
-                total.value = leads.value.length
-            } else if (Array.isArray(data)) {
-                leads.value = data
-                lastPage.value = 1
-                total.value = data.length
-            } else {
-                leads.value = []
-                lastPage.value = 1
-                total.value = 0
+            applyPoolBody(body)
+            if (isDefaultLeadPoolParams(params)) {
+                rememberLeadPoolResponse(body)
             }
         } catch (error) {
             if (generation !== fetchGeneration) return
@@ -870,7 +902,7 @@ async function fetchAssignmentStatus() {
 // a change — replaces the old @lead-updated listener from this component's own removed
 // local <ViewLeadModal> instance.
 const unsubscribeLeadViewUpdated = onLeadViewUpdated(() => {
-    fetchLeadPool()
+    fetchLeadPool({ force: true })
 })
 
 onMounted(async () => {
