@@ -59,7 +59,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 .mk-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2050;
+  z-index: 20500;
   display: flex;
   align-items: center;
   justify-content: center;
