@@ -98,7 +98,18 @@ class UserController extends Controller
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('display_name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
+                      ->orWhere('phone', 'like', "%{$search}%") 
+                      ->orWhereHas('employeeProfile', function ($sub) use ($search) {
+                          $sub->where('employee_code', 'like', "%{$search}%")
+                               ->orWhere('emirates_id_number', 'like', "%{$search}%")
+                               ->orWhere('employee_name', 'like', "%{$search}%")
+                               ->orWhereHas('department', function ($dept) use ($search) {
+                                   $dept->where('name', 'like', "%{$search}%");
+                               })
+                               ->orWhereHas('designation', function ($des) use ($search) {
+                                   $des->where('name', 'like', "%{$search}%");
+                               });
+                      });
                 });
             }
             
