@@ -149,7 +149,11 @@ function attachAuthInterceptor(client) {
 
   client.interceptors.request.use(async (config) => {
     const url = String(config?.url || '')
-    if (!url.includes('stages-with-leads')) {
+    const params = config?.params || {}
+    const isLeadPoolPage = String(params.paginate) === '1' && String(params.stage_id) === '10'
+    // The pool list must not wait behind the kanban board request, or the cards
+    // stay blank until that board call finishes (often only after a refresh).
+    if (!url.includes('stages-with-leads') && !isLeadPoolPage) {
       await waitForLeadBoardPriority()
     }
     const token = resolveAuthToken()

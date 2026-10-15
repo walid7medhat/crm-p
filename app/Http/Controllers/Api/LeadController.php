@@ -331,12 +331,16 @@ class LeadController extends Controller
                         $paginator = $leadsQuery->simplePaginate($perPage);
                         $items = collect($paginator->items());
 
-                        $duplicateCounts = $this->leadPoolDuplicateCountsByWorkPhone($items);
+                        // Count only. Loading every duplicate id for the page (often tens of
+                        // thousands of rows) held the response until a refresh felt faster.
+                        KanbanLeadCardResource::setDuplicateNoByLeadId(
+                            $this->leadPoolDuplicateNosByLeadId($items)
+                        );
                         $serviceDupFlags = $this->leadPoolServiceDuplicateFlags($items);
                         KanbanLeadCardResource::setKanbanMeta(
-                            $duplicateCounts,
+                            [],
                             $serviceDupFlags,
-                            KanbanLeadCardResource::duplicateIdsByLeadId($items)
+                            []
                         );
                         KanbanLeadCardResource::setEngagementUsersByLeadId(
                             KanbanLeadCardResource::engagementUsersForLeads($items)
@@ -2442,23 +2446,43 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
      * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
      * @return array<string, int>
      */
-    private function leadPoolDuplicateCountsByWorkPhone($leads): array
+    /**
+     * Duplicate badge counts for one Lead Pool page.
+     * One grouped COUNT on work_phone_digits — same match rule as the duplicates modal,
+     * without loading every matching lead id into the card payload.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Lead>  $leads
+     * @return array<int, int>
+     */
+    private function leadPoolDuplicateNosByLeadId($leads): array
     {
-        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
-        if ($phones === []) {
-            return [];
-        }
-
-        $rows = Lead::query()
-            ->select('work_phone', \DB::raw('COUNT(*) as cnt'))
-            ->whereIn('work_phone', $phones)
-            ->whereNotNull('work_phone')
-            ->groupBy('work_phone')
-            ->get();
+        $digitsList = $leads->map(fn ($lead) => Lead::phoneDigits($lead->work_phone))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $counts = [];
-        foreach ($rows as $row) {
-            $counts[$row->work_phone] = max(0, (int) $row->cnt - 1);
+        foreach ($leads as $lead) {
+            $counts[(int) $lead->id] = 0;
+        }
+
+        if ($digitsList === []) {
+            return $counts;
+        }
+
+        $totals = Lead::query()
+            ->select('work_phone_digits', \DB::raw('COUNT(*) as cnt'))
+            ->whereIn('work_phone_digits', $digitsList)
+            ->groupBy('work_phone_digits')
+            ->pluck('cnt', 'work_phone_digits');
+
+        foreach ($leads as $lead) {
+            $digits = Lead::phoneDigits($lead->work_phone);
+            if ($digits === '') {
+                continue;
+            }
+            $counts[(int) $lead->id] = max(0, (int) ($totals[$digits] ?? 0) - 1);
         }
 
         return $counts;

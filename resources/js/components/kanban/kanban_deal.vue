@@ -83,7 +83,13 @@ import { rememberCrmSection, CRM_SECTIONS, DEAL_TYPE_KEY } from '@/composables/u
 // does not download/parse both boards (~800KB shared bundle before).
 const Deals = defineAsyncComponent(() => import('./deals/Deals.vue'))
 const Leads = defineAsyncComponent(() => import('./leadList/leads.vue'))
-const LeadPool = defineAsyncComponent(() => import('./leadList/LeadPool.vue'))
+const LeadPool = defineAsyncComponent({
+    loader: () => import('./leadList/LeadPool.vue'),
+    delay: 0,
+    loadingComponent: {
+        template: '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-3 mb-0" style="color:#1e1b2e;font-weight:600">Loading Lead Pool…</p></div>',
+    },
+})
 const CreateLeadModal = defineAsyncComponent(() => import('./createLead/CreateLeadModal.vue'))
 const CreateDealModal = defineAsyncComponent(() => import('./deals/CreateDealModal.vue'))
 const ViewDealModal = defineAsyncComponent(() => import('./deals/ViewDealModal.vue'))

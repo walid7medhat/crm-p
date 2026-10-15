@@ -1,9 +1,10 @@
 <template>
     <div class="lead-pool-wrapper" :class="{ 'lead-pool-wrapper--searching': searching }">
-        <div v-if="loading && leads.length === 0" class="text-center py-5">
+        <div v-if="loading && leads.length === 0" class="lead-pool-loading">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
+            <p class="lead-pool-loading__text">Loading Lead Pool…</p>
         </div>
 
         <div v-else-if="!loading && leads.length === 0" class="lead-pool-empty-state">
@@ -528,26 +529,6 @@ const buildFetchParams = () => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const requestLeadPool = async (params, attempt = 0) => {
-    try {
-        return await api.get('/leads', {
-            params,
-            signal: fetchAbortController?.signal,
-        })
-    } catch (error) {
-        const status = error?.response?.status
-        if (status === 429 && attempt < 2) {
-            const retryAfter = Number(error?.response?.headers?.['retry-after'])
-            const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
-                ? retryAfter * 1000
-                : 1500 * (attempt + 1)
-            await sleep(delayMs)
-            return requestLeadPool(params, attempt + 1)
-        }
-        throw error
-    }
-}
-
 // Numeric pager with ellipsis: always show first/last + a window around current.
 const visiblePages = computed(() => {
     const last = lastPage.value
@@ -581,12 +562,21 @@ const fetchLeadPool = async ({ force = false } = {}) => {
     const params = buildFetchParams()
     const signature = JSON.stringify(params)
 
+    // Same page + filters already in flight: keep that request.
+    // A second call (tab switch + search reset) used to abort it, so the cards
+    // never arrived until a full refresh started a single request.
     if (!force && fetchInFlight && lastFetchSignature === signature) {
         return fetchInFlight
     }
 
+    if (fetchAbortController) {
+        fetchAbortController.abort()
+    }
+
     lastFetchSignature = signature
     const generation = ++fetchGeneration
+    const controller = new AbortController()
+    fetchAbortController = controller
     const isFirstLoad = leads.value.length === 0
     if (isFirstLoad) {
         loading.value = true
@@ -595,13 +585,12 @@ const fetchLeadPool = async ({ force = false } = {}) => {
     }
     window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
 
-    const run = async () => {
+    const run = (async () => {
         try {
-            if (fetchAbortController) {
-                fetchAbortController.abort()
-            }
-            fetchAbortController = new AbortController()
-            const response = await requestLeadPool(params)
+            const response = await api.get('/leads', {
+                params,
+                signal: controller.signal,
+            })
             if (generation !== fetchGeneration) return
 
             const body = response.data || {}
@@ -628,11 +617,20 @@ const fetchLeadPool = async ({ force = false } = {}) => {
             }
         } catch (error) {
             if (generation !== fetchGeneration) return
-            if (error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
-                return
+            const canceled = error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED'
+            if (canceled) return
+            const status = error?.response?.status
+            if (status === 429 && !force) {
+                const retryAfter = Number(error?.response?.headers?.['retry-after'])
+                const delayMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1200
+                await sleep(delayMs)
+                if (generation !== fetchGeneration) return
+                lastFetchSignature = ''
+                fetchInFlight = null
+                return fetchLeadPool({ force: true })
             }
             console.error('Error fetching lead pool:', error)
-            const isRateLimited = error?.response?.status === 429
+            const isRateLimited = status === 429
             Swal.fire({
                 icon: isRateLimited ? 'warning' : 'error',
                 title: isRateLimited ? 'Too many requests' : 'Error',
@@ -642,34 +640,27 @@ const fetchLeadPool = async ({ force = false } = {}) => {
                 timer: 4000,
                 showConfirmButton: false,
             })
-            leads.value = []
-            lastPage.value = 1
-            total.value = 0
+            if (leads.value.length === 0) {
+                leads.value = []
+                lastPage.value = 1
+                total.value = 0
+            }
         } finally {
             if (generation !== fetchGeneration) return
             loading.value = false
             searching.value = false
-            fetchAbortController = null
+            if (fetchAbortController === controller) {
+                fetchAbortController = null
+            }
             window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
             if (fetchInFlight === run) {
                 fetchInFlight = null
             }
         }
-    }
+    })()
 
-    fetchInFlight = run()
+    fetchInFlight = run
     return fetchInFlight
-}
-
-const scheduleFetchLeadPool = (options = {}) => {
-    if (fetchDebounceTimer) {
-        clearTimeout(fetchDebounceTimer)
-    }
-    // Keep debounce tiny — long delay makes the "searching" state feel stuck.
-    fetchDebounceTimer = setTimeout(() => {
-        fetchDebounceTimer = null
-        fetchLeadPool(options)
-    }, 80)
 }
 
 const goToPage = (page) => {
@@ -884,8 +875,8 @@ const unsubscribeLeadViewUpdated = onLeadViewUpdated(() => {
 
 onMounted(async () => {
     window.addEventListener('keydown', onLeadPoolKeydown)
-    scheduleFetchLeadPool()
-        await fetchAssignmentStatus()
+    fetchLeadPool()
+    await fetchAssignmentStatus()
 
     // Restore the lead modal on a hard refresh while ?lead= is in the URL — same
     // explicit check leads.vue already does for the regular Kanban board, done here
@@ -918,23 +909,38 @@ defineExpose({
     setQuery(query) {
         currentQuery.value = query && typeof query === 'object' ? { ...query } : {}
         currentPage.value = 1
-        lastFetchSignature = ''
-        // Fetch immediately — don't wait on debounce while a spinner is showing.
         if (fetchDebounceTimer) {
             clearTimeout(fetchDebounceTimer)
             fetchDebounceTimer = null
         }
-        fetchLeadPool({ force: true })
+        // Same filters already loading: do not abort that request.
+        fetchLeadPool()
     },
 })
 </script>
 
 <style scoped>
+.lead-pool-loading {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.lead-pool-loading__text {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e1b2e;
+}
+
 .lead-pool-wrapper {
     padding: 16px 20px 28px;
     position: relative;
     height: auto;
-    min-height: 0;
+    min-height: 280px;
     max-height: calc(100dvh - 150px);
     overflow-x: hidden;
     overflow-y: auto;
@@ -954,9 +960,11 @@ defineExpose({
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.88);
+    color: #1e1b2e;
     text-align: center;
-    text-shadow: 0 2px 12px rgba(15, 23, 42, 0.35);
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 12px;
+    padding: 12px 18px;
 }
 
 .lead-pool-wrapper--searching .leads-grid {

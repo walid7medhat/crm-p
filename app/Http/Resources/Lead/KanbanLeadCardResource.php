@@ -27,6 +27,14 @@ class KanbanLeadCardResource extends JsonResource
     /** @var array<int, array<int>> */
     protected static array $duplicateIdsByLeadId = [];
 
+    /**
+     * Lead id => duplicate count, when the caller already counted in one grouped query
+     * and did not load every duplicate id (Lead Pool page).
+     *
+     * @var array<int, int>|null
+     */
+    protected static ?array $duplicateNoByLeadId = null;
+
     /** @var bool */
     protected static bool $collectionPrimed = false;
 
@@ -52,6 +60,14 @@ class KanbanLeadCardResource extends JsonResource
         static::$serviceDuplicateByLeadId = $serviceDuplicateByLeadId;
         static::$duplicateIdsByLeadId = $duplicateIdsByLeadId;
         static::$collectionPrimed = true;
+    }
+
+    /**
+     * @param  array<int, int>  $map
+     */
+    public static function setDuplicateNoByLeadId(array $map): void
+    {
+        static::$duplicateNoByLeadId = $map;
     }
 
     /**
@@ -98,6 +114,7 @@ class KanbanLeadCardResource extends JsonResource
         static::$duplicateCountsByPhone = [];
         static::$serviceDuplicateByLeadId = [];
         static::$duplicateIdsByLeadId = [];
+        static::$duplicateNoByLeadId = null;
         static::$collectionPrimed = false;
     }
 
@@ -209,8 +226,10 @@ class KanbanLeadCardResource extends JsonResource
 
     public function toArray($request): array
     {
-        $phone = $this->work_phone;
         $duplicateIds = $this->resolveDuplicateIds();
+        $duplicateNo = is_array(static::$duplicateNoByLeadId)
+            ? (int) (static::$duplicateNoByLeadId[(int) $this->id] ?? 0)
+            : count($duplicateIds);
 
         $lastActivityAt = $this->bitrix24_last_activity_at ?? $this->updated_at;
         $lastActivityUser = $this->cardActivityUser();
@@ -249,7 +268,7 @@ class KanbanLeadCardResource extends JsonResource
             'area' => $this->area?->name ?? $this->area?->title,
             'created_at' => $this->created_at?->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
-            'duplicate_no' => count($duplicateIds),
+            'duplicate_no' => $duplicateNo,
             'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
             'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
