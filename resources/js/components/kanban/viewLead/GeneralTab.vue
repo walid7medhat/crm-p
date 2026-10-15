@@ -278,20 +278,22 @@ const canDeleteAll = computed(() => {
 })
 
 const isSuperAdminUser = computed(() => user.value?.roles?.includes('super_admin') ?? false)
+const isAdminOrSuperAdminUser = computed(() => {
+    const roles = user.value?.roles ?? []
+    return roles.includes('admin') || roles.includes('super_admin')
+})
 
-// Lead Pool (stage_id = 10) comments/activities are super_admin-only — they're cleared
-// on assign-to-me anyway, and we don't want non-admins to see them during triage.
+// Lead Pool (stage_id = 10) comments/activities are admin and super_admin only.
 const isLeadPoolLead = computed(() => Number(props.lead?.stage_id) === 10)
-// Same "Lead Pool is admin-only" rule as comments/activities, applied to the Quality
-// Status/Call Result/Lead Type badges — kept as its own computed (not reusing
-// canViewCommentsAndActivities) so the two can diverge later without confusion.
+// Quality Status/Call Result/Lead Type badges stay super_admin-only on Lead Pool.
+// Kept separate from canViewCommentsAndActivities so the two can diverge.
 const canViewLeadQualificationSection = computed(() => {
     if (!isLeadPoolLead.value) return true
     return isSuperAdminUser.value
 })
 const canViewCommentsAndActivities = computed(() => {
     if (!isLeadPoolLead.value) return true
-    return isSuperAdminUser.value
+    return isAdminOrSuperAdminUser.value
 })
 
 const requirementHasPropertyDetails = (req) => {

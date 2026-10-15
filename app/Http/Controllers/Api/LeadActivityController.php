@@ -41,6 +41,10 @@ class LeadActivityController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        if ($denied = $this->denyLeadPoolConversationRead($lead)) {
+            return $denied;
+        }
+
         $activities = $lead->activities()
             ->with('user')
             ->orderBy('reminder_date', 'desc')
@@ -243,6 +247,10 @@ class LeadActivityController extends Controller
 
         if (!auth()->user()->canViewLead($lead)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if ($denied = $this->denyLeadPoolConversationRead($lead)) {
+            return $denied;
         }
 
         $comments = $lead->comments()
@@ -856,4 +864,21 @@ public function destroyAllActivitieComments($leadId)
         return ApiResponse::error('Failed to delete activities and comments: ' . $e->getMessage());
     }
 }
+
+    /**
+     * Lead Pool (stage_id = 10) comments and activities are readable by admin and super_admin only.
+     * canViewLead() is checked separately and is not bypassed by these roles.
+     */
+    private function denyLeadPoolConversationRead(Lead $lead)
+    {
+        if ((int) $lead->stage_id !== 10) {
+            return null;
+        }
+
+        if (auth()->user()->hasRole(['admin', 'super_admin'])) {
+            return null;
+        }
+
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
 }
