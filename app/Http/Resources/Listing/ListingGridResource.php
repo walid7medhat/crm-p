@@ -100,7 +100,8 @@ class ListingGridResource extends JsonResource
     /** hero_image_path, or the first gallery image if no hero was ever set. */
     protected function resolveMainImagePath(): ?string
     {
-        if ($this->hero_image_path) {
+        if ($this->hero_image_path
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->hero_image_path)) {
             return $this->hero_image_path;
         }
 

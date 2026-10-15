@@ -2006,6 +2006,20 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 $heroImageProcessed = true;
             }
         }
+        // Make sure the hero still points to something that exists in the gallery.
+            if (!$heroImageProcessed) {
+                $listing->refresh();
+                $galleryPaths = $listing->galleryImages()->orderBy('order')->pluck('image_path');
+                $hero = $listing->hero_image_path;
+
+                $heroInvalid = !$hero
+                    || !Storage::disk('public')->exists($hero)
+                    || ($galleryPaths->isNotEmpty() && !$galleryPaths->contains($hero));
+
+                if ($heroInvalid) {
+                    $listing->update(['hero_image_path' => $galleryPaths->first()]); // null if no gallery
+                }
+            }
         
         if ($request->has('imported_floor_plans')) {
             foreach ($request->imported_floor_plans as $importedPlanData) {
@@ -2603,7 +2617,18 @@ private function sendResubmissionNotification($listing, $user)
                 ImageHelper::deleteImage($galleryImage->image_path);
             }
 
-            $galleryImage->delete();
+            $wasHero = $listing->hero_image_path  && $listing->hero_image_path === $galleryImage->image_path;
+
+                if ($galleryImage->image_path) {
+                    ImageHelper::deleteImage($galleryImage->image_path);
+                }
+
+                $galleryImage->delete();
+
+                if ($wasHero) {
+                    $next = $listing->galleryImages()->orderBy('order')->first();
+                    $listing->update(['hero_image_path' => $next?->image_path]); // null if none left
+                }
 
             $this->clearCache();
             $this->clearSpecificCache($listing->id);
