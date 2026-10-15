@@ -16,9 +16,11 @@ use Illuminate\Validation\Rule;
 use App\Notifications\MarketingBookingStatusNotification;
 use App\Events\PhotoBookingChanged;
 
-/** Marketing → Bookings tab: the team works through public photoshoot requests. */
+/** Marketing → Bookings tab. */
 class BookingController extends MarketingBaseController
 {
+    private const WITH = ['handler:id,name', 'task:id,title,category', 'user:id,name,avatar'];
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -26,8 +28,14 @@ class BookingController extends MarketingBaseController
             'search' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $query = MarketingBooking::query()
-            ->with(['handler:id,name', 'task:id,title,category', 'user:id,name,avatar'])
+        $base = MarketingBooking::query();
+        if (! $this->isAdmin()) {
+            // الفريق يشوف بس اللي اتقبل (وأي حجز متقبَّل ليه كارد)
+            $base->where(fn ($q) => $q->where('status', 'confirmed')->orWhereNotNull('task_id'));
+        }
+
+        $query = (clone $base)
+            ->with(self::WITH)
             ->orderByRaw("FIELD(status, 'new', 'contacted', 'confirmed', 'cancelled')")
             ->orderBy('booking_date')
             ->orderBy('booking_time');
@@ -42,10 +50,11 @@ class BookingController extends MarketingBaseController
                 ->orWhere('phone', 'like', $like)
                 ->orWhere('reference', 'like', $like)
                 ->orWhere('location_label', 'like', $like)
-                ->orWhere('unit_number', 'like', $like));
+                ->orWhere('unit_number', 'like', $like)
+                ->orWhereRaw('CAST(units AS CHAR) like ?', [$like]));
         }
 
-        $counts = MarketingBooking::query()
+        $counts = (clone $base)
             ->selectRaw('status, COUNT(*) as n')
             ->groupBy('status')
             ->pluck('n', 'status');
@@ -61,10 +70,20 @@ class BookingController extends MarketingBaseController
 
     public function update(Request $request, MarketingBooking $booking): JsonResponse
     {
+        // الفريق ميقدرش يلمس حجز لسه ما اتقبلش
+        if (! $this->isAdmin()) {
+            abort_unless($booking->status === 'confirmed' || $booking->task_id, 403, 'This booking has not been accepted yet.');
+        }
+
         $validated = $request->validate([
             'status' => ['sometimes', Rule::in(MarketingBooking::STATUSES)],
             'internal_note' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
+
+        // التقبّل بيتم بس من زرار "Accept & create card"
+        if (($validated['status'] ?? null) === 'confirmed' && $booking->status !== 'confirmed' && ! $booking->task_id) {
+            return response()->json(['message' => 'Use "Accept & create card" to confirm a booking.'], 422);
+        }
 
         $statusChanged = isset($validated['status']) && $validated['status'] !== $booking->status;
         if ($statusChanged) {
@@ -78,14 +97,19 @@ class BookingController extends MarketingBaseController
         }
         PhotoBookingChanged::send($booking, 'updated');
 
-        return response()->json(['booking' => $this->format($booking->fresh(['handler:id,name', 'task:id,title,category', 'user:id,name,avatar']))]);
+        return response()->json(['booking' => $this->format($booking->fresh(self::WITH))]);
     }
 
-    /** Turn the booking into a Production card (Pending), due on the shoot date. */
+    /** Admin only: يقبل الحجز + يعمل كارد Production في نفس اللحظة. */
     public function convert(MarketingBooking $booking): JsonResponse
     {
+        abort_unless($this->isAdmin(), 403, 'Only an admin can accept and create the card.');
+
         if ($booking->task_id && $booking->task) {
             return response()->json(['message' => 'This booking already has a card.', 'booking' => $this->format($booking)], 422);
+        }
+        if ($booking->status === 'cancelled') {
+            return response()->json(['message' => 'This booking is cancelled.'], 422);
         }
 
         $stage = MarketingStage::where('category', 'production')->orderBy('sort_order')->orderBy('id')->first();
@@ -93,17 +117,24 @@ class BookingController extends MarketingBaseController
             return response()->json(['message' => 'The Production board has no stages yet.'], 422);
         }
 
+        $wasConfirmed = $booking->status === 'confirmed';
         $type = MarketingBooking::TYPE_LABELS[$booking->shoot_type] ?? $booking->shoot_type;
         $time = Carbon::parse($booking->booking_time)->format('g:i A');
-        $wasNew = $booking->status === 'new';
+        $units = MarketingBooking::unitsOf($booking);
+        $unitLines = collect($units)
+            ->map(fn ($u) => '• Unit '.$u['unit_number'].($u['bedrooms_label'] ? ' · '.$u['bedrooms_label'] : ''))
+            ->all();
+        $unitTitle = count($units) > 1
+            ? count($units).' units'
+            : (($units[0]['unit_number'] ?? null) ? 'Unit '.$units[0]['unit_number'] : null);
 
-        $task = DB::transaction(function () use ($booking, $stage, $type, $time) {
+        $task = DB::transaction(function () use ($booking, $stage, $type, $time, $unitLines, $unitTitle, $wasConfirmed) {
             MarketingTask::where('stage_id', $stage->id)->increment('position');
 
             $task = MarketingTask::create([
                 'category' => 'production',
                 'type' => $booking->shoot_type === 'photo' ? 'photo' : 'video',
-                'title' => 'Photoshoot — '.($booking->unit_number ? "Unit {$booking->unit_number}, " : '').($booking->location_label ?: $booking->name),
+                'title' => 'Photoshoot — '.($unitTitle ? $unitTitle.', ' : '').($booking->location_label ?: $booking->name),
                 'stage_id' => $stage->id,
                 'position' => 0,
                 'due_date' => $booking->booking_date,
@@ -111,9 +142,7 @@ class BookingController extends MarketingBaseController
                 'notes' => implode("\n", array_filter([
                     "{$type} on {$booking->booking_date->format('l, j F Y')} at {$time}",
                     $booking->location_label ? "Location: {$booking->location_label}" : null,
-                    $booking->unit_number || $booking->bedrooms !== null
-                        ? 'Unit: '.trim(($booking->unit_number ?? '').' · '.(MarketingBooking::bedroomsLabel($booking->bedrooms) ?? ''), ' ·')
-                        : null,
+                    $unitLines ? "Units:\n".implode("\n", $unitLines) : null,
                     'Requested by: '.implode(' · ', array_filter([$booking->name, $booking->phone, $booking->email])),
                     $booking->notes ? "Notes: {$booking->notes}" : null,
                 ])),
@@ -126,29 +155,31 @@ class BookingController extends MarketingBaseController
 
             $booking->update([
                 'task_id' => $task->id,
-                'handled_by' => $booking->handled_by ?? Auth::id(),
-                'status' => $booking->status === 'new' ? 'contacted' : $booking->status,
-                'status_changed_at' => $booking->status === 'new' ? now() : $booking->status_changed_at,
+                'handled_by' => Auth::id(),
+                'status' => 'confirmed',
+                'status_changed_at' => $wasConfirmed ? $booking->status_changed_at : now(),
             ]);
 
             return $task;
         });
 
-        // Creating the card moves a new request to "contacted" — let the requester know.
-        if ($wasNew) {
+        // الـ Accept حصل هنا، فالمستخدم لازم يتبلغ
+        if (! $wasConfirmed) {
             $this->notifyRequester($booking->fresh());
         }
         PhotoBookingChanged::send($booking->fresh(), 'updated');
 
         return response()->json([
-            'booking' => $this->format($booking->fresh(['handler:id,name', 'task:id,title,category', 'user:id,name,avatar'])),
+            'booking' => $this->format($booking->fresh(self::WITH)),
             'task_id' => $task->id,
         ], 201);
     }
 
-    /** Admin only (route middleware). */
+    /** Admin only. */
     public function destroy(MarketingBooking $booking): JsonResponse
     {
+        abort_unless($this->isAdmin(), 403, 'Only an admin can delete bookings.');
+
         $booking->delete();
         PhotoBookingChanged::send($booking, 'deleted');
 
@@ -184,6 +215,7 @@ class BookingController extends MarketingBaseController
             'unit_number' => $b->unit_number,
             'bedrooms' => $b->bedrooms,
             'bedrooms_label' => MarketingBooking::bedroomsLabel($b->bedrooms),
+            'units' => MarketingBooking::unitsOf($b),
             'shoot_type' => $b->shoot_type,
             'shoot_type_label' => MarketingBooking::TYPE_LABELS[$b->shoot_type] ?? $b->shoot_type,
             'date' => $b->booking_date->format('Y-m-d'),

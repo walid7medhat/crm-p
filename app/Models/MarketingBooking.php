@@ -27,6 +27,7 @@ class MarketingBooking extends Model
         'booking_date' => 'date:Y-m-d',
         'status_changed_at' => 'datetime',
         'bedrooms' => 'integer',
+         'units' => 'array',   
     ];
 
     protected $hidden = ['ip', 'user_agent'];
@@ -68,5 +69,19 @@ class MarketingBooking extends Model
         $n = $last ? ((int) substr($last, -4)) + 1 : 1;
 
         return sprintf('PB-%d-%04d', $year, $n);
+    }
+
+    /** [{unit_number, bedrooms, bedrooms_label}] — falls back to the legacy single unit. */
+    public static function unitsOf(self $b): array
+    {
+        $units = $b->units ?: ($b->unit_number !== null || $b->bedrooms !== null
+            ? [['unit_number' => $b->unit_number, 'bedrooms' => $b->bedrooms]]
+            : []);
+
+        return collect($units)->map(fn ($u) => [
+            'unit_number' => $u['unit_number'] ?? null,
+            'bedrooms' => $u['bedrooms'] ?? null,
+            'bedrooms_label' => self::bedroomsLabel($u['bedrooms'] ?? null),
+        ])->values()->all();
     }
 }

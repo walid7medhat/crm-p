@@ -47,17 +47,24 @@ class MyBookingController extends Controller
         $validated = $request->validate([
             'shoot_type' => ['required', Rule::in(array_keys(MarketingBooking::SHOOT_TYPES))],
             'area_id' => ['required', 'integer', 'exists:areas,id'],
-            'unit_number' => ['required', 'string', 'max:60'],
-            'bedrooms' => ['required', 'integer', 'between:0,9'],
+            // 'unit_number' => ['required', 'string', 'max:60'],
+            // 'bedrooms' => ['required', 'integer', 'between:0,9'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'before:+1 year'],
             'booking_time' => ['required', 'date_format:H:i'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'units' => ['required', 'array', 'min:1', 'max:20'],
+            'units.*.unit_number' => ['required', 'string', 'max:60', 'distinct:ignore_case'],
+            'units.*.bedrooms' => ['required', 'integer', 'between:0,9'],
         ], [
             'area_id.required' => 'Please choose the location.',
             'unit_number.required' => 'Please enter the unit number.',
             'bedrooms.required' => 'Please choose the number of bedrooms.',
             'booking_date.after_or_equal' => 'Please choose today or a future date.',
             'booking_date.before' => 'Please choose a date within the next 12 months.',
+            'units.required' => 'Please add at least one unit.',
+            'units.*.unit_number.required' => 'Please enter the unit number.',
+            'units.*.unit_number.distinct' => 'This unit number is entered twice.',
+            'units.*.bedrooms.required' => 'Please choose the number of bedrooms.',
         ]);
 
         $when = Carbon::parse($validated['booking_date'].' '.$validated['booking_time']);
@@ -81,33 +88,43 @@ class MyBookingController extends Controller
         $area = Area::find($validated['area_id']);
 
         $booking = null;
-        for ($attempt = 0; $attempt < 3 && ! $booking; $attempt++) {
-            try {
-                $booking = MarketingBooking::create([
-                    'reference' => MarketingBooking::nextReference(),
-                    'user_id' => $user->id,
-                    // Snapshot of the requester's contact details, so the team can call even if the profile changes.
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone ?: ($user->company_mobile ?: ($user->personal_phone ?: null)),
-                    'shoot_type' => $validated['shoot_type'],
-                    'area_id' => $area?->id,
-                    'location_label' => $area?->title ?: $area?->name,
-                    'unit_number' => trim(strip_tags($validated['unit_number'])),
-                    'bedrooms' => (int) $validated['bedrooms'],
-                    'booking_date' => $validated['booking_date'],
-                    'booking_time' => $validated['booking_time'],
-                    'notes' => isset($validated['notes']) ? trim(strip_tags($validated['notes'])) ?: null : null,
-                    'status' => 'new',
-                    'ip' => $request->ip(),
-                    'user_agent' => substr((string) $request->userAgent(), 0, 255),
-                ]);
-            } catch (QueryException $e) {
-                if (! str_contains($e->getMessage(), 'reference')) {
-                    throw $e;
+        $units = collect($validated['units'])->map(fn ($u) => [
+            'unit_number' => trim(strip_tags($u['unit_number'])),
+            'bedrooms' => (int) $u['bedrooms'],
+        ])->values()->all();
+            for ($attempt = 0; $attempt < 3 && ! $booking; $attempt++) {
+                try {
+                    $booking = MarketingBooking::create([
+                        'reference' => MarketingBooking::nextReference(),
+                        'user_id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'phone' => $user->phone ?: ($user->company_mobile ?: ($user->personal_phone ?: null)),
+                        'shoot_type' => $validated['shoot_type'],
+                        'area_id' => $area?->id,
+                        'location_label' => $area?->title ?: $area?->name,
+                        'units' => $units,
+                        'unit_number' => $units[0]['unit_number'],
+                        'bedrooms' => $units[0]['bedrooms'],
+                        'booking_date' => $validated['booking_date'],
+                        'booking_time' => $validated['booking_time'],
+                        'notes' => isset($validated['notes']) ? trim(strip_tags($validated['notes'])) ?: null : null,
+                        'status' => 'new',
+                        'ip' => $request->ip(),
+                        'user_agent' => substr((string) $request->userAgent(), 0, 255),
+                    ]);
+                } catch (QueryException $e) {
+                    // 1062 = duplicate entry، ونتأكد إنه على عمود reference بالذات
+                    $isDuplicateReference = ($e->errorInfo[1] ?? null) === 1062 && str_contains($e->getMessage(), 'reference');
+                    if (! $isDuplicateReference) {
+                        throw $e;   // أي خطأ تاني يظهر بوضوح (مثلًا: Unknown column 'units')
+                    }
                 }
             }
-        }
+
+            if (! $booking) {
+                return response()->json(['message' => 'Could not save your request. Please try again.'], 500);
+            }
 
         $this->notifyTeam($booking);
         PhotoBookingChanged::send($booking, 'created');

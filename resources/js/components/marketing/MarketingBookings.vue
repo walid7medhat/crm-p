@@ -61,12 +61,16 @@
           </header>
 
           <!-- Where & what -->
-          <div v-if="b.location || b.unit_number || b.bedrooms_label" class="tk__place">
-            <iconify-icon icon="lucide:map-pin" />
-            <b>{{ b.location || 'Location not set' }}</b>
-            <span v-if="b.unit_number" class="tk__tag">Unit {{ b.unit_number }}</span>
-            <span v-if="b.bedrooms_label" class="tk__tag"><iconify-icon icon="lucide:bed-double" /> {{ b.bedrooms_label }}</span>
-          </div>
+            <div v-if="b.location || b.units?.length" class="tk__place">
+              <iconify-icon icon="lucide:map-pin" />
+              <b>{{ b.location || 'Location not set' }}</b>
+            </div>
+            <div v-if="b.units?.length" class="tk__units">
+              <span v-for="(u, i) in b.units" :key="i" class="tk__tag">
+                <iconify-icon icon="lucide:door-open" /> {{ u.unit_number }}
+                <template v-if="u.bedrooms_label"> · <iconify-icon icon="lucide:bed-double" /> {{ u.bedrooms_label }}</template>
+              </span>
+            </div>
 
           <div class="tk__chips">
             <span class="tk__chip tk__chip--type"><iconify-icon :icon="TYPE_ICONS[b.shoot_type]" /> {{ b.shoot_type_label }}</span>
@@ -103,19 +107,25 @@
             <span v-else class="tk__handled tk__handled--new"><iconify-icon icon="lucide:bell-ring" /> Waiting for a call back</span>
 
             <div class="tk__actions">
+              <!-- تغيير الحالة: الأدمن والفريق -->
               <MkSelect
                 :model-value="b.status"
-                :options="STATUS_OPTIONS"
+                :options="statusOptions(b)"
                 aria-label="Booking status"
                 align="right"
                 @change="(v) => save(b, { status: v })"
               />
+
+              <!-- الأدمن بس: قبول + كارد في خطوة واحدة -->
+              <button v-if="canManage && !b.task && b.status !== 'cancelled'" type="button" class="mk-btn mk-btn--primary mk-btn--sm" :disabled="busyId === b.id" @click="convert(b)">
+                <iconify-icon icon="lucide:badge-check" /> Accept &amp; create card
+              </button>
+
               <button v-if="b.task" type="button" class="mk-btn mk-btn--ghost mk-btn--sm" @click="$emit('open-task', b.task.id, b.task.category)">
                 <iconify-icon icon="lucide:external-link" /> Open card
               </button>
-              <button v-else type="button" class="mk-btn mk-btn--primary mk-btn--sm" :disabled="busyId === b.id" @click="convert(b)">
-                <iconify-icon icon="lucide:clapperboard" /> Create card
-              </button>
+
+              <!-- الأدمن بس -->
               <button v-if="canManage" type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon tk__del" title="Delete booking" @click="remove(b)">
                 <iconify-icon icon="lucide:trash-2" />
               </button>
@@ -176,7 +186,8 @@ const counts = ref({})
 const canManage = ref(false)
 const loading = ref(false)
 const busyId = ref(null)
-
+// "confirmed" بيجي بس من زرار Accept & create card، فمش بتظهر لحجز من غير كارد
+const statusOptions = (b) => (b.task ? STATUS_OPTIONS : STATUS_OPTIONS.filter((o) => o.value !== 'confirmed'))
 let seq = 0
 /** `silent` = live/background refresh: no dimming, no error pop-up. */
 async function load(silent = false) {
@@ -201,7 +212,12 @@ async function save(b, patch) {
   try {
     const { data } = await api.put(`/marketing/bookings/${b.id}`, patch)
     if (patch.status) {
-      showCrmToast({ kind: patch.status === 'cancelled' ? 'deleted' : 'updated', headline: `Marked ${STATUS_LABEL[patch.status].toLowerCase()}`, subtitle: b.name, chip: b.reference })
+      showCrmToast({
+        kind: patch.status === 'cancelled' ? 'deleted' : 'updated',
+        headline: `Marked ${STATUS_LABEL[patch.status].toLowerCase()}`,
+        subtitle: b.name,
+        chip: b.reference,
+      })
       load()
     } else {
       Object.assign(b, data.booking)
@@ -210,7 +226,6 @@ async function save(b, patch) {
     Swal.fire({ icon: 'error', title: 'Could not update booking', text: apiError(err) })
   }
 }
-
 async function convert(b) {
   busyId.value = b.id
   try {
@@ -394,7 +409,7 @@ onBeforeUnmount(() => {
 /* ===== Booking tickets ===== */
 .mk-bk__list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 490px), 1fr));
   gap: 14px;
   transition: opacity 0.2s;
 }
@@ -580,4 +595,6 @@ a.tk__chip:hover, .tk__chip--btn:hover { border-color: #d8ccea; color: var(--col
   .tk:hover { transform: none; }
   .tk.is-flash, .tk.is-new .tk__status-dot { animation: none; }
 }
+
+.tk__units { display: flex; flex-wrap: wrap; gap: 6px; }
 </style>

@@ -75,29 +75,47 @@
               <small v-if="errors.area_id" class="ps-err"><iconify-icon icon="lucide:alert-circle" /> {{ errors.area_id }}</small>
             </section>
 
-            <div class="ps-row">
-              <section class="ps-sec" :class="{ 'has-error': errors.unit_number }">
-                <label class="ps-label" for="ps-unit">Unit number</label>
-                <input id="ps-unit" v-model.trim="form.unit_number" class="ps-input" maxlength="60" placeholder="e.g. A-1204" />
-                <small v-if="errors.unit_number" class="ps-err"><iconify-icon icon="lucide:alert-circle" /> {{ errors.unit_number }}</small>
-              </section>
-              <section class="ps-sec" :class="{ 'has-error': errors.bedrooms }">
-                <span class="ps-label">How many bedrooms?</span>
-                <div class="ps-beds" role="radiogroup" aria-label="Bedrooms">
+            <section class="ps-sec" :class="{ 'has-error': errors.units }">
+              <span class="ps-label">Units</span>
+
+              <div v-for="(u, i) in form.units" :key="u.key" class="ps-unit">
+                <div class="ps-unit__top">
+                  <span class="ps-unit__n">{{ i + 1 }}</span>
+                  <input
+                    v-model.trim="u.unit_number"
+                    class="ps-input"
+                    maxlength="60"
+                    placeholder="Unit number, e.g. A-1204"
+                    :aria-label="`Unit number ${i + 1}`"
+                    :class="{ 'is-invalid': unitErrors[`${i}.unit_number`] }"
+                    @input="delete unitErrors[`${i}.unit_number`]"
+                  />
+                  <button v-if="form.units.length > 1" type="button" class="ps-icon-btn" :aria-label="`Remove unit ${i + 1}`" @click="removeUnit(i)">
+                    <iconify-icon icon="lucide:trash-2" />
+                  </button>
+                </div>
+                <div class="ps-beds" role="radiogroup" :aria-label="`Bedrooms for unit ${i + 1}`">
                   <button
                     v-for="b in BEDROOMS"
                     :key="b.value"
                     type="button"
                     role="radio"
                     class="ps-bed"
-                    :class="{ on: form.bedrooms === b.value }"
-                    :aria-checked="form.bedrooms === b.value"
-                    @click="form.bedrooms = b.value"
+                    :class="{ on: u.bedrooms === b.value }"
+                    :aria-checked="u.bedrooms === b.value"
+                    @click="u.bedrooms = b.value; delete unitErrors[`${i}.bedrooms`]"
                   >{{ b.text }}</button>
                 </div>
-                <small v-if="errors.bedrooms" class="ps-err"><iconify-icon icon="lucide:alert-circle" /> {{ errors.bedrooms }}</small>
-              </section>
-            </div>
+                <small v-if="unitErrors[`${i}.unit_number`] || unitErrors[`${i}.bedrooms`]" class="ps-err">
+                  <iconify-icon icon="lucide:alert-circle" /> {{ unitErrors[`${i}.unit_number`] || unitErrors[`${i}.bedrooms`] }}
+                </small>
+              </div>
+
+              <button type="button" class="ps-btn ps-btn--ghost ps-add" :disabled="form.units.length >= 20" @click="addUnit">
+                <iconify-icon icon="lucide:plus" /> Add another unit
+              </button>
+              <small v-if="errors.units" class="ps-err"><iconify-icon icon="lucide:alert-circle" /> {{ errors.units }}</small>
+            </section>
 
             <section class="ps-sec">
               <label class="ps-label" for="ps-notes">Notes <em>optional</em></label>
@@ -218,9 +236,11 @@
           <p class="ps-card__where" :title="b.location || ''">
             <iconify-icon icon="lucide:map-pin" /> <span>{{ b.location || 'Location not set' }}</span>
           </p>
-          <div v-if="b.unit_number || b.bedrooms_label" class="ps-card__tags">
-            <span v-if="b.unit_number" class="ps-tag"><iconify-icon icon="lucide:door-open" /> {{ b.unit_number }}</span>
-            <span v-if="b.bedrooms_label" class="ps-tag"><iconify-icon icon="lucide:bed-double" /> {{ b.bedrooms_label }}</span>
+          <div v-if="b.units?.length" class="ps-card__tags">
+            <span v-for="(u, i) in b.units" :key="i" class="ps-tag">
+              <iconify-icon icon="lucide:door-open" /> {{ u.unit_number }}
+              <template v-if="u.bedrooms_label"> · {{ u.bedrooms_label }}</template>
+            </span>
           </div>
           <p v-if="b.notes" class="ps-card__notes" :title="b.notes">“{{ b.notes }}”</p>
 
@@ -351,7 +371,16 @@ const formOpen = ref(false)
 const sending = ref(false)
 const areas = ref([])
 const areasLoading = ref(false)
-const blank = () => ({ shoot_type: '', area_id: null, unit_number: '', bedrooms: null, booking_date: '', booking_time: '', notes: '' })
+let unitKey = 0
+const newUnit = () => ({ key: ++unitKey, unit_number: '', bedrooms: null })
+const blank = () => ({ shoot_type: '', area_id: null, units: [newUnit()], booking_date: '', booking_time: '', notes: '' })
+const unitErrors = reactive({})
+
+function addUnit() { if (form.units.length < 20) form.units.push(newUnit()) }
+function removeUnit(i) {
+  form.units.splice(i, 1)
+  Object.keys(unitErrors).forEach((k) => delete unitErrors[k])
+}
 const form = reactive(blank())
 const errors = reactive({})
 const view = ref(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -380,6 +409,7 @@ function closeForm() {
   formOpen.value = false
   Object.assign(form, blank())
   Object.keys(errors).forEach((k) => delete errors[k])
+  Object.keys(unitErrors).forEach((k) => delete unitErrors[k])
 }
 
 // calendar
@@ -446,10 +476,20 @@ watch(() => [form.booking_date, form.booking_time], () => { delete errors.bookin
 
 function validate() {
   Object.keys(errors).forEach((k) => delete errors[k])
+  Object.keys(unitErrors).forEach((k) => delete unitErrors[k])
   if (!form.shoot_type) errors.shoot_type = 'Please choose what we should shoot.'
   if (!form.area_id) errors.area_id = 'Please choose the location.'
-  if (!form.unit_number) errors.unit_number = 'Please enter the unit number.'
-  if (form.bedrooms === null) errors.bedrooms = 'Please choose the number of bedrooms.'
+
+  const seen = new Set()
+  form.units.forEach((u, i) => {
+    const num = (u.unit_number || '').trim().toLowerCase()
+    if (!num) unitErrors[`${i}.unit_number`] = 'Please enter the unit number.'
+    else if (seen.has(num)) unitErrors[`${i}.unit_number`] = 'This unit number is entered twice.'
+    seen.add(num)
+    if (u.bedrooms === null) unitErrors[`${i}.bedrooms`] ||= 'Please choose the number of bedrooms.'
+  })
+  if (Object.keys(unitErrors).length) errors.units = 'Please complete every unit.'
+
   if (!form.booking_date) errors.booking_date = 'Please choose a date.'
   else if (!form.booking_time) errors.booking_time = 'Please choose a time.'
   return !Object.keys(errors).length
@@ -463,7 +503,11 @@ async function submit() {
   if (!validate()) return scrollToError()
   sending.value = true
   try {
-    const { data } = await api.post('/photo-bookings', { ...form })
+    const payload = {
+      ...form,
+      units: form.units.map(({ unit_number, bedrooms }) => ({ unit_number, bedrooms })),
+    }
+    const { data } = await api.post('/photo-bookings', payload)
     showCrmToast({
       kind: 'created',
       headline: data.duplicate ? 'You already requested this slot' : 'Photoshoot requested',
@@ -479,8 +523,15 @@ async function submit() {
     if (res?.status === 422 && res.data?.errors) {
       Object.entries(res.data.errors).forEach(([k, v]) => {
         const msg = Array.isArray(v) ? v[0] : v
-        if (k in blank()) errors[k] = msg
-        else errors.general = msg
+        const m = k.match(/^units\.(\d+)\.(\w+)$/)
+        if (m) {
+          unitErrors[`${m[1]}.${m[2]}`] = msg
+          errors.units = 'Please complete every unit.'
+        } else if (k in blank()) {
+          errors[k] = msg
+        } else {
+          errors.general = msg
+        }
       })
       scrollToError()
     } else if (res?.status === 429) {
@@ -734,4 +785,9 @@ textarea.ps-input { resize: vertical; min-height: 60px; }
   .ps-card, .ps-type, .ps-drop-enter-active, .ps-drop-leave-active { transition: none; }
   .ps-card.is-flash { animation: none; }
 }
+.ps-unit { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: var(--neutral-50); border: 1px solid var(--border-color); }
+.ps-unit__top { display: flex; align-items: center; gap: 8px; }
+.ps-unit__n { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; background: var(--color-primary); }
+.ps-input.is-invalid { border-color: #f4a49b; }
+.ps-add { align-self: flex-start; }
 </style>
