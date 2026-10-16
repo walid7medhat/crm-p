@@ -6919,13 +6919,18 @@ const fetchRevertNotifications = async () => {
     margin-right: 2px;
     position: relative;
     z-index: 1;
-    transform: translate3d(var(--px), var(--py), 0) rotateX(var(--rx)) rotateY(var(--ry));
+    /* transform: translate3d(var(--px), var(--py), 0) rotateX(var(--rx)) rotateY(var(--ry)); */
     transform-style: preserve-3d;
     transition:
         transform 0.48s cubic-bezier(0.22, 1, 0.36, 1),
         box-shadow 0.48s cubic-bezier(0.22, 1, 0.36, 1),
         border-color 0.48s ease,
         scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+    --tilt-strength: 0.25; 
+    transform:
+    translate3d(calc(var(--px) * var(--tilt-strength)), calc(var(--py) * var(--tilt-strength)), 0)
+    rotateX(calc(var(--rx) * var(--tilt-strength)))
+    rotateY(calc(var(--ry) * var(--tilt-strength)));
 }
 
 .kanban-outer:not(.kanban-outer--mobile) .kanban-card > * {
