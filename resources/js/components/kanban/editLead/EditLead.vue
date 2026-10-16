@@ -1025,7 +1025,7 @@ const fetchAreas = async () => {
     try {
         isLoadingAreas.value = true
 
-        const response = await api.get("/listings/areas/?has_listings=true")
+        const response = await api.get("/listings/areas")
         const data = response.data.data || response.data
 
         areas.value = data.map(area => ({

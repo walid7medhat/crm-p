@@ -1490,7 +1490,7 @@ watch(selectedExistingClient, (client) => {
         try {
             isLoadingAreas.value = true;
     
-            const response = await api.get("/listings/areas/?has_listings=true");
+            const response = await api.get("/listings/areas");
             const areasData = response.data.data || response.data;
     
             areas.value = areasData.map(area => ({

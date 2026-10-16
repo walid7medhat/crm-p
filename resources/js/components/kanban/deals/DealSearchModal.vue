@@ -1405,7 +1405,7 @@ const isLoadingData = ref(false)
 // دالة لجلب المناطق
 const fetchAreasData = async () => {
     try {
-        const res = await api.get('/listings/areas/?has_listings=true')
+        const res = await api.get('/listings/areas')
         const data = res.data.data || res.data || []
         localAreas.value = data.map(area => ({
             id: area.id,

@@ -40,7 +40,7 @@ export function useCache() {
   const fetchAreas = async () => {
     if (cache.areas) return cache.areas
     try {
-      const res = await api.get('/listings/areas/?has_listings=true')
+      const res = await api.get('/listings/areas')
       let data = res.data?.data
       if (!Array.isArray(data)) {
         data = Array.isArray(res.data) ? res.data : []

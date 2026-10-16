@@ -390,7 +390,7 @@ async function loadAreas() {
   areasLoading.value = true
   try {
     // Same source and shape as the lead / deal location picker.
-    const res = await api.get('/listings/areas/?has_listings=true')
+    const res = await api.get('/listings/areas')
     const list = res.data?.data || res.data || []
     areas.value = list.map((a) => ({ id: a.id, name: a.name || a.title, parent: a.area_parents_title || null }))
   } catch {

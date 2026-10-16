@@ -1709,7 +1709,7 @@ const fetchClientReqLookups = async () => {
     if (clientReqAreas.value.length === 0) {
         try {
             isLoadingClientReqAreas.value = true
-            const response = await api.get('/listings/areas/?has_listings=true')
+            const response = await api.get('/listings/areas')
             const data = unwrapList(response.data?.data ?? response.data)
             clientReqAreas.value = data.map((area) => ({
                 id: area.id,
