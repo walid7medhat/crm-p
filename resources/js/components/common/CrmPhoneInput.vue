@@ -432,7 +432,7 @@ defineExpose({
   flex-shrink: 0;
   display: inline-block;
   width: 20px;
-  height: 15px;
+  height: 10px;
   background-repeat: no-repeat;
   background-color: transparent;
 }
