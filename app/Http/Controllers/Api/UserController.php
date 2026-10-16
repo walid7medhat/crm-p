@@ -74,7 +74,7 @@ class UserController extends Controller
 
                         // User #33: sees every user in their whole branch, not just their
                         // own subordinates.
-                        $ids = $user->id == 33 ? $user->getBranchUserIds() : $user->getAllSubordinatesIds();
+                        $ids = $user->id == 33 || $user->hasRole('branch_admin') || $user->hasRole('admin')? $user->getBranchUserIds() : $user->getAllSubordinatesIds();
 
                         $query->whereIn('id', $ids);
                     }
