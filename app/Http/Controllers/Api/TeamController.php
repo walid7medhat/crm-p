@@ -25,7 +25,7 @@ class TeamController extends Controller
                         ->withCount('children')
                         ->when(! ($user->hasRole('super_admin') || $user->hasRole('admin') ), function ($qq) use ($currentUser, $branchUserIds) {
                                 if ($branchUserIds) {
-                                    $qq->whereIn('id', $branchUserIds);
+                                    $qq->whereIn('id', $branchUserIds) ->orWhereNull('parent_id');
                                     return;
                                 }
 
@@ -234,7 +234,7 @@ class TeamController extends Controller
 
             ->when(!($user->hasRole('super_admin') || $user->hasRole('admin')), function ($qq) use ($currentUser, $branchUserIds) {
                 if ($branchUserIds) {
-                    $qq->whereIn('id', $branchUserIds);
+                    $qq->whereIn('id', $branchUserIds) ->orWhereNull('parent_id');;
                     return;
                 }
 
