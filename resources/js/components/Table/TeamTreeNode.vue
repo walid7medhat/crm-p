@@ -97,7 +97,7 @@ function isLeader(node) {
 
 function acceptsDrop(node) {
     const key = roleKey(node);
-    return key === 'manager' || key.endsWith('_manager') || key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
+    return key === 'admin' || key === 'manager' || key.endsWith('_manager') || key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
 }
 
 export default {

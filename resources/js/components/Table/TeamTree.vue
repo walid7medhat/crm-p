@@ -236,6 +236,14 @@ function isTeamLeadRole(user) {
     return key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
 }
 
+function isAdminRole(user) {
+    return roleKey(user) === 'admin';
+}
+
+function isDestinationRole(user) {
+    return isAdminRole(user) || isManagerRole(user) || isTeamLeadRole(user);
+}
+
 const COMPANY = '#0B0736';
 const DUBAI = '#733E87';
 const ABU_DHABI = '#9A7420';
@@ -391,7 +399,7 @@ export default {
             if (isLeader(user)) return true;
             const parent = this.byId.get(Number(user.parent_id));
             if (!parent) return false;
-            return isTeamLeadRole(parent) || isManagerRole(parent);
+            return isDestinationRole(parent);
         },
         canDrag(user) {
             return this.canAssign && !!user && !isLeader(user) && !this.assigning;
@@ -401,10 +409,9 @@ export default {
             return !!this.resolveDestination(node);
         },
         resolveDestination(node) {
-            if (isTeamLeadRole(node)) return { type: 'direct', parent: node };
-            if (isManagerRole(node)) return { type: 'direct', parent: node };
+            if (isDestinationRole(node)) return { type: 'direct', parent: node };
             const parent = this.byId.get(Number(node.parent_id));
-            if (parent && (isTeamLeadRole(parent) || isManagerRole(parent))) {
+            if (parent && isDestinationRole(parent)) {
                 const treeParent = this.findNode(this.roots, Number(parent.id)) || parent;
                 return this.resolveDestination(treeParent);
             }
