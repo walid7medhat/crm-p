@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
   USER_TEAM_MEMBERS: (userId) => `${API_BASE_URL}/users/${userId}/team-members`,
   USER_ATTENDANCE_HISTORY: (userId) => `${API_BASE_URL}/users/${userId}/attendance-history`,
      TEAM_HIERARCHY: `${API_BASE_URL}/team/hierarchy`,
+    TEAM_REASSIGN: `${API_BASE_URL}/team/reassign`,
     USERS_WITH_CHILDREN: `${API_BASE_URL}/users/with-children`,
     USER_STATUS: (id) => `${API_BASE_URL}/users/${id}/status`,
     USER_BIOMETRIC: (id) => `${API_BASE_URL}/users/${id}/biometric-code`,
