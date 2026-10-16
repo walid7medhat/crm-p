@@ -654,9 +654,19 @@ public function show(User $user): JsonResponse
                 return ApiResponse::error('Access denied', 403);
             }
 
-            $descendantIds = ($user->hasRole('super_admin') || $user->hasRole('admin'))
-                ? User::where('id', '!=', $user->id)->orderBy('created_at', 'desc')->pluck('id')->toArray()
-                : $this->collectDescendantIds($user->id);
+            // $descendantIds = ($user->hasRole('super_admin') || $user->hasRole('admin'))
+            //     ? User::where('id', '!=', $user->id)->orderBy('created_at', 'desc')->pluck('id')->toArray()
+            //     : $this->collectDescendantIds($user->id);
+             if (!$currentUser->hasRole('super_admin') && $currentUser->id != 30) {
+
+                        // User #33: sees every user in their whole branch, not just their
+                        // own subordinates.
+                        $descendantIds = $currentUser->id == 33 || $currentUser->hasRole('branch_admin') || $currentUser->hasRole('admin')? $currentUser->getBranchUserIds() : $currentUser->getAllSubordinatesIds();
+
+                    }
+             else {
+                  $descendantIds=   User::where('id', '!=', $currentUser->id)->orderBy('created_at', 'desc')->pluck('id')->toArray();
+                }
             $total = count($descendantIds);
 
             if ($total === 0) {
@@ -724,7 +734,7 @@ public function show(User $user): JsonResponse
     private function canAccessUser(User $currentUser, User $targetUser): bool
     {
         // Super Admin can access all users
-        if ($currentUser->hasRole('admin') || $currentUser->hasRole('super_admin')) {
+        if ($currentUser->hasRole('admin') || $currentUser->hasRole('super_admin') ||$currentUser->hasRole('branch_admin')) {
             return true;
         }
         
