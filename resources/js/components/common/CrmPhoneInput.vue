@@ -426,4 +426,18 @@ defineExpose({
   border: 1px solid #e2e8f0;
   border-radius: 8px;
 }
+/* Restore the sprite geometry so flags aren't cropped/mixed */
+.crm-phone-input :deep(.vti__flag) {
+  box-sizing: content-box !important;
+  flex-shrink: 0;
+  display: inline-block;
+  width: 20px;
+  height: 15px;
+  background-repeat: no-repeat;
+  background-color: transparent;
+}
+
+.crm-phone-input :deep(.vti__dropdown-item .vti__flag) {
+  margin-right: 8px;
+}
 </style>
