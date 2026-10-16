@@ -18,19 +18,25 @@ class TeamController extends Controller
         try {
             $user = $request->user();
             $currentUser = $user;
+        $branchUserIds = $user->hasRole('branch_admin') ? $user->getBranchUserIds() : null;
 
-            $users = User::query()
-                ->with(['roles:id,name'])
-                ->withCount('children')
-                ->when(! ($user->hasRole('super_admin') || $user->hasRole('admin')), function ($qq) use ($currentUser) {
-                    $qq->where(function ($q) use ($currentUser) {
-                        $q->where('id', $currentUser->id)
-                            ->orWhere('parent_id', $currentUser->id)
-                            ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
-                                $parentQuery->where('parent_id', $currentUser->id);
-                            });
-                    });
-                })
+                    $users = User::query()
+                        ->with(['roles:id,name'])
+                        ->withCount('children')
+                        ->when(! ($user->hasRole('super_admin') || $user->hasRole('admin') ), function ($qq) use ($currentUser, $branchUserIds) {
+                                if ($branchUserIds) {
+                                    $qq->whereIn('id', $branchUserIds);
+                                    return;
+                                }
+
+                                $qq->where(function ($q) use ($currentUser) {
+                                    $q->where('id', $currentUser->id)
+                                        ->orWhere('parent_id', $currentUser->id)
+                                        ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
+                                            $parentQuery->where('parent_id', $currentUser->id);
+                                        });
+                                });
+                            })
                 ->get();
 
             $branches = $this->branchNodesFor($users);
@@ -216,6 +222,8 @@ class TeamController extends Controller
             $currentUser = $request->user();
             $user=auth()->user();
             // Get users that report to current user or are in the same hierarchy
+                        $branchUserIds = $user->hasRole('branch_admin') ? $user->getBranchUserIds() : null;
+
             $users = User::with([
                 'roles',
                 'parent',
@@ -223,14 +231,20 @@ class TeamController extends Controller
                     $query->withCount('children');
                 }
             ])
-            ->when(!($user->hasRole('super_admin')|| $user->hasRole('admin')) ,function($qq)use ($currentUser){
-            $qq->where(function($q) use ($currentUser) {
-                $q->where('id', $currentUser->id)
-                ->orWhere('parent_id', $currentUser->id)
-                ->orWhereHas('parent', function($parentQuery) use ($currentUser) {
-                    $parentQuery->where('parent_id', $currentUser->id);
+
+            ->when(!($user->hasRole('super_admin') || $user->hasRole('admin')), function ($qq) use ($currentUser, $branchUserIds) {
+                if ($branchUserIds) {
+                    $qq->whereIn('id', $branchUserIds);
+                    return;
+                }
+
+                $qq->where(function ($q) use ($currentUser) {
+                    $q->where('id', $currentUser->id)
+                        ->orWhere('parent_id', $currentUser->id)
+                        ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
+                            $parentQuery->where('parent_id', $currentUser->id);
+                        });
                 });
-            });
             })
             // ->where('status', 'active')
             ->get()
