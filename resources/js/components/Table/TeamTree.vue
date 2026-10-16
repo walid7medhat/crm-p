@@ -1,290 +1,209 @@
 <template>
-    <div class="card basic-data-table">
-        <div class="card-header">
-            <div class="row">
-                <div class="col-md-6 text-start">
-                    <h5 class="card-title mb-0">Team Tree</h5>
-                    <p class="text-muted mb-0">View your team structure in a hierarchical tree</p>
+    <div class="org-chart-page">
+        <header class="org-toolbar">
+            <div class="org-toolbar__tools">
+                <div class="org-search" :class="{ 'is-open': searchText }">
+                    <iconify-icon icon="lucide:search" width="16"></iconify-icon>
+                    <input
+                        v-model="searchText"
+                        type="search"
+                        placeholder="Find someone"
+                        aria-label="Find an employee"
+                        autocomplete="off"
+                        @keydown.down.prevent="moveSearch(1)"
+                        @keydown.up.prevent="moveSearch(-1)"
+                        @keydown.enter.prevent="chooseSearch(searchMatches[searchIndex] || searchMatches[0])"
+                        @keydown.esc="clearSearch"
+                    >
+                    <button v-if="searchText" type="button" class="org-search__clear" aria-label="Clear search" @click="clearSearch">
+                        <iconify-icon icon="lucide:x" width="14"></iconify-icon>
+                    </button>
+                    <div v-if="searchText" class="org-search__panel">
+                        <p class="org-search__meta">{{ searchMatches.length }} {{ searchMatches.length === 1 ? 'match' : 'matches' }}</p>
+                        <ul v-if="searchMatches.length" class="org-search__list">
+                            <li v-for="(person, index) in searchMatches" :key="person.id">
+                                <button
+                                    type="button"
+                                    :class="{ 'is-active': index === searchIndex }"
+                                    @mouseenter="searchIndex = index"
+                                    @click="chooseSearch(person)"
+                                >
+                                    <span class="org-search__avatar" :style="{ '--accent': branchColor(person.branch_name) }">{{ initials(person.name) }}</span>
+                                    <span class="org-search__copy">
+                                        <strong v-html="highlight(person.name)"></strong>
+                                        <small>
+                                            {{ person.role_name || 'Team member' }}
+                                            <template v-if="person.branch_name"> · {{ person.branch_name }}</template>
+                                        </small>
+                                    </span>
+                                </button>
+                            </li>
+                        </ul>
+                        <p v-else class="org-search__empty">No matching people</p>
+                    </div>
                 </div>
-                <div class="col-md-6 text-end">
-                    <router-link to="/users" class="btn btn-outline-primary">
-                        <iconify-icon icon="lucide:table" class="me-2"></iconify-icon>
-                        Open Team Table
-                    </router-link>
+                <div class="org-legend" aria-hidden="true">
+                    <span><i style="background:#733E87"></i>Dubai</span>
+                    <span><i style="background:#9A7420"></i>Abu Dhabi</span>
+                </div>
+                <select v-model="focusBranchId" class="org-select" aria-label="Focus branch">
+                    <option value="">All branches</option>
+                    <option v-for="branch in branchOptions" :key="branch.id" :value="String(branch.id)">{{ branch.name }}</option>
+                </select>
+                <div class="org-zoom" role="group" aria-label="Chart zoom">
+                    <button type="button" title="Zoom out" @click="changeZoom(-0.1)"><iconify-icon icon="lucide:minus" width="15"></iconify-icon></button>
+                    <span>{{ Math.round(zoom * 100) }}%</span>
+                    <button type="button" title="Zoom in" @click="changeZoom(0.1)"><iconify-icon icon="lucide:plus" width="15"></iconify-icon></button>
+                    <button type="button" title="Fit to screen" @click="fitToScreen">Fit</button>
+                    <button type="button" title="Center view" @click="centerView">Center</button>
+                </div>
+                <router-link to="/users" class="org-link">Team table</router-link>
+                <button type="button" class="org-drawer-toggle" @click="drawerOpen = !drawerOpen">
+                    Unassigned
+                    <span>{{ unassigned.length }}</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="org-body">
+            <div
+                ref="viewport"
+                class="org-viewport"
+                @dragover="onViewportDragOver"
+            >
+                <div v-if="loading" class="org-skeleton" aria-hidden="true">
+                    <div class="org-skeleton__card"></div>
+                    <div class="org-skeleton__row">
+                        <div class="org-skeleton__card"></div>
+                        <div class="org-skeleton__card"></div>
+                        <div class="org-skeleton__card"></div>
+                    </div>
+                </div>
+                <div v-else-if="!visibleRoots.length" class="org-empty">
+                    <iconify-icon icon="lucide:network" width="36"></iconify-icon>
+                    <p>No organization chart to show</p>
+                </div>
+                <div v-else ref="canvas" class="org-canvas" :style="{ zoom }">
+                    <div class="org-forest">
+                        <TeamTreeNode
+                            v-for="root in visibleRoots"
+                            :key="root.id"
+                            :node="root"
+                            accent="#1e3a78"
+                            :current-user-id="Number(currentUser.id) || 0"
+                            :highlighted-id="highlightedId"
+                            :dragging-id="dragEmployee ? dragEmployee.id : 0"
+                            :collapsed-map="collapsed"
+                            :can-drag="canDrag"
+                            :can-drop-on="canDropOn"
+                            @toggle="toggleNode"
+                            @open="openPerson"
+                            @drag-start="onDragStart"
+                            @drag-end="onDragEnd"
+                            @drop="onDrop"
+                        />
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="card">
-            <!-- Filters Section -->
-            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3"
-                style="border-bottom: none; padding-bottom: 0px;">
 
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                    <!-- Role Filter -->
-                    <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-sm w-auto rounded-3" v-model="selectedRole"
-                            style="border-radius: 10px; height: 2.4rem;" @change="applyFilters">
-                            <option value="">All Roles</option>
-                            <option v-for="role in availableRoles" :key="role" :value="role">{{ role }}</option>
+            <aside v-show="drawerOpen" class="org-drawer" :class="{ 'is-open': drawerOpen }">
+                <div class="org-drawer__head">
+                    <div>
+                        <p class="org-drawer__title">Unassigned <span>{{ filteredUnassigned.length }}</span></p>
+                    </div>
+                    <button type="button" class="org-icon-btn" :title="drawerOpen ? 'Collapse drawer' : 'Expand drawer'" @click="drawerOpen = !drawerOpen">
+                        <iconify-icon :icon="drawerOpen ? 'lucide:panel-right-close' : 'lucide:panel-right-open'" width="18"></iconify-icon>
+                    </button>
+                </div>
+                <div v-show="drawerOpen" class="org-drawer__filters">
+                    <input v-model="drawerSearch" type="search" placeholder="Search unassigned" aria-label="Search unassigned employees">
+                    <div class="org-drawer__selects">
+                        <select v-model="drawerBranch" aria-label="Filter by branch">
+                            <option value="">All branches</option>
+                            <option v-for="branch in unassignedBranches" :key="branch" :value="branch">{{ branch }}</option>
+                        </select>
+                        <select v-model="drawerRole" aria-label="Filter by role">
+                            <option value="">All roles</option>
+                            <option v-for="role in unassignedRoles" :key="role" :value="role">{{ role }}</option>
                         </select>
                     </div>
-
-                    <!-- Status Filter -->
-                    <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-sm w-auto rounded-3" v-model="selectedStatus"
-                            style="border-radius: 10px; height: 2.4rem;" @change="applyFilters">
-                            <option value="">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="in_active">Inactive</option>
-                        </select>
-                    </div>
-
-                    <!-- Clear Filters Button -->
-                    <button v-if="hasActiveFilters" class="btn btn-sm btn-outline-secondary" @click="clearFilters">
-                        <iconify-icon icon="lucide:x" class="me-1"></iconify-icon>
-                        Clear Filters
-                    </button>
                 </div>
-
-                <div class="d-flex gap-2">
-                    <div class="icon-field d-flex align-items-center">
-                        <span class="me-2">Search:</span>
-                        <div class="position-relative" style="width: 100%; max-width: 240px;">
-                            <input type="text" class="form-control form-control-sm w-100 px-3 pe-5" v-model="searchText"
-                                style="border-radius: 10px; height: 2.5rem;" placeholder="Search team members..." 
-                                @input="handleSearchInput"/>
-                            <span class="icon position-absolute end-0 top-50 translate-middle-y me-3 text-muted"
-                                style="pointer-events: none;">
-                                <iconify-icon icon="lucide:search"></iconify-icon>
-                            </span>
+                <div v-show="drawerOpen" class="org-drawer__list">
+                    <p v-if="!filteredUnassigned.length" class="org-drawer__empty">
+                        <template v-if="unassigned.length">No one matches these filters.</template>
+                        <template v-else>Everyone in your view is already on a team.</template>
+                    </p>
+                    <article
+                        v-for="person in filteredUnassigned"
+                        :key="person.id"
+                        class="pool-card"
+                        :class="{ 'is-dragging': dragEmployee && dragEmployee.id === person.id }"
+                        :draggable="canDrag(person) ? 'true' : 'false'"
+                        @dragstart="onPoolDragStart($event, person)"
+                        @dragend="onDragEnd"
+                        @click="onPoolClick(person)"
+                    >
+                        <div class="pool-card__avatar">{{ initials(person.name) }}</div>
+                        <div>
+                            <strong>{{ person.name }}</strong>
+                            <small>{{ person.role_name || 'Team member' }}</small>
+                            <small v-if="person.branch_name">{{ person.branch_name }}</small>
                         </div>
-                    </div>
+                    </article>
                 </div>
-            </div>
+            </aside>
+        </div>
 
-            <!-- Filters Summary -->
-            <div v-if="hasActiveFilters" class="card-body py-2 border-bottom bg-light">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <small class="text-muted">Active filters:</small>
-                    <span v-if="selectedRole" class="badge bg-light text-dark border">
-                        Role: {{ selectedRole }}
-                        <button @click="selectedRole = ''" class="btn-close ms-1" style="font-size: 0.6rem;"></button>
-                    </span>
-                    <span v-if="selectedStatus" class="badge bg-light text-dark border">
-                        Status: {{ selectedStatus === 'active' ? 'Active' : 'Inactive' }}
-                        <button @click="selectedStatus = ''" class="btn-close ms-1" style="font-size: 0.6rem;"></button>
-                    </span>
-                    <span v-if="searchText" class="badge bg-light text-dark border">
-                        Search: "{{ searchText }}"
-                        <button @click="searchText = ''" class="btn-close ms-1" style="font-size: 0.6rem;"></button>
-                    </span>
-                </div>
-            </div>
-
-            <!-- Team Tree Content with Scroll -->
-            <div class="card-body p-0">
-                <div class="team-tree-container" ref="treeContainer">
-                    <div class="tree-scroll-wrapper">
-                        <div class="tree-content">
-                            <div v-if="filteredTeamTree.length > 0" class="tree-root">
-                                <div v-for="member in filteredTeamTree" :key="member.id" class="root-node">
-                                    <TeamTreeNode 
-                                        :node="member" 
-                                        :level="0"
-                                        :current-user-id="currentUser.id"
-                                        @view-profile="viewUserProfile"
-                                        @open-sidebar="openSidebar"
-                                          @close-all-sidebars="handleCloseAllSidebars"
-                                        :permissions="{
-                                            view: $hasPermission('users-list')
-                                        }" />
-                                </div>
-                            </div>
-                            
-                            <!-- No team members message -->
-                            <div v-else-if="!loading" class="text-center text-muted py-4">
-                                <iconify-icon icon="lucide:users" width="48" class="mb-2"></iconify-icon>
-                                <p v-if="hasActiveFilters">No team members match your filters</p>
-                                <p v-else>No team members found</p>
-                                <button v-if="$hasPermission('users-create') && !hasActiveFilters" class="btn btn-outline-primary mt-2" @click="addUser">
-                                    <iconify-icon icon="lucide:plus" class="me-2"></iconify-icon>
-                                    Add Team Member
-                                </button>
-                                <button v-if="hasActiveFilters" class="btn btn-outline-primary mt-2" @click="clearFilters">
-                                    <iconify-icon icon="lucide:filter-x" class="me-2"></iconify-icon>
-                                    Clear Filters
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Scroll Indicators -->
-                    <div v-if="showScrollIndicators" class="scroll-indicators">
-                        <div class="scroll-hint left-hint" v-if="canScrollLeft">
-                            <iconify-icon icon="lucide:chevron-left" class="me-1"></iconify-icon>
-                            <span>Scroll Left</span>
-                        </div>
-                        <div class="scroll-hint right-hint" v-if="canScrollRight">
-                            <span>Scroll Right</span>
-                            <iconify-icon icon="lucide:chevron-right" class="ms-1"></iconify-icon>
-                        </div>
+        <div v-if="person" class="org-modal" @click.self="person = null">
+            <div class="org-dialog org-dialog--person" role="dialog" aria-modal="true" :aria-label="person.name">
+                <button type="button" class="org-icon-btn org-dialog__close" @click="person = null" aria-label="Close">
+                    <iconify-icon icon="lucide:x" width="16"></iconify-icon>
+                </button>
+                <div class="org-dialog__head">
+                    <div class="org-dialog__photo">{{ initials(person.name) }}</div>
+                    <div class="org-dialog__identity">
+                        <p class="org-dialog__name">{{ person.name }}</p>
+                        <p class="org-dialog__role">{{ person.role_name || 'Team member' }}</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Loading State -->
-            <div v-if="loading" class="loading text-center py-4">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2">Loading team structure...</p>
+                <dl>
+                    <template v-if="person.email"><dt>Email</dt><dd>{{ person.email }}</dd></template>
+                    <template v-if="person.phone"><dt>Phone</dt><dd>{{ person.phone }}</dd></template>
+                    <template v-if="person.branch_name"><dt>Branch</dt><dd>{{ person.branch_name }}</dd></template>
+                    <template v-if="person.parent_name"><dt>Reports to</dt><dd>{{ person.parent_name }}</dd></template>
+                    <dt>Status</dt>
+                    <dd>
+                        <span class="org-status" :class="person.status === 'in_active' ? 'is-off' : 'is-on'">
+                            {{ person.status === 'in_active' ? 'Inactive' : (person.status || 'Active') }}
+                        </span>
+                    </dd>
+                </dl>
+                <button v-if="canViewProfile" type="button" class="org-primary" @click="viewProfile(person)">View profile</button>
             </div>
         </div>
 
-        <!-- Team Lead Sidebar -->
-          <!-- Team Lead Sidebar -->
-           <!-- Team Lead Sidebar -->
-        <div v-if="isTeamLeadSidebarOpen" class="sidebar-overlay" @click="closeTeamLeadSidebar"></div>
-        <div class="team-lead-sidebar" :class="{'sidebar-open': isTeamLeadSidebarOpen}">
-            <div class="sidebar-content">
-                <div class="sidebar-header">
-                    <h5>Team Lead Details</h5>
-                    <button class="close-btn" @click="closeTeamLeadSidebar">
-                        <iconify-icon icon="lucide:x"></iconify-icon>
+        <div v-if="picker" class="org-modal" @click.self="picker = null">
+            <div class="org-dialog org-dialog--wide" role="dialog" aria-modal="true" aria-label="Choose a team">
+                <button type="button" class="org-icon-btn org-dialog__close" @click="picker = null" aria-label="Close">
+                    <iconify-icon icon="lucide:x" width="18"></iconify-icon>
+                </button>
+                <p class="org-dialog__name">Choose {{ picker.manager.name }}'s team</p>
+                <p class="org-dialog__role">{{ picker.employee.name }} can join one of these teams.</p>
+                <div class="org-picker">
+                    <button v-for="team in picker.teams" :key="team.id" type="button" @click="commitAssign(picker.employee, team)">
+                        <strong>{{ team.name }}</strong>
+                        <small>{{ team.role_name }} · {{ (team.children || []).length }} people</small>
                     </button>
-                </div>
-                
-                <div class="sidebar-body" v-if="selectedTeamLead">
-                    <!-- Team Lead Header -->
-                    <div class="team-lead-header-simple">
-                        <div class="header-content-simple">
-                            <div class="avatar-section-simple">
-                                <div class="user-avatar-simple">
-                                    <img :src="selectedTeamLead.avatar || defaultAvatar" 
-                                        alt="Team Lead Avatar"
-                                        @error="handleImageError">
-                                </div>
-                            </div>
-                            <div class="info-section-simple">
-                                <h4 class="user-name-simple">{{ selectedTeamLead.name }}</h4>
-                                <div class="role-section-simple">
-                                    <span class="role-badge-simple">{{ selectedTeamLead.role_name }}</span>
-                                </div>
-                                <div class="team-size-simple">
-                                    <iconify-icon icon="lucide:users" class="team-icon"></iconify-icon>
-                                    <span>{{ getSalesMembersCount(selectedTeamLead) }} Sales Members</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sales Members Section -->
-                    <div class="team-members-section-simple" v-if="getSalesMembers(selectedTeamLead).length > 0">
-                        <h6 class="section-title-simple">Sales Team</h6>
-                        <div class="team-members-list-simple">
-                            <div v-for="member in getSalesMembers(selectedTeamLead)" 
-                                :key="member.id" 
-                                class="team-member-item-simple"
-                                @click="openEmployeeSidebar(member)">
-                                <div class="member-avatar-simple">
-                                    <img :src="member.avatar || defaultAvatar" 
-                                        alt="Member Avatar"
-                                        @error="handleImageError">
-                                    <span class="status-dot-simple" :class="{'online': isUserOnline(member)}"></span>
-                                </div>
-                                <div class="member-info-simple">
-                                    <h6 class="member-name-simple">{{ member.name }}</h6>
-                                    <span class="member-role-simple">{{ member.role_name }}</span>
-                                </div>
-                                <div class="member-action-simple">
-                                    <iconify-icon icon="lucide:chevron-right" class="chevron-icon-simple"></iconify-icon>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- No Sales Members Message -->
-                    <div v-else class="no-team-members-simple">
-                        <div class="empty-state-simple">
-                            <iconify-icon icon="lucide:users" width="48" class="empty-icon-simple"></iconify-icon>
-                            <p class="empty-text-simple">No sales members assigned</p>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons-simple">
-                        <button class="btn btn-outline-primary w-100" @click="viewFullProfile(selectedTeamLead)">
-                            <iconify-icon icon="lucide:user" class="me-2"></iconify-icon>
-                            View Full Profile
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Employee Sidebar -->
-        <div v-if="isEmployeeSidebarOpen" class="sidebar-overlay" @click="closeEmployeeSidebar"></div>
-        <div class="employee-sidebar" :class="{'sidebar-open': isEmployeeSidebarOpen}">
-            <div class="sidebar-content">
-                <div class="sidebar-header">
-                    <h5>Employee Details</h5>
-                    <button class="close-btn" @click="closeEmployeeSidebar">
-                        <iconify-icon icon="lucide:x"></iconify-icon>
-                    </button>
-                </div>
-                
-                <div class="sidebar-body" v-if="selectedEmployee">
-                    <!-- Employee Header -->
-                    <div class="user-header">
-                        <div class="user-avatar-large">
-                            <img :src="selectedEmployee.avatar || defaultAvatar" 
-                                 alt="Employee Avatar"
-                                 @error="handleImageError">
-                        </div>
-                        <div class="user-info-large">
-                            <h4>{{ selectedEmployee.name }}</h4>
-                            <span class="role-badge-large">{{ selectedEmployee.role_name }}</span>
-                            <div v-if="selectedEmployee.team_members_count > 0" class="team-size-badge">
-                                {{ selectedEmployee.team_members_count }} Team Members
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Employee Details -->
-                    <div class="user-details-section">
-                        <div class="detail-row">
-                            <iconify-icon icon="lucide:mail"></iconify-icon>
-                            <div>
-                                <label>Email</label>
-                                <p>{{ selectedEmployee.email }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="detail-row" v-if="selectedEmployee.phone">
-                            <iconify-icon icon="lucide:phone"></iconify-icon>
-                            <div>
-                                <label>Phone</label>
-                                <p>{{ selectedEmployee.phone }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="detail-row" v-if="selectedEmployee.last_login_at">
-                            <iconify-icon icon="lucide:clock"></iconify-icon>
-                            <div>
-                                <label>Last Login</label>
-                                <p>{{ formatLastLogin(selectedEmployee.last_login_at) }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons">
-                        <button class="btn btn-outline-primary w-100" @click="viewFullProfile(selectedEmployee)">
-                            <iconify-icon icon="lucide:user" class="me-2"></iconify-icon>
-                            View Full Profile
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div v-if="toast" class="org-toast" :class="'is-' + toast.type" role="status">
+            <span>{{ toast.message }}</span>
+            <button v-if="toast.undo" type="button" @click="undoAssign">Undo</button>
+            <button type="button" aria-label="Dismiss" @click="toast = null">
+                <iconify-icon icon="lucide:x" width="14"></iconify-icon>
+            </button>
         </div>
     </div>
 </template>
@@ -293,1202 +212,1063 @@
 import { API_ENDPOINTS } from '../../config/api';
 import TeamTreeNode from './TeamTreeNode.vue';
 
+const LEADERS = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'];
+
+function roleKey(user) {
+    if (!user) return '';
+    if (user.role_key) return String(user.role_key).toLowerCase();
+    const roles = Array.isArray(user.roles) ? user.roles : [];
+    if (roles.length && typeof roles[0] === 'string') return String(roles[0]).toLowerCase();
+    return String(user.role_name || '').toLowerCase().replace(/\s+/g, '_');
+}
+
+function isLeader(user) {
+    return LEADERS.includes(roleKey(user));
+}
+
+function isManagerRole(user) {
+    const key = roleKey(user);
+    return key === 'manager' || key.endsWith('_manager');
+}
+
+function isTeamLeadRole(user) {
+    const key = roleKey(user);
+    return key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
+}
+
+const COMPANY = '#0B0736';
+const DUBAI = '#733E87';
+const ABU_DHABI = '#9A7420';
+
+function branchColor(name) {
+    const label = String(name || '').toLowerCase();
+    if (label.includes('dubai')) return DUBAI;
+    if (label.includes('abu dhabi') || label.includes('abu-dhabi') || label.includes('abudhabi')) return ABU_DHABI;
+    return COMPANY;
+}
+
+function paintBranch(node, accent) {
+    node.accent = accent;
+    (node.children || []).forEach((child) => paintBranch(child, accent));
+}
+
 export default {
     name: 'TeamTree',
-    components: {
-        TeamTreeNode
-    },
+    components: { TeamTreeNode },
     data() {
         return {
             loading: true,
-            selectedRole: '',
-            selectedStatus: '',
-            searchText: '',
             allUsers: [],
-            filteredUsers: [],
             currentUser: {},
-            searchTimeout: null,
-            showScrollIndicators: false,
-            canScrollLeft: false,
-            canScrollRight: false,
-            isTeamLeadSidebarOpen: false,
-            isEmployeeSidebarOpen: false,
-            selectedTeamLead: null,
-            selectedEmployee: null,
-                defaultAvatar: '/assets/images/user.png'
+            canAssign: false,
+            searchText: '',
+            searchIndex: 0,
+            highlightedId: 0,
+            focusBranchId: '',
+            zoom: 1,
+            drawerOpen: false,
+            drawerSearch: '',
+            drawerBranch: '',
+            drawerRole: '',
+            collapsed: {},
+            dragEmployee: null,
+            poolDragged: false,
+            assigning: false,
+            person: null,
+            picker: null,
+            toast: null,
+            toastTimer: null,
         };
     },
     computed: {
-        availableRoles() {
-            const roles = [...new Set(this.allUsers.map(user => user.role_name).filter(Boolean))];
-            return roles.sort();
+        byId() {
+            return new Map(this.allUsers.map((user) => [Number(user.id), user]));
         },
-        
-        teamTree() {
-            if (!this.filteredUsers.length) return [];
-
-            try {
-                const usersMap = new Map();
-                const roots = [];
-
-                this.filteredUsers.forEach(user => {
-                    usersMap.set(user.id, { 
-                        ...user, 
-                        children: []
-                    });
-                });
-
-                this.filteredUsers.forEach(user => {
-                    const node = usersMap.get(user.id);
-                    if (user.parent_id && usersMap.has(user.parent_id)) {
-                        const parent = usersMap.get(user.parent_id);
-                        parent.children.push(node);
-                    } else {
-                        roots.push(node);
-                    }
-                });
-
-                return roots;
-            } catch (error) {
-                console.error('Error building team tree:', error);
-                return [];
-            }
+        chartPeople() {
+            return this.allUsers.filter((user) => this.inChart(user));
         },
-
-        filteredTeamTree() {
-            return this.teamTree;
+        unassigned() {
+            return this.allUsers.filter((user) => !this.inChart(user));
         },
-
-        hasActiveFilters() {
-            return this.selectedRole || this.selectedStatus || this.searchText;
-        }
-    },
-    mounted() {
-        console.log('TeamTree component mounted');
-        this.fetchTeamData();
-        this.$nextTick(() => {
-            this.setupScrollListener();
-        });
-    },
-    methods: {
-        getSalesMembers(teamLead) {
-            // ترجع الأعضاء السالز فقط
-            if (!teamLead || !teamLead.children) return [];
-            return teamLead.children.filter(member => {
-                const roleLower = member.role_name?.toLowerCase() || '';
-                return roleLower.includes('sales');
+        roots() {
+            const nodes = new Map(this.chartPeople.map((user) => [Number(user.id), { ...user, children: [] }]));
+            const roots = [];
+            nodes.forEach((node) => {
+                const parentId = Number(node.parent_id);
+                if (parentId && nodes.has(parentId)) nodes.get(parentId).children.push(node);
+                else roots.push(node);
+            });
+            const sortNodes = (list) => {
+                list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+                list.forEach((node) => sortNodes(node.children));
+            };
+            sortNodes(roots);
+            roots.forEach((root) => {
+                if (roleKey(root) === 'super_admin') {
+                    root.accent = COMPANY;
+                    (root.children || []).forEach((child) => paintBranch(child, branchColor(child.name)));
+                } else {
+                    paintBranch(root, branchColor(root.name));
+                }
+            });
+            return roots;
+        },
+        visibleRoots() {
+            if (!this.focusBranchId) return this.roots;
+            const match = this.findNode(this.roots, Number(this.focusBranchId));
+            return match ? [match] : this.roots;
+        },
+        branchOptions() {
+            const map = new Map();
+            this.allUsers.forEach((user) => {
+                if (user.branch_id && user.branch_name) map.set(user.branch_id, user.branch_name);
+            });
+            return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+        },
+        searchMatches() {
+            const query = this.searchText.trim().toLowerCase();
+            if (!query) return [];
+            const score = (user) => {
+                const name = String(user.name || '').toLowerCase();
+                const email = String(user.email || '').toLowerCase();
+                if (name.startsWith(query)) return 0;
+                if (name.split(/\s+/).some((part) => part.startsWith(query))) return 1;
+                if (name.includes(query)) return 2;
+                if (email.startsWith(query)) return 3;
+                return 4;
+            };
+            return this.allUsers.filter((user) => {
+                return [user.name, user.email, user.role_name, user.branch_name, user.parent_name]
+                    .some((value) => String(value || '').toLowerCase().includes(query));
+            }).sort((a, b) => score(a) - score(b) || String(a.name).localeCompare(String(b.name))).slice(0, 10);
+        },
+        unassignedBranches() {
+            return [...new Set(this.unassigned.map((user) => user.branch_name).filter(Boolean))].sort();
+        },
+        unassignedRoles() {
+            return [...new Set(this.unassigned.map((user) => user.role_name).filter(Boolean))].sort();
+        },
+        filteredUnassigned() {
+            const query = this.drawerSearch.trim().toLowerCase();
+            return this.unassigned.filter((user) => {
+                if (this.drawerBranch && user.branch_name !== this.drawerBranch) return false;
+                if (this.drawerRole && user.role_name !== this.drawerRole) return false;
+                if (!query) return true;
+                return [user.name, user.email, user.role_name, user.branch_name]
+                    .some((value) => String(value || '').toLowerCase().includes(query));
             });
         },
-
-        getSalesMembersCount(teamLead) {
-            // حساب عدد الأعضاء السالز فقط
-            if (!teamLead || !teamLead.children) return 0;
-            return teamLead.children.filter(member => {
-                const roleLower = member.role_name?.toLowerCase() || '';
-                return roleLower.includes('sales');
-            }).length;
+        canViewProfile() {
+            const roles = Array.isArray(this.currentUser.roles) ? this.currentUser.roles : [];
+            if (roles.includes('super_admin') || roles.includes('admin')) return true;
+            return !this.$hasPermission || this.$hasPermission('users-list');
+        },
+        actorIsAdmin() {
+            const roles = (Array.isArray(this.currentUser.roles) ? this.currentUser.roles : []).map((role) => {
+                return String(typeof role === 'string' ? role : role?.name || '').toLowerCase();
+            });
+            return roles.includes('super_admin') || roles.includes('admin');
+        },
+    },
+    mounted() {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+            try { this.currentUser = JSON.parse(stored) || {}; } catch (error) { this.currentUser = {}; }
+        }
+        this.fetchTeamData();
+    },
+    watch: {
+        searchText() {
+            this.searchIndex = 0;
+        },
+    },
+    beforeUnmount() {
+        clearTimeout(this.toastTimer);
+        clearTimeout(this.highlightTimer);
+    },
+    methods: {
+        inChart(user) {
+            if (isLeader(user)) return true;
+            const parent = this.byId.get(Number(user.parent_id));
+            if (!parent) return false;
+            return isTeamLeadRole(parent) || isManagerRole(parent);
+        },
+        canDrag(user) {
+            return this.canAssign && !!user && !isLeader(user) && !this.assigning;
+        },
+        canDropOn(node) {
+            if (!this.dragEmployee || !node || Number(node.id) === Number(this.dragEmployee.id)) return false;
+            return !!this.resolveDestination(node);
+        },
+        resolveDestination(node) {
+            if (isTeamLeadRole(node)) return { type: 'direct', parent: node };
+            if (isManagerRole(node)) return { type: 'direct', parent: node };
+            const parent = this.byId.get(Number(node.parent_id));
+            if (parent && (isTeamLeadRole(parent) || isManagerRole(parent))) {
+                const treeParent = this.findNode(this.roots, Number(parent.id)) || parent;
+                return this.resolveDestination(treeParent);
+            }
+            return null;
+        },
+        sameBranchAllowed(employee, parent) {
+            if (this.actorIsAdmin) return true;
+            const employeeBranch = employee.branch_id || null;
+            const parentBranch = parent.branch_id || null;
+            const actor = this.byId.get(Number(this.currentUser.id));
+            const actorBranch = actor?.branch_id || null;
+            if (employeeBranch && parentBranch && Number(employeeBranch) !== Number(parentBranch)) return false;
+            if (actorBranch && parentBranch && Number(actorBranch) !== Number(parentBranch)) return false;
+            if (actorBranch && employeeBranch && Number(actorBranch) !== Number(employeeBranch)) return false;
+            return true;
         },
         async fetchTeamData() {
+            this.loading = true;
             try {
-                this.loading = true;
-                
                 const token = localStorage.getItem('token');
-                
-                const userData = localStorage.getItem('user');
-                if (userData) {
-                    this.currentUser = JSON.parse(userData);
-                }
-
-                try {
-                    const hierarchyResponse = await fetch(API_ENDPOINTS.TEAM_HIERARCHY, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': 'Bearer ' + token,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        }
-                    });
-
-                    if (hierarchyResponse.ok) {
-                        const hierarchyData = await hierarchyResponse.json();
-                        this.processTeamData(hierarchyData);
-                        return;
-                    }
-                } catch (hierarchyError) {
-                    console.warn('Team hierarchy API failed, falling back to users API:', hierarchyError);
-                }
-
-                await this.fetchUsersData();
-                
+                const response = await fetch(API_ENDPOINTS.TEAM_HIERARCHY, {
+                    headers: {
+                        Authorization: 'Bearer ' + token,
+                        Accept: 'application/json',
+                    },
+                });
+                if (!response.ok) throw new Error('Hierarchy request failed');
+                const payload = await response.json();
+                this.applyPayload(payload);
             } catch (error) {
-                console.error('Error fetching team data:', error);
-                this.allUsers = [];
-                this.filteredUsers = [];
-                this.showNotification('Failed to load team structure. Please try again.', 'error');
+                console.error(error);
+                this.notify('Could not load the organization chart.', 'error');
             } finally {
                 this.loading = false;
-                this.$nextTick(() => {
-                    this.checkScroll();
-                });
+                this.$nextTick(() => this.centerView());
             }
         },
-
-        async fetchUsersData() {
-            try {
-                const token = localStorage.getItem('token');
-                
-                const response = await fetch(API_ENDPOINTS.USERS, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                this.processTeamData(data);
-                
-            } catch (error) {
-                console.error('Error fetching users data:', error);
-                throw error;
-            }
-        },
-
-        processTeamData(data) {
-            let usersData = [];
-            
-            if (data.data) {
-                usersData = Array.isArray(data.data) ? data.data : [];
-            } else if (Array.isArray(data)) {
-                usersData = data;
-            } else if (data.success && data.data) {
-                usersData = Array.isArray(data.data) ? data.data : [];
-            }
-
-            this.allUsers = usersData.map(user => ({
-                id: user.id || 0,
+        applyPayload(payload) {
+            const rows = Array.isArray(payload?.data) ? payload.data : [];
+            this.allUsers = rows.map((user) => ({
+                id: Number(user.id),
                 name: user.name || 'Unnamed',
                 email: user.email || '',
                 phone: user.phone || '',
                 avatar: user.avatar || null,
                 status: user.status || 'active',
-                parent_id: user.parent_id || null,
+                parent_id: user.parent_id ? Number(user.parent_id) : null,
                 parent_name: user.parent_name || null,
-                role_name: user.role_name || 'Unknown Role',
+                role_name: user.role_name || '',
+                role_key: user.role_key || '',
                 role_id: user.role_id || null,
+                branch_id: user.branch_id ? Number(user.branch_id) : null,
+                branch_name: user.branch_name || '',
                 team_members_count: user.team_members_count || 0,
                 last_login_at: user.last_login_at || null,
-                created_at: user.created_at || null,
-                children: user.children || []
             }));
-
-            const hasChildren = this.allUsers.some(user => user.children && user.children.length > 0);
-            
-            if (!hasChildren) {
-                this.buildTreeStructure();
-            }
-
-            this.applyFilters();
+            if (typeof payload?.can_reassign === 'boolean') this.canAssign = payload.can_reassign;
+            else this.canAssign = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'].includes(roleKey(this.currentUser));
         },
-
-        buildTreeStructure() {
-            const usersMap = new Map();
-            
-            this.allUsers.forEach(user => {
-                usersMap.set(user.id, { ...user, children: [] });
-            });
-
-            this.allUsers.forEach(user => {
-                if (user.parent_id && usersMap.has(user.parent_id)) {
-                    const parent = usersMap.get(user.parent_id);
-                    parent.children.push(usersMap.get(user.id));
-                }
-            });
-
-            this.allUsers = Array.from(usersMap.values());
-        },
-
-        applyFilters() {
-            let filtered = [...this.allUsers];
-
-            if (this.selectedRole) {
-                filtered = filtered.filter(user => 
-                    user.role_name && user.role_name === this.selectedRole
-                );
+        findNode(list, id) {
+            for (const node of list || []) {
+                if (Number(node.id) === Number(id)) return node;
+                const found = this.findNode(node.children, id);
+                if (found) return found;
             }
-
-            if (this.selectedStatus) {
-                filtered = filtered.filter(user => 
-                    user.status && user.status === this.selectedStatus
-                );
-            }
-
-            if (this.searchText) {
-                const search = this.searchText.toLowerCase();
-                filtered = filtered.filter(user => 
-                    (user.name && user.name.toLowerCase().includes(search)) ||
-                    (user.email && user.email.toLowerCase().includes(search)) ||
-                    (user.role_name && user.role_name.toLowerCase().includes(search)) ||
-                    (user.parent_name && user.parent_name.toLowerCase().includes(search))
-                );
-            }
-
-            this.filteredUsers = filtered;
-            this.$nextTick(() => {
-                this.checkScroll();
-            });
+            return null;
         },
-
-        handleSearchInput() {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.applyFilters();
-            }, 300);
+        toggleNode(id) {
+            this.collapsed = { ...this.collapsed, [id]: !this.collapsed[id] };
         },
-
-        clearFilters() {
-            this.selectedRole = '';
-            this.selectedStatus = '';
+        expandAncestors(id) {
+            const next = { ...this.collapsed };
+            let current = this.byId.get(Number(id));
+            const seen = new Set();
+            while (current && current.parent_id && !seen.has(current.id)) {
+                seen.add(current.id);
+                delete next[Number(current.parent_id)];
+                current = this.byId.get(Number(current.parent_id));
+            }
+            this.collapsed = next;
+        },
+        branchColor(name) {
+            return branchColor(name);
+        },
+        clearSearch() {
             this.searchText = '';
-            this.applyFilters();
+            this.searchIndex = 0;
         },
-
-        setupScrollListener() {
-            const container = this.$refs.treeContainer;
-            if (container) {
-                container.addEventListener('scroll', this.handleScroll);
-            }
+        moveSearch(step) {
+            const total = this.searchMatches.length;
+            if (!total) return;
+            this.searchIndex = (this.searchIndex + step + total) % total;
         },
-
-        handleScroll() {
-            this.checkScroll();
+        highlight(value) {
+            const text = String(value || '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+            }[char]));
+            const query = this.searchText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (!query) return text;
+            return text.replace(new RegExp(`(${query})`, 'ig'), '<mark>$1</mark>');
         },
-
-        checkScroll() {
-            const container = this.$refs.treeContainer;
-            if (!container) return;
-
-            const scrollWrapper = container.querySelector('.tree-scroll-wrapper');
-            if (!scrollWrapper) return;
-
-            const hasHorizontalScroll = scrollWrapper.scrollWidth > container.clientWidth;
-            this.showScrollIndicators = hasHorizontalScroll;
-
-            if (hasHorizontalScroll) {
-                this.canScrollLeft = container.scrollLeft > 0;
-                this.canScrollRight = container.scrollLeft < (scrollWrapper.scrollWidth - container.clientWidth - 10);
-            } else {
-                this.canScrollLeft = false;
-                this.canScrollRight = false;
-            }
-        },
-    handleCloseAllSidebars() {
-        console.log('Closing all sidebars from child component');
-        this.closeAllSidebars();
-    },
-    
-    // تعديل دالة openSidebar
-    openSidebar(user) {
-        console.log('Opening sidebar for user:', user);
-        
-        // إغلاق أي سايدبار مفتوحة حالياً أولاً
-        this.closeAllSidebars();
-        
-        // إعطاء وقت بسيط للـ DOM
-        this.$nextTick(() => {
-            // تحديد نوع السايدبار بناءً على دور المستخدم
-            if (this.isTeamLead(user)) {
-                this.selectedTeamLead = user;
-                this.isTeamLeadSidebarOpen = true;
-            } else {
-                this.selectedEmployee = user;
-                this.isEmployeeSidebarOpen = true;
-            }
-            
-            document.body.style.overflow = 'hidden';
-        });
-    },
-
-
-            closeAllSidebars() {
-                this.isTeamLeadSidebarOpen = false;
-                this.isEmployeeSidebarOpen = false;
-                this.selectedTeamLead = null;
-                this.selectedEmployee = null;
-                document.body.style.overflow = '';
-            },
-
-            // دالة جديدة نستدعيها لما نعرف إنه بيقفل الفروع
-            onNodeCollapse() {
-                this.closeAllSidebars();
-            },
-
-        isTeamLead(user) {
-            // تحديد إذا كان المستخدم Team Lead بناءً على الدور أو إذا كان لديه فريق
-            const roleLower = user.role_name?.toLowerCase() || '';
-            return roleLower.includes('team_lead') || 
-                   roleLower.includes('manager') ||
-                   (user.children && user.children.length > 0);
-        },
-
-        openEmployeeSidebar(member) {
-            this.selectedEmployee = member;
-            this.isEmployeeSidebarOpen = true;
-            document.body.style.overflow = 'hidden';
-        },
-
-        closeTeamLeadSidebar() {
-            console.log('Closing team lead sidebar');
-            this.isTeamLeadSidebarOpen = false;
-            this.selectedTeamLead = null;
-            document.body.style.overflow = '';
-        },
-
-        closeEmployeeSidebar() {
-            console.log('Closing employee sidebar');
-            this.isEmployeeSidebarOpen = false;
-            this.selectedEmployee = null;
-            document.body.style.overflow = '';
-        },
-
-        getTeamMembers(teamLead) {
-            // الحصول على أعضاء الفريق الخاص بال Team Lead
-            if (!teamLead || !teamLead.children) return [];
-            return teamLead.children;
-        },
-
-        getTeamMembersCount(teamLead) {
-            // حساب عدد أعضاء الفريق
-            if (!teamLead || !teamLead.children) return 0;
-            return teamLead.children.length;
-        },
-
-        viewUserProfile(userId) {
-            if (!this.$hasPermission('users-list')) {
-                this.showNotification('You do not have permission to view users', 'warning');
+        chooseSearch(person) {
+            if (!person) return;
+            this.clearSearch();
+            if (!this.inChart(person)) {
+                this.drawerOpen = true;
+                this.person = this.byId.get(Number(person.id)) || person;
                 return;
             }
-            this.$router.push(`/users/${userId}`);
+            if (!this.findNode(this.visibleRoots, person.id)) this.focusBranchId = '';
+            this.expandAncestors(person.id);
+            this.highlightedId = Number(person.id);
+            clearTimeout(this.highlightTimer);
+            this.highlightTimer = setTimeout(() => {
+                if (this.highlightedId === Number(person.id)) this.highlightedId = 0;
+            }, 2600);
+            this.$nextTick(() => {
+                const card = this.$el.querySelector(`[data-person="${person.id}"]`);
+                card?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
+            });
         },
-
-        viewFullProfile(user) {
-            this.closeTeamLeadSidebar();
-            this.closeEmployeeSidebar();
-            this.viewUserProfile(user.id);
+        changeZoom(delta) {
+            this.zoom = Math.min(1.4, Math.max(0.4, Math.round((this.zoom + delta) * 10) / 10));
         },
-
-        addUser() {
-            if (!this.$hasPermission('users-create')) {
-                this.showNotification('You do not have permission to create users', 'warning');
+        fitToScreen() {
+            const viewport = this.$refs.viewport;
+            const canvas = this.$refs.canvas;
+            if (!viewport || !canvas) return;
+            this.zoom = 1;
+            this.$nextTick(() => {
+                const width = canvas.offsetWidth || 1;
+                const scale = Math.min((viewport.clientWidth - 32) / width, 1);
+                this.zoom = Math.max(0.75, Math.round(scale * 100) / 100);
+                this.centerView();
+            });
+        },
+        centerView() {
+            this.$nextTick(() => {
+                const viewport = this.$refs.viewport;
+                const card = this.$el.querySelector('.org-forest .org-card');
+                if (!viewport || !card) return;
+                const viewRect = viewport.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                viewport.scrollLeft += cardRect.left - viewRect.left - (viewRect.width - cardRect.width) / 2;
+                viewport.scrollTop = 0;
+            });
+        },
+        onDragStart(user) {
+            this.dragEmployee = user;
+            this.person = null;
+        },
+        onPoolDragStart(event, person) {
+            if (!this.canDrag(person)) {
+                event.preventDefault();
                 return;
             }
-            this.$router.push('/add-user');
+            this.poolDragged = true;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(person.id));
+            this.onDragStart(person);
         },
-
-        isUserOnline(user) {
-            if (!user.last_login_at) return false;
+        onPoolClick(person) {
+            if (this.poolDragged) {
+                this.poolDragged = false;
+                return;
+            }
+            this.openPerson(person);
+        },
+        onDragEnd() {
+            this.dragEmployee = null;
+        },
+        onViewportDragOver(event) {
+            if (!this.dragEmployee) return;
+            const viewport = this.$refs.viewport;
+            if (!viewport) return;
+            const rect = viewport.getBoundingClientRect();
+            const edge = 56;
+            if (event.clientX - rect.left < edge) viewport.scrollLeft -= 18;
+            else if (rect.right - event.clientX < edge) viewport.scrollLeft += 18;
+            if (event.clientY - rect.top < edge) viewport.scrollTop -= 18;
+            else if (rect.bottom - event.clientY < edge) viewport.scrollTop += 18;
+        },
+        onDrop(target) {
+            const employee = this.dragEmployee;
+            this.dragEmployee = null;
+            if (!employee || !target) return;
+            const destination = this.resolveDestination(target);
+            if (!destination) {
+                this.notify('Drop onto a team leader or a manager.', 'warning');
+                return;
+            }
+            if (destination.type === 'choose') {
+                this.picker = { employee, manager: destination.manager, teams: destination.teams };
+                return;
+            }
+            if (!this.sameBranchAllowed(employee, destination.parent)) {
+                this.notify('You cannot assign employees across branches.', 'error');
+                return;
+            }
+            this.commitAssign(employee, destination.parent);
+        },
+        async commitAssign(employee, parent) {
+            this.picker = null;
+            if (!employee || !parent || this.assigning) return;
+            if (Number(employee.parent_id) === Number(parent.id)) {
+                this.notify(`${employee.name} is already on this team.`, 'info');
+                return;
+            }
+            if (!this.sameBranchAllowed(employee, parent)) {
+                this.notify('You cannot assign employees across branches.', 'error');
+                return;
+            }
+            const previous = {
+                parent_id: employee.parent_id,
+                parent_name: employee.parent_name,
+            };
+            this.assigning = true;
             try {
-                const lastLogin = new Date(user.last_login_at);
-                const now = new Date();
-                const diffMinutes = (now - lastLogin) / (1000 * 60);
-                return diffMinutes <= 15;
+                const token = localStorage.getItem('token');
+                const response = await fetch(API_ENDPOINTS.TEAM_REASSIGN, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + token,
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: employee.id, parent_id: parent.id }),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || payload.success === false) {
+                    throw new Error(payload.message || 'Assignment was rejected.');
+                }
+                const row = this.allUsers.find((user) => Number(user.id) === Number(employee.id));
+                if (row) {
+                    row.parent_id = payload.data?.parent_id ? Number(payload.data.parent_id) : Number(parent.id);
+                    row.parent_name = payload.data?.parent_name || parent.name;
+                    if (!row.branch_id && parent.branch_id) {
+                        row.branch_id = parent.branch_id;
+                        row.branch_name = parent.branch_name;
+                    }
+                }
+                this.highlightedId = Number(employee.id);
+                this.expandAncestors(employee.id);
+                this.notify(`${employee.name} moved to ${parent.name}.`, 'success', previous.parent_id ? { employeeId: employee.id, ...previous } : null);
+                this.$nextTick(() => this.chooseSearch(row || employee));
             } catch (error) {
-                return false;
+                this.notify(error.message || 'Assignment was rejected.', 'error');
+            } finally {
+                this.assigning = false;
             }
         },
-
-        getRoleBadgeClass(role) {
-            const roleLower = role?.toLowerCase();
-            if (roleLower.includes('super_admin')) return 'role-super-admin';
-            if (roleLower.includes('admin')) return 'role-admin';
-            if (roleLower.includes('manager')) return 'role-manager';
-            if (roleLower.includes('team') || roleLower.includes('lead')) return 'role-team-lead';
-            if (roleLower.includes('sales')) return 'role-sales';
-            return 'role-agent';
-        },
-
-        getStatusBadgeClass(status) {
-            return status === 'active' ? 'status-active' : 'status-inactive';
-        },
-
-        formatLastLogin(timestamp) {
-            if (!timestamp) return 'Never';
+        async undoAssign() {
+            const undo = this.toast?.undo;
+            this.toast = null;
+            if (!undo) return;
+            const employee = this.byId.get(Number(undo.employeeId));
+            if (!employee) return;
+            this.assigning = true;
             try {
-                const now = new Date();
-                const loginTime = new Date(timestamp);
-                const diffMs = now - loginTime;
-                const diffMins = Math.floor(diffMs / 60000);
-                
-                if (diffMins < 1) return 'Just now';
-                if (diffMins < 60) return `${diffMins}m ago`;
-                
-                const diffHours = Math.floor(diffMins / 60);
-                if (diffHours < 24) return `${diffHours}h ago`;
-                
-                const diffDays = Math.floor(diffHours / 24);
-                return `${diffDays}d ago`;
+                const token = localStorage.getItem('token');
+                const response = await fetch(API_ENDPOINTS.TEAM_REASSIGN, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + token,
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: undo.employeeId, parent_id: undo.parent_id }),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || payload.success === false) throw new Error(payload.message || 'Undo failed.');
+                const row = this.allUsers.find((user) => Number(user.id) === Number(undo.employeeId));
+                if (row) {
+                    row.parent_id = payload.data?.parent_id ? Number(payload.data.parent_id) : null;
+                    row.parent_name = payload.data?.parent_name || undo.parent_name || null;
+                }
+                this.notify('Assignment restored.', 'success');
             } catch (error) {
-                return 'Invalid date';
+                this.notify(error.message || 'Undo failed.', 'error');
+            } finally {
+                this.assigning = false;
             }
         },
-
-        handleImageError(event) {
-            event.target.src = this.defaultAvatar;
+        openPerson(user) {
+            const fresh = this.byId.get(Number(user.id)) || user;
+            this.person = fresh;
         },
-
-        showNotification(message, type = 'info') {
-            if (this.$showNotification) {
-                this.$showNotification(message, type);
-            } else {
-                console.log(`${type}: ${message}`);
-                alert(`${type.toUpperCase()}: ${message}`);
-            }
-        }
-        
+        viewProfile(user) {
+            this.person = null;
+            this.$router.push(`/users/${user.id}`);
+        },
+        initials(name) {
+            const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return '?';
+            return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+        },
+        notify(message, type = 'info', undo = null) {
+            if (window.$showNotification) window.$showNotification(message, type);
+            this.toast = { message, type, undo };
+            clearTimeout(this.toastTimer);
+            this.toastTimer = setTimeout(() => { this.toast = null; }, undo ? 7000 : 3200);
+        },
     },
-    beforeUnmount() {
-        const container = this.$refs.treeContainer;
-        if (container) {
-            container.removeEventListener('scroll', this.handleScroll);
-        }
-    }
 };
 </script>
 
 <style scoped>
-.team-tree-container {
-    position: relative;
-    width: 100%;
-    height: 70vh;
-    min-height: 500px;
-    max-height: 800px;
-    overflow: auto;
-    padding: 1rem;
-}
-
-.tree-scroll-wrapper {
-    width: max-content;
-    min-width: 100%;
-    padding: 1rem;
-}
-
-.tree-content {
+.org-chart-page {
+    --ink: #243056;
+    --line: #4a4678;
+    --muted: #8b93a7;
+    --paper: #f5f7fb;
+    height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem));
+    max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem));
+    min-height: 0;
+    overflow: hidden;
     display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(115, 62, 135, .16), transparent 32%),
+        radial-gradient(circle at 100% 0%, rgba(154, 116, 32, .16), transparent 28%),
+        var(--paper);
+    color: var(--ink);
+    position: relative;
+}
+
+.org-toolbar {
+    display: flex;
+    justify-content: flex-start;
+    gap: 16px;
+    align-items: center;
+    padding: 10px 16px 8px;
+    flex-wrap: wrap;
+}
+
+.org-toolbar__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    position: relative;
+}
+
+.org-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #e1e5f0;
+    border-radius: 12px;
+    padding: 0 8px 0 10px;
+    min-width: min(280px, 72vw);
+    height: 38px;
+    box-shadow: 0 8px 18px rgba(11, 7, 54, .05);
+}
+
+.org-search.is-open {
+    border-color: #733E87;
+    box-shadow: 0 0 0 3px rgba(115, 62, 135, .12);
+}
+
+.org-search__clear {
+    border: 0;
+    background: #f3f0f6;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    color: #5c5168;
 }
 
-.tree-root {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.org-search input,
+.org-drawer__filters input,
+.org-select,
+.org-drawer__selects select {
+    border: 0;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    font-size: 13px;
+    color: var(--ink);
 }
 
-.root-node {
-    margin-bottom: 2rem;
-}
-
-/* Custom Scrollbar */
-.team-tree-container::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-}
-
-.team-tree-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 6px;
-}
-
-.team-tree-container::-webkit-scrollbar-thumb {
-    background: #6c757d;
-    border-radius: 6px;
-    border: 2px solid #f1f1f1;
-}
-
-.team-tree-container::-webkit-scrollbar-thumb:hover {
-    background: #495057;
-}
-
-.team-tree-container::-webkit-scrollbar-corner {
-    background: #f1f1f1;
-}
-
-/* Scroll Indicators */
-.scroll-indicators {
+.org-search__panel {
     position: absolute;
-    top: 50%;
+    top: calc(100% + 8px);
     left: 0;
-    right: 0;
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 10;
+    width: min(340px, 86vw);
+    background: #fff;
+    border: 1px solid #efeaf3;
+    border-radius: 14px;
+    box-shadow: 0 22px 44px rgba(11, 7, 54, .16);
+    z-index: 30;
+    padding: 6px;
 }
 
-.scroll-hint {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    background: rgba(108, 117, 125, 0.9);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    animation: fadeInOut 2s ease-in-out infinite;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+.org-search__meta {
+    margin: 2px 8px 4px;
+    font-size: 10px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #8b93a7;
 }
 
-.left-hint {
-    left: 1rem;
-}
-
-.right-hint {
-    right: 1rem;
-}
-
-@keyframes fadeInOut {
-    0%, 100% { opacity: 0.7; transform: translateX(0); }
-    50% { opacity: 1; transform: translateX(5px); }
-}
-
-.right-hint {
-    animation: fadeInOutRight 2s ease-in-out infinite;
-}
-
-@keyframes fadeInOutRight {
-    0%, 100% { opacity: 0.7; transform: translateX(0); }
-    50% { opacity: 1; transform: translateX(-5px); }
-}
-
-.loading {
-    color: #7f8c8d;
-    font-size: 16px;
-}
-
-/* Sidebar Base Styles */
-.team-lead-sidebar,
-.employee-sidebar {
-    position: fixed;
-    top: 0;
-    right: -450px;
-    width: 450px;
-    height: 100vh;
-    background: white;
-    box-shadow: -2px 0 20px rgba(0,0,0,0.15);
-    transition: right 0.3s ease;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-open.team-lead-sidebar,
-.sidebar-open.employee-sidebar {
-    right: 0;
-}
-
-.sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.5);
-    z-index: 9999;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-.sidebar-open + .sidebar-overlay {
-    opacity: 1;
-    visibility: visible;
-}
-
-.sidebar-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    background: white;
-}
-
-.sidebar-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-}
-
-.sidebar-header h5 {
+.org-search__list,
+.org-search__empty {
     margin: 0;
-    color: #212529;
-    font-weight: 600;
+    padding: 0;
+    list-style: none;
 }
 
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    color: #6c757d;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-    background: #f8f9fa;
-    color: #495057;
-}
-
-.sidebar-body {
-    flex: 1;
-    padding: 1.5rem;
-    overflow-y: auto;
-    background: white;
-}
-
-/* Team Lead Header */
-.team-lead-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.user-avatar-large {
-    position: relative;
-    display: inline-block;
-    margin-bottom: 1rem;
-}
-
-.user-avatar-large img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: 4px solid #f8f9fa;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.user-info-large h4 {
-    margin: 0 0 0.75rem 0;
-    color: #212529;
-    font-weight: 600;
-}
-
-.role-badge-large {
-    display: inline-block;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: white;
-    background: #2596be;
-    margin-bottom: 0.5rem;
-}
-
-.team-size-badge {
-    display: block;
-    color: #6c757d;
-    font-size: 0.85rem;
-    margin-top: 0.5rem;
-}
-
-/* Team Members Section */
-.team-members-section {
-    margin: 2rem 0;
-}
-
-.section-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #212529;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.team-members-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.team-member-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.team-member-item:hover {
-    background: #e9ecef;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.member-avatar img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-.member-info {
-    flex: 1;
-}
-
-.member-info h6 {
-    margin: 0 0 0.25rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #212529;
-}
-
-.member-role {
-    font-size: 0.75rem;
-    color: #6c757d;
-    background: #e9ecef;
-    padding: 0.2rem 0.5rem;
+.org-search__list button {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
     border-radius: 10px;
-}
-
-.member-status {
+    padding: 6px 8px;
     display: flex;
     align-items: center;
+    gap: 8px;
 }
 
-.status-dot {
+.org-search__list button.is-active,
+.org-search__list button:hover { background: #f7f2f8; }
+
+.org-search__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent, #733E87);
+    background: color-mix(in srgb, var(--accent, #733E87) 14%, #fff);
+}
+
+.org-search__copy { min-width: 0; }
+
+.org-search__list strong,
+.pool-card strong { display: block; font-size: 13px; }
+
+.org-search__list :deep(mark) {
+    background: #f3e7c2;
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+.org-search__list small,
+.pool-card small,
+.org-search__empty {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.org-search__empty { padding: 10px 8px; }
+
+.org-legend {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 11px;
+    color: #5c6478;
+}
+
+.org-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+.org-legend i {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #6c757d;
-}
-
-.status-dot.online {
-    background: #28a745;
-}
-
-.no-team-members {
-    text-align: center;
-    padding: 2rem;
-    color: #6c757d;
-}
-
-.no-team-members p {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-/* User Details Section */
-.user-details-section {
-    margin-bottom: 2rem;
-}
-
-.detail-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.detail-row iconify-icon {
-    color: #2596be;
-    margin-top: 0.2rem;
-    flex-shrink: 0;
-}
-
-.detail-row label {
-    font-weight: 600;
-    color: #495057;
-    font-size: 0.85rem;
-    margin-bottom: 0.3rem;
-    display: block;
-}
-
-.detail-row p {
-    margin: 0;
-    color: #6c757d;
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-.action-buttons {
-    margin-top: auto;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e9ecef;
-}
-
-.action-buttons .btn {
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
-}
-
-.user-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .team-lead-sidebar,
-    .employee-sidebar {
-        width: 100vw;
-        right: -100vw;
-    }
-    
-    .sidebar-header {
-        padding: 1.25rem;
-    }
-    
-    .sidebar-body {
-        padding: 1.25rem;
-    }
-    
-    .team-member-item {
-        padding: 0.75rem;
-    }
-}
-.team-lead-header-new {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem 1.5rem;
-    margin: -1.5rem -1.5rem 2rem -1.5rem;
-    border-radius: 0 0 20px 20px;
-}
-
-.header-content {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.avatar-section {
-    flex-shrink: 0;
-}
-
-.user-avatar-large img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.info-section {
-    flex: 1;
-}
-
-.user-name {
-    margin: 0 0 1rem 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
-}
-
-.role-phone-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.role-badge-large {
     display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #667eea;
-    background: white;
-    text-transform: capitalize;
 }
 
-.phone-number {
+.org-select,
+.org-zoom,
+.org-link,
+.org-drawer-toggle {
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #e1e5f0;
+    background: #fff;
+    color: var(--ink);
+    font-size: 13px;
+}
+
+.org-select { padding: 0 10px; max-width: 180px; }
+
+.org-zoom {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.9);
+    overflow: hidden;
 }
 
-.phone-icon {
-    font-size: 1rem;
-}
-
-.team-size-badge-new {
+.org-zoom button,
+.org-link,
+.org-drawer-toggle {
+    border: 0;
+    background: transparent;
+    height: 100%;
+    padding: 0 10px;
+    color: var(--ink);
+    text-decoration: none;
     display: inline-flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    backdrop-filter: blur(10px);
+    gap: 6px;
 }
 
-/* Team Lead Header البسيط */
-.team-lead-header-simple {
-    background: white;
-    padding: 2rem 1.5rem 1.5rem;
-    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
-    border-bottom: 1px solid #e9ecef;
+.org-zoom span {
+    min-width: 42px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    border-left: 1px solid #eef0f6;
+    border-right: 1px solid #eef0f6;
+    line-height: 36px;
 }
 
-.header-content-simple {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.5rem;
+.org-drawer-toggle span {
+    background: #eef2fb;
+    border-radius: 99px;
+    padding: 1px 7px;
+    font-size: 11px;
 }
 
-.avatar-section-simple {
-    flex-shrink: 0;
-}
-
-.user-avatar-simple img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: 3px solid #f8f9fa;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.info-section-simple {
+.org-body {
     flex: 1;
-}
-
-.user-name-simple {
-    margin: 0 0 0.75rem 0;
-    font-size: 1.5rem !important;
-    font-weight: 600;
-    color: #212529;
-}
-
-.role-section-simple {
-    margin-bottom: 0.75rem;
-}
-
-.role-badge-simple {
-    display: inline-block;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #495057;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    text-transform: capitalize;
-}
-
-.phone-section-simple {
+    min-height: 0;
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    color: #6c757d;
-    font-size: 0.9rem;
+    gap: 0;
 }
 
-.phone-icon-simple {
-    color: #6c757d;
-    font-size: 0.9rem;
+.org-viewport {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 16px 96px;
 }
 
-.phone-text {
-    font-weight: 500;
+.org-canvas {
+    width: max-content;
+    min-width: 100%;
+    padding: 12px 24px 40px;
 }
 
-.team-size-simple {
+.org-forest {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #2596be;
-    font-size: 0.9rem;
-    font-weight: 600;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 28px;
 }
 
-.team-icon {
-    font-size: 1rem;
-}
-
-/* Team Members Section البسيطة */
-.team-members-section-simple {
-    margin-bottom: 2rem;
-}
-
-.section-title-simple {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #212529;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.team-members-list-simple {
+.org-empty,
+.org-skeleton {
+    min-height: 320px;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-}
-
-.team-member-item-simple {
-    display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    justify-content: center;
+    color: var(--muted);
+    gap: 8px;
 }
 
-.team-member-item-simple:hover {
-    background: #f8f9fa;
-    border-color: #2596be;
+.org-skeleton__row { display: flex; gap: 18px; margin-top: 36px; }
+
+.org-skeleton__card {
+    width: 168px;
+    height: 92px;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #eceff6 25%, #f7f8fb 50%, #eceff6 75%);
+    background-size: 200% 100%;
+    animation: org-shimmer 1.2s infinite;
 }
 
-.member-avatar-simple {
-    position: relative;
-    flex-shrink: 0;
+.org-drawer {
+    width: 320px;
+    flex: 0 0 320px;
+    border-left: 1px solid #e6e9f2;
+    background: rgba(255, 255, 255, .9);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
-.member-avatar-simple img {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    border: 2px solid #f8f9fa;
+.org-drawer__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px 6px;
+    gap: 8px;
 }
 
-.status-dot-simple {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 10px;
-    height: 10px;
-    background: #6c757d;
-    border: 2px solid white;
-    border-radius: 50%;
+.org-drawer__title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--muted);
+    letter-spacing: .02em;
 }
 
-.status-dot-simple.online {
-    background: #28a745;
+.org-drawer__title span {
+    margin-left: 4px;
+    color: var(--ink);
 }
 
-.member-info-simple {
+.org-drawer__head p,
+.org-drawer__empty {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.org-drawer__filters {
+    padding: 0 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.org-drawer__filters input,
+.org-drawer__selects select {
+    height: 34px;
+    border: 1px solid #e6e9f2;
+    border-radius: 9px;
+    padding: 0 10px;
+    background: #fff;
+}
+
+.org-drawer__selects { display: flex; gap: 6px; }
+
+.org-drawer__list {
+    overflow: auto;
+    padding: 4px 12px 16px;
+    min-height: 0;
     flex: 1;
 }
 
-.member-name-simple {
-    margin: 0 0 0.25rem 0;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #212529;
-}
-
-.member-role-simple {
-    font-size: 0.75rem;
-    color: #6c757d;
-    background: #f8f9fa;
-    padding: 0.2rem 0.6rem;
+.pool-card {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    border: 1px solid #e8ebf3;
     border-radius: 12px;
-    font-weight: 500;
+    margin-bottom: 8px;
+    background: #fff;
+    cursor: grab;
 }
 
-.member-action-simple {
-    color: #6c757d;
+.pool-card.is-dragging { opacity: .45; }
+
+.pool-card__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e7eefc;
+    color: #1d4e9e;
+    font-size: 12px;
+    font-weight: 700;
+    flex: 0 0 auto;
 }
 
-.chevron-icon-simple {
-    font-size: 1.1rem;
-}
-
-.team-member-item-simple:hover .chevron-icon-simple {
-    color: #2596be;
-}
-
-/* No Team Members البسيط */
-.no-team-members-simple {
-    margin: 2rem 0;
-}
-
-.empty-state-simple {
-    text-align: center;
-    color: #6c757d;
-    padding: 2rem;
-}
-
-.empty-icon-simple {
-    margin-bottom: 1rem;
-    opacity: 0.4;
-}
-
-.empty-text-simple {
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-/* Action Buttons البسيط */
-.action-buttons-simple {
-    margin-top: auto;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e9ecef;
-}
-
-.action-buttons-simple .btn {
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
+.org-icon-btn {
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
+    border: 1px solid #e6e9f2;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .team-lead-header-simple {
-        padding: 1.5rem 1rem 1rem;
-        margin: -1.25rem -1.25rem 1rem -1.25rem;
-    }
-    
-    .header-content-simple {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .user-name-simple {
-        font-size: 1.3rem !important;
-    }
-    
-    .team-member-item-simple {
-        padding: 0.75rem;
-    }
+.org-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 28, 58, .35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 80;
+    padding: 16px;
 }
 
-@media (max-width: 480px) {
-    .user-avatar-simple img {
-        width: 70px;
-        height: 70px;
+.org-dialog {
+    width: min(360px, 100%);
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 16px 14px;
+    position: relative;
+    box-shadow: 0 18px 48px rgba(20, 28, 58, .18);
+}
+
+.org-dialog--person { width: min(340px, 100%); }
+
+.org-dialog--wide { width: min(440px, 100%); }
+
+.org-dialog__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 28px;
+    margin-bottom: 12px;
+}
+
+.org-dialog__identity { min-width: 0; }
+
+.org-dialog__name {
+    margin: 0;
+    font-size: 15px !important;
+    line-height: 1.25;
+    font-weight: 650;
+    color: #1a2340;
+    overflow-wrap: anywhere;
+}
+
+.org-dialog__role {
+    color: #7b8499;
+    margin: 2px 0 0;
+    font-size: 12px;
+}
+
+.org-dialog__photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e7eefc;
+    color: #1d4e9e;
+    font-size: 12px;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.org-dialog__close { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; }
+
+.org-dialog dl {
+    display: grid;
+    grid-template-columns: 78px 1fr;
+    gap: 7px 10px;
+    align-items: center;
+    font-size: 12px;
+    margin: 0 0 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eef1f6;
+}
+
+.org-dialog dt { color: #8b93a7; font-weight: 500; }
+
+.org-dialog dd {
+    margin: 0;
+    color: #243056;
+    overflow-wrap: anywhere;
+}
+
+.org-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: #e8f6ee;
+    color: #1c7a45;
+}
+
+.org-status.is-off { background: #fdecee; color: #9a3040; }
+
+.org-primary,
+.org-picker button {
+    border: 1px solid #d9e0ef;
+    background: #fff;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+.org-primary {
+    background: #1d4e9e;
+    color: #fff;
+    border-color: #1d4e9e;
+}
+
+.org-picker { display: flex; flex-direction: column; gap: 8px; }
+
+.org-picker button { text-align: left; }
+
+.org-picker strong, .org-picker small { display: block; }
+.org-picker small { color: var(--muted); }
+
+.org-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    background: #243056;
+    color: #fff;
+    border-radius: 999px;
+    padding: 8px 10px 8px 16px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    z-index: 90;
+    box-shadow: 0 10px 30px rgba(20, 28, 58, .25);
+    font-size: 13px;
+}
+
+.org-toast button {
+    border: 0;
+    background: transparent;
+    color: #fff;
+    border-radius: 99px;
+    padding: 4px 8px;
+}
+
+.org-toast.is-error { background: #8d2f39; }
+.org-toast.is-success { background: #1d4e9e; }
+
+@keyframes org-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+@media (max-width: 860px) {
+    .org-chart-page {
+        height: calc(100dvh - var(--app-topbar-height, 3.25rem) - 96px);
+        max-height: calc(100dvh - var(--app-topbar-height, 3.25rem) - 96px);
     }
-    
-    .member-avatar-simple img {
-        width: 40px;
-        height: 40px;
+    .org-body { display: block; }
+    .org-viewport { height: calc(100dvh - 230px); }
+    .org-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 70;
+        width: min(360px, 92vw);
+        flex-basis: auto;
+        transform: translateX(105%);
+        transition: transform .2s ease;
+        box-shadow: -12px 0 40px rgba(20, 28, 58, .15);
     }
+    .org-drawer.is-open { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .org-skeleton__card,
+    .org-drawer { animation: none; transition: none; }
 }
 </style>

@@ -414,6 +414,16 @@ html:has(#app main.auth-page-main) .dashboard-main.active {
   flex-direction: column;
 }
 
+html.page-natural-scroll #app main.dashboard-main > .dashboard-main-router:has(.org-chart-page),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.org-chart-page),
+#app main.dashboard-main > .dashboard-main-router:has(.org-chart-page) {
+  overflow: hidden !important;
+  min-height: 0 !important;
+  height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)) !important;
+  max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)) !important;
+  padding-bottom: 0 !important;
+}
+
 #app main.dashboard-main > .dashboard-main-router:has(.property-form-page),
 #app main.dashboard-main > .dashboard-main-router:has(.property-show-page),
 #app main.dashboard-main > .dashboard-main-router:has(.property-show-inner),

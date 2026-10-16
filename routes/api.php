@@ -716,6 +716,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
 
      Route::get('/team/hierarchy', [TeamController::class, 'getTeamHierarchy']);
+    Route::post('/team/reassign', [TeamController::class, 'reassign']);
     Route::get('/team/my-team', [TeamController::class, 'getMyTeam']);
     Route::get('/users/with-children', [UserController::class, 'getUsersWithChildren']);
 
