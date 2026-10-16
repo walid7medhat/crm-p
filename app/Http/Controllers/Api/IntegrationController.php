@@ -34,10 +34,12 @@ class IntegrationController extends Controller
             if (!$user) {
                 return ApiResponse::error('Unauthorized', 401);
             }
-            $query = Integration::where('user_id', $user->id)
-                ->with(['project', 'responsiblePerson'])
+            $query = Integration::
+                 with(['project', 'responsiblePerson'])
                 ->orderBy('created_at', 'desc');
-
+                if (!$user->hasRole('super_admin')) {
+                    $query->where('user_id', $user->id);
+                }
             // Avoid failing the endpoint when lead relation count cannot be queried.
             if (Schema::hasTable('leads') && Schema::hasColumn('leads', 'integration_id')) {
                 $query->withCount('leads');
