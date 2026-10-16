@@ -299,6 +299,11 @@
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
                                                 @touchcancel="clearMobileLongPress"
                                                 @contextmenu="onMobileCardContextMenu"
+                                                @pointermove="onLeadCardTilt"
+                                                @pointerdown="onLeadCardTiltDown"
+                                                @pointerup="onLeadCardTiltUp"
+                                                @pointerleave="releaseLeadCardTilt($event.currentTarget)"
+                                                @pointercancel="releaseLeadCardTilt($event.currentTarget)"
                                                 @click="onLeadCardClick(task, column, $event)"
                                                 @dblclick.stop.prevent="onLeadCardDblClick(task)"
                                             >
@@ -1252,6 +1257,15 @@ import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { peekLeadBoardPrefetchPromise, peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import { rememberLeadDetailOrigin } from '@/motion/leadDetailMotion'
+import {
+    clearLeadDragImage,
+    mountLeadDragImage,
+    onLeadCardTilt,
+    onLeadCardTiltDown,
+    onLeadCardTiltUp,
+    releaseLeadCardTilt,
+    settleLeadCard,
+} from '@/motion/leadCardTilt'
 import {
     armLeadMotion,
     beginConversionCelebration,
@@ -2299,6 +2313,8 @@ function onLeadDragStart(event) {
     noteLeadDragOrigin(event)
     isLeadDragging.value = true
     const item = event?.item
+    releaseLeadCardTilt(item)
+    mountLeadDragImage(event)
     if (leadSelectionActive.value && item) {
         const from = columnFromDragList(event.from)
         const count = isNewLeadColumn(from)
@@ -2322,7 +2338,9 @@ function onLeadDragStart(event) {
     }
 }
 
-function onLeadDragEnd() {
+function onLeadDragEnd(event) {
+    clearLeadDragImage()
+    settleLeadCard(event?.item)
     isLeadDragging.value = false
     dragPointerX.value = null
     document.querySelectorAll('.lead-pack-drag').forEach((el) => {
@@ -6122,9 +6140,18 @@ const fetchRevertNotifications = async () => {
     .kanban-card,
     .kanban-card:hover,
     .kanban-card:active,
+    .kanban-card.is-tilting,
+    .kanban-card--settle,
     .dragging {
         transition: none;
         transform: none;
+        animation: none;
+        scale: none;
+        will-change: auto;
+    }
+
+    .kanban-card::before {
+        opacity: 0;
     }
 }
 
@@ -6872,45 +6899,119 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card {
-    transition: transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 160ms ease, border-color 160ms ease;
+    --rx: 0deg;
+    --ry: 0deg;
+    --px: 0px;
+    --py: 0px;
+    --lz: 0px;
+    --gx: 50%;
+    --gy: 18%;
     color: #1e293b;
     border: 1px solid rgba(30, 27, 46, 0.14) !important;
     border-radius: 14px !important;
-    box-shadow: 0 2px 10px rgba(30, 27, 46, 0.08) !important;
-    background: #ffffff !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, #ffffff 42%, #fbfbfd 100%) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        0 1px 2px rgba(1, 6, 45, 0.04),
+        0 8px 16px -12px rgba(1, 6, 45, 0.18) !important;
     margin-left: 2px;
     margin-right: 2px;
     position: relative;
     z-index: 1;
+    transform: translate3d(var(--px), var(--py), 0) rotateX(var(--rx)) rotateY(var(--ry));
+    transform-style: preserve-3d;
+    transition:
+        transform 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.48s ease,
+        scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background:
+        radial-gradient(130px 78px at var(--gx) var(--gy), rgba(255, 255, 255, 0.72), rgba(250, 163, 0, 0.1) 42%, transparent 72%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 40%);
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .kanban-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(1, 6, 45, 0.22) !important;
-        background: #ffffff !important;
-        box-shadow: 0 8px 18px rgba(1, 6, 45, 0.1) !important;
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover:not(.ghost):not(.dragging):not(.kanban-card--motion-hold):not(.is-tilting) {
+        border-color: rgba(115, 62, 135, 0.26) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.95),
+            0 12px 20px -14px rgba(1, 6, 45, 0.24),
+            0 4px 8px -6px rgba(115, 62, 135, 0.2) !important;
     }
 
-    .kanban-card.lead-priority-hot-border:hover {
-        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.16) !important;
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting:not(.ghost):not(.kanban-card--motion-hold),
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost),
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging {
+        z-index: 4;
+        border-color: rgba(115, 62, 135, 0.3) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.96),
+            0 14px 22px -16px rgba(1, 6, 45, 0.28),
+            0 6px 10px -8px rgba(115, 62, 135, 0.22) !important;
     }
 
-    .kanban-card.lead-priority-warm-border:hover {
-        box-shadow: 0 8px 18px rgba(245, 158, 11, 0.16) !important;
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting::before,
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging::before,
+    .kanban-card--drag-image::before {
+        opacity: 0.85;
     }
 
-    .kanban-card.lead-priority-cold-border:hover {
-        box-shadow: 0 8px 18px rgba(100, 116, 139, 0.14) !important;
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting {
+        transition: transform 45ms linear, scale 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
     }
 
-    .kanban-card--selected:hover {
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.18), 0 10px 20px rgba(1, 6, 45, 0.12) !important;
+    .kanban-card.lead-priority-hot-border:hover,
+    .kanban-card.lead-priority-hot-border.is-tilting {
+        border-color: #ef4444 !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 16px 28px -12px rgba(239, 68, 68, 0.28) !important;
+    }
+
+    .kanban-card.lead-priority-warm-border:hover,
+    .kanban-card.lead-priority-warm-border.is-tilting {
+        border-color: #f59e0b !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 16px 28px -12px rgba(245, 158, 11, 0.28) !important;
+    }
+
+    .kanban-card.lead-priority-cold-border:hover,
+    .kanban-card.lead-priority-cold-border.is-tilting {
+        border-color: #64748b !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 16px 28px -12px rgba(100, 116, 139, 0.24) !important;
+    }
+
+    .kanban-card--selected:hover,
+    .kanban-card--selected.is-tilting {
+        box-shadow:
+            0 0 0 2px rgba(15, 23, 42, 0.18),
+            0 16px 28px -12px rgba(1, 6, 45, 0.22) !important;
     }
 }
 
-.kanban-card:active {
-    transform: translateY(0) scale(0.988);
+.kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-pressed:not(.dragging) {
+    scale: 0.988;
 }
 
 .kanban-card:focus-visible {
@@ -6922,6 +7023,32 @@ const fetchRevertNotifications = async () => {
 .kanban-card--motion-hold:hover,
 .kanban-card--motion-hold:active {
     transform: none;
+    scale: none;
+    will-change: auto;
+}
+
+.kanban-card--settle {
+    animation: kanban-card-drop 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes kanban-card-drop {
+    0% { transform: translate3d(0, -8px, 0) rotateX(4deg) scale(1.012); }
+    70% { transform: translate3d(0, 1px, 0) rotateX(-0.6deg) scale(0.998); }
+    100% { transform: translate3d(0, 0, 0) rotateX(0deg) scale(1); }
+}
+
+.kanban-card--drag-image {
+    position: fixed !important;
+    top: -1400px !important;
+    left: 0 !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+    z-index: 1;
+    transform: translate3d(0, -6px, 0) rotateX(6deg) rotate(-1deg) scale(1.015) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.96),
+        0 16px 24px -14px rgba(1, 6, 45, 0.32),
+        0 0 0 1px rgba(250, 163, 0, 0.35) !important;
 }
 
 .lead-priority-hot-border {
@@ -7255,6 +7382,8 @@ const fetchRevertNotifications = async () => {
     flex-direction: column;
     gap: 8px;
     font-family: Montserrat;
+    perspective: 1100px;
+    perspective-origin: 50% 20%;
 }
 
 /* Draggable styles */
@@ -7272,12 +7401,43 @@ const fetchRevertNotifications = async () => {
     transform: none !important;
 }
 
+.kanban-card.ghost:not(.dragging) {
+    opacity: 0.8;
+    background:
+        linear-gradient(165deg, rgba(250, 163, 0, 0.16), rgba(115, 62, 135, 0.08) 58%, rgba(1, 6, 45, 0.04)) !important;
+    border: 1.5px dashed rgba(250, 163, 0, 0.95) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 0 22px rgba(250, 163, 0, 0.14) !important;
+    transform: none !important;
+    scale: 1;
+    animation: none;
+}
+
 .dragging {
     cursor: grabbing;
     z-index: 4;
     transform: rotate(1.25deg) scale(1.015);
     box-shadow: 0 14px 28px rgba(1, 6, 45, 0.16) !important;
     transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 140ms ease;
+}
+
+.kanban-card.dragging.lead-pack-drag {
+    box-shadow:
+        0 22px 34px -12px rgba(1, 6, 45, 0.32),
+        10px 12px 0 rgba(115, 62, 135, 0.28),
+        18px 22px 0 rgba(115, 62, 135, 0.16),
+        0 0 0 1px rgba(250, 163, 0, 0.4) !important;
+}
+
+.kanban-card.dragging {
+    z-index: 6;
+    transform: translate3d(0, -8px, 0) rotateX(6deg) rotate(-1.2deg) scale(1.015);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.96),
+        0 16px 24px -16px rgba(1, 6, 45, 0.3),
+        0 0 0 1px rgba(250, 163, 0, 0.32) !important;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
 }
 
 .lead-pack-drag {
@@ -7290,6 +7450,7 @@ const fetchRevertNotifications = async () => {
 .lead-pack-drag::after {
     content: attr(data-pack-count);
     position: absolute;
+    z-index: 5;
     top: -10px;
     right: -10px;
     min-width: 22px;
@@ -7319,6 +7480,8 @@ const fetchRevertNotifications = async () => {
     .kanban-card,
     .kanban-card:hover,
     .kanban-card:active,
+    .kanban-card.is-tilting,
+    .kanban-card--settle,
     .dragging,
     .kanban-outer--mobile .kanban-card--mobile,
     .mobile-stage-nav__arrow,
@@ -7326,6 +7489,12 @@ const fetchRevertNotifications = async () => {
         transition: none;
         transform: none;
         animation: none;
+        scale: none;
+        will-change: auto;
+    }
+
+    .kanban-card::before {
+        opacity: 0;
     }
 }
 
@@ -7713,6 +7882,13 @@ const fetchRevertNotifications = async () => {
 
 .kanban-outer--mobile-stage .column-header--mobile {
     display: none !important;
+}
+
+.kanban-outer--mobile .kanban-card,
+.kanban-outer--mobile .kanban-card:hover,
+.kanban-outer--mobile .kanban-card:active {
+    transform: none;
+    scale: none;
 }
 
 .kanban-outer--mobile .kanban-card--mobile {

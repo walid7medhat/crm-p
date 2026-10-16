@@ -17,8 +17,9 @@
       <iconify-icon icon="lucide:chevron-down" class="mk-select__chev" />
     </button>
 
+    <Teleport to="body">
     <Transition name="mk-select-pop">
-      <ul v-if="open" ref="menu" class="mk-select__menu" :class="[`is-${align}`, { 'is-up': openUp }]" role="listbox" @keydown="onMenuKey">
+      <ul v-if="open" ref="menu" class="mk-select__menu" :class="[`is-${align}`, { 'is-up': openUp }]" :style="menuStyle" role="listbox" @keydown="onMenuKey">
         <li v-if="searchable" class="mk-select__search" @click.stop>
           <iconify-icon icon="lucide:search" />
           <input ref="searchInput" v-model="query" type="text" name="mk-select-query" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" placeholder="Search…" @keydown.down.prevent="focusItem(0)" />
@@ -44,6 +45,7 @@
         <li v-if="!filtered.length" class="mk-select__empty">No match</li>
       </ul>
     </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -73,6 +75,7 @@ const emit = defineEmits(['update:modelValue', 'change'])
 const open = ref(false)
 const query = ref('')
 const root = ref(null)
+const menu = ref(null)
 const searchInput = ref(null)
 const itemEls = ref([])
 
@@ -87,13 +90,40 @@ function toggle() {
   open.value ? close() : openAndFocus()
 }
 const openUp = ref(false)
-const MENU_SPACE = 320 // menu max-height + gap
+const menuStyle = ref({})
+const MENU_SPACE = 220
+
+function placeMenu() {
+  const rect = root.value?.getBoundingClientRect()
+  if (!rect) return
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  openUp.value = spaceBelow < MENU_SPACE && spaceAbove > spaceBelow
+  const style = {
+    position: 'fixed',
+    zIndex: 80,
+    minWidth: `${Math.max(rect.width, 148)}px`,
+  }
+  if (openUp.value) {
+    style.top = 'auto'
+    style.bottom = `${window.innerHeight - rect.top + 6}px`
+  } else {
+    style.top = `${rect.bottom + 6}px`
+    style.bottom = 'auto'
+  }
+  if (props.align === 'right') {
+    style.left = 'auto'
+    style.right = `${window.innerWidth - rect.right}px`
+  } else {
+    style.left = `${rect.left}px`
+    style.right = 'auto'
+  }
+  menuStyle.value = style
+}
 
 function openAndFocus() {
   if (props.disabled) return
-  // Not enough room under the control (e.g. bottom of the screen) → open upward instead.
-  const rect = root.value?.getBoundingClientRect()
-  openUp.value = !!rect && window.innerHeight - rect.bottom < MENU_SPACE && rect.top > window.innerHeight - rect.bottom
+  placeMenu()
   open.value = true
   query.value = ''
   itemEls.value = []
@@ -125,10 +155,21 @@ function onMenuKey(e) {
 }
 
 function onDoc(e) {
-  if (open.value && root.value && !root.value.contains(e.target)) close()
+  if (open.value && root.value && !root.value.contains(e.target) && !menu.value?.contains(e.target)) close()
 }
-onMounted(() => document.addEventListener('mousedown', onDoc))
-onBeforeUnmount(() => document.removeEventListener('mousedown', onDoc))
+function onReflow() {
+  if (open.value) placeMenu()
+}
+onMounted(() => {
+  document.addEventListener('mousedown', onDoc)
+  window.addEventListener('scroll', onReflow, true)
+  window.addEventListener('resize', onReflow)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onDoc)
+  window.removeEventListener('scroll', onReflow, true)
+  window.removeEventListener('resize', onReflow)
+})
 </script>
 
 <style scoped>
@@ -172,7 +213,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDoc))
 
 .mk-select__menu {
   position: absolute;
-  z-index: 40;
+  z-index: 80;
   top: calc(100% + 6px);
   min-width: 100%;
   width: max-content;
