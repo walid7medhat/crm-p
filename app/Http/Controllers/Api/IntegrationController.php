@@ -588,15 +588,43 @@ class IntegrationController extends Controller
             $leadDataArray['email'] = $fields['email'];
         }
 
-        if (!isset($leadDataArray['work_phone'])) {
-            $leadDataArray['work_phone'] = $fields['phone_number'] ?? 
-                                           $fields['phone'] ?? 
-                                           $fields['work_phone'] ?? 
-                                           $fields['work_phone_number'] ?? 
-                                           $fields['mobile'] ?? 
-                                           $fields['cell'] ?? 
-                                           null;
-        }
+        // ===== Phones: أول رقم → work_phone ، التاني → work_phone_2 =====
+            $phoneKeys = [
+                'phone_number',
+                'phone',
+                'work_phone',
+                'work_phone_number',
+                'mobile',
+                'cell',
+            ];
+
+            // نجمع الأرقام الموجودة (من غير فاضي ومن غير تكرار)
+            $phones = [];
+            foreach ($phoneKeys as $key) {
+                $val = trim((string) ($fields[$key] ?? ''));
+                if ($val !== '' && !in_array($val, $phones, true)) {
+                    $phones[] = $val;
+                }
+            }
+
+            // القيم اللي جاية من field_mappings تتحترم
+            $primary   = trim((string) ($leadDataArray['work_phone'] ?? ''));
+            $secondary = trim((string) ($leadDataArray['work_phone_2'] ?? ''));
+
+            foreach ($phones as $phone) {
+                if ($phone === $primary || $phone === $secondary) {
+                    continue; // الرقم ده متسجل بالفعل
+                }
+                if ($primary === '') {
+                    $primary = $phone;      // الأول يتملى work_phone
+                } elseif ($secondary === '') {
+                    $secondary = $phone;    // لو لسه فيه رقم تاني يتسجل في work_phone_2
+                }
+            }
+
+            $leadDataArray['work_phone']   = $primary !== '' ? $primary : null;
+            $leadDataArray['work_phone_2'] = $secondary !== '' ? $secondary : null;
+            // ==============================================================
 
         // بناء lead_name
         if (!isset($leadDataArray['lead_name']) || empty($leadDataArray['lead_name'])) {
