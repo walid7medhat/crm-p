@@ -58,7 +58,7 @@ class PropertyTypeController extends Controller
                     $query->whereHas('listings');
                 }
                 if($request->has('resdintial')){
-                     $query->where('parent_id',10)->orWhere('id',31);
+                     $query->where('parent_id',10)->orWhereIn('id',[31,8]);
                 }
 
                 return $query->orderBy('parent_id', 'desc')->get();

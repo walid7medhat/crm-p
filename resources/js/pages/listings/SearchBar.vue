@@ -1435,7 +1435,7 @@ const sortOptions = [
 
     const inferPropertyCategory = (name) => {
       const value = String(name || "").toLowerCase();
-      const commercialKeywords = ["office", "shop", "retail", "warehouse", "labour", "hotel", "factory", "showroom", "commercial"];
+      const commercialKeywords = [ "shop", "retail", "warehouse", "labour", "hotel", "factory", "showroom", "commercial"];
       return commercialKeywords.some((kw) => value.includes(kw)) ? "commercial" : "residential";
     };
 

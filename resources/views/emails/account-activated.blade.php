@@ -41,13 +41,13 @@
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 28px 0;">
                                 <tr>
                                     <td style="text-align: center;">
-                                        <a href="https://listings.oiaproperties.com/" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none; background-color: #0f172a; border-radius: 8px;">Sign In to Your Account</a>
+                                        <a href="https://oiaproperties.altcrm.com/" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none; background-color: #0f172a; border-radius: 8px;">Sign In to Your Account</a>
                                     </td>
                                 </tr>
                             </table>
                             <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280; text-align: center;">Or copy and paste this link into your browser:</p>
                             <p style="margin: 0 0 24px 0; font-size: 14px; text-align: center;">
-                                <a href="https://listings.oiaproperties.com/" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; word-break: break-all;">https://listings.oiaproperties.com/</a>
+                                <a href="https://oiaproperties.altcrm.com/" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; word-break: break-all;">https://oiaproperties.altcrm.com/</a>
                             </p>
                         </td>
                     </tr>

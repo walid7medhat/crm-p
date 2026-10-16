@@ -37,20 +37,36 @@
           />
         </div>
         <div class="col-md-3">
-          <select v-model="filters.property_type_id" @change="fetchPendingApprovals" class="form-control">
-            <option value="">All Property Types</option>
-            <option v-for="type in propertyTypes" :key="type.id" :value="type.id">
-              {{ type.name }}
-            </option>
-          </select>
+          <v-select
+            v-model="filters.property_type_id"
+            :options="propertyTypes"
+            label="name"
+            :reduce="type => type.id"
+            :filter-by="typeFilterBy"
+            placeholder="All Property Types"
+            :clearable="true"
+            class="agent-v-select"
+          >
+            <template #no-options>No property types found</template>
+          </v-select>
         </div>
         <div class="col-md-3">
-          <select v-model="filters.agent_id" @change="fetchPendingApprovals" class="form-control">
-            <option value="">All Agents</option>
-            <option v-for="agent in agents" :key="agent.id" :value="agent.id">
+          <v-select
+            v-model="filters.agent_id"
+            :options="agents"
+            label="name"
+            :reduce="agent => agent.id"
+            :filter-by="agentFilterBy"
+            placeholder="All Agents"
+            :clearable="true"
+            class="agent-v-select"
+          >
+            <template #option="agent">
               {{ agent.name }}
-            </option>
-          </select>
+              <small v-if="agent.email" class="text-muted d-block">{{ agent.email }}</small>
+            </template>
+            <template #no-options>No agents found</template>
+          </v-select>
         </div>
         <div class="col-md-2">
           <button @click="batchApprove" class="btn btn-success w-100" :disabled="selectedListings.length === 0">
@@ -215,7 +231,22 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal';
+import vSelect from 'vue-select';
+import 'vue-select/dist/vue-select.css';
 
+// Match the start of any word in the name (so "ah" finds "Ahmed", not "Mohamed"), or anywhere in the email
+const agentFilterBy = (agent, label, search) => {
+  const q = (search || '').trim().toLowerCase();
+  if (!q) return true;
+  const nameMatch = (agent.name || '').toLowerCase().split(/\s+/).some(w => w.startsWith(q));
+  return nameMatch || (agent.email || '').toLowerCase().includes(q);
+};
+// Match the start of any word in the type name
+const typeFilterBy = (type, label, search) => {
+  const q = (search || '').trim().toLowerCase();
+  if (!q) return true;
+  return (type.name || '').toLowerCase().split(/\s+/).some(w => w.startsWith(q));
+};
 // State
 const listings = ref([]);
 const loading = ref(false);
@@ -595,5 +626,11 @@ onUnmounted(() => {
   border: none;
   font-size: 24px;
   cursor: pointer;
+}
+.agent-v-select :deep(.vs__dropdown-toggle) {
+  min-height: 38px;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  background: #fff;
 }
 </style>
