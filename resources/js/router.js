@@ -23,6 +23,7 @@ const baseRoutes = [
       { path: '/logs', component: () => import('./pages/logs/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: '/system-announcements', component: () => import('./pages/system-announcements/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true } },
       { path: '/daily-motivation', component: () => import('./pages/daily-motivation/DailyMotivationAdmin.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+      { path: '/animation-control', component: () => import('./pages/animation-control/index.vue'), meta: { requiresAuth: true, requiresPermission: 'user-animation-control', strictPermission: true } },
       { path: '/announcements', component: () => import('./pages/announcements/index.vue'), meta: { requiresAuth: true } },
       {
         path: '/system-overview',

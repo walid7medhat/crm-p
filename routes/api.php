@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
+use App\Http\Controllers\Api\UserAnimationController;
 use App\Http\Controllers\Api\StageController;
 use App\Http\Controllers\Api\Marketing\BoardController as MarketingBoardController;
 use App\Http\Controllers\Api\Marketing\TaskController as MarketingTaskController;
@@ -696,6 +697,20 @@ Route::middleware(['jwt.auth'])->group(function () {
             Route::post('/import', [DailyMotivationController::class, 'import']);
             Route::get('/users', [DailyMotivationController::class, 'lookup']);
             Route::post('/users/{user}/reset', [DailyMotivationController::class, 'resetUser'])->whereNumber('user');
+        });
+    });
+
+    // Targeted animation. /me is the signed-in user's own state.
+    // Start, stop, and lookup require super_admin or user-animation-control.
+    Route::prefix('user-animations')->middleware(['jwt.auth'])->group(function () {
+        Route::get('/me', [UserAnimationController::class, 'me']);
+
+        Route::middleware('role_or_permission:super_admin|user-animation-control')->group(function () {
+            Route::get('/catalog', [UserAnimationController::class, 'catalog']);
+            Route::get('/users', [UserAnimationController::class, 'search']);
+            Route::get('/users/{user}', [UserAnimationController::class, 'show'])->whereNumber('user');
+            Route::post('/users/{user}/start', [UserAnimationController::class, 'start'])->whereNumber('user');
+            Route::post('/users/{user}/stop', [UserAnimationController::class, 'stop'])->whereNumber('user');
         });
     });
 

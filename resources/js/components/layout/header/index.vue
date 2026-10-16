@@ -263,6 +263,21 @@
           </transition>
         </li>
 
+        <li v-if="canControlUserAnimation">
+          <router-link to="/animation-control" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarSubItemActive('/animation-control') }"
+              @mouseenter="prefetchRoute('/animation-control')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:sparkles" class="menu-icon" />
+              <span>Animation</span>
+            </a>
+          </router-link>
+        </li>
+
         <li v-if="isSuperAdmin">
           <router-link to="/daily-motivation" custom v-slot="{ navigate, href }">
             <a
@@ -652,6 +667,12 @@
             </div>
           </template>
 
+          <button v-if="canControlUserAnimation" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/animation-control') }" @click="onMoreGo('/animation-control')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:sparkles" /></span>
+            <span class="mobile-more-row__label">Animation</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
           <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/daily-motivation') }" @click="onMoreGo('/daily-motivation')">
             <span class="mobile-more-row__icon"><iconify-icon icon="lucide:sunrise" /></span>
             <span class="mobile-more-row__label">Daily Message</span>
@@ -985,6 +1006,10 @@ const isHr =computed(() => {
 const canSeeMarketing = computed(() => {
   if (!user.value) return false;
   return isSuperAdmin.value || proxy.$hasPermission('marketing');
+});
+const canControlUserAnimation = computed(() => {
+  if (!user.value) return false;
+  return isSuperAdmin.value || proxy.$hasPermission('user-animation-control');
 });
 // Photo Shoots: request a photoshoot — `photo-booking` permission (super admins always).
 const canBookPhotoshoot = computed(() => {
