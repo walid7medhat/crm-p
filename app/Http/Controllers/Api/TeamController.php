@@ -322,7 +322,7 @@ class TeamController extends Controller
 
     private function canManageAssignments(User $actor): bool
     {
-        if ($actor->hasAnyRole(['super_admin', 'admin', 'admin_branch', 'manager', 'team_lead'])) {
+        if ($actor->hasAnyRole(['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead'])) {
             return true;
         }
 
