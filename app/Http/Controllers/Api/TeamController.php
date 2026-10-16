@@ -158,7 +158,7 @@ class TeamController extends Controller
                     }
                 } else {
                     if (! $this->isChartDestination($parent)) {
-                        return [422, 'Employees can only be assigned to a manager or a team leader.'];
+                        return [422, 'Employees can only be assigned to a admin, manager or a team leader.'];
                     }
                     if (! $this->canTouch($actor, $parent, true)) {
                         return [403, 'You cannot assign employees to that team.'];
@@ -337,7 +337,7 @@ class TeamController extends Controller
 
     private function isChartDestination(User $user): bool
     {
-        return $user->hasAnyRole(['manager', 'team_lead']);
+        return $user->hasAnyRole(['manager', 'team_lead','admin']);
     }
 
     private function canTouch(User $actor, User $target, bool $allowSelf): bool
@@ -369,7 +369,7 @@ class TeamController extends Controller
 
     private function crossesBranch(User $actor, User $employee, User $parent): bool
     {
-        if ($actor->hasAnyRole(['super_admin', 'admin',])) {
+        if ($actor->hasAnyRole(['super_admin', 'admin'])) {
             return false;
         }
 
