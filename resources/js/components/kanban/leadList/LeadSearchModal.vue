@@ -9131,6 +9131,81 @@ onBeforeUnmount(() => {
         z-index: 1;
     }
 
+    /* Mobile search sheet only. Desktop keeps the side-by-side preset list and calendar. */
+    @media (max-width: 768px) {
+        .lead-search-date-backdrop:not(.lead-search-date--desk) {
+            align-items: flex-end;
+            padding: 0;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-modal {
+            width: 100%;
+            max-width: 100%;
+            max-height: min(92dvh, 100%);
+            border-radius: 18px 18px 0 0;
+            display: flex;
+            flex-direction: column;
+            overflow: auto;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-left {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 14px 14px 12px;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-preset:last-child {
+            grid-column: 1 / -1;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-preset {
+            min-height: 40px;
+            font-size: 13px;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-right {
+            min-width: 0;
+            padding: 12px 14px 16px;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-calendar-head {
+            font-size: 16px;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-weekdays,
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-calendar-grid {
+            width: 100%;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-weekdays span,
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-day {
+            min-width: 0;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-day {
+            min-height: 40px;
+            font-size: 13px;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-actions.large {
+            position: sticky;
+            bottom: 0;
+            margin-top: 14px;
+            padding-top: 10px;
+            background: #fff;
+        }
+
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-actions.large .btn-cancel,
+        .lead-search-date-backdrop:not(.lead-search-date--desk) .lr-date-actions.large .btn-apply {
+            flex: 1;
+            min-height: 42px;
+        }
+    }
+
     .modal-dialog {
         z-index: 1060 !important;
     }
