@@ -5,7 +5,6 @@
                 class="stage-current"
                 :style="currentStage ? { backgroundColor: currentStage.color, borderColor: currentStage.color } : undefined"
             >
-                <span class="stage-current__label">Current</span>
                 <span class="stage-text">{{ currentStage?.name || 'Stage' }}</span>
             </div>
             <button
@@ -75,16 +74,24 @@
     <Teleport to="body">
         <div v-if="pickerOpen" class="stage-picker-overlay" @click.self="closeStagePicker">
             <div class="stage-picker" role="dialog" aria-modal="true" aria-label="Change stage">
-                <header class="stage-picker__top">
-                    <div>
-                        <p class="stage-picker__kicker">Lead stage</p>
-                        <h2 class="stage-picker__title">Change stage</h2>
+                <div class="stage-picker__top">
+                    <div class="stage-picker__head">
+                        <span class="stage-picker__mark" aria-hidden="true"></span>
+                        <p class="stage-picker__title">Change stage</p>
                     </div>
                     <button type="button" class="stage-picker__close" aria-label="Close" @click="closeStagePicker">
                         <iconify-icon icon="lucide:x" />
                     </button>
-                </header>
-                <p class="stage-picker__hint">Choose the stage this lead should move to.</p>
+                </div>
+                <p class="stage-picker__hint">Tap a stage to move this lead.</p>
+                <div
+                    v-if="currentStage"
+                    class="stage-picker__now"
+                    :style="{ backgroundColor: currentStage.color }"
+                >
+                    <span class="stage-picker__now-label">Active now</span>
+                    <span class="stage-picker__now-name">{{ currentStage.name }}</span>
+                </div>
                 <div class="stage-picker__list">
                     <button
                         v-for="(stage, index) in stages"
@@ -377,15 +384,29 @@ const currentStage = computed(() => {
 })
 
 const pickerOpen = ref(false)
+const isMobile = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
+let mobileQuery = null
+
+const syncMobile = () => {
+    isMobile.value = window.matchMedia('(max-width: 768px)').matches
+}
 
 const openStagePicker = () => {
-    if (props.disabled) return
+    if (props.disabled || !isMobile.value) return
     pickerOpen.value = true
 }
 
 const closeStagePicker = () => {
     pickerOpen.value = false
 }
+
+watch(pickerOpen, (open) => {
+    document.body.classList.toggle('stage-picker-open', open)
+})
+
+watch(isMobile, (mobile) => {
+    if (!mobile) closeStagePicker()
+})
 
 const pickStage = (index) => {
     if (index === selectedStageIndex.value) {
@@ -446,18 +467,28 @@ watch(() => stages.value.length, () => {
 
 onMounted(() => {
     console.log('StageSelector mounted')
+    mobileQuery = window.matchMedia('(max-width: 768px)')
+    isMobile.value = mobileQuery.matches
+    mobileQuery.addEventListener('change', syncMobile)
     window.addEventListener('keydown', onPickerKeydown)
     fetchStages()
     nextTick(() => {
         scrollSelectedIntoView()
         updateScrollAffordance()
     })
-    window.addEventListener('resize', updateScrollAffordance)
+    window.addEventListener('resize', onViewportChange)
 })
+
+const onViewportChange = () => {
+    syncMobile()
+    updateScrollAffordance()
+}
 
 onUnmounted(() => {
     stopEdgeScroll()
-    window.removeEventListener('resize', updateScrollAffordance)
+    mobileQuery?.removeEventListener('change', syncMobile)
+    document.body.classList.remove('stage-picker-open')
+    window.removeEventListener('resize', onViewportChange)
     window.removeEventListener('keydown', onPickerKeydown)
 })
 </script>
@@ -644,124 +675,161 @@ onUnmounted(() => {
     gap: 8px;
     min-width: 0;
     padding: 6px;
-    border: 1px solid rgba(var(--color-primary-rgb), 0.35);
-    border-radius: 16px;
-    background: #fff;
+    border: 1px solid #efe4f3;
+    border-radius: 14px;
+    background: #faf6fb;
 }
 
 .stage-current {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
     min-width: 0;
-    min-height: 36px;
-    padding: 6px 14px;
+    max-width: 52%;
+    min-height: 32px;
+    padding: 5px 14px;
     border-radius: 999px;
     border: 1px solid transparent;
-}
-
-.stage-current__label {
-    flex: 0 0 auto;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #3b3558;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(var(--color-primary-rgb), 0.55);
 }
 
 .stage-current .stage-text {
     width: auto;
     min-width: 0;
-    font-size: 13px;
-    font-weight: 750;
-    color: #0b0736;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1c1424;
+    text-align: center;
 }
 
 .stage-change-btn {
     margin-left: auto;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     flex: 0 0 auto;
-    height: 36px;
+    height: 32px;
     padding: 0 12px;
-    border: 0;
+    border: 1px solid #eadff0;
     border-radius: 999px;
-    background: transparent;
+    background: #fff;
     color: var(--color-primary);
     font-family: Montserrat, system-ui, sans-serif;
-    font-size: 13px;
-    font-weight: 750;
+    font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
 }
 
-.stage-change-btn:hover {
+.stage-change-btn:active {
     background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+:global(body.stage-picker-open) {
+    overflow: hidden;
 }
 
 .stage-picker-overlay {
     position: fixed;
     inset: 0;
     z-index: 20000;
-    display: grid;
-    place-items: center;
-    padding: 20px;
-    background: rgba(11, 7, 54, 0.45);
-    backdrop-filter: blur(8px);
+    display: flex;
+    background: #f6f1f8;
 }
 
 .stage-picker {
-    width: min(420px, 100%);
-    max-height: min(78vh, 640px);
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 18px;
-    border-radius: 22px;
-    background: #fff;
-    box-shadow: 0 24px 60px rgba(11, 7, 54, 0.28);
+    padding: 0;
+    border-radius: 0;
+    background:
+        radial-gradient(90% 28% at 100% 0%, rgba(var(--color-primary-rgb), 0.18), transparent 60%),
+        linear-gradient(180deg, #fff 0%, #f8f3fb 22%, #f4eef8 100%);
     font-family: Montserrat, system-ui, sans-serif;
+    animation: stage-page-in 0.28s ease;
+}
+
+@keyframes stage-page-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
 }
 
 .stage-picker__top {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px 0;
 }
 
-.stage-picker__kicker {
-    margin: 0;
-    color: var(--color-primary);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+.stage-picker__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.stage-picker__mark {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 2px;
+    transform: rotate(45deg);
+    background: var(--gradient-primary, var(--color-primary));
 }
 
 .stage-picker__title {
-    margin: 2px 0 0;
-    color: #0b0736;
-    font-size: 22px !important;
-    font-weight: 750;
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .stage-picker__close {
     margin-left: auto;
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border: 0;
     border-radius: 999px;
-    background: #f4f1f7;
+    background: #fff;
     color: #3b3558;
+    box-shadow: 0 4px 14px rgba(28, 20, 36, 0.08);
     cursor: pointer;
 }
 
 .stage-picker__hint {
-    margin: 4px 0 10px;
+    margin: 6px 16px 0;
     color: #6b6580;
     font-size: 11px;
-    line-height: 1.3;
+    line-height: 1.35;
+}
+
+.stage-picker__now {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 14px 16px 0;
+    padding: 12px 14px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(28, 20, 36, 0.08);
+}
+
+.stage-picker__now-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #3b3558;
+}
+
+.stage-picker__now-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1c1424;
 }
 
 .stage-picker__list {
@@ -769,6 +837,8 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    margin-top: 14px;
+    padding: 0 16px calc(18px + env(safe-area-inset-bottom));
     overflow: auto;
 }
 
@@ -777,13 +847,14 @@ onUnmounted(() => {
     align-items: center;
     gap: 10px;
     width: 100%;
-    min-height: 48px;
+    min-height: 44px;
     padding: 8px 12px;
     border: 1px solid #efe8f4;
     border-radius: 14px;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.92);
     text-align: left;
     cursor: pointer;
+    box-shadow: 0 6px 16px rgba(28, 20, 36, 0.04);
 }
 
 .stage-picker__option:hover {
@@ -814,7 +885,7 @@ onUnmounted(() => {
     text-overflow: ellipsis;
     white-space: nowrap;
     color: #1c1424;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
 }
 
