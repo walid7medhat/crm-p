@@ -322,12 +322,13 @@ class TeamController extends Controller
 
     private function canManageAssignments(User $actor): bool
     {
-        if ($actor->hasAnyRole(['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'])) {
+        if ($actor->hasAnyRole(['super_admin', 'admin', 'admin_branch', 'manager', 'team_lead'])) {
             return true;
         }
 
         return $actor->checkPermissionTo('users-edit');
     }
+
 
     private function isChartLeader(User $user): bool
     {
@@ -341,7 +342,7 @@ class TeamController extends Controller
 
     private function canTouch(User $actor, User $target, bool $allowSelf): bool
     {
-        if ($actor->hasAnyRole(['super_admin', 'admin'])) {
+        if ($actor->hasAnyRole(['super_admin', 'admin','branch_admin'])) {
             return true;
         }
 
@@ -368,7 +369,7 @@ class TeamController extends Controller
 
     private function crossesBranch(User $actor, User $employee, User $parent): bool
     {
-        if ($actor->hasAnyRole(['super_admin', 'admin'])) {
+        if ($actor->hasAnyRole(['super_admin', 'admin',])) {
             return false;
         }
 
