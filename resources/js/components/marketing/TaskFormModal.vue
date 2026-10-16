@@ -21,10 +21,8 @@
           :placeholder="titlePlaceholder"
         />
         <span v-if="errors.title" class="mk-error">{{ errors.title }}</span>
-      </div>
 
-      <!-- PRODUCTION -->
-      <template v-if="category === 'production'">
+      </div>
         <div class="mk-field">
           <span class="mk-label">Department</span>
           <div class="mk-chips">
@@ -40,6 +38,9 @@
           </div>
           <span v-if="errors.department" class="mk-error">{{ errors.department }}</span>
         </div>
+      <!-- PRODUCTION -->
+      <template v-if="category === 'production'">
+   
         <div class="mk-field">
           <span class="mk-label">Content type</span>
           <div class="mk-chips">
