@@ -1,6 +1,6 @@
 import { ref, computed, shallowRef } from 'vue'
 
-const MAX_SELECTION = 5
+const MAX_SELECTION = 10
 
 /**
  * Lead Pool multi-select state (IDs only, shallow Set for perf).
@@ -32,7 +32,7 @@ export function useLeadPoolSelection(getOrderedIds) {
       // Maximum 5 selected leads
       if (next.size >= MAX_SELECTION) {
         window.$showNotification?.(
-          'You can select a maximum of 5 leads at a time.',
+          'You can select a maximum of 10 leads at a time.',
           'warning'
         )
 

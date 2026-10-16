@@ -398,9 +398,9 @@ const selection = useLeadPoolSelection(() => orderedLeadIds.value)
 const { isAssigning, assignToMe } = useLeadPoolBulkActions()
 const assignmentStatus = ref({
     today_count: 0,
-    daily_limit: 20,
-    remaining_today: 20,
-    batch_limit: 5,
+    daily_limit: 40,
+    remaining_today: 40,
+    batch_limit: 10,
     cooldown_active: false,
     next_available_at: null,
     can_assign: true,
@@ -444,9 +444,9 @@ async function handleBulkAssignToMe() {
   if (isAssigning.value) return
   const ids = selection.selectedIds.value.map(Number).filter(Boolean)
   if (!ids.length) return
-    if (ids.length > 5) {
+    if (ids.length > 10) {
         window.$showNotification?.(
-            'You can assign a maximum of 5 leads at a time.',
+            'You can assign a maximum of 10 leads at a time.',
             'warning'
         )
         return
