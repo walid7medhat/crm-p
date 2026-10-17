@@ -52,6 +52,7 @@ export const PLATFORMS = {
   linkedin: { label: 'LinkedIn', short: 'LinkedIn', color: '#1F6FC2', grad: 'linear-gradient(135deg, #3A8FE0 0%, #0A5BAA 100%)', icon: 'mdi:linkedin' },
   snapchat: { label: 'Snapchat', short: 'Snapchat', color: '#D4A900', grad: 'linear-gradient(135deg, #FFF26B 0%, #F7CF1D 100%)', ink: '#2A2310', icon: 'mdi:snapchat' },
   youtube: { label: 'YouTube', short: 'YouTube', color: '#E5322D', grad: 'linear-gradient(135deg, #FF5A4E 0%, #C4221B 100%)', icon: 'mdi:youtube' },
+  sales: { label: 'Sales', short: 'Sales', color: '#0F766E', grad: 'linear-gradient(135deg, #2AA89A 0%, #0B6B62 100%)', icon: 'lucide:badge-dollar-sign' },
 };
 
 /** Inline style for a toggle chip: solid color, selected gradient, and text color on the fill. */

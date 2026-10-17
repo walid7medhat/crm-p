@@ -9,7 +9,7 @@ class MarketingCalendarPost extends Model
 {
     use SoftDeletes;
 
-    public const PLATFORMS = ['instagram_story', 'instagram', 'tiktok', 'linkedin', 'snapchat', 'youtube'];
+    public const PLATFORMS = ['instagram_story', 'instagram', 'tiktok', 'linkedin', 'snapchat', 'youtube', 'sales'];
 
     protected $guarded = [];
 

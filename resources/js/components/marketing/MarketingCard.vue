@@ -1,7 +1,7 @@
 <template>
   <article
     class="mk-card"
-    :class="{ 'is-done': stageDone }"
+    :class="{ 'is-done': stageDone, 'is-scheduled': scheduled }"
     :data-task-id="task.id"
     tabindex="0"
     @click="$emit('open', task)"
@@ -13,6 +13,7 @@
       </span>
       <span class="mk-card__dot" :style="{ background: tagColor }" />
       <h6 class="mk-card__title">{{ task.title }}</h6>
+      <span v-if="scheduled" class="mk-card__scheduled">Scheduled</span>
     </div>
 
     <p v-if="task.category === 'content' && task.notes" class="mk-card__note">{{ task.notes }}</p>
@@ -67,6 +68,7 @@ const dept = computed(() => DEPARTMENTS[props.task.department])
 const tagLabel = computed(() => (type.value ? type.value.label : category.value.label))
 const tagColor = computed(() => (type.value ? type.value.color : category.value.color))
 const overdue = computed(() => !props.stageDone && props.task.due_date && props.task.due_date < isoDate(new Date()))
+const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(props.task.posted_count || 0))
 
 </script>
 
@@ -88,6 +90,23 @@ const overdue = computed(() => !props.stageDone && props.task.due_date && props.
   transform: translateY(-1px);
 }
 .mk-card.is-done .mk-card__title { color: #9a93a8; }
+.mk-card.is-scheduled {
+  border-color: #e7c56a;
+  background: linear-gradient(180deg, #fff8e8 0%, #fff 56%);
+  box-shadow: 0 0 0 1px rgba(212, 160, 40, 0.35), 0 10px 22px -16px rgba(160, 110, 10, 0.55);
+}
+.mk-card__scheduled {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  color: #8a5a00;
+  background: #fff3d1;
+  border: 1px solid #f0d48a;
+}
 
 .mk-card__top { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
 .mk-card__check {
