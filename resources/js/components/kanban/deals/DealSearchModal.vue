@@ -498,11 +498,11 @@
         </div>
 
         <div class="search-modal-footer d-flex align-items-center justify-content-between">
-          <div class="d-flex gap-4">
-            <a href="#" class="footer-link text-decoration-underline" @click.prevent="showFieldSettings = true">Add Field</a>
-            <a href="#" class="footer-link text-secondary" @click.prevent="restoreDefaultSearchFields">Restore default fields</a>
+          <div class="footer-links">
+            <button type="button" class="footer-link" @click="showFieldSettings = true">Add Field</button>
+            <button type="button" class="footer-link footer-link--muted" @click="restoreDefaultSearchFields">Restore default fields</button>
           </div>
-          <div class="d-flex gap-3">
+          <div class="footer-actions">
             <button class="btn-reset" @click="resetForm">Reset</button>
             <button class="btn-search" @click="applySearch">Search</button>
           </div>
@@ -585,7 +585,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -1507,7 +1507,25 @@ const resetForm = () => {
 const restoreDefaultSearchFields = () => {
   fieldSettings.value = { ...defaultFieldSettings }
   persistFieldSettingsToSession(fieldSettings.value)
-  resetForm()
+}
+
+const isMobileSheet = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
+
+function onDealSheetTouchMove(event) {
+  const el = event.target
+  if (el?.closest?.('.search-sections-wrap, .deal-sidebar-pills, .vs__dropdown-menu, .deal-field-settings-overlay, .lead-search-date-backdrop, .lr-date-modal')) {
+    return
+  }
+  event.preventDefault()
+}
+
+function syncDealSheetLock() {
+  const locked = props.asDropdown && props.modelValue && isMobileSheet.value
+  const root = document.documentElement
+  if (root.classList.contains('lead-search-sheet-lock') === locked) return
+  root.classList.toggle('lead-search-sheet-lock', locked)
+  if (locked) document.addEventListener('touchmove', onDealSheetTouchMove, { passive: false })
+  else document.removeEventListener('touchmove', onDealSheetTouchMove)
 }
 
 const applyFieldSettings = (settings) => {
@@ -1762,7 +1780,10 @@ watch(
 watch(() => props.dealType, fetchStages)
 watch(() => props.dealType, hydrateFieldSettingsFromSession)
 
+watch(() => props.modelValue, () => syncDealSheetLock())
+
 onMounted(async () => {
+  syncDealSheetLock()
   hydrateFieldSettingsFromSession()
 
   await Promise.all([fetchUsers(), fetchStages(),fetchAreasData(),
@@ -1775,6 +1796,11 @@ onMounted(async () => {
   if (props.modelValue) {
     hydrateFormFromQuery(props.currentQuery)
   }
+})
+
+onUnmounted(() => {
+  document.documentElement.classList.remove('lead-search-sheet-lock')
+  document.removeEventListener('touchmove', onDealSheetTouchMove)
 })
 </script>
 
@@ -2203,10 +2229,29 @@ onMounted(async () => {
   background: #fff;
 }
 
+.footer-links,
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 .footer-link {
+  border: none;
+  background: transparent;
+  padding: 0;
   font-size: 14px;
   color: #3b82f6;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.footer-link--muted {
+  color: #64748b;
   font-weight: 500;
+  text-decoration: none;
 }
 
 .btn-reset,
@@ -2299,7 +2344,19 @@ onMounted(async () => {
     position: sticky;
     bottom: 0;
     z-index: 5;
+    flex-wrap: wrap;
+    gap: 10px;
     padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .footer-links,
+  .footer-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .footer-link {
+    font-size: 13px;
   }
 }
 :deep(.custom-v-select .vs__open-indicator-icon) {
@@ -2667,6 +2724,51 @@ onMounted(async () => {
     
     .lr-weekdays span {
         font-size: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .lead-search-dropdown-outer--mobile-sheet .deal-search-dropdown-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100%;
+        min-height: 0;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .lead-search-dropdown-outer--mobile-sheet .deal-search-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border-radius: 0;
+    }
+
+    .lead-search-dropdown-outer--mobile-sheet .form-content-wrapper {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .lead-search-dropdown-outer--mobile-sheet .search-sections-wrap {
+        max-height: none;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .lead-search-dropdown-outer--mobile-sheet .close-btn {
+        top: 10px;
+        right: 10px;
+        width: 34px;
+        height: 34px;
+        z-index: 3;
     }
 }
 </style>

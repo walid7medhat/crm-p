@@ -556,6 +556,20 @@ onUnmounted(() => {
     border: 1px solid #E2E8F0;
 }
 
+@media (max-width: 768px) {
+    .reminder-dropdown-wrapper {
+        position: static !important;
+    }
+
+    .reminder-dropdown {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+}
+
 .reminder-header-option {
     display: flex;
     align-items: center;

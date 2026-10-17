@@ -1043,7 +1043,7 @@ const activeFilters = ref([]);
 const lastQuery = ref(null);
 const activeFilter = ref(null);
 const showSearchModal = ref(false);
-const isMobileLeadSearchSheet = computed(() => isMobileViewport.value && activeKanbanTab.value !== 'deals');
+const isMobileLeadSearchSheet = computed(() => isMobileViewport.value);
 const searchInputFocused = ref(false);
 const searchDropdownAnchorRef = ref(null);
 const searchDropdownPanelRef = ref(null);

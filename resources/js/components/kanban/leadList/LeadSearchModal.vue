@@ -124,7 +124,7 @@
 
                     <template v-for="field in section.fields" :key="field.id">
 
-                        <div class="col-md-6 mt-3">
+                        <div class="col-md-6 mt-3" :class="{ 'sheet-date-col': field.id === 'created_on' || field.id === 'assigned_on' }">
 
                             <label v-if="field.id === 'inactive_sales'" class="form-label-custom d-flex align-items-center gap-2">
 
@@ -1096,7 +1096,7 @@
 
                     <template v-for="field in section.fields" :key="field.id">
 
-                        <div class="col-md-6 mt-3">
+                        <div class="col-md-6 mt-3" :class="{ 'sheet-date-col': field.id === 'created_on' || field.id === 'assigned_on' }">
 
                             <label v-if="field.id === 'inactive_sales'" class="form-label-custom d-flex align-items-center gap-2">
 
@@ -4443,7 +4443,8 @@ function sheetChipOptions(field) {
 }
 
 function toggleSheetChip(field, value) {
-    form[field.formKey] = form[field.formKey] === value ? null : value
+    const key = field.formKey
+    form.value[key] = form.value[key] === value ? '' : value
 }
 
 const searchFieldSections = [
@@ -8448,6 +8449,36 @@ onBeforeUnmount(() => {
     min-width: 0;
 }
 
+.lead-search-dropdown-panel--sheet .search-section-card .row:has(> .sheet-date-col + .sheet-date-col) {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    column-gap: 10px;
+}
+
+.lead-search-dropdown-panel--sheet .search-section-card .row:has(> .sheet-date-col + .sheet-date-col) > .sheet-date-col {
+    display: block !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    flex: 0 0 calc(50% - 5px) !important;
+}
+
+.lead-search-dropdown-panel--sheet .sheet-date-col .form-label-custom {
+    white-space: nowrap;
+}
+
+.lead-search-dropdown-panel--sheet .sheet-date-col .custom-date-trigger {
+    font-size: 13px !important;
+    padding: 0 10px !important;
+    gap: 6px;
+}
+
+.lead-search-dropdown-panel--sheet .sheet-date-col .custom-date-trigger span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .lead-search-dropdown-panel--sheet .form-label-custom {
     font-size: 13px;
     font-weight: 600;
@@ -9408,6 +9439,24 @@ onBeforeUnmount(() => {
         z-index: 1 !important;
     }
 
+    .lead-search-dropdown-panel--sheet .search-section-card .crm-phone-input.crm-phone-input--dropdown-open,
+    .lead-search-dropdown-panel--sheet .search-section-card .col-md-6:has(.crm-phone-input--dropdown-open) {
+        z-index: 40 !important;
+        overflow: visible !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .crm-phone-input--dropdown-open .vti__dropdown.show {
+        overflow: visible !important;
+        max-height: none !important;
+        background: transparent !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .crm-phone-input--dropdown-open .vti__dropdown-list {
+        z-index: 40 !important;
+        background: #ffffff !important;
+        box-shadow: 0 12px 32px rgba(28, 23, 48, 0.16);
+    }
+
     .lead-search-dropdown-panel--sheet .search-section-card .v-select .vs__dropdown-toggle,
     .lead-search-dropdown-panel--sheet .search-section-card input.form-control,
     .lead-search-dropdown-panel--sheet .search-section-card input.custom-input,
@@ -9439,5 +9488,10 @@ onBeforeUnmount(() => {
         color: #8b8498 !important;
         -webkit-text-fill-color: #8b8498 !important;
         opacity: 1 !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .sheet-date-col .custom-date-trigger {
+        font-size: 13px !important;
+        padding: 0 10px !important;
     }
 </style>

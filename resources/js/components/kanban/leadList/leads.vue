@@ -6952,36 +6952,35 @@ const fetchRevertNotifications = async () => {
     pointer-events: none;
     z-index: 0;
     opacity: 0;
-    transition: opacity 0.35s ease;
-    background:
-        radial-gradient(130px 78px at var(--gx) var(--gy), rgba(255, 255, 255, 0.72), rgba(250, 163, 0, 0.1) 42%, transparent 72%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 40%);
+    transition: opacity 0.32s ease;
+    background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 @media (hover: hover) and (pointer: fine) {
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover:not(.ghost):not(.dragging):not(.kanban-card--motion-hold):not(.is-tilting) {
-        border-color: rgba(115, 62, 135, 0.26) !important;
+        border-color: rgba(var(--color-primary-rgb), 0.34) !important;
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.95),
-            0 12px 20px -14px rgba(1, 6, 45, 0.24),
-            0 4px 8px -6px rgba(115, 62, 135, 0.2) !important;
+            0 0 0 1px rgba(var(--color-primary-rgb), 0.08),
+            0 16px 28px -18px rgba(var(--color-primary-rgb), 0.45) !important;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting:not(.ghost):not(.kanban-card--motion-hold),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging {
         z-index: 4;
-        border-color: rgba(115, 62, 135, 0.3) !important;
+        border-color: rgba(var(--color-primary-rgb), 0.42) !important;
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.96),
-            0 14px 22px -16px rgba(1, 6, 45, 0.28),
-            0 6px 10px -8px rgba(115, 62, 135, 0.22) !important;
+            0 0 0 1px rgba(var(--color-primary-rgb), 0.1),
+            0 18px 32px -16px rgba(var(--color-primary-rgb), 0.42) !important;
     }
 
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover::before,
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting::before,
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging::before,
     .kanban-card--drag-image::before {
-        opacity: 0.85;
+        opacity: 1;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting {

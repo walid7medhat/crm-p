@@ -846,6 +846,7 @@
       <div class="mobile-sort-sheet" @click.stop>
         <div class="mobile-filter-sheet-head">
           <button type="button" class="mobile-filter-clear" @click="resetMobileSort">Reset</button>
+          <h6 class="mobile-filter-sheet-title">Sort by</h6>
           <button type="button" class="mobile-filter-close" @click="showMobileSortSheet = false" aria-label="Close">
             <i class="ri-close-line"></i>
           </button>
@@ -5210,8 +5211,10 @@ const featuresButtonLabel = computed(() => {
     line-height: 1;
   }
   .mobile-filter-close i {
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
   }
   .mobile-filter-accordion details {
     border: 1px solid #e7ebf2;

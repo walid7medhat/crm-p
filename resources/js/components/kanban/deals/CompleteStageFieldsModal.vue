@@ -1026,6 +1026,7 @@
                                     <v-select
                                         :model-value="property.area_id"
                                         @update:modelValue="(val) => onPropertyAreaSelected(val, propIndex)"
+                                        @search="onSearchAreas"
                                         :options="areas"
                                         :reduce="item => item.id"
                                         label="name"
@@ -2580,13 +2581,11 @@ function extractAreasList(responseData) {
   return []
 }
 
-// The areas table has thousands of rows — fetching them all made this dropdown render
-// (and scroll) thousands of DOM nodes at once. Load a small default page instead; typing
-// hits the (now server-filtered) search below, and ensureAreasIncludeSelected() below
-// guarantees each property's already-picked address is still present even off this page.
+// Same address list as Edit Deal (PropertyCard / ViewDealModal): the full /listings/areas
+// payload, including building and project rows. A 50-row cap hid those names here.
 async function fetchAllAreas() {
   try {
-    const response = await api.get('/listings/areas', { params: { limit: 50 } })
+    const response = await api.get('/listings/areas')
     areas.value = extractAreasList(response.data)
     areasLoaded.value = true
   } catch (error) {
@@ -2596,9 +2595,8 @@ async function fetchAllAreas() {
 }
 async function fetchAreas(search = '') {
   try {
-    // `limit` as a fallback cap for when search is cleared back to '' (backend only
-    // applies its own 50-cap while a search term is present).
-    const response = await api.get('/listings/areas', { params: { search, limit: 50 } })
+    const term = String(search || '').trim()
+    const response = await api.get('/listings/areas', { params: term ? { search: term } : {} })
     areas.value = extractAreasList(response.data)
   } catch (error) {
     console.error('Error fetching areas:', error)

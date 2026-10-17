@@ -324,6 +324,7 @@ defineExpose({
   width: 100%;
   position: relative;
   overflow: visible;
+  container-type: inline-size;
 }
 
 .crm-phone-input--dropdown-open {
@@ -406,6 +407,11 @@ defineExpose({
   background: #fff !important;
   border: 1px solid #e2e8f0;
   z-index: 10060 !important;
+  box-sizing: border-box;
+  left: 0 !important;
+  width: 100cqi !important;
+  max-width: 100cqi !important;
+  max-height: min(220px, 36dvh);
 }
 
 .crm-phone-input :deep(.vti__dropdown-item) {

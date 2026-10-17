@@ -1234,6 +1234,20 @@
     gap: 8px;
   }
 
+  .mobile-sort-sheet .mobile-filter-sheet-head {
+    padding: 4px 6px 10px;
+  }
+
+  .mobile-sort-sheet .mobile-filter-close {
+    justify-self: end;
+    grid-column: 3;
+  }
+
+  .mobile-sort-sheet .mobile-filter-close i {
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+  }
+
   .mobile-filter-sticky-actions--dual {
     display: grid !important;
     grid-template-columns: 1fr 1.6fr;

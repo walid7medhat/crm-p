@@ -65,6 +65,7 @@
               <!-- Admin / super admin: editable -->
               <BDropdown
                 v-if="canEditDealType"
+                class="deal-type-select"
                 right
                 no-caret
                 :disabled="dealTypeSaving || isEditingDeal"
@@ -1667,11 +1668,7 @@ function close() {
 
 /* Stage progress — same rail as the lead view */
 .deal-progress-wrapper {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
-  scrollbar-width: none;
+  overflow: hidden;
   padding: 4px 12px 6px !important;
   border-bottom: none;
   position: relative;
@@ -1681,20 +1678,28 @@ function close() {
   margin-top: 0;
   min-height: 42px;
 }
-.deal-progress-wrapper::-webkit-scrollbar {
-  display: none;
-}
 .deal-progress-bar {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: nowrap;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 32px;
-  padding: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
   border: 1px solid #efe4f3;
   border-radius: 14px;
   background: #faf6fb;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.deal-progress-bar::-webkit-scrollbar {
+  display: none;
 }
 .deal-stage-pill {
     display: flex;
@@ -1713,6 +1718,7 @@ function close() {
     box-shadow: none;
     height: 32px;
     background: #fff;
+    flex: 0 0 auto;
 }
 
 .deal-stage-pill:not(.active) {
@@ -2525,6 +2531,67 @@ function close() {
 
   .modal-header-custom {
     align-items: flex-start;
+    overflow: visible;
+  }
+
+  .lead-header-main {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 8px;
+  }
+
+  .lead-header-actions {
+    display: contents;
+  }
+
+  .lead-header-identity {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 48px);
+  }
+
+  .close-btn {
+    order: 2;
+    margin-left: 0;
+  }
+
+  .deal-type-select {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .deal-title-read-row,
+  .view-deal-title-truncate {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .view-deal-title-truncate {
+    display: block;
+    flex: 1 1 auto;
+  }
+
+  :deep(.deal-type-select .deal-type-dropdown-toggle) {
+    width: 100%;
+    height: 36px;
+    justify-content: space-between;
+    padding: 0 12px;
+  }
+
+  .deal-type-dropdown-label {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.deal-type-select .deal-type-dropdown-menu) {
+    width: 100%;
+    min-width: 100%;
+    z-index: 40;
   }
 }
 :deep(.deal-type-dropdown-toggle) {

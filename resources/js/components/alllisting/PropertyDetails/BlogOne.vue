@@ -71,9 +71,10 @@
             <div v-if="isMobileViewport && property" class="pf-page">
               <section class="pf-card" :class="{ 'pf-card--overlap': property.gallery_images && property.gallery_images.length }">
                 <p class="pf-price">
-                  AED {{ formatPrice(property.price) }}
-                  <span v-if="property.listing_status === 'rent'">/year</span>
+                  <span>AED {{ formatPrice(property.price) }}</span>
+                  <span v-if="rentPriceMeta" class="pf-price__period">{{ rentPriceMeta.period }}</span>
                 </p>
+                <p v-if="rentPriceMeta" class="pf-price__equiv">{{ rentPriceMeta.monthly }}</p>
                 <h2 v-if="mobileListingTitle" class="pf-title">{{ mobileListingTitle }}</h2>
                 <p v-if="mobileLocationLabel" class="pf-location">{{ mobileLocationLabel }}</p>
                 <p v-if="mobileSpecSentence" class="pf-specs">{{ mobileSpecSentence }}</p>
@@ -251,7 +252,11 @@
                   </button> -->
                 </div>
                 <div class="price-main">
-                  <h3 class="property-price">AED {{ formatPrice(property.price) }}</h3>
+                  <h3 class="property-price">
+                    AED {{ formatPrice(property.price) }}
+                    <span v-if="rentPriceMeta" class="property-price__period">{{ rentPriceMeta.period }}</span>
+                  </h3>
+                  <p v-if="rentPriceMeta" class="property-price__equiv">{{ rentPriceMeta.monthly }}</p>
                   <h4 class="property-title">{{ property.area?.area_title || '' }}</h4>
                    <!--<h4 class="property-title"> Old Area {{ property.old_area || "" }}</h4>-->
                 </div>
@@ -313,7 +318,10 @@
                   
                   <div class="info-item">
                     <span class="info-label">Price</span>
-                    <span class="info-value">AED {{ formatPrice(property.price) }}</span>
+                    <span class="info-value">
+                      AED {{ formatPrice(property.price) }}
+                      <template v-if="rentPriceMeta"> · {{ rentPriceMeta.period }}</template>
+                    </span>
                   </div>
                   
                   <div class="info-item">
@@ -3182,6 +3190,20 @@ const mobileListingTitle = computed(() => {
   const p = property.value;
   if (!p) return '';
   return p.project?.title || p.area?.area_title || p.title || p.reference_number || '';
+});
+
+// UAE residential rent is quoted as an annual figure. Show that as a period
+// label, and the monthly amount agents use when talking to a tenant.
+const rentPriceMeta = computed(() => {
+  const status = String(property.value?.listing_status || '').trim().toLowerCase();
+  if (status !== 'rent') return null;
+  const annual = Number(property.value?.price);
+  if (!Number.isFinite(annual) || annual <= 0) return null;
+  const monthly = Math.round(annual / 12);
+  return {
+    period: 'Yearly',
+    monthly: `AED ${new Intl.NumberFormat('en-US').format(monthly)} a month`,
+  };
 });
 
 const mobileLocationLabel = computed(() => {
@@ -8719,6 +8741,7 @@ const getHistoryIcon = (event) => {
       mobileGalleryBadges,
       mobilePurposeLabel,
       mobileListingTitle,
+      rentPriceMeta,
       mobileLocationLabel,
       mobileSpecs,
       mobileSpecSentence,
@@ -9829,8 +9852,31 @@ margin-top: 20px;
   font-size: 24px !important;
   font-weight: 800;
   color: #0B0736;
-  margin: 0 0 15px 0 !important;
+  margin: 0 0 6px 0 !important;
   line-height: 1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.property-price__period {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5b21b6;
+  background: #f3e8ff;
+  border-radius: 999px;
+  padding: 3px 8px;
+  line-height: 1.2;
+}
+
+.property-price__equiv {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6c757d;
 }
 
 .property-title {

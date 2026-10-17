@@ -3,7 +3,7 @@
         <div v-if="appearance === 'panel' && isMobile" class="stage-current-bar">
             <div
                 class="stage-current"
-                :style="currentStage ? { backgroundColor: currentStage.color, borderColor: currentStage.color } : undefined"
+                :style="currentStageStyle"
             >
                 <span class="stage-text">{{ currentStage?.name || 'Stage' }}</span>
             </div>
@@ -383,6 +383,27 @@ const currentStage = computed(() => {
     return stages.value[selectedStageIndex.value] || null
 })
 
+function textOnStageColor(hex) {
+    const raw = String(hex || '').trim().replace('#', '')
+    if (!/^[0-9a-fA-F]{6}$/.test(raw)) return '#ffffff'
+    const r = parseInt(raw.slice(0, 2), 16)
+    const g = parseInt(raw.slice(2, 4), 16)
+    const b = parseInt(raw.slice(4, 6), 16)
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000
+    return yiq >= 170 ? '#1c1424' : '#ffffff'
+}
+
+const currentStageStyle = computed(() => {
+    const color = currentStage.value?.color
+    if (!color) return undefined
+    return {
+        '--stage-color': color,
+        backgroundColor: color,
+        borderColor: color,
+        color: textOnStageColor(color),
+    }
+})
+
 const pickerOpen = ref(false)
 const isMobile = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
 let mobileQuery = null
@@ -689,7 +710,9 @@ onUnmounted(() => {
     padding: 5px 14px;
     border-radius: 999px;
     border: 1px solid transparent;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(var(--color-primary-rgb), 0.55);
+    background-color: var(--stage-color) !important;
+    border-color: var(--stage-color) !important;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--stage-color, rgba(var(--color-primary-rgb), 0.55));
 }
 
 .stage-current .stage-text {
@@ -697,7 +720,8 @@ onUnmounted(() => {
     min-width: 0;
     font-size: 11px;
     font-weight: 700;
-    color: #1c1424;
+    color: inherit !important;
+    -webkit-text-fill-color: currentColor !important;
     text-align: center;
 }
 

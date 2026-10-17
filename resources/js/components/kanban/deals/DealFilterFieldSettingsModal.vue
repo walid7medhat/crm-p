@@ -125,7 +125,7 @@ const apply = () => {
   position: fixed;
   inset: 0;
   background: rgba(9, 14, 34, 0.4);
-  z-index: 12000;
+  z-index: 16000;
   display: flex;
   align-items: center;
   justify-content: center;
