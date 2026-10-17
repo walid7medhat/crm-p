@@ -58,7 +58,7 @@
                     <button type="button" title="Center view" @click="centerView">Center</button>
                 </div>
                 <router-link to="/users" class="org-link">Team table</router-link>
-                <button type="button" class="org-drawer-toggle" @click="toggleUnassigned">
+                <button type="button" class="org-drawer-toggle" @click="openUnassigned">
                     Unassigned
                     <span>{{ unassigned.length }}</span>
                 </button>
@@ -100,6 +100,7 @@
                             :highlighted-id="highlightedId"
                             :dragging-id="dragEmployee ? dragEmployee.id : 0"
                             :collapsed-map="collapsed"
+                            :selected-id="salesScope ? Number(salesScope.id) : 0"
                             :can-drag="canDrag"
                             :can-drop-on="canDropOn"
                             @toggle="toggleNode"
@@ -111,6 +112,46 @@
                     </div>
                 </div>
             </div>
+
+            <aside v-if="salesScope" class="org-sales" :class="{ 'is-min': salesMinimized }">
+                <header class="org-sales__head">
+                    <div class="org-sales__who">
+                        <p class="org-sales__kicker">Sales under</p>
+                        <strong>{{ salesScope.name }}</strong>
+                        <small>{{ salesScope.role_name || 'Team member' }} · {{ scopedSales.length }}</small>
+                    </div>
+                    <div class="org-sales__tools">
+                        <button type="button" class="org-icon-btn" :title="salesMinimized ? 'Expand list' : 'Minimize list'" @click="salesMinimized = !salesMinimized">
+                            <iconify-icon :icon="salesMinimized ? 'lucide:chevron-up' : 'lucide:chevron-down'" width="16"></iconify-icon>
+                        </button>
+                        <button type="button" class="org-icon-btn" title="Close" aria-label="Close sales list" @click="closeSalesScope">
+                            <iconify-icon icon="lucide:x" width="16"></iconify-icon>
+                        </button>
+                    </div>
+                </header>
+                <div v-show="!salesMinimized" class="org-sales__body">
+                    <input v-model="salesQuery" type="search" placeholder="Search these agents" aria-label="Search sales agents">
+                    <p v-if="!filteredScopedSales.length" class="org-sales__empty">
+                        <template v-if="scopedSales.length">No one matches this search.</template>
+                        <template v-else>No sales agents report under this person.</template>
+                    </p>
+                    <ul v-else class="org-sales__list">
+                        <li v-for="agent in filteredScopedSales" :key="agent.id">
+                            <button type="button" :style="{ paddingLeft: (8 + Math.min(agent.depth, 4) * 10) + 'px' }" @click="openSalesScope(agent)">
+                                <span class="org-sales__avatar">{{ initials(agent.name) }}</span>
+                                <span class="org-sales__copy">
+                                    <strong>{{ agent.name }}</strong>
+                                    <small>
+                                        {{ agent.role_name || 'Sales' }}
+                                        <template v-if="agent.parent_name"> · {{ agent.parent_name }}</template>
+                                    </small>
+                                </span>
+                            </button>
+                        </li>
+                    </ul>
+                    <button v-if="canViewProfile" type="button" class="org-sales__profile" @click="viewProfile(salesScope)">View profile</button>
+                </div>
+            </aside>
 
             <aside v-show="drawerOpen" class="org-drawer" :class="{ 'is-open': drawerOpen }">
                 <div class="org-drawer__head">
@@ -292,6 +333,9 @@ export default {
             drawerBranch: '',
             drawerRole: '',
             collapsed: {},
+            salesScope: null,
+            salesMinimized: false,
+            salesQuery: '',
             dragEmployee: null,
             poolDragged: false,
             assigning: false,
@@ -369,6 +413,41 @@ export default {
         },
         unassignedRoles() {
             return [...new Set(this.unassigned.map((user) => user.role_name).filter(Boolean))].sort();
+        },
+        childrenByParent() {
+            const map = new Map();
+            this.allUsers.forEach((user) => {
+                const parentId = Number(user.parent_id);
+                if (!parentId) return;
+                if (!map.has(parentId)) map.set(parentId, []);
+                map.get(parentId).push(user);
+            });
+            return map;
+        },
+        scopedSales() {
+            if (!this.salesScope) return [];
+            const map = this.childrenByParent;
+            const rows = [];
+            const seen = new Set();
+            const walk = (id, depth) => {
+                (map.get(Number(id)) || []).forEach((child) => {
+                    if (seen.has(child.id)) return;
+                    seen.add(child.id);
+                    const nextDepth = depth + 1;
+                    if (isActiveUser(child) && isSalesRole(child)) rows.push({ ...child, depth });
+                    walk(child.id, nextDepth);
+                });
+            };
+            walk(this.salesScope.id, 0);
+            return rows.sort((a, b) => a.depth - b.depth || String(a.name).localeCompare(String(b.name)));
+        },
+        filteredScopedSales() {
+            const query = this.salesQuery.trim().toLowerCase();
+            if (!query) return this.scopedSales;
+            return this.scopedSales.filter((user) => {
+                return [user.name, user.email, user.role_name, user.parent_name, user.branch_name]
+                    .some((value) => String(value || '').toLowerCase().includes(query));
+            });
         },
         filteredUnassigned() {
             const query = this.drawerSearch.trim().toLowerCase();
@@ -487,11 +566,7 @@ export default {
             }));
             if (typeof payload?.can_reassign === 'boolean') this.canAssign = payload.can_reassign;
             else this.canAssign = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'].includes(roleKey(this.currentUser));
-            const collapsed = {};
-            this.allUsers.forEach((user) => {
-                if (isManagerRole(user) || isTeamLeadRole(user)) collapsed[user.id] = true;
-            });
-            this.collapsed = collapsed;
+            this.collapsed = {};
         },
         findNode(list, id) {
             for (const node of list || []) {
@@ -501,16 +576,15 @@ export default {
             }
             return null;
         },
-        toggleUnassigned() {
-            const filtered = !!(this.drawerBranch || this.drawerRole || this.drawerSearch.trim());
-            if (!this.drawerOpen || filtered) {
-                this.drawerSearch = '';
-                this.drawerBranch = '';
-                this.drawerRole = '';
-                this.drawerOpen = true;
+        openUnassigned() {
+            if (this.drawerOpen) {
+                this.drawerOpen = false;
                 return;
             }
-            this.drawerOpen = false;
+            this.drawerSearch = '';
+            this.drawerBranch = '';
+            this.drawerRole = '';
+            this.drawerOpen = true;
         },
         toggleNode(id) {
             this.collapsed = { ...this.collapsed, [id]: !this.collapsed[id] };
@@ -551,9 +625,12 @@ export default {
             this.clearSearch();
             if (!this.inChart(person)) {
                 this.drawerOpen = true;
-                this.person = this.byId.get(Number(person.id)) || person;
+                const fresh = this.byId.get(Number(person.id)) || person;
+                if (this.opensSalesSidebar(fresh)) this.openSalesScope(fresh);
+                else this.person = fresh;
                 return;
             }
+            if (this.opensSalesSidebar(person)) this.openSalesScope(person);
             if (!this.findNode(this.visibleRoots, person.id)) this.focusBranchId = '';
             this.expandAncestors(person.id);
             this.highlightedId = Number(person.id);
@@ -791,8 +868,28 @@ export default {
                 this.assigning = false;
             }
         },
+        opensSalesSidebar(user) {
+            const key = roleKey(user);
+            return key === 'admin' || key === 'super_admin' || isManagerRole(user) || isTeamLeadRole(user) || isSalesRole(user);
+        },
+        openSalesScope(user) {
+            const fresh = this.byId.get(Number(user.id)) || user;
+            this.salesScope = fresh;
+            this.salesMinimized = false;
+            this.salesQuery = '';
+            this.person = null;
+        },
+        closeSalesScope() {
+            this.salesScope = null;
+            this.salesQuery = '';
+            this.salesMinimized = false;
+        },
         openPerson(user) {
             const fresh = this.byId.get(Number(user.id)) || user;
+            if (this.opensSalesSidebar(fresh)) {
+                this.openSalesScope(fresh);
+                return;
+            }
             this.person = fresh;
         },
         viewProfile(user) {
@@ -1046,6 +1143,140 @@ export default {
     min-height: 0;
     display: flex;
     gap: 0;
+}
+
+.org-sales {
+    width: 260px;
+    flex: 0 0 260px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid #e6e9f2;
+    background: rgba(255, 255, 255, .94);
+    animation: org-sales-in .22s ease;
+}
+
+.org-sales.is-min {
+    width: 220px;
+    flex-basis: 220px;
+}
+
+.org-sales__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 10px 8px;
+}
+
+.org-sales__who { min-width: 0; }
+
+.org-sales__kicker {
+    margin: 0;
+    color: #8b93a7;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.org-sales__who strong {
+    display: block;
+    margin-top: 2px;
+    color: #243056;
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.org-sales__who small,
+.org-sales__empty,
+.org-sales__copy small {
+    display: block;
+    color: #8b93a7;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.org-sales__tools { display: flex; gap: 4px; flex: 0 0 auto; }
+
+.org-sales__body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    padding: 0 10px 10px;
+    gap: 8px;
+}
+
+.org-sales__body input {
+    height: 30px;
+    border: 1px solid #e6e9f2;
+    border-radius: 8px;
+    padding: 0 8px;
+    font-size: 12px;
+    background: #fff;
+}
+
+.org-sales__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    min-height: 0;
+    flex: 1;
+}
+
+.org-sales__list button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    padding: 6px 8px;
+}
+
+.org-sales__list button:hover { background: #f6f3f8; }
+
+.org-sales__avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3eaf6;
+    color: #733e87;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.org-sales__copy { min-width: 0; }
+.org-sales__copy strong {
+    display: block;
+    color: #243056;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+.org-sales__empty { margin: 4px 2px; }
+
+.org-sales__profile {
+    border: 1px solid #e1e5f0;
+    background: #fff;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    color: #243056;
+}
+
+@keyframes org-sales-in {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: none; }
 }
 
 .org-viewport {
@@ -1375,10 +1606,23 @@ export default {
         box-shadow: -12px 0 40px rgba(20, 28, 58, .15);
     }
     .org-drawer.is-open { transform: translateX(0); }
+    .org-sales {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 69;
+        width: min(300px, 92vw);
+        flex-basis: auto;
+        box-shadow: -12px 0 40px rgba(20, 28, 58, .15);
+    }
+    .org-sales.is-min { width: min(300px, 92vw); }
+    .org-body:has(.org-drawer.is-open) .org-sales { right: min(360px, 92vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .org-skeleton__card,
-    .org-drawer { animation: none; transition: none; }
+    .org-drawer,
+    .org-sales { animation: none; transition: none; }
 }
 </style>

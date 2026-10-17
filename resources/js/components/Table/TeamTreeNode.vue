@@ -51,6 +51,7 @@
                     :highlighted-id="highlightedId"
                     :dragging-id="draggingId"
                     :collapsed-map="collapsedMap"
+                    :selected-id="selectedId"
                     :can-drag="canDrag"
                     :can-drop-on="canDropOn"
                     @toggle="$emit('toggle', $event)"
@@ -71,6 +72,7 @@
                     :highlighted-id="highlightedId"
                     :dragging-id="draggingId"
                     :collapsed-map="collapsedMap"
+                    :selected-id="selectedId"
                     :can-drag="canDrag"
                     :can-drop-on="canDropOn"
                     @toggle="$emit('toggle', $event)"
@@ -91,6 +93,7 @@
                     :highlighted-id="highlightedId"
                     :dragging-id="draggingId"
                     :collapsed-map="collapsedMap"
+                    :selected-id="selectedId"
                     :can-drag="canDrag"
                     :can-drop-on="canDropOn"
                     @toggle="$emit('toggle', $event)"
@@ -140,6 +143,7 @@ export default {
         highlightedId: { type: Number, default: 0 },
         draggingId: { type: Number, default: 0 },
         collapsedMap: { type: Object, default: () => ({}) },
+        selectedId: { type: Number, default: 0 },
         canDrag: { type: Function, required: true },
         canDropOn: { type: Function, required: true },
     },
@@ -178,22 +182,19 @@ export default {
             return this.isManagerNode || isTeamLead(this.node);
         },
         hasBody() {
-            if (this.overviewChildren.length) return true;
-            return this.holdsTeam && (this.teamLeadChildren.length > 0 || this.memberChildren.length > 0);
+            return false;
         },
         collapsed() {
             return !!this.collapsedMap[this.node.id];
         },
         showOverview() {
-            return !this.collapsed && this.overviewChildren.length > 0 && !this.cluster;
+            return this.overviewChildren.length > 0 && !this.cluster;
         },
         showTeamLeads() {
-            if (this.cluster || !this.teamLeadChildren.length) return false;
-            if (this.isManagerNode) return true;
-            return !this.collapsed;
+            return this.teamLeadChildren.length > 0 && !this.cluster;
         },
         showMembers() {
-            return !this.collapsed && this.holdsTeam && this.memberChildren.length > 0 && !this.cluster;
+            return false;
         },
         peopleCount() {
             if (!this.holdsTeam) return this.overviewChildren.length;
@@ -221,7 +222,7 @@ export default {
         cardClass() {
             return {
                 'is-you': this.node.id === this.currentUserId,
-                'is-found': this.highlightedId === this.node.id,
+                'is-found': this.highlightedId === this.node.id || this.selectedId === this.node.id,
                 'is-dragging': this.dragging,
                 'is-available': this.available,
                 'is-hover': this.hovering && this.available,
@@ -241,11 +242,6 @@ export default {
     methods: {
         onClick() {
             if (this.suppressClick) return;
-            const canOpenTeam = this.isManagerNode || isTeamLead(this.node);
-            if (canOpenTeam && this.collapsed && this.hasBody) {
-                this.$emit('toggle', this.node.id);
-                return;
-            }
             this.$emit('open', this.node);
         },
         onDragStart(event) {
