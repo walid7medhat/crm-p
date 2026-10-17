@@ -1,16 +1,20 @@
 <template>
   <Teleport to="body">
-    <Transition name="edge-slide" mode="out-in">
-      <div v-if="activePayload && !myDayOpen" key="message" class="edge-dock">
+    <Transition name="edge-slide">
+      <div
+        v-if="activePayload || myDayOpen"
+        key="dock"
+        class="edge-dock"
+        :class="{ 'edge-dock--day': myDayOpen && !activePayload, 'edge-dock--stack': activePayload && myDayOpen }"
+      >
         <DailyEdgeCard
+          v-if="activePayload"
           :date-label="activePayload.date_label"
           :message="activePayload.message"
           dismissible
           @close="closeActive"
         />
-      </div>
-      <div v-else-if="myDayOpen" key="day" class="edge-dock edge-dock--day">
-        <article class="myday" role="dialog" aria-modal="false" aria-label="My Day">
+        <article v-if="myDayOpen" class="myday" role="dialog" aria-modal="false" aria-label="My Day">
           <header class="myday__top">
             <div class="myday__mark" aria-hidden="true">
               <iconify-icon icon="lucide:sun" />
@@ -125,8 +129,7 @@ const activePayload = computed(() => {
 })
 
 const showPill = computed(() => {
-  if (activePayload.value && !myDayOpen.value) return false
-  if (myDayOpen.value) return !!production.value?.message || (!!testPayload.value?.message && lastClosed.value === 'test')
+  if (activePayload.value) return false
   if (testPayload.value?.message && lastClosed.value === 'test') return true
   return !!production.value?.message && !productionOpen.value
 })
@@ -334,7 +337,6 @@ function reopen() {
     return
   }
   if (production.value?.message) {
-    myDayOpen.value = false
     productionOpen.value = true
     return
   }
@@ -348,7 +350,6 @@ function onResize() {
 }
 
 onMounted(() => {
-  restoreDayTop()
   load()
   window.addEventListener('daily-edge:test', onTestEvent)
   window.addEventListener('daily-edge:open', onDelivered)
@@ -372,7 +373,10 @@ onUnmounted(() => {
   right: 16px;
   bottom: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: 12px;
   width: min(340px, calc(100vw - 32px));
   pointer-events: none;
 }
@@ -382,9 +386,16 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 
-.edge-dock--day {
-  align-items: stretch;
+.edge-dock--day,
+.edge-dock--stack {
+  justify-content: center;
   padding: 88px 0 24px;
+}
+
+.edge-dock--stack .myday,
+.edge-dock--day .myday {
+  flex: 0 1 auto;
+  max-height: min(520px, calc(100vh - 280px));
 }
 
 .myday {
@@ -525,7 +536,7 @@ onUnmounted(() => {
   position: fixed;
   z-index: 1100;
   right: 16px;
-  top: calc(50% + 150px);
+  top: calc(50% + 168px);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -543,7 +554,7 @@ onUnmounted(() => {
 }
 
 .edge-pill--day {
-  top: calc(50% + 198px);
+  top: calc(50% + 216px);
   touch-action: none;
   cursor: grab;
   user-select: none;
@@ -581,8 +592,9 @@ onUnmounted(() => {
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
-  .edge-dock--day {
-    align-items: stretch;
+  .edge-dock--day,
+  .edge-dock--stack {
+    justify-content: flex-end;
     padding-top: 72px;
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }

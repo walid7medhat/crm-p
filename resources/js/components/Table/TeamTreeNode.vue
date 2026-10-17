@@ -62,11 +62,31 @@
             </div>
         </div>
 
-        <div v-if="showLeaders" class="org-children">
-            <div v-for="(child, index) in leaderChildren" :key="child.id" class="org-child">
+        <div v-if="showOverview" class="org-children">
+            <div v-for="child in overviewChildren" :key="child.id" class="org-child">
                 <TeamTreeNode
                     :node="child"
-                    :accent="leaderAccent(index)"
+                    :accent="child.accent || cardAccent"
+                    :current-user-id="currentUserId"
+                    :highlighted-id="highlightedId"
+                    :dragging-id="draggingId"
+                    :collapsed-map="collapsedMap"
+                    :can-drag="canDrag"
+                    :can-drop-on="canDropOn"
+                    @toggle="$emit('toggle', $event)"
+                    @open="$emit('open', $event)"
+                    @drag-start="$emit('drag-start', $event)"
+                    @drag-end="$emit('drag-end')"
+                    @drop="$emit('drop', $event)"
+                />
+            </div>
+        </div>
+
+        <div v-if="showTeamLeads" class="org-children">
+            <div v-for="child in teamLeadChildren" :key="child.id" class="org-child">
+                <TeamTreeNode
+                    :node="child"
+                    :accent="child.accent || cardAccent"
                     :current-user-id="currentUserId"
                     :highlighted-id="highlightedId"
                     :dragging-id="draggingId"
@@ -90,14 +110,24 @@ function roleKey(node) {
     return String(node?.role_name || '').toLowerCase().replace(/\s+/g, '_');
 }
 
-function isLeader(node) {
+function isOverview(node) {
     const key = roleKey(node);
-    return ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'].includes(key);
+    return key === 'super_admin' || key === 'admin' || key === 'manager' || key.endsWith('_manager');
+}
+
+function isManager(node) {
+    const key = roleKey(node);
+    return key === 'manager' || key.endsWith('_manager');
+}
+
+function isTeamLead(node) {
+    const key = roleKey(node);
+    return key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
 }
 
 function acceptsDrop(node) {
     const key = roleKey(node);
-    return key === 'admin' || key === 'manager' || key.endsWith('_manager') || key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
+    return key === 'manager' || key.endsWith('_manager') || key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
 }
 
 export default {
@@ -132,26 +162,44 @@ export default {
             if (Number.isNaN(then)) return false;
             return (Date.now() - then) / 60000 <= 15;
         },
-        leaderChildren() {
-            return (this.node.children || []).filter((child) => isLeader(child));
+        overviewChildren() {
+            return (this.node.children || []).filter((child) => isOverview(child));
+        },
+        teamLeadChildren() {
+            return (this.node.children || []).filter((child) => isTeamLead(child));
         },
         memberChildren() {
-            return (this.node.children || []).filter((child) => !isLeader(child));
+            return (this.node.children || []).filter((child) => !isOverview(child) && !isTeamLead(child));
+        },
+        isManagerNode() {
+            return isManager(this.node);
+        },
+        holdsTeam() {
+            return this.isManagerNode || isTeamLead(this.node);
         },
         hasBody() {
-            return this.leaderChildren.length > 0 || this.memberChildren.length > 0;
+            if (this.overviewChildren.length) return true;
+            return this.holdsTeam && (this.teamLeadChildren.length > 0 || this.memberChildren.length > 0);
         },
         collapsed() {
             return !!this.collapsedMap[this.node.id];
         },
-        showLeaders() {
-            return !this.collapsed && this.leaderChildren.length > 0 && !this.cluster;
+        showOverview() {
+            return !this.collapsed && this.overviewChildren.length > 0 && !this.cluster;
+        },
+        showTeamLeads() {
+            return !this.collapsed && this.holdsTeam && this.teamLeadChildren.length > 0 && !this.cluster;
         },
         showMembers() {
-            return !this.collapsed && this.memberChildren.length > 0 && !this.cluster;
+            return !this.collapsed && this.holdsTeam && this.memberChildren.length > 0 && !this.cluster;
         },
         peopleCount() {
-            return (this.node.children || []).length;
+            if (!this.holdsTeam) return this.overviewChildren.length;
+            const countTeam = (nodes) => (nodes || []).reduce((sum, node) => {
+                if (isOverview(node)) return sum + countTeam(node.children);
+                return sum + 1 + countTeam(node.children);
+            }, 0);
+            return countTeam(this.node.children);
         },
         cardAccent() {
             return this.node.accent || this.accent;
@@ -189,12 +237,12 @@ export default {
         },
     },
     methods: {
-        leaderAccent(index) {
-            const child = this.leaderChildren[index];
-            return child?.accent || this.cardAccent;
-        },
         onClick() {
             if (this.suppressClick) return;
+            if (this.isManagerNode && this.collapsed && this.hasBody) {
+                this.$emit('toggle', this.node.id);
+                return;
+            }
             this.$emit('open', this.node);
         },
         onDragStart(event) {

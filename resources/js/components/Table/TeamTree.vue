@@ -69,7 +69,13 @@
             <div
                 ref="viewport"
                 class="org-viewport"
+                :class="{ 'is-panning': panning }"
                 @dragover="onViewportDragOver"
+                @wheel="onWheel"
+                @pointerdown="onPanStart"
+                @pointermove="onPanMove"
+                @pointerup="onPanEnd"
+                @pointercancel="onPanEnd"
             >
                 <div v-if="loading" class="org-skeleton" aria-hidden="true">
                     <div class="org-skeleton__card"></div>
@@ -212,7 +218,7 @@
 import { API_ENDPOINTS } from '../../config/api';
 import TeamTreeNode from './TeamTreeNode.vue';
 
-const LEADERS = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'];
+const LEADERS = ['super_admin', 'admin', 'manager', 'team_lead'];
 
 function roleKey(user) {
     if (!user) return '';
@@ -236,12 +242,18 @@ function isTeamLeadRole(user) {
     return key === 'team_lead' || key === 'team lead' || key.includes('team_lead');
 }
 
-function isAdminRole(user) {
-    return roleKey(user) === 'admin';
+function isSalesRole(user) {
+    const key = roleKey(user);
+    return key === 'sales' || key === 'sale';
 }
 
-function isDestinationRole(user) {
-    return isAdminRole(user) || isManagerRole(user) || isTeamLeadRole(user);
+function isTreeRole(user) {
+    const key = roleKey(user);
+    return isSalesRole(user) || key === 'admin' || key === 'super_admin' || isManagerRole(user) || isTeamLeadRole(user);
+}
+
+function isActiveUser(user) {
+    return String(user?.status || 'active').toLowerCase() === 'active';
 }
 
 const COMPANY = '#0B0736';
@@ -274,6 +286,7 @@ export default {
             highlightedId: 0,
             focusBranchId: '',
             zoom: 1,
+            panning: false,
             drawerOpen: false,
             drawerSearch: '',
             drawerBranch: '',
@@ -296,7 +309,7 @@ export default {
             return this.allUsers.filter((user) => this.inChart(user));
         },
         unassigned() {
-            return this.allUsers.filter((user) => !this.inChart(user));
+            return this.allUsers.filter((user) => isActiveUser(user) && isSalesRole(user) && !this.inChart(user));
         },
         roots() {
             const nodes = new Map(this.chartPeople.map((user) => [Number(user.id), { ...user, children: [] }]));
@@ -346,6 +359,7 @@ export default {
                 return 4;
             };
             return this.allUsers.filter((user) => {
+                if (!isActiveUser(user) || !isTreeRole(user)) return false;
                 return [user.name, user.email, user.role_name, user.branch_name, user.parent_name]
                     .some((value) => String(value || '').toLowerCase().includes(query));
             }).sort((a, b) => score(a) - score(b) || String(a.name).localeCompare(String(b.name))).slice(0, 10);
@@ -396,10 +410,13 @@ export default {
     },
     methods: {
         inChart(user) {
-            if (isLeader(user)) return true;
+            if (!isActiveUser(user) || !isTreeRole(user)) return false;
+            if (isLeader(user) || isManagerRole(user) || isTeamLeadRole(user)) return true;
             const parent = this.byId.get(Number(user.parent_id));
-            if (!parent) return false;
-            return isDestinationRole(parent);
+            // A branch card is not a team. Sales who only report to the branch,
+            // or to someone inactive, belong in Unassigned.
+            if (!parent || !isActiveUser(parent)) return false;
+            return isManagerRole(parent) || isTeamLeadRole(parent);
         },
         canDrag(user) {
             return this.canAssign && !!user && !isLeader(user) && !this.assigning;
@@ -409,9 +426,9 @@ export default {
             return !!this.resolveDestination(node);
         },
         resolveDestination(node) {
-            if (isDestinationRole(node)) return { type: 'direct', parent: node };
+            if (isManagerRole(node) || isTeamLeadRole(node)) return { type: 'direct', parent: node };
             const parent = this.byId.get(Number(node.parent_id));
-            if (parent && isDestinationRole(parent)) {
+            if (parent && (isManagerRole(parent) || isTeamLeadRole(parent))) {
                 const treeParent = this.findNode(this.roots, Number(parent.id)) || parent;
                 return this.resolveDestination(treeParent);
             }
@@ -446,7 +463,7 @@ export default {
                 this.notify('Could not load the organization chart.', 'error');
             } finally {
                 this.loading = false;
-                this.$nextTick(() => this.centerView());
+                this.$nextTick(() => this.fitToScreen());
             }
         },
         applyPayload(payload) {
@@ -470,6 +487,11 @@ export default {
             }));
             if (typeof payload?.can_reassign === 'boolean') this.canAssign = payload.can_reassign;
             else this.canAssign = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'].includes(roleKey(this.currentUser));
+            const collapsed = {};
+            this.allUsers.forEach((user) => {
+                if (isManagerRole(user)) collapsed[user.id] = true;
+            });
+            this.collapsed = collapsed;
         },
         findNode(list, id) {
             for (const node of list || []) {
@@ -533,20 +555,83 @@ export default {
                 card?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
             });
         },
+        clampZoom(value) {
+            return Math.min(2, Math.max(0.08, Math.round(value * 100) / 100));
+        },
         changeZoom(delta) {
-            this.zoom = Math.min(1.4, Math.max(0.4, Math.round((this.zoom + delta) * 10) / 10));
+            this.zoomAround(this.zoom + delta);
+        },
+        zoomAround(nextZoom, clientX, clientY) {
+            const viewport = this.$refs.viewport;
+            const previous = this.zoom || 1;
+            const next = this.clampZoom(nextZoom);
+            if (!viewport || next === previous) {
+                this.zoom = next;
+                return;
+            }
+            const rect = viewport.getBoundingClientRect();
+            const originX = (clientX == null ? rect.left + rect.width / 2 : clientX) - rect.left;
+            const originY = (clientY == null ? rect.top + rect.height / 2 : clientY) - rect.top;
+            const contentX = viewport.scrollLeft + originX;
+            const contentY = viewport.scrollTop + originY;
+            const ratio = next / previous;
+            this.zoom = next;
+            this.$nextTick(() => {
+                viewport.scrollLeft = contentX * ratio - originX;
+                viewport.scrollTop = contentY * ratio - originY;
+            });
+        },
+        onWheel(event) {
+            if (!event.ctrlKey && !event.metaKey) return;
+            event.preventDefault();
+            this.zoomAround(this.zoom * Math.exp(-event.deltaY * 0.01), event.clientX, event.clientY);
+        },
+        onPanStart(event) {
+            if (event.button !== 0) return;
+            if (event.target.closest('.org-card, .org-toggle, button, a, input, select')) return;
+            const viewport = this.$refs.viewport;
+            if (!viewport) return;
+            this.panning = true;
+            this.panOriginX = event.clientX;
+            this.panOriginY = event.clientY;
+            this.panScrollLeft = viewport.scrollLeft;
+            this.panScrollTop = viewport.scrollTop;
+            viewport.setPointerCapture(event.pointerId);
+        },
+        onPanMove(event) {
+            if (!this.panning) return;
+            const viewport = this.$refs.viewport;
+            if (!viewport) return;
+            viewport.scrollLeft = this.panScrollLeft - (event.clientX - this.panOriginX);
+            viewport.scrollTop = this.panScrollTop - (event.clientY - this.panOriginY);
+        },
+        onPanEnd() {
+            this.panning = false;
         },
         fitToScreen() {
             const viewport = this.$refs.viewport;
             const canvas = this.$refs.canvas;
             if (!viewport || !canvas) return;
-            this.zoom = 1;
-            this.$nextTick(() => {
-                const width = canvas.offsetWidth || 1;
-                const scale = Math.min((viewport.clientWidth - 32) / width, 1);
-                this.zoom = Math.max(0.75, Math.round(scale * 100) / 100);
-                this.centerView();
-            });
+            const apply = () => {
+                const width = canvas.scrollWidth || canvas.offsetWidth || 1;
+                const height = canvas.scrollHeight || canvas.offsetHeight || 1;
+                const scale = Math.min(
+                    (viewport.clientWidth - 16) / width,
+                    (viewport.clientHeight - 16) / height,
+                    1
+                );
+                this.zoom = this.clampZoom(scale);
+                this.$nextTick(() => {
+                    viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
+                    viewport.scrollTop = Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2);
+                });
+            };
+            if (this.zoom !== 1) {
+                this.zoom = 1;
+                this.$nextTick(() => requestAnimationFrame(apply));
+                return;
+            }
+            requestAnimationFrame(apply);
         },
         centerView() {
             this.$nextTick(() => {
@@ -957,7 +1042,14 @@ export default {
     min-width: 0;
     min-height: 0;
     overflow: auto;
-    padding: 8px 16px 96px;
+    padding: 8px 16px 24px;
+    cursor: grab;
+    touch-action: pan-x pan-y;
+}
+
+.org-viewport.is-panning {
+    cursor: grabbing;
+    user-select: none;
 }
 
 .org-canvas {
