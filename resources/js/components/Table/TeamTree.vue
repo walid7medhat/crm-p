@@ -58,7 +58,7 @@
                     <button type="button" title="Center view" @click="centerView">Center</button>
                 </div>
                 <router-link to="/users" class="org-link">Team table</router-link>
-                <button type="button" class="org-drawer-toggle" @click="drawerOpen = !drawerOpen">
+                <button type="button" class="org-drawer-toggle" @click="toggleUnassigned">
                     Unassigned
                     <span>{{ unassigned.length }}</span>
                 </button>
@@ -489,7 +489,7 @@ export default {
             else this.canAssign = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'].includes(roleKey(this.currentUser));
             const collapsed = {};
             this.allUsers.forEach((user) => {
-                if (isManagerRole(user)) collapsed[user.id] = true;
+                if (isManagerRole(user) || isTeamLeadRole(user)) collapsed[user.id] = true;
             });
             this.collapsed = collapsed;
         },
@@ -500,6 +500,17 @@ export default {
                 if (found) return found;
             }
             return null;
+        },
+        toggleUnassigned() {
+            const filtered = !!(this.drawerBranch || this.drawerRole || this.drawerSearch.trim());
+            if (!this.drawerOpen || filtered) {
+                this.drawerSearch = '';
+                this.drawerBranch = '';
+                this.drawerRole = '';
+                this.drawerOpen = true;
+                return;
+            }
+            this.drawerOpen = false;
         },
         toggleNode(id) {
             this.collapsed = { ...this.collapsed, [id]: !this.collapsed[id] };

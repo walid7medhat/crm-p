@@ -188,7 +188,9 @@ export default {
             return !this.collapsed && this.overviewChildren.length > 0 && !this.cluster;
         },
         showTeamLeads() {
-            return !this.collapsed && this.holdsTeam && this.teamLeadChildren.length > 0 && !this.cluster;
+            if (this.cluster || !this.teamLeadChildren.length) return false;
+            if (this.isManagerNode) return true;
+            return !this.collapsed;
         },
         showMembers() {
             return !this.collapsed && this.holdsTeam && this.memberChildren.length > 0 && !this.cluster;
@@ -239,7 +241,8 @@ export default {
     methods: {
         onClick() {
             if (this.suppressClick) return;
-            if (this.isManagerNode && this.collapsed && this.hasBody) {
+            const canOpenTeam = this.isManagerNode || isTeamLead(this.node);
+            if (canOpenTeam && this.collapsed && this.hasBody) {
                 this.$emit('toggle', this.node.id);
                 return;
             }
