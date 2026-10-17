@@ -101,7 +101,9 @@ function placeMenu() {
   openUp.value = spaceBelow < MENU_SPACE && spaceAbove > spaceBelow
   const style = {
     position: 'fixed',
-    zIndex: 80,
+    // Above the create-card modal (20500). The menu is teleported to body, so a low
+    // z-index leaves the stage list hidden behind that overlay.
+    zIndex: 20650,
     minWidth: `${Math.max(rect.width, 148)}px`,
   }
   if (openUp.value) {
@@ -213,7 +215,7 @@ onBeforeUnmount(() => {
 
 .mk-select__menu {
   position: absolute;
-  z-index: 80;
+  z-index: 20650;
   top: calc(100% + 6px);
   min-width: 100%;
   width: max-content;
