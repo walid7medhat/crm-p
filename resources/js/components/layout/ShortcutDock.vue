@@ -1,16 +1,21 @@
 <template>
-  <div id="shortcut-dock" class="shortcut-dock" :style="dockStyle">
+  <div
+    id="shortcut-dock"
+    class="shortcut-dock"
+    :class="{ 'is-collapsed': !open }"
+    :style="dockStyle"
+  >
     <button
       type="button"
-      class="shortcut-dock__grip"
-      aria-label="Move shortcuts up or down"
+      class="shortcut-dock__launcher"
+      :aria-label="open ? 'Close shortcuts' : 'Open shortcuts'"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
+      @click="onToggle"
     >
-      <span></span>
-      <span></span>
+      <iconify-icon :icon="open ? 'lucide:x' : 'lucide:layout-grid'" />
     </button>
     <slot />
   </div>
@@ -20,11 +25,15 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const KEY = 'shortcut-dock-top'
+const OPEN_KEY = 'shortcut-dock-open'
 const top = ref(null)
+const open = ref(true)
 const dragging = ref(false)
 let pointerId = null
 let startY = 0
 let startTop = 0
+let dragMoved = false
+let suppressClick = false
 let observer = null
 
 const dockStyle = computed(() => {
@@ -56,18 +65,37 @@ function remember(px) {
   }
 }
 
+function setOpen(value) {
+  open.value = value
+  try {
+    localStorage.setItem(OPEN_KEY, value ? '1' : '0')
+  } catch {
+    // The open or closed state still applies for this visit.
+  }
+}
+
+function onToggle() {
+  if (suppressClick) {
+    suppressClick = false
+    return
+  }
+  setOpen(!open.value)
+}
+
 function onPointerDown(event) {
   if (event.button != null && event.button !== 0) return
   const dock = document.getElementById('shortcut-dock')
   pointerId = event.pointerId
   startY = event.clientY
   startTop = dock?.getBoundingClientRect().top || 0
+  dragMoved = false
   dragging.value = true
   event.currentTarget.setPointerCapture?.(event.pointerId)
 }
 
 function onPointerMove(event) {
   if (pointerId !== event.pointerId) return
+  if (Math.abs(event.clientY - startY) > 4) dragMoved = true
   top.value = clamp(startTop + (event.clientY - startY))
 }
 
@@ -75,7 +103,8 @@ function onPointerUp(event) {
   if (pointerId !== event.pointerId) return
   pointerId = null
   dragging.value = false
-  if (top.value != null) remember(top.value)
+  suppressClick = dragMoved
+  if (dragMoved && top.value != null) remember(top.value)
 }
 
 function onResize() {
@@ -87,6 +116,7 @@ onMounted(() => {
   try {
     const ratio = Number(localStorage.getItem(KEY))
     if (Number.isFinite(ratio)) remember(ratio * window.innerHeight)
+    open.value = localStorage.getItem(OPEN_KEY) !== '0'
   } catch {
     top.value = null
   }
@@ -153,6 +183,42 @@ onUnmounted(() => {
 }
 
 .shortcut-dock__grip:active { cursor: grabbing; }
+
+.shortcut-dock__close,
+.shortcut-dock__launcher {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--color-primary, #733e87);
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(115, 62, 135, 0.16);
+  cursor: pointer;
+}
+
+.shortcut-dock__launcher {
+  width: 52px;
+  height: 52px;
+  color: #fff;
+  background: var(--gradient-primary);
+  cursor: grab;
+  touch-action: none;
+}
+
+.shortcut-dock__launcher:active { cursor: grabbing; }
+
+.shortcut-dock.is-collapsed {
+  gap: 0;
+  width: 68px;
+  padding: 8px;
+}
+
+.shortcut-dock.is-collapsed .shortcut-item {
+  display: none !important;
+}
 
 .shortcut-dock .shortcut-item--chat { order: 1; }
 .shortcut-dock .shortcut-item--actions { order: 2; }
