@@ -353,7 +353,8 @@ export default {
             return this.allUsers.filter((user) => this.inChart(user));
         },
         unassigned() {
-            return this.allUsers.filter((user) => isActiveUser(user) && isSalesRole(user) && !this.inChart(user));
+            // return this.allUsers.filter((user) => isActiveUser(user) && isSalesRole(user) && !this.inChart(user));
+                return this.allUsers.filter((user) => (isSalesRole(user) || hasNoRole(user)) && !this.inChart(user));
         },
         roots() {
             const nodes = new Map(this.chartPeople.map((user) => [Number(user.id), { ...user, children: [] }]));
@@ -403,7 +404,6 @@ export default {
                 return 4;
             };
             return this.allUsers.filter((user) => {
-                if (!isActiveUser(user) || !isTreeRole(user)) return false;
                 return [user.name, user.email, user.role_name, user.branch_name, user.parent_name]
                     .some((value) => String(value || '').toLowerCase().includes(query));
             }).sort((a, b) => score(a) - score(b) || String(a.name).localeCompare(String(b.name))).slice(0, 10);
@@ -434,7 +434,7 @@ export default {
                     if (seen.has(child.id)) return;
                     seen.add(child.id);
                     const nextDepth = depth + 1;
-                    if (isActiveUser(child) && isSalesRole(child)) rows.push({ ...child, depth });
+                    if (isSalesRole(child) || hasNoRole(child)) rows.push({ ...child, depth });
                     walk(child.id, nextDepth);
                 });
             };
@@ -489,12 +489,10 @@ export default {
     },
     methods: {
         inChart(user) {
-            if (!isActiveUser(user) || !isTreeRole(user)) return false;
+            if (!isTreeRole(user)) return false;
             if (isLeader(user) || isManagerRole(user) || isTeamLeadRole(user)) return true;
             const parent = this.byId.get(Number(user.parent_id));
-            // A branch card is not a team. Sales who only report to the branch,
-            // or to someone inactive, belong in Unassigned.
-            if (!parent || !isActiveUser(parent)) return false;
+            if (!parent) return false;
             return isManagerRole(parent) || isTeamLeadRole(parent);
         },
         canDrag(user) {

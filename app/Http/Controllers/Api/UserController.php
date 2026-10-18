@@ -77,6 +77,9 @@ class UserController extends Controller
                         $ids = $user->id == 33 || $user->hasRole('branch_admin') || $user->hasRole('admin')? $user->getBranchUserIds() : $user->getAllSubordinatesIds();
 
                         $query->whereIn('id', $ids);
+                        if($user->hasRole('branch_admin')){
+                            $query->orWhereNull('parent_id');
+                        }
                     }
                 }
            if ($request->filled('parent_id')) {
@@ -659,13 +662,25 @@ public function show(User $user): JsonResponse
             //     : $this->collectDescendantIds($user->id);
              if (!$currentUser->hasRole('super_admin') && $currentUser->id != 30) {
 
-                        // User #33: sees every user in their whole branch, not just their
-                        // own subordinates.
-                        $descendantIds = $currentUser->id == 33 || $currentUser->hasRole('branch_admin') || $currentUser->hasRole('admin')? $currentUser->getBranchUserIds() : $currentUser->getAllSubordinatesIds();
+                    if ($currentUser->id == 33 || $currentUser->hasRole('branch_admin') || $currentUser->hasRole('admin')) {
+                        $descendantIds = $currentUser->getBranchUserIds();
 
+                        // branch_admin also sees users with no parent (orphans), e.g. imported users
+                        if ($currentUser->hasRole('branch_admin')) {
+                            $orphanIds = User::query()
+                                ->whereDoesntHave('parent')
+                                ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
+                                ->orderBy('created_at', 'desc')
+                                ->pluck('id')
+                                ->toArray();
+
+                            $descendantIds = array_values(array_unique(array_merge($descendantIds, $orphanIds)));
+                        }
+                    } else {
+                        $descendantIds = $currentUser->getAllSubordinatesIds();
                     }
-             else {
-                  $descendantIds=   User::where('id', '!=', $currentUser->id)->orderBy('created_at', 'desc')->pluck('id')->toArray();
+                } else {
+                    $descendantIds = User::where('id', '!=', $currentUser->id)->orderBy('created_at', 'desc')->pluck('id')->toArray();
                 }
             $total = count($descendantIds);
 

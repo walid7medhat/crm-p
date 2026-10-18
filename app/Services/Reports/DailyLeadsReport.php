@@ -112,6 +112,7 @@ class DailyLeadsReport
             ->whereNull('leads.deleted_at')
             ->where('h.changes->action', 'assigned')
             ->whereBetween('h.created_at', [$start, $end])
+            ->whereBetween('leads.created_at', [$start, $end]) 
             ->whereIn('h.user_id', $branchAdminIds ?: [0])
             ->orderBy('h.id')
             ->get(['h.lead_id', 'h.changes', 'leads.lead_source', 'leads.responsible_person_id']);
