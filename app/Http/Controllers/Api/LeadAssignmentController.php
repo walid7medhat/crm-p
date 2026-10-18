@@ -127,25 +127,39 @@ class LeadAssignmentController extends Controller
             return ApiResponse::error('New stage not found', 422);
         }
 
-        $totalInNew = (int) Lead::query()->where('stage_id', $newStageId)->count();
+        $user = auth()->user();
+        $totalQuery = Lead::query()->where('stage_id', $newStageId);
+        $listQuery = Lead::query()
+            ->with(['stage:id,name', 'responsiblePerson:id,name'])
+            ->where('stage_id', $newStageId)
+            ->orderByDesc('id');
+        if (app(\App\Services\Roles\RoleAccessStore::class)->scopeForUser($user, 'leads') !== null) {
+            $user->applyConfiguredLeadScope($totalQuery);
+            $user->applyConfiguredLeadScope($listQuery);
+        }
+        $totalInNew = (int) $totalQuery->count();
 
         // Cap list payload for UI performance; total is returned in meta for the headline count.
-        $leads = Lead::query()
+        $leads = $listQuery
             ->with(['stage:id,name', 'responsiblePerson:id,name'])
             ->where('stage_id', $newStageId)
             ->orderByDesc('id')
             ->limit(75)
             ->get(['id', 'lead_number', 'lead_name', 'stage_id', 'responsible_person_id', 'budget', 'lead_source', 'priority', 'score', 'created_at']);
 
-        $payload = $leads->map(function (Lead $lead) {
-            return [
+        $store = app(\App\Services\Roles\RoleAccessStore::class);
+        $payload = $leads->map(function (Lead $lead) use ($store, $user) {
+            return $store->applyFieldVisibility($user, 'leads', [
                 'id' => $lead->id,
                 'lead_number' => $lead->lead_number,
                 'lead_name' => $lead->lead_name,
+                'budget' => $lead->budget,
+                'lead_source' => $lead->lead_source,
+                'responsible_person_id' => $lead->responsible_person_id,
                 'responsible' => $lead->responsiblePerson?->name,
                 'computed_assignment_score' => $lead->computed_assignment_score,
                 'created_at' => $lead->created_at,
-            ];
+            ]);
         });
 
         return ApiResponse::success($payload, 'Queue loaded', 200, [
@@ -193,6 +207,11 @@ class LeadAssignmentController extends Controller
         $data = $request->validate([
             'lead_id' => 'required|integer|exists:leads,id',
         ]);
+
+        $lead = Lead::query()->find($data['lead_id']);
+        if (! $lead || ! $user->canViewLead($lead)) {
+            return ApiResponse::error('You are not authorized to reassign this lead', 403);
+        }
 
         $settings = LeadAssignmentSetting::current();
         $newStageId = $service->resolveNewStageId();
