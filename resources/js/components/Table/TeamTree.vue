@@ -287,6 +287,9 @@ function isSalesRole(user) {
     const key = roleKey(user);
     return key === 'sales' || key === 'sale';
 }
+function hasNoRole(user) {
+    return !roleKey(user);
+}
 
 function isTreeRole(user) {
     const key = roleKey(user);
