@@ -6916,7 +6916,7 @@ const showOfferHistory = async () => {
               <div>
                 
                 <div style="font-size: 14px">
-                  <strong style="font-size: 14px"> ${offer.creator?.name || 'Unknown'}</strong>
+                  <strong style="font-size: 14px"> ${offer.creator_name || offer.creator?.name || 'Unknown'}</strong>
                 </div>
                 
               </div>
