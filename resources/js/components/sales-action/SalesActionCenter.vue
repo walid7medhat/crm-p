@@ -46,16 +46,13 @@
     </button>
 
     <aside
-      v-if="open && (hoverList.length || hoverState === 'loading' || hoverState === 'empty')"
+      v-if="open && (hoverList.length || hoverState === 'empty')"
       class="sac-pop"
       :style="popStyle"
       @mouseenter="holdCard"
       @mouseleave="scheduleHide"
     >
-      <template v-if="hoverState === 'loading'">
-        <p class="sac-pop__status">Loading these leads…</p>
-      </template>
-      <template v-else-if="hoverList.length">
+      <template v-if="hoverList.length">
         <p class="sac-pop__kicker">{{ hoverList.length }} {{ hoverList.length === 1 ? 'lead' : 'leads' }}</p>
         <p class="sac-pop__task">{{ hoverList[0].title }}</p>
         <div class="sac-leads">
@@ -397,6 +394,23 @@ function cacheKey(key) {
   return [key, search.value.trim(), previewUserId.value].join('|')
 }
 
+function applyListsPayload(payload) {
+  const map = payload && typeof payload === 'object' ? payload : {}
+  const next = { ...lists.value }
+  for (const [key, rows] of Object.entries(map)) {
+    next[cacheKey(key)] = Array.isArray(rows) ? rows : []
+  }
+  lists.value = next
+}
+
+function applyCenterPayload(data) {
+  categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
+  preview.value = !!data.preview
+  subjectName.value = data.subject_name || ''
+  if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
+  state.value = 'ready'
+}
+
 async function loadAgents() {
   try {
     const response = await api.get('/sales-action-center/agents')
@@ -411,13 +425,9 @@ let summaryRequest = 0
 async function prefetchSummary() {
   const requestId = ++summaryRequest
   try {
-    const response = await api.get('/sales-action-center', { params: params() })
+    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
     if (requestId !== summaryRequest) return
-    const data = response.data?.data || {}
-    categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
-    preview.value = !!data.preview
-    subjectName.value = data.subject_name || ''
-    state.value = 'ready'
+    applyCenterPayload(response.data?.data || {})
   } catch (_) {
     // Prefetch is best-effort; a click will try again.
   }
@@ -430,15 +440,10 @@ async function loadSummary() {
     state.value = 'loading'
     errorMessage.value = ''
   }
-  lists.value = {}
   try {
-    const response = await api.get('/sales-action-center', { params: params() })
+    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
     if (requestId !== summaryRequest) return
-    const data = response.data?.data || {}
-    categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
-    preview.value = !!data.preview
-    subjectName.value = data.subject_name || ''
-    state.value = 'ready'
+    applyCenterPayload(response.data?.data || {})
     if (!open.value) return
     treeReady.value = true
     await nextTick()
@@ -495,24 +500,26 @@ async function previewCategory(category, event) {
   clearTimeout(hideTimer)
   hoveredKey.value = category.key
   const node = event.currentTarget
-  placePop(node)
   const key = cacheKey(category.key)
-  if (lists.value[key]) {
+  if (Object.prototype.hasOwnProperty.call(lists.value, key)) {
     hoverList.value = lists.value[key]
     hoverState.value = hoverList.value.length ? 'ready' : 'empty'
+    placePop(node)
     await nextTick()
     placePop(node)
     return
   }
-  hoverState.value = 'loading'
+  // Keep the card hidden while a rare miss loads — never flash "Loading…".
   hoverList.value = []
+  hoverState.value = 'idle'
   try {
     const response = await api.get('/sales-action-center', { params: params({ category: category.key }) })
     const rows = response.data?.data?.recommendations || []
-    lists.value[key] = rows
+    lists.value = { ...lists.value, [key]: rows }
     if (hoveredKey.value !== category.key) return
     hoverList.value = rows
     hoverState.value = rows.length ? 'ready' : 'empty'
+    placePop(node)
     await nextTick()
     placePop(node)
   } catch (_) {
@@ -611,7 +618,10 @@ function activateCategory(category, event) {
 
 function onSearch() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => loadSummary(), 250)
+  searchTimer = setTimeout(() => {
+    lists.value = {}
+    loadSummary()
+  }, 250)
 }
 
 function openItem(item) {

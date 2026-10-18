@@ -35,7 +35,7 @@ class SalesActionCenterService
     /** @var Collection<int, Stage>|null */
     private ?Collection $leadStages = null;
 
-    public function center(User $subject, ?string $category = null, ?string $search = null, int $page = 1): array
+    public function center(User $subject, ?string $category = null, ?string $search = null, int $page = 1, bool $withLists = false): array
     {
         $evaluatedAt = now()->toIso8601String();
         $categories = $this->categoryDefinitions();
@@ -55,12 +55,29 @@ class SalesActionCenterService
             $recommendations = $this->recommendationsFor($subject, $category, $search, max(1, $page), $evaluatedAt);
         }
 
+        $lists = [];
+        if ($withLists && ! $category) {
+            foreach ($summary as $row) {
+                if ((int) ($row['count'] ?? 0) <= 0) {
+                    continue;
+                }
+                $lists[$row['key']] = $this->recommendationsFor(
+                    $subject,
+                    $row['key'],
+                    $search,
+                    1,
+                    $evaluatedAt
+                );
+            }
+        }
+
         return [
             'evaluated_at' => $evaluatedAt,
             'timezone' => config('app.timezone'),
             'inactive_days' => self::INACTIVE_DAYS,
             'categories' => $summary,
             'recommendations' => $recommendations,
+            'lists' => $lists,
             'page' => max(1, $page),
             'per_page' => self::PER_PAGE,
         ];
