@@ -91,9 +91,22 @@
                             Create deal
                         </button>
                     </div>
-                    <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="closeWithMotion">
-                        <iconify-icon icon="lucide:x"></iconify-icon>
-                    </button>
+                    <div class="lead-header-tools">
+                        <button
+                            v-if="canUseLeadIntelligence"
+                            type="button"
+                            class="lead-intel-btn"
+                            :aria-pressed="intelligenceOpen"
+                            title="Lead Intelligence"
+                            aria-label="Lead Intelligence"
+                            @click.stop="intelligenceOpen = !intelligenceOpen"
+                        >
+                            <iconify-icon icon="lucide:scan-search"></iconify-icon>
+                        </button>
+                        <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="closeWithMotion">
+                            <iconify-icon icon="lucide:x"></iconify-icon>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -170,6 +183,12 @@
                 <!-- History Tab Content -->
                 <HistoryTab v-else-if="activeTab === 'history' && canViewHistory && lead"  :lead="lead" :is-active="activeTab === 'history'" />
             </div>
+            <LeadIntelligencePanel
+                v-if="canUseLeadIntelligence && intelligenceOpen && lead?.id"
+                :lead-id="lead.id"
+                :lead-name="lead.lead_name || ''"
+                @close="intelligenceOpen = false"
+            />
         </div>
         
         <!-- Stage Change Reason Modal -->
@@ -208,7 +227,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { BModal, BDropdown } from 'bootstrap-vue-3'
 import StageSelector from '../shared/StageSelector.vue'
@@ -219,6 +238,7 @@ import LeadDealsPopup from './LeadDealsPopup.vue'
 import BrandLoader from '@/components/layout/BrandLoader.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
+const LeadIntelligencePanel = defineAsyncComponent(() => import('./LeadIntelligencePanel.vue'))
 import api from '@/plugins/axios'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 import {
@@ -283,6 +303,7 @@ const props = defineProps({
 
 const lead = ref(null)
 const isLoadingLead = ref(false)
+const intelligenceOpen = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
@@ -466,7 +487,7 @@ const blockQualifiedRequirementEscape = (event) => {
     show.value = false
 }
 
-const QUALIFIED_REQUIREMENT_ALLOW = '.view-lead-close-btn, .complete-requirement-cta, .lead-converted-deal-link, .lead-converted-create-deal, .tab-item, .btn-toggle, .scroll-hover-edge, .btn-show-older, .show-older-link'
+const QUALIFIED_REQUIREMENT_ALLOW = '.view-lead-close-btn, .lead-intel-btn, .lead-intel-panel, .complete-requirement-cta, .lead-converted-deal-link, .lead-converted-create-deal, .tab-item, .btn-toggle, .scroll-hover-edge, .btn-show-older, .show-older-link'
 
 const isQualifiedRequirementAction = (target) => {
     if (!(target instanceof Element)) return false
@@ -558,6 +579,8 @@ function handleLeadConverted(deal) {
     }
     openConvertedDeal()
 }
+
+const canUseLeadIntelligence = computed(() => user.value?.roles?.includes('super_admin') === true)
 
 const canViewHistory = computed(() => {
     if (!user.value || !lead.value) return false
@@ -1663,6 +1686,7 @@ watch(show, (val, oldVal) => {
     }
     fetchLeadGeneration++
     cleanup()
+    intelligenceOpen.value = false
     cancelEditName()
     activeTab.value = 'general'
     if (props.syncUrl && route.query.lead) {
@@ -2065,6 +2089,37 @@ defineExpose({
     background: #fff;
     color: var(--color-primary);
     transform: translateY(-1px);
+}
+
+.lead-header-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.lead-intel-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--color-primary, #0f766e);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.lead-intel-btn iconify-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.lead-intel-btn[aria-pressed="true"] {
+    background: var(--gradient-primary, #0f766e);
+    color: #fff;
+    border-color: transparent;
 }
 
 .view-lead-close-btn {

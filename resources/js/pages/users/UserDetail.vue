@@ -77,18 +77,15 @@
                                                     {{ user.admin_parent_name }}
                                                 </span>
                                         </div>
-                                        <div class="col-12" v-if="user.last_login_location && isAdminOrSuperAdmin" >
-                                                <label class="col-3">Location:</label>
-                                                <span class=" text-muted col-12 mb-0">
-                                                    <i class="ri-map-pin-line me-1"></i>{{ user.last_login_location }}
-                                                    <a v-if="user.last_login_lat && user.last_login_lng"
-                                                       :href="mapsLink(user)"
-                                                       target="_blank"
-                                                       rel="noopener"
-                                                       class="ms-2">
-                                                        View on map
-                                                    </a>
-                                                </span>
+                                        <div class="col-12" v-if="isAdminOrSuperAdmin">
+                                            <UserDeviceLocation
+                                                :latitude="user.last_login_lat"
+                                                :longitude="user.last_login_lng"
+                                                :accuracy="user.last_login_accuracy"
+                                                :captured-at="user.last_login_location_at"
+                                                :address="user.last_login_location"
+                                                :source="user.last_login_location_source"
+                                            />
                                         </div>
 
                                     </div>
@@ -526,6 +523,7 @@
 import { API_ENDPOINTS } from '@/config/api';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
+import UserDeviceLocation from '@/components/Users/UserDeviceLocation.vue';
 import api from '@/plugins/axios';
 import apexchart from 'vue3-apexcharts';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
@@ -536,6 +534,7 @@ export default {
     components: {
         Breadcrumb,
         UserAttendanceCarousel,
+        UserDeviceLocation,
         apexchart,
     },
     data() {
@@ -1074,11 +1073,6 @@ export default {
 
         handleImageError(event) {
             event.target.src = this.userPlaceholder;
-        },
-
-        /** Google Maps link for the user's last-login coordinates. */
-        mapsLink(user) {
-            return `https://www.google.com/maps/search/?api=1&query=${user.last_login_lat},${user.last_login_lng}`;
         },
 
         showNotification(message, type = 'info') {

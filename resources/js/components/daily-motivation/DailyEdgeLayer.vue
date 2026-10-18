@@ -5,7 +5,13 @@
         v-if="activePayload || myDayOpen"
         key="dock"
         class="edge-dock"
-        :class="{ 'edge-dock--day': myDayOpen && !activePayload, 'edge-dock--stack': activePayload && myDayOpen, 'edge-dock--sheet': isSheet }"
+        :class="{
+          'edge-dock--day': myDayOpen && !activePayload,
+          'edge-dock--stack': activePayload && myDayOpen,
+          'edge-dock--sheet': isSheet,
+          'edge-dock--up': !isSheet && openUp,
+          'edge-dock--down': !isSheet && !openUp,
+        }"
         :style="panelStyle"
       >
         <DailyEdgeCard
@@ -136,6 +142,12 @@ const showPill = computed(() => {
 const showDayPill = computed(() => sessionReady.value && !myDayOpen.value)
 const isSheet = computed(() => viewportWidth.value <= 800)
 
+const openUp = computed(() => {
+  const rect = panelAnchor.value
+  if (!rect) return true
+  return rect.top + rect.height / 2 > viewportHeight.value * 0.5
+})
+
 const panelStyle = computed(() => {
   const mobile = isSheet.value
   if (mobile) {
@@ -153,10 +165,35 @@ const panelStyle = computed(() => {
   }
   const rect = panelAnchor.value
   const width = Math.min(340, Math.max(260, viewportWidth.value - 32))
-  if (!rect) return { width: `${width}px` }
-  const right = Math.max(12, viewportWidth.value - rect.left + 18)
-  let top = rect.top + rect.height / 2 - 36
-  top = Math.max(16, Math.min(top, viewportHeight.value - 280))
+  if (!rect) {
+    return {
+      top: 'auto',
+      bottom: '24px',
+      right: '88px',
+      width: `${width}px`,
+      maxHeight: '62vh',
+      justifyContent: 'flex-end',
+      padding: '0',
+    }
+  }
+  const right = Math.max(12, viewportWidth.value - rect.left + 14)
+  if (openUp.value) {
+    const bottom = Math.max(16, viewportHeight.value - rect.top + 10)
+    const maxHeight = Math.max(180, Math.min(520, rect.top - 24))
+    return {
+      top: 'auto',
+      bottom: `${bottom}px`,
+      right: `${right}px`,
+      left: 'auto',
+      width: `${width}px`,
+      height: 'auto',
+      maxHeight: `${maxHeight}px`,
+      justifyContent: 'flex-end',
+      padding: '0',
+    }
+  }
+  const top = Math.min(viewportHeight.value - 140, Math.max(16, rect.bottom + 10))
+  const maxHeight = Math.max(180, Math.min(520, viewportHeight.value - top - 16))
   return {
     top: `${top}px`,
     bottom: 'auto',
@@ -164,6 +201,7 @@ const panelStyle = computed(() => {
     left: 'auto',
     width: `${width}px`,
     height: 'auto',
+    maxHeight: `${maxHeight}px`,
     justifyContent: 'flex-start',
     padding: '0',
   }
@@ -429,15 +467,21 @@ onUnmounted(() => {
 }
 
 .edge-dock--day,
-.edge-dock--stack {
-  justify-content: center;
-  padding: 88px 0 24px;
+.edge-dock--stack,
+.edge-dock--up,
+.edge-dock--down {
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.edge-dock--up {
+  justify-content: flex-end;
 }
 
 .edge-dock--stack .myday,
 .edge-dock--day .myday {
   flex: 0 1 auto;
-  max-height: min(520px, calc(100vh - 280px));
+  max-height: inherit;
 }
 
 .myday {
@@ -606,22 +650,42 @@ onUnmounted(() => {
 
 .edge-slide-enter-active {
   transform-origin: right center;
-  animation: edge-from-icon 0.48s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: edge-from-icon 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edge-dock--up.edge-slide-enter-active,
+.edge-dock--up.edge-slide-leave-active {
+  transform-origin: right bottom;
+}
+
+.edge-dock--down.edge-slide-enter-active,
+.edge-dock--down.edge-slide-leave-active {
+  transform-origin: right top;
 }
 
 .edge-slide-leave-active {
   transform-origin: right center;
-  transition: opacity 0.2s ease, transform 0.28s ease;
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
 .edge-slide-enter-from,
 .edge-slide-leave-to {
   opacity: 0;
-  transform: translateX(36px) scale(0.16);
+  transform: translateX(24px) scale(0.2);
+}
+
+.edge-dock--up.edge-slide-enter-from,
+.edge-dock--up.edge-slide-leave-to {
+  transform: translateY(18px) scale(0.2);
+}
+
+.edge-dock--down.edge-slide-enter-from,
+.edge-dock--down.edge-slide-leave-to {
+  transform: translateY(-18px) scale(0.2);
 }
 
 @keyframes edge-from-icon {
-  from { opacity: 0; transform: translateX(36px) scale(0.16); }
+  from { opacity: 0; transform: translateX(24px) scale(0.2); }
   to { opacity: 1; transform: translateX(0) scale(1); }
 }
 

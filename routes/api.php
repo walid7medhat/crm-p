@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Marketing\MyBookingController as MarketingMyBooking
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserRoleController;
 use App\Http\Controllers\Api\LeadController;
+use App\Http\Controllers\Api\LeadIntelligenceScanController;
 use App\Http\Controllers\Api\Listing\AreaController;
 use App\Http\Controllers\Api\Listing\PropertyTypeController;
 use App\Http\Controllers\Api\Listing\OwnerController;
@@ -770,6 +771,12 @@ Route::middleware('role:super_admin|admin')->group(function () {
 });
 
 // Before apiResource so "phone-duplicates" isn't taken as a {lead} id.
+Route::get('/leads/{lead}/intelligence-scans/latest', [LeadIntelligenceScanController::class, 'latest'])->whereNumber('lead');
+// Prefix keeps this limit separate from the API-wide counter. Without it, opening
+// a lead consumes the same bucket and the first scan returns "Too Many Attempts."
+Route::post('/leads/{lead}/intelligence-scans', [LeadIntelligenceScanController::class, 'store'])->whereNumber('lead')->middleware('throttle:30,10,lead-intelligence-scan');
+Route::get('/leads/{lead}/intelligence-scans/{scan}', [LeadIntelligenceScanController::class, 'show'])->whereNumber('lead')->whereNumber('scan');
+Route::post('/leads/{lead}/intelligence-scans/{scan}/cancel', [LeadIntelligenceScanController::class, 'cancel'])->whereNumber('lead')->whereNumber('scan');
 Route::get('/leads/phone-duplicates', [LeadController::class, 'phoneDuplicates']);
 Route::get('/leads/inactive-sales', [LeadController::class, 'inactiveSales']);
 Route::apiResource('leads', LeadController::class);

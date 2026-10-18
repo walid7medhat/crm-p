@@ -23,13 +23,9 @@
       />
     </svg>
 
-    <div v-if="open" class="sac-tools" :class="{ 'is-compact': isCompact }">
-      <button type="button" class="sac-tools__icon" aria-label="Refresh" @click="loadSummary">
-        <iconify-icon icon="lucide:refresh-cw" />
-      </button>
-    </div>
-
     <p v-if="open && state === 'error'" class="sac-banner">{{ errorMessage }}</p>
+    <p v-else-if="open && state === 'loading' && !categories.length" class="sac-banner">Loading next actions…</p>
+    <p v-else-if="open && state === 'ready' && !categories.length" class="sac-banner">Nothing needs action right now.</p>
 
     <button
       v-for="(category, index) in (open ? categories : [])"
@@ -168,10 +164,15 @@ watch(open, (isOpen) => {
     return
   }
   window.addEventListener('keydown', onKey)
-  ignoreCloseUntil = Date.now() + 450
+  ignoreCloseUntil = Date.now() + 500
   setTimeout(() => {
     if (open.value) document.addEventListener('pointerdown', onPointerDown, true)
   }, 0)
+  // Paint cached stages immediately so the click feels instant.
+  if (categories.value.length) {
+    treeReady.value = true
+    nextTick(() => drawWires())
+  }
   loadSummary()
 })
 
@@ -189,6 +190,7 @@ watch(salesActionAnchor, () => {
 onMounted(() => {
   window.addEventListener('resize', onResize)
   restorePillTop()
+  prefetchSummary()
 })
 
 onUnmounted(() => {
@@ -289,7 +291,7 @@ function onPillClick(event) {
 function onPointerDown(event) {
   if (Date.now() < ignoreCloseUntil) return
   const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target]
-  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, .sac-tools, .sidebar-nav-link, .mobile-more-row'))
+  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, #shortcut-dock, .shortcut-dock, .sidebar-nav-link, .mobile-more-row'))
   if (inside) return
   closeSalesActionCenter()
 }
@@ -340,19 +342,22 @@ function treeLayout() {
   }
   const span = Math.max(0, (count - 1) * gap)
   const mid = anchor.top + anchor.height / 2
+  const openUp = mid > vh * 0.5
   let start
   if (stacked) {
-    start = stackUp ? regionBottom - span - nodeH : regionTop
-  } else if (mid > vh * 0.5) {
-    // Dock is low: grow the tree upward so the last stage stays on screen.
-    start = regionBottom - span - nodeH
+    start = (stackUp || openUp) ? regionBottom - span - nodeH : regionTop
+  } else if (openUp) {
+    // Dock is low: grow upward so the last stage sits above the button.
+    const treeBottom = Math.min(anchor.top - 10, regionBottom)
+    start = treeBottom - span - nodeH
   } else {
-    start = mid - span / 2 - nodeH / 2
+    // Dock is high: grow downward from the button.
+    start = Math.max(regionTop, Math.min(anchor.top, regionBottom - span - nodeH))
   }
   const maxStart = regionBottom - span - nodeH
   start = Math.min(Math.max(regionTop, start), Math.max(regionTop, maxStart))
   const width = Math.max(120, Math.min(stacked ? 440 : 420, stacked ? vw - inset * 2 : sideWidth))
-  return { vw, vh, anchor, count, compact, stacked, stackUp, toRight, width, sidePos, nodeH, gap, start, inset, mid }
+  return { vw, vh, anchor, count, compact, stacked, stackUp, openUp, toRight, width, sidePos, nodeH, gap, start, inset, mid }
 }
 
 function nodeStyle(index) {
@@ -363,14 +368,14 @@ function nodeStyle(index) {
     top: `${top}px`,
     width: `${layout.width}px`,
     height: `${layout.nodeH}px`,
-    animationDelay: `${90 + index * 70}ms`,
+    animationDelay: `${index * 18}ms`,
     '--from-y': fromY,
   }
   if (layout.stacked) {
     style.left = `${layout.inset}px`
-    style['--origin'] = layout.stackUp ? 'center bottom' : 'center top'
+    style['--origin'] = (layout.stackUp || layout.openUp) ? 'center bottom' : 'center top'
     style['--from-x'] = '0px'
-    style['--from-y'] = layout.stackUp ? '28px' : '-28px'
+    style['--from-y'] = (layout.stackUp || layout.openUp) ? '18px' : '-18px'
     return style
   }
   if (layout.toRight) {
@@ -405,24 +410,53 @@ async function loadAgents() {
   }
 }
 
-async function loadSummary() {
-  state.value = 'loading'
-  errorMessage.value = ''
-  lists.value = {}
+let summaryRequest = 0
+
+async function prefetchSummary() {
+  const requestId = ++summaryRequest
   try {
     const response = await api.get('/sales-action-center', { params: params() })
+    if (requestId !== summaryRequest) return
     const data = response.data?.data || {}
-    categories.value = (data.categories || []).filter((row) => Number(row.count) > 0)
+    categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
     preview.value = !!data.preview
     subjectName.value = data.subject_name || ''
     state.value = 'ready'
-    treeReady.value = false
-    await nextTick()
+  } catch (_) {
+    // Prefetch is best-effort; a click will try again.
+  }
+}
+
+async function loadSummary() {
+  const requestId = ++summaryRequest
+  const hadCategories = categories.value.length > 0
+  if (!hadCategories) {
+    state.value = 'loading'
+    errorMessage.value = ''
+  }
+  lists.value = {}
+  try {
+    const response = await api.get('/sales-action-center', { params: params() })
+    if (requestId !== summaryRequest) return
+    const data = response.data?.data || {}
+    categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
+    preview.value = !!data.preview
+    subjectName.value = data.subject_name || ''
+    state.value = 'ready'
+    if (!open.value) return
     treeReady.value = true
+    await nextTick()
     drawWires()
   } catch (error) {
+    if (requestId !== summaryRequest) return
+    if (!open.value) return
     state.value = 'error'
     errorMessage.value = error?.response?.data?.message || "Couldn't load the action center."
+    if (hadCategories) {
+      treeReady.value = true
+      await nextTick()
+      drawWires()
+    }
   }
 }
 
@@ -457,7 +491,7 @@ function drawWires() {
     const d = layout.stacked
       ? `M ${x1} ${y1} C ${x1} ${bendY}, ${x2} ${y1}, ${x2} ${y2}`
       : `M ${x1} ${y1} C ${bendX} ${y1}, ${bendX} ${y2}, ${x2} ${y2}`
-    return { d, delay: 40 + index * 70 }
+    return { d, delay: index * 18 }
   })
 }
 
@@ -589,7 +623,7 @@ function activateCategory(category, event) {
 
 function onSearch() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(loadSummary, 250)
+  searchTimer = setTimeout(() => loadSummary(), 250)
 }
 
 function openItem(item) {
@@ -644,7 +678,7 @@ function openItem(item) {
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: sac-draw 0.55s ease forwards;
+  animation: sac-draw 0.22s ease forwards;
 }
 .sac-node {
   position: fixed;
@@ -668,7 +702,7 @@ function openItem(item) {
 }
 .sac-node.is-grown {
   opacity: 1;
-  animation: sac-from-icon 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: sac-from-icon 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 .sac-node.is-hot {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), #f6e7b2);
@@ -857,14 +891,17 @@ function openItem(item) {
 .sac-banner {
   position: fixed;
   z-index: 1260;
-  top: 16px;
-  left: 16px;
+  top: auto;
+  right: 88px;
+  bottom: 28px;
+  left: auto;
   margin: 0;
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   color: #4c1d6e;
   font-size: 13px;
+  box-shadow: 0 8px 20px rgba(70, 50, 110, 0.08);
 }
 @keyframes sac-from-icon {
   to { opacity: 1; transform: translate(0, 0) scale(1); }

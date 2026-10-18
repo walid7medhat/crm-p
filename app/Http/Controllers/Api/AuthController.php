@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
+use App\Jobs\ResolveLoginLocation;
+use App\Services\Auth\LoginLocationUpdate;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\BirthdaySelfNotification;
 use App\Notifications\NewSalesAgentNotification;
@@ -148,32 +150,8 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-         $ip  = $request->ip();
-        $lat = $request->input('latitude');
-        $lng = $request->input('longitude');
-        $hasCoords = is_numeric($lat) && is_numeric($lng);
-
-        $loginData = [
-            'last_login_at' => now(),
-            'last_login_ip' => $ip,
-        ];
-
-        if ($hasCoords) {
-            // Raw coordinates saved instantly
-            $loginData['last_login_lat'] = (float) $lat;
-            $loginData['last_login_lng'] = (float) $lng;
-        }
-
-        $user->update($loginData);
-
-        // Street lookup runs after the response is sent, so login stays fast
-        \App\Jobs\ResolveLoginLocation::dispatch(
-            $user->id,
-            $hasCoords ? (float) $lat : null,
-            $hasCoords ? (float) $lng : null,
-            $ip
-        )->afterResponse();
-
+        $this->recordSignInLocation($user, $request);
+        $user->refresh();
         $user->load('roles', 'permissions');
 
         $payload = [
@@ -198,41 +176,72 @@ public function resetPassword(Request $request): JsonResponse
 }
 public function updateLocation(Request $request): JsonResponse
 {
-    $data = $request->validate([
-        'latitude'  => 'required|numeric|between:-90,90',
+    $request->validate([
+        'latitude' => 'required|numeric|between:-90,90',
         'longitude' => 'required|numeric|between:-180,180',
+        'accuracy' => 'nullable|numeric|min:0|max:1000000',
+        'captured_at' => 'nullable|date',
     ]);
 
+    // Always the authenticated account. A user id in the body is ignored.
     $user = auth()->user();
-    $ip  = $request->ip();
-    $lat = $request->input('latitude');
-    $lng = $request->input('longitude');
-    $hasCoords = is_numeric($lat) && is_numeric($lng);
+    $updated = $this->recordSignInLocation($user, $request);
 
-    $loginData = [
-        'last_login_at' => now(),
-        'last_login_ip' => $ip,
-    ];
-
-    if ($hasCoords) {
-        // Saved immediately, no external API call
-        $loginData['last_login_lat'] = (float) $lat;
-        $loginData['last_login_lng'] = (float) $lng;
-    }
-
-    $user->update($loginData);
-
-    // Street address / IP lookup runs AFTER the response is sent
-    \App\Jobs\ResolveLoginLocation::dispatch(
-        $user->id,
-        $hasCoords ? (float) $lat : null,
-        $hasCoords ? (float) $lng : null,
-        $ip
-    )->afterResponse();
-
-
-    return ApiResponse::success(null, 'Location saved');
+    return ApiResponse::success(
+        ['location_updated' => $updated],
+        $updated ? 'Location saved' : 'Location unchanged'
+    );
 }
+
+    /**
+     * Save a device fix for this user. A rejected or missing fix leaves any
+     * stored coordinates in place and never substitutes an IP position.
+     */
+    private function recordSignInLocation(User $user, Request $request): bool
+    {
+        $recorder = app(LoginLocationUpdate::class);
+        $decision = $recorder->decision(
+            $user,
+            $request->input('latitude'),
+            $request->input('longitude'),
+            $request->input('accuracy'),
+            $request->input('captured_at'),
+        );
+        $attributes = $recorder->attributes($decision);
+
+        $loginData = [
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ];
+
+        if ($attributes !== []) {
+            if ($recorder->moved(
+                $user->last_login_lat,
+                $user->last_login_lng,
+                $attributes['last_login_lat'],
+                $attributes['last_login_lng'],
+            )) {
+                $attributes['last_login_location'] = null;
+            }
+
+            $loginData = array_merge($loginData, $attributes);
+        }
+
+        $user->update($loginData);
+
+        if ($attributes === []) {
+            return false;
+        }
+
+        ResolveLoginLocation::dispatch(
+            $user->id,
+            (float) $attributes['last_login_lat'],
+            (float) $attributes['last_login_lng'],
+            $request->ip(),
+        )->afterResponse();
+
+        return true;
+    }
     /**
      * "Switch account" — super_admin only. Mints a JWT for the target user, same
      * shape as login(), so the frontend can drop it straight into localStorage.

@@ -131,6 +131,7 @@
 <script>
 import api, { setAuthToken, clearAuthToken } from '@/plugins/axios';
 import { askLeadPushPermission, subscribeLeadPush } from '@/services/offerLeadPush';
+import { captureDeviceLocation } from '@/utils/deviceLocation.mjs';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 import AuthMobileStack from './AuthMobileStack.vue';
@@ -148,6 +149,7 @@ export default {
       loading: false,
       errorMessage: '',
       authNotice: '',
+      locationAttempt: 0,
     };
   },
   setup() {
@@ -241,98 +243,40 @@ export default {
     },
 
     /**
-     * Run a single geolocation attempt with the given options, wrapped in a
-     * promise. Rejects with the raw GeolocationPositionError so the caller can
-     * decide whether to retry or surface a message.
-     */
-    requestPosition(options) {
-      return new Promise((resolve, reject) => {
-        // Some browsers never fire either callback (e.g. OS location service off),
-        // so guard with our own timer on top of the geolocation timeout.
-        const guard = setTimeout(
-          () => reject({ code: 3, message: 'Location request timed out' }),
-          (options.timeout || 10000) + 2000
-        );
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            clearTimeout(guard);
-            resolve(pos);
-          },
-          (err) => {
-            clearTimeout(guard);
-            reject(err);
-          },
-          options
-        );
-      });
-    },
-    requestBestPosition({ goodEnough = 100, softWait = 3000, maxWait = 6000 } = {}) {
-      return new Promise((resolve, reject) => {
-        let best = null, watchId = null, done = false;
-
-        const finish = (pos, err) => {
-          if (done) return;
-          done = true;
-          clearTimeout(softTimer);
-          clearTimeout(hardTimer);
-          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-          pos ? resolve(pos) : reject(err);
-        };
-
-        // After 3s, use whatever we have
-        const softTimer = setTimeout(() => { if (best) finish(best); }, softWait);
-        // Hard stop at 6s
-        const hardTimer = setTimeout(
-          () => finish(best, { code: 3, message: 'Location request timed out' }),
-          maxWait
-        );
-
-        watchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
-            if (pos.coords.accuracy <= goodEnough) finish(pos);
-          },
-          (err) => finish(best, err),
-          { enableHighAccuracy: true, timeout: maxWait, maximumAge: 0 }
-        );
-      });
-    },
-    /**
-     * Ask the browser for the user's location. Resolves to { latitude, longitude },
-     * or rejects with a user-facing message. Tries a fast low-accuracy fix first
-     * (works on desktops without GPS), then a high-accuracy pass. Login is gated
-     * on this succeeding.
+     * One device reading for this sign-in. High accuracy is preferred. A later
+     * attempt invalidates an older in-flight result so it cannot be submitted.
      */
     async getCurrentLocation() {
       if (!navigator?.geolocation) {
-        throw new Error('Your browser does not support location. Location is required to sign in.');
+        throw { code: 0, message: 'Your browser does not support location. Location is required to sign in.' };
       }
       if (window.isSecureContext === false) {
-        throw new Error('Location needs a secure (HTTPS) connection.');
+        throw { code: 0, message: 'Location needs a secure (HTTPS) connection.' };
       }
 
-      try {
-        const position = await this.requestBestPosition({ goodEnough: 100, softWait: 3000, maxWait: 6000 });
-        return {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: Math.round(position.coords.accuracy), // meters
-        };
-      } catch (error) {
-        const err = new Error(this.handleLocationError(error));
-        err.permissionDenied = error?.code === 1;
-        throw err;
-      }
+      return captureDeviceLocation(navigator.geolocation);
     },
 
-  // Never throws, returns a result object so it can be started early
-  async fetchLocationSafe() {
-    try {
-      return { coords: await this.getCurrentLocation(), error: null };
-    } catch (error) {
-      return { coords: null, error };
-    }
-  },
+    async fetchLocationSafe() {
+      const attempt = ++this.locationAttempt;
+      try {
+        const coords = await this.getCurrentLocation();
+        if (attempt !== this.locationAttempt) {
+          return { coords: null, error: null, stale: true };
+        }
+        return { coords, error: null, stale: false };
+      } catch (error) {
+        if (attempt !== this.locationAttempt) {
+          return { coords: null, error: null, stale: true };
+        }
+        const message = error?.code === 0 && error?.message
+          ? error.message
+          : this.handleLocationError(error);
+        const wrapped = new Error(message);
+        wrapped.permissionDenied = error?.code === 1;
+        return { coords: null, error: wrapped, stale: false };
+      }
+    },
 
     async login() {
       this.loading = true;
@@ -342,18 +286,22 @@ export default {
       try {
         const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
-        // Usually already resolved while the user was typing
+        // Usually already resolved while the user was typing.
         let result = await (this.locationPromise || this.fetchLocationSafe());
+        if (result?.stale) {
+          result = await this.fetchLocationSafe();
+        }
 
         // Retry only if the user denied before (they may have just enabled it).
-        // Timeouts are NOT retried, the server falls back to IP location.
+        // A timeout or unavailable reading is not retried and is not replaced
+        // with a network or IP position.
         if (!result.coords && result.error?.permissionDenied === true) {
           result = await this.fetchLocationSafe();
           this.locationPromise = Promise.resolve(result);
         }
 
         // Block only on denied / unsupported. Timeout or unavailable continues
-        // without coordinates and the server records the IP-based location.
+        // without coordinates. The server leaves any previous device fix as-is.
         const couldNotLocate = result.error?.permissionDenied === false;
         if (!result.coords && !isLocal && !couldNotLocate) {
           this.errorMessage = result.error?.message || 'Location is required to sign in.';
@@ -367,6 +315,8 @@ export default {
           password: this.password,
           latitude: coords?.latitude ?? null,
           longitude: coords?.longitude ?? null,
+          accuracy: coords?.accuracy ?? null,
+          captured_at: coords?.capturedAt ?? null,
         });
 
         const token = response.data?.data?.token;
