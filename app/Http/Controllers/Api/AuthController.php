@@ -148,35 +148,13 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-        // Location is mandatory in production but optional in local dev. When the
-        // browser sends GPS coordinates, reverse-geocode them to a full street/
-        // building level address. When absent (local), skip location tracking.
-        $ip = $request->ip();
-        $lat = $request->input('latitude');
-        $lng = $request->input('longitude');
-
-        $loginData = [
+       $user->update([
             'last_login_at' => now(),
-            'last_login_ip' => $ip,
-        ];
+            'last_login_ip' => $request->ip(),
+        ]);
 
-        if (is_numeric($lat) && is_numeric($lng)) {
-            $location = \App\Helpers\LocationHelper::fromCoords($lat, $lng);
-            $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
-            $loginData['last_login_lat'] = $location['lat'] ?? $user->last_login_lat;
-            $loginData['last_login_lng'] = $location['lon'] ?? $user->last_login_lng;
-        } else {
-            // Browser couldn't get a GPS fix (timeout / unavailable) — fall back
-            // to an approximate city-level location from the request IP.
-            $location = \App\Helpers\LocationHelper::fromIp($ip);
-            if (!empty($location['lat']) && !empty($location['lon'])) {
-                $loginData['last_login_location'] = \App\Helpers\LocationHelper::toAddress($location) ?? $user->last_login_location;
-                $loginData['last_login_lat'] = $location['lat'];
-                $loginData['last_login_lng'] = $location['lon'];
-            }
-        }
-
-        $user->update($loginData);
+        // IP-based location, runs AFTER the response is sent (does not slow login)
+        \App\Jobs\ResolveLoginLocation::dispatch($user->id, null, null, $request->ip())->afterResponse();
 
         $user->load('roles', 'permissions');
 
@@ -200,7 +178,43 @@ public function resetPassword(Request $request): JsonResponse
         return ApiResponse::error('Login failed: ' . $e->getMessage());
     }
 }
+public function updateLocation(Request $request): JsonResponse
+{
+    $data = $request->validate([
+        'latitude'  => 'required|numeric|between:-90,90',
+        'longitude' => 'required|numeric|between:-180,180',
+    ]);
 
+    $user = auth()->user();
+    $ip  = $request->ip();
+    $lat = $request->input('latitude');
+    $lng = $request->input('longitude');
+    $hasCoords = is_numeric($lat) && is_numeric($lng);
+
+    $loginData = [
+        'last_login_at' => now(),
+        'last_login_ip' => $ip,
+    ];
+
+    if ($hasCoords) {
+        // Saved immediately, no external API call
+        $loginData['last_login_lat'] = (float) $lat;
+        $loginData['last_login_lng'] = (float) $lng;
+    }
+
+    $user->update($loginData);
+
+    // Street address / IP lookup runs AFTER the response is sent
+    \App\Jobs\ResolveLoginLocation::dispatch(
+        $user->id,
+        $hasCoords ? (float) $lat : null,
+        $hasCoords ? (float) $lng : null,
+        $ip
+    )->afterResponse();
+
+
+    return ApiResponse::success(null, 'Location saved');
+}
     /**
      * "Switch account" — super_admin only. Mints a JWT for the target user, same
      * shape as login(), so the frontend can drop it straight into localStorage.

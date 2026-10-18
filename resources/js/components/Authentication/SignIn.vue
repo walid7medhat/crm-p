@@ -155,6 +155,8 @@ export default {
     return { router };
   },
   mounted() {
+    // Start the location request now, so the user answers the prompt while typing
+    this.locationPromise = this.fetchLocationSafe();
     // Why the user was sent here (set by the 401 handler / expired-token guard). Read once.
     try {
       this.authNotice = sessionStorage.getItem('authNotice') || '';
@@ -273,43 +275,34 @@ export default {
      */
     async getCurrentLocation() {
       if (!navigator?.geolocation) {
-          throw new Error('Your browser does not support location. Location is required to sign in.');
+        throw new Error('Your browser does not support location. Location is required to sign in.');
+      }
+      if (window.isSecureContext === false) {
+        throw new Error('Location needs a secure (HTTPS) connection.');
       }
 
-      // Geolocation only works on https:// or localhost. Fail early with a clear
-      // message instead of a confusing timeout when served over plain http.
-      if (typeof window !== 'undefined' && window.isSecureContext === false) {
-        throw new Error('Location needs a secure (HTTPS) connection. Open the site over https:// to sign in.');
+      try {
+        const position = await this.requestPosition({
+          enableHighAccuracy: false,   // fast network/wifi fix
+          timeout: 8000,
+          maximumAge: 10 * 60 * 1000,  // reuse a recent position
+        });
+        return { latitude: position.coords.latitude, longitude: position.coords.longitude };
+      } catch (error) {
+        const err = new Error(this.handleLocationError(error));
+        err.permissionDenied = error?.code === 1;
+        throw err;
       }
-
-      const attempts = [
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-      ];
-
-      let lastError = null;
-      for (const options of attempts) {
-        try {
-          const position = await this.requestPosition(options);
-          return {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-        } catch (error) {
-          lastError = error;
-          // Don't bother retrying if the user actively denied permission.
-          if (error && error.code === error.PERMISSION_DENIED) {
-            break;
-          }
-        }
-      }
-
-      const err = new Error(this.handleLocationError(lastError));
-      // Only an explicit "deny" blocks login. Timeout / position unavailable
-      // (common on desktops without GPS) falls back to server-side IP location.
-      err.permissionDenied = lastError?.code === 1;
-      throw err;
     },
+
+  // Never throws, returns a result object so it can be started early
+  async fetchLocationSafe() {
+    try {
+      return { coords: await this.getCurrentLocation(), error: null };
+    } catch (error) {
+      return { coords: null, error };
+    }
+  },
 
     async login() {
       this.loading = true;
@@ -317,24 +310,27 @@ export default {
       this.errorMessage = '';
 
       try {
-        // Location is mandatory in production. On localhost (dev) it is optional,
-        // so a failed/denied lookup still allows login without tracking.
         const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
-        let coords = null;
-        try {
-          coords = await this.getCurrentLocation();
-        } catch (locationError) {
-          // Block only when the user denied permission (or the browser can't do
-          // geolocation at all). If the device simply couldn't get a fix, continue
-          // without coordinates — the server records the IP-based location.
-          const couldNotLocate = locationError.permissionDenied === false;
-          if (!isLocal && !couldNotLocate) {
-            this.errorMessage = locationError.message;
-            this.loading = false;
-            return;
-          }
+        // Usually already resolved while the user was typing
+        let result = await (this.locationPromise || this.fetchLocationSafe());
+
+        // Retry only if the user denied before (they may have just enabled it).
+        // Timeouts are NOT retried, the server falls back to IP location.
+        if (!result.coords && result.error?.permissionDenied === true) {
+          result = await this.fetchLocationSafe();
+          this.locationPromise = Promise.resolve(result);
         }
+
+        // Block only on denied / unsupported. Timeout or unavailable continues
+        // without coordinates and the server records the IP-based location.
+        const couldNotLocate = result.error?.permissionDenied === false;
+        if (!result.coords && !isLocal && !couldNotLocate) {
+          this.errorMessage = result.error?.message || 'Location is required to sign in.';
+          return; // finally{} resets loading
+        }
+
+        const coords = result.coords;
 
         const response = await api.post('/auth/login', {
           email: this.email,
@@ -346,56 +342,48 @@ export default {
         const token = response.data?.data?.token;
         const webPush = response.data?.data?.web_push;
 
-        if (token) {
-          const notificationPermission = await askLeadPushPermission(webPush);
-
-          setAuthToken(token);
-
-          const userData = response.data.data.user;
-
-          localStorage.setItem(
-            'user',
-            JSON.stringify({
-              id: userData.id,
-              name: userData.name,
-              email: userData.email,
-              phone: userData.phone,
-              avatar: userData.avatar,
-              roles: userData.roles,
-              permissions: userData.permissions,
-              role_name: userData.role_name,
-              is_listing_team: userData.is_listing_team,
-              admin_parent_name: userData.admin_parent_name,
-            })
-          );
-
-          // Don't let a previous user's saved listing filters leak into this session
-          // (shared computer / switched account without a clean logout).
-          localStorage.removeItem('listingSearchFilters');
-
-          if (notificationPermission === 'granted' && webPush?.public_key) {
-            try {
-              await subscribeLeadPush(webPush.public_key);
-            } catch (_) {
-              /* Login still continues. The bell can retry the subscription. */
-            }
-          }
-
-          const isAdminUser = userData.roles?.includes('only show listings');
-          if (!isAdminUser) {
-            window.location.href = '/';
-          } else {
-            window.location.href = '/alllisting';
-          }
-        } else {
+        if (!token) {
           this.errorMessage = 'Token not found';
+          return;
         }
+
+        const notificationPermission = await askLeadPushPermission(webPush);
+
+        setAuthToken(token);
+
+        const userData = response.data.data.user;
+
+        localStorage.setItem(
+          'user',
+          JSON.stringify({
+            id: userData.id,
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone,
+            avatar: userData.avatar,
+            roles: userData.roles,
+            permissions: userData.permissions,
+            role_name: userData.role_name,
+            is_listing_team: userData.is_listing_team,
+            admin_parent_name: userData.admin_parent_name,
+          })
+        );
+
+        // Don't let a previous user's saved listing filters leak into this session
+        localStorage.removeItem('listingSearchFilters');
+
+        if (notificationPermission === 'granted' && webPush?.public_key) {
+          try {
+            await subscribeLeadPush(webPush.public_key);
+          } catch (_) {
+            /* Login still continues. The bell can retry the subscription. */
+          }
+        }
+
+        const isAdminUser = userData.roles?.includes('only show listings');
+        window.location.href = isAdminUser ? '/alllisting' : '/';
       } catch (error) {
-        if (error.response && error.response.data.message) {
-          this.errorMessage = error.response.data.message;
-        } else {
-          this.errorMessage = 'Server error';
-        }
+        this.errorMessage = error.response?.data?.message || 'Server error';
       } finally {
         this.loading = false;
       }

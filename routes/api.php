@@ -132,6 +132,7 @@ Route::get('/save-account-activated-email-html', function () {
 
 Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
+    Route::post('auth/location', [AuthController::class, 'updateLocation'])->middleware('auth:api');
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
