@@ -148,13 +148,31 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-       $user->update([
-            'last_login_at' => now(),
-            'last_login_ip' => $request->ip(),
-        ]);
+         $ip  = $request->ip();
+        $lat = $request->input('latitude');
+        $lng = $request->input('longitude');
+        $hasCoords = is_numeric($lat) && is_numeric($lng);
 
-        // IP-based location, runs AFTER the response is sent (does not slow login)
-        \App\Jobs\ResolveLoginLocation::dispatch($user->id, null, null, $request->ip())->afterResponse();
+        $loginData = [
+            'last_login_at' => now(),
+            'last_login_ip' => $ip,
+        ];
+
+        if ($hasCoords) {
+            // Raw coordinates saved instantly
+            $loginData['last_login_lat'] = (float) $lat;
+            $loginData['last_login_lng'] = (float) $lng;
+        }
+
+        $user->update($loginData);
+
+        // Street lookup runs after the response is sent, so login stays fast
+        \App\Jobs\ResolveLoginLocation::dispatch(
+            $user->id,
+            $hasCoords ? (float) $lat : null,
+            $hasCoords ? (float) $lng : null,
+            $ip
+        )->afterResponse();
 
         $user->load('roles', 'permissions');
 

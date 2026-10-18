@@ -266,7 +266,37 @@ export default {
         );
       });
     },
+    requestBestPosition({ goodEnough = 100, softWait = 3000, maxWait = 6000 } = {}) {
+      return new Promise((resolve, reject) => {
+        let best = null, watchId = null, done = false;
 
+        const finish = (pos, err) => {
+          if (done) return;
+          done = true;
+          clearTimeout(softTimer);
+          clearTimeout(hardTimer);
+          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+          pos ? resolve(pos) : reject(err);
+        };
+
+        // After 3s, use whatever we have
+        const softTimer = setTimeout(() => { if (best) finish(best); }, softWait);
+        // Hard stop at 6s
+        const hardTimer = setTimeout(
+          () => finish(best, { code: 3, message: 'Location request timed out' }),
+          maxWait
+        );
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
+            if (pos.coords.accuracy <= goodEnough) finish(pos);
+          },
+          (err) => finish(best, err),
+          { enableHighAccuracy: true, timeout: maxWait, maximumAge: 0 }
+        );
+      });
+    },
     /**
      * Ask the browser for the user's location. Resolves to { latitude, longitude },
      * or rejects with a user-facing message. Tries a fast low-accuracy fix first
@@ -282,12 +312,12 @@ export default {
       }
 
       try {
-        const position = await this.requestPosition({
-          enableHighAccuracy: false,   // fast network/wifi fix
-          timeout: 8000,
-          maximumAge: 10 * 60 * 1000,  // reuse a recent position
-        });
-        return { latitude: position.coords.latitude, longitude: position.coords.longitude };
+        const position = await this.requestBestPosition({ goodEnough: 100, softWait: 3000, maxWait: 6000 });
+        return {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Math.round(position.coords.accuracy), // meters
+        };
       } catch (error) {
         const err = new Error(this.handleLocationError(error));
         err.permissionDenied = error?.code === 1;

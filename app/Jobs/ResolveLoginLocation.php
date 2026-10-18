@@ -25,11 +25,12 @@ class ResolveLoginLocation
         try {
             if ($this->lat !== null && $this->lng !== null) {
                 $location = LocationHelper::fromCoords($this->lat, $this->lng);
-                $data = [
+                $user->update([
                     'last_login_location' => LocationHelper::toAddress($location) ?? $user->last_login_location,
-                    'last_login_lat' => $location['lat'] ?? $this->lat,
-                    'last_login_lng' => $location['lon'] ?? $this->lng,
-                ];
+                    'last_login_lat' => $this->lat,   // keep the real GPS point
+                    'last_login_lng' => $this->lng,
+                ]);
+                return;
             } else {
                 $location = LocationHelper::fromIp($this->ip);
                 if (empty($location['lat']) || empty($location['lon'])) return;
