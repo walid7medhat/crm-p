@@ -1,9 +1,21 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export const salesActionCenterOpen = ref(false)
 export const salesActionAnchor = ref(null)
 
 let openedAt = 0
+
+/** Sales agents and managers keep Next Actions. Admin and super admin do not. */
+export const canUseNextActions = computed(() => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const roles = Array.isArray(user.roles) ? user.roles : []
+    if (roles.includes('super_admin') || roles.includes('admin')) return false
+    return true
+  } catch {
+    return false
+  }
+})
 
 function rectOf(event) {
   const el = event?.currentTarget
@@ -20,6 +32,8 @@ function rectOf(event) {
 }
 
 export function openSalesActionCenter(event) {
+  if (!canUseNextActions.value) return
+
   const next = rectOf(event)
   if (next) salesActionAnchor.value = next
 

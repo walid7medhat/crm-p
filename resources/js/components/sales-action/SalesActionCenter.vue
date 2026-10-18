@@ -24,19 +24,11 @@
     </svg>
 
     <div v-if="open" class="sac-tools" :class="{ 'is-compact': isCompact }">
-      <label v-if="isSuperAdmin" class="sac-tools__agent">
-        <span>View as</span>
-        <select v-model="previewUserId" @change="loadSummary">
-          <option value="">My own access</option>
-          <option v-for="agent in agents" :key="agent.id" :value="String(agent.id)">{{ agent.name }}</option>
-        </select>
-      </label>
       <button type="button" class="sac-tools__icon" aria-label="Refresh" @click="loadSummary">
         <iconify-icon icon="lucide:refresh-cw" />
       </button>
     </div>
 
-    <p v-if="open && preview" class="sac-banner">Preview of {{ subjectName || 'this agent' }}. Read only.</p>
     <p v-if="open && state === 'error'" class="sac-banner">{{ errorMessage }}</p>
 
     <button
@@ -54,7 +46,7 @@
     >
       <iconify-icon icon="lucide:chevron-right" class="sac-node__chevron" />
       <span class="sac-node__label">{{ category.title }}</span>
-      <span class="sac-node__count">{{ category.count }}</span>
+      <span class="sac-node__count">{{ displayCount(category.count) }}</span>
     </button>
 
     <aside
@@ -107,6 +99,8 @@ import {
   salesActionCenterOpen,
 } from '@/composables/useSalesActionCenter.js'
 
+const BATCH = 20
+
 const open = salesActionCenterOpen
 const categories = ref([])
 const state = ref('ready')
@@ -137,15 +131,6 @@ const lists = ref({})
 let searchTimer = null
 let hideTimer = null
 let ignoreCloseUntil = 0
-
-const isSuperAdmin = computed(() => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    return Array.isArray(user.roles) && user.roles.includes('super_admin')
-  } catch (_) {
-    return false
-  }
-})
 
 const isCompact = computed(() => {
   layoutTick.value
@@ -187,9 +172,13 @@ watch(open, (isOpen) => {
   setTimeout(() => {
     if (open.value) document.addEventListener('pointerdown', onPointerDown, true)
   }, 0)
-  if (isSuperAdmin.value && !agents.value.length) loadAgents()
   loadSummary()
 })
+
+function displayCount(count) {
+  const n = Number(count) || 0
+  return Math.min(n, BATCH)
+}
 
 watch(salesActionAnchor, () => {
   if (!open.value) return
@@ -324,19 +313,20 @@ function treeLayout() {
   const compact = vw <= 800
   const inset = 12
   const topSafe = compact ? 64 : 16
-  const bottomSafe = compact ? 16 : 16
+  // Leave room under the last stage so the lead card can sit above the dock.
+  const bottomSafe = compact ? 110 : 120
   const toRight = anchor.left < vw * 0.45
   const stem = compact ? 20 : 46
   const sidePos = toRight ? anchor.right + stem : vw - anchor.left + stem
   const sideWidth = vw - sidePos - inset
   const stacked = sideWidth < 200
   const spaceAbove = anchor.top - topSafe
-  const spaceBelow = vh - anchor.bottom - (compact ? 92 : 16)
+  const spaceBelow = vh - anchor.bottom - (compact ? 92 : bottomSafe)
   const stackUp = spaceAbove >= spaceBelow
   const regionTop = stacked ? (stackUp ? topSafe : anchor.bottom + 12) : topSafe
   const regionBottom = stacked
-    ? (stackUp ? Math.max(regionTop + 32, anchor.top - 12) : vh - (compact ? 88 : 16))
-    : vh - (compact ? 88 : bottomSafe)
+    ? (stackUp ? Math.max(regionTop + 32, anchor.top - 12) : vh - (compact ? 88 : bottomSafe))
+    : vh - bottomSafe
   const availableH = Math.max(32, regionBottom - regionTop)
   let nodeH = compact ? 42 : 46
   let gap = nodeH + (compact ? 8 : 14)
@@ -350,9 +340,15 @@ function treeLayout() {
   }
   const span = Math.max(0, (count - 1) * gap)
   const mid = anchor.top + anchor.height / 2
-  let start = stacked
-    ? (stackUp ? regionBottom - span - nodeH : regionTop)
-    : mid - span / 2 - nodeH / 2
+  let start
+  if (stacked) {
+    start = stackUp ? regionBottom - span - nodeH : regionTop
+  } else if (mid > vh * 0.5) {
+    // Dock is low: grow the tree upward so the last stage stays on screen.
+    start = regionBottom - span - nodeH
+  } else {
+    start = mid - span / 2 - nodeH / 2
+  }
   const maxStart = regionBottom - span - nodeH
   start = Math.min(Math.max(regionTop, start), Math.max(regionTop, maxStart))
   const width = Math.max(120, Math.min(stacked ? 440 : 420, stacked ? vw - inset * 2 : sideWidth))
@@ -416,7 +412,7 @@ async function loadSummary() {
   try {
     const response = await api.get('/sales-action-center', { params: params() })
     const data = response.data?.data || {}
-    categories.value = data.categories || []
+    categories.value = (data.categories || []).filter((row) => Number(row.count) > 0)
     preview.value = !!data.preview
     subjectName.value = data.subject_name || ''
     state.value = 'ready'
@@ -468,11 +464,14 @@ function drawWires() {
 async function previewCategory(category, event) {
   clearTimeout(hideTimer)
   hoveredKey.value = category.key
-  placePop(event.currentTarget)
+  const node = event.currentTarget
+  placePop(node)
   const key = cacheKey(category.key)
   if (lists.value[key]) {
     hoverList.value = lists.value[key]
     hoverState.value = hoverList.value.length ? 'ready' : 'empty'
+    await nextTick()
+    placePop(node)
     return
   }
   hoverState.value = 'loading'
@@ -484,6 +483,8 @@ async function previewCategory(category, event) {
     if (hoveredKey.value !== category.key) return
     hoverList.value = rows
     hoverState.value = rows.length ? 'ready' : 'empty'
+    await nextTick()
+    placePop(node)
   } catch (_) {
     if (hoveredKey.value === category.key) hoverState.value = 'empty'
   }
@@ -508,7 +509,7 @@ function placePop(node) {
   let left
   let width
   let top = box.top
-  let maxHeight = Math.min(Math.round(vh * 0.72), vh - margin * 2)
+  let maxHeight = Math.min(Math.round(vh * 0.68), vh - margin * 2)
 
   if (spaceLeft >= 200 || spaceRight >= 200) {
     if (spaceLeft >= spaceRight) {
@@ -518,22 +519,31 @@ function placePop(node) {
       width = Math.min(preferredW, spaceRight - gap)
       left = box.right + gap
     }
+    // Keep the whole card on screen when the stage sits near the bottom.
+    if (top + maxHeight > vh - margin) {
+      top = Math.max(margin, vh - margin - maxHeight)
+    }
   } else {
     width = Math.min(preferredW, Math.max(160, vw - margin * 2))
     left = Math.max(margin, Math.min(box.left, vw - width - margin))
     const below = vh - box.bottom - margin
     const above = box.top - margin
-    if (below >= 150 || below >= above) {
+    if (below >= 180 && below >= above) {
       top = box.bottom + gap
-      maxHeight = Math.min(Math.round(vh * 0.72), Math.max(180, below - gap))
+      maxHeight = Math.min(maxHeight, Math.max(180, below - gap))
     } else {
-      maxHeight = Math.min(Math.round(vh * 0.72), Math.max(180, above - gap))
+      maxHeight = Math.min(maxHeight, Math.max(180, above - gap))
       top = Math.max(margin, box.top - gap - maxHeight)
     }
   }
 
   if (top < margin) top = margin
-  if (top + maxHeight > vh - margin) maxHeight = Math.max(150, vh - margin - top)
+  if (top + maxHeight > vh - margin) {
+    maxHeight = Math.max(160, vh - margin - top)
+  }
+  if (top + maxHeight > vh - margin) {
+    top = Math.max(margin, vh - margin - maxHeight)
+  }
 
   for (const item of obstacleBoxes()) {
     const hitsX = left + width > item.left && left < item.right

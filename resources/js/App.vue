@@ -23,7 +23,7 @@
       />
     </ShortcutDock>
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
-    <SalesActionCenter v-if="showLayout && !isAppLoading" />
+    <SalesActionCenter v-if="showLayout && !isAppLoading && canUseNextActions" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
@@ -99,6 +99,7 @@ import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
 import ShortcutDock from './components/layout/ShortcutDock.vue'
+import { canUseNextActions } from './composables/useSalesActionCenter.js'
 import { useLeadViewModal, initLeadViewModal, checkUrlForLead } from './composables/useLeadViewModal.js'
 import { useImpersonation } from './composables/useImpersonation.js'
 
@@ -249,6 +250,7 @@ export default {
       chatListingId,
       chatContext,
       canUseChat,
+      canUseNextActions,
       openChatInbox,
       closeChat,
       showLeadViewModal,
