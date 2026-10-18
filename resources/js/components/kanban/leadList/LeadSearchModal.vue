@@ -582,7 +582,7 @@
 
                                 @mousedown.stop
 
-                                @open="loadInactiveSales(true)"
+                                @open="loadInactiveSales()"
 
                                 :loading="loadingInactiveSales"
 
@@ -1554,7 +1554,7 @@
 
                                 @mousedown.stop
 
-                                @open="loadInactiveSales(true)"
+                                @open="loadInactiveSales()"
 
                                 :loading="loadingInactiveSales"
 
@@ -2798,41 +2798,16 @@ function normalizeSourceWebsiteForm(next) {
     next.sourcePortal = []
     next.sourceWhatsapp = []
 }
-
 async function loadAllSelectDataForCurrentForm() {
     const promises = []
-    
-    if (form.value.areaId) {
-        promises.push(loadAreas(true))
-    }
-    
-    if (form.value.propertyType) {
-        promises.push(loadPropertyTypes(true))
-    }
-    
-    if (hasValue(form.value.responsible)) {
-        promises.push(loadResponsiblePersons(true))
-    }
-
-    if (hasValue(form.value.inactiveSales)) {
-        promises.push(loadInactiveSales())
-    }
-
-    if (hasValue(form.value.team)) {
-        promises.push(loadTeams(true))
-    }
-    
-    if (form.value.office && form.value.office.length > 0) {
-        promises.push(loadOffices(true))
-    }
-    
-    if (form.value.branchSource) {
-        promises.push(loadBranchSources(true))
-    }
-    
-    if (promises.length > 0) {
-        await Promise.all(promises)
-    }
+    if (form.value.areaId) promises.push(loadAreas())
+    if (form.value.propertyType) promises.push(loadPropertyTypes())
+    if (hasValue(form.value.responsible)) promises.push(loadResponsiblePersons())
+    if (hasValue(form.value.inactiveSales)) promises.push(loadInactiveSales())
+    if (hasValue(form.value.team)) promises.push(loadTeams())
+    if (form.value.office?.length) promises.push(loadOffices())
+    if (form.value.branchSource) promises.push(loadBranchSources())
+    if (promises.length) await Promise.all(promises)
 }
 
 function syncFormFromQuery(query) {
@@ -5514,7 +5489,7 @@ async function applySearch(options = {}) {
                 assignedAt = undefined
 
                 break
-                
+
             case 'this_year':
 
                 assignedFrom = toLocalDateStr(new Date(today.getFullYear(), 0, 1))
@@ -6851,41 +6826,6 @@ watch(() => form.value.budgetTo, () => {
 
 
 
-watch(() => props.modelValue, (val) => {
-
-    show.value = val
-
-    if (val) {
-
-        console.log('Modal opening with initialActivePill:', props.initialActivePill)
-
-        if (props.initialActivePill) {
-
-            activePill.value = props.initialActivePill
-
-            console.log('Setting activePill to:', props.initialActivePill)
-
-        }
-
-        
-
-        restoreSavedFields()
-
-        
-
-        if (!props.hasActiveFilters) {
-
-            resetFormValues()
-
-        } else {
-
-            syncFormFromQuery(props.currentQuery)
-
-        }
-
-    }
-
-})
 
 
 
@@ -7011,6 +6951,12 @@ onMounted(async () => {
 
         // استعادة الحقول المحفوظة
         await restoreSavedFields()
+          const warm = () => {
+    loadResponsiblePersons()
+    if (canUseInactiveSales.value) loadInactiveSales()
+}
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(warm, { timeout: 3000 })
+    else setTimeout(warm, 1500)
 
         if (props.modelValue) {
             syncFormFromQuery(props.currentQuery)
