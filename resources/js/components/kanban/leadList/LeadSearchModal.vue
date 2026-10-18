@@ -3499,7 +3499,9 @@ const createdOnOptions = [
 
     { value: 'last_month', text: 'Last Month' },
 
-    { value: 'custom_date', text: 'Custom Date' }
+    { value: 'custom_date', text: 'Custom Date' },
+    { value: 'this_year', text: 'This Year' },
+    { value: 'last_year', text: 'Last Year' },
 
 ]
 
@@ -3888,6 +3890,8 @@ const datePresets = [
     { value: 'this_month', label: 'This Month' },
 
     { value: 'last_month', label: 'Last Month' },
+
+    { value: 'this_year', label: 'This Year' },
 
     { value: 'last_year', label: 'Last Year' },
 
@@ -5254,7 +5258,13 @@ async function applySearch(options = {}) {
                 createdTo = toLocalDateStr(new Date(today.getFullYear() - 1, 11, 31))
 
                 break
+            case 'this_year':
 
+                            createdFrom = toLocalDateStr(new Date(today.getFullYear(), 0, 1))
+
+                            createdTo = toLocalDateStr(new Date(today.getFullYear(), 11, 31))
+
+                            break
                 
 
             case 'next_week': {
@@ -5500,6 +5510,16 @@ async function applySearch(options = {}) {
                 assignedFrom = toLocalDateStr(new Date(today.getFullYear() - 1, 0, 1))
 
                 assignedTo = toLocalDateStr(new Date(today.getFullYear() - 1, 11, 31))
+
+                assignedAt = undefined
+
+                break
+                
+            case 'this_year':
+
+                assignedFrom = toLocalDateStr(new Date(today.getFullYear(), 0, 1))
+
+                assignedTo = toLocalDateStr(new Date(today.getFullYear(), 11, 31))
 
                 assignedAt = undefined
 
@@ -6405,6 +6425,12 @@ function selectPresetRange(preset) {
         startDate.value = new Date(y, m - 1, 1)
 
         endDate.value = new Date(y, m, 0)
+
+    } else if (preset === 'this_year') {
+
+        startDate.value = new Date(y, 0, 1)
+
+        endDate.value = new Date(y, 11, 31)
 
     } else if (preset === 'last_year') {
 

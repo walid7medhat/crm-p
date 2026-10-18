@@ -661,6 +661,8 @@ const datePresets = [
     { value: 'last_week', label: 'Last Week' },
     { value: 'this_month', label: 'This Month' },
     { value: 'last_month', label: 'Last Month' },
+    { value: 'this_year', label: 'This Year' },     
+    { value: 'last_year', label: 'Last Year' },  
     { value: 'custom_date', label: 'Custom Date' },
 ]
 
@@ -769,6 +771,10 @@ function getDateRangeFromPreset(preset) {
         case 'last_month':
             from = toYmd(new Date(now.getFullYear(), now.getMonth() - 1, 1))
             to = toYmd(new Date(now.getFullYear(), now.getMonth(), 0))
+            break
+       case 'this_year':
+            from = toYmd(new Date(now.getFullYear(), 0, 1))
+            to = toYmd(new Date(now.getFullYear(), 11, 31))
             break
         case 'last_year':
             from = toYmd(new Date(now.getFullYear() - 1, 0, 1))
