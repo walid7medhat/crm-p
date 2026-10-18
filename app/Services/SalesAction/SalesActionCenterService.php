@@ -140,11 +140,6 @@ class SalesActionCenterService
                 'description' => 'Qualified, without the area, type, bedrooms, or budget used for matching.',
             ],
             [
-                'key' => 'qualified_ready_to_match',
-                'title' => 'Qualified — Ready to Match Properties',
-                'description' => 'Qualified, and the saved requirement is enough to match listings.',
-            ],
-            [
                 'key' => 'converted_deal_missing',
                 'title' => 'Converted — Deal Missing',
                 'description' => 'In Converted, with no deal linked from conversion or the deals table.',

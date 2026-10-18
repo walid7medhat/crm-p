@@ -88,7 +88,7 @@ class SalesActionCenterTest extends TestCase
         $this->assertStringContainsString('does not record a call', $row['explanation']);
     }
 
-    public function test_qualified_requirements_split_missing_from_ready_to_match(): void
+    public function test_qualified_missing_requirements_are_listed_and_complete_ones_are_not(): void
     {
         $agent = $this->makeUser('sales');
         $qualified = $this->stageId(4);
@@ -112,9 +112,11 @@ class SalesActionCenterTest extends TestCase
         ]);
 
         $this->assertContains($missing->id, $this->keys($agent, 'qualified_missing_requirements'));
-        $this->assertNotContains($missing->id, $this->keys($agent, 'qualified_ready_to_match'));
-        $this->assertContains($ready->id, $this->keys($agent, 'qualified_ready_to_match'));
         $this->assertNotContains($ready->id, $this->keys($agent, 'qualified_missing_requirements'));
+
+        $center = $this->center($agent);
+        $keys = collect($center['categories'])->pluck('key')->all();
+        $this->assertNotContains('qualified_ready_to_match', $keys);
     }
 
     public function test_converted_lead_without_a_deal_is_listed_and_a_linked_deal_is_not(): void
