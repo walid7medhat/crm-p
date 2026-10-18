@@ -672,8 +672,6 @@ class StageController extends Controller
         // ================= permissions =================
         if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33) {
             // super admin sees everything
-        } elseif ($user->applyConfiguredLeadScope($baseLeadsQuery)) {
-            // Saved record scope replaces the role-name filter for this board.
         } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) || $user->seesBranchLeads()) {
             $subordinatesIds = $user->leadScopeUserIds();
             // Current responsible person only — a lead reassigned outside the team
