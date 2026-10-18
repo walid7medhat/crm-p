@@ -1,27 +1,28 @@
 <template>
-  <Teleport to="body">
-    <button
-      v-show="visible"
-      type="button"
-      class="chat-floating-btn"
-      :class="{
-        'chat-floating-btn--unread': unreadCount > 0,
-        'chat-floating-btn--attention': attention,
-      }"
-      :aria-label="ariaLabel"
-      :title="ariaLabel"
-      @click="openChat"
+  <button
+    v-show="visible"
+    type="button"
+    class="chat-floating-btn shortcut-item shortcut-item--chat"
+    :class="{
+      'chat-floating-btn--unread': unreadCount > 0,
+      'chat-floating-btn--attention': attention,
+    }"
+    :aria-label="ariaLabel"
+    :title="ariaLabel"
+    @click="openChat"
+  >
+    <iconify-icon icon="lucide:messages-square" aria-hidden="true" />
+    <span>Chat</span>
+    <span
+      v-if="unreadCount > 0"
+      class="chat-floating-badge"
+      :class="{ 'chat-floating-badge--pulse': attention }"
+      aria-hidden="true"
     >
-      <i class="ri-chat-3-fill" aria-hidden="true"></i>
-      <span
-        v-if="unreadCount > 0"
-        class="chat-floating-badge"
-        :class="{ 'chat-floating-badge--pulse': attention }"
-        aria-hidden="true"
-      >
-        {{ badgeText }}
-      </span>
-    </button>
+      {{ badgeText }}
+    </span>
+  </button>
+  <Teleport to="body">
     <span class="chat-live-region" aria-live="polite">{{ liveStatus }}</span>
   </Teleport>
 </template>
@@ -48,7 +49,7 @@ const props = defineProps({
 
 const emit = defineEmits(['open'])
 
-const visible = ref(false)
+const visible = ref(!!localStorage.getItem('token'))
 const unreadCount = ref(0)
 const attention = ref(false)
 const liveStatus = ref('')
@@ -282,22 +283,22 @@ watch(() => props.chatOpen, (isOpen) => {
 
 <style scoped>
 .chat-floating-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  position: relative;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
   border: none;
-  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.4);
+  box-shadow: none;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 99998;
-  transition: transform 0.2s, box-shadow 0.2s;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
 }
 .chat-floating-btn--unread {
   box-shadow:
@@ -317,8 +318,8 @@ watch(() => props.chatOpen, (isOpen) => {
   animation: chat-btn-ring 1.15s ease-out 3;
 }
 .chat-floating-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.5);
+  transform: none;
+  filter: brightness(1.05);
 }
 .chat-floating-btn--unread:hover {
   box-shadow:
@@ -328,29 +329,13 @@ watch(() => props.chatOpen, (isOpen) => {
 .chat-floating-btn:active {
   transform: scale(0.98);
 }
+.chat-floating-btn iconify-icon,
 .chat-floating-btn i {
-  font-size: 26px;
+  font-size: 16px;
   position: relative;
   z-index: 1;
 }
 
-@media (max-width: 768px) {
-  .chat-floating-btn {
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-    right: 16px;
-    width: 52px;
-    height: 52px;
-    z-index: 10050;
-  }
-
-  .chat-floating-btn i {
-    font-size: 23px;
-  }
-
-  .chat-floating-btn--attention::before {
-    animation-name: chat-btn-ring-mobile;
-  }
-}
 .chat-floating-badge {
   position: absolute;
   top: -3px;

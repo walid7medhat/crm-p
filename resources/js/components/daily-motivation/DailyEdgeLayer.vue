@@ -5,7 +5,8 @@
         v-if="activePayload || myDayOpen"
         key="dock"
         class="edge-dock"
-        :class="{ 'edge-dock--day': myDayOpen && !activePayload, 'edge-dock--stack': activePayload && myDayOpen }"
+        :class="{ 'edge-dock--day': myDayOpen && !activePayload, 'edge-dock--stack': activePayload && myDayOpen, 'edge-dock--sheet': isSheet }"
+        :style="panelStyle"
       >
         <DailyEdgeCard
           v-if="activePayload"
@@ -49,32 +50,28 @@
         </article>
       </div>
     </Transition>
-    <button
-      v-if="showPill"
-      type="button"
-      class="edge-pill"
-      @click="reopen"
-    >
-      <span class="edge-pill__mark" aria-hidden="true"></span>
-      Daily Message
-    </button>
-    <button
-      v-if="showDayPill"
-      ref="dayPillEl"
-      type="button"
-      class="edge-pill edge-pill--day"
-      :class="{ 'edge-pill--dragging': dayDragging }"
-      :style="dayPillStyle"
-      @pointerdown="onDayPointerDown"
-      @pointermove="onDayPointerMove"
-      @pointerup="onDayPointerUp"
-      @pointercancel="onDayPointerUp"
-      @click="onDayClick"
-    >
-      <span class="edge-pill__mark" aria-hidden="true"></span>
-      My Day
-    </button>
   </Teleport>
+  <Teleport to="#shortcut-dock">
+      <button
+        v-if="showPill"
+        type="button"
+        class="edge-pill shortcut-item shortcut-item--message"
+        @click="reopen"
+      >
+        <iconify-icon icon="lucide:sparkles" />
+        <span>Daily Message</span>
+      </button>
+      <button
+        v-if="showDayPill"
+        ref="dayPillEl"
+        type="button"
+        class="edge-pill edge-pill--day shortcut-item shortcut-item--day"
+        @click="openMyDay"
+      >
+        <iconify-icon icon="lucide:sun" />
+        <span>My Day</span>
+      </button>
+    </Teleport>
 </template>
 
 <script setup>
@@ -103,6 +100,8 @@ const dayPillEl = ref(null)
 const dayPillTop = ref(null)
 const dayDragging = ref(false)
 const viewportHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 0)
+const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 0)
+const panelAnchor = ref(null)
 let dismissing = false
 let dayPointerId = null
 let dayDragStartY = 0
@@ -135,6 +134,47 @@ const showPill = computed(() => {
 })
 
 const showDayPill = computed(() => sessionReady.value && !myDayOpen.value)
+const isSheet = computed(() => viewportWidth.value <= 800)
+
+const panelStyle = computed(() => {
+  const mobile = isSheet.value
+  if (mobile) {
+    return {
+      top: 'auto',
+      left: '12px',
+      right: '12px',
+      bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))',
+      width: 'auto',
+      height: 'auto',
+      maxHeight: '62vh',
+      justifyContent: 'flex-end',
+      padding: '0',
+    }
+  }
+  const rect = panelAnchor.value
+  const width = Math.min(340, Math.max(260, viewportWidth.value - 32))
+  if (!rect) return { width: `${width}px` }
+  const right = Math.max(12, viewportWidth.value - rect.left + 18)
+  let top = rect.top + rect.height / 2 - 36
+  top = Math.max(16, Math.min(top, viewportHeight.value - 280))
+  return {
+    top: `${top}px`,
+    bottom: 'auto',
+    right: `${right}px`,
+    left: 'auto',
+    width: `${width}px`,
+    height: 'auto',
+    justifyContent: 'flex-start',
+    padding: '0',
+  }
+})
+
+function rememberAnchor(event) {
+  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  panelAnchor.value = rect
+    ? { top: rect.top, left: rect.left, height: rect.height, width: rect.width }
+    : null
+}
 
 async function onDelivered() {
   closeDailyEdgeTest()
@@ -325,12 +365,14 @@ function onDayClick() {
   openMyDay()
 }
 
-function openMyDay() {
+function openMyDay(event) {
+  rememberAnchor(event)
   myDayOpen.value = true
   loadActions()
 }
 
-function reopen() {
+function reopen(event) {
+  rememberAnchor(event)
   if (lastClosed.value === 'test' && testPayload.value?.message) {
     testOpen.value = true
     return
@@ -344,6 +386,7 @@ function reopen() {
 
 function onResize() {
   viewportHeight.value = window.innerHeight
+  viewportWidth.value = window.innerWidth
   if (dayPillTop.value == null || dayDragging.value) return
   rememberDayTop(dayPillTop.value * window.innerHeight)
 }
@@ -532,35 +575,26 @@ onUnmounted(() => {
 }
 
 .edge-pill {
-  position: fixed;
-  z-index: 1100;
-  right: 16px;
-  top: calc(50% + 116px);
+  position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
-  padding: 10px 14px;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
   border: 0;
   border-radius: 999px;
   color: #ffffff !important;
   background: var(--gradient-primary) !important;
-  box-shadow: 0 10px 24px rgba(var(--color-purple-rgb), 0.28);
   font-family: Inter, system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .edge-pill--day {
-  top: calc(50% + 176px);
-  touch-action: none;
-  cursor: grab;
-  user-select: none;
-}
-
-.edge-pill--dragging {
-  cursor: grabbing;
+  background: #4c1d6e !important;
 }
 
 .edge-pill__mark {
@@ -571,17 +605,24 @@ onUnmounted(() => {
 }
 
 .edge-slide-enter-active {
-  transition: opacity 0.3s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: right center;
+  animation: edge-from-icon 0.48s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .edge-slide-leave-active {
+  transform-origin: right center;
   transition: opacity 0.2s ease, transform 0.28s ease;
 }
 
 .edge-slide-enter-from,
 .edge-slide-leave-to {
   opacity: 0;
-  transform: translateX(110%);
+  transform: translateX(36px) scale(0.16);
+}
+
+@keyframes edge-from-icon {
+  from { opacity: 0; transform: translateX(36px) scale(0.16); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 @media (max-width: 1024px) {
@@ -597,15 +638,31 @@ onUnmounted(() => {
     padding-top: 72px;
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
+}
 
-  .edge-pill {
-    top: auto;
-    right: 12px;
-    bottom: calc(252px + env(safe-area-inset-bottom, 0px));
+@media (max-width: 800px) {
+  .edge-dock,
+  .edge-dock--sheet {
+    top: auto !important;
+    right: 12px !important;
+    left: 12px !important;
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+    width: auto !important;
+    max-height: 62vh;
+    justify-content: flex-end;
+    align-items: stretch;
+    padding: 0 !important;
   }
 
-  .edge-pill--day {
-    bottom: calc(196px + env(safe-area-inset-bottom, 0px));
+  .edge-slide-enter-active,
+  .edge-slide-leave-active,
+  .edge-dock--sheet {
+    transform-origin: center bottom;
+  }
+
+  .edge-slide-enter-from,
+  .edge-slide-leave-to {
+    transform: translateY(28px) scale(0.28);
   }
 }
 

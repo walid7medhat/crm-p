@@ -1,21 +1,17 @@
 <template>
-  <Teleport to="body">
+  <Teleport to="#shortcut-dock">
     <button
       ref="floatRef"
       type="button"
-      class="sac-root"
-      :class="{ 'is-open': open, 'is-compact': isCompact, 'is-dragging': pillDragging }"
-      :style="pillStyle"
-      @pointerdown="onPillPointerDown"
-      @pointermove="onPillPointerMove"
-      @pointerup="onPillPointerUp"
-      @pointercancel="onPillPointerUp"
+      class="sac-root shortcut-item shortcut-item--actions"
+      :class="{ 'is-open': open }"
       @click="onPillClick"
     >
-      <span class="sac-root__dot" aria-hidden="true"></span>
-      Next Actions
+      <iconify-icon icon="lucide:list-tree" />
+      <span>Next Actions</span>
     </button>
-
+  </Teleport>
+  <Teleport to="body">
     <svg v-if="open" class="sac-wires" aria-hidden="true">
       <path
         v-for="(wire, index) in wires"
@@ -34,9 +30,6 @@
           <option value="">My own access</option>
           <option v-for="agent in agents" :key="agent.id" :value="String(agent.id)">{{ agent.name }}</option>
         </select>
-      </label>
-      <label class="sac-tools__search">
-        <input v-model="search" type="search" placeholder="Search" @input="onSearch" />
       </label>
       <button type="button" class="sac-tools__icon" aria-label="Refresh" @click="loadSummary">
         <iconify-icon icon="lucide:refresh-cw" />
@@ -599,34 +592,24 @@ function openItem(item) {
 
 <style scoped>
 .sac-root {
-  position: fixed;
-  z-index: 1400;
-  right: 16px;
-  top: calc(50% + 48px);
+  position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
-  padding: 12px 18px;
-  touch-action: none;
-  cursor: grab;
-  user-select: none;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
   border: 0;
   border-radius: 999px;
   background: #1a1028;
   color: #fff;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
-  box-shadow:
-    0 0 0 7px rgba(176, 92, 255, 0.18),
-    0 0 28px rgba(168, 85, 247, 0.72);
-}
-.sac-root.is-dragging {
-  cursor: grabbing;
+  cursor: pointer;
 }
 .sac-root.is-open {
-  box-shadow:
-    0 0 0 8px rgba(176, 92, 255, 0.28),
-    0 0 36px rgba(168, 85, 247, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(216, 180, 254, 0.8);
 }
 .sac-root__dot {
   width: 8px;
@@ -880,14 +863,6 @@ function openItem(item) {
   to { stroke-dashoffset: 0; }
 }
 @media (max-width: 1024px) {
-  .sac-root {
-    top: auto;
-    right: max(12px, env(safe-area-inset-right, 0px));
-    bottom: calc(140px + env(safe-area-inset-bottom, 0px));
-    max-width: calc(100vw - 24px);
-    padding: 11px 14px;
-    font-size: 14px;
-  }
   .sac-tools {
     top: max(8px, env(safe-area-inset-top, 0px));
     right: max(8px, env(safe-area-inset-right, 0px));
@@ -905,9 +880,6 @@ function openItem(item) {
     max-width: none;
   }
   .sac-pop { max-height: min(68vh, 560px); }
-}
-@media (max-width: 380px) {
-  .sac-root { font-size: 13px; padding: 10px 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sac-wire,

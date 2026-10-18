@@ -14,6 +14,14 @@
     <AppLoader :show="isAppLoading" label="Loading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
     <SystemCampaignPopup v-if="showLayout" />
+    <ShortcutDock v-if="showLayout && !isAppLoading">
+      <ChatFloatingButton
+        v-if="canUseChat"
+        :show="!chatOpen"
+        :chat-open="chatOpen"
+        @open="openChatInbox"
+      />
+    </ShortcutDock>
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
     <SalesActionCenter v-if="showLayout && !isAppLoading" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
@@ -32,12 +40,6 @@
       </div>
       <Footer v-if="showLayout" />
     </main>
-    <ChatFloatingButton
-      v-if="showLayout && canUseChat"
-      :show="!chatOpen"
-      :chat-open="chatOpen"
-      @open="openChatInbox"
-    />
     <ChatPopup
       v-if="canUseChat"
       :show="chatOpen"
@@ -96,6 +98,7 @@ import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
+import ShortcutDock from './components/layout/ShortcutDock.vue'
 import { useLeadViewModal, initLeadViewModal, checkUrlForLead } from './composables/useLeadViewModal.js'
 import { useImpersonation } from './composables/useImpersonation.js'
 
@@ -108,6 +111,7 @@ export default {
     SystemCampaignPopup,
     DailyEdgeLayer,
     SalesActionCenter,
+    ShortcutDock,
     UserAnimationPlayer,
     MobilePushToggle,
     PropertyDetailsModal,
