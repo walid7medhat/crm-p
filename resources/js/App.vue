@@ -15,6 +15,7 @@
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
     <SystemCampaignPopup v-if="showLayout" />
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
+    <SalesActionCenter v-if="showLayout && !isAppLoading" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
@@ -51,6 +52,7 @@
       :leadId="leadViewModalId"
       :initialLead="leadViewModalSeed"
       :disableStageChange="leadViewModalDisableStageChange"
+      :openSection="leadViewOpenSection"
       @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
@@ -83,6 +85,7 @@ const LeadOpeningLoader = {
 }
 const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layout/SystemCampaignPopup.vue'))
 const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-motivation/DailyEdgeLayer.vue'))
+const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
 const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
@@ -104,6 +107,7 @@ export default {
     BirthdayCelebrationLayer,
     SystemCampaignPopup,
     DailyEdgeLayer,
+    SalesActionCenter,
     UserAnimationPlayer,
     MobilePushToggle,
     PropertyDetailsModal,
@@ -129,6 +133,7 @@ export default {
       leadViewModalId,
       leadViewModalSeed,
       leadViewModalDisableStageChange,
+      leadViewOpenSection,
       openLeadView,
       notifyLeadViewUpdated,
     } = useLeadViewModal()
@@ -246,6 +251,7 @@ export default {
       leadViewModalId,
       leadViewModalSeed,
       leadViewModalDisableStageChange,
+      leadViewOpenSection,
       notifyLeadViewUpdated,
       impersonatorUser,
       returnToSuperAdmin,

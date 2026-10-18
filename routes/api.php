@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
+use App\Http\Controllers\Api\SalesActionCenterController;
 use App\Http\Controllers\Api\UserAnimationController;
 use App\Http\Controllers\Api\StageController;
 use App\Http\Controllers\Api\Marketing\BoardController as MarketingBoardController;
@@ -614,6 +615,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/schedule', [DashboardController::class, 'getDashboardSchedule']);
     Route::get('/dashboard/studio', [DashboardController::class, 'getStudio']);
     Route::get('/dashboard/my-day', [MyDayController::class, 'show']);
+    Route::get('/sales-action-center', [SalesActionCenterController::class, 'index']);
+    Route::get('/sales-action-center/agents', [SalesActionCenterController::class, 'agents']);
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 

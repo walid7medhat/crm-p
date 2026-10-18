@@ -92,6 +92,12 @@
                 <span>Leads</span>
               </a>
             </li>
+            <li v-if="canShowLeadsTab" class="nav-link">
+              <button type="button" class="sidebar-nav-link" @click.stop.prevent="openSalesActionCenter">
+                <iconify-icon icon="lucide:list-tree" class="imgicon submenu-icon"></iconify-icon>
+                <span>Next Actions</span>
+              </button>
+            </li>
             <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
               <a href="/kanban_deal" class="sidebar-nav-link" @mouseenter="prefetchRoute('/kanban_deal')" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
                 <img :src="dealsIcon" class="imgicon submenu-icon" alt="" />
@@ -563,6 +569,11 @@
               <span class="mobile-more-row__label">Leads</span>
               <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
             </button>
+            <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" @click="onMoreNextActions">
+              <span class="mobile-more-row__icon"><iconify-icon icon="lucide:list-tree" /></span>
+              <span class="mobile-more-row__label">Next Actions</span>
+              <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+            </button>
             <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }" @click="onMoreDeal">
               <span class="mobile-more-row__icon"><img :src="dealsIcon" alt="" /></span>
               <span class="mobile-more-row__label">Deals</span>
@@ -870,6 +881,7 @@ import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import { useRoute, useRouter } from 'vue-router';
 import api, { clearAuthToken } from '@/plugins/axios';
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
+import { openSalesActionCenter } from '@/composables/useSalesActionCenter.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import {
   buildListingsSidebarSections,
@@ -1868,6 +1880,11 @@ async function onMoreHome() {
 async function onMoreLead() {
   closeMoreSheet();
   await goToCrmSection(CRM_SECTIONS.LEAD);
+}
+
+function onMoreNextActions(event) {
+  openSalesActionCenter(event);
+  closeMoreSheet();
 }
 
 async function onMoreDeal() {

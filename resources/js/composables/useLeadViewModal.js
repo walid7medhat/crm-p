@@ -9,6 +9,8 @@ export const leadViewModalId = ref(null)
 export const leadViewModalSeed = ref(null)
 /** Lead Pool leads shouldn't be movable from inside the modal — set per-open by the caller. */
 export const leadViewModalDisableStageChange = ref(false)
+/** Section inside the lead modal to reveal after open: activity, requirements, matching, create_deal. */
+export const leadViewOpenSection = ref(null)
 const leadUpdatedListeners = new Set()
 
 let router = null
@@ -26,6 +28,7 @@ export function useLeadViewModal() {
     leadViewModalId,
     leadViewModalSeed,
     leadViewModalDisableStageChange,
+    leadViewOpenSection,
     openLeadView,
     closeLeadView,
     onLeadViewUpdated,
@@ -42,10 +45,12 @@ export function useLeadViewModal() {
  * @param {object|null} [leadData] Local card/lead object for instant paint
  * @param {object} [options]
  * @param {boolean} [options.disableStageChange] Lead Pool leads shouldn't be movable from the modal
+ * @param {string|null} [options.focus] Activity, requirements, matching, or create_deal
  */
 export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
   if (!id) return
+  leadViewOpenSection.value = options.focus || null
 
   // The ?lead= URL sync (and page-mount checks) call this again for a lead that is
   // already open — only the first open counts as a view.

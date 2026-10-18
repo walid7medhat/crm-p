@@ -181,7 +181,7 @@
                 <div class="info-value">{{ item.answer }}</div>
             </div>
         </div>
-        <div v-if="showClientRequirementArea" class="client-requirement-wrap">
+        <div v-if="showClientRequirementArea" id="lead-section-requirements" class="client-requirement-wrap">
             <div class="client-requirement-header-row">
                 <div class="info-section-title mb-0">Client Requirement</div>
                 <div class="client-requirement-header-actions">

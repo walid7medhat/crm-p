@@ -42,10 +42,6 @@ class PushSubscriptionController extends Controller
 
         $endpoint = $data['endpoint'];
         $hash = hash('sha256', $endpoint);
-        $existing = PushSubscription::query()->where('endpoint_hash', $hash)->first();
-        if ($existing && (int) $existing->user_id !== (int) $user->id) {
-            return ApiResponse::error('This device is already registered to another account', 403);
-        }
 
         PushSubscription::query()->updateOrCreate(
             ['endpoint_hash' => $hash],

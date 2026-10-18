@@ -265,6 +265,11 @@ const props = defineProps({
      * didn't cause). Only one instance should own that query param; the other passes
      * syncUrl=false and manages its own persistence separately (see LeadPool.vue).
      */
+    /** Sales Action Center asks the open lead to reveal one existing section. */
+    openSection: {
+        type: String,
+        default: null
+    },
     syncUrl: {
         type: Boolean,
         default: true
@@ -1255,6 +1260,8 @@ const fetchLead = async ({ silent = false } = {}) => {
             if (fresh) {
                 lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
                 if (fresh.stage_id) leadStageId.value = fresh.stage_id
+                await nextTick()
+                applyOpenSection()
             }
         } catch (error) {
             if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
@@ -1403,6 +1410,23 @@ onMounted(() => {
     checkUrlForLead()
     document.addEventListener('keydown', blockQualifiedRequirementEscape, true)
 })
+
+const appliedOpenSection = ref(null)
+
+function applyOpenSection() {
+    const section = props.openSection
+    if (!section || !lead.value?.id) return
+    const token = `${lead.value.id}:${section}`
+    if (appliedOpenSection.value === token) return
+    appliedOpenSection.value = token
+    if (section === 'create_deal') {
+        openCreateDealForConvertedLead()
+        return
+    }
+    if (section === 'activity' || section === 'comments' || section === 'requirements' || section === 'matching') {
+        jumpTo(section)
+    }
+}
 
 function syncJumpFromScroll() {
     if (jumpTarget) {

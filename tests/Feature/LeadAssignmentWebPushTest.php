@@ -95,6 +95,30 @@ class LeadAssignmentWebPushTest extends TestCase
         ]);
     }
 
+    public function test_a_browser_already_registered_to_someone_else_moves_to_the_signed_in_user(): void
+    {
+        $first = $this->activeUser(1);
+        $second = User::query()->where('id', '!=', 1)->where('status', 'active')->first();
+        if (! $second) {
+            $this->markTestSkipped('No second active user.');
+        }
+
+        $endpoint = 'https://push.example.test/shared-'.uniqid();
+        $payload = [
+            'endpoint' => $endpoint,
+            'keys' => ['p256dh' => 'public-key', 'auth' => 'auth-secret'],
+        ];
+
+        $this->asUser($first)->postJson('/api/push-subscriptions', $payload)->assertOk();
+        $this->asUser($second)->postJson('/api/push-subscriptions', $payload)->assertOk();
+
+        $this->assertSame(1, PushSubscription::query()->where('endpoint_hash', hash('sha256', $endpoint))->count());
+        $this->assertDatabaseHas('push_subscriptions', [
+            'user_id' => $second->id,
+            'endpoint_hash' => hash('sha256', $endpoint),
+        ]);
+    }
+
     public function test_sales_user_can_subscribe(): void
     {
         $sales = User::role('sales')->where('status', 'active')->first();

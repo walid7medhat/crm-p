@@ -1,5 +1,5 @@
 <template>
-    <div v-if="lead?.id && canAttemptMatching" class="matching-properties-section info-section">
+    <div v-if="lead?.id && canAttemptMatching" id="lead-section-matching" class="matching-properties-section info-section">
         <div class="info-section-title">Matching property</div>
 
         <div v-if="resolvingIntegration">Loading project from integration…</div>

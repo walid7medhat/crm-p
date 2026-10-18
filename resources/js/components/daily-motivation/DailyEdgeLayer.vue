@@ -85,6 +85,7 @@ import DailyEdgeCard from './DailyEdgeCard.vue'
 import { dismissToday, fetchToday } from '@/services/dailyMotivationApi'
 import { closeDailyEdgeTest, openDailyEdgeTest, useDailyEdgeTest } from '@/composables/useDailyEdgePreview.js'
 import { openLeadView } from '@/composables/useLeadViewModal.js'
+import { clampFloatingTop } from '@/composables/useFloatingDock.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal.js'
 
 const router = useRouter()
@@ -109,7 +110,6 @@ let dayDragStartTop = 0
 let dayDragMoved = false
 let ignoreDayClick = false
 const DAY_PILL_KEY = 'edge-pill-day-top'
-const DAY_PILL_MARGIN = 12
 
 const dayPillStyle = computed(() => {
   if (dayPillTop.value == null) return null
@@ -260,8 +260,7 @@ function openAction(item) {
 
 function clampDayTop(px) {
   const height = dayPillEl.value?.offsetHeight || 40
-  const max = Math.max(DAY_PILL_MARGIN, window.innerHeight - height - DAY_PILL_MARGIN)
-  return Math.min(max, Math.max(DAY_PILL_MARGIN, px))
+  return clampFloatingTop(px, height, dayPillEl.value)
 }
 
 function rememberDayTop(px) {
@@ -536,7 +535,7 @@ onUnmounted(() => {
   position: fixed;
   z-index: 1100;
   right: 16px;
-  top: calc(50% + 168px);
+  top: calc(50% + 116px);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -554,7 +553,7 @@ onUnmounted(() => {
 }
 
 .edge-pill--day {
-  top: calc(50% + 216px);
+  top: calc(50% + 176px);
   touch-action: none;
   cursor: grab;
   user-select: none;
@@ -602,11 +601,11 @@ onUnmounted(() => {
   .edge-pill {
     top: auto;
     right: 12px;
-    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(252px + env(safe-area-inset-bottom, 0px));
   }
 
   .edge-pill--day {
-    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(196px + env(safe-area-inset-bottom, 0px));
   }
 }
 
