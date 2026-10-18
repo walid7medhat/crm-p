@@ -24,7 +24,6 @@
     </svg>
 
     <p v-if="open && state === 'error'" class="sac-banner">{{ errorMessage }}</p>
-    <p v-else-if="open && state === 'loading' && !categories.length" class="sac-banner">Loading next actions…</p>
     <p v-else-if="open && state === 'ready' && !categories.length" class="sac-banner">Nothing needs action right now.</p>
 
     <button
@@ -121,9 +120,12 @@ const hoverState = ref('idle')
 const popStyle = ref({})
 const layoutTick = ref(0)
 const lists = ref({})
+const WARM_KEY = 'sac-warm-v1'
 let searchTimer = null
 let hideTimer = null
 let ignoreCloseUntil = 0
+let summaryRequest = 0
+let listsRequest = 0
 
 const isCompact = computed(() => {
   layoutTick.value
@@ -167,10 +169,12 @@ watch(open, (isOpen) => {
   }, 0)
   // Paint cached stages immediately so the click feels instant.
   if (categories.value.length) {
+    state.value = 'ready'
     treeReady.value = true
     nextTick(() => drawWires())
   }
-  loadSummary()
+  // Refresh counts in the background — never block the open on lead lists.
+  loadSummary({ soft: categories.value.length > 0 })
 })
 
 function displayCount(count) {
@@ -187,6 +191,7 @@ watch(salesActionAnchor, () => {
 onMounted(() => {
   window.addEventListener('resize', onResize)
   restorePillTop()
+  restoreWarmCache()
   prefetchSummary()
 })
 
@@ -401,14 +406,54 @@ function applyListsPayload(payload) {
     next[cacheKey(key)] = Array.isArray(rows) ? rows : []
   }
   lists.value = next
+  writeWarmCache()
 }
 
-function applyCenterPayload(data) {
+function applyCenterPayload(data, { keepLists = true } = {}) {
   categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
   preview.value = !!data.preview
   subjectName.value = data.subject_name || ''
+  if (!keepLists) lists.value = {}
   if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
+  else writeWarmCache()
   state.value = 'ready'
+}
+
+function warmScope() {
+  return [search.value.trim(), previewUserId.value].join('|')
+}
+
+function writeWarmCache() {
+  try {
+    localStorage.setItem(WARM_KEY, JSON.stringify({
+      scope: warmScope(),
+      categories: categories.value,
+      lists: lists.value,
+      preview: preview.value,
+      subjectName: subjectName.value,
+      at: Date.now(),
+    }))
+  } catch {
+    // Cache is optional.
+  }
+}
+
+function restoreWarmCache() {
+  try {
+    const raw = localStorage.getItem(WARM_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    // Keep for this browser session day so a refresh still opens instantly.
+    if (!data || data.scope !== warmScope() || !Array.isArray(data.categories)) return
+    if (data.at && Date.now() - Number(data.at) > 6 * 60 * 60 * 1000) return
+    categories.value = data.categories.filter((row) => Number(row?.count) > 0)
+    if (data.lists && typeof data.lists === 'object') lists.value = data.lists
+    preview.value = !!data.preview
+    subjectName.value = data.subjectName || ''
+    if (categories.value.length) state.value = 'ready'
+  } catch {
+    // Ignore broken cache.
+  }
 }
 
 async function loadAgents() {
@@ -420,44 +465,70 @@ async function loadAgents() {
   }
 }
 
-let summaryRequest = 0
+async function prefetchLists() {
+  if (!categories.value.length) return
+  const requestId = ++listsRequest
+  try {
+    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
+    if (requestId !== listsRequest) return
+    const data = response.data?.data || {}
+    if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
+    // Keep stage counts in sync if this heavier call finishes later.
+    if (Array.isArray(data.categories) && requestId === listsRequest) {
+      categories.value = data.categories.filter((row) => Number(row?.count) > 0)
+      writeWarmCache()
+      if (open.value) {
+        await nextTick()
+        drawWires()
+      }
+    }
+  } catch (_) {
+    // Hover can still fetch a single stage if needed.
+  }
+}
 
 async function prefetchSummary() {
   const requestId = ++summaryRequest
   try {
-    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
+    const response = await api.get('/sales-action-center', { params: params() })
     if (requestId !== summaryRequest) return
     applyCenterPayload(response.data?.data || {})
+    prefetchLists()
   } catch (_) {
     // Prefetch is best-effort; a click will try again.
   }
 }
 
-async function loadSummary() {
+async function loadSummary({ soft = false } = {}) {
   const requestId = ++summaryRequest
   const hadCategories = categories.value.length > 0
-  if (!hadCategories) {
+  if (!hadCategories && !soft) {
     state.value = 'loading'
     errorMessage.value = ''
   }
   try {
-    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
+    // Fast path: counts only. Lead lists warm in the background.
+    const response = await api.get('/sales-action-center', { params: params() })
     if (requestId !== summaryRequest) return
     applyCenterPayload(response.data?.data || {})
-    if (!open.value) return
-    treeReady.value = true
-    await nextTick()
-    drawWires()
-  } catch (error) {
-    if (requestId !== summaryRequest) return
-    if (!open.value) return
-    state.value = 'error'
-    errorMessage.value = error?.response?.data?.message || "Couldn't load the action center."
-    if (hadCategories) {
+    if (open.value) {
       treeReady.value = true
       await nextTick()
       drawWires()
     }
+    prefetchLists()
+  } catch (error) {
+    if (requestId !== summaryRequest) return
+    if (!open.value) return
+    if (hadCategories) {
+      state.value = 'ready'
+      treeReady.value = true
+      await nextTick()
+      drawWires()
+      return
+    }
+    state.value = 'error'
+    errorMessage.value = error?.response?.data?.message || "Couldn't load the action center."
   }
 }
 
@@ -620,7 +691,7 @@ function onSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     lists.value = {}
-    loadSummary()
+    loadSummary({ soft: false })
   }, 250)
 }
 

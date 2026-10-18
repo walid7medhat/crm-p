@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Rule-based next actions for leads a user is allowed to work.
@@ -38,17 +39,7 @@ class SalesActionCenterService
     public function center(User $subject, ?string $category = null, ?string $search = null, int $page = 1, bool $withLists = false): array
     {
         $evaluatedAt = now()->toIso8601String();
-        $categories = $this->categoryDefinitions();
-        $summary = [];
-
-        foreach ($categories as $definition) {
-            $summary[] = [
-                'key' => $definition['key'],
-                'title' => $definition['title'],
-                'description' => $definition['description'],
-                'count' => $this->categoryQuery($subject, $definition['key'], $search)->count(),
-            ];
-        }
+        $summary = $this->cachedCategorySummary($subject, $search);
 
         $recommendations = [];
         if ($category && $this->definition($category)) {
@@ -81,6 +72,30 @@ class SalesActionCenterService
             'page' => max(1, $page),
             'per_page' => self::PER_PAGE,
         ];
+    }
+
+    /**
+     * Stage counts are expensive; keep a short per-user cache so open/hover stays snappy.
+     *
+     * @return array<int, array{key: string, title: string, description: string, count: int}>
+     */
+    private function cachedCategorySummary(User $subject, ?string $search): array
+    {
+        $cacheKey = 'sac:summary:v1:'.$subject->id.':'.md5((string) $search);
+
+        return Cache::remember($cacheKey, 45, function () use ($subject, $search) {
+            $summary = [];
+            foreach ($this->categoryDefinitions() as $definition) {
+                $summary[] = [
+                    'key' => $definition['key'],
+                    'title' => $definition['title'],
+                    'description' => $definition['description'],
+                    'count' => $this->categoryQuery($subject, $definition['key'], $search)->count(),
+                ];
+            }
+
+            return $summary;
+        });
     }
 
     /**
