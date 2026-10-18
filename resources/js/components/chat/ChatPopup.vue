@@ -781,11 +781,11 @@ function backToConversationList() {
   background: rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(2px);
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: flex-end;
   z-index: 99999;
   pointer-events: auto;
-  padding: 0 24px 24px 0;
+  padding: 88px 24px 24px 0;
   box-sizing: border-box;
 }
 .chat-popup {
@@ -794,7 +794,7 @@ function backToConversationList() {
   max-width: min(480px, calc(100vw - 48px));
   height: 580px;
   min-height: 420px;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 120px);
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -807,7 +807,7 @@ function backToConversationList() {
 @keyframes chat-popup-in {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translateY(-16px) scale(0.98);
   }
   to {
     opacity: 1;

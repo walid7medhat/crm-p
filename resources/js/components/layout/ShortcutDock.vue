@@ -24,7 +24,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
-const KEY = 'shortcut-dock-top'
+const KEY = 'shortcut-dock-top-v3'
 const OPEN_KEY = 'shortcut-dock-open'
 const top = ref(null)
 const open = ref(true)
@@ -37,8 +37,10 @@ let suppressClick = false
 let observer = null
 
 const dockStyle = computed(() => {
-  if (top.value == null) return null
-  return { top: `${top.value}px`, bottom: 'auto' }
+  if (top.value == null) {
+    return { top: '50%', bottom: 'auto', transform: 'translateY(-50%)' }
+  }
+  return { top: `${top.value}px`, bottom: 'auto', transform: 'none' }
 })
 
 function limits() {
@@ -47,12 +49,17 @@ function limits() {
   const mobile = window.innerWidth <= 800
   const minTop = 8
   const maxTop = Math.max(minTop, window.innerHeight - height - (mobile ? 84 : 12))
-  return { minTop, maxTop }
+  return { minTop, maxTop, height }
 }
 
 function clamp(px) {
   const { minTop, maxTop } = limits()
   return Math.min(maxTop, Math.max(minTop, px))
+}
+
+function middleTop() {
+  const { height } = limits()
+  return clamp((window.innerHeight - height) / 2)
 }
 
 function remember(px) {
@@ -114,11 +121,16 @@ function onResize() {
 
 onMounted(() => {
   try {
-    const ratio = Number(localStorage.getItem(KEY))
-    if (Number.isFinite(ratio)) remember(ratio * window.innerHeight)
     open.value = localStorage.getItem(OPEN_KEY) !== '0'
+    const ratio = Number(localStorage.getItem(KEY))
+    // Default to the middle of the page; only restore a saved drag if it stays mid-band.
+    if (Number.isFinite(ratio) && ratio >= 0.25 && ratio <= 0.75) {
+      remember(ratio * window.innerHeight)
+    } else {
+      requestAnimationFrame(() => remember(middleTop()))
+    }
   } catch {
-    top.value = null
+    requestAnimationFrame(() => remember(middleTop()))
   }
   const dock = document.getElementById('shortcut-dock')
   if (dock && typeof ResizeObserver !== 'undefined') {
@@ -142,7 +154,9 @@ onUnmounted(() => {
   position: fixed;
   z-index: 1400;
   right: 16px;
-  bottom: 24px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -348,7 +362,8 @@ onUnmounted(() => {
 @media (max-width: 800px) {
   .shortcut-dock {
     right: 10px;
-    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    top: calc(50% - 42px);
+    bottom: auto;
     width: 58px;
     gap: 8px;
     padding: 8px 6px 10px;

@@ -342,16 +342,12 @@ function treeLayout() {
   }
   const span = Math.max(0, (count - 1) * gap)
   const mid = anchor.top + anchor.height / 2
-  const openUp = mid > vh * 0.5
+  // Always grow the tree downward from the shortcut button.
+  const openUp = false
   let start
   if (stacked) {
-    start = (stackUp || openUp) ? regionBottom - span - nodeH : regionTop
-  } else if (openUp) {
-    // Dock is low: grow upward so the last stage sits above the button.
-    const treeBottom = Math.min(anchor.top - 10, regionBottom)
-    start = treeBottom - span - nodeH
+    start = stackUp ? regionBottom - span - nodeH : regionTop
   } else {
-    // Dock is high: grow downward from the button.
     start = Math.max(regionTop, Math.min(anchor.top, regionBottom - span - nodeH))
   }
   const maxStart = regionBottom - span - nodeH
@@ -373,9 +369,9 @@ function nodeStyle(index) {
   }
   if (layout.stacked) {
     style.left = `${layout.inset}px`
-    style['--origin'] = (layout.stackUp || layout.openUp) ? 'center bottom' : 'center top'
+    style['--origin'] = 'center top'
     style['--from-x'] = '0px'
-    style['--from-y'] = (layout.stackUp || layout.openUp) ? '18px' : '-18px'
+    style['--from-y'] = '-18px'
     return style
   }
   if (layout.toRight) {
@@ -553,30 +549,22 @@ function placePop(node) {
       width = Math.min(preferredW, spaceRight - gap)
       left = box.right + gap
     }
-    // Keep the whole card on screen when the stage sits near the bottom.
+    // Prefer opening downward; only shrink height if the card would leave the screen.
     if (top + maxHeight > vh - margin) {
-      top = Math.max(margin, vh - margin - maxHeight)
+      maxHeight = Math.max(160, vh - margin - top)
     }
   } else {
     width = Math.min(preferredW, Math.max(160, vw - margin * 2))
     left = Math.max(margin, Math.min(box.left, vw - width - margin))
     const below = vh - box.bottom - margin
-    const above = box.top - margin
-    if (below >= 180 && below >= above) {
-      top = box.bottom + gap
-      maxHeight = Math.min(maxHeight, Math.max(180, below - gap))
-    } else {
-      maxHeight = Math.min(maxHeight, Math.max(180, above - gap))
-      top = Math.max(margin, box.top - gap - maxHeight)
-    }
+    // Default: open the lead card downward from the stage.
+    top = box.bottom + gap
+    maxHeight = Math.min(maxHeight, Math.max(160, below - gap))
   }
 
   if (top < margin) top = margin
   if (top + maxHeight > vh - margin) {
     maxHeight = Math.max(160, vh - margin - top)
-  }
-  if (top + maxHeight > vh - margin) {
-    top = Math.max(margin, vh - margin - maxHeight)
   }
 
   for (const item of obstacleBoxes()) {
