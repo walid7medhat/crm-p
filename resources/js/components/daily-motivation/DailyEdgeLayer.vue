@@ -161,34 +161,52 @@ const panelStyle = computed(() => {
       padding: '0',
     }
   }
-  const rect = panelAnchor.value
-  const width = Math.min(340, Math.max(260, viewportWidth.value - 32))
-  const right = rect
-    ? Math.max(12, viewportWidth.value - rect.left + 14)
-    : 88
-  // Always open downward from the shortcut button.
-  const top = rect
-    ? Math.min(viewportHeight.value - 140, Math.max(16, rect.bottom + 10))
-    : 96
-  const maxHeight = Math.max(180, Math.min(520, viewportHeight.value - top - 16))
+  const rect = panelAnchor.value || dockFallbackRect()
+  const vh = viewportHeight.value || window.innerHeight
+  const vw = viewportWidth.value || window.innerWidth
+  const width = Math.min(340, Math.max(280, vw - 100))
+  // Sit just to the left of the shortcut rail.
+  const right = Math.max(12, vw - rect.left + 12)
+  const maxHeight = Math.max(220, Math.min(480, vh - 32))
+  // Align with the dock; keep the card fully on screen.
+  let top = rect.top
+  if (top + Math.min(320, maxHeight) > vh - 16) {
+    top = Math.max(16, vh - 16 - Math.min(320, maxHeight))
+  }
+  top = Math.max(16, top)
   return {
-    top: `${top}px`,
+    top: `${Math.round(top)}px`,
     bottom: 'auto',
-    right: `${right}px`,
+    right: `${Math.round(right)}px`,
     left: 'auto',
-    width: `${width}px`,
+    width: `${Math.round(width)}px`,
     height: 'auto',
-    maxHeight: `${maxHeight}px`,
+    maxHeight: `${Math.round(maxHeight)}px`,
     justifyContent: 'flex-start',
     padding: '0',
   }
 })
 
+function dockFallbackRect() {
+  const dock = typeof document !== 'undefined' ? document.getElementById('shortcut-dock') : null
+  const box = dock?.getBoundingClientRect?.()
+  if (box?.width) {
+    return { top: box.top, left: box.left, height: box.height, width: box.width, bottom: box.bottom }
+  }
+  const vh = viewportHeight.value || (typeof window !== 'undefined' ? window.innerHeight : 800)
+  const vw = viewportWidth.value || (typeof window !== 'undefined' ? window.innerWidth : 1200)
+  return { top: vh / 2 - 110, left: vw - 88, height: 220, width: 72, bottom: vh / 2 + 110 }
+}
+
 function rememberAnchor(event) {
-  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  const fromEvent = event?.currentTarget?.getBoundingClientRect?.()
+  const dock = typeof document !== 'undefined' ? document.getElementById('shortcut-dock') : null
+  const fromDock = dock?.getBoundingClientRect?.()
+  // Prefer the whole shortcut rail so My Day / Daily Message open in the same area.
+  const rect = fromDock?.width ? fromDock : fromEvent
   panelAnchor.value = rect
-    ? { top: rect.top, left: rect.left, height: rect.height, width: rect.width }
-    : null
+    ? { top: rect.top, left: rect.left, height: rect.height, width: rect.width, bottom: rect.bottom }
+    : dockFallbackRect()
 }
 
 async function onDelivered() {
@@ -393,6 +411,8 @@ function openMyDay(event) {
   rememberAnchor(event)
   claimShortcutPanel('my-day')
   myDayOpen.value = true
+  // Re-measure after the pill hides so the panel stays glued to the rail.
+  requestAnimationFrame(() => rememberAnchor(event))
   loadActions()
 }
 
@@ -408,6 +428,7 @@ function reopen(event) {
     return
   }
   if (testPayload.value?.message) testOpen.value = true
+  requestAnimationFrame(() => rememberAnchor(event))
 }
 
 function onResize() {
@@ -437,12 +458,9 @@ onUnmounted(() => {
 .edge-dock {
   position: fixed;
   z-index: 99998;
-  top: 0;
-  right: 16px;
-  bottom: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: stretch;
   gap: 12px;
   width: min(340px, calc(100vw - 32px));
@@ -457,6 +475,9 @@ onUnmounted(() => {
 .edge-dock--day,
 .edge-dock--stack,
 .edge-dock--down {
+  /* Position comes from panelStyle (anchored to #shortcut-dock). */
+  bottom: auto;
+  height: auto;
   justify-content: flex-start;
   padding: 0;
 }
@@ -657,18 +678,9 @@ onUnmounted(() => {
   to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (min-width: 801px) {
   .edge-dock {
-    align-items: flex-end;
-    right: 12px;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .edge-dock--day,
-  .edge-dock--stack {
-    justify-content: flex-end;
-    padding-top: 72px;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
   }
 }
 
