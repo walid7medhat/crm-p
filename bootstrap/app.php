@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
            'broadcasting/auth',
            'api/webhook/facebook', 
        ]);
+       $middleware->trustProxies(at: '*');
     })
 
    ->withExceptions(function ($exceptions) {

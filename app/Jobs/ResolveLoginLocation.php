@@ -33,9 +33,10 @@ class ResolveLoginLocation
                 return;
             } else {
                 $location = LocationHelper::fromIp($this->ip);
-                if (empty($location['lat']) || empty($location['lon'])) return;
+                  if (empty($location['lat']) || empty($location['lon'])) return;
+
                 $data = [
-                    'last_login_location' => LocationHelper::toAddress($location) ?? $user->last_login_location,
+                    'last_login_location' => '(approx. by IP) ' . (LocationHelper::toAddress($location) ?? ''),
                     'last_login_lat' => $location['lat'],
                     'last_login_lng' => $location['lon'],
                 ];
