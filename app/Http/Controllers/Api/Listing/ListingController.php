@@ -3476,11 +3476,14 @@ public function validateUnitNumber(Request $request)
     public function getOffers($id)
     {
         try {
-            $offers = PropertyOffer::with('creator:id,name,email,avatar')
-                ->where('property_id', $id)
-                ->orderBy('created_at', 'desc')
-                ->get();
-
+           $offers = PropertyOffer::with('creator:id,name,display_name,email,avatar')
+            ->where('property_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($offer) {
+                $offer->creator_name = User::resolveDisplayName($offer->creator);
+                return $offer;
+            });
             return response()->json([
                 'status' => true,
                 'data' => $offers

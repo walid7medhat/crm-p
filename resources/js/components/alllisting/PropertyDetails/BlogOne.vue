@@ -6594,8 +6594,10 @@ const showMobileOfferReady = ({ blob, filename, offerNumber, creatorName }) => {
 };
 
 const usesMobileOfferFlow = () => Boolean(isMobileViewport.value) || isMobileOfferDevice();
+ let offerDateLabel = '';
 
 const generateMobileOffer = async () => {
+  offerDateLabel = '';
   showMobileOfferBusy('Saving the offer…');
   const userData = localStorage.getItem('user');
   const currentUser = userData ? JSON.parse(userData) : null;
@@ -6621,6 +6623,7 @@ const generateMobileOffer = async () => {
   }
   const offerNumber = saveResponse.data?.data?.offer?.offer_number;
   if (!offerNumber) throw new Error('Offer number was not returned');
+  offerDateLabel = formatOfferDate(saveResponse.data?.data?.offer?.created_at);
   setMobileOfferBusyText('Preparing images…');
   // Same slides as desktop (renderOfferSlidesPdf). The old jsPDF-only mobile pages
   // (buildMobileOfferPdf) drifted from the desktop design; html2canvas is fine on phones
@@ -6778,6 +6781,7 @@ const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}) => {
 };
 
 const generatePDF = async () => {
+  offerDateLabel = '';
   if (offerPdfInFlight) return;
   offerPdfInFlight = true;
   if (usesMobileOfferFlow()) {
@@ -6840,6 +6844,7 @@ const generatePDF = async () => {
 
     const offerNumber = saveResponse.data.data.offer.offer_number;
     const filename = `sales-offer-${offerNumber}.pdf`;
+        offerDateLabel = formatOfferDate(saveResponse.data.data.offer.created_at);
 
     pdfMobileMode = false;
     Swal.update({ text: 'Preparing images…' });
@@ -7497,9 +7502,20 @@ const createSlide7 = () => {
   `;
 };
 
- 
+
+const formatOfferDate = (value) => {
+  const d = value ? new Date(value) : new Date();
+  const safe = Number.isNaN(d.getTime()) ? new Date() : d;
+  return safe.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Dubai',
+  });
+};
 
 const createSlide9 = (currentUser) => {
+
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
     <img src="${LastSlide_bg}" crossorigin="anonymous" style="position:absolute !important; top:0 !important; left:0 !important; width:130% !important; height:100% !important; object-fit:cover !important; display:block !important;" />
@@ -7510,6 +7526,7 @@ const createSlide9 = (currentUser) => {
         <p style="color:rgba(255,255,255,0.7) !important; font-size:3.5mm !important; margin:0 0 1.5mm 0 !important;">Contact</p>
         <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.name || ''}</p>
         <p style="color:#fff !important; font-size:4.5mm !important; font-weight:500 !important; margin:1mm 0 0 0 !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.phone || ''}</p>
+        <p style="color:rgba(255,255,255,0.65) !important; font-size:2.2mm !important; font-weight:400 !important; margin:1.5mm 0 0 0 !important; font-family:'Montserrat', sans-serif !important;">${offerDateLabel || formatOfferDate()}</p>
       </div>
     </div>
     ${createFooter2()}
