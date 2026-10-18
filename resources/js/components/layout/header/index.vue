@@ -92,12 +92,6 @@
                 <span>Leads</span>
               </a>
             </li>
-            <li v-if="canShowLeadsTab" class="nav-link">
-              <button type="button" class="sidebar-nav-link" @click.stop.prevent="openSalesActionCenter">
-                <iconify-icon icon="lucide:list-tree" class="imgicon submenu-icon"></iconify-icon>
-                <span>Next Actions</span>
-              </button>
-            </li>
             <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }]">
               <a href="/kanban_deal" class="sidebar-nav-link" @mouseenter="prefetchRoute('/kanban_deal')" @click.prevent="goToCrmSection(CRM_SECTIONS.DEAL)">
                 <img :src="dealsIcon" class="imgicon submenu-icon" alt="" />
