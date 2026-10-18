@@ -34,10 +34,7 @@
       class="sac-node"
       :class="{ 'is-hot': hoveredKey === category.key, 'is-grown': treeReady, 'is-compact': isCompact }"
       :style="nodeStyle(index)"
-      @mouseenter="previewCategory(category, $event)"
-      @mouseleave="scheduleHide"
-      @focus="previewCategory(category, $event)"
-      @click="activateCategory(category, $event)"
+      @click="toggleCategory(category, $event)"
     >
       <iconify-icon icon="lucide:chevron-right" class="sac-node__chevron" />
       <span class="sac-node__label">{{ category.title }}</span>
@@ -48,8 +45,6 @@
       v-if="open && (hoverList.length || hoverState === 'empty')"
       class="sac-pop"
       :style="popStyle"
-      @mouseenter="holdCard"
-      @mouseleave="scheduleHide"
     >
       <template v-if="hoverList.length">
         <p class="sac-pop__kicker">{{ hoverList.length }} {{ hoverList.length === 1 ? 'lead' : 'leads' }}</p>
@@ -122,7 +117,6 @@ const layoutTick = ref(0)
 const lists = ref({})
 const WARM_KEY = 'sac-warm-v1'
 let searchTimer = null
-let hideTimer = null
 let ignoreCloseUntil = 0
 let summaryRequest = 0
 let listsRequest = 0
@@ -138,7 +132,6 @@ const pillStyle = computed(() => {
   const px = clampFloatingTop(pillTop.value * window.innerHeight, height, floatRef.value)
   return { top: `${px}px`, bottom: 'auto' }
 })
-const hoverItem = computed(() => hoverList.value[0] || null)
 function phoneHrefFor(item) {
   const digits = String(item?.card?.phone || '').replace(/[^\d+]/g, '')
   return digits ? `tel:${digits}` : ''
@@ -200,7 +193,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('pointerdown', onPointerDown, true)
   clearTimeout(searchTimer)
-  clearTimeout(hideTimer)
 })
 
 function onKey(event) {
@@ -568,7 +560,6 @@ function drawWires() {
 }
 
 async function previewCategory(category, event) {
-  clearTimeout(hideTimer)
   hoveredKey.value = category.key
   const node = event.currentTarget
   const key = cacheKey(category.key)
@@ -661,30 +652,19 @@ function placePop(node) {
   }
 }
 
-function scheduleHide() {
-  clearTimeout(hideTimer)
-  hideTimer = setTimeout(() => {
-    hoveredKey.value = ''
-    hoverList.value = []
-    hoverState.value = 'idle'
-  }, 160)
+function closeStageCards() {
+  hoveredKey.value = ''
+  hoverList.value = []
+  hoverState.value = 'idle'
 }
 
-function holdCard() {
-  clearTimeout(hideTimer)
-}
-
-function activateCategory(category, event) {
-  const coarse = window.matchMedia('(hover: none)').matches
-  if (coarse) {
-    if (hoveredKey.value === category.key && hoverItem.value) {
-      openItem(hoverItem.value)
-      return
-    }
-    previewCategory(category, event)
+function toggleCategory(category, event) {
+  // Click the open stage again to close its cards, then pick another stage.
+  if (hoveredKey.value === category.key) {
+    closeStageCards()
     return
   }
-  if (hoverItem.value && hoveredKey.value === category.key) openItem(hoverItem.value)
+  previewCategory(category, event)
 }
 
 function onSearch() {
@@ -777,7 +757,15 @@ function openItem(item) {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), #f6e7b2);
   box-shadow: 0 0 0 1px rgba(214, 184, 92, 0.7), 0 12px 28px rgba(180, 140, 40, 0.12);
 }
-.sac-node__chevron { color: #9a8fb0; flex: none; }
+.sac-node__chevron {
+  color: #9a8fb0;
+  flex: none;
+  transition: transform 0.16s ease;
+}
+.sac-node.is-hot .sac-node__chevron {
+  transform: rotate(90deg);
+  color: #6b21a8;
+}
 .sac-node__label {
   flex: 1;
   min-width: 0;
