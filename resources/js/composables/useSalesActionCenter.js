@@ -5,13 +5,10 @@ export const salesActionAnchor = ref(null)
 
 let openedAt = 0
 
-/** Sales agents and managers keep Next Actions. Admin and super admin do not. */
+/** Any signed-in CRM user can open Next Actions, including admin and super admin. */
 export const canUseNextActions = computed(() => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const roles = Array.isArray(user.roles) ? user.roles : []
-    if (roles.includes('super_admin') || roles.includes('admin')) return false
-    return true
+    return !!localStorage.getItem('token') && !!localStorage.getItem('user')
   } catch {
     return false
   }
