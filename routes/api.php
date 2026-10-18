@@ -20,7 +20,6 @@ use App\Http\Controllers\Api\Marketing\ReportController as MarketingReportContro
 use App\Http\Controllers\Api\Marketing\BookingController as MarketingBookingController;
 use App\Http\Controllers\Api\Marketing\MyBookingController as MarketingMyBookingController;
 use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\RoleSimulationController;
 use App\Http\Controllers\Api\UserRoleController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\Listing\AreaController;
@@ -748,11 +747,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/users/{user}/attendance-history', [AttendanceController::class, 'userAttendanceHistory']);
         Route::get('/users/online/current', [UserController::class, 'getOnlineUsers']);
     Route::get('/users/login-activity', [UserController::class, 'getLoginActivity']);
-// Role Routes. Catalog and preview are registered before the resource so
-// "permission-catalog" is not captured as a role id. Both are read-only.
-Route::get('/roles/permission-catalog', [RoleSimulationController::class, 'catalog']);
-Route::get('/roles/simulation-users', [RoleSimulationController::class, 'searchUsers']);
-Route::post('/roles/access-preview', [RoleSimulationController::class, 'preview']);
+// Role Routes
 Route::apiResource('roles', RoleController::class);
 Route::get('/permissions', [RoleController::class, 'permissions']);
 // User Role Routes
