@@ -23,6 +23,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { closeAllShortcutPanels } from '@/composables/useShortcutPanels.js'
 
 const KEY = 'shortcut-dock-top-v3'
 const OPEN_KEY = 'shortcut-dock-open'
@@ -74,6 +75,7 @@ function remember(px) {
 
 function setOpen(value) {
   open.value = value
+  if (!value) closeAllShortcutPanels()
   try {
     localStorage.setItem(OPEN_KEY, value ? '1' : '0')
   } catch {

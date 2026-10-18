@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api, { resolveAuthToken } from '@/plugins/axios'
 import DailyEdgeCard from './DailyEdgeCard.vue'
@@ -89,6 +89,11 @@ import { closeDailyEdgeTest, openDailyEdgeTest, useDailyEdgeTest } from '@/compo
 import { openLeadView } from '@/composables/useLeadViewModal.js'
 import { clampFloatingTop } from '@/composables/useFloatingDock.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal.js'
+import {
+  claimShortcutPanel,
+  dailyMessageCloseTick,
+  myDayPanelOpen,
+} from '@/composables/useShortcutPanels.js'
 
 const router = useRouter()
 
@@ -98,7 +103,7 @@ const productionOpen = ref(false)
 const actions = ref([])
 const actionsState = ref('ready')
 const dayDate = ref('')
-const myDayOpen = ref(false)
+const myDayOpen = myDayPanelOpen
 const sessionReady = ref(false)
 const lastClosed = ref(null)
 const dayPillEl = ref(null)
@@ -279,6 +284,15 @@ function closeMyDay() {
   myDayOpen.value = false
 }
 
+function closeDailyMessageSurfaces() {
+  closeDailyEdgeTest()
+  productionOpen.value = false
+}
+
+watch(dailyMessageCloseTick, () => {
+  closeDailyMessageSurfaces()
+})
+
 function openAction(item) {
   const leadId = item?.lead_id
   const dealId = item?.deal_id
@@ -377,12 +391,14 @@ function onDayClick() {
 
 function openMyDay(event) {
   rememberAnchor(event)
+  claimShortcutPanel('my-day')
   myDayOpen.value = true
   loadActions()
 }
 
 function reopen(event) {
   rememberAnchor(event)
+  claimShortcutPanel('daily-message')
   if (lastClosed.value === 'test' && testPayload.value?.message) {
     testOpen.value = true
     return

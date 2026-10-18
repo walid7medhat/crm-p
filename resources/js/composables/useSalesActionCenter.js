@@ -1,6 +1,11 @@
 import { computed, ref } from 'vue'
+import {
+  claimShortcutPanel,
+  salesActionCenterOpen,
+} from '@/composables/useShortcutPanels.js'
 
-export const salesActionCenterOpen = ref(false)
+export { salesActionCenterOpen }
+
 export const salesActionAnchor = ref(null)
 
 let openedAt = 0
@@ -40,6 +45,7 @@ export function openSalesActionCenter(event) {
     return
   }
 
+  claimShortcutPanel('next-actions')
   openedAt = Date.now()
   salesActionCenterOpen.value = true
 }
