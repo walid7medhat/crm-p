@@ -1080,7 +1080,6 @@ const tableItems = computed(() => {
   const c = sidebarCounts.value;
   const items = [
     { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: c?.listings?.all || 0,permission: 'listings-list' },
-    { path: '/property-compare', label: 'Compare', colorClass: 'text-warning-main w-auto', count: 0, permission: 'listings-list' },
     { path: '/property-form', label: 'Create Listing', colorClass: 'text-info-main w-auto', permission: 'listings-create', count: 0 },
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]

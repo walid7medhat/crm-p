@@ -59,14 +59,6 @@ const LISTINGS_INVENTORY_PATHS = [
 
 const NOTIFY_ME_PATHS = ['/notify-me'];
 
-const PROPERTY_COMPARE_TAB = {
-  id: 'property-compare',
-  label: 'Compare',
-  type: 'route',
-  path: '/property-compare',
-  matchPaths: ['/property-compare'],
-};
-
 const VIEWINGS_PATHS = ['/my-viewings'];
 
 const REQUESTS_ADMIN_PATHS = ['/all-requests'];
@@ -446,14 +438,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         count: listingTabCounts.listings || 0,
       },
     ];
-    if (!hasPermission || hasPermission('listings-list')) {
-      tabs.push(PROPERTY_COMPARE_TAB);
-    }
     return tabs;
-  }
-
-  if (section === CRM_SECTIONS.LISTINGS && isShowOnlyListing) {
-    return [PROPERTY_COMPARE_TAB];
   }
 
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
@@ -476,7 +461,6 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       });
     }
     if (canList) {
-      tabs.push(PROPERTY_COMPARE_TAB);
       tabs.push({
         id: 'notify-me',
         label: 'Notify Me',
