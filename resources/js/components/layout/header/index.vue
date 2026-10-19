@@ -293,6 +293,21 @@
           </router-link>
         </li>
 
+        <li v-if="isSuperAdmin">
+          <router-link to="/next-action-tour" custom v-slot="{ navigate, href }">
+            <a
+              :href="href"
+              class="sidebar-nav-link"
+              :class="{ active: isSidebarSubItemActive('/next-action-tour') }"
+              @mouseenter="prefetchRoute('/next-action-tour')"
+              @click="navigate"
+            >
+              <iconify-icon icon="lucide:list-tree" class="menu-icon" />
+              <span>Next Actions Tour</span>
+            </a>
+          </router-link>
+        </li>
+
         <li v-if="isSuperAdmin || Number(user?.id) === 33">
           <router-link to="/system-announcements" custom v-slot="{ navigate, href }">
             <a
@@ -684,6 +699,12 @@
             <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
           </button>
 
+          <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/next-action-tour') }" @click="onMoreGo('/next-action-tour')">
+            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:list-tree" /></span>
+            <span class="mobile-more-row__label">Next Actions Tour</span>
+            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
+          </button>
+
           <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/system-announcements') }" @click="onMoreGo('/system-announcements')">
             <span class="mobile-more-row__icon"><iconify-icon icon="lucide:megaphone" /></span>
             <span class="mobile-more-row__label">Announcements</span>
@@ -1035,6 +1056,7 @@ const tableItems = computed(() => {
   const c = sidebarCounts.value;
   const items = [
     { path: '/alllisting', label: 'All Listing', colorClass: 'text-warning-main w-auto', count: c?.listings?.all || 0,permission: 'listings-list' },
+    { path: '/property-compare', label: 'Compare', colorClass: 'text-warning-main w-auto', count: 0, permission: 'listings-list' },
     { path: '/property-form', label: 'Create Listing', colorClass: 'text-info-main w-auto', permission: 'listings-create', count: 0 },
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]
@@ -1410,6 +1432,7 @@ const mobileDockItems = computed(() => {
 
   if (isSuperAdmin.value) {
     moreChildren.push({ path: '/daily-motivation', label: 'Daily Message', icon: 'lucide:sunrise' });
+    moreChildren.push({ path: '/next-action-tour', label: 'Next Actions Tour', icon: 'lucide:list-tree' });
   }
 
   if (filteredUsersItems.value.length) {

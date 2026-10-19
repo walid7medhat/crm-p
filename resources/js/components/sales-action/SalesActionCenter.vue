@@ -4,6 +4,7 @@
       ref="floatRef"
       type="button"
       class="sac-root shortcut-item shortcut-item--actions"
+      data-tour="next-actions-pill"
       :class="{ 'is-open': open }"
       @click="onPillClick"
     >
@@ -12,7 +13,7 @@
     </button>
   </Teleport>
   <Teleport to="body">
-    <svg v-if="open" class="sac-wires" aria-hidden="true">
+    <svg v-if="open" class="sac-wires" data-tour="next-actions-tree" aria-hidden="true">
       <path
         v-for="(wire, index) in wires"
         :key="index"
@@ -32,6 +33,8 @@
       :ref="(el) => setNodeRef(el, index)"
       type="button"
       class="sac-node"
+      data-tour="next-actions-stage"
+      :data-tour-stage="category.key"
       :class="{ 'is-hot': hoveredKey === category.key, 'is-grown': treeReady, 'is-compact': isCompact }"
       :style="nodeStyle(index)"
       @click="toggleCategory(category, $event)"
@@ -44,6 +47,7 @@
     <aside
       v-if="open && (hoverList.length || hoverState === 'empty')"
       class="sac-pop"
+      data-tour="next-actions-cards"
       :style="popStyle"
     >
       <template v-if="hoverList.length">
@@ -85,6 +89,7 @@ import {
   salesActionAnchor,
   salesActionCenterOpen,
 } from '@/composables/useSalesActionCenter.js'
+import { isTourWalkthrough } from '@/composables/useNextActionTourPreview.js'
 
 const BATCH = 20
 
@@ -181,8 +186,49 @@ watch(salesActionAnchor, () => {
   nextTick(() => drawWires())
 })
 
+function onTourAction(event) {
+  const action = event?.detail?.action
+  if (action === 'list-categories') {
+    window.dispatchEvent(new CustomEvent('next-action-tour:categories', {
+      detail: {
+        categories: categories.value.map((row) => ({
+          key: row.key,
+          title: row.title,
+          count: row.count,
+        })),
+      },
+    }))
+    return
+  }
+  if (action === 'open-stage' || action === 'open-first-stage') {
+    const index = Number(event?.detail?.index)
+    const key = event?.detail?.key
+    let category = Number.isFinite(index) ? categories.value[index] : null
+    let node = Number.isFinite(index) ? nodeRefs.value[index] : null
+    if (!category && key) {
+      const found = categories.value.findIndex((row) => row.key === key)
+      if (found >= 0) {
+        category = categories.value[found]
+        node = nodeRefs.value[found]
+      }
+    }
+    if (!category) {
+      category = categories.value[0]
+      node = nodeRefs.value[0]
+    }
+    if (!category || !node) return
+    // Expand the stage for the tour — never open a lead.
+    previewCategory(category, { currentTarget: node })
+    return
+  }
+  if (action === 'close-stage') {
+    closeStageCards()
+  }
+}
+
 onMounted(() => {
   window.addEventListener('resize', onResize)
+  window.addEventListener('next-action-tour:action', onTourAction)
   restorePillTop()
   restoreWarmCache()
   prefetchSummary()
@@ -190,6 +236,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('next-action-tour:action', onTourAction)
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('pointerdown', onPointerDown, true)
   clearTimeout(searchTimer)
@@ -284,8 +331,10 @@ function onPillClick(event) {
 
 function onPointerDown(event) {
   if (Date.now() < ignoreCloseUntil) return
+  // Keep Next Actions open while the admin Preview tour is guiding the UI.
+  if (isTourWalkthrough.value) return
   const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target]
-  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, #shortcut-dock, .shortcut-dock, .sidebar-nav-link, .mobile-more-row'))
+  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, #shortcut-dock, .shortcut-dock, .sidebar-nav-link, .mobile-more-row, .nat-tour, .nat-announce'))
   if (inside) return
   closeSalesActionCenter()
 }
