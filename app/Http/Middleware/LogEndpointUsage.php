@@ -21,14 +21,19 @@ class LogEndpointUsage
         $user = $request->user();
 
         Log::channel('endpoint_usage')->info($request->route()?->uri() ?? $request->path(), [
-            'user_id'  => $user?->id,
-            'role'     => $user?->roles?->pluck('name')->first(),
-            'ip'       => $request->ip(),
-            'status'   => $response->getStatusCode(),
-            'ms'       => round((microtime(true) - $request->attributes->get('usage_start', microtime(true))) * 1000, 1),
-            'filters'  => $request->except(['page']),
-            'has_office_branch' => $request->filled('office_branch'),
-            'has_search'        => $request->filled('search'),
-        ]);
+                'user_id'    => $user?->id,
+                'role'       => $user?->roles?->pluck('name')->first(),
+                'ip'         => $request->ip(),
+                'status'     => $response->getStatusCode(),
+                'ms'         => round((microtime(true) - $request->attributes->get('usage_start', microtime(true))) * 1000, 1),
+
+                // Who/what project is calling
+                'origin'     => $request->header('Origin'),       // browser calls from another site
+                'referer'    => $request->header('Referer'),
+                'user_agent' => $request->userAgent(),            // e.g. axios, Guzzle, curl, Postman
+                'token_name' => $user?->currentAccessToken()?->name ?? null, // Sanctum token name
+
+                'filters'    => array_keys($request->except(['page'])),
+            ]);
     }
 }
