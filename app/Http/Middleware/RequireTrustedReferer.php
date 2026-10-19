@@ -56,7 +56,7 @@ class RequireTrustedReferer
 
     public function handle(Request $request, Closure $next)
     {
-        $mode = config('security.referer_guard', 'log');
+       $mode = env('REFERER_GUARD', 'log');
 
         // Disabled, CORS preflight, or exempt path: let it through
         if ($mode === 'off'
