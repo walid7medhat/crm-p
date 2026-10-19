@@ -939,7 +939,10 @@ class LeadController extends Controller
     public function phoneDuplicates(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if (! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+        $isPrivileged = $user->hasAnyRole(['super_admin', 'admin', 'branch_admin']);
+        $isListingTeamSales = $user->hasRole('sales') && (bool) $user->is_listing_team;
+
+        if (! $isPrivileged && ! $isListingTeamSales) {
             return ApiResponse::error('Unauthorized', 403);
         }
 
