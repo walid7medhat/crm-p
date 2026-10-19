@@ -55,6 +55,7 @@ class RequireTrustedReferer
         'api/mobile/*',
          'api/website-lead',
     'api/website-lead/*',
+    'api/altcrm/update-more-info'
     ];
 
     public function handle(Request $request, Closure $next)
