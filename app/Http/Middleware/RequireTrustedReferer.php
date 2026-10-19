@@ -15,6 +15,7 @@ class RequireTrustedReferer
         // 'oiaproperties.altcrm.ae',
 
         // Landing pages
+        'oiaproperties.com',
         'alrahabeachprojects.ae',
         'alreemislandprojects.ae',
         'athlonbyaldar.ae',
