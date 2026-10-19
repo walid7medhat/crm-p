@@ -316,21 +316,6 @@
           </router-link>
         </li>
 
-        <li v-if="isSuperAdmin">
-          <router-link to="/next-action-tour" custom v-slot="{ navigate, href }">
-            <a
-              :href="href"
-              class="sidebar-nav-link"
-              :class="{ active: isSidebarSubItemActive('/next-action-tour') }"
-              @mouseenter="prefetchRoute('/next-action-tour')"
-              @click="navigate"
-            >
-              <iconify-icon icon="lucide:list-tree" class="menu-icon" />
-              <span>Next Actions Tour</span>
-            </a>
-          </router-link>
-        </li>
-
         <li v-if="isSuperAdmin || Number(user?.id) === 33">
           <router-link to="/system-announcements" custom v-slot="{ navigate, href }">
             <a
@@ -602,11 +587,6 @@
               <span class="mobile-more-row__label">Leads</span>
               <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
             </button>
-            <button v-if="canShowLeadsTab && canUseNextActions" type="button" class="mobile-more-row" @click="onMoreNextActions">
-              <span class="mobile-more-row__icon"><iconify-icon icon="lucide:list-tree" /></span>
-              <span class="mobile-more-row__label">Next Actions</span>
-              <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
-            </button>
             <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.DEAL) }" @click="onMoreDeal">
               <span class="mobile-more-row__icon"><img :src="dealsIcon" alt="" /></span>
               <span class="mobile-more-row__label">Deals</span>
@@ -720,12 +700,6 @@
           <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/daily-motivation') }" @click="onMoreGo('/daily-motivation')">
             <span class="mobile-more-row__icon"><iconify-icon icon="lucide:sunrise" /></span>
             <span class="mobile-more-row__label">Daily Message</span>
-            <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
-          </button>
-
-          <button v-if="isSuperAdmin" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarSubItemActive('/next-action-tour') }" @click="onMoreGo('/next-action-tour')">
-            <span class="mobile-more-row__icon"><iconify-icon icon="lucide:list-tree" /></span>
-            <span class="mobile-more-row__label">Next Actions Tour</span>
             <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
           </button>
 
@@ -920,7 +894,6 @@ import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import { useRoute, useRouter } from 'vue-router';
 import api, { clearAuthToken } from '@/plugins/axios';
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
-import { canUseNextActions, openSalesActionCenter } from '@/composables/useSalesActionCenter.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import {
   buildListingsSidebarSections,
@@ -1483,7 +1456,6 @@ const mobileDockItems = computed(() => {
 
   if (isSuperAdmin.value) {
     moreChildren.push({ path: '/daily-motivation', label: 'Daily Message', icon: 'lucide:sunrise' });
-    moreChildren.push({ path: '/next-action-tour', label: 'Next Actions Tour', icon: 'lucide:list-tree' });
   }
 
   if (filteredUsersItems.value.length) {
@@ -1948,11 +1920,6 @@ async function onMoreHome() {
 async function onMoreLead() {
   closeMoreSheet();
   await goToCrmSection(CRM_SECTIONS.LEAD);
-}
-
-function onMoreNextActions(event) {
-  openSalesActionCenter(event);
-  closeMoreSheet();
 }
 
 async function onMoreDeal() {
