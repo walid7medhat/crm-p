@@ -53,6 +53,8 @@ class RequireTrustedReferer
         'api/webhooks/*',
         'api/bitrix/*',
         'api/mobile/*',
+         'api/website-lead',
+    'api/website-lead/*',
     ];
 
     public function handle(Request $request, Closure $next)
