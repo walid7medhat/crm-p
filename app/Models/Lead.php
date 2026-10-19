@@ -123,6 +123,7 @@ protected const NON_ENGAGEMENT_FIELDS = [
                 if ($lead->responsible_person_id && !$lead->initial_responsible_person_id) {
                     $lead->initial_responsible_person_id = $lead->responsible_person_id;
                 }
+                $lead->bitrix24_last_activity_at ??= $lead->created_at ?? now();
             });
             static::created(function ($lead) {
                 $settings = LeadScoringSetting::resolved();
