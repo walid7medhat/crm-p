@@ -24,6 +24,7 @@
     </ShortcutDock>
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
     <SalesActionCenter v-if="showLayout && !isAppLoading && canUseNextActions" />
+    <NextActionTourLayer v-if="showLayout && !isAppLoading" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
@@ -88,6 +89,7 @@ const LeadOpeningLoader = {
 const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layout/SystemCampaignPopup.vue'))
 const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-motivation/DailyEdgeLayer.vue'))
 const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
+const NextActionTourLayer = defineAsyncComponent(() => import('./components/onboarding/NextActionTourLayer.vue'))
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
 const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
@@ -113,6 +115,7 @@ export default {
     SystemCampaignPopup,
     DailyEdgeLayer,
     SalesActionCenter,
+    NextActionTourLayer,
     ShortcutDock,
     UserAnimationPlayer,
     MobilePushToggle,
