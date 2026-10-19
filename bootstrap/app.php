@@ -27,7 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
         'role_or_permission' => RoleOrPermissionMiddleware::class,
         'jwt.auth' => JwtAuthMiddleware::class,
                 'block.bots' => BlockBots::class,
-        'log.usage' => \App\Http\Middleware\LogEndpointUsage::class
+        'log.usage' => \App\Http\Middleware\LogEndpointUsage::class,
+        'trusted.referer' => \App\Http\Middleware\RequireTrustedReferer::class
 
     ]);
        // Exclude broadcasting/auth from CSRF since we use JWT auth
@@ -37,7 +38,10 @@ return Application::configure(basePath: dirname(__DIR__))
        ]);
 
        $middleware->trustProxies(at: '*');
-    })
+        $middleware->api(append: [
+            \App\Http\Middleware\RequireTrustedReferer::class,
+        ]);
+        })
 
    ->withExceptions(function ($exceptions) {
         $exceptions->render(function (Throwable $e, $request) {
