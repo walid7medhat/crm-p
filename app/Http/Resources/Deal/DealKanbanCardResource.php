@@ -11,6 +11,28 @@ namespace App\Http\Resources\Deal;
  */
 class DealKanbanCardResource extends DealResource
 {
+    /**
+     * @param  iterable<int, \App\Models\Deal>  $deals
+     */
+    public static function warmCardUsers(iterable $deals): void
+    {
+        $users = [];
+        foreach ($deals as $deal) {
+            if ($deal->relationLoaded('responsiblePerson') && $deal->responsiblePerson) {
+                $users[] = $deal->responsiblePerson;
+            }
+            if ($deal->relationLoaded('addedBy') && $deal->addedBy) {
+                $users[] = $deal->addedBy;
+            }
+            $history = static::$assignmentHistoryByDealId[(int) $deal->id] ?? null;
+            if ($history && $history->relationLoaded('user') && $history->user) {
+                $users[] = $history->user;
+            }
+        }
+
+        \App\Models\User::warmHierarchy($users);
+    }
+
     public function toArray($request)
     {
         $assignmentHistory = $this->resolveAssignmentHistory();

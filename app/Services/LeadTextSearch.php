@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Shared lead free-text search applicator.
@@ -40,11 +42,11 @@ class LeadTextSearch
     }
 
     /**
-     * @param  Builder<\App\Models\Lead>  $query
+     * @param  EloquentBuilder<\App\Models\Lead>|QueryBuilder  $query
      * @param  array{comments?: bool, relations?: bool, admin?: bool, lean?: bool}  $options
-     * @return Builder<\App\Models\Lead>
+     * @return EloquentBuilder<\App\Models\Lead>|QueryBuilder
      */
-    public static function apply(Builder $query, string $search, array $options = []): Builder
+    public static function apply(EloquentBuilder|QueryBuilder $query, string $search, array $options = []): EloquentBuilder|QueryBuilder
     {
         $term = trim($search);
         if ($term === '' || ! self::isActionable($term)) {
@@ -61,28 +63,12 @@ class LeadTextSearch
         // Phone-like terms: scan contact/number columns only (much faster than full OR + whereHas).
         $digits = preg_replace('/\D+/', '', $term) ?? '';
         if (strlen($digits) >= 4 && preg_match('/^[\d\s\+\-\(\)]+$/', $term) === 1) {
-            $variants = array_values(array_unique(array_filter([
-                $digits,
-                // UAE local <-> international variants
-                (str_starts_with($digits, '971') && strlen($digits) > 3) ? ('0'.substr($digits, 3)) : null,
-                (str_starts_with($digits, '0') && strlen($digits) > 1) ? ('971'.substr($digits, 1)) : null,
-            ])));
-
-            return $query->where(function (Builder $s) use ($variants) {
-                foreach ($variants as $variant) {
-                    $like = '%'.$variant.'%';
-                    $s->orWhere('work_phone', 'like', $like)
-                        ->orWhere('work_phone_2', 'like', $like)
-                        ->orWhere('whatsapp_number', 'like', $like)
-                        ->orWhere('lead_number', 'like', $like)
-                        ->orWhere('source_client_phone', 'like', $like);
-                }
-            });
+            return self::applyPhone($query, self::phoneDigitVariants($digits));
         }
 
         // Email-like terms: prefer email columns.
         if (str_contains($term, '@')) {
-            return $query->where(function (Builder $s) use ($term) {
+            return $query->where(function ($s) use ($term) {
                 $like = '%'.$term.'%';
                 $s->where('email', 'like', $like)
                     ->orWhere('secondary_email', 'like', $like)
@@ -93,7 +79,7 @@ class LeadTextSearch
         $like = '%'.$term.'%';
 
         if (! $isAdmin) {
-            return $query->where(function (Builder $s) use ($like, $includeComments, $lean, $matchLeadName) {
+            return $query->where(function ($s) use ($like, $includeComments, $lean, $matchLeadName) {
                 if ($matchLeadName) {
                     $s->orWhere('lead_name', 'like', $like);
                 }
@@ -131,7 +117,7 @@ class LeadTextSearch
         // Lean mode intentionally skips relation/EXISTS scans (agent/property/stage/integration).
         // Use dedicated filters in the advanced search modal for those.
 
-        return $query->where(function (Builder $s) use ($term, $like, $expanded, $includeComments, $includeRelations, $lean) {
+        return $query->where(function ($s) use ($term, $like, $expanded, $includeComments, $includeRelations, $lean) {
             // Core identity / contact fields (highest hit-rate, cheapest).
             $s->where('lead_name', 'like', $like)
                 ->orWhere('lead_number', 'like', $like)
@@ -213,6 +199,82 @@ class LeadTextSearch
                         }
                     }
                 });
+            }
+        });
+    }
+
+    /**
+     * Same UAE local/international pairs the previous phone LIKE search used.
+     *
+     * @return list<string>
+     */
+    public static function phoneDigitVariants(string $digits): array
+    {
+        return array_values(array_unique(array_filter([
+            $digits,
+            (str_starts_with($digits, '971') && strlen($digits) > 3) ? ('0'.substr($digits, 3)) : null,
+            (str_starts_with($digits, '0') && strlen($digits) > 1) ? ('971'.substr($digits, 1)) : null,
+        ], fn ($variant) => is_string($variant) && $variant !== '')));
+    }
+
+    /**
+     * work_phone_digits is generated from work_phone only. These extra 0/971 forms
+     * are applied to that column alone so a national number still seeks the index
+     * when the stored value kept the other prefix.
+     *
+     * @param  list<string>  $variants
+     * @return list<string>
+     */
+    public static function indexedWorkPhoneVariants(array $variants): array
+    {
+        $indexed = $variants;
+        $raw = $variants[0] ?? '';
+        if ($raw !== '' && ! str_starts_with($raw, '0') && ! str_starts_with($raw, '971')) {
+            $indexed[] = '0'.$raw;
+            $indexed[] = '971'.$raw;
+        }
+
+        return array_values(array_unique($indexed));
+    }
+
+    /**
+     * @param  EloquentBuilder<\App\Models\Lead>|QueryBuilder  $query
+     * @param  list<string>  $variants
+     * @return EloquentBuilder<\App\Models\Lead>|QueryBuilder
+     */
+    private static function applyPhone(EloquentBuilder|QueryBuilder $query, array $variants): EloquentBuilder|QueryBuilder
+    {
+        $indexed = self::indexedWorkPhoneVariants($variants);
+
+        return $query->where(function ($outer) use ($variants, $indexed) {
+            // Exact and prefix seeks on the generated work_phone column. A leading-wildcard
+            // LIKE cannot use leads_work_phone_digits_index; these predicates can.
+            $outer->whereIn('leads.id', self::indexedWorkPhoneIdQuery($indexed));
+
+            // Unchanged substring match for every column the old search covered, including
+            // work_phone. work_phone_digits does not represent the other numbers.
+            $outer->orWhere(function ($legacy) use ($variants) {
+                foreach ($variants as $variant) {
+                    $like = '%'.$variant.'%';
+                    $legacy->orWhere('work_phone', 'like', $like)
+                        ->orWhere('work_phone_2', 'like', $like)
+                        ->orWhere('whatsapp_number', 'like', $like)
+                        ->orWhere('lead_number', 'like', $like)
+                        ->orWhere('source_client_phone', 'like', $like);
+                }
+            });
+        });
+    }
+
+    /**
+     * @param  list<string>  $indexed
+     */
+    private static function indexedWorkPhoneIdQuery(array $indexed): QueryBuilder
+    {
+        return DB::table('leads')->select('id')->where(function ($phones) use ($indexed) {
+            foreach ($indexed as $variant) {
+                $phones->orWhere('work_phone_digits', $variant)
+                    ->orWhere('work_phone_digits', 'like', $variant.'%');
             }
         });
     }

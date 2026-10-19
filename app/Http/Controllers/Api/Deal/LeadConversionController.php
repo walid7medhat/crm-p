@@ -396,13 +396,13 @@ class LeadConversionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Lead converted to deal successfully',
-                'data' => new DealResource($deal->load([
+                'data' => new DealResource($deal->load(Deal::withDetailGraph([
                     'stage',
                     'parties',
                     'responsiblePerson',
                     'documents',
-                    'properties'
-                ]))
+                    'properties',
+                ])))
             ], 201);
 
         } catch (\Exception $e) {

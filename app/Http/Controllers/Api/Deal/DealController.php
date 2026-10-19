@@ -120,14 +120,14 @@ class DealController extends Controller
             ], 403);
         }
 
-        $deal->load([
+        $deal->load(Deal::withDetailGraph([
             'lead',
             'stage',
             'responsiblePerson',
             'parties.documents',
             'documents',
-            'properties'
-        ]);
+            'properties',
+        ]));
 
         return response()->json([
             'success' => true,
@@ -253,13 +253,13 @@ class DealController extends Controller
                 ]);
             }
 
-            $deal->load([
+            $deal->load(Deal::withDetailGraph([
                 'stage',
                 'parties',
                 'documents',
                 'responsiblePerson',
-                'properties'
-            ]);
+                'properties',
+            ]));
 
             $this->broadcastDealUpdate($deal, 'updated', null, null, true);
 
@@ -351,12 +351,10 @@ class DealController extends Controller
 
         // Kanban cards only — hover/formatLeadUser needs light user graph (not parent×3 + docs/properties).
         $userEager = [
-            'background',
             'roles:id,name',
             'employeeProfile.companyBranch:id,name',
             'employeeProfile.designation:id,name',
             'parent:id,name,display_name,avatar,parent_id,status,background_id',
-            'parent.background',
             'parent.roles:id,name',
         ];
 
@@ -377,6 +375,7 @@ class DealController extends Controller
 
         try {
             DealKanbanCardResource::primeForCollection($dealsById->values());
+            DealKanbanCardResource::warmCardUsers($dealsById->values());
 
             $result = $stages->map(function ($stage) use ($idsByStage, $dealsById, $countsByStage, $perPage) {
                 $stageIdList = $idsByStage[$stage->id] ?? [];
@@ -433,12 +432,10 @@ class DealController extends Controller
         $perPage = $request->input('per_page', 10);
 
         $userEager = [
-            'background',
             'roles:id,name',
             'employeeProfile.companyBranch:id,name',
             'employeeProfile.designation:id,name',
             'parent:id,name,display_name,avatar,parent_id,status,background_id',
-            'parent.background',
             'parent.roles:id,name',
         ];
         
@@ -457,6 +454,7 @@ class DealController extends Controller
 
         try {
             DealKanbanCardResource::primeForCollection($deals->getCollection());
+            DealKanbanCardResource::warmCardUsers($deals->getCollection());
             $cardData = DealKanbanCardResource::collection($deals->getCollection())->resolve();
         } finally {
             DealKanbanCardResource::clearCollectionPrime();
@@ -904,7 +902,7 @@ class DealController extends Controller
 
             DB::commit();
 
-            $deal->load(['parties', 'documents', 'stage', 'properties']);
+            $deal->load(Deal::withDetailGraph(['parties', 'documents', 'stage', 'properties']));
             $this->broadcastDealUpdate($deal, 'updated');
 
             return response()->json([
@@ -1074,7 +1072,7 @@ class DealController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Deal stage and info updated successfully',
-                'data' => new DealResource($deal->load(['parties', 'documents', 'stage', 'properties']))
+                'data' => new DealResource($deal->load(Deal::withDetailGraph(['parties', 'documents', 'stage', 'properties'])))
             ]);
 
         } catch (\Exception $e) {
@@ -1150,7 +1148,7 @@ class DealController extends Controller
 
             DB::commit();
 
-            $deal->load(['stage', 'parties', 'documents', 'properties']);
+            $deal->load(Deal::withDetailGraph(['stage', 'parties', 'documents', 'properties']));
             $this->broadcastDealUpdate($deal, 'stage_changed');
 
             return response()->json([
@@ -1347,7 +1345,7 @@ class DealController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Deal updated successfully',
-                'data' => new DealResource($deal->load(['parties', 'documents', 'stage', 'properties']))
+                'data' => new DealResource($deal->load(Deal::withDetailGraph(['parties', 'documents', 'stage', 'properties'])))
             ]);
 
         } catch (\Exception $e) {
@@ -2138,7 +2136,7 @@ class DealController extends Controller
         DB::commit();
 
         // Load relationships for response
-        $property->load(['propertyType', 'area', 'developer']);
+        $property->load(['propertyType', 'area.parent.parent.parent.parent.parent', 'developer']);
 
         $payload = $property->toArray();
         $payload['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
@@ -2342,7 +2340,7 @@ public function addProperty(Request $request, Deal $deal)
         DB::commit();
 
         // Load relationships for response
-        $property->load(['propertyType', 'area', 'developer']);
+        $property->load(['propertyType', 'area.parent.parent.parent.parent.parent', 'developer']);
         
         return response()->json([
             'success' => true,
@@ -2465,7 +2463,7 @@ public function changeDealType(Request $request, Deal $deal): JsonResponse
         return response()->json([
             'success' => true,
             'message' => 'Deal type is unchanged',
-            'data' => new DealResource($deal->load(['lead', 'stage', 'parties.documents', 'documents', 'responsiblePerson', 'properties'])),
+            'data' => new DealResource($deal->load(Deal::withDetailGraph(['lead', 'stage', 'parties.documents', 'documents', 'responsiblePerson', 'properties']))),
         ]);
     }
 
@@ -2501,7 +2499,7 @@ public function changeDealType(Request $request, Deal $deal): JsonResponse
 
         DB::commit();
 
-        $deal->load(['lead', 'stage', 'parties.documents', 'documents', 'responsiblePerson', 'properties']);
+        $deal->load(Deal::withDetailGraph(['lead', 'stage', 'parties.documents', 'documents', 'responsiblePerson', 'properties']));
         $this->broadcastDealUpdate($deal, 'updated');
 
         return response()->json([

@@ -249,6 +249,67 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $ids;
     }
 
+    /**
+     * Load parent chains for a set of users in one query per level, with roles,
+     * so admin_parent and office can walk in memory.
+     *
+     * @param  iterable<int, mixed>  $roots
+     */
+    public static function warmHierarchy(iterable $roots): void
+    {
+        $known = [];
+        $frontier = [];
+        foreach ($roots as $user) {
+            if (! $user instanceof self) {
+                continue;
+            }
+            $known[$user->id] = $user;
+            $frontier[$user->id] = $user;
+        }
+
+        for ($depth = 0; $depth < 12 && $frontier !== []; $depth++) {
+            $missingParentIds = [];
+            foreach ($frontier as $user) {
+                if (! $user->parent_id) {
+                    continue;
+                }
+                if ($user->relationLoaded('parent') && $user->parent) {
+                    $known[$user->parent->id] = $user->parent;
+                    continue;
+                }
+                if (isset($known[$user->parent_id])) {
+                    $user->setRelation('parent', $known[$user->parent_id]);
+                    continue;
+                }
+                $missingParentIds[] = (int) $user->parent_id;
+            }
+
+            $missingParentIds = array_values(array_unique($missingParentIds));
+            if ($missingParentIds !== []) {
+                $parents = static::query()
+                    ->whereIn('id', $missingParentIds)
+                    ->with('roles:id,name')
+                    ->get(['id', 'name', 'display_name', 'avatar', 'email', 'parent_id', 'status', 'background_id', 'bitrix24_id']);
+                foreach ($parents as $parent) {
+                    $known[$parent->id] = $parent;
+                }
+                foreach ($frontier as $user) {
+                    if ($user->parent_id && isset($known[$user->parent_id]) && ! $user->relationLoaded('parent')) {
+                        $user->setRelation('parent', $known[$user->parent_id]);
+                    }
+                }
+            }
+
+            $frontier = [];
+            foreach ($known as $user) {
+                $parent = $user->relationLoaded('parent') ? $user->parent : null;
+                if ($parent && $parent->parent_id && ! $parent->relationLoaded('parent')) {
+                    $frontier[$parent->id] = $parent;
+                }
+            }
+        }
+    }
+
 
     /**
      * branch_admin is placed as a regular team member INSIDE an office (not above it,

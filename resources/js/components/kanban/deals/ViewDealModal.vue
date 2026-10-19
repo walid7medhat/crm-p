@@ -673,13 +673,60 @@ async function fetchDealDetailShared(dealId) {
 }
 
 let editLookupsInFlight = null
+let editLookupsCacheKey = null
+let editLookupsSnapshot = null
+let editLookupsNeedRestore = false
+
+function editLookupCacheKey() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null') || {}
+    const profile = user.employee_profile || user.employeeProfile || {}
+    const branch = profile.company_branch_id
+      ?? profile.company_branch?.id
+      ?? user.company_branch_id
+      ?? user.branch_id
+      ?? user.office_id
+      ?? ''
+    return `${user.id ?? ''}:${branch}`
+  } catch {
+    return ''
+  }
+}
+
+function cloneEditLookups(value) {
+  return JSON.parse(JSON.stringify(value ?? {}))
+}
+
 function ensureEditLookupsLoaded() {
-  if (!editLookupsInFlight) {
-    editLookupsInFlight = fetchEditLookups().catch((error) => {
+  const key = editLookupCacheKey()
+  if (editLookupsCacheKey !== key) {
+    editLookupsInFlight = null
+    editLookupsSnapshot = null
+    editLookupsNeedRestore = false
+    editLookupsCacheKey = key
+  }
+  if (editLookupsSnapshot) {
+    if (editLookupsNeedRestore) {
+      editLookup.value = cloneEditLookups(editLookupsSnapshot)
+      editLookupsNeedRestore = false
+    }
+    return Promise.resolve(editLookupsSnapshot)
+  }
+  if (editLookupsInFlight) {
+    return editLookupsInFlight
+  }
+  editLookupsInFlight = fetchEditLookups()
+    .then(() => {
+      editLookupsSnapshot = cloneEditLookups(editLookup.value)
+      editLookupsNeedRestore = false
+      return editLookupsSnapshot
+    })
+    .catch((error) => {
       editLookupsInFlight = null
+      editLookupsSnapshot = null
+      editLookupsCacheKey = null
       throw error
     })
-  }
   return editLookupsInFlight
 }
 
@@ -1318,7 +1365,7 @@ watch(show, (val) => {
     editFormData.value = {}
     editFieldErrors.value = {}
     editShowErrors.value = false
-    editLookupsInFlight = null
+    editLookupsNeedRestore = true
   }
   emit('update:modelValue', val)
 })

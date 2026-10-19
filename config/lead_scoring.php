@@ -38,4 +38,13 @@ return [
     'kanban_search' => [
         'skip_ranking' => (bool) env('KANBAN_SEARCH_SKIP_RANKING', true),
     ],
+
+    /*
+    | Heat chip totals only (not the board). 0 disables the cache.
+    | Model events drop the version immediately; this TTL covers writes
+    | that skip those events.
+    */
+    'kanban_heat' => [
+        'ttl_seconds' => (int) env('KANBAN_HEAT_CACHE_TTL', 30),
+    ],
 ];

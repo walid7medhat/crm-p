@@ -10,6 +10,7 @@ use App\Events\LeadUpdated;
 use App\Models\KanbanSetting;
 use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
+use App\Services\LeadKanbanHeatCache;
 use App\Services\WebPush\LeadAssignmentTestNotifier;
 use App\Models\LeadScoringSetting;
 use App\Traits\AltCRMLeadTrait;
@@ -138,6 +139,7 @@ protected const NON_ENGAGEMENT_FIELDS = [
                     $lead->responsible_person_id,
                     (int) $lead->id
                 );
+                LeadKanbanHeatCache::bump();
             //       if ($lead->shouldSyncToAltCRM()) {
             //     $lead->sendToAltCRM();
             // }
@@ -179,6 +181,16 @@ protected const NON_ENGAGEMENT_FIELDS = [
                     );
                 }
 
+                if ($lead->wasChanged(['status_lead', 'stage_id', 'interaction_result', 'responsible_person_id', 'revert'])) {
+                    LeadKanbanHeatCache::bump();
+                }
+
+            });
+            static::deleted(function () {
+                LeadKanbanHeatCache::bump();
+            });
+            static::restored(function () {
+                LeadKanbanHeatCache::bump();
             });
             static::updating(function ($lead) {
                     if (! $lead->isDirty('interaction_result')) {

@@ -1829,6 +1829,12 @@ let ignoreSearchOutsideClick = false;
 let ignoreSearchOutsideClickTimer = null;
 const searchModalMounted = ref(false);
 let modalOpenObserver = null;
+let modalOpenFrame = 0;
+let shellPopupIdle = 0;
+let shellPopupUsesIdle = false;
+let shellPopupsCancelled = false;
+let shellPopupGeneration = 0;
+let shellPopupsStarted = false;
 // True while any *other* app modal (Create Lead/Deal, Add Stage, Settings, ...) is
 // showing — disables the nav search input outright so it can't silently steal
 // focus/keystrokes meant for that modal's own fields.
@@ -2539,39 +2545,52 @@ onMounted(() => {
   loadNotificationSettings();
   setupClickOutsideListener();
   fetchListingTabCounts();
-  loadPendingAnnouncementPopups();
-  announcementPopupPollTimer = setInterval(loadPendingAnnouncementPopups, ANNOUNCEMENT_POPUP_POLL_MS);
-  loadBirthdayPopup();
-  birthdayPopupPollTimer = setInterval(loadBirthdayPopup, BIRTHDAY_POPUP_POLL_MS);
+  // A new navbar instance must be allowed to poll. Unmount sets the cancel
+  // flag and bumps the generation so a stale idle callback cannot start a
+  // second loop after this instance is gone.
+  shellPopupsCancelled = false;
+  const popupGeneration = ++shellPopupGeneration;
+  // Badge counts paint the sidebar. Announcement and birthday calls wait until
+  // the browser is idle so they do not compete with that first request.
+  const startShellPopups = () => {
+    shellPopupIdle = 0;
+    if (shellPopupsCancelled || popupGeneration !== shellPopupGeneration || shellPopupsStarted) {
+      return;
+    }
+    shellPopupsStarted = true;
+    loadPendingAnnouncementPopups();
+    announcementPopupPollTimer = setInterval(loadPendingAnnouncementPopups, ANNOUNCEMENT_POPUP_POLL_MS);
+    loadBirthdayPopup();
+    birthdayPopupPollTimer = setInterval(loadBirthdayPopup, BIRTHDAY_POPUP_POLL_MS);
+  };
+  if (typeof window.requestIdleCallback === 'function') {
+    shellPopupUsesIdle = true;
+    shellPopupIdle = window.requestIdleCallback(startShellPopups, { timeout: 2000 });
+  } else {
+    shellPopupIdle = window.setTimeout(startShellPopups, 300);
+  }
    if (isCrmRoute(route.path)) {
      restoreCrmSectionFromStorage();
    }
+     document.removeEventListener('mousedown', onDocumentPointerDown, true);
      document.addEventListener('mousedown', onDocumentPointerDown, true);
+     document.removeEventListener('click', onDocumentClick);
      document.addEventListener('click', onDocumentClick);
+     window.removeEventListener('resize', onSearchDropdownReposition);
      window.addEventListener('resize', onSearchDropdownReposition);
+     window.removeEventListener('scroll', onSearchDropdownReposition, true);
      window.addEventListener('scroll', onSearchDropdownReposition, true);
+     window.removeEventListener('kanban-lead-search-loading', onKanbanLeadSearchLoading);
      window.addEventListener('kanban-lead-search-loading', onKanbanLeadSearchLoading);
+  window.removeEventListener('kanban-lead-search-update', onKanbanSearchUpdate);
+  window.removeEventListener('kanban-deal-search-update', onKanbanSearchUpdate);
+  window.addEventListener('kanban-lead-search-update', onKanbanSearchUpdate);
+  window.addEventListener('kanban-deal-search-update', onKanbanSearchUpdate);
 
-     window.addEventListener('kanban-lead-search-update', (e) => {
-    if (e.detail) {
-      activeFilters.value = e.detail.activeFilters || []
-      lastQuery.value = e.detail.query
-      if (!e.detail.query?.search) {
-        search.value = ''
-      }
-    }
-  })
-
-  window.addEventListener('kanban-deal-search-update', (e) => {
-    if (e.detail) {
-      activeFilters.value = e.detail.activeFilters || []
-      lastQuery.value = e.detail.query
-      if (!e.detail.query?.search) {
-        search.value = ''
-      }
-    }
-  })
-
+  window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
+  window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
+  window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.addEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
@@ -2582,7 +2601,8 @@ onMounted(() => {
   // Stage, Settings, ...) opens, so it can't silently steal focus/keystrokes meant
   // for that modal's own fields. Also blurs it if it already had focus right as the
   // modal appeared (a click-based guard can't catch that — no new click happens).
-  modalOpenObserver = new MutationObserver(() => {
+  const syncModalOpenState = () => {
+    modalOpenFrame = 0
     const open = !!document.querySelector(ANY_MODAL_OPEN_SELECTOR)
     isAnyModalOpen.value = open
     if (!open) return
@@ -2591,13 +2611,57 @@ onMounted(() => {
       active.blur()
     }
     closeSearchModal()
+  }
+  // Kanban and listing grids toggle classes constantly. One frame is enough
+  // to notice a modal; checking on every class change stalls the page.
+  if (modalOpenObserver) {
+    modalOpenObserver.disconnect();
+    modalOpenObserver = null;
+  }
+  if (modalOpenFrame) {
+    window.cancelAnimationFrame(modalOpenFrame);
+    modalOpenFrame = 0;
+  }
+  modalOpenObserver = new MutationObserver(() => {
+    if (modalOpenFrame) return
+    modalOpenFrame = window.requestAnimationFrame(syncModalOpenState)
   })
   modalOpenObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
 });
 
+function onKanbanSearchUpdate(event) {
+  if (!event?.detail) return
+  activeFilters.value = event.detail.activeFilters || []
+  lastQuery.value = event.detail.query
+  if (!event.detail.query?.search) {
+    search.value = ''
+  }
+}
+
 onUnmounted(() => {
-  if (announcementPopupPollTimer) clearInterval(announcementPopupPollTimer);
-  if (birthdayPopupPollTimer) clearInterval(birthdayPopupPollTimer);
+  shellPopupsCancelled = true
+  shellPopupGeneration += 1
+  shellPopupsStarted = false
+  if (shellPopupIdle) {
+    if (shellPopupUsesIdle && typeof window.cancelIdleCallback === 'function') {
+      window.cancelIdleCallback(shellPopupIdle)
+    } else {
+      window.clearTimeout(shellPopupIdle)
+    }
+    shellPopupIdle = 0
+  }
+  if (announcementPopupPollTimer) {
+    clearInterval(announcementPopupPollTimer);
+    announcementPopupPollTimer = null;
+  }
+  if (birthdayPopupPollTimer) {
+    clearInterval(birthdayPopupPollTimer);
+    birthdayPopupPollTimer = null;
+  }
+  if (modalOpenFrame) {
+    window.cancelAnimationFrame(modalOpenFrame)
+    modalOpenFrame = 0
+  }
   if (modalOpenObserver) {
     modalOpenObserver.disconnect();
     modalOpenObserver = null;
@@ -2608,8 +2672,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', onSearchDropdownReposition);
   window.removeEventListener('scroll', onSearchDropdownReposition, true);
   window.removeEventListener('kanban-lead-search-loading', onKanbanLeadSearchLoading);
-  window.removeEventListener('kanban-lead-search-update', () => {})
-  window.removeEventListener('kanban-deal-search-update', () => {})
+  window.removeEventListener('kanban-lead-search-update', onKanbanSearchUpdate)
+  window.removeEventListener('kanban-deal-search-update', onKanbanSearchUpdate)
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)

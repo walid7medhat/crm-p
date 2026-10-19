@@ -4,8 +4,6 @@ import { clearAuthToken } from './plugins/axios.js'
 import { installNavProgress } from './composables/useNavProgress.js'
 import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
-import { prefetchLeadPool } from './composables/leadPoolPrefetch.js'
-
 /**
  * Route components are lazy-loaded so the initial main bundle no longer pulls
  * every page (HR, kanban, listings, maps, etc.). Auth guards / meta below are
@@ -421,7 +419,6 @@ router.beforeEach((to, from, next) => {
       const hasBoardQuery = Object.keys(to.query || {}).some((key) => key !== 'lead' && to.query[key])
       import('./components/kanban/leadList/leads.vue')
       import('./components/kanban/leadList/LeadPool.vue')
-      prefetchLeadPool()
       if (!hasBoardQuery) {
         holdBackgroundApis(700)
         prefetchLeadBoard().finally(() => releaseBackgroundApis())

@@ -18,6 +18,57 @@ class KanbanLeadCardResource extends JsonResource
 {
     use ResolvesLeadLastActivity;
 
+    /**
+     * Lead columns this card reads. raw_meta_data stays because api_first_question
+     * is derived from it. The response shape does not include the raw column.
+     *
+     * @return list<string>
+     */
+    public static function cardSelect(): array
+    {
+        return [
+            'leads.id',
+            'leads.added_by',
+            'leads.lead_name',
+            'leads.lead_number',
+            'leads.stage_id',
+            'leads.salutation',
+            'leads.first_name',
+            'leads.second_name',
+            'leads.last_name',
+            'leads.whatsapp_number',
+            'leads.work_phone',
+            'leads.work_phone_2',
+            'leads.email',
+            'leads.lead_source',
+            'leads.lead_branch_source',
+            'leads.source_information',
+            'leads.status_lead',
+            'leads.interaction_result',
+            'leads.bedrooms',
+            'leads.purpose_buying',
+            'leads.extra_client_requirements',
+            'leads.responsible_person_id',
+            'leads.budget',
+            'leads.budget_from',
+            'leads.budget_to',
+            'leads.property_status',
+            'leads.lead_type',
+            'leads.property_type_id',
+            'leads.area_id',
+            'leads.created_at',
+            'leads.updated_at',
+            'leads.revert',
+            'leads.bitrix24_last_activity_at',
+            'leads.bitrix24_last_activity_by_id',
+            'leads.raw_meta_data',
+            'leads.score',
+            'leads.priority',
+            'leads.intent',
+            'leads.next_action',
+        ];
+    }
+
     /** @var array<string, int> */
     protected static array $duplicateCountsByPhone = [];
 

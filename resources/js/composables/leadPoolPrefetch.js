@@ -58,8 +58,8 @@ export function readLeadPoolCache() {
 
 /**
  * One shared request for the default Lead Pool page.
- * Started as soon as the kanban opens, so clicking the tab paints the cards
- * from this result instead of waiting on a new request.
+ * Started when the Lead Pool tab is selected, so that tab can reuse the
+ * in-flight result instead of waiting on a second request.
  */
 export function prefetchLeadPool({ force = false } = {}) {
   if (!force && pending) return pending

@@ -1123,13 +1123,18 @@ public function getPropertyTypesWithListings(Request $request)
             $cacheKey = 'sidebar_counts:u'.$user->id;
             $counts = Cache::remember($cacheKey, 45, function () use ($user) {
                 $currentUser = $user;
-                $user_hierarchy = User::where(function ($q) use ($currentUser) {
-                    $q->where('id', $currentUser->id)
-                        ->orWhere('parent_id', $currentUser->id)
-                        ->orWhereHas('parent', function ($parentQuery) use ($currentUser) {
-                            $parentQuery->where('parent_id', $currentUser->id);
-                        });
-                })->pluck('id')->toArray();
+                // Self, direct reports, and their reports. Two parent_id lookups
+                // match the old whereHas('parent') without a correlated subquery.
+                $childIds = User::query()->where('parent_id', $currentUser->id)->pluck('id');
+                $grandchildIds = $childIds->isEmpty()
+                    ? collect()
+                    : User::query()->whereIn('parent_id', $childIds)->pluck('id');
+                $user_hierarchy = $childIds
+                    ->merge($grandchildIds)
+                    ->push($currentUser->id)
+                    ->unique()
+                    ->values()
+                    ->all();
 
                 $requests = ListingAccessRequest::when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function ($q) use ($user_hierarchy, $user) {
                     $q->whereHas('listing', function ($query) use ($user_hierarchy) {

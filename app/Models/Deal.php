@@ -66,14 +66,50 @@ class Deal extends Model
         return $this->belongsTo(User::class, 'added_by');
     }
 
+    /**
+     * Deal rows, plus the linked lead's rows when this deal has a lead.
+     * A null lead_id must not become "OR lead_id IS NULL", which matches every
+     * history written for an unlinked deal.
+     */
     public function histories()
     {
         return LeadHistory::query()
             ->where(function ($query) {
-                $query->where('deal_id', $this->id)
-                      ->orWhere('lead_id', $this->lead_id);
+                $query->where('deal_id', $this->id);
+                if ($this->lead_id) {
+                    $query->orWhere('lead_id', $this->lead_id);
+                }
             })
             ->latest();
+    }
+
+    /**
+     * Relations DealResource reads per property and listing while building
+     * area titles and agent names. Area trees in this database are 6 levels deep.
+     *
+     * @return list<string>
+     */
+    public static function detailGraphRelations(): array
+    {
+        $parents = 'parent.parent.parent.parent.parent';
+
+        return [
+            'listing.agent',
+            'listing.area.'.$parents,
+            'properties.propertyType',
+            'properties.area.'.$parents,
+            'properties.listing.propertyType',
+            'properties.listing.agent',
+        ];
+    }
+
+    /**
+     * @param  list<string>  $relations
+     * @return list<string>
+     */
+    public static function withDetailGraph(array $relations): array
+    {
+        return array_values(array_unique([...$relations, ...self::detailGraphRelations()]));
     }
 
     public function stage()

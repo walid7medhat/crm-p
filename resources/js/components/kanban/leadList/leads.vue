@@ -2103,9 +2103,6 @@ const mobilePickStageColumn = computed(() => {
     return columns.value.find(c => c.status === mobilePickStageId.value) || null
 })
 
-const INITIAL_VISIBLE_LEADS_PER_STAGE = 15
-const VISIBLE_LEADS_INCREMENT = 15
-const visibleLeadCounts = ref({})
 const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v2'
 const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // keep board visible across refreshes
 
@@ -2595,13 +2592,6 @@ function applyStagesWithLeadsResponse(response, params) {
     seedActivityAvatarCacheFromColumns(newData)
     syncStageOrderMapFromColumns(newData)
 
-    const nextCounts = {}
-    columns.value.forEach(col => {
-        const total = Array.isArray(col.leads) ? col.leads.length : 0
-        nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
-    })
-    visibleLeadCounts.value = nextCounts
-
     const newStagePagination = {}
     stagesData.forEach(stage => {
         newStagePagination[stage.id] = {
@@ -2769,14 +2759,6 @@ function loadCachedColumns() {
         }
         sortAllColumnLeads()
 
-        // Initialize visible counts based on cached data
-        const nextCounts = {}
-        columns.value.forEach(col => {
-            const total = Array.isArray(col.leads) ? col.leads.length : 0
-            nextCounts[col.status] = Math.min(INITIAL_VISIBLE_LEADS_PER_STAGE, total)
-        })
-        visibleLeadCounts.value = nextCounts
-
         loading.value = false
         error.value = null
         return true
@@ -2819,22 +2801,6 @@ if (!hadCachedBoard) {
     }
 }
 
-function getVisibleLeadCount(stageId) {
-    const current = visibleLeadCounts.value[stageId]
-    if (current == null) {
-        return INITIAL_VISIBLE_LEADS_PER_STAGE
-    }
-    return current
-}
-
-
-function loadMoreLeads(stageId) {
-    const current = getVisibleLeadCount(stageId)
-    visibleLeadCounts.value = {
-        ...visibleLeadCounts.value,
-        [stageId]: current + VISIBLE_LEADS_INCREMENT
-    }
-}
 async function fetchMoreLeadsFromApi(stageId) {
     // لو بتحمل حالياً، متعملش حاجة
     if (loadingMoreLeads.value[stageId]) return
@@ -2908,14 +2874,6 @@ async function fetchMoreLeadsFromApi(stageId) {
                 total: newPagination.total,
                 hasMorePages: newPagination.has_more_pages
             }
-        }
-        
-        // بعد ما تجيب الليدا الجديدة، زود العدد المرئي عشان تظهر
-        // لكن هنا أحنا ضفناها بالفعل للـ leads array، فمحتاجين نحدث visibleLeadCounts
-        const totalLeadsNow = columns.value[columnIndex].leads.length
-        visibleLeadCounts.value = {
-            ...visibleLeadCounts.value,
-            [stageId]: totalLeadsNow // خلي الكل مرئي
         }
         
     } catch (error) {
@@ -3547,9 +3505,6 @@ const formatMaskedQuestion = (questionData) => {
     
     return '—'
 }
-watch(cardFields, () => {
-    console.log('Card fields updated:', cardFields.value)
-}, { deep: true })
 let unsubscribeLeadViewUpdated = null
 
 onMounted(async () => {
@@ -3717,14 +3672,26 @@ const initializeLeadUpdates = () => {
         // Engine emits `lead.assignment.updated` on `private-lead-assignment` (immediate, small payload).
         // Kanban must subscribe here — `user.{id}` may omit sales users / dual-role admins for `lead.updated`.
         const assignmentChannel = window.Echo.private('lead-assignment')
-        assignmentChannel.listen('.lead.assignment.updated', () => {
+        assignmentChannel.listen('.lead.assignment.updated', (event) => {
+            const payload = normalizeLeadRealtimeEvent(event)
+            const leadId = payload?.lead_id
+            const assignedId = payload?.assigned_user_id
+            // This event has no card body. If the board card already shows that
+            // owner, lead.updated already patched it. Otherwise reload so the
+            // server decides visibility.
+            if (leadId && assignedId != null) {
+                const existing = findLeadInColumns(leadId)
+                if (existing && String(existing.responsible_person_id) === String(assignedId)) {
+                    return
+                }
+            }
             if (leadAssignmentBoardRefreshTimer.value) {
                 clearTimeout(leadAssignmentBoardRefreshTimer.value)
             }
             leadAssignmentBoardRefreshTimer.value = setTimeout(() => {
                 leadAssignmentBoardRefreshTimer.value = null
                 if (!isFetching.value) {
-                    fetchLeads(true)
+                    fetchLeads(true, undefined, { silent: true })
                 }
             }, 400)
         })
@@ -3755,6 +3722,9 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
     }
     
     if (!leadData || !leadData.id) {
+        if (!isFetching.value) {
+            fetchLeads(true, undefined, { silent: true })
+        }
         return
     }
 
@@ -4695,15 +4665,11 @@ async function goListNext() {
         return
     }
     if (!listHasMore.value) return
-    const needed = listPage.value * LIST_PAGE_SIZE + 1
-    let guard = 0
-    while (listRows.value.length < needed && listHasMore.value && guard < 20) {
-        guard += 1
-        const before = listRows.value.length
-        await loadNextListPage()
-        if (listRows.value.length <= before) break
+    const before = listRows.value.length
+    await loadNextListPage()
+    if (listRows.value.length > before && listPage.value < listPageCount.value) {
+        listPage.value += 1
     }
-    if (listPage.value < listPageCount.value) listPage.value += 1
 }
 
 function onKanbanContainerScroll() {

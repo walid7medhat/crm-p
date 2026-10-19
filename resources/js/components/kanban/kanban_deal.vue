@@ -77,6 +77,7 @@ import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import { useRoute, useRouter } from 'vue-router'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
+import { prefetchLeadPool } from '@/composables/leadPoolPrefetch.js'
 import { rememberCrmSection, CRM_SECTIONS, DEAL_TYPE_KEY } from '@/composables/useLayoutNavigation.js'
 
 // Split board + modals into separate chunks so first open of Leads or Deals
@@ -193,6 +194,7 @@ watch(activeTab, (id) => {
     persistKanbanTab(id)
     window.dispatchEvent(new CustomEvent('kanban-tab-change', { detail: id }))
     if (id === 'lead-pool') {
+        prefetchLeadPool()
         nextTick(() => markKanbanReady())
     }
 }, { immediate: true })

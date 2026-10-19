@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\LeadKanbanHeatCache;
 use App\Services\LeadTextSearch;
 use DB;
 use Illuminate\Support\Facades\Schema;
@@ -319,33 +320,7 @@ class StageController extends Controller
         // ================= analytics counts (chip totals, pre-heat-filter) =================
         // Skip during free-text search. For normal board refresh, cache briefly to avoid
         // re-scanning the full lead set on every page reload.
-        if ($isTextSearch || $skipSearchRanking) {
-            $leadAnalytics = [
-                'tempCold' => 0,
-                'tempWarm' => 0,
-                'tempHot' => 0,
-                'callAnswered' => 0,
-                'callNoAnswer' => 0,
-            ];
-        } else {
-            $heatCounts = (clone $baseLeadsQuery)
-                ->selectRaw(
-                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                    SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
-                    SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
-                    SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
-                    SUM(CASE WHEN stage_id = 5 AND interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
-                )
-                ->first();
-
-            $leadAnalytics = [
-                'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
-                'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
-                'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
-                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
-                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
-            ];
-        }
+        $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, $isTextSearch || $skipSearchRanking);
 
         // ================= apply heat chip filter (affects stage counts + lists only) =================
         if ($request->filled('heat')) {
@@ -463,6 +438,7 @@ class StageController extends Controller
             $leadsById = empty($allIds)
                 ? collect()
                 : Lead::query()
+                    ->select(KanbanLeadCardResource::cardSelect())
                     ->whereIn('id', $allIds)
                     ->with($kanbanEagerLoads)
                     ->get()
@@ -513,6 +489,7 @@ class StageController extends Controller
             $leadsById = empty($allIds)
                 ? collect()
                 : Lead::query()
+                    ->select(KanbanLeadCardResource::cardSelect())
                     ->whereIn('id', $allIds)
                     ->with($kanbanEagerLoads)
                     ->get()
@@ -600,34 +577,7 @@ class StageController extends Controller
 
             $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
             $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
-
-            if ($isTextSearch || $skipSearchRanking) {
-                $leadAnalytics = [
-                    'tempCold' => 0,
-                    'tempWarm' => 0,
-                    'tempHot' => 0,
-                    'callAnswered' => 0,
-                    'callNoAnswer' => 0,
-                ];
-            } else {
-                $heatCounts = (clone $baseLeadsQuery)
-                    ->selectRaw(
-                        "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
-                        SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
-                        SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
-                        SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
-                        SUM(CASE WHEN stage_id = 5 AND interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
-                    )
-                    ->first();
-
-                $leadAnalytics = [
-                    'tempCold'     => (int) ($heatCounts->temp_cold ?? 0),
-                    'tempWarm'     => (int) ($heatCounts->temp_warm ?? 0),
-                    'tempHot'      => (int) ($heatCounts->temp_hot ?? 0),
-                    'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
-                    'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
-                ];
-            }
+            $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, $isTextSearch || $skipSearchRanking);
 
             return ApiResponse::success($leadAnalytics, 'Lead analytics retrieved successfully');
         } catch (\Exception $e) {
@@ -847,6 +797,48 @@ class StageController extends Controller
     }
 
     /**
+     * Chip totals for the visible lead scope, before the heat chip is applied.
+     * Cached per user, role, branch permission, and the filters on this query.
+     * Search still returns zeros and is not cached.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $baseLeadsQuery
+     * @return array{tempCold: int, tempWarm: int, tempHot: int, callAnswered: int, callNoAnswer: int}
+     */
+    private function leadHeatAnalytics(Request $request, User $user, $baseLeadsQuery, bool $skip): array
+    {
+        $empty = [
+            'tempCold' => 0,
+            'tempWarm' => 0,
+            'tempHot' => 0,
+            'callAnswered' => 0,
+            'callNoAnswer' => 0,
+        ];
+        if ($skip) {
+            return $empty;
+        }
+
+        return LeadKanbanHeatCache::remember($user, $request, function () use ($baseLeadsQuery) {
+            $heatCounts = (clone $baseLeadsQuery)
+                ->selectRaw(
+                    "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                    SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
+                    SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                    SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                    SUM(CASE WHEN stage_id = 5 AND interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                )
+                ->first();
+
+            return [
+                'tempCold' => (int) ($heatCounts->temp_cold ?? 0),
+                'tempWarm' => (int) ($heatCounts->temp_warm ?? 0),
+                'tempHot' => (int) ($heatCounts->temp_hot ?? 0),
+                'callAnswered' => (int) ($heatCounts->call_answered ?? 0),
+                'callNoAnswer' => (int) ($heatCounts->call_no_answer ?? 0),
+            ];
+        });
+    }
+
+    /**
      * Load more leads for a specific stage (infinite scroll)
      */
     public function getMoreStageLeads(Request $request, Stage $stage): JsonResponse
@@ -856,7 +848,7 @@ class StageController extends Controller
             $perPage = (int) $request->get('per_page', 15);
             $page = $request->get('page', 1);
 
-            $leadsQuery = $stage->leads()->with([
+            $leadsQuery = $stage->leads()->select(KanbanLeadCardResource::cardSelect())->with([
                 'addedBy:id,name,display_name,avatar',
                 'responsiblePerson:id,name,display_name,avatar,parent_id',
                 'propertyType:id,name',

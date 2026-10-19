@@ -581,6 +581,7 @@ const mobileActionSheet = ref({
 
 // Real-time updates
 const echoListeners = ref([])
+let dealEchoInitTimer = null
 const pollingInterval = ref(null)
 const isFetching = ref(false)
 const pendingFetchDeals = ref(false)
@@ -1029,6 +1030,7 @@ const loadMoreDealsForColumn = async (column, reset = false) => {
     const newDeals = response.data.data || [];
     const total = response.data.total || 0;
     
+    let addedCount = newDeals.length
     if (reset) {
       // أول تحميل: استبدال الصفقات
       column.deals = newDeals;
@@ -1038,22 +1040,50 @@ const loadMoreDealsForColumn = async (column, reset = false) => {
       // نمنع تكرار الـ deals عن طريق الـ ID
       const existingIds = new Set(column.deals.map(d => d.id));
       const uniqueNewDeals = newDeals.filter(d => !existingIds.has(d.id));
+      addedCount = uniqueNewDeals.length
       column.deals.push(...uniqueNewDeals);
       column.currentPage = nextPage;
     }
     
     // تحديث عدد الصفقات الكلي
     column.deals_count = response.data.total || column.deals.length;
-    // تحديد إذا كان هناك المزيد من الصفقات للتحميل
-    column.hasMoreDeals = column.deals.length < total;
-    
+    // A page of ids we already have must not keep the sentinel requesting forever.
+    column.hasMoreDeals = addedCount > 0 && column.deals.length < total;
+    column.loadingMore = false;
+    scheduleSentinelLoad(column);
   } catch (error) {
     console.error(`Error loading deals for stage ${column.stage_id}:`, error);
     showNotification('Failed to load more deals', 'error');
-  } finally {
     column.loadingMore = false;
   }
 };
+
+function sentinelIsNearViewport(column) {
+  const sentinel = document.getElementById(`sentinel-${column.stage_id}`);
+  if (!sentinel) return false;
+  const rect = sentinel.getBoundingClientRect();
+  return rect.top < window.innerHeight + 100 && rect.bottom > 0;
+}
+
+function scheduleSentinelLoad(column) {
+  nextTick(() => {
+    if (!column.hasMoreDeals || column.loadingMore || loading.value) return;
+    if (sentinelIsNearViewport(column)) {
+      loadMoreDealsForColumn(column, false);
+    }
+  });
+}
+
+let infiniteObservers = [];
+
+function disconnectInfiniteObservers() {
+  infiniteObservers.forEach((observer) => observer.disconnect());
+  infiniteObservers = [];
+  if (window._infiniteObservers) {
+    window._infiniteObservers.forEach((observer) => observer.disconnect());
+    window._infiniteObservers = [];
+  }
+}
 
 async function executeFetchDeals() {
   if (abortController.value) {
@@ -1150,34 +1180,25 @@ async function executeFetchDeals() {
 
 const setupInfiniteScroll = () => {
   nextTick(() => {
-    if (window._infiniteObservers) {
-      window._infiniteObservers.forEach(observer => observer.disconnect());
-    }
-    
-    const observers = [];
-    
+    disconnectInfiniteObservers();
+
     columns.value.forEach((column) => {
-      const sentinelId = `sentinel-${column.stage_id}`;
-      const sentinel = document.getElementById(sentinelId);
-      
+      const sentinel = document.getElementById(`sentinel-${column.stage_id}`);
+
       if (sentinel && column.hasMoreDeals) {
         const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting && column.hasMoreDeals && !column.loadingMore && !loading.value) {
-              loadMoreDealsForColumn(column, false);
-            }
-          });
-        }, { 
+          if (entries.some((entry) => entry.isIntersecting) && column.hasMoreDeals && !column.loadingMore && !loading.value) {
+            loadMoreDealsForColumn(column, false);
+          }
+        }, {
           threshold: 0.1,
-          rootMargin: '0px 0px 100px 0px' // يبدأ التحميل قبل الوصول للنهاية بـ 100px
+          rootMargin: '0px 0px 100px 0px'
         });
-        
+
         observer.observe(sentinel);
-        observers.push(observer);
+        infiniteObservers.push(observer);
       }
     });
-    
-    window._infiniteObservers = observers;
   });
 };
 
@@ -1209,22 +1230,25 @@ async function switchTab(tabId) {
   window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: tabId }))
   emit('deal-type-change', tabId)
   
-  if (window._infiniteObservers) {
-    window._infiniteObservers.forEach(observer => observer.disconnect());
-    window._infiniteObservers = [];
-  }
-  
+  disconnectInfiniteObservers();
+
   await fetchDeals(true);
 }
 
 
 // Initialize real-time updates with Echo/Pusher
 const initializeDealUpdates = () => {
+  if (echoListeners.value.length > 0) {
+    return
+  }
+
   const user = JSON.parse(localStorage.getItem('user'))
   if (!user || !window.Echo) {
     startPolling()
     return
   }
+
+  stopPolling()
 
   try {
     const channel = window.Echo.private(`user.${user.id}`)
@@ -1253,7 +1277,10 @@ const handleDealUpdate = (event) => {
     dealData = dealData.data
   }
   
-  if (!dealData || !dealData.id) return
+  if (!dealData || !dealData.id) {
+    if (!isFetching.value) fetchDeals(true)
+    return
+  }
   
   switch (event.action_type) {
     case 'created':
@@ -2453,9 +2480,13 @@ const showNotification = (message, type = 'info') => {
     title: message
   })
 }
-watch(() => columns.value, () => {
+const infiniteScrollKey = computed(() =>
+  columns.value.map((column) => `${column.stage_id}:${column.hasMoreDeals ? 1 : 0}`).join('|')
+)
+
+watch(infiniteScrollKey, () => {
   setupInfiniteScroll();
-}, { deep: true, flush: 'post' });
+});
 
 // Lifecycle hooks
 onMounted(async () => {
@@ -2473,22 +2504,26 @@ onMounted(async () => {
     setupInfiniteScroll();
   });
   window.addEventListener('resize', updateScrollArrows);
-  setTimeout(() => {
+  window.addEventListener('echo-ready', initializeDealUpdates);
+  dealEchoInitTimer = setTimeout(() => {
     initializeDealUpdates();
   }, 1000);
 });
 
 onUnmounted(() => {
+  if (dealEchoInitTimer) {
+    clearTimeout(dealEchoInitTimer);
+    dealEchoInitTimer = null;
+  }
   resetMobilePressState();
   closeMobileActionSheet();
   onDealDragEnd();
   stopScroll();
   window.removeEventListener('resize', updateScrollArrows);
+  window.removeEventListener('echo-ready', initializeDealUpdates);
   window.removeEventListener('kanban-deal-type-change', onExternalDealTypeChange);
   cleanup();
-  if (window._infiniteObservers) {
-    window._infiniteObservers.forEach(observer => observer.disconnect());
-  }
+  disconnectInfiniteObservers();
 });
 
 // Watch for filter changes

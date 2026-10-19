@@ -7,6 +7,7 @@ use App\Models\Deal;
 use App\Models\LeadHistory;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use App\Http\Resources\Deal\Concerns\FormatsResponsiblePersonForDisplay;
 
 class DealResource extends JsonResource
@@ -36,7 +37,6 @@ class DealResource extends JsonResource
         static::$collectionPrimed = true;
 
         $dealIds = $collection->pluck('id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
-        $leadIds = $collection->pluck('lead_id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
 
         foreach ($dealIds as $dealId) {
             static::$assignmentHistoryByDealId[$dealId] = null;
@@ -46,45 +46,69 @@ class DealResource extends JsonResource
             return;
         }
 
+        $winners = static::latestAssignmentHistoryIds($dealIds);
+        if ($winners === []) {
+            return;
+        }
+
         $histories = LeadHistory::query()
             ->with([
-                'user:id,name,display_name,avatar,email,parent_id,status,background_id',
-                'user.background',
+                'user:id,name,display_name,avatar,email,parent_id,status,background_id,bitrix24_id',
+                'user.roles:id,name',
                 'user.parent:id,name,display_name,avatar,parent_id,status,background_id',
                 'user.parent.roles:id,name',
-                'user.parent.background',
-                'user.roles:id,name',
                 'user.employeeProfile.companyBranch:id,name',
                 'user.employeeProfile.designation:id,name',
-                'user.employeeProfile.department:id,name',
             ])
-            ->where('changes->action', 'assigned')
-            ->where(function ($q) use ($dealIds, $leadIds) {
-                $q->whereIn('deal_id', $dealIds);
-                if ($leadIds !== []) {
-                    $q->orWhereIn('lead_id', $leadIds);
-                }
-            })
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get();
+            ->whereIn('id', array_values(array_unique($winners)))
+            ->get()
+            ->keyBy('id');
 
-        foreach ($collection as $deal) {
-            $dealId = (int) $deal->id;
-            $leadId = $deal->lead_id ? (int) $deal->lead_id : null;
-
-            // Same selection order as histories()->...->orderBy(created_at desc)->first():
-            // prefer deal_id match, else lead_id match (when lead_id is set).
-            $match = $histories->first(function (LeadHistory $history) use ($dealId, $leadId) {
-                if ((int) $history->deal_id === $dealId) {
-                    return true;
-                }
-
-                return $leadId !== null && (int) $history->lead_id === $leadId;
-            });
-
-            static::$assignmentHistoryByDealId[$dealId] = $match;
+        foreach ($winners as $dealId => $historyId) {
+            static::$assignmentHistoryByDealId[$dealId] = $histories->get($historyId);
         }
+    }
+
+    /**
+     * Newest assigned history per deal.
+     * A row matches when its deal_id is the deal, or its lead_id is the deal's lead.
+     * Null lead ids do not match. Order is created_at desc, then id desc.
+     *
+     * @param  list<int>  $dealIds
+     * @return array<int, int> deal id => history id
+     */
+    private static function latestAssignmentHistoryIds(array $dealIds): array
+    {
+        if ($dealIds === []) {
+            return [];
+        }
+
+        $ranked = DB::table('deals')
+            ->join('lead_histories as lh', function ($join) {
+                $join->where(function ($match) {
+                    $match->whereColumn('lh.deal_id', 'deals.id')
+                        ->orWhere(function ($lead) {
+                            $lead->whereNotNull('deals.lead_id')
+                                ->whereColumn('lh.lead_id', 'deals.lead_id');
+                        });
+                })->whereNull('lh.deleted_at')
+                    ->where('lh.changes->action', 'assigned');
+            })
+            ->whereIn('deals.id', $dealIds)
+            ->select('deals.id as card_deal_id', 'lh.id as history_id')
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY deals.id ORDER BY lh.created_at DESC, lh.id DESC) as rn');
+
+        $rows = DB::query()
+            ->fromSub($ranked, 'ranked_assignment')
+            ->where('rn', 1)
+            ->get(['card_deal_id', 'history_id']);
+
+        $winners = [];
+        foreach ($rows as $row) {
+            $winners[(int) $row->card_deal_id] = (int) $row->history_id;
+        }
+
+        return $winners;
     }
 
     public static function clearCollectionPrime(): void
