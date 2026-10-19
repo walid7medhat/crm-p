@@ -907,14 +907,21 @@ aside.sidebar .sidebar-submenu li a {
 
 aside.sidebar .sidebar-menu li a:hover,
 aside.sidebar .sidebar-submenu li a:hover {
-  background: var(--gradient-primary) !important;
-  color: #ffffff !important;
+  background: #ffffff !important;
+  color: #171717 !important;
 }
 
 aside.sidebar .sidebar-menu li a:hover > span:not(.menu-count),
 aside.sidebar .sidebar-submenu li a:hover > span:not(.menu-count),
 aside.sidebar .sidebar-menu li a:hover .menu-icon,
 aside.sidebar .sidebar-submenu li a:hover .menu-icon,
+aside.sidebar .sidebar-menu li a:hover iconify-icon,
+aside.sidebar .sidebar-submenu li a:hover iconify-icon {
+  color: #171717 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 aside.sidebar .sidebar-menu li a.active > span:not(.menu-count),
 aside.sidebar .sidebar-submenu li a.active > span:not(.menu-count),
 aside.sidebar .sidebar-menu .nav-link.active-page > a > span:not(.menu-count),
@@ -924,9 +931,11 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a .menu-icon {
 }
 
 aside.sidebar .sidebar-menu li a:hover .imgicon,
-aside.sidebar .sidebar-submenu li a:hover .imgicon,
-aside.sidebar .sidebar-submenu__nested.open > a.active .imgicon,
-aside.sidebar .sidebar-submenu__nested.open > a:hover .imgicon {
+aside.sidebar .sidebar-submenu li a:hover .imgicon {
+  filter: brightness(0) saturate(100%) !important;
+}
+
+aside.sidebar .sidebar-submenu__nested.open > a.active .imgicon {
   filter: brightness(0) invert(1) !important;
 }
 

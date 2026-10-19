@@ -1,0 +1,541 @@
+/**
+ * Desktop sidebar motion. Loaded after the light shell so these rules can
+ * restore a few transitions the shell turns off. Mobile drawer styles stay put.
+ */
+
+@media (max-width: 768px) {
+  aside.sidebar .sidebar-surface {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 769px) {
+  aside.sidebar:not(.sidebar--mobile-drawer),
+  aside.sidebar:not(.sidebar--mobile-drawer).active,
+  aside.sidebar:not(.sidebar--mobile-drawer).active:hover,
+  aside.sidebar.sidebar--dashboard-home,
+  aside.sidebar.sidebar--dashboard-home.active:hover {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transition:
+      width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      min-width 280ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  aside.sidebar .sidebar-surface {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, #ffffff 0%, #f7f6f8 100%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 1px 2px rgba(23, 17, 40, 0.04),
+      0 18px 40px rgba(23, 17, 40, 0.08);
+  }
+
+  aside.sidebar .sidebar-surface::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  aside.sidebar .sidebar-surface .sidebar-menu-area {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  aside.sidebar > .sidebar-edge-toggle {
+    position: absolute !important;
+    top: 22px;
+    inset-inline-end: -13px;
+    z-index: 5 !important;
+    transition:
+      transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 160ms ease,
+      border-color 160ms ease !important;
+  }
+
+  aside.sidebar > .sidebar-edge-toggle:hover {
+    transform: scale(1.08) !important;
+    background: #ffffff !important;
+    border-color: #e7e5ee !important;
+  }
+
+  aside.sidebar > .sidebar-edge-toggle:active {
+    transform: scale(0.94) !important;
+  }
+
+  aside.sidebar > .sidebar-edge-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  aside.sidebar .sidebar-edge-toggle__icon {
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  aside.sidebar .sidebar-edge-toggle__icon.is-pointing-open {
+    transform: rotate(180deg) !important;
+  }
+
+  aside.sidebar .sidebar-brand,
+  aside.sidebar .sidebar-brand--collapsed {
+    justify-content: flex-start !important;
+    padding: 16px var(--sidebar-row-pad-x) 8px !important;
+  }
+
+  aside.sidebar .sidebar-brand__mark {
+    transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Keep icons on one column while the rail width changes. */
+  aside.sidebar.active .sidebar-menu > li > a,
+  aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link {
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding: var(--sidebar-row-pad-y) var(--sidebar-row-pad-x) !important;
+    gap: var(--sidebar-label-gap) !important;
+  }
+
+  aside.sidebar .sidebar-menu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar .sidebar-submenu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar .menu-label,
+  aside.sidebar .dropdown-arrow {
+    max-width: 12rem;
+    opacity: 1;
+    transition:
+      max-width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 140ms ease !important;
+  }
+
+  aside.sidebar.active .sidebar-menu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar.active:hover .sidebar-menu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar.active .sidebar-submenu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar.active:hover .sidebar-submenu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar.active .menu-label,
+  aside.sidebar.active:hover .menu-label,
+  aside.sidebar.active .dropdown-arrow,
+  aside.sidebar.active:hover .dropdown-arrow {
+    display: inline-block !important;
+    flex: 0 0 0px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+  }
+
+  aside.sidebar .sidebar-menu,
+  aside.sidebar .sidebar-submenu {
+    perspective: 900px;
+  }
+
+  aside.sidebar .sidebar-menu li a,
+  aside.sidebar .sidebar-submenu li a {
+    transform-origin: center center;
+    transition:
+      background-color 180ms ease,
+      color 160ms ease,
+      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  aside.sidebar .sidebar-menu li a:active,
+  aside.sidebar .sidebar-submenu li a:active,
+  aside.sidebar .sidebar-menu li a:hover:active,
+  aside.sidebar .sidebar-submenu li a:hover:active {
+    transform: translate3d(0, 0, 0) scale(0.98) !important;
+  }
+
+  aside.sidebar .sidebar-menu li a .imgicon,
+  aside.sidebar .sidebar-menu li a .menu-icon,
+  aside.sidebar .sidebar-submenu li a .imgicon,
+  aside.sidebar .sidebar-submenu li a .menu-icon {
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  aside.sidebar .sidebar-menu li a:hover,
+  aside.sidebar .sidebar-submenu li a:hover,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu li a:hover,
+  aside.sidebar.sidebar--dashboard-home .sidebar-submenu li a:hover {
+    background: #ffffff !important;
+    color: #171717 !important;
+    transform: translate3d(0, -3px, 0) rotateX(6deg) !important;
+    box-shadow:
+      inset 0 1px 0 #ffffff,
+      0 10px 18px rgba(23, 17, 40, 0.1),
+      0 2px 4px rgba(23, 17, 40, 0.05) !important;
+  }
+
+  aside.sidebar .sidebar-menu li a:hover > span:not(.menu-count),
+  aside.sidebar .sidebar-submenu li a:hover > span:not(.menu-count),
+  aside.sidebar .sidebar-menu li a:hover .menu-icon,
+  aside.sidebar .sidebar-submenu li a:hover .menu-icon,
+  aside.sidebar .sidebar-menu li a:hover iconify-icon,
+  aside.sidebar .sidebar-submenu li a:hover iconify-icon,
+  aside.sidebar .sidebar-menu li a:hover .menu-label,
+  aside.sidebar .sidebar-submenu li a:hover .menu-label,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu li a:hover > span:not(.menu-count),
+  aside.sidebar.sidebar--dashboard-home .sidebar-submenu li a:hover > span:not(.menu-count),
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu li a:hover .menu-icon,
+  aside.sidebar.sidebar--dashboard-home .sidebar-submenu li a:hover .menu-icon,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu li a:hover iconify-icon,
+  aside.sidebar.sidebar--dashboard-home .sidebar-submenu li a:hover iconify-icon {
+    color: #171717 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  aside.sidebar .sidebar-menu li a:hover .imgicon,
+  aside.sidebar .sidebar-submenu li a:hover .imgicon,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu li a:hover .imgicon,
+  aside.sidebar.sidebar--dashboard-home .sidebar-submenu li a:hover .imgicon {
+    filter: brightness(0) saturate(100%) !important;
+  }
+
+  aside.sidebar .sidebar-menu li a:hover .dropdown-arrow,
+  aside.sidebar .sidebar-submenu li a:hover .dropdown-arrow {
+    border-color: #9ca3af !important;
+  }
+
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active,
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active:hover,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link--dashboard.active,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link--dashboard.active:hover,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a:hover {
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    border: 1px solid transparent !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 8px 16px rgba(115, 62, 135, 0.22) !important;
+  }
+
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active:hover,
+  aside.sidebar.sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link--dashboard.active:hover,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a:hover {
+    transform: translate3d(0, -3px, 0) rotateX(6deg) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 14px 22px rgba(115, 62, 135, 0.3) !important;
+  }
+
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active > span:not(.menu-count),
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active:hover > span:not(.menu-count),
+  aside.sidebar .sidebar-menu .nav-link.active-page > a > span:not(.menu-count),
+  aside.sidebar .sidebar-menu .nav-link.active-page > a:hover > span:not(.menu-count),
+  aside.sidebar .sidebar-menu .nav-link.active-page > a .menu-label,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a:hover .menu-label,
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active .menu-icon,
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active:hover .menu-icon,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a .menu-icon,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a:hover .menu-icon {
+    color: #ffffff !important;
+  }
+
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active .imgicon,
+  aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active:hover .imgicon,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a .imgicon,
+  aside.sidebar .sidebar-menu .nav-link.active-page > a:hover .imgicon {
+    filter: brightness(0) invert(1) !important;
+  }
+
+  aside.sidebar .sidebar-menu > li.active-parent > a,
+  aside.sidebar .sidebar-menu > li.active-parent > a:hover,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a:hover,
+  aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a,
+  aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a:hover,
+  aside.sidebar .sidebar-submenu__nested.open > a,
+  aside.sidebar .sidebar-submenu__nested.open > a:hover,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a:hover {
+    background: #ffffff !important;
+    color: #171717 !important;
+    border: 1px solid transparent !important;
+    box-shadow:
+      inset 0 1px 0 #ffffff,
+      0 1px 2px rgba(17, 17, 17, 0.04),
+      0 8px 16px rgba(17, 17, 17, 0.06) !important;
+  }
+
+  aside.sidebar .sidebar-menu > li.active-parent > a:hover,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a:hover,
+  aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a:hover,
+  aside.sidebar .sidebar-submenu__nested.open > a:hover,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a:hover {
+    transform: translate3d(0, -3px, 0) rotateX(6deg) !important;
+  }
+
+  aside.sidebar .sidebar-menu > li.active-parent > a > span,
+  aside.sidebar .sidebar-menu > li.active-parent > a:hover > span,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a > span,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a:hover > span,
+  aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a > span,
+  aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a:hover > span,
+  aside.sidebar .sidebar-submenu__nested.open > a > span,
+  aside.sidebar .sidebar-submenu__nested.open > a:hover > span,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a > span,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a:hover > span,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a .menu-icon,
+  aside.sidebar .sidebar-menu > li.active-parent > a .menu-icon {
+    color: #171717 !important;
+    font-weight: 600 !important;
+  }
+
+  aside.sidebar .sidebar-menu > li.dropdown.open > a .imgicon,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a:hover .imgicon,
+  aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a .imgicon,
+  aside.sidebar .sidebar-menu > li.active-parent > a .imgicon,
+  aside.sidebar .sidebar-menu > li.active-parent > a:hover .imgicon,
+  aside.sidebar .sidebar-submenu__nested.open > a .imgicon,
+  aside.sidebar .sidebar-submenu__nested.open > a:hover .imgicon,
+  aside.sidebar .sidebar-submenu__nested.dropdown-open > a .imgicon {
+    filter: brightness(0) saturate(100%) !important;
+  }
+
+  aside.sidebar .sidebar-menu > li.dropdown.open > a .dropdown-arrow,
+  aside.sidebar .sidebar-menu > li.dropdown.open > a:hover .dropdown-arrow,
+  aside.sidebar .sidebar-submenu__nested.open > a .dropdown-arrow,
+  aside.sidebar .sidebar-submenu__nested.open > a:hover .dropdown-arrow {
+    border-color: #9ca3af !important;
+  }
+
+  .sidebar-menu li.dropdown > a::after {
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  aside.sidebar .sidebar-user,
+  aside.sidebar .sidebar-user--collapsed {
+    justify-content: flex-start !important;
+    margin: 8px 6px 12px !important;
+    padding: 8px 4px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f2f5 100%) !important;
+    border: 1px solid rgba(17, 17, 17, 0.04);
+    box-shadow:
+      inset 0 1px 0 #ffffff,
+      0 6px 14px rgba(17, 17, 17, 0.05);
+  }
+
+  aside.sidebar .menu-count.menu-count--pop {
+    animation: sidebar-count-pop 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+}
+
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+  aside.sidebar .sidebar-menu li a:hover .imgicon,
+  aside.sidebar .sidebar-menu li a:hover .menu-icon,
+  aside.sidebar .sidebar-submenu li a:hover .imgicon,
+  aside.sidebar .sidebar-submenu li a:hover .menu-icon {
+    transform: translate3d(0, -1px, 0) scale(1.14) !important;
+  }
+}
+
+@keyframes sidebar-count-pop {
+  from { transform: scale(0.86); }
+  to { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  aside.sidebar,
+  aside.sidebar .sidebar-surface,
+  aside.sidebar .sidebar-brand__mark,
+  aside.sidebar .sidebar-menu li a,
+  aside.sidebar .sidebar-submenu li a,
+  aside.sidebar .sidebar-menu li a > span,
+  aside.sidebar .menu-label,
+  aside.sidebar .dropdown-arrow,
+  aside.sidebar .sidebar-edge-toggle,
+  aside.sidebar .sidebar-edge-toggle__icon,
+  aside.sidebar .menu-count,
+  .sidebar-menu li.dropdown > a::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  aside.sidebar .sidebar-menu li a:hover,
+  aside.sidebar .sidebar-submenu li a:hover,
+  aside.sidebar .sidebar-menu li a:hover .imgicon,
+  aside.sidebar .sidebar-menu li a:hover .menu-icon,
+  aside.sidebar .sidebar-submenu li a:hover .imgicon,
+  aside.sidebar .sidebar-submenu li a:hover .menu-icon,
+  aside.sidebar .sidebar-menu li a:active,
+  aside.sidebar .sidebar-submenu li a:active,
+  aside.sidebar > .sidebar-edge-toggle:hover,
+  aside.sidebar > .sidebar-edge-toggle:active {
+    transform: none !important;
+  }
+
+  aside.sidebar .sidebar-edge-toggle__icon.is-pointing-open {
+    transform: rotate(180deg) !important;
+  }
+}
+
+/* Closed rail stays closed. The round button, or the logo, opens it. */
+@media (min-width: 769px) {
+  aside.sidebar.active,
+  aside.sidebar.active:hover,
+  aside.sidebar.sidebar.active:hover,
+  .sidebar.active:hover {
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+  }
+
+  aside.sidebar.active .sidebar-menu > li {
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  aside.sidebar.active .sidebar-menu > li > a,
+  aside.sidebar.active:hover .sidebar-menu > li > a,
+  aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link,
+  aside.sidebar.active:hover .sidebar-menu > li > a.sidebar-nav-link,
+  aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link.active,
+  aside.sidebar.active:hover .sidebar-menu > li > a.sidebar-nav-link.active,
+  aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link.active:hover,
+  aside.sidebar.active:hover .sidebar-menu > li > a.sidebar-nav-link.active:hover {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    margin: 2px auto !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  aside.sidebar.active .sidebar-menu li a:hover,
+  aside.sidebar.active:hover .sidebar-menu li a:hover,
+  aside.sidebar.active .sidebar-submenu li a:hover {
+    background: transparent !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  aside.sidebar.active .sidebar-menu li a:hover .imgicon,
+  aside.sidebar.active .sidebar-menu li a:hover .menu-icon,
+  aside.sidebar.active:hover .sidebar-menu li a:hover .imgicon,
+  aside.sidebar.active:hover .sidebar-menu li a:hover .menu-icon {
+    transform: none !important;
+  }
+
+  aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link.active,
+  aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link.active:hover,
+  aside.sidebar.active:hover .sidebar-menu > li > a.sidebar-nav-link.active,
+  aside.sidebar.active:hover .sidebar-menu > li > a.sidebar-nav-link.active:hover {
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  aside.sidebar.active .sidebar-menu > li.dropdown.open > a,
+  aside.sidebar.active .sidebar-menu > li.dropdown.open > a:hover,
+  aside.sidebar.active .sidebar-menu > li.dropdown.dropdown-open > a,
+  aside.sidebar.active .sidebar-menu > li.dropdown.dropdown-open > a:hover,
+  aside.sidebar.active .sidebar-menu > li.active-parent > a,
+  aside.sidebar.active .sidebar-menu > li.active-parent > a:hover,
+  aside.sidebar.active:hover .sidebar-menu > li.dropdown.open > a,
+  aside.sidebar.active:hover .sidebar-menu > li.active-parent > a {
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    border-color: transparent !important;
+  }
+
+  aside.sidebar.active .sidebar-submenu,
+  aside.sidebar.active:hover .sidebar-submenu,
+  aside.sidebar.active .sidebar-menu li.dropdown.open .sidebar-submenu,
+  aside.sidebar.active .sidebar-menu li.dropdown.dropdown-open .sidebar-submenu,
+  aside.sidebar.active:hover .sidebar-menu li.dropdown.open .sidebar-submenu,
+  aside.sidebar.active:hover .sidebar-menu li.dropdown.dropdown-open .sidebar-submenu {
+    display: none !important;
+  }
+
+  aside.sidebar.active .sidebar-menu li.dropdown > a::after,
+  aside.sidebar.active:hover .sidebar-menu li.dropdown > a::after {
+    display: none !important;
+  }
+
+  aside.sidebar.active .sidebar-brand,
+  aside.sidebar.active:hover .sidebar-brand,
+  aside.sidebar.active .sidebar-brand--collapsed,
+  aside.sidebar.active:hover .sidebar-brand--collapsed {
+    justify-content: center !important;
+    padding: 16px 0 10px !important;
+  }
+
+  aside.sidebar.active .sidebar-brand__mark,
+  aside.sidebar.active:hover .sidebar-brand--collapsed .sidebar-brand__mark {
+    width: 28px !important;
+    height: 26px !important;
+    flex: 0 0 28px !important;
+    overflow: hidden !important;
+  }
+
+  aside.sidebar.active .sidebar-brand__logo,
+  aside.sidebar.active:hover .sidebar-brand--collapsed .sidebar-brand__logo {
+    display: none !important;
+  }
+
+  aside.sidebar.active .sidebar-user,
+  aside.sidebar.active .sidebar-user--collapsed,
+  aside.sidebar.active:hover .sidebar-user {
+    justify-content: center !important;
+    margin: 8px 0 14px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  aside.sidebar.active > .sidebar-edge-toggle,
+  aside.sidebar.active:hover > .sidebar-edge-toggle {
+    width: 36px !important;
+    height: 36px !important;
+    top: 18px;
+    inset-inline-end: -16px;
+    background: #ffffff !important;
+    border: 1px solid #e6e4ec !important;
+    box-shadow: 0 6px 14px rgba(23, 17, 40, 0.14) !important;
+  }
+}

@@ -27,10 +27,31 @@
         <iconify-icon icon="lucide:x" />
       </button>
     </header>
+    <button
+      v-if="!isMobileViewport"
+      type="button"
+      class="sidebar-edge-toggle"
+      :aria-label="isSidebarActive ? 'Open menu' : 'Close menu'"
+      @pointerdown.stop
+      @click.stop="handleSidebarToggleClick"
+    >
+      <iconify-icon
+        icon="lucide:chevron-left"
+        class="sidebar-edge-toggle__icon"
+        :class="{ 'is-pointing-open': isSidebarActive }"
+      />
+    </button>
+    <div class="sidebar-surface">
     <div
       v-if="!isMobileViewport"
       class="sidebar-brand"
-      :class="{ 'sidebar-brand--collapsed': isSidebarActive }"
+      :class="{ 'sidebar-brand--collapsed': isSidebarActive, 'sidebar-brand--opens': isSidebarActive }"
+      :role="isSidebarActive ? 'button' : undefined"
+      :tabindex="isSidebarActive ? 0 : undefined"
+      :aria-label="isSidebarActive ? 'Open menu' : undefined"
+      @click="isSidebarActive && handleSidebarToggleClick()"
+      @keydown.enter.prevent="isSidebarActive && handleSidebarToggleClick()"
+      @keydown.space.prevent="isSidebarActive && handleSidebarToggleClick()"
     >
       <div class="sidebar-brand__mark">
         <img
@@ -39,15 +60,6 @@
           class="sidebar-brand__logo"
         />
       </div>
-      <button
-        type="button"
-        class="sidebar-edge-toggle"
-        :aria-label="isSidebarActive ? 'Open menu' : 'Close menu'"
-        @pointerdown.stop
-        @click.stop="handleSidebarToggleClick"
-      >
-        <iconify-icon :icon="isSidebarActive ? 'lucide:chevron-right' : 'lucide:chevron-left'" />
-      </button>
     </div>
     <!-- Menu -->
     <div class="sidebar-menu-area" @click="onMobileSidebarNavClick">
@@ -85,6 +97,7 @@
             <span>CRM</span>
             <span class="dropdown-arrow dropdown-arrow--crm" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
           <ul v-if="!isHr" v-show="activeDropdown === 'crm'" class="sidebar-submenu sidebar-submenu--crm">
             <li v-if="canShowLeadsTab" :class="['nav-link', { 'active-page': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }]">
               <a href="/kanban" class="sidebar-nav-link sidebar-nav-link--leads" @mouseenter="prefetchRoute('/kanban')" @click.prevent="goToCrmSection(CRM_SECTIONS.LEAD)">
@@ -113,6 +126,7 @@
                 <span>Listings</span>
                 <span class="dropdown-arrow dropdown-arrow--nested" :class="{ rotated: crmListingsExpanded }" />
               </a>
+              <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
               <ul v-if="crmListingsExpanded && !isMobileViewport" class="sidebar-submenu sidebar-submenu--grouped sidebar-submenu--nested">
                 <template v-for="section in listingsSidebarSections" :key="section.key">
                   <li v-if="section.key !== 'listings'" class="sidebar-submenu__heading sidebar-submenu__heading--with-icon">
@@ -138,12 +152,18 @@
                         alt=""
                       />
                       <span class="menu-label">{{ item.label }}</span>
-                      <span v-if="item.count > 0" class="menu-count">{{ item.count }}</span>
+                      <span
+                        v-if="item.count > 0"
+                        :key="item.count"
+                        class="menu-count"
+                        :class="{ 'menu-count--pop': poppedCountPaths[item.path] === item.count }"
+                      >{{ item.count }}</span>
                       <span v-else-if="countsLoading && item.count !== undefined" class="menu-count loading">…</span>
                     </a>
                   </li>
                 </template>
               </ul>
+              </transition>
             </li>
             <li
               v-else-if="showCrmListingsFlat"
@@ -155,6 +175,7 @@
               </a>
             </li>
           </ul>
+          </transition>
         </li>
 
         <li
@@ -171,6 +192,7 @@
             <span>Calculators</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'calculator' }" />
           </a>
+          <transition @before-enter="beforeEnter" @enter="enter" @after-enter="afterEnter" @before-leave="beforeLeave" @leave="leave" @after-leave="afterLeave">
           <ul v-show="activeDropdown === 'calculator'" class="sidebar-submenu sidebar-submenu--crm sidebar-submenu--calculator">
             <li
               v-for="item in calculatorMenuItems"
@@ -191,6 +213,7 @@
               </router-link>
             </li>
           </ul>
+          </transition>
         </li>
 
         <li v-if="isSuperAdmin || user.id === 186 || isHr">
@@ -401,6 +424,7 @@
         <span class="sidebar-user__label">Logged in</span>
         <span class="sidebar-user__name">{{ user.name }}</span>
       </span>
+    </div>
     </div>
 
     <!-- Mobile: Listings panel slides in front of the main menu -->
@@ -1267,6 +1291,34 @@ const listingsSidebarSections = computed(() =>
   })),
 );
 
+const poppedCountPaths = ref(Object.create(null));
+let previousCountMap = null;
+
+function countMapFromSections(sections) {
+  const map = Object.create(null);
+  for (const section of sections || []) {
+    for (const item of section.items || []) {
+      map[item.path] = item.count || 0;
+    }
+  }
+  return map;
+}
+
+watch(listingsSidebarSections, (sections) => {
+  const next = countMapFromSections(sections);
+  const popped = Object.create(null);
+  if (previousCountMap) {
+    const hadRealCounts = Object.values(previousCountMap).some((value) => value > 0);
+    if (hadRealCounts) {
+      for (const path of Object.keys(next)) {
+        if (next[path] !== previousCountMap[path]) popped[path] = next[path];
+      }
+    }
+  }
+  previousCountMap = next;
+  poppedCountPaths.value = popped;
+});
+
 function listingsSectionIcon(key) {
   const map = {
     listings: listingsIcon.value,
@@ -2030,44 +2082,108 @@ const handleMobileDrawerClose = () => {
   closeMobileMenu();
 };
 
-// Animation functions (تبقى كما هي)
+const SIDEBAR_MENU_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+function sidebarMotionOk() {
+  return typeof window === 'undefined' || !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function nextSidebarMotion(el) {
+  el._sidebarMotion = (el._sidebarMotion || 0) + 1;
+  return el._sidebarMotion;
+}
+
+function clearSidebarMotion(el) {
+  el.style.height = '';
+  el.style.opacity = '';
+  el.style.transition = '';
+  el.style.overflow = '';
+}
+
+function bindSidebarMotionEnd(el, fallbackMs, done) {
+  let settled = false;
+  const finish = (event) => {
+    if (settled) return;
+    if (event && event.target !== el) return;
+    if (event && event.propertyName !== 'height') return;
+    settled = true;
+    el.removeEventListener('transitionend', finish);
+    window.clearTimeout(timer);
+    done();
+  };
+  const timer = window.setTimeout(finish, fallbackMs);
+  el.addEventListener('transitionend', finish);
+  return finish;
+}
+
 function beforeEnter(el) {
+  if (!sidebarMotionOk()) return;
+  nextSidebarMotion(el);
   el.style.height = '0px';
   el.style.opacity = '0';
   el.style.overflow = 'hidden';
 }
 
-function enter(el) {
-  el.style.transition = 'height 0.18s ease';
-  el.style.height = el.scrollHeight + 'px';
-  el.style.opacity = '1';
+function enter(el, done) {
+  if (!sidebarMotionOk()) {
+    clearSidebarMotion(el);
+    done();
+    return;
+  }
+  const token = el._sidebarMotion;
+  el._sidebarPhaseToken = token;
+  el.style.transition = `height 220ms ${SIDEBAR_MENU_EASE}, opacity 160ms ease`;
+  const finish = bindSidebarMotionEnd(el, 320, done);
+  requestAnimationFrame(() => {
+    if (el._sidebarMotion !== token) {
+      finish();
+      return;
+    }
+    const target = el.scrollHeight;
+    if (!target) {
+      finish();
+      return;
+    }
+    el.style.height = `${target}px`;
+    el.style.opacity = '1';
+  });
 }
 
 function afterEnter(el) {
-  el.style.height = 'auto';
-  el.style.overflow = '';
-  el.style.transition = '';
+  if (el._sidebarPhaseToken !== el._sidebarMotion) return;
+  clearSidebarMotion(el);
 }
 
 function beforeLeave(el) {
-  el.style.height = el.scrollHeight + 'px';
+  if (!sidebarMotionOk()) return;
+  nextSidebarMotion(el);
+  el.style.height = `${el.scrollHeight}px`;
   el.style.opacity = '1';
   el.style.overflow = 'hidden';
 }
 
-function leave(el) {
-  el.style.transition = 'height 0.15s ease';
+function leave(el, done) {
+  if (!sidebarMotionOk()) {
+    done();
+    return;
+  }
+  const token = el._sidebarMotion;
+  el._sidebarPhaseToken = token;
+  el.style.transition = `height 180ms ${SIDEBAR_MENU_EASE}, opacity 140ms ease`;
+  const finish = bindSidebarMotionEnd(el, 280, done);
   requestAnimationFrame(() => {
+    if (el._sidebarMotion !== token) {
+      finish();
+      return;
+    }
     el.style.height = '0px';
     el.style.opacity = '0';
   });
 }
 
 function afterLeave(el) {
-  el.style.height = '';
-  el.style.opacity = '';
-  el.style.transition = '';
-  el.style.overflow = '';
+  if (el._sidebarPhaseToken !== el._sidebarMotion) return;
+  clearSidebarMotion(el);
 }
 
 function syncSidebarDropdownFromRoute() {
@@ -2213,7 +2329,7 @@ onUnmounted(() => {
   visibility: visible !important;
 }
 
-.sidebar-submenu__nested .sidebar-submenu--nested {
+.sidebar-submenu__nested:not(.open):not(.dropdown-open) .sidebar-submenu--nested:not(.v-leave-active):not(.v-enter-active) {
   display: none !important;
 }
 
@@ -2282,18 +2398,8 @@ aside.sidebar {
   display: none;
 }
 
-.sidebar.active:hover .sidebar-brand--collapsed .sidebar-brand__mark {
-  width: 86px;
-  height: auto;
-  flex: 0 0 auto;
-  background: none;
-}
-
-.sidebar.active:hover .sidebar-brand--collapsed .sidebar-brand__logo {
-  display: block;
-  width: 86px;
-  height: auto;
-  max-width: none;
+.sidebar-brand--opens {
+  cursor: pointer;
 }
 
 .sidebar-edge-toggle {
@@ -2428,17 +2534,8 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
   line-height: 1.25;
   font-weight: 500;
 }
-.sidebar:not(.active) .sidebar-submenu,
-.sidebar.active:hover .sidebar-submenu {
+.sidebar:not(.active) .sidebar-submenu {
   padding-inline-start: 14px;
-}
-/* Hovering a closed menu opens it so the labels can be read. */
-.sidebar.active:hover {
-  width: 11.75rem !important;
-  min-width: 11.75rem !important;
-  max-width: none !important;
-  background: #ffffff !important;
-  z-index: 1100 !important;
 }
 @media (max-width: 991px) {
   .sidebar.sidebar-open:not(.sidebar--mobile-drawer) {
@@ -2616,20 +2713,6 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 @media (min-width: 1200px) {
   .sidebar.active:hover {
     inset-inline-start: 0;
-    width: 11.75rem !important;
-    min-width: 11.75rem !important;
-  }
-}
-@media (min-width: 1400px) {
-  .sidebar.active:hover {
-    width: 11.75rem !important;
-    min-width: 11.75rem !important;
-  }
-}
-@media (min-width: 1650px) {
-  .sidebar.active:hover {
-    width: 11.75rem !important;
-    min-width: 11.75rem !important;
   }
 }
 
@@ -2747,8 +2830,8 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 }
 
 .menu-count.loading {
-  background: #9ca3af;
-  animation: pulse 1.5s infinite;
+  background: #e5e7eb;
+  color: #6b7280;
 }
 
 .sidebar-submenu .menu-count {
@@ -2824,15 +2907,19 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
 }
 
 .sidebar--dashboard-home .sidebar-menu li a:hover {
-  background: var(--gradient-primary) !important;
-  color: #ffffff !important;
+  background: #ffffff !important;
+  color: #171717 !important;
 }
 
 .sidebar--dashboard-home .sidebar-menu li a:hover span,
 .sidebar--dashboard-home .sidebar-submenu li a:hover span,
 .sidebar--dashboard-home .sidebar-menu li a:hover .menu-icon,
-.sidebar--dashboard-home .sidebar-submenu li a:hover .menu-icon {
-  color: #ffffff !important;
+.sidebar--dashboard-home .sidebar-submenu li a:hover .menu-icon,
+.sidebar--dashboard-home .sidebar-menu li a:hover iconify-icon,
+.sidebar--dashboard-home .sidebar-submenu li a:hover iconify-icon {
+  color: #171717 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .sidebar--dashboard-home .sidebar-menu li a {
@@ -2879,7 +2966,20 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
   opacity: 1;
 }
 
-.sidebar--dashboard-home .sidebar-menu li a:hover .imgicon {
+.sidebar--dashboard-home .sidebar-menu li a:hover .imgicon,
+.sidebar--dashboard-home .sidebar-submenu li a:hover .imgicon {
+  filter: brightness(0) saturate(100%) !important;
+  opacity: 1;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a.active:hover .menu-icon,
+.sidebar--dashboard-home .sidebar-menu li a.sidebar-nav-link.active:hover .menu-icon,
+.sidebar--dashboard-home .sidebar-menu .nav-link.active-page > a:hover .menu-icon {
+  color: #ffffff !important;
+}
+
+.sidebar--dashboard-home .sidebar-menu li a.active:hover .imgicon,
+.sidebar--dashboard-home .sidebar-menu .nav-link.active-page > a:hover .imgicon {
   filter: brightness(0) invert(1) !important;
   opacity: 1;
 }
@@ -2974,10 +3074,6 @@ aside.sidebar .sidebar-menu .nav-link.active-page > a::before {
   width: 100%;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
 .sidebar-logo
 {
   justify-content: space-between;
