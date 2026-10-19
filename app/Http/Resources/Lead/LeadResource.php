@@ -390,8 +390,8 @@ $branchName =
             'is_reverted' => ! is_null($this->revert),
             // branch_admin may edit any lead they can see (their branch) — except the
             // primary phone (can_edit_primary_phone; also stripped in LeadController::update).
-            'can_edit' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || $this->responsible_person_id == auth()->user()->id),
-            'can_edit_phone_email' => auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']),
+            'can_edit' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || $this->responsible_person_id == auth()->user()->id || (auth()->hasRole('sales') && auth->user()->is_listing_team)),
+            'can_edit_phone_email' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || (auth()->hasRole('sales') && auth->user()->is_listing_team)),
             'can_edit_primary_phone' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin']) || (auth()->hasRole('sales') && auth->user()->is_listing_team)),
             // Lead source: super_admin / admin / branch_admin only (enforced in LeadController::update).
             'can_edit_source' => auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']),
