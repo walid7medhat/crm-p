@@ -655,7 +655,7 @@ class StageController extends Controller
             if ((int) $stage->order === 1) {
                 $query->orderBy('leads.created_at', 'desc')->orderBy('leads.id', 'desc');
             } else {
-                $query->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+                $query->orderByRaw('COALESCE(bitrix24_last_activity_at) DESC');
             }
 
             $idsByStage[$stage->id] = $query->limit($limit)->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -1047,7 +1047,7 @@ class StageController extends Controller
                     ->orderBy('id', 'desc');
                 }else{
                     $leadsQuery
-                        ->orderByRaw('COALESCE(bitrix24_last_activity_at, created_at) DESC');
+                        ->orderByRaw('COALESCE(bitrix24_last_activity_at) DESC');
                         // ->orderBy('id', 'desc');
                 }
 
@@ -1107,42 +1107,6 @@ class StageController extends Controller
             return ApiResponse::error($e->getMessage());
         }
     }
-// public function getTeamsWithLeads(Request $request): JsonResponse
-// {
-//     try {
-//         $user = auth()->user();
-        
-//         if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
-//             return ApiResponse::error('Unauthorized', 403);
-//         }
-
-       
-//         $teams = User::whereHas('children', function($query) {
-//             // users who have at least one child/subordinate
-//         })
-//         ->whereIn('id',$user->getAllSubordinatesIds())
-//         ->where('id','!=',auth()->user()->id)
-//         ->withCount('children') 
-//         ->get()
-//         ->map(function($user) {
-//             $allSubordinates = $user->getAllSubordinatesIds();
-//             $teamSize = count($allSubordinates) - 1; 
-            
-//             return [
-//                 'id' => $user->id,
-//                 'name' => $user->name,
-//                 'email' => $user->email,
-//                 'team_size' => $teamSize,
-//                 'role' => $user->roles->pluck('name')->first()
-//             ];
-//         });
-
-//         return ApiResponse::success($teams, 'Teams fetched successfully');
-
-//     } catch (\Exception $e) {
-//         return ApiResponse::error($e->getMessage());
-//     }
-// }
 public function getTeamsWithLeads(Request $request): JsonResponse
 {
     try {
