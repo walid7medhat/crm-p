@@ -111,10 +111,22 @@
                                             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone[0] }}
                                             </div>
-                                            <div v-if="phoneDuplicateNote('work_phone')" class="phone-dup-note" role="status">
-                                                <iconify-icon icon="lucide:copy" class="phone-dup-note__icon" />
+                                           <div v-if="phoneDuplicateNote('work_phone')" class="phone-dup-note" role="status">
+                                            <iconify-icon icon="lucide:copy" class="phone-dup-note__icon" />
+                                            <div class="phone-dup-note__body">
                                                 <span>{{ phoneDuplicateNote('work_phone') }}</span>
+                                                <ul class="phone-dup-note__list">
+                                                    <li v-for="lead in phoneDuplicateLeads('work_phone')" :key="lead.id">
+                                                        <strong>{{ lead.responsible_person || 'Unassigned' }}</strong>
+                                                        <template v-if="lead.lead_name"> · {{ lead.lead_name }}</template>
+                                                        <template v-if="lead.stage"> · {{ lead.stage }}</template>
+                                                    </li>
+                                                </ul>
+                                                <span v-if="phoneDuplicateMore('work_phone')" class="phone-dup-note__more">
+                                                    +{{ phoneDuplicateMore('work_phone') }} more
+                                                </span>
                                             </div>
+                                        </div>
                                         </div>
                                         <div class="col">
                                             <label class="form-label-custom">Primary Email</label>
@@ -1613,15 +1625,21 @@ watch(selectedExistingClient, (client) => {
     }
 
     const phoneDuplicateNote = (field) => {
-        const dup = phoneDuplicates.value[field]
-        if (!dup?.count) return ''
-        const first = dup.leads?.[0]
-        const details = first
-            ? ` — latest: "${first.lead_name || 'Lead #' + first.id}"${first.stage ? ` (${first.stage}` : ''}${first.responsible_person ? `, ${first.responsible_person}` : ''}${first.stage ? ')' : ''}`
-            : ''
-            // ${details}
-        return `This phone already exists in ${dup.count} lead${dup.count > 1 ? 's' : ''}`
-    }
+            const dup = phoneDuplicates.value[field]
+            if (!dup?.count) return ''
+            return `This phone already exists in ${dup.count} lead${dup.count > 1 ? 's' : ''}`
+        }
+
+        const PHONE_DUP_VISIBLE = 2
+
+        const phoneDuplicateLeads = (field) =>
+            (phoneDuplicates.value[field]?.leads || []).slice(0, PHONE_DUP_VISIBLE)
+
+        const phoneDuplicateMore = (field) => {
+            const dup = phoneDuplicates.value[field]
+            if (!dup) return 0
+            return Math.max(0, dup.count - phoneDuplicateLeads(field).length)
+        }
 
     watch(() => form.value.work_phone, () => checkPhoneDuplicates('work_phone'))
     watch(() => form.value.work_phone_2, () => checkPhoneDuplicates('work_phone_2'))
@@ -3567,6 +3585,25 @@ watch(selectedExistingClient, (client) => {
     body > .vs__dropdown-menu {
         z-index: 13000 !important;
         background: #fff;
+    }
+    .phone-dup-note__body {
+        min-width: 0;
+    }
+
+    .phone-dup-note__list {
+        margin: 4px 0 0;
+        padding-left: 16px;
+        list-style: disc;
+    }
+
+    .phone-dup-note__list li {
+        word-break: break-word;
+    }
+
+    .phone-dup-note__more {
+        display: block;
+        margin-top: 2px;
+        font-weight: 600;
     }
     </style>
     
