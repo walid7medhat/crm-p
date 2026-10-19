@@ -1,5 +1,5 @@
 <template>
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--mobile-stage': kanbanIsMobile && mobileListFilterStageId !== MOBILE_FILTER_ALL, 'kanban-outer--searching': showKanbanSearchOverlay, 'kanban-outer--list': boardView === 'list' }">
+    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile, 'kanban-outer--mobile-stage': kanbanIsMobile && mobileListFilterStageId !== MOBILE_FILTER_ALL, 'kanban-outer--searching': showKanbanSearchOverlay, 'kanban-outer--list': boardView === 'list', 'is-lead-dragging': isLeadDragging }">
         <div
             v-if="showKanbanSearchOverlay"
             class="kanban-search-overlay"
@@ -152,7 +152,6 @@
             class="kanban-container"
             :class="{ 'kanban-container--list': boardView === 'list' }"
             @scroll="onKanbanContainerScroll"
-            @dragover.prevent="onContainerDragOver"
         >
         <!-- Error state -->
         <div v-if="error && columns.length === 0 && !loading" class="kanban-empty-state kanban-error-state">
@@ -264,21 +263,33 @@
                                 <!-- Tasks -->
                                 <draggable
                                     v-model="column.leads"
-                                    :group="'tasks'"
+                                    :group="leadDragGroup"
                                     item-key="id"
                                     class="tasks-list flex-grow-1"
                                     :data-stage-id="column.status"
                                     :ghost-class="'ghost'"
                                     :drag-class="'dragging'"
-                                    :disabled="kanbanIsMobile"
+                                    :chosen-class="'kanban-card-chosen'"
+                                    :fallback-class="'kanban-card-fallback'"
+                                    :disabled="leadCardDragDisabled"
                                     :move="canDragLeadToColumn"
-                                    :force-fallback="kanbanIsMobile"
-                                    :delay="200"
+                                    :force-fallback="true"
+                                    :fallback-on-body="true"
+                                    :fallback-tolerance="3"
+                                    :fallback-offset="leadDragFallbackOffset"
+                                    :animation="150"
+                                    easing="cubic-bezier(0.2, 0, 0, 1)"
+                                    :delay="140"
                                     :delay-on-touch-only="true"
+                                    :touch-start-threshold="8"
+                                    :empty-insert-threshold="48"
+                                    :swap-threshold="0.65"
+                                    direction="vertical"
                                     :scroll="true"
                                     :bubble-scroll="true"
-                                    :scroll-sensitivity="220"
-                                    :scroll-speed="22"
+                                    :scroll-sensitivity="72"
+                                    :scroll-speed="12"
+                                    :filter="'.lead-card-check, .duplicate-badge, .person-hover-anchor, a, button, input, textarea, select'"
                                     @start="onLeadDragStart"
                                     @end="onLeadDragEnd"
                                     @change="(evt) => onLeadDragChange(evt, column)"
@@ -300,7 +311,7 @@
                                                 @touchcancel="clearMobileLongPress"
                                                 @contextmenu="onMobileCardContextMenu"
                                                 @pointermove="onLeadCardTilt"
-                                                @pointerdown="onLeadCardTiltDown"
+                                                @pointerdown="onLeadCardPointerDown"
                                                 @pointerup="onLeadCardTiltUp"
                                                 @pointerleave="releaseLeadCardTilt($event.currentTarget)"
                                                 @pointercancel="releaseLeadCardTilt($event.currentTarget)"
@@ -1246,10 +1257,12 @@ import leadsIcon from '@/assets/images/kanban/leads-icon.png'
 import avatar2 from '@/assets/images/users/user2.png'
 import LeadSourceMark from './LeadSourceMark.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
+import StageChangeReasonModal from './StageChangeReasonModal.vue'
 const DuplicateLeadsModal = defineAsyncComponent(() => import('./DuplicateLeadsModal.vue'))
-const StageChangeReasonModal = defineAsyncComponent(() => import('./StageChangeReasonModal.vue'))
-const ConvertLeadModal = defineAsyncComponent(() => import('./ConvertLeadModal.vue'))
+const convertLeadModalLoader = () => import('./ConvertLeadModal.vue')
+const ConvertLeadModal = defineAsyncComponent(convertLeadModalLoader)
 const ProfilePopup = defineAsyncComponent(() => import('../shared/ProfilePopup.vue'))
+convertLeadModalLoader()
 
 
 import api, { getApiErrorMessage } from '@/plugins/axios'
@@ -2127,10 +2140,31 @@ const leadsPerPage = ref(15)
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
 const isLeadDragging = ref(false)
-const dragPointerX = ref(null)
-let dragAutoScrollRaf = null
-const DRAG_SCROLL_EDGE_THRESHOLD = 220
-const DRAG_SCROLL_MAX_SPEED = 10
+let dragGestureStartedAt = 0
+let dragDropAt = 0
+
+// One visible phone column cannot accept a cross-stage drop. All-stages
+// (and every desktop/tablet width) keeps the real drag path.
+const leadCardDragDisabled = computed(() => {
+    if (!kanbanIsMobile.value) return false
+    return mobileListFilterStageId.value !== MOBILE_FILTER_ALL
+})
+const leadDragGroup = { name: 'tasks', pull: true, put: true }
+const leadDragFallbackOffset = { x: 0, y: 0 }
+
+function noteDragMetric(patch) {
+    if (typeof window === 'undefined') return
+    const previous = window.__kanbanLeadDragMetrics || {}
+    window.__kanbanLeadDragMetrics = { ...previous, ...patch, at: Date.now() }
+}
+
+function onLeadCardPointerDown(event) {
+    const card = event.currentTarget
+    const id = Number(card?.getAttribute?.('data-lead-id'))
+    if (id && motionHeld[id]) cancelLeadMotion(id)
+    dragGestureStartedAt = performance.now()
+    onLeadCardTiltDown(event)
+}
 
 function updateScrollArrows() {
     const el = kanbanContainerRef.value
@@ -2210,59 +2244,6 @@ function stopListScroll() {
     }
 }
 
-function onGlobalPointerMove(event) {
-    const x = event?.touches?.[0]?.clientX ?? event?.clientX
-    if (typeof x === 'number') {
-        dragPointerX.value = x
-    }
-}
-
-function onContainerDragOver(event) {
-    if (!isLeadDragging.value) return
-    const x = event?.clientX
-    if (typeof x === 'number') {
-        dragPointerX.value = x
-    }
-}
-
-function onGlobalDragOver(event) {
-    if (!isLeadDragging.value) return
-    const x = event?.clientX
-    if (typeof x === 'number') {
-        dragPointerX.value = x
-    }
-}
-
-function stepDragAutoScroll() {
-    if (!isLeadDragging.value) {
-        dragAutoScrollRaf = null
-        return
-    }
-
-    const container = kanbanContainerRef.value
-    if (container && typeof dragPointerX.value === 'number') {
-        const rect = container.getBoundingClientRect()
-        const threshold = DRAG_SCROLL_EDGE_THRESHOLD
-        const maxSpeed = DRAG_SCROLL_MAX_SPEED
-        let delta = 0
-
-        if (dragPointerX.value < rect.left + threshold) {
-            const ratio = Math.min(1, (rect.left + threshold - dragPointerX.value) / threshold)
-            delta = -Math.ceil(maxSpeed * ratio)
-        } else if (dragPointerX.value > rect.right - threshold) {
-            const ratio = Math.min(1, (dragPointerX.value - (rect.right - threshold)) / threshold)
-            delta = Math.ceil(maxSpeed * ratio)
-        }
-
-        if (delta !== 0) {
-            container.scrollLeft += delta
-            updateScrollArrows()
-        }
-    }
-
-    dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
-}
-
 function stageNameKey(column) {
     return String(column?.title || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 }
@@ -2306,12 +2287,35 @@ function markPackDropTargets(active) {
     })
 }
 
+function polishDragFallback(source) {
+    const fallback = document.querySelector('.kanban-card-fallback')
+    if (!fallback) return
+    fallback.classList.remove('is-tilting', 'is-pressed', 'is-releasing', 'kanban-card--settle', 'kanban-card--motion-hold', 'ghost', 'kanban-card-chosen')
+    fallback.style.transition = 'none'
+    fallback.style.animation = 'none'
+    fallback.style.opacity = '1'
+    ;['--rx', '--ry', '--px', '--py', '--lz', '--gx', '--gy'].forEach((name) => fallback.style.removeProperty(name))
+    if (source?.classList?.contains('lead-pack-drag')) {
+        fallback.classList.add('lead-pack-drag')
+        const count = source.getAttribute('data-pack-count')
+        if (count) fallback.setAttribute('data-pack-count', count)
+    }
+}
+
 function onLeadDragStart(event) {
     noteLeadDragOrigin(event)
+    clearTimeout(leadCardClickTimer)
+    clearMobileLongPress()
     isLeadDragging.value = true
     const item = event?.item
+    const draggedId = Number(item?.getAttribute?.('data-lead-id'))
+    if (draggedId && motionHeld[draggedId]) cancelLeadMotion(draggedId)
     releaseLeadCardTilt(item)
     mountLeadDragImage(event)
+    const now = performance.now()
+    noteDragMetric({
+        pointerToDragMs: dragGestureStartedAt ? Math.round(now - dragGestureStartedAt) : 0,
+    })
     if (leadSelectionActive.value && item) {
         const from = columnFromDragList(event.from)
         const count = isNewLeadColumn(from)
@@ -2323,39 +2327,24 @@ function onLeadDragStart(event) {
             markPackDropTargets(true)
         }
     }
-    onGlobalPointerMove(event?.originalEvent || event)
-
-    document.addEventListener('pointermove', onGlobalPointerMove, { passive: true })
-    document.addEventListener('mousemove', onGlobalPointerMove, { passive: true })
-    document.addEventListener('touchmove', onGlobalPointerMove, { passive: true })
-    document.addEventListener('dragover', onGlobalDragOver)
-
-    if (!dragAutoScrollRaf) {
-        dragAutoScrollRaf = requestAnimationFrame(stepDragAutoScroll)
-    }
+    polishDragFallback(item)
 }
 
 function onLeadDragEnd(event) {
     clearLeadDragImage()
+    if (event?.item?.style?.willChange) event.item.style.willChange = ''
     settleLeadCard(event?.item)
     isLeadDragging.value = false
-    dragPointerX.value = null
+    dragDropAt = performance.now()
+    noteDragMetric({
+        gestureMs: dragGestureStartedAt ? Math.round(dragDropAt - dragGestureStartedAt) : null,
+    })
     document.querySelectorAll('.lead-pack-drag').forEach((el) => {
         el.classList.remove('lead-pack-drag')
         el.removeAttribute('data-pack-count')
     })
     markPackDropTargets(false)
     stopScroll()
-
-    document.removeEventListener('pointermove', onGlobalPointerMove)
-    document.removeEventListener('mousemove', onGlobalPointerMove)
-    document.removeEventListener('touchmove', onGlobalPointerMove)
-    document.removeEventListener('dragover', onGlobalDragOver)
-
-    if (dragAutoScrollRaf) {
-        cancelAnimationFrame(dragAutoScrollRaf)
-        dragAutoScrollRaf = null
-    }
 }
 
 const echoListeners = ref([])
@@ -5208,8 +5197,34 @@ async function moveSelectedLeadsToAssign(draggedLead, sourceColumn, targetColumn
     window.$showNotification?.(moving.length === 1 ? 'Lead moved to Assign.' : `${moving.length} leads moved to Assign.`, 'success')
 }
 
+function revertLeadDrop(lead, sourceColumn, newStageId) {
+    if (!sourceColumn || !lead) return
+    const sameId = (left, right) => String(left) === String(right)
+    const targetColumnIndex = columns.value.findIndex(c => sameId(c.status, newStageId))
+    if (targetColumnIndex !== -1) {
+        columns.value[targetColumnIndex].leads =
+            columns.value[targetColumnIndex].leads.filter(l => !l || !sameId(l.id, lead.id))
+    }
+    restoreLeadToColumn(sourceColumn, lead)
+}
+
+function openStageRequirementModal(payload, missingFields) {
+    if (showStageChangeModal.value) return false
+    pendingStageChange.value = payload
+    missingFieldsForLead.value = missingFields
+    showStageChangeModal.value = true
+    const dropAt = dragDropAt || performance.now()
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            noteDragMetric({ dropToModalPaintMs: Math.round(performance.now() - dropAt) })
+        })
+    })
+    return true
+}
+
 async function onLeadDragChange(evt, column) {
     if (evt.added) {
+        dragDropAt = performance.now()
         const lead = evt.added.element
         const newStageId = column.status
         if (leadSelectionActive.value && isLeadSelected(lead.id)) {
@@ -5257,20 +5272,15 @@ async function onLeadDragChange(evt, column) {
         const isMovingToContacted = targetStageName.includes('contacted')
         const isSalutationMissing = !lead.salutation || lead.salutation === ''
 
-        console.log('Lead drag change:', { 
-            leadId: lead.id, 
-            newStageId, 
-            newStageOrder,
-            leadData: lead,
-            isMovingToContacted,
-            isSalutationMissing
-        })
-
-        // [NEW] Check if moving to Contacted and salutation is missing
         if (isMovingToContacted && isSalutationMissing) {
-            console.log('Moving to Contacted stage but salutation is missing. Showing modal.')
-            
-            pendingStageChange.value = {
+            if (showStageChangeModal.value) {
+                revertLeadDrop(lead, sourceColumn, newStageId)
+                $showNotification('Finish the open stage change before moving another lead', 'info')
+                return
+            }
+            beginLeadMove(lead.id)
+            revertLeadDrop(lead, sourceColumn, newStageId)
+            openStageRequirementModal({
                 leadId: lead.id,
                 targetStageId: newStageId,
                 targetStageName: column.title,
@@ -5278,30 +5288,20 @@ async function onLeadDragChange(evt, column) {
                 originalStageId: lead.stage_id,
                 leadData: { ...lead },
                 isConversion: false,
-                interactionMode: true // or false? Based on your modal, interactionMode shows call results. Set to false to show reason field.
-            }
-            beginLeadMove(lead.id)
-            // Specify that 'salutation' is the missing field
-            missingFieldsForLead.value = ['salutation']
-
-            // Revert the drag and drop UI change
-            if (sourceColumn) {
-                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-                if (targetColumnIndex !== -1) {
-                    columns.value[targetColumnIndex].leads =
-                        columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-                }
-                restoreLeadToColumn(sourceColumn, lead)
-            }
-
-            await nextTick()
-            showStageChangeModal.value = true
+                interactionMode: true,
+            }, ['salutation'])
             return
         }
 
         if (isAssignToFollowUpOrContacted) {
+            if (showStageChangeModal.value) {
+                revertLeadDrop(lead, sourceColumn, newStageId)
+                $showNotification('Finish the open stage change before moving another lead', 'info')
+                return
+            }
             beginLeadMove(lead.id)
-            pendingStageChange.value = {
+            revertLeadDrop(lead, sourceColumn, newStageId)
+            openStageRequirementModal({
                 leadId: lead.id,
                 targetStageId: newStageId,
                 targetStageName: column.title,
@@ -5309,21 +5309,8 @@ async function onLeadDragChange(evt, column) {
                 originalStageId: lead.stage_id,
                 leadData: { ...lead },
                 isConversion: false,
-                interactionMode: true
-            }
-            missingFieldsForLead.value = []
-
-            if (sourceColumn) {
-                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-                if (targetColumnIndex !== -1) {
-                    columns.value[targetColumnIndex].leads =
-                        columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-                }
-                restoreLeadToColumn(sourceColumn, lead)
-            }
-
-            await nextTick()
-            showStageChangeModal.value = true
+                interactionMode: true,
+            }, [])
             return
         }
 
@@ -5350,43 +5337,27 @@ async function onLeadDragChange(evt, column) {
                 return !value || value === '' || value === null || value === undefined
             })
             if (!missingFields.includes('status_lead')) missingFields.push('status_lead')
-            console.log('Conversion - Missing fields:', missingFields)
-            
+
             if (missingFields.length > 0) {
-                console.log('Showing modal to complete missing fields for conversion')
+                if (showStageChangeModal.value) {
+                    revertLeadDrop(lead, sourceColumn, newStageId)
+                    $showNotification('Finish the open stage change before moving another lead', 'info')
+                    return
+                }
                 beginLeadMove(lead.id)
-                
-                pendingStageChange.value = {
+                revertLeadDrop(lead, sourceColumn, newStageId)
+                openStageRequirementModal({
                     leadId: lead.id,
                     targetStageId: newStageId,
                     targetStageName: column.title,
                     targetStageOrder: newStageOrder,
                     originalStageId: lead.stage_id,
                     leadData: { ...lead },
-                    isConversion: true
-                }
-                
-                missingFieldsForLead.value = missingFields
-                
-                // إرجاع الـ lead للمرحلة السابقة
-                const sourceColumn = columns.value.find(c => String(c.status) === String(lead.stage_id))
-                if (sourceColumn) {
-                    const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-                    if (targetColumnIndex !== -1) {
-                        columns.value[targetColumnIndex].leads =
-                            columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-                    }
-                    
-                    restoreLeadToColumn(sourceColumn, lead)
-                }
-                
-                await nextTick()
-                showStageChangeModal.value = true
+                    isConversion: true,
+                }, missingFields)
                 return
             }
-            
-            // جميع البيانات موجودة، انتقل إلى التحويل
-            console.log('All data complete, showing conversion modal')
+
             beginLeadMove(lead.id)
             selectedLeadForConversion.value = lead?.id || lead?.lead_id || null
             selectedLeadData.value = lead
@@ -5433,38 +5404,26 @@ async function onLeadDragChange(evt, column) {
                 }
             }
         if (fieldsToShow.length > 0 || [3,4,5,7,8,9,10].includes(newStageOrder)) {
-            console.log('Showing modal for stage order:', newStageOrder, 'Missing fields:', leadMissingFields)
+            if (showStageChangeModal.value) {
+                revertLeadDrop(lead, sourceColumn, newStageId)
+                $showNotification('Finish the open stage change before moving another lead', 'info')
+                return
+            }
             beginLeadMove(lead.id)
-            
-            pendingStageChange.value = {
+            revertLeadDrop(lead, sourceColumn, newStageId)
+            openStageRequirementModal({
                 leadId: lead.id,
                 targetStageId: newStageId,
                 targetStageName: column.title,
                 targetStageOrder: newStageOrder,
                 originalStageId: lead.stage_id,
                 leadData: { ...lead },
-                isConversion: false
-            }
-            
-            missingFieldsForLead.value = fieldsToShow
-            
-            const sourceColumn = columns.value.find(c => String(c.status) === String(lead.stage_id))
-            if (sourceColumn) {
-                const targetColumnIndex = columns.value.findIndex(c => c.status === newStageId)
-                if (targetColumnIndex !== -1) {
-                    columns.value[targetColumnIndex].leads =
-                        columns.value[targetColumnIndex].leads.filter(l => l.id !== lead.id)
-                }
-                
-                restoreLeadToColumn(sourceColumn, lead)
-            }
-            
-            await nextTick()
-            showStageChangeModal.value = true
+                isConversion: false,
+            }, fieldsToShow)
             return
         }
-        
-        await moveLeadWithStageChange(lead, newStageId)
+
+        void moveLeadWithStageChange(lead, newStageId)
     }
 }
 
@@ -5525,9 +5484,11 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
         motionPlayed = true
     }
     try {
+        const apiStarted = performance.now()
         const response = await api.post(`/leads/${lead.id}/change-stage`, {
             stage_id: newStageId
         })
+        noteDragMetric({ stageApiMs: Math.round(performance.now() - apiStarted) })
         if (!isLatestLeadMove(lead.id, token)) {
             rememberSupersededStage(lead.id, newStageId)
             return
@@ -5560,19 +5521,23 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
         if (!isLatestLeadMove(lead.id, token)) return
         consumeSupersededStage(lead.id)
         if (motionArmed) cancelLeadMotion(lead.id)
-        // Revert the UI change if API fails - only refetch if not already fetching
-        if (!isFetching.value) {
-            await fetchLeads(true) // Immediate refetch on error
+        const originalStageId = oldLeadSnapshot.stage_id
+        Object.assign(lead, oldLeadSnapshot)
+        lead.stage_id = originalStageId
+        const restored = settleLeadOnBoard(lead, originalStageId)
+        if (!restored && !isFetching.value) {
+            await fetchLeads(true)
         }
-        $showNotification('Failed to move lead', 'error')
+        const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || 'Failed to move lead'
+        $showNotification(errorMessage, 'error')
     }
 }
 
 
 
 async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...additionalData }) {
-    console.log('handleStageChangeWithReason called:', { leadId, targetStageId, reason, additionalData })
-
     const lead = pendingStageChange.value?.leadData
     if (!lead) {
         console.error('No lead data found')
@@ -5698,7 +5663,9 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
 
         // Fire API in background; reconcile lightly / revert on failure.
         try {
+            const apiStarted = performance.now()
             const response = await api.post(`/leads/${leadId}/change-stage`, payload)
+            noteDragMetric({ stageApiMs: Math.round(performance.now() - apiStarted) })
             if (!isLatestLeadMove(leadId, moveToken)) {
                 rememberSupersededStage(leadId, targetStageId)
                 return
@@ -6904,10 +6871,9 @@ const fetchRevertNotifications = async () => {
     /* transform: translate3d(var(--px), var(--py), 0) rotateX(var(--rx)) rotateY(var(--ry)); */
     transform-style: preserve-3d;
     transition:
-        transform 0.48s cubic-bezier(0.22, 1, 0.36, 1),
-        box-shadow 0.48s cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 0.48s ease,
-        scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+        box-shadow 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.16s ease,
+        scale 0.12s cubic-bezier(0.22, 1, 0.36, 1);
     --tilt-strength: 0.2;  /* قلله أكتر لو لسه كبير */
     --max-tilt: 2deg;      /* أقصى ميل حتى لو الماوس في الطرف */
     --max-shift: 2px;      /* أقصى إزاحة */
@@ -6966,8 +6932,12 @@ const fetchRevertNotifications = async () => {
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting {
-        transition: transform 45ms linear, scale 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: transform 45ms linear, scale 0.12s cubic-bezier(0.22, 1, 0.36, 1);
         will-change: transform;
+    }
+
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost) {
+        transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, border-color 0.16s ease;
     }
 
     .kanban-card.lead-priority-hot-border:hover,
@@ -7007,7 +6977,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card:focus-visible {
-    outline: 2px solid #FAA300;
+    outline: 2px solid var(--color-primary, #733E87);
     outline-offset: 2px;
 }
 
@@ -7020,13 +6990,12 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card--settle {
-    animation: kanban-card-drop 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: kanban-card-drop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes kanban-card-drop {
-    0% { transform: translate3d(0, -8px, 0) rotateX(4deg) scale(1.012); }
-    70% { transform: translate3d(0, 1px, 0) rotateX(-0.6deg) scale(0.998); }
-    100% { transform: translate3d(0, 0, 0) rotateX(0deg) scale(1); }
+    0% { transform: translate3d(0, -4px, 0) scale(1.01); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
 .kanban-card--drag-image {
@@ -7105,9 +7074,10 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card .task-title {
-    font-size: 13px !important;
+    font-size: 13.5px !important;
     font-weight: 700 !important;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
 }
 
 .kanban-card .task-title:hover {
@@ -7120,11 +7090,14 @@ const fetchRevertNotifications = async () => {
 .kanban-card .info-label {
     color: #8b8798 !important;
     font-size: 10px !important;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
 }
 
 .kanban-card .info-value {
     color: #353535 !important;
-    font-size: 11px !important;
+    font-size: 12px !important;
+    line-height: 1.35;
 }
 
 .cursor-pointer {
@@ -7372,17 +7345,27 @@ const fetchRevertNotifications = async () => {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     font-family: Montserrat;
     perspective: 1100px;
     perspective-origin: 50% 20%;
 }
 
+.tasks-list > .kanban-card {
+    margin-bottom: 0 !important;
+}
+
 /* Draggable styles */
 .tasks-list:has(.ghost) {
     border-radius: 12px;
-    background: rgba(1, 6, 45, 0.035);
-    box-shadow: inset 0 0 0 1px rgba(250, 163, 0, 0.55);
+    background: rgba(var(--color-primary-rgb), 0.05);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--color-primary-rgb), 0.34);
+    transition: background 80ms ease, box-shadow 80ms ease;
+}
+
+.kanban-column:has(.tasks-list .ghost) .column-content-scrollable {
+    background: rgba(var(--color-primary-rgb), 0.035);
+    box-shadow: inset 0 0 0 1px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .ghost {
@@ -7409,9 +7392,8 @@ const fetchRevertNotifications = async () => {
 .dragging {
     cursor: grabbing;
     z-index: 4;
-    transform: rotate(1.25deg) scale(1.015);
     box-shadow: 0 14px 28px rgba(1, 6, 45, 0.16) !important;
-    transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 140ms ease;
+    transition: none;
 }
 
 .kanban-card.dragging.lead-pack-drag {
@@ -7424,12 +7406,35 @@ const fetchRevertNotifications = async () => {
 
 .kanban-card.dragging {
     z-index: 6;
-    transform: translate3d(0, -8px, 0) rotateX(6deg) rotate(-1.2deg) scale(1.015);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.96),
-        0 16px 24px -16px rgba(1, 6, 45, 0.3),
-        0 0 0 1px rgba(250, 163, 0, 0.32) !important;
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+        0 22px 36px -18px rgba(1, 6, 45, 0.42),
+        0 8px 16px -12px rgba(var(--color-primary-rgb), 0.35),
+        0 0 0 1px rgba(var(--color-primary-rgb), 0.28) !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.kanban-card.kanban-card-fallback,
+.kanban-card.sortable-fallback {
+    opacity: 1 !important;
+    cursor: grabbing;
+    pointer-events: none !important;
+    touch-action: none;
+    border-color: rgba(var(--color-primary-rgb), 0.45) !important;
+    border-radius: 14px !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.96),
+        0 2px 4px rgba(1, 6, 45, 0.06),
+        0 24px 40px -18px rgba(1, 6, 45, 0.46),
+        0 10px 18px -12px rgba(var(--color-primary-rgb), 0.38) !important;
+    transition: none !important;
+    animation: none !important;
+    will-change: transform;
+}
+
+.kanban-card-chosen:not(.ghost) {
+    border-color: rgba(var(--color-primary-rgb), 0.4) !important;
 }
 
 .lead-pack-drag {

@@ -12,6 +12,7 @@
             </div>
             
             <div class="modal-body">
+                <p v-if="lookupsLoading && needsLookups" class="stage-change-lookup-status">Loading lists…</p>
                 <!-- Reason Section -->
                 <div v-if="!mandatory && (interactionMode || targetStageOrder !== 6)" class="mb-4 box-shadow">
                     <template v-if="interactionMode">
@@ -982,7 +983,6 @@ const isPlotsOrLand = computed(() => {
     if (!selectedType) return false;
     
     const typeName = selectedType.text.toLowerCase();
-    console.log(typeName);
     return typeName.includes('plots') || typeName.includes('land');
 });
 // Add this computed property
@@ -1280,7 +1280,19 @@ const formData = ref({
 
 })
 
-const loadLookupData = async () => {
+const lookupsLoading = ref(false)
+let lookupsLoaded = false
+let lookupsPromise = null
+
+const needsLookups = computed(() => {
+    const fields = props.missingFields || []
+    return fields.includes('area_id') || fields.includes('property_type_id')
+})
+
+const loadLookupData = () => {
+    if (lookupsLoaded) return Promise.resolve()
+    if (lookupsPromise) return lookupsPromise
+
     const unwrapList = (payload) => {
         if (Array.isArray(payload)) return payload
         if (Array.isArray(payload?.data)) return payload.data
@@ -1288,27 +1300,52 @@ const loadLookupData = async () => {
         return []
     }
 
+    lookupsLoading.value = true
     // Load independently so a slow/failing areas call does not blank property types.
     // Use has_listings=true — same fast path as Create Lead / Lead Info.
-    const loadAreas = api.get('/listings/areas', { params: { has_listings: true } })
-        .then((areasRes) => {
-            areas.value = unwrapList(areasRes.data?.data ?? areasRes.data)
-        })
-        .catch((error) => {
-            console.error('Error loading areas:', error)
-            areas.value = []
-        })
+    lookupsPromise = Promise.all([
+        api.get('/listings/areas', { params: { has_listings: true } })
+            .then((areasRes) => {
+                areas.value = unwrapList(areasRes.data?.data ?? areasRes.data)
+            })
+            .catch((error) => {
+                console.error('Error loading areas:', error)
+                areas.value = []
+            }),
+        api.get('/listings/property-types')
+            .then((typesRes) => {
+                propertyTypes.value = unwrapList(typesRes.data?.data ?? typesRes.data)
+            })
+            .catch((error) => {
+                console.error('Error loading property types:', error)
+                propertyTypes.value = []
+            }),
+    ]).then(() => {
+        lookupsLoaded = areas.value.length > 0 || propertyTypes.value.length > 0
+    }).finally(() => {
+        lookupsLoading.value = false
+        lookupsPromise = null
+    })
 
-    const loadTypes = api.get('/listings/property-types')
-        .then((typesRes) => {
-            propertyTypes.value = unwrapList(typesRes.data?.data ?? typesRes.data)
-        })
-        .catch((error) => {
-            console.error('Error loading property types:', error)
-            propertyTypes.value = []
-        })
+    return lookupsPromise
+}
 
-    await Promise.all([loadAreas, loadTypes])
+function focusFirstOpenField() {
+    if (props.interactionMode) {
+        const button = callResultGridRef.value?.querySelector?.('button')
+        button?.focus?.({ preventScroll: true })
+        return
+    }
+    if (Number(props.targetStageOrder) === 6 && props.missingFields?.includes('deal_name')) {
+        dealNameInputRef.value?.focus?.({ preventScroll: true })
+        return
+    }
+    if (!props.mandatory && Number(props.targetStageOrder) !== 6) {
+        reasonInputRef.value?.focus?.({ preventScroll: true })
+        return
+    }
+    const first = (props.missingFields || []).find(Boolean)
+    if (first) focusField(first)
 }
 
 const closeModal = (arg) => {
@@ -1723,6 +1760,7 @@ watch(visible, (newVal) => {
             // إذا لم يوجد lead data وكانت المرحلة 6، اجعل القيمة 'converted'
             formData.value.lead_status = 'converted'
         }
+        nextTick(() => focusFirstOpenField())
     }
 }, { immediate: true })
 const calculatePosition = (dropdownList, component, { width }) => {
@@ -1734,7 +1772,9 @@ const calculatePosition = (dropdownList, component, { width }) => {
     dropdownList.style.zIndex = '15000'
 }
 onMounted(() => {
-    console.log(props.targetStageOrder);
+    const warmLookups = () => loadLookupData()
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(warmLookups, { timeout: 1200 })
+    else setTimeout(warmLookups, 400)
     // Capture phase: several triggers in this form (reminder, date-time, the budget
     // trigger itself) use @click.stop, which would otherwise stop the click before
     // it ever reaches this document listener, leaving the budget/reminder popups
@@ -1759,6 +1799,13 @@ defineExpose({
 </script>
 
 <style scoped>
+.stage-change-lookup-status {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #64748b;
+}
+
 .client-req-order {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
