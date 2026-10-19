@@ -594,10 +594,11 @@ protected function resolveOriginalBranch(): ?string
             'office_name' => $hierarchy['office_name'],
             'role_name' => $roleName ? ucwords(str_replace('_', ' ', $roleName)) : null,
             'branch' => $branchName,
-            'branch_name' => $branchName,
+            'branch_name' => User::resolveDisplayName($user->getBranchNode()),
             'position' => $user->employeeProfile?->designation?->name,
             'bitrix24_id' => $user->bitrix24_id,
             'is_external' => false,
+
         ];
     }
 

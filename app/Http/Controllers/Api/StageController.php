@@ -303,7 +303,7 @@ class StageController extends Controller
 
         // ================= base leads query with permissions =================
         $kanbanEagerLoads = [
-            'addedBy:id,name,display_name,avatar',
+            'addedBy:id,name,display_name,avatar,status,parent_id',
             // parent_id: needed by KanbanLeadCardResource to resolve reports-to/branch (parent/admin_parent/office chain).
             'responsiblePerson:id,name,display_name,avatar,parent_id',
             'propertyType:id,name',
@@ -849,7 +849,7 @@ class StageController extends Controller
             $page = $request->get('page', 1);
 
             $leadsQuery = $stage->leads()->select(KanbanLeadCardResource::cardSelect())->with([
-                'addedBy:id,name,display_name,avatar',
+                'addedBy:id,name,display_name,avatar,status,parent_id',
                 'responsiblePerson:id,name,display_name,avatar,parent_id',
                 'propertyType:id,name',
                 'area:id,name',
@@ -1265,7 +1265,7 @@ public function getOffices()
         try {
             $user = auth()->user();
             
-            $leadsQuery = $stage->leads()->with(['responsiblePerson:id,name,display_name,email', 'addedBy:id,name,display_name']);
+            $leadsQuery = $stage->leads()->with(['responsiblePerson:id,name,display_name,email', 'addedBy:id,name,display_name,status,parent_id']);
             
             // Apply lead visibility based on user role
             if (!($user->hasRole('super_admin') || $user->hasRole('admin'))) {

@@ -103,9 +103,11 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             return null;
         }
 
-        return filled($user->display_name)
+         $name= filled($user->display_name)
             ? $user->display_name
             : static::shortName($user->name);
+        return $name === null ? null : \Illuminate\Support\Str::title($name);
+
     }
 
     /**

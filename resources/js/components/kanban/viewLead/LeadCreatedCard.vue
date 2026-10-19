@@ -158,16 +158,40 @@ const branch = computed(() => {
 })
 const branchOffice=computed(() => props.lead?.office_branch ||  '—')
 const source = computed(() => props.lead?.lead_source || null)
-const creatorName = computed(() => props.lead?.added_by_user?.name || '—')
-const creatorId = computed(() => props.lead?.added_by_user?.id || '—')
-const creatorAvatar = computed(() => props.lead?.added_by_user?.avatar || null)
+const creator = computed(() => props.lead?.added_by_user || null)
+
+const creatorInactive = computed(() => {
+    const s = creator.value?.status
+    if (s === undefined || s === null || s === '') return false
+    return !(s === 'active' || s === 1 || s === '1' || s === true)
+})
+
+const creatorBranchName = computed(() => {
+    const u = creator.value
+    const value = u?.branch_name || u?.admin_parent_name || u?.office_name || props.lead?.original_branch || null
+    return value ? String(value).replace(/\b\w/g, (c) => c.toUpperCase()) : null
+})
+
+// Inactive creator: show the branch instead of the name
+const creatorName = computed(() => {
+    if (creatorInactive.value) return creatorBranchName.value || '—'
+    return creator.value?.name || '—'
+})
+
 const creatorRole = computed(() => {
-    const role = props.lead?.added_by_user?.role_name
+    if (creatorInactive.value) return null
+    const role = creator.value?.role_name
     if (!role) return null
     return String(role).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 })
-const creatorManager = computed(() => props.lead?.added_by_user?.parent_name || null)
-const creatorBranch = computed(() => props.lead?.added_by_user?.office_name || null)
+
+const creatorManager = computed(() => (creatorInactive.value ? null : creator.value?.parent_name || null))
+
+const creatorBranch = computed(() => creatorBranchName.value)
+const creatorId = computed(() => props.lead?.added_by_user?.id || '—')
+const creatorAvatar = computed(() => props.lead?.added_by_user?.avatar || null)
+
+
 const creatorTooltip = computed(() => creatorName.value !== '—' ? `Created by ${creatorName.value}` : 'Created by')
 const showCreatorCard = ref(false)
 </script>

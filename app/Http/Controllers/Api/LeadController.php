@@ -572,7 +572,7 @@ class LeadController extends Controller
             $lead->loadMissing([
                 'stage:id,name,order,color',
                 'responsiblePerson:id,name,display_name,email,avatar,status',
-                'addedBy:id,name,display_name,email,avatar,status',
+                'addedBy:id,name,display_name,email,avatar,status,parent_id',
                 'propertyType:id,name',
                 'area:id,name',
             ]);
@@ -611,7 +611,7 @@ class LeadController extends Controller
             $data = (new LeadResource($lead->load([
                 'stage',
                 'addedBy.roles:id,name',
-                'addedBy.parent:id,name,display_name,avatar',
+                'addedBy.parent:id,name,display_name,avatar,parent_id',
                 'addedBy.employeeProfile.companyBranch:id,name',
                 'addedBy.employeeProfile.designation:id,name',
                 'responsiblePerson.roles:id,name',
@@ -1482,7 +1482,7 @@ class LeadController extends Controller
 
             $query = Lead::onlyTrashed()
                 ->with([
-                    'addedBy:id,name,display_name,avatar',
+                    'addedBy:id,name,display_name,avatar,status,parent_id',
                     'responsiblePerson:id,name,display_name,avatar',
                     'stage:id,name',
                 ])
@@ -1531,7 +1531,7 @@ class LeadController extends Controller
             return ApiResponse::success(
                 new LeadResource($lead->load([
                     'stage',
-                    'addedBy.roles:id,name',
+                    'addedBy.roles:id,name,status,avatar,parent_id',
                     'addedBy.parent:id,name,display_name,avatar',
                     'addedBy.employeeProfile.companyBranch:id,name',
                     'addedBy.employeeProfile.designation:id,name',

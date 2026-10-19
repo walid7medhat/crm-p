@@ -322,7 +322,7 @@ class KanbanLeadCardResource extends JsonResource
             'duplicate_no' => $duplicateNo,
             'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
-            'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
+            'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatCreatorUser($this->addedBy)),
              'responsible_person' => $this->formatLeadPoolUser($this->responsiblePerson),
             'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,
@@ -359,7 +359,28 @@ class KanbanLeadCardResource extends JsonResource
 
         return static::$hierarchyCache[$user->id];
     }
+    /**
+     * Creator payload for the card. Inactive creators also carry their branch
+     * (taken from the user hierarchy), because the card shows the branch instead of the name.
+     */
+    protected function formatCreatorUser($user): ?array
+    {
+        $payload = $this->formatLeadPoolUser($user);
+        if (! $payload) {
+            return null;
+        }
 
+        if ($user->status !== 'active') {
+            $hierarchy = $this->resolveHierarchy($user);
+
+            $payload['branch_name'] = $hierarchy['admin_parent_name']
+                ?? \App\Models\User::resolveDisplayName($user->getBranchNode());
+            $payload['office_name'] = $hierarchy['office_name'];
+            $payload['admin_parent_name'] = $hierarchy['admin_parent_name'];
+        }
+
+        return $payload;
+    }
     protected function formatLeadPoolUser($user, bool $withHierarchy = false): ?array
     {
         if (! $user) {
@@ -373,6 +394,7 @@ class KanbanLeadCardResource extends JsonResource
             'email' => $user->email,
             'avatar' => $user->avatar ? asset('storage/'.$user->avatar) : null,
             'status' => $user->status,
+        
         ];
 
         if ($withHierarchy) {
@@ -383,6 +405,7 @@ class KanbanLeadCardResource extends JsonResource
             $payload['admin_parent_id'] = $hierarchy['admin_parent_id'];
             $payload['admin_parent_name'] = $hierarchy['admin_parent_name'];
             $payload['office_name'] = $hierarchy['office_name'];
+            
         }
 
         return $payload;

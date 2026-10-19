@@ -3239,8 +3239,25 @@ const isPersonHoverVisible = (task, type) => {
     return activePersonHover.value?.leadId === task?.id && activePersonHover.value?.type === type
 }
 
+const isCreatorInactive = (task) => {
+    const u = task?.added_by_user
+    return !!(u && typeof u === 'object' && u.status && u.status !== 'active')
+}
+
 const getCreatedByDisplay = (task) => {
     const u = task?.added_by_user
+    console.log('CREATED BY', task?.id, JSON.stringify(u))
+
+    if (isCreatorInactive(task)) {
+        return (
+            u.branch_name ||
+            u.office_name ||
+            u.admin_parent_name ||
+            task?.lead_branch_source ||
+            '—'
+        )
+    }
+
     if (u?.name) return u.name
     if (typeof u === 'string' && u.trim()) return u.trim()
     if (task?.added_by != null && task?.added_by !== '') {
@@ -3248,7 +3265,6 @@ const getCreatedByDisplay = (task) => {
     }
     return '—'
 }
-
 const hasDynamicFieldValue = (task, key) => {
     if (key === 'created_by') {
         return !!(
