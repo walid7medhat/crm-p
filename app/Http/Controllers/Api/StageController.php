@@ -655,7 +655,8 @@ class StageController extends Controller
             if ((int) $stage->order === 1) {
                 $query->orderBy('leads.created_at', 'desc')->orderBy('leads.id', 'desc');
             } else {
-                $query->orderByRaw('COALESCE(bitrix24_last_activity_at) DESC');
+                $query->orderBy('leads.bitrix24_last_activity_at', 'desc')
+                        ->orderBy('leads.id', 'desc');
             }
 
             $idsByStage[$stage->id] = $query->limit($limit)->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -1046,9 +1047,9 @@ class StageController extends Controller
                     ->orderBy('created_at', 'desc')
                     ->orderBy('id', 'desc');
                 }else{
-                    $leadsQuery
-                        ->orderByRaw('COALESCE(bitrix24_last_activity_at) DESC');
-                        // ->orderBy('id', 'desc');
+                   
+                    $leadsQuery->orderBy('leads.bitrix24_last_activity_at', 'desc')
+                    ->orderBy('leads.id', 'desc');
                 }
 
             $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
