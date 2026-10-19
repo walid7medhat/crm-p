@@ -194,7 +194,6 @@
                 <ul v-if="members.length" class="mk-reassign__list">
                   <li v-for="m in members" :key="m.id">
                     <button type="button" :class="{ 'is-on': reassignTo === m.id }" :disabled="busy" @click="reassignTo = m.id">
-                      <MkAvatar :user="m" :size="28" />
                       <span>{{ m.name }}</span>
                       <iconify-icon v-if="reassignTo === m.id" icon="lucide:check" />
                     </button>
@@ -621,7 +620,8 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  min-height: 42px;
+  padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   background: #fff;
@@ -633,7 +633,7 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   border-color: #7c3aed;
   background: #f6f1fc;
 }
-.mk-reassign__list span { flex: 1; min-width: 0; }
+.mk-reassign__list span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mk-reassign__list iconify-icon { color: #7c3aed; }
 .mk-reassign .mk-btn { align-self: flex-start; }
 
