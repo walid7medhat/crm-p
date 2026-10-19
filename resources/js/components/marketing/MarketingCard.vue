@@ -13,10 +13,18 @@
       </span>
       <span class="mk-card__dot" :style="{ background: tagColor }" />
       <h6 class="mk-card__title">{{ task.title }}</h6>
+      <span v-if="task.source_task_id" class="mk-card__origin">Content</span>
       <span v-if="scheduled" class="mk-card__scheduled">Scheduled</span>
     </div>
 
+    <img v-if="task.reference_image_url" class="mk-card__ref" :src="task.reference_image_url" alt="Reference" />
+
     <p v-if="task.category === 'content' && task.notes" class="mk-card__note">{{ task.notes }}</p>
+
+    <div v-if="task.category === 'content' && (task.designer || task.also_video)" class="mk-card__chips">
+      <span v-if="task.designer" class="mk-chiplet">Design</span>
+      <span v-if="task.also_video" class="mk-chiplet mk-chiplet--video">Video</span>
+    </div>
 
     <div v-if="task.category === 'design' && task.deliverables?.length" class="mk-card__chips">
       <span v-for="d in task.deliverables" :key="d" class="mk-chiplet">{{ DELIVERABLES[d]?.label || d }}</span>
@@ -41,6 +49,10 @@
         <template v-if="task.category === 'production'">
           <MkAvatar v-if="task.shooter" :user="task.shooter" :size="26" />
           <MkAvatar v-if="task.editor && task.editor.id !== task.shooter?.id" :user="task.editor" :size="26" />
+        </template>
+        <template v-else-if="task.category === 'content'">
+          <MkAvatar v-if="task.assignee" :user="task.assignee" :size="26" />
+          <MkAvatar v-if="task.designer && task.designer.id !== task.assignee?.id" :user="task.designer" :size="26" />
         </template>
         <MkAvatar v-else-if="task.assignee" :user="task.assignee" :size="26" />
       </div>
@@ -107,6 +119,27 @@ const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(pr
   background: #fff3d1;
   border: 1px solid #f0d48a;
 }
+.mk-card__origin {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #0f766e;
+  background: #e7f6f4;
+  border: 1px solid #b7e4de;
+}
+.mk-card__ref {
+  display: block;
+  width: calc(100% - 24px);
+  height: 96px;
+  margin: 10px 0 0 24px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f6f4f8;
+}
+.mk-chiplet--video { color: #9f1239; background: #ffe4e6; }
 
 .mk-card__top { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
 .mk-card__check {

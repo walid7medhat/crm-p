@@ -76,7 +76,7 @@ class MarketingNotifier
     /** Assignee, shooter, editor and creator of the card — minus whoever acted. */
     private static function cardPeople(MarketingTask $task, ?User $actor)
     {
-        $ids = collect([$task->assigned_to, $task->shooting_by, $task->editing_by, $task->created_by])
+        $ids = collect([$task->assigned_to, $task->designed_by, $task->shooting_by, $task->editing_by, $task->created_by])
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->unique()

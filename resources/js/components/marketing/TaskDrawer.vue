@@ -79,6 +79,18 @@
                     <MkAvatar :user="task.assignee" :size="40" />
                     <div><small>{{ task.category === 'design' ? 'Designer' : 'Assigned to' }}</small><b>{{ task.assignee?.name || '—' }}</b></div>
                   </div>
+                  <div v-if="task.category === 'content'" class="mk-person">
+                    <MkAvatar :user="task.designer" :size="40" badge="lucide:palette" badge-color="#7c3aed" />
+                    <div><small>Designer</small><b>{{ task.designer?.name || '—' }}</b></div>
+                  </div>
+                </div>
+
+                <div v-if="task.category === 'content' && (task.designer || task.also_video)" class="mk-also">
+                  <span v-if="task.designer" class="mk-pill" style="--pill: #7c3aed">Also on Design</span>
+                  <span v-if="task.also_video" class="mk-pill" style="--pill: #C2416B">Also on Video</span>
+                </div>
+                <div v-else-if="task.source_task_id" class="mk-also">
+                  <span class="mk-pill" style="--pill: #0d9488">Also on Content</span>
                 </div>
 
                 <div v-if="task.category === 'production'" class="mk-details__block">
@@ -111,9 +123,12 @@
                   <div v-if="task.is_approved"><dt>Approved by</dt><dd>{{ task.approved_by }} · {{ timeAgo(task.approved_at) }}</dd></div>
                 </dl>
 
-                <div v-if="task.reference" class="mk-details__block">
+                <div v-if="task.reference || task.reference_image_url" class="mk-details__block">
                   <span class="mk-label">Reference</span>
-                  <p class="mk-details__text" v-html="linkify(task.reference)" />
+                  <a v-if="task.reference_image_url" class="mk-ref-shot" :href="task.reference_image_url" target="_blank" rel="noopener">
+                    <img :src="task.reference_image_url" alt="Reference image" />
+                  </a>
+                  <p v-if="task.reference" class="mk-details__text" v-html="linkify(task.reference)" />
                 </div>
                 <div v-if="task.notes" class="mk-details__block">
                   <span class="mk-label">{{ task.category === 'content' ? 'Note / tag' : 'Notes' }}</span>
@@ -510,6 +525,17 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 }
 .mk-details__grid dt { font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary-light); }
 .mk-details__grid dd { margin: 2px 0 0; font-size: 14px !important; font-weight: 600 !important; }
+.mk-also { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 18px; }
+.mk-ref-shot { display: block; margin-bottom: 8px; }
+.mk-ref-shot img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #f0eef4;
+  background: #f6f4f8;
+}
 .mk-details__text { margin: 0; font-size: 14px !important; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
 .mk-details__text :deep(a) { color: var(--color-primary); }
 .mk-posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

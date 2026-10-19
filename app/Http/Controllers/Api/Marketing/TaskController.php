@@ -7,10 +7,12 @@ use App\Models\MarketingTask;
 use App\Services\Marketing\MarketingHistoryRecorder;
 use App\Services\Marketing\MarketingLinkClassifier;
 use App\Services\Marketing\MarketingPresenter;
+use App\Services\Marketing\MarketingTaskMirror;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class TaskController extends MarketingBaseController
@@ -19,10 +21,10 @@ class TaskController extends MarketingBaseController
     private const CATEGORY_FIELDS = [
         'production' => ['department', 'type', 'shooting_by', 'editing_by', 'channels', 'reference', 'notes', 'due_date'],
         'design' => ['department', 'assigned_to', 'deliverables', 'tov', 'reference', 'notes', 'due_date'],
-        'content' => ['department', 'assigned_to', 'reference', 'notes', 'due_date'],
+        'content' => ['department', 'assigned_to', 'designed_by', 'also_video', 'reference', 'notes', 'due_date'],
     ];
 
-    private const OPTIONAL_FIELDS = ['department','type', 'assigned_to', 'shooting_by', 'editing_by', 'deliverables', 'channels', 'tov', 'reference', 'notes', 'due_date'];
+    private const OPTIONAL_FIELDS = ['department', 'type', 'assigned_to', 'designed_by', 'also_video', 'shooting_by', 'editing_by', 'deliverables', 'channels', 'tov', 'reference', 'notes', 'due_date'];
 
     public function show(MarketingTask $task): JsonResponse
     {
@@ -48,6 +50,7 @@ class TaskController extends MarketingBaseController
 
     public function store(Request $request): JsonResponse
     {
+        $this->blankToNull($request);
         $validated = $request->validate($this->rules(true) + [
             'stage_id' => ['nullable', 'integer'],
             'links' => ['nullable', 'array', 'max:20'],
@@ -64,11 +67,11 @@ class TaskController extends MarketingBaseController
             return response()->json(['message' => 'No stage found for this board. Ask an admin to add one.'], 422);
         }
 
-        $task = DB::transaction(function () use ($validated, $category, $stage) {
+        $task = DB::transaction(function () use ($request, $validated, $category, $stage) {
             // New cards land on top of their column.
             MarketingTask::where('stage_id', $stage->id)->increment('position');
 
-            $task = MarketingTask::create($this->onlyCategoryFields($category, $validated) + [
+            $task = MarketingTask::create($this->referenceImageChanges($request, $this->onlyCategoryFields($category, $validated)) + [
                 'category' => $category,
                 'title' => $validated['title'],
                 'stage_id' => $stage->id,
@@ -91,6 +94,8 @@ class TaskController extends MarketingBaseController
                 'field' => 'stage_id', 'label' => 'Stage', 'old' => null, 'new' => $stage->name,
             ]]);
 
+            MarketingTaskMirror::sync($task);
+
             return $task;
         });
 
@@ -99,20 +104,31 @@ class TaskController extends MarketingBaseController
 
     public function update(Request $request, MarketingTask $task): JsonResponse
     {
+        $this->blankToNull($request);
         $validated = $request->validate($this->rules(false, $task));
 
         $before = MarketingHistoryRecorder::snapshot($task);
+        $oldImage = $task->reference_image;
 
-        $data = $this->onlyCategoryFields($task->category, $validated, partial: true);
+        $data = $this->referenceImageChanges($request, $this->onlyCategoryFields($task->category, $validated, partial: true));
         if (array_key_exists('title', $validated)) {
             $data['title'] = $validated['title'];
         }
 
-        $task->fill($data)->save();
+        DB::transaction(function () use ($task, $data, $before) {
+            $task->fill($data)->save();
 
-        $changes = MarketingHistoryRecorder::diff($before, $task->fresh());
-        if ($changes) {
-            MarketingHistoryRecorder::record($task, 'updated', $changes);
+            $changes = MarketingHistoryRecorder::diff($before, $task->fresh());
+            if ($changes) {
+                MarketingHistoryRecorder::record($task, 'updated', $changes);
+            }
+
+            MarketingTaskMirror::sync($task->fresh());
+        });
+
+        $current = $task->fresh()->reference_image;
+        if ($oldImage && $oldImage !== $current) {
+            $this->forgetReferenceImage($oldImage);
         }
 
         return response()->json(['task' => $this->fresh($task)]);
@@ -195,8 +211,32 @@ class TaskController extends MarketingBaseController
     /** Admin only (route middleware). */
     public function destroy(MarketingTask $task): JsonResponse
     {
-        MarketingHistoryRecorder::record($task, 'deleted');
-        $task->delete();
+        $image = $task->reference_image;
+
+        DB::transaction(function () use ($task) {
+            if ($task->category === 'content' && !$task->source_task_id) {
+                MarketingTask::where('source_task_id', $task->id)->get()->each(function (MarketingTask $mirror) {
+                    MarketingHistoryRecorder::record($mirror, 'deleted');
+                    $mirror->delete();
+                });
+            } elseif ($task->source_task_id) {
+                $source = MarketingTask::find($task->source_task_id);
+                if ($source) {
+                    if ($task->category === 'design') {
+                        $source->designed_by = null;
+                    }
+                    if ($task->category === 'production') {
+                        $source->also_video = false;
+                    }
+                    $source->save();
+                }
+            }
+
+            MarketingHistoryRecorder::record($task, 'deleted');
+            $task->delete();
+        });
+
+        $this->forgetReferenceImage($image);
 
         return response()->json(['message' => 'Card deleted.']);
     }
@@ -205,7 +245,7 @@ class TaskController extends MarketingBaseController
     {
         $req = $creating ? 'required' : 'sometimes';
         $member = ['nullable', 'integer', $this->memberRule(
-            $task ? [$task->assigned_to, $task->shooting_by, $task->editing_by] : []
+            $task ? [$task->assigned_to, $task->designed_by, $task->shooting_by, $task->editing_by] : []
         )];
 
         return array_filter([
@@ -213,6 +253,8 @@ class TaskController extends MarketingBaseController
             'title' => [$req, 'string', 'max:255'],
             'type' => ['nullable', Rule::in(MarketingTask::TYPES)],
             'assigned_to' => $member,
+            'designed_by' => $member,
+            'also_video' => ['nullable', 'boolean'],
             'shooting_by' => $member,
             'editing_by' => $member,
             'deliverables' => ['nullable', 'array'],
@@ -221,6 +263,8 @@ class TaskController extends MarketingBaseController
             'channels.*' => ['boolean'],
             'tov' => ['nullable', 'string', 'max:50'],
             'reference' => ['nullable', 'string', 'max:5000'],
+            'reference_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:8192'],
+            'remove_reference_image' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'due_date' => ['nullable', 'date'],
             'department' => [$req, Rule::in(MarketingTask::DEPARTMENTS)],
@@ -236,7 +280,7 @@ class TaskController extends MarketingBaseController
         foreach (self::OPTIONAL_FIELDS as $field) {
             if (!in_array($field, $allowed, true)) {
                 if (!$partial) {
-                    $data[$field] = null;
+                    $data[$field] = $field === 'also_video' ? false : null;
                 }
                 continue;
             }
@@ -259,7 +303,47 @@ class TaskController extends MarketingBaseController
             $data['type'] = 'video';
         }
 
+        if (array_key_exists('also_video', $data)) {
+            $data['also_video'] = (bool) $data['also_video'];
+        }
+
         return $data;
+    }
+
+    /** Multipart forms send unused optional fields as empty strings. */
+    private function blankToNull(Request $request): void
+    {
+        $merged = [];
+        foreach (['designed_by', 'assigned_to', 'shooting_by', 'editing_by', 'due_date', 'reference', 'notes', 'tov', 'type', 'stage_id'] as $field) {
+            if ($request->input($field) === '') {
+                $merged[$field] = null;
+            }
+        }
+        if ($request->input('deliverables') === '' || $request->input('deliverables') === ['']) {
+            $merged['deliverables'] = [];
+        }
+        if ($merged) {
+            $request->merge($merged);
+        }
+    }
+
+    /** @param array<string, mixed> $data */
+    private function referenceImageChanges(Request $request, array $data): array
+    {
+        if ($request->hasFile('reference_image')) {
+            $data['reference_image'] = $request->file('reference_image')->store('marketing/references', 'public');
+        } elseif ($request->boolean('remove_reference_image')) {
+            $data['reference_image'] = null;
+        }
+
+        return $data;
+    }
+
+    private function forgetReferenceImage(?string $path): void
+    {
+        if ($path && !MarketingTask::where('reference_image', $path)->exists()) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function fresh(MarketingTask $task): array

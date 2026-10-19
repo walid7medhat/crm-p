@@ -47,7 +47,7 @@
           <MkSelect v-if="activeTab === 'production'" v-model="filters.type" :options="typeOptions" icon="lucide:shapes" aria-label="Filter by type" highlight />
           <MkSelect v-if="activeTab === 'design'" v-model="filters.deliverable" :options="deliverableOptions" icon="lucide:layout-template" aria-label="Filter by deliverable" highlight />
           <MkSelect v-model="filters.due" :options="dueOptions" icon="lucide:calendar-clock" aria-label="Filter by due date" highlight align="right" />
-          <MkSelect v-model="filters.sort" :options="sortOptions" icon="lucide:arrow-up-down" aria-label="Sort by created date" highlight />
+          <MkSelect v-model="filters.sort" :options="sortOptions" icon="lucide:arrow-up-down" aria-label="Sort cards" highlight />
           <button v-if="canManage" type="button" class="mk-btn mk-btn--ghost" title="Manage stages" @click="stageManagerOpen = true">
             <iconify-icon icon="lucide:columns-3" /> <span class="mk-hide-sm">Stages</span>
           </button>
@@ -69,7 +69,7 @@
 
     <div v-if="isBoard && (activeFilterCount || filters.sort )" class="mk-active-filters">
       <span>{{ totalCards }} card{{ totalCards === 1 ? '' : 's' }} match</span>
-        <span v-if="filters.sort">Sorted by created date · dragging is off</span>
+        <span v-if="filters.sort">{{ sortLabel }} · dragging is off</span>
       <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm" @click="clearFilters"><iconify-icon icon="lucide:filter-x" /> Clear filters</button>
     </div>
 
@@ -227,9 +227,12 @@ const totalCards = computed(() => stages.value.reduce((n, s) => n + s.tasks.leng
 
 const sortOptions = [
   { value: '', label: 'Manual order' },
+  { value: 'due_asc', label: 'Due date: soonest', icon: 'lucide:calendar-arrow-up' },
+  { value: 'due_desc', label: 'Due date: latest', icon: 'lucide:calendar-arrow-down' },
   { value: 'desc', label: 'Created: newest first', icon: 'lucide:arrow-down-wide-narrow' },
   { value: 'asc', label: 'Created: oldest first', icon: 'lucide:arrow-up-narrow-wide' },
 ]
+const sortLabel = computed(() => sortOptions.find((o) => o.value === filters.sort)?.label || 'Sorted')
 const activeFilterCount = computed(() => [search.value, filters.assignee, filters.type, filters.deliverable, filters.due, filters.dateFrom, filters.dateTo].filter(Boolean).length)
 
 
