@@ -59,6 +59,14 @@ const LISTINGS_INVENTORY_PATHS = [
 
 const NOTIFY_ME_PATHS = ['/notify-me'];
 
+const PROPERTY_COMPARE_TAB = {
+  id: 'property-compare',
+  label: 'Compare',
+  type: 'route',
+  path: '/property-compare',
+  matchPaths: ['/property-compare'],
+};
+
 const VIEWINGS_PATHS = ['/my-viewings'];
 
 const REQUESTS_ADMIN_PATHS = ['/all-requests'];
@@ -87,6 +95,7 @@ const AGENTS_PREFIXES = ['/users', '/add-user', '/team-tree', '/view-profile', '
 const LISTINGS_PREFIXES = [
   '/alllisting',
   '/my-listing',
+  '/property-compare',
   '/property-form',
   '/notify-me',
   '/archive',
@@ -173,6 +182,7 @@ const LISTINGS_REQUEST_PATHS = [
 export function isListingsRememberablePath(path) {
   if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return false;
   if (path === '/property-details' || path.startsWith('/property-details/')) return false;
+  if (path === '/property-compare') return false;
   if (LISTINGS_FORM_PATHS.includes(path)) return false;
   if (path.endsWith('/edit')) return false;
   if (LISTINGS_REQUEST_PATHS.includes(path)) return false;
@@ -436,8 +446,14 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         count: listingTabCounts.listings || 0,
       },
     ];
-    
+    if (!hasPermission || hasPermission('listings-list')) {
+      tabs.push(PROPERTY_COMPARE_TAB);
+    }
     return tabs;
+  }
+
+  if (section === CRM_SECTIONS.LISTINGS && isShowOnlyListing) {
+    return [PROPERTY_COMPARE_TAB];
   }
 
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
@@ -460,6 +476,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       });
     }
     if (canList) {
+      tabs.push(PROPERTY_COMPARE_TAB);
       tabs.push({
         id: 'notify-me',
         label: 'Notify Me',
