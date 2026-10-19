@@ -1575,15 +1575,17 @@ watch(selectedExistingClient, (client) => {
         }
     })
 
-    // ================= Duplicate-phone note (super_admin / admin / branch_admin) =================
-    const canSeePhoneDuplicates = (() => {
-        try {
-            const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
-            return ['super_admin', 'admin', 'branch_admin'].some((r) => roles.includes(r))
-        } catch {
-            return false
-        }
-    })()
+  // ================= Duplicate-phone note (super_admin / admin / branch_admin / listing-team sales) =================
+        const canSeePhoneDuplicates = computed(() => {
+            try {
+                const roles = JSON.parse(localStorage.getItem('user') || '{}')?.roles || []
+                const isPrivilegedRole = ['super_admin', 'admin', 'branch_admin'].some((r) => roles.includes(r))
+                const isListingTeamSales = isSalesUser.value && isListingTeamUser.value
+                return isPrivilegedRole || isListingTeamSales
+            } catch {
+                return false
+            }
+        })
 
     const phoneDuplicates = ref({ work_phone: null, work_phone_2: null })
     const phoneDuplicateTimers = {}

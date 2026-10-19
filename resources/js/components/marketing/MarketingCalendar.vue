@@ -72,7 +72,10 @@
         <div v-for="post in dayPosts(day.iso)" :key="post.id" class="mk-post" :class="{ posted: post.is_posted }" :style="{ '--p': PLATFORMS[post.platform]?.color }">
           <button type="button" class="mk-post__check" @click="togglePosted(post)"><iconify-icon :icon="post.is_posted ? 'lucide:check' : 'lucide:circle'" /></button>
           <iconify-icon :icon="PLATFORMS[post.platform]?.icon" class="mk-post__platform" />
-          <span class="mk-post__title">{{ post.title }}</span>
+          <a v-if="post.link" class="mk-post__title" :href="post.link.url" target="_blank" rel="noopener">
+            <iconify-icon :icon="LINK_KINDS[post.link.kind]?.icon || 'lucide:link'" /> {{ post.title }}
+          </a>
+          <span v-else class="mk-post__title">{{ post.title }}</span>
           <button v-if="post.task_id" type="button" class="mk-post__btn" @click="$emit('open-task', post.task_id, post.task_category)"><iconify-icon icon="lucide:external-link" /></button>
         </div>
         <p v-if="!dayPosts(day.iso).length" class="mk-cal__none">Nothing scheduled</p>

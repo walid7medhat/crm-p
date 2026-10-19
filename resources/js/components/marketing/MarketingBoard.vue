@@ -69,6 +69,7 @@
         ghost-class="mk-ghost"
         chosen-class="mk-chosen"
         drag-class="mk-dragging"
+        :disabled="locked"
         @start="(evt) => pickUp(evt.item)"
         @change="(evt) => onChange(evt, stage)"
       >
@@ -97,6 +98,8 @@ const props = defineProps({
   stages: { type: Array, required: true },
   category: { type: String, required: true },
   loading: { type: Boolean, default: false },
+    locked: { type: Boolean, default: false },
+
 })
 const emit = defineEmits(['move', 'open', 'create', 'add-link'])
 

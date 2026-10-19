@@ -35,6 +35,13 @@ class BoardController extends MarketingBaseController
             ->where('category', $category)
             ->with(MarketingPresenter::TASK_RELATIONS)
             ->withCount(MarketingPresenter::taskCounts())
+            ->when($request->filled('date_from'), fn ($q) => $q->whereDate('created_at', '>=', $request->date_from))
+            ->when($request->filled('date_to'),   fn ($q) => $q->whereDate('created_at', '<=', $request->date_to))
+            ->when(
+                $request->filled('sort'),
+                fn ($q) => $q->orderBy('created_at', $request->sort)->orderBy('id', $request->sort),
+                fn ($q) => $q->orderBy('position')->orderByDesc('id'),   // existing default order
+                )   
             ->orderBy('position')->orderByDesc('id');
 
         if ($search = trim($validated['search'] ?? '')) {

@@ -35,10 +35,19 @@
         </label>
 
         <template v-if="isBoard">
+          <label class="mk-date" title="Created from">
+            <span>From</span>
+            <input v-model="filters.dateFrom" type="date" :max="filters.dateTo || undefined" />
+          </label>
+          <label class="mk-date" title="Created to">
+            <span>To</span>
+            <input v-model="filters.dateTo" type="date" :min="filters.dateFrom || undefined" />
+          </label>
           <MkSelect v-model="filters.assignee" :options="personOptions" icon="lucide:users" aria-label="Filter by person" searchable highlight />
           <MkSelect v-if="activeTab === 'production'" v-model="filters.type" :options="typeOptions" icon="lucide:shapes" aria-label="Filter by type" highlight />
           <MkSelect v-if="activeTab === 'design'" v-model="filters.deliverable" :options="deliverableOptions" icon="lucide:layout-template" aria-label="Filter by deliverable" highlight />
           <MkSelect v-model="filters.due" :options="dueOptions" icon="lucide:calendar-clock" aria-label="Filter by due date" highlight align="right" />
+          <MkSelect v-model="filters.sort" :options="sortOptions" icon="lucide:arrow-up-down" aria-label="Sort by created date" highlight />
           <button v-if="canManage" type="button" class="mk-btn mk-btn--ghost" title="Manage stages" @click="stageManagerOpen = true">
             <iconify-icon icon="lucide:columns-3" /> <span class="mk-hide-sm">Stages</span>
           </button>
@@ -58,8 +67,9 @@
       </div>
     </header>
 
-    <div v-if="isBoard && activeFilterCount" class="mk-active-filters">
+    <div v-if="isBoard && (activeFilterCount || filters.sort )" class="mk-active-filters">
       <span>{{ totalCards }} card{{ totalCards === 1 ? '' : 's' }} match</span>
+        <span v-if="filters.sort">Sorted by created date · dragging is off</span>
       <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm" @click="clearFilters"><iconify-icon icon="lucide:filter-x" /> Clear filters</button>
     </div>
 
@@ -71,6 +81,7 @@
       :stages="stages"
       :category="activeTab"
       :loading="boardLoading"
+      :locked="!!filters.sort"
       @move="onMove"
       @open="openTask($event.id)"
       @create="openCreate"
@@ -165,7 +176,7 @@ const canManage = ref(false)
 const stages = ref([])
 const boardLoading = ref(false)
 const search = ref('')
-const filters = reactive({ assignee: null, type: '', deliverable: '', due: '' })
+const filters = reactive({ assignee: null, type: '', deliverable: '', due: '', sort: '', dateFrom: '', dateTo: '' })
 const calendarPlatform = ref('')
 const calendarReloadKey = ref(0)
 
@@ -213,7 +224,13 @@ const dueOptions = [
 const platformOptions = [{ value: '', label: 'All platforms' }, ...Object.entries(PLATFORMS).map(([value, p]) => ({ value, label: p.label, icon: p.icon }))]
 
 const totalCards = computed(() => stages.value.reduce((n, s) => n + s.tasks.length, 0))
-const activeFilterCount = computed(() => [search.value, filters.assignee, filters.type, filters.deliverable, filters.due].filter(Boolean).length)
+
+const sortOptions = [
+  { value: '', label: 'Manual order' },
+  { value: 'desc', label: 'Created: newest first', icon: 'lucide:arrow-down-wide-narrow' },
+  { value: 'asc', label: 'Created: oldest first', icon: 'lucide:arrow-up-narrow-wide' },
+]
+const activeFilterCount = computed(() => [search.value, filters.assignee, filters.type, filters.deliverable, filters.due, filters.dateFrom, filters.dateTo].filter(Boolean).length)
 
 
 // ---------- Data ----------
@@ -242,6 +259,9 @@ async function loadBoard() {
         type: category === 'production' ? filters.type || undefined : undefined,
         deliverable: category === 'design' ? filters.deliverable || undefined : undefined,
         due: filters.due || undefined,
+        sort: filters.sort || undefined,
+        date_from: filters.dateFrom || undefined,
+        date_to: filters.dateTo || undefined,
       },
     })
     if (mine !== boardSeq) return
@@ -257,7 +277,7 @@ async function loadBoard() {
 
 function clearFilters() {
   search.value = ''
-  Object.assign(filters, { assignee: null, type: '', deliverable: '', due: '' })
+  Object.assign(filters, { assignee: null, type: '', deliverable: '', due: '' , sort: '', dateFrom: '', dateTo: ''})
 }
 
 // ---------- Tabs (driven by the header, like Deal types) ----------
@@ -270,7 +290,7 @@ function onTabChange(e) { setTab(e?.detail) }
 watch(activeTab, (tab) => {
   try { localStorage.setItem(MARKETING_TAB_KEY, tab) } catch { /* ignore */ }
   search.value = ''
-  Object.assign(filters, { type: '', deliverable: '', due: '' })
+  Object.assign(filters, { type: '', deliverable: '', due: '' , sort: '', dateFrom: '', dateTo: ''})
   stages.value = []
   loadBoard()
 })
@@ -561,4 +581,12 @@ onBeforeUnmount(() => {
   .mk-filter { flex: 1 1 45%; }
   .mk-hide-sm { display: none; }
 }
+.mk-date {
+  display: flex; align-items: center; gap: 6px; margin: 0;
+  min-height: 38px; padding: 0 10px; border-radius: 10px;
+  border: 1px solid var(--border-color); background: var(--neutral-50);
+  font-size: 12px; font-weight: 600; color: var(--text-secondary-light);
+}
+.mk-date input { border: 0; outline: 0; background: transparent; font-size: 13px; color: var(--text-primary-light); }
+.mk-date:focus-within { border-color: var(--color-primary); background: var(--white); }
 </style>

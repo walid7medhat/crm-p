@@ -46,6 +46,14 @@
           :invalid="!form.scheduled_date && !!error"
         />
       </div>
+      <div class="mk-field">
+        <span class="mk-label">Link <small>(optional)</small></span>
+        <div class="mk-row">
+          <input v-model.trim="form.link_url" type="url" class="mk-input" :class="{ 'mk-input--error': linkError }" placeholder="https://drive.google.com/…" />
+          <input v-model.trim="form.link_label" class="mk-input" placeholder="Label (e.g. T.1.png)" />
+        </div>
+        <span v-if="linkError" class="mk-error">{{ linkError }}</span>
+      </div>
 
       <div class="mk-field">
         <span class="mk-label">Platforms</span>
@@ -125,6 +133,8 @@ async function save() {
     const { data } = await api.post('/marketing/calendar', {
       task_id: props.task?.id ?? null,
       link_id: form.link_id,
+      link_url: form.link_url || null,
+      link_label: form.link_label || null,
       title: form.title || null,
       platforms: form.platforms,
       scheduled_date: form.scheduled_date,
