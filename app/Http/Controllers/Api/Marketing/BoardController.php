@@ -23,6 +23,7 @@ class BoardController extends MarketingBaseController
             'type' => ['nullable', Rule::in(MarketingTask::TYPES)],
             'deliverable' => ['nullable', Rule::in(MarketingTask::DELIVERABLES)],
             'due' => ['nullable', Rule::in(['overdue', 'week'])],
+            'sort' => ['nullable', Rule::in(['asc', 'desc', 'due_asc', 'due_desc'])],
         ]);
 
         $category = $validated['category'];
@@ -36,13 +37,19 @@ class BoardController extends MarketingBaseController
             ->with(MarketingPresenter::TASK_RELATIONS)
             ->withCount(MarketingPresenter::taskCounts())
             ->when($request->filled('date_from'), fn ($q) => $q->whereDate('created_at', '>=', $request->date_from))
-            ->when($request->filled('date_to'),   fn ($q) => $q->whereDate('created_at', '<=', $request->date_to))
-            ->when(
-                $request->filled('sort'),
-                fn ($q) => $q->orderBy('created_at', $request->sort)->orderBy('id', $request->sort),
-                fn ($q) => $q->orderBy('position')->orderByDesc('id'),   // existing default order
-                )   
-            ->orderBy('position')->orderByDesc('id');
+            ->when($request->filled('date_to'),   fn ($q) => $q->whereDate('created_at', '<=', $request->date_to));
+
+        $sort = $validated['sort'] ?? null;
+        if ($sort === 'asc' || $sort === 'desc') {
+            $query->orderBy('created_at', $sort)->orderBy('id', $sort);
+        } elseif ($sort === 'due_asc' || $sort === 'due_desc') {
+            // Cards with no due date stay at the bottom of the column.
+            $query->orderByRaw('due_date IS NULL')
+                ->orderBy('due_date', $sort === 'due_desc' ? 'desc' : 'asc')
+                ->orderBy('id');
+        } else {
+            $query->orderBy('position')->orderByDesc('id');
+        }
 
         if ($search = trim($validated['search'] ?? '')) {
             $like = '%' . $search . '%';
@@ -52,7 +59,7 @@ class BoardController extends MarketingBaseController
                     ->orWhere('reference', 'like', $like)
                     ->orWhere('tov', 'like', $like)
                     ->orWhereHas('links', fn ($l) => $l->where(fn ($w) => $w->where('label', 'like', $like)->orWhere('url', 'like', $like)));
-                foreach (['assignee', 'shooter', 'editor'] as $rel) {
+                foreach (['assignee', 'designer', 'shooter', 'editor'] as $rel) {
                     $q->orWhereHas($rel, fn ($u) => $u->where('name', 'like', $like));
                 }
             });
@@ -60,6 +67,7 @@ class BoardController extends MarketingBaseController
 
         if ($assignee = $validated['assignee'] ?? null) {
             $query->where(fn ($q) => $q->where('assigned_to', $assignee)
+                ->orWhere('designed_by', $assignee)
                 ->orWhere('shooting_by', $assignee)
                 ->orWhere('editing_by', $assignee));
         }

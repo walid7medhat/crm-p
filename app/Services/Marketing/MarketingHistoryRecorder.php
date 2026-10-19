@@ -20,6 +20,8 @@ class MarketingHistoryRecorder
         'type' => 'Type',
         'stage_id' => 'Stage',
         'assigned_to' => 'Assigned to',
+        'designed_by' => 'Designer',
+        'also_video' => 'Video',
         'shooting_by' => 'Shooting by',
         'editing_by' => 'Editing by',
         'deliverables' => 'Deliverables',
@@ -30,7 +32,7 @@ class MarketingHistoryRecorder
         'due_date' => 'Due date',
     ];
 
-    private const USER_FIELDS = ['assigned_to', 'shooting_by', 'editing_by'];
+    private const USER_FIELDS = ['assigned_to', 'designed_by', 'shooting_by', 'editing_by'];
 
     private const KEY_LABELS = [
         'youtube' => 'YouTube',
@@ -124,6 +126,9 @@ class MarketingHistoryRecorder
 
     private static function normalize($value): ?string
     {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
         if (is_array($value)) {
             $list = self::enabledList($value);
             return $list ? json_encode($list) : null;
@@ -137,6 +142,9 @@ class MarketingHistoryRecorder
 
     private static function display(string $field, $value): ?string
     {
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
         if ($value === null || $value === '' || $value === []) {
             return null;
         }

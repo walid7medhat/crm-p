@@ -20,6 +20,7 @@ class MarketingTask extends Model
         'deliverables' => 'array',
         'channels' => 'array',
         'is_approved' => 'boolean',
+        'also_video' => 'boolean',
         'approved_at' => 'datetime',
         'completed_at' => 'datetime',
         'due_date' => 'date:Y-m-d',
@@ -34,6 +35,21 @@ class MarketingTask extends Model
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function designer()
+    {
+        return $this->belongsTo(User::class, 'designed_by');
+    }
+
+    public function source()
+    {
+        return $this->belongsTo(self::class, 'source_task_id');
+    }
+
+    public function mirrors()
+    {
+        return $this->hasMany(self::class, 'source_task_id');
     }
 
     public function shooter()
