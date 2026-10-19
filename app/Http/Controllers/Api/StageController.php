@@ -252,6 +252,9 @@ class StageController extends Controller
         $perPage = (int) $request->get('per_page', 15);
 
         $userRole = $user->roles()->first()?->name ?? 'sales';
+        $perfStart = microtime(true);
+
+        DB::enableQueryLog();
 
         // ================= stages allowed for this role =================
         $stageVisibility = DB::table('stage_visibility')
@@ -564,7 +567,7 @@ class StageController extends Controller
 
         KanbanLeadCardResource::clearKanbanMeta();
         KanbanLeadCardResource::clearEngagementUsers();
-
+        $this->logKanbanPerf($request, $perfStart);
         return ApiResponse::success([
             'stages' => $stagesWithLeads,
             'analytics' => $leadAnalytics,
@@ -578,6 +581,7 @@ class StageController extends Controller
         ], 'Stages with paginated leads retrieved successfully');
 
     } catch (\Exception $e) {
+            $this->logKanbanPerf($request, $perfStart ?? microtime(true), $e->getMessage());
         return ApiResponse::error($e->getMessage());
     }
 }
@@ -742,37 +746,28 @@ class StageController extends Controller
             if ($request->filled('lead_branch_source')) {
                 $q->where('lead_branch_source', $request->lead_branch_source);
             }
-            if ($request->filled('office_branch')) {
-                $officeBranches = $request->office_branch;
-                if (is_string($officeBranches)) {
-                    $officeBranches = explode(',', $officeBranches);
-                }
-                if (is_array($officeBranches) && count($officeBranches) > 0) {
+           if ($request->filled('office_branch')) {
+                $officeBranches = $this->requestedIdList($request->office_branch); // already handles string/array/CSV
+
+                if ($officeBranches) {
                     $allTeamMembers = [];
                     foreach ($officeBranches as $officeBranchId) {
-                        if (is_numeric($officeBranchId)) {
-                            $branchTeam = User::find($officeBranchId);
-                            if ($branchTeam) {
-                                $teamMembers = $branchTeam->getAllSubordinatesIds();
-                                if (is_array($teamMembers)) {
-                                    $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
-                                }
-                                $allTeamMembers[] = $branchTeam->id;
+                        $members = \Cache::remember(
+                            "office_members:{$officeBranchId}",
+                            now()->addMinutes(10),
+                            function () use ($officeBranchId) {
+                                $office = User::find($officeBranchId);
+                                return $office
+                                    ? array_merge($office->getAllSubordinatesIds(), [$office->id])
+                                    : [];
                             }
-                        }
+                        );
+                        $allTeamMembers = array_merge($allTeamMembers, $members);
                     }
-                    $allTeamMembers = array_unique($allTeamMembers);
-                    if (!empty($allTeamMembers)) {
+
+                    $allTeamMembers = array_values(array_unique($allTeamMembers));
+                    if ($allTeamMembers) {
                         $q->whereIn('responsible_person_id', $allTeamMembers);
-                    }
-                } elseif (is_numeric($officeBranches)) {
-                    $branchTeam = User::find($officeBranches);
-                    if ($branchTeam) {
-                        $teamMembers = $branchTeam->getAllSubordinatesIds();
-                        if (is_array($teamMembers)) {
-                            $teamMembers[] = $branchTeam->id;
-                            $q->whereIn('responsible_person_id', $teamMembers);
-                        }
                     }
                 }
             }
@@ -929,52 +924,30 @@ class StageController extends Controller
                     $leadsQuery->where('lead_branch_source', $request->lead_branch_source);
                 }
             if ($request->filled('office_branch')) {
-                    $officeBranches = $request->office_branch;
-                    
-                    // Convert to array if it's a string (coming as comma-separated)
-                    if (is_string($officeBranches)) {
-                        $officeBranches = explode(',', $officeBranches);
-                    }
-                    
-                    // If it's an array and not empty
-                    if (is_array($officeBranches) && count($officeBranches) > 0) {
-                        $allTeamMembers = [];
-                        
-                        foreach ($officeBranches as $officeBranchId) {
-                            // تأكد من أن $officeBranchId هو رقم صحيح
-                            if (is_numeric($officeBranchId)) {
-                                $branchTeam = User::find($officeBranchId);
-                                if ($branchTeam) {
-                                    // استدعاء الدالة على الـ Model وليس Collection
-                                    $teamMembers = $branchTeam->getAllSubordinatesIds();
-                                    if (is_array($teamMembers)) {
-                                        $allTeamMembers = array_merge($allTeamMembers, $teamMembers);
-                                    }
-                                    // Also add the branch lead themselves
-                                    $allTeamMembers[] = $branchTeam->id;
-                                }
+                $officeBranches = $this->requestedIdList($request->office_branch); // already handles string/array/CSV
+
+                if ($officeBranches) {
+                    $allTeamMembers = [];
+                    foreach ($officeBranches as $officeBranchId) {
+                        $members = \Cache::remember(
+                            "office_members:{$officeBranchId}",
+                            now()->addMinutes(10),
+                            function () use ($officeBranchId) {
+                                $office = User::find($officeBranchId);
+                                return $office
+                                    ? array_merge($office->getAllSubordinatesIds(), [$office->id])
+                                    : [];
                             }
-                        }
-                        
-                        // Remove duplicates
-                        $allTeamMembers = array_unique($allTeamMembers);
-                        
-                        if (!empty($allTeamMembers)) {
-                            $leadsQuery->whereIn('responsible_person_id', $allTeamMembers);
-                        }
+                        );
+                        $allTeamMembers = array_merge($allTeamMembers, $members);
                     }
-                    // Handle single office_branch for backward compatibility
-                    elseif (is_numeric($officeBranches)) {
-                        $branchTeam = User::find($officeBranches);
-                        if ($branchTeam) {
-                            $teamMembers = $branchTeam->getAllSubordinatesIds();
-                            if (is_array($teamMembers)) {
-                                $teamMembers[] = $branchTeam->id;
-                                $leadsQuery->whereIn('responsible_person_id', $teamMembers);
-                            }
-                        }
+
+                    $allTeamMembers = array_values(array_unique($allTeamMembers));
+                    if ($allTeamMembers) {
+                        $leadsQuery->whereIn('responsible_person_id', $allTeamMembers);
                     }
                 }
+            }
 
             $teamIds = $this->requestedIdList($request->input('team_id'));
             if ($teamIds) {
@@ -1612,4 +1585,24 @@ public function getOffices()
 
         return array_values(array_unique($ids));
     }
+    private function logKanbanPerf(Request $request, float $startedAt, ?string $error = null): void
+{
+    $queries = collect(DB::getQueryLog());
+
+    \Log::channel('kanban_perf')->info('stages-with-leads', [
+        'user_id'      => auth()->id(),
+        'filters'      => $request->except(['page']),
+        'total_ms'     => round((microtime(true) - $startedAt) * 1000, 1),
+        'query_count'  => $queries->count(),
+        'query_ms_sum' => round($queries->sum('time'), 1),
+        'error'        => $error,
+        'slowest'      => $queries->sortByDesc('time')->take(8)->map(fn ($q) => [
+            'ms'  => round($q['time'], 1),
+            // Keep the log readable: long IN (...) lists are collapsed.
+            'sql' => preg_replace('/\(\s*(\?\s*,\s*)+\?\s*\)/', '(?...)', $q['query']),
+        ])->values()->all(),
+    ]);
+
+    DB::disableQueryLog();
+}
 }
