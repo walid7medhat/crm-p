@@ -173,6 +173,11 @@ return [
         'level' => 'info',
         'days' => 30,
     ],
+    'kanban_perf' => [
+        'driver' => 'single',
+        'path'   => storage_path('logs/kanban-perf.log'),
+        'level'  => 'debug',
+    ],
     ],
 
 ];
