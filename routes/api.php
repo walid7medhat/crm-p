@@ -1035,6 +1035,7 @@ Route::middleware(['jwt.auth', 'role_or_permission:super_admin|marketing'])->pre
     Route::post('/tasks/{task}/links', [MarketingTaskLinkController::class, 'store']);
     Route::delete('/tasks/{task}/links/{link}', [MarketingTaskLinkController::class, 'destroy']);
     Route::post('/tasks/{task}/comments', [MarketingTaskCommentController::class, 'store']);
+    Route::post('/tasks/{task}/reassign', [MarketingTaskController::class, 'reassign']);
 
     Route::get('/bookings', [MarketingBookingController::class, 'index']);
     Route::put('/bookings/{booking}', [MarketingBookingController::class, 'update']);

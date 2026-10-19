@@ -21,13 +21,11 @@
 
     <p v-if="task.category === 'content' && task.notes" class="mk-card__note">{{ task.notes }}</p>
 
-    <div v-if="task.category === 'content' && (task.designer || task.also_video)" class="mk-card__chips">
-      <span v-if="task.designer" class="mk-chiplet">Design</span>
-      <span v-if="task.also_video" class="mk-chiplet mk-chiplet--video">Video</span>
-    </div>
-
-    <div v-if="task.category === 'design' && task.deliverables?.length" class="mk-card__chips">
-      <span v-for="d in task.deliverables" :key="d" class="mk-chiplet">{{ DELIVERABLES[d]?.label || d }}</span>
+    <div v-if="typeChips.length" class="mk-card__chips">
+      <span v-for="chip in typeChips" :key="chip.key" class="mk-type" :style="{ '--t': chip.color }">
+        <iconify-icon v-if="chip.icon" :icon="chip.icon" />
+        {{ chip.label }}
+      </span>
     </div>
 
     <div v-if="task.category === 'production'" class="mk-card__channels">
@@ -42,8 +40,9 @@
 
     <footer class="mk-card__foot">
       <span class="mk-card__date" :class="{ 'is-late': overdue }">
-        {{ task.due_date ? formatDate(task.due_date) : tagLabel }}
-        <template v-if="dept"> · {{ dept.label }}</template>
+        <template v-if="task.due_date">{{ formatDate(task.due_date) }}</template>
+        <template v-if="task.due_date && dept"> · </template>
+        <template v-if="dept">{{ dept.label }}</template>
       </span>
       <div class="mk-card__people">
         <template v-if="task.category === 'production'">
@@ -76,9 +75,26 @@ defineEmits(['open'])
 const category = computed(() => MARKETING_CATEGORIES[props.task.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => (props.task.category === 'production' ? CONTENT_TYPES[props.task.type] : null))
 const dept = computed(() => DEPARTMENTS[props.task.department])
-// The tag is the card's only color hint: a small colored icon on a neutral pill.
-const tagLabel = computed(() => (type.value ? type.value.label : category.value.label))
 const tagColor = computed(() => (type.value ? type.value.color : category.value.color))
+
+/** Readable type on the card face: Video / Photo / Reel, or Story / Post / Cover, or Design / Video. */
+const typeChips = computed(() => {
+  const task = props.task
+  if (task.category === 'production') {
+    return type.value ? [{ key: task.type, label: type.value.label, color: type.value.color, icon: type.value.icon }] : []
+  }
+  if (task.category === 'design') {
+    const picked = (task.deliverables || []).map((key) => {
+      const item = DELIVERABLES[key]
+      return { key, label: item?.label || key, color: item?.color || '#7c3aed' }
+    })
+    return picked.length ? picked : [{ key: 'design', label: 'Design', color: '#7c3aed', icon: 'lucide:palette' }]
+  }
+  const chips = []
+  if (task.designer) chips.push({ key: 'design', label: 'Design', color: '#7c3aed', icon: 'lucide:palette' })
+  if (task.also_video) chips.push({ key: 'video', label: 'Video', color: '#C2416B', icon: 'lucide:video' })
+  return chips
+})
 const overdue = computed(() => !props.stageDone && props.task.due_date && props.task.due_date < isoDate(new Date()))
 const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(props.task.posted_count || 0))
 
@@ -139,7 +155,18 @@ const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(pr
   object-fit: cover;
   background: #f6f4f8;
 }
-.mk-chiplet--video { color: #9f1239; background: #ffe4e6; }
+.mk-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.4;
+  color: var(--t);
+  background: color-mix(in srgb, var(--t) 14%, #fff);
+}
 
 .mk-card__top { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
 .mk-card__check {
@@ -189,15 +216,6 @@ const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(pr
 }
 
 .mk-card__chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 0 24px; }
-.mk-chiplet {
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: #6d4ea3;
-  background: #f3eefb;
-  border: 0;
-}
 
 .mk-card__channels { display: flex; gap: 6px; margin: 8px 0 0 24px; }
 .mk-card__channel {

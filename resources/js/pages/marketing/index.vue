@@ -43,6 +43,16 @@
             <span>To</span>
             <input v-model="filters.dateTo" type="date" :min="filters.dateFrom || undefined" />
           </label>
+          <div class="mk-date-shortcuts" role="group" aria-label="Created date shortcuts">
+            <button
+              v-for="s in dateShortcuts"
+              :key="s.id"
+              type="button"
+              class="mk-date-shortcut"
+              :class="{ 'is-on': activeDateShortcut === s.id }"
+              @click="applyDateShortcut(s)"
+            >{{ s.label }}</button>
+          </div>
           <MkSelect v-model="filters.assignee" :options="personOptions" icon="lucide:users" aria-label="Filter by person" searchable highlight />
           <MkSelect v-if="activeTab === 'production'" v-model="filters.type" :options="typeOptions" icon="lucide:shapes" aria-label="Filter by type" highlight />
           <MkSelect v-if="activeTab === 'design'" v-model="filters.deliverable" :options="deliverableOptions" icon="lucide:layout-template" aria-label="Filter by deliverable" highlight />
@@ -118,6 +128,7 @@
       v-model="drawerOpen"
       :task-id="drawerTaskId"
       :stages="drawerStages"
+      :members="members"
       :can-manage="canManage"
       @updated="replaceTask"
       @deleted="removeTask"
@@ -152,7 +163,7 @@ import StageManagerModal from '@/components/marketing/StageManagerModal.vue'
 import MkSelect from '@/components/marketing/shared/MkSelect.vue'
 import DailyReportModal from '@/components/marketing/DailyReportModal.vue'
 import { MARKETING_TAB_KEY, MARKETING_TAB_IDS } from '@/composables/useLayoutNavigation.js'
-import { MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, PLATFORMS, apiError } from '@/config/marketingConfig.js'
+import { MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, PLATFORMS, apiError, isoDate } from '@/config/marketingConfig.js'
 
 const BOARD_TABS = ['production', 'design', 'content']
 const route = useRoute()
@@ -177,6 +188,28 @@ const stages = ref([])
 const boardLoading = ref(false)
 const search = ref('')
 const filters = reactive({ assignee: null, type: '', deliverable: '', due: '', sort: '', dateFrom: '', dateTo: '' })
+
+function shiftDate(days) {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + days)
+  return isoDate(d)
+}
+const dateShortcuts = [
+  { id: 'today', label: 'Today', from: 0, to: 0 },
+  { id: 'yesterday', label: 'Yesterday', from: -1, to: -1 },
+  { id: 'week', label: 'Last 7 days', from: -6, to: 0 },
+]
+const activeDateShortcut = computed(() => dateShortcuts.find((s) => filters.dateFrom === shiftDate(s.from) && filters.dateTo === shiftDate(s.to))?.id || '')
+function applyDateShortcut(shortcut) {
+  if (activeDateShortcut.value === shortcut.id) {
+    filters.dateFrom = ''
+    filters.dateTo = ''
+    return
+  }
+  filters.dateFrom = shiftDate(shortcut.from)
+  filters.dateTo = shiftDate(shortcut.to)
+}
 const calendarPlatform = ref('')
 const calendarReloadKey = ref(0)
 
@@ -592,4 +625,22 @@ onBeforeUnmount(() => {
 }
 .mk-date input { border: 0; outline: 0; background: transparent; font-size: 13px; color: var(--text-primary-light); }
 .mk-date:focus-within { border-color: var(--color-primary); background: var(--white); }
+.mk-date-shortcuts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mk-date-shortcut {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--neutral-50);
+  color: var(--text-primary-light);
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+}
+.mk-date-shortcut:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.mk-date-shortcut.is-on {
+  border-color: transparent;
+  background: var(--color-primary);
+  color: #fff;
+}
 </style>

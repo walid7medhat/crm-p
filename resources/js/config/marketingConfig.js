@@ -32,6 +32,7 @@ export const DELIVERABLES = {
   linkedin: { label: 'LinkedIn', color: '#2C6FB7', grad: 'linear-gradient(135deg, #4A90D9 0%, #1F5EA3 100%)' },
   cover: { label: 'Cover', color: '#3F8C6B', grad: 'linear-gradient(135deg, #5CAE89 0%, #33785B 100%)' },
   sales_story: { label: 'Sales Story', color: '#2A8C99', grad: 'linear-gradient(135deg, #47AEBB 0%, #237683 100%)' },
+  other: { label: 'Other', color: '#64748B', grad: 'linear-gradient(135deg, #94A3B8 0%, #475569 100%)' },
 };
 
 /** Production distribution channels (where the finished video/photo goes). */
