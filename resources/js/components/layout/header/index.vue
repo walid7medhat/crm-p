@@ -563,7 +563,7 @@
               <span class="mobile-more-row__label">Leads</span>
               <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
             </button>
-            <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" @click="onMoreNextActions">
+            <button v-if="canShowLeadsTab && canUseNextActions" type="button" class="mobile-more-row" @click="onMoreNextActions">
               <span class="mobile-more-row__icon"><iconify-icon icon="lucide:list-tree" /></span>
               <span class="mobile-more-row__label">Next Actions</span>
               <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
@@ -875,7 +875,7 @@ import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
 import { useRoute, useRouter } from 'vue-router';
 import api, { clearAuthToken } from '@/plugins/axios';
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
-import { openSalesActionCenter } from '@/composables/useSalesActionCenter.js';
+import { canUseNextActions, openSalesActionCenter } from '@/composables/useSalesActionCenter.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import {
   buildListingsSidebarSections,

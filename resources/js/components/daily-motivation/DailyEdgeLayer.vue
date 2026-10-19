@@ -5,7 +5,12 @@
         v-if="activePayload || myDayOpen"
         key="dock"
         class="edge-dock"
-        :class="{ 'edge-dock--day': myDayOpen && !activePayload, 'edge-dock--stack': activePayload && myDayOpen, 'edge-dock--sheet': isSheet }"
+        :class="{
+          'edge-dock--day': myDayOpen && !activePayload,
+          'edge-dock--stack': activePayload && myDayOpen,
+          'edge-dock--sheet': isSheet,
+          'edge-dock--down': !isSheet,
+        }"
         :style="panelStyle"
       >
         <DailyEdgeCard
@@ -75,7 +80,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api, { resolveAuthToken } from '@/plugins/axios'
 import DailyEdgeCard from './DailyEdgeCard.vue'
@@ -84,6 +89,11 @@ import { closeDailyEdgeTest, openDailyEdgeTest, useDailyEdgeTest } from '@/compo
 import { openLeadView } from '@/composables/useLeadViewModal.js'
 import { clampFloatingTop } from '@/composables/useFloatingDock.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal.js'
+import {
+  claimShortcutPanel,
+  dailyMessageCloseTick,
+  myDayPanelOpen,
+} from '@/composables/useShortcutPanels.js'
 
 const router = useRouter()
 
@@ -93,7 +103,7 @@ const productionOpen = ref(false)
 const actions = ref([])
 const actionsState = ref('ready')
 const dayDate = ref('')
-const myDayOpen = ref(false)
+const myDayOpen = myDayPanelOpen
 const sessionReady = ref(false)
 const lastClosed = ref(null)
 const dayPillEl = ref(null)
@@ -147,33 +157,56 @@ const panelStyle = computed(() => {
       width: 'auto',
       height: 'auto',
       maxHeight: '62vh',
-      justifyContent: 'flex-end',
+      justifyContent: 'flex-start',
       padding: '0',
     }
   }
-  const rect = panelAnchor.value
-  const width = Math.min(340, Math.max(260, viewportWidth.value - 32))
-  if (!rect) return { width: `${width}px` }
-  const right = Math.max(12, viewportWidth.value - rect.left + 18)
-  let top = rect.top + rect.height / 2 - 36
-  top = Math.max(16, Math.min(top, viewportHeight.value - 280))
+  const rect = panelAnchor.value || dockFallbackRect()
+  const vh = viewportHeight.value || window.innerHeight
+  const vw = viewportWidth.value || window.innerWidth
+  const width = Math.min(340, Math.max(280, vw - 100))
+  // Sit just to the left of the shortcut rail.
+  const right = Math.max(12, vw - rect.left + 12)
+  const maxHeight = Math.max(220, Math.min(480, vh - 32))
+  // Align with the dock; keep the card fully on screen.
+  let top = rect.top
+  if (top + Math.min(320, maxHeight) > vh - 16) {
+    top = Math.max(16, vh - 16 - Math.min(320, maxHeight))
+  }
+  top = Math.max(16, top)
   return {
-    top: `${top}px`,
+    top: `${Math.round(top)}px`,
     bottom: 'auto',
-    right: `${right}px`,
+    right: `${Math.round(right)}px`,
     left: 'auto',
-    width: `${width}px`,
+    width: `${Math.round(width)}px`,
     height: 'auto',
+    maxHeight: `${Math.round(maxHeight)}px`,
     justifyContent: 'flex-start',
     padding: '0',
   }
 })
 
+function dockFallbackRect() {
+  const dock = typeof document !== 'undefined' ? document.getElementById('shortcut-dock') : null
+  const box = dock?.getBoundingClientRect?.()
+  if (box?.width) {
+    return { top: box.top, left: box.left, height: box.height, width: box.width, bottom: box.bottom }
+  }
+  const vh = viewportHeight.value || (typeof window !== 'undefined' ? window.innerHeight : 800)
+  const vw = viewportWidth.value || (typeof window !== 'undefined' ? window.innerWidth : 1200)
+  return { top: vh / 2 - 110, left: vw - 88, height: 220, width: 72, bottom: vh / 2 + 110 }
+}
+
 function rememberAnchor(event) {
-  const rect = event?.currentTarget?.getBoundingClientRect?.()
+  const fromEvent = event?.currentTarget?.getBoundingClientRect?.()
+  const dock = typeof document !== 'undefined' ? document.getElementById('shortcut-dock') : null
+  const fromDock = dock?.getBoundingClientRect?.()
+  // Prefer the whole shortcut rail so My Day / Daily Message open in the same area.
+  const rect = fromDock?.width ? fromDock : fromEvent
   panelAnchor.value = rect
-    ? { top: rect.top, left: rect.left, height: rect.height, width: rect.width }
-    : null
+    ? { top: rect.top, left: rect.left, height: rect.height, width: rect.width, bottom: rect.bottom }
+    : dockFallbackRect()
 }
 
 async function onDelivered() {
@@ -268,6 +301,15 @@ async function closeActive() {
 function closeMyDay() {
   myDayOpen.value = false
 }
+
+function closeDailyMessageSurfaces() {
+  closeDailyEdgeTest()
+  productionOpen.value = false
+}
+
+watch(dailyMessageCloseTick, () => {
+  closeDailyMessageSurfaces()
+})
 
 function openAction(item) {
   const leadId = item?.lead_id
@@ -367,12 +409,16 @@ function onDayClick() {
 
 function openMyDay(event) {
   rememberAnchor(event)
+  claimShortcutPanel('my-day')
   myDayOpen.value = true
+  // Re-measure after the pill hides so the panel stays glued to the rail.
+  requestAnimationFrame(() => rememberAnchor(event))
   loadActions()
 }
 
 function reopen(event) {
   rememberAnchor(event)
+  claimShortcutPanel('daily-message')
   if (lastClosed.value === 'test' && testPayload.value?.message) {
     testOpen.value = true
     return
@@ -382,6 +428,7 @@ function reopen(event) {
     return
   }
   if (testPayload.value?.message) testOpen.value = true
+  requestAnimationFrame(() => rememberAnchor(event))
 }
 
 function onResize() {
@@ -411,12 +458,9 @@ onUnmounted(() => {
 .edge-dock {
   position: fixed;
   z-index: 99998;
-  top: 0;
-  right: 16px;
-  bottom: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: stretch;
   gap: 12px;
   width: min(340px, calc(100vw - 32px));
@@ -429,15 +473,19 @@ onUnmounted(() => {
 }
 
 .edge-dock--day,
-.edge-dock--stack {
-  justify-content: center;
-  padding: 88px 0 24px;
+.edge-dock--stack,
+.edge-dock--down {
+  /* Position comes from panelStyle (anchored to #shortcut-dock). */
+  bottom: auto;
+  height: auto;
+  justify-content: flex-start;
+  padding: 0;
 }
 
 .edge-dock--stack .myday,
 .edge-dock--day .myday {
   flex: 0 1 auto;
-  max-height: min(520px, calc(100vh - 280px));
+  max-height: inherit;
 }
 
 .myday {
@@ -606,37 +654,33 @@ onUnmounted(() => {
 
 .edge-slide-enter-active {
   transform-origin: right center;
-  animation: edge-from-icon 0.48s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: edge-from-icon 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.edge-dock--down.edge-slide-enter-active,
+.edge-dock--down.edge-slide-leave-active {
+  transform-origin: right top;
 }
 
 .edge-slide-leave-active {
-  transform-origin: right center;
-  transition: opacity 0.2s ease, transform 0.28s ease;
+  transform-origin: right top;
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
 .edge-slide-enter-from,
 .edge-slide-leave-to {
   opacity: 0;
-  transform: translateX(36px) scale(0.16);
+  transform: translateY(-18px) scale(0.2);
 }
 
 @keyframes edge-from-icon {
-  from { opacity: 0; transform: translateX(36px) scale(0.16); }
+  from { opacity: 0; transform: translateX(24px) scale(0.2); }
   to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (min-width: 801px) {
   .edge-dock {
-    align-items: flex-end;
-    right: 12px;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .edge-dock--day,
-  .edge-dock--stack {
-    justify-content: flex-end;
-    padding-top: 72px;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
   }
 }
 

@@ -23,21 +23,8 @@
       />
     </svg>
 
-    <div v-if="open" class="sac-tools" :class="{ 'is-compact': isCompact }">
-      <label v-if="isSuperAdmin" class="sac-tools__agent">
-        <span>View as</span>
-        <select v-model="previewUserId" @change="loadSummary">
-          <option value="">My own access</option>
-          <option v-for="agent in agents" :key="agent.id" :value="String(agent.id)">{{ agent.name }}</option>
-        </select>
-      </label>
-      <button type="button" class="sac-tools__icon" aria-label="Refresh" @click="loadSummary">
-        <iconify-icon icon="lucide:refresh-cw" />
-      </button>
-    </div>
-
-    <p v-if="open && preview" class="sac-banner">Preview of {{ subjectName || 'this agent' }}. Read only.</p>
     <p v-if="open && state === 'error'" class="sac-banner">{{ errorMessage }}</p>
+    <p v-else-if="open && state === 'ready' && !categories.length" class="sac-banner">Nothing needs action right now.</p>
 
     <button
       v-for="(category, index) in (open ? categories : [])"
@@ -47,27 +34,19 @@
       class="sac-node"
       :class="{ 'is-hot': hoveredKey === category.key, 'is-grown': treeReady, 'is-compact': isCompact }"
       :style="nodeStyle(index)"
-      @mouseenter="previewCategory(category, $event)"
-      @mouseleave="scheduleHide"
-      @focus="previewCategory(category, $event)"
-      @click="activateCategory(category, $event)"
+      @click="toggleCategory(category, $event)"
     >
       <iconify-icon icon="lucide:chevron-right" class="sac-node__chevron" />
       <span class="sac-node__label">{{ category.title }}</span>
-      <span class="sac-node__count">{{ category.count }}</span>
+      <span class="sac-node__count">{{ displayCount(category.count) }}</span>
     </button>
 
     <aside
-      v-if="open && (hoverList.length || hoverState === 'loading' || hoverState === 'empty')"
+      v-if="open && (hoverList.length || hoverState === 'empty')"
       class="sac-pop"
       :style="popStyle"
-      @mouseenter="holdCard"
-      @mouseleave="scheduleHide"
     >
-      <template v-if="hoverState === 'loading'">
-        <p class="sac-pop__status">Loading these leads…</p>
-      </template>
-      <template v-else-if="hoverList.length">
+      <template v-if="hoverList.length">
         <p class="sac-pop__kicker">{{ hoverList.length }} {{ hoverList.length === 1 ? 'lead' : 'leads' }}</p>
         <p class="sac-pop__task">{{ hoverList[0].title }}</p>
         <div class="sac-leads">
@@ -107,6 +86,8 @@ import {
   salesActionCenterOpen,
 } from '@/composables/useSalesActionCenter.js'
 
+const BATCH = 20
+
 const open = salesActionCenterOpen
 const categories = ref([])
 const state = ref('ready')
@@ -134,18 +115,11 @@ const hoverState = ref('idle')
 const popStyle = ref({})
 const layoutTick = ref(0)
 const lists = ref({})
+const WARM_KEY = 'sac-warm-v1'
 let searchTimer = null
-let hideTimer = null
 let ignoreCloseUntil = 0
-
-const isSuperAdmin = computed(() => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    return Array.isArray(user.roles) && user.roles.includes('super_admin')
-  } catch (_) {
-    return false
-  }
-})
+let summaryRequest = 0
+let listsRequest = 0
 
 const isCompact = computed(() => {
   layoutTick.value
@@ -158,7 +132,6 @@ const pillStyle = computed(() => {
   const px = clampFloatingTop(pillTop.value * window.innerHeight, height, floatRef.value)
   return { top: `${px}px`, bottom: 'auto' }
 })
-const hoverItem = computed(() => hoverList.value[0] || null)
 function phoneHrefFor(item) {
   const digits = String(item?.card?.phone || '').replace(/[^\d+]/g, '')
   return digits ? `tel:${digits}` : ''
@@ -183,13 +156,24 @@ watch(open, (isOpen) => {
     return
   }
   window.addEventListener('keydown', onKey)
-  ignoreCloseUntil = Date.now() + 450
+  ignoreCloseUntil = Date.now() + 500
   setTimeout(() => {
     if (open.value) document.addEventListener('pointerdown', onPointerDown, true)
   }, 0)
-  if (isSuperAdmin.value && !agents.value.length) loadAgents()
-  loadSummary()
+  // Paint cached stages immediately so the click feels instant.
+  if (categories.value.length) {
+    state.value = 'ready'
+    treeReady.value = true
+    nextTick(() => drawWires())
+  }
+  // Refresh counts in the background — never block the open on lead lists.
+  loadSummary({ soft: categories.value.length > 0 })
 })
+
+function displayCount(count) {
+  const n = Number(count) || 0
+  return Math.min(n, BATCH)
+}
 
 watch(salesActionAnchor, () => {
   if (!open.value) return
@@ -200,6 +184,8 @@ watch(salesActionAnchor, () => {
 onMounted(() => {
   window.addEventListener('resize', onResize)
   restorePillTop()
+  restoreWarmCache()
+  prefetchSummary()
 })
 
 onUnmounted(() => {
@@ -207,7 +193,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('pointerdown', onPointerDown, true)
   clearTimeout(searchTimer)
-  clearTimeout(hideTimer)
 })
 
 function onKey(event) {
@@ -300,7 +285,7 @@ function onPillClick(event) {
 function onPointerDown(event) {
   if (Date.now() < ignoreCloseUntil) return
   const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target]
-  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, .sac-tools, .sidebar-nav-link, .mobile-more-row'))
+  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, #shortcut-dock, .shortcut-dock, .sidebar-nav-link, .mobile-more-row'))
   if (inside) return
   closeSalesActionCenter()
 }
@@ -324,19 +309,20 @@ function treeLayout() {
   const compact = vw <= 800
   const inset = 12
   const topSafe = compact ? 64 : 16
-  const bottomSafe = compact ? 16 : 16
+  // Leave room under the last stage so the lead card can sit above the dock.
+  const bottomSafe = compact ? 110 : 120
   const toRight = anchor.left < vw * 0.45
   const stem = compact ? 20 : 46
   const sidePos = toRight ? anchor.right + stem : vw - anchor.left + stem
   const sideWidth = vw - sidePos - inset
   const stacked = sideWidth < 200
   const spaceAbove = anchor.top - topSafe
-  const spaceBelow = vh - anchor.bottom - (compact ? 92 : 16)
+  const spaceBelow = vh - anchor.bottom - (compact ? 92 : bottomSafe)
   const stackUp = spaceAbove >= spaceBelow
   const regionTop = stacked ? (stackUp ? topSafe : anchor.bottom + 12) : topSafe
   const regionBottom = stacked
-    ? (stackUp ? Math.max(regionTop + 32, anchor.top - 12) : vh - (compact ? 88 : 16))
-    : vh - (compact ? 88 : bottomSafe)
+    ? (stackUp ? Math.max(regionTop + 32, anchor.top - 12) : vh - (compact ? 88 : bottomSafe))
+    : vh - bottomSafe
   const availableH = Math.max(32, regionBottom - regionTop)
   let nodeH = compact ? 42 : 46
   let gap = nodeH + (compact ? 8 : 14)
@@ -350,13 +336,18 @@ function treeLayout() {
   }
   const span = Math.max(0, (count - 1) * gap)
   const mid = anchor.top + anchor.height / 2
-  let start = stacked
-    ? (stackUp ? regionBottom - span - nodeH : regionTop)
-    : mid - span / 2 - nodeH / 2
+  // Always grow the tree downward from the shortcut button.
+  const openUp = false
+  let start
+  if (stacked) {
+    start = stackUp ? regionBottom - span - nodeH : regionTop
+  } else {
+    start = Math.max(regionTop, Math.min(anchor.top, regionBottom - span - nodeH))
+  }
   const maxStart = regionBottom - span - nodeH
   start = Math.min(Math.max(regionTop, start), Math.max(regionTop, maxStart))
   const width = Math.max(120, Math.min(stacked ? 440 : 420, stacked ? vw - inset * 2 : sideWidth))
-  return { vw, vh, anchor, count, compact, stacked, stackUp, toRight, width, sidePos, nodeH, gap, start, inset, mid }
+  return { vw, vh, anchor, count, compact, stacked, stackUp, openUp, toRight, width, sidePos, nodeH, gap, start, inset, mid }
 }
 
 function nodeStyle(index) {
@@ -367,14 +358,14 @@ function nodeStyle(index) {
     top: `${top}px`,
     width: `${layout.width}px`,
     height: `${layout.nodeH}px`,
-    animationDelay: `${90 + index * 70}ms`,
+    animationDelay: `${index * 18}ms`,
     '--from-y': fromY,
   }
   if (layout.stacked) {
     style.left = `${layout.inset}px`
-    style['--origin'] = layout.stackUp ? 'center bottom' : 'center top'
+    style['--origin'] = 'center top'
     style['--from-x'] = '0px'
-    style['--from-y'] = layout.stackUp ? '28px' : '-28px'
+    style['--from-y'] = '-18px'
     return style
   }
   if (layout.toRight) {
@@ -400,6 +391,63 @@ function cacheKey(key) {
   return [key, search.value.trim(), previewUserId.value].join('|')
 }
 
+function applyListsPayload(payload) {
+  const map = payload && typeof payload === 'object' ? payload : {}
+  const next = { ...lists.value }
+  for (const [key, rows] of Object.entries(map)) {
+    next[cacheKey(key)] = Array.isArray(rows) ? rows : []
+  }
+  lists.value = next
+  writeWarmCache()
+}
+
+function applyCenterPayload(data, { keepLists = true } = {}) {
+  categories.value = (data.categories || []).filter((row) => Number(row?.count) > 0)
+  preview.value = !!data.preview
+  subjectName.value = data.subject_name || ''
+  if (!keepLists) lists.value = {}
+  if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
+  else writeWarmCache()
+  state.value = 'ready'
+}
+
+function warmScope() {
+  return [search.value.trim(), previewUserId.value].join('|')
+}
+
+function writeWarmCache() {
+  try {
+    localStorage.setItem(WARM_KEY, JSON.stringify({
+      scope: warmScope(),
+      categories: categories.value,
+      lists: lists.value,
+      preview: preview.value,
+      subjectName: subjectName.value,
+      at: Date.now(),
+    }))
+  } catch {
+    // Cache is optional.
+  }
+}
+
+function restoreWarmCache() {
+  try {
+    const raw = localStorage.getItem(WARM_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    // Keep for this browser session day so a refresh still opens instantly.
+    if (!data || data.scope !== warmScope() || !Array.isArray(data.categories)) return
+    if (data.at && Date.now() - Number(data.at) > 6 * 60 * 60 * 1000) return
+    categories.value = data.categories.filter((row) => Number(row?.count) > 0)
+    if (data.lists && typeof data.lists === 'object') lists.value = data.lists
+    preview.value = !!data.preview
+    subjectName.value = data.subjectName || ''
+    if (categories.value.length) state.value = 'ready'
+  } catch {
+    // Ignore broken cache.
+  }
+}
+
 async function loadAgents() {
   try {
     const response = await api.get('/sales-action-center/agents')
@@ -409,22 +457,68 @@ async function loadAgents() {
   }
 }
 
-async function loadSummary() {
-  state.value = 'loading'
-  errorMessage.value = ''
-  lists.value = {}
+async function prefetchLists() {
+  if (!categories.value.length) return
+  const requestId = ++listsRequest
+  try {
+    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
+    if (requestId !== listsRequest) return
+    const data = response.data?.data || {}
+    if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
+    // Keep stage counts in sync if this heavier call finishes later.
+    if (Array.isArray(data.categories) && requestId === listsRequest) {
+      categories.value = data.categories.filter((row) => Number(row?.count) > 0)
+      writeWarmCache()
+      if (open.value) {
+        await nextTick()
+        drawWires()
+      }
+    }
+  } catch (_) {
+    // Hover can still fetch a single stage if needed.
+  }
+}
+
+async function prefetchSummary() {
+  const requestId = ++summaryRequest
   try {
     const response = await api.get('/sales-action-center', { params: params() })
-    const data = response.data?.data || {}
-    categories.value = data.categories || []
-    preview.value = !!data.preview
-    subjectName.value = data.subject_name || ''
-    state.value = 'ready'
-    treeReady.value = false
-    await nextTick()
-    treeReady.value = true
-    drawWires()
+    if (requestId !== summaryRequest) return
+    applyCenterPayload(response.data?.data || {})
+    prefetchLists()
+  } catch (_) {
+    // Prefetch is best-effort; a click will try again.
+  }
+}
+
+async function loadSummary({ soft = false } = {}) {
+  const requestId = ++summaryRequest
+  const hadCategories = categories.value.length > 0
+  if (!hadCategories && !soft) {
+    state.value = 'loading'
+    errorMessage.value = ''
+  }
+  try {
+    // Fast path: counts only. Lead lists warm in the background.
+    const response = await api.get('/sales-action-center', { params: params() })
+    if (requestId !== summaryRequest) return
+    applyCenterPayload(response.data?.data || {})
+    if (open.value) {
+      treeReady.value = true
+      await nextTick()
+      drawWires()
+    }
+    prefetchLists()
   } catch (error) {
+    if (requestId !== summaryRequest) return
+    if (!open.value) return
+    if (hadCategories) {
+      state.value = 'ready'
+      treeReady.value = true
+      await nextTick()
+      drawWires()
+      return
+    }
     state.value = 'error'
     errorMessage.value = error?.response?.data?.message || "Couldn't load the action center."
   }
@@ -461,29 +555,35 @@ function drawWires() {
     const d = layout.stacked
       ? `M ${x1} ${y1} C ${x1} ${bendY}, ${x2} ${y1}, ${x2} ${y2}`
       : `M ${x1} ${y1} C ${bendX} ${y1}, ${bendX} ${y2}, ${x2} ${y2}`
-    return { d, delay: 40 + index * 70 }
+    return { d, delay: index * 18 }
   })
 }
 
 async function previewCategory(category, event) {
-  clearTimeout(hideTimer)
   hoveredKey.value = category.key
-  placePop(event.currentTarget)
+  const node = event.currentTarget
   const key = cacheKey(category.key)
-  if (lists.value[key]) {
+  if (Object.prototype.hasOwnProperty.call(lists.value, key)) {
     hoverList.value = lists.value[key]
     hoverState.value = hoverList.value.length ? 'ready' : 'empty'
+    placePop(node)
+    await nextTick()
+    placePop(node)
     return
   }
-  hoverState.value = 'loading'
+  // Keep the card hidden while a rare miss loads — never flash "Loading…".
   hoverList.value = []
+  hoverState.value = 'idle'
   try {
     const response = await api.get('/sales-action-center', { params: params({ category: category.key }) })
     const rows = response.data?.data?.recommendations || []
-    lists.value[key] = rows
+    lists.value = { ...lists.value, [key]: rows }
     if (hoveredKey.value !== category.key) return
     hoverList.value = rows
     hoverState.value = rows.length ? 'ready' : 'empty'
+    placePop(node)
+    await nextTick()
+    placePop(node)
   } catch (_) {
     if (hoveredKey.value === category.key) hoverState.value = 'empty'
   }
@@ -508,7 +608,7 @@ function placePop(node) {
   let left
   let width
   let top = box.top
-  let maxHeight = Math.min(Math.round(vh * 0.72), vh - margin * 2)
+  let maxHeight = Math.min(Math.round(vh * 0.68), vh - margin * 2)
 
   if (spaceLeft >= 200 || spaceRight >= 200) {
     if (spaceLeft >= spaceRight) {
@@ -518,22 +618,23 @@ function placePop(node) {
       width = Math.min(preferredW, spaceRight - gap)
       left = box.right + gap
     }
+    // Prefer opening downward; only shrink height if the card would leave the screen.
+    if (top + maxHeight > vh - margin) {
+      maxHeight = Math.max(160, vh - margin - top)
+    }
   } else {
     width = Math.min(preferredW, Math.max(160, vw - margin * 2))
     left = Math.max(margin, Math.min(box.left, vw - width - margin))
     const below = vh - box.bottom - margin
-    const above = box.top - margin
-    if (below >= 150 || below >= above) {
-      top = box.bottom + gap
-      maxHeight = Math.min(Math.round(vh * 0.72), Math.max(180, below - gap))
-    } else {
-      maxHeight = Math.min(Math.round(vh * 0.72), Math.max(180, above - gap))
-      top = Math.max(margin, box.top - gap - maxHeight)
-    }
+    // Default: open the lead card downward from the stage.
+    top = box.bottom + gap
+    maxHeight = Math.min(maxHeight, Math.max(160, below - gap))
   }
 
   if (top < margin) top = margin
-  if (top + maxHeight > vh - margin) maxHeight = Math.max(150, vh - margin - top)
+  if (top + maxHeight > vh - margin) {
+    maxHeight = Math.max(160, vh - margin - top)
+  }
 
   for (const item of obstacleBoxes()) {
     const hitsX = left + width > item.left && left < item.right
@@ -551,35 +652,27 @@ function placePop(node) {
   }
 }
 
-function scheduleHide() {
-  clearTimeout(hideTimer)
-  hideTimer = setTimeout(() => {
-    hoveredKey.value = ''
-    hoverList.value = []
-    hoverState.value = 'idle'
-  }, 160)
+function closeStageCards() {
+  hoveredKey.value = ''
+  hoverList.value = []
+  hoverState.value = 'idle'
 }
 
-function holdCard() {
-  clearTimeout(hideTimer)
-}
-
-function activateCategory(category, event) {
-  const coarse = window.matchMedia('(hover: none)').matches
-  if (coarse) {
-    if (hoveredKey.value === category.key && hoverItem.value) {
-      openItem(hoverItem.value)
-      return
-    }
-    previewCategory(category, event)
+function toggleCategory(category, event) {
+  // Click the open stage again to close its cards, then pick another stage.
+  if (hoveredKey.value === category.key) {
+    closeStageCards()
     return
   }
-  if (hoverItem.value && hoveredKey.value === category.key) openItem(hoverItem.value)
+  previewCategory(category, event)
 }
 
 function onSearch() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(loadSummary, 250)
+  searchTimer = setTimeout(() => {
+    lists.value = {}
+    loadSummary({ soft: false })
+  }, 250)
 }
 
 function openItem(item) {
@@ -634,7 +727,7 @@ function openItem(item) {
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: sac-draw 0.55s ease forwards;
+  animation: sac-draw 0.22s ease forwards;
 }
 .sac-node {
   position: fixed;
@@ -658,13 +751,21 @@ function openItem(item) {
 }
 .sac-node.is-grown {
   opacity: 1;
-  animation: sac-from-icon 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: sac-from-icon 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 .sac-node.is-hot {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), #f6e7b2);
   box-shadow: 0 0 0 1px rgba(214, 184, 92, 0.7), 0 12px 28px rgba(180, 140, 40, 0.12);
 }
-.sac-node__chevron { color: #9a8fb0; flex: none; }
+.sac-node__chevron {
+  color: #9a8fb0;
+  flex: none;
+  transition: transform 0.16s ease;
+}
+.sac-node.is-hot .sac-node__chevron {
+  transform: rotate(90deg);
+  color: #6b21a8;
+}
 .sac-node__label {
   flex: 1;
   min-width: 0;
@@ -847,14 +948,17 @@ function openItem(item) {
 .sac-banner {
   position: fixed;
   z-index: 1260;
-  top: 16px;
-  left: 16px;
+  top: auto;
+  right: 88px;
+  bottom: 28px;
+  left: auto;
   margin: 0;
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   color: #4c1d6e;
   font-size: 13px;
+  box-shadow: 0 8px 20px rgba(70, 50, 110, 0.08);
 }
 @keyframes sac-from-icon {
   to { opacity: 1; transform: translate(0, 0) scale(1); }

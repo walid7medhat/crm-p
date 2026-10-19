@@ -93,6 +93,15 @@
           </div>
         </div>
       </div>
+      <UserDeviceLocation
+        v-if="canViewDeviceLocation"
+        :latitude="user.last_login_lat"
+        :longitude="user.last_login_lng"
+        :accuracy="user.last_login_accuracy"
+        :captured-at="user.last_login_location_at"
+        :address="user.last_login_location"
+        :source="user.last_login_location_source"
+      />
     </section>
 
     <!-- Nav + content (single card) -->
@@ -1648,6 +1657,7 @@ import api from '@/plugins/axios';
 import defaultAvatar from "@/assets/images/user-grid/user-grid-img14.png";
 import user1 from "@/assets/images/user-grid/user-grid-img13.png";
 import UserAttendanceCarousel from '@/components/Users/UserAttendanceCarousel.vue';
+import UserDeviceLocation from '@/components/Users/UserDeviceLocation.vue';
 import SearchableSelect from '@/components/ui/SearchableSelect.vue';
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue';
 import { aiSalesIntelligenceApi } from '@/services/aiSalesIntelligenceApi';
@@ -1656,6 +1666,7 @@ export default {
   name: 'UserProfile',
   components: {
     UserAttendanceCarousel,
+    UserDeviceLocation,
     SearchableSelect,
     AdvancedDatePicker,
   },
@@ -1832,6 +1843,15 @@ export default {
     const currentDelegate = computed(() => {
       if (!vacationData.delegate_id) return null;
       return agentsList.value.find(agent => agent.id == vacationData.delegate_id);
+    });
+    const canViewDeviceLocation = computed(() => {
+      const roleName = String(user.value?.role_name || '').toLowerCase();
+      if (roleName === 'admin' || roleName === 'super_admin' || roleName === 'super admin') return true;
+      const roles = Array.isArray(user.value?.roles) ? user.value.roles : [];
+      return roles.some((role) => {
+        const name = String(role?.name || role || '').toLowerCase();
+        return name === 'admin' || name === 'super_admin' || name === 'super admin';
+      });
     });
     const isSuperAdmin = computed(() => {
       const roleName = String(user.value?.role_name || '').toLowerCase();
@@ -3299,6 +3319,7 @@ const openLeaveDetail = (lv) => {
       checkinSubmitting,
       checkinCode,
       dayOptions,
+      canViewDeviceLocation,
       isSuperAdmin,
       isTeamLead,
       isSalesProfile,

@@ -34,7 +34,8 @@ class SalesActionCenterController extends Controller
             $subject,
             $request->input('category'),
             $request->input('search'),
-            max(1, (int) $request->input('page', 1))
+            max(1, (int) $request->input('page', 1)),
+            $request->boolean('with_lists')
         );
         $data['preview'] = $preview;
         $data['live'] = ! $preview;

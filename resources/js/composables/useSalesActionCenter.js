@@ -1,9 +1,23 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import {
+  claimShortcutPanel,
+  salesActionCenterOpen,
+} from '@/composables/useShortcutPanels.js'
 
-export const salesActionCenterOpen = ref(false)
+export { salesActionCenterOpen }
+
 export const salesActionAnchor = ref(null)
 
 let openedAt = 0
+
+/** Any signed-in CRM user can open Next Actions, including admin and super admin. */
+export const canUseNextActions = computed(() => {
+  try {
+    return !!localStorage.getItem('token') && !!localStorage.getItem('user')
+  } catch {
+    return false
+  }
+})
 
 function rectOf(event) {
   const el = event?.currentTarget
@@ -20,6 +34,8 @@ function rectOf(event) {
 }
 
 export function openSalesActionCenter(event) {
+  if (!canUseNextActions.value) return
+
   const next = rectOf(event)
   if (next) salesActionAnchor.value = next
 
@@ -29,6 +45,7 @@ export function openSalesActionCenter(event) {
     return
   }
 
+  claimShortcutPanel('next-actions')
   openedAt = Date.now()
   salesActionCenterOpen.value = true
 }

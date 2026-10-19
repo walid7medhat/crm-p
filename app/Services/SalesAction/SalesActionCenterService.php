@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Rule-based next actions for leads a user is allowed to work.
@@ -35,24 +36,30 @@ class SalesActionCenterService
     /** @var Collection<int, Stage>|null */
     private ?Collection $leadStages = null;
 
-    public function center(User $subject, ?string $category = null, ?string $search = null, int $page = 1): array
+    public function center(User $subject, ?string $category = null, ?string $search = null, int $page = 1, bool $withLists = false): array
     {
         $evaluatedAt = now()->toIso8601String();
-        $categories = $this->categoryDefinitions();
-        $summary = [];
-
-        foreach ($categories as $definition) {
-            $summary[] = [
-                'key' => $definition['key'],
-                'title' => $definition['title'],
-                'description' => $definition['description'],
-                'count' => $this->categoryQuery($subject, $definition['key'], $search)->count(),
-            ];
-        }
+        $summary = $this->cachedCategorySummary($subject, $search);
 
         $recommendations = [];
         if ($category && $this->definition($category)) {
             $recommendations = $this->recommendationsFor($subject, $category, $search, max(1, $page), $evaluatedAt);
+        }
+
+        $lists = [];
+        if ($withLists && ! $category) {
+            foreach ($summary as $row) {
+                if ((int) ($row['count'] ?? 0) <= 0) {
+                    continue;
+                }
+                $lists[$row['key']] = $this->recommendationsFor(
+                    $subject,
+                    $row['key'],
+                    $search,
+                    1,
+                    $evaluatedAt
+                );
+            }
         }
 
         return [
@@ -61,9 +68,34 @@ class SalesActionCenterService
             'inactive_days' => self::INACTIVE_DAYS,
             'categories' => $summary,
             'recommendations' => $recommendations,
+            'lists' => $lists,
             'page' => max(1, $page),
             'per_page' => self::PER_PAGE,
         ];
+    }
+
+    /**
+     * Stage counts are expensive; keep a short per-user cache so open/hover stays snappy.
+     *
+     * @return array<int, array{key: string, title: string, description: string, count: int}>
+     */
+    private function cachedCategorySummary(User $subject, ?string $search): array
+    {
+        $cacheKey = 'sac:summary:v1:'.$subject->id.':'.md5((string) $search);
+
+        return Cache::remember($cacheKey, 45, function () use ($subject, $search) {
+            $summary = [];
+            foreach ($this->categoryDefinitions() as $definition) {
+                $summary[] = [
+                    'key' => $definition['key'],
+                    'title' => $definition['title'],
+                    'description' => $definition['description'],
+                    'count' => $this->categoryQuery($subject, $definition['key'], $search)->count(),
+                ];
+            }
+
+            return $summary;
+        });
     }
 
     /**
@@ -106,11 +138,6 @@ class SalesActionCenterService
                 'key' => 'qualified_missing_requirements',
                 'title' => 'Qualified — Missing Requirements',
                 'description' => 'Qualified, without the area, type, bedrooms, or budget used for matching.',
-            ],
-            [
-                'key' => 'qualified_ready_to_match',
-                'title' => 'Qualified — Ready to Match Properties',
-                'description' => 'Qualified, and the saved requirement is enough to match listings.',
             ],
             [
                 'key' => 'converted_deal_missing',

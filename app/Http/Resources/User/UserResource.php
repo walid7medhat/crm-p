@@ -3,6 +3,7 @@
 namespace App\Http\Resources\User;
 
 use App\Models\User;
+use App\Services\Auth\LoginLocationUpdate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -53,8 +54,12 @@ class UserResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i'),
                         'last_login_at' => $this->last_login_at,
             'last_login_location' => $this->last_login_location,
-            'last_login_lat' => $this->last_login_lat,
-            'last_login_lng' => $this->last_login_lng,
+            'last_login_lat' => $this->last_login_lat !== null ? (float) $this->last_login_lat : null,
+            'last_login_lng' => $this->last_login_lng !== null ? (float) $this->last_login_lng : null,
+            'last_login_accuracy' => $this->last_login_accuracy !== null ? (int) $this->last_login_accuracy : null,
+            'last_login_location_at' => $this->last_login_location_at?->toIso8601String(),
+            'last_login_location_source' => LoginLocationUpdate::source($this->resource),
+            'last_login_location_precise' => LoginLocationUpdate::isPrecise($this->last_login_accuracy),
             'last_login_ip' => $this->last_login_ip,
               // Hierarchical data
             'team_members_count' => $this->relationLoaded('children')

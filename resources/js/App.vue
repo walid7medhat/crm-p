@@ -23,7 +23,7 @@
       />
     </ShortcutDock>
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
-    <SalesActionCenter v-if="showLayout && !isAppLoading" />
+    <SalesActionCenter v-if="showLayout && !isAppLoading && canUseNextActions" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
@@ -99,6 +99,8 @@ import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { useBackground } from './composables/useBackground.js'
 import ShortcutDock from './components/layout/ShortcutDock.vue'
+import { canUseNextActions } from './composables/useSalesActionCenter.js'
+import { chatPanelOpen, claimShortcutPanel } from './composables/useShortcutPanels.js'
 import { useLeadViewModal, initLeadViewModal, checkUrlForLead } from './composables/useLeadViewModal.js'
 import { useImpersonation } from './composables/useImpersonation.js'
 
@@ -144,7 +146,7 @@ export default {
     const { impersonatorUser, returnToSuperAdmin } = useImpersonation()
     const showLayout = computed(() => route.meta.layout !== false)
     const isDashboardHome = computed(() => !!route.meta?.dashboardHome)
-    const chatOpen = ref(false)
+    const chatOpen = chatPanelOpen
     const chatAgent = ref(null)
     const chatListingId = ref(null)
     const chatContext = ref(null)
@@ -165,6 +167,7 @@ export default {
 
     function openPropertyChat(agent, listingId, context = null) {
       if (!canUseChat.value) return
+      claimShortcutPanel('chat')
       chatAgent.value = agent
       chatListingId.value = listingId != null ? Number(listingId) : null
       chatContext.value = context || null
@@ -173,6 +176,7 @@ export default {
 
     function openChatInbox() {
       if (!canUseChat.value) return
+      claimShortcutPanel('chat')
       chatAgent.value = null
       chatListingId.value = null
       chatContext.value = null
@@ -249,6 +253,7 @@ export default {
       chatListingId,
       chatContext,
       canUseChat,
+      canUseNextActions,
       openChatInbox,
       closeChat,
       showLeadViewModal,
