@@ -189,7 +189,24 @@
                 <div v-else class="mk-empty"><iconify-icon icon="lucide:message-circle" />No comments yet.</div>
               </section>
 
-              <section v-else-if="tab === 'history'">
+              <section v-else-if="tab === 'reassign'" class="mk-reassign">
+                <p class="mk-reassign__hint">Choose a designer. This card stays on Content, and a copy is placed in the first stage on Design, assigned to them.</p>
+                <ul v-if="members.length" class="mk-reassign__list">
+                  <li v-for="m in members" :key="m.id">
+                    <button type="button" :class="{ 'is-on': reassignTo === m.id }" :disabled="busy" @click="reassignTo = m.id">
+                      <MkAvatar :user="m" :size="28" />
+                      <span>{{ m.name }}</span>
+                      <iconify-icon v-if="reassignTo === m.id" icon="lucide:check" />
+                    </button>
+                  </li>
+                </ul>
+                <div v-else class="mk-empty"><iconify-icon icon="lucide:users" />No one has the Marketing permission yet.</div>
+                <button type="button" class="mk-btn mk-btn--primary" :disabled="busy || !reassignTo" @click="reassign">
+                  <iconify-icon icon="lucide:user-plus" /> Reassign
+                </button>
+              </section>
+
+              <section v-else-if="tab === 'history' && canManage">
                 <ol class="mk-timeline">
                   <li v-for="(h, i) in task.histories" :key="h.id" class="mk-rise" :style="{ '--h': HISTORY_ACTIONS[h.action]?.color || '#64748b', '--i': Math.min(i, 12) }">
                     <span class="mk-timeline__dot"><iconify-icon :icon="HISTORY_ACTIONS[h.action]?.icon || 'lucide:dot'" /></span>
@@ -236,6 +253,7 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   taskId: { type: [Number, null], default: null },
   stages: { type: Array, default: () => [] },
+  members: { type: Array, default: () => [] },
   canManage: { type: Boolean, default: false },
   initialTab: { type: String, default: 'details' },
 })
@@ -247,6 +265,7 @@ const busy = ref(false)
 const tab = ref('details')
 const newLink = reactive({ url: '', label: '' })
 const newComment = ref('')
+const reassignTo = ref(null)
 
 const cat = computed(() => MARKETING_CATEGORIES[task.value?.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => CONTENT_TYPES[task.value?.type])
@@ -255,7 +274,10 @@ const tabs = computed(() => [
   { id: 'details', label: 'Details', icon: 'lucide:info' },
   { id: 'links', label: 'Links', icon: 'lucide:link', count: task.value?.links?.length },
   { id: 'comments', label: 'Comments', icon: 'lucide:message-circle', count: task.value?.comments?.length },
-  { id: 'history', label: 'History', icon: 'lucide:history' },
+  ...(task.value?.category === 'content' && !task.value?.source_task_id
+    ? [{ id: 'reassign', label: 'Reassign', icon: 'lucide:user-plus' }]
+    : []),
+  ...(props.canManage ? [{ id: 'history', label: 'History', icon: 'lucide:history' }] : []),
 ])
 
 /** Same rich top-right toast as lead / deal pop-ups: headline + card title + board chip. */
@@ -272,6 +294,7 @@ async function load() {
   try {
     const { data } = await api.get(`/marketing/tasks/${props.taskId}`)
     task.value = data.task
+    reassignTo.value = data.task?.designer?.id ?? null
   } catch (err) {
     Swal.fire({ icon: 'error', title: 'Could not open card', text: apiError(err) })
     close()
@@ -289,10 +312,11 @@ async function refresh() {
 watch(() => [props.modelValue, props.taskId], ([open, id], [wasOpen, oldId] = []) => {
   if (open && (!wasOpen || id !== oldId)) {
     task.value = null
-    tab.value = props.initialTab
+    tab.value = props.canManage || props.initialTab !== 'history' ? props.initialTab : 'details'
     newLink.url = ''
     newLink.label = ''
     newComment.value = ''
+    reassignTo.value = null
     load()
   }
 })
@@ -330,6 +354,20 @@ async function toggleApprove() {
     await refresh()
   } catch (err) {
     Swal.fire({ icon: 'error', title: 'Could not update approval', text: apiError(err) })
+  } finally {
+    busy.value = false
+  }
+}
+
+async function reassign() {
+  if (!task.value || !reassignTo.value) return
+  busy.value = true
+  try {
+    await api.post(`/marketing/tasks/${task.value.id}/reassign`, { designed_by: reassignTo.value })
+    toast('Sent to Design', 'updated')
+    await refresh()
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'Could not reassign', text: apiError(err) })
   } finally {
     busy.value = false
   }
@@ -573,6 +611,31 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 .mk-links a b { display: block; font-size: 14px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mk-links a small { font-size: 12px !important; color: var(--text-secondary-light); }
 .mk-links a:hover b { color: var(--color-primary); }
+
+/* Reassign */
+.mk-reassign { display: flex; flex-direction: column; gap: 14px; }
+.mk-reassign__hint { margin: 0; font-size: 13px !important; line-height: 1.5; color: var(--text-secondary-light); }
+.mk-reassign__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mk-reassign__list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+.mk-reassign__list button.is-on {
+  border-color: #7c3aed;
+  background: #f6f1fc;
+}
+.mk-reassign__list span { flex: 1; min-width: 0; }
+.mk-reassign__list iconify-icon { color: #7c3aed; }
+.mk-reassign .mk-btn { align-self: flex-start; }
 
 /* Comments */
 .mk-comments__composer { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 18px; }

@@ -41,6 +41,37 @@ class MarketingTaskMirror
         ], $fromSource);
     }
 
+    /**
+     * From a content card: set the designer and place the Design copy at the top
+     * of the first Design stage, even if that copy was already further along.
+     */
+    public static function reassignDesigner(MarketingTask $task, int $designerId): void
+    {
+        $source = self::sourceOf($task);
+        if (!$source || $source->category !== 'content') {
+            throw ValidationException::withMessages([
+                'designed_by' => 'Only a content card can be reassigned to Design.',
+            ]);
+        }
+
+        $before = MarketingHistoryRecorder::snapshot($source);
+        $source->designed_by = $designerId;
+        if ($source->isDirty()) {
+            $source->save();
+            $changes = MarketingHistoryRecorder::diff($before, $source->fresh());
+            if ($changes) {
+                MarketingHistoryRecorder::record($source, 'updated', $changes);
+            }
+        }
+
+        self::sync($source->fresh());
+
+        $mirror = MarketingTask::where('source_task_id', $source->id)->where('category', 'design')->first();
+        if ($mirror) {
+            self::placeOnFirstStage($mirror->fresh());
+        }
+    }
+
     private static function sourceOf(MarketingTask $task): ?MarketingTask
     {
         if ($task->category === 'content' && !$task->source_task_id) {
@@ -115,6 +146,39 @@ class MarketingTaskMirror
             'old' => null,
             'new' => $stage->name,
         ]]);
+    }
+
+    /** Drop a card at the top of the first stage on its board. */
+    private static function placeOnFirstStage(MarketingTask $mirror): void
+    {
+        $stage = MarketingStage::where('category', $mirror->category)->orderBy('sort_order')->orderBy('id')->first();
+        if (!$stage) {
+            throw ValidationException::withMessages([
+                'designed_by' => 'Add a stage on the Design board before sending this card there.',
+            ]);
+        }
+
+        if ((int) $mirror->stage_id === (int) $stage->id && (int) $mirror->position === 0) {
+            return;
+        }
+
+        $fromStageId = (int) $mirror->stage_id;
+
+        MarketingTask::where('stage_id', $stage->id)->where('id', '!=', $mirror->id)->increment('position');
+
+        $mirror->stage_id = $stage->id;
+        $mirror->position = 0;
+        $mirror->completed_at = $stage->is_done ? ($mirror->completed_at ?? now()) : null;
+        $mirror->save();
+
+        if ($fromStageId !== (int) $stage->id) {
+            MarketingTask::where('stage_id', $fromStageId)
+                ->orderBy('position')->orderByDesc('id')
+                ->pluck('id')
+                ->each(fn ($id, $index) => MarketingTask::whereKey($id)->update(['position' => $index]));
+
+            MarketingHistoryRecorder::record($mirror, 'moved', MarketingHistoryRecorder::stageChange($fromStageId, $stage->id));
+        }
     }
 
     /** @return array<string, mixed> */

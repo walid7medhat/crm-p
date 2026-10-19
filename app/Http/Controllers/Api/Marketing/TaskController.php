@@ -28,23 +28,30 @@ class TaskController extends MarketingBaseController
 
     public function show(MarketingTask $task): JsonResponse
     {
+        $canSeeHistory = $this->isAdmin();
+
         $task->load(MarketingPresenter::TASK_RELATIONS)
             ->loadCount(MarketingPresenter::taskCounts())
             ->load([
                 'comments' => fn ($q) => $q->with('user:id,name,avatar')->latest('id'),
-                'histories' => fn ($q) => $q->with('user:id,name,avatar')->latest('id'),
                 'posts' => fn ($q) => $q->with(['link', 'poster:id,name'])->orderBy('scheduled_date'),
                 'stage',
             ]);
+
+        if ($canSeeHistory) {
+            $task->load(['histories' => fn ($q) => $q->with('user:id,name,avatar')->latest('id')]);
+        }
 
         return response()->json([
             'task' => MarketingPresenter::task($task) + [
                 'stage' => $task->stage ? ['id' => $task->stage->id, 'name' => $task->stage->name, 'color' => $task->stage->color, 'is_done' => $task->stage->is_done] : null,
                 'comments' => $task->comments->map(fn ($c) => MarketingPresenter::comment($c))->values(),
-                'histories' => $task->histories->map(fn ($h) => MarketingPresenter::history($h))->values(),
+                'histories' => $canSeeHistory
+                    ? $task->histories->map(fn ($h) => MarketingPresenter::history($h))->values()
+                    : [],
                 'posts' => $task->posts->map(fn ($p) => MarketingPresenter::post($p))->values(),
             ],
-            'can_manage' => $this->isAdmin(),
+            'can_manage' => $canSeeHistory,
         ]);
     }
 
@@ -190,6 +197,22 @@ class TaskController extends MarketingBaseController
             // UI suggests adding the final link when a card reaches Done empty-handed.
             'suggest_link' => $target->is_done && $fromStageId !== $target->id && !$task->links()->exists(),
         ]);
+    }
+
+    /**
+     * Content card only. Sets the designer and puts the Design copy in the first Design stage.
+     */
+    public function reassign(Request $request, MarketingTask $task): JsonResponse
+    {
+        $validated = $request->validate([
+            'designed_by' => ['required', 'integer', $this->memberRule([$task->designed_by])],
+        ]);
+
+        DB::transaction(function () use ($task, $validated) {
+            MarketingTaskMirror::reassignDesigner($task, (int) $validated['designed_by']);
+        });
+
+        return response()->json(['task' => $this->fresh($task)]);
     }
 
     public function approve(Request $request, MarketingTask $task): JsonResponse
