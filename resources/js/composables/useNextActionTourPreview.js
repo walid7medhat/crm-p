@@ -1,15 +1,19 @@
 import { computed, ref } from 'vue'
+import api from '@/plugins/axios'
 import {
   closeSalesActionCenter,
   openSalesActionCenter,
   salesActionCenterOpen,
 } from '@/composables/useSalesActionCenter.js'
 
-/** Preview-only. Phases: idle → intro (3D bumper) → tour (real tool walkthrough). */
+/** Phases: idle → intro (3D bumper) → tour (real tool walkthrough). */
 export const tourPhase = ref('idle')
 export const tourStepIndex = ref(0)
 export const tourAutoPlaying = ref(false)
 export const tourSteps = ref([])
+/** null = admin Preview; uuid = live campaign for this user */
+export const liveLaunchId = ref(null)
+export const tourMode = ref('preview') // preview | live
 
 const INTRO_MS = 4200
 const STEP_MS = 3600
@@ -177,7 +181,7 @@ function queueAutoAdvance() {
     if (!tourAutoPlaying.value || tourPhase.value !== 'tour') return
     if (tourStepIndex.value >= tourSteps.value.length - 1) {
       scheduleAuto(2000, () => {
-        if (tourAutoPlaying.value) endNextActionTourPreview()
+        if (tourAutoPlaying.value) endNextActionTourPreview({ completed: true })
       })
       return
     }
@@ -202,19 +206,45 @@ async function beginWalkthrough() {
   queueAutoAdvance()
 }
 
-/** Admin Preview: 3D intro, then auto walkthrough of the real Next Actions tree. */
-export function startNextActionTourPreview() {
+async function recordLive(path) {
+  if (tourMode.value !== 'live' || !liveLaunchId.value) return
+  try {
+    await api.post(`/next-action-tour/${path}`, { launch_id: liveLaunchId.value })
+  } catch {
+    // Progress tracking is best-effort; the tour UI still works.
+  }
+}
+
+function startTourSession({ mode = 'preview', launchId = null } = {}) {
   autoToken += 1
   clearAutoTimer()
+  tourMode.value = mode
+  liveLaunchId.value = launchId
   tourAutoPlaying.value = true
   tourStepIndex.value = 0
   tourSteps.value = []
   tourPhase.value = 'intro'
 
+  if (mode === 'live' && launchId) {
+    recordLive('shown')
+  }
+
   scheduleAuto(INTRO_MS, async () => {
     if (!tourAutoPlaying.value || tourPhase.value !== 'intro') return
     await beginWalkthrough()
   })
+}
+
+/** Admin Preview: local only — no campaign, no other users. */
+export function startNextActionTourPreview() {
+  startTourSession({ mode: 'preview', launchId: null })
+}
+
+/** Live campaign for the signed-in user (Echo /me). Max 3 views enforced by API. */
+export function startNextActionTourLive(launchId) {
+  if (!launchId) return
+  if (tourPhase.value !== 'idle') return
+  startTourSession({ mode: 'live', launchId: String(launchId) })
 }
 
 export async function continueTourFromAnnouncement() {
@@ -234,7 +264,7 @@ export async function goTourNext() {
   }
   if (tourPhase.value !== 'tour') return
   if (tourStepIndex.value >= tourSteps.value.length - 1) {
-    endNextActionTourPreview()
+    endNextActionTourPreview({ completed: true })
     return
   }
   tourStepIndex.value += 1
@@ -250,15 +280,22 @@ export async function goTourPrev() {
   await runStepAction()
 }
 
-export function endNextActionTourPreview() {
+export function endNextActionTourPreview({ completed = false } = {}) {
+  const wasLive = tourMode.value === 'live' && liveLaunchId.value
+  const launchId = liveLaunchId.value
   autoToken += 1
   clearAutoTimer()
   tourAutoPlaying.value = false
   tourPhase.value = 'idle'
   tourStepIndex.value = 0
   tourSteps.value = []
+  tourMode.value = 'preview'
+  liveLaunchId.value = null
   dispatchTourAction('close-stage')
   closeSalesActionCenter()
+  if (wasLive && launchId) {
+    api.post(`/next-action-tour/${completed ? 'completed' : 'dismissed'}`, { launch_id: launchId }).catch(() => {})
+  }
 }
 
 export function useNextActionTourPreview() {
@@ -268,12 +305,15 @@ export function useNextActionTourPreview() {
     tourStep,
     tourSteps,
     tourAutoPlaying,
+    tourMode,
+    liveLaunchId,
     TOUR_STEPS,
     isTourPreviewActive,
     isIntro,
     isAnnouncement,
     isTourWalkthrough,
     startNextActionTourPreview,
+    startNextActionTourLive,
     continueTourFromAnnouncement,
     goTourNext,
     goTourPrev,

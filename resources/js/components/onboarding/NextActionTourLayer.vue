@@ -60,6 +60,9 @@ import {
   tourStepIndex,
   tourSteps,
 } from '@/composables/useNextActionTourPreview.js'
+import { initNextActionTourLive } from '@/composables/useNextActionTourLive.js'
+
+let teardownLive = null
 
 const hole = ref(null)
 const viewport = ref({ w: 0, h: 0 })
@@ -187,11 +190,14 @@ function onKey(event) {
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('resize', measure)
+  teardownLive = initNextActionTourLive()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('resize', measure)
+  if (typeof teardownLive === 'function') teardownLive()
+  teardownLive = null
 })
 </script>
 

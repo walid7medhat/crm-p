@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BackgroundController;
 use App\Http\Controllers\Api\SystemCampaignController;
 use App\Http\Controllers\Api\DailyMotivationController;
+use App\Http\Controllers\Api\NextActionTourController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\Listing\FeatureController;
 use App\Http\Controllers\Api\UserInvitationController;
@@ -701,6 +702,20 @@ Route::middleware(['jwt.auth'])->group(function () {
             Route::post('/import', [DailyMotivationController::class, 'import']);
             Route::get('/users', [DailyMotivationController::class, 'lookup']);
             Route::post('/users/{user}/reset', [DailyMotivationController::class, 'resetUser'])->whereNumber('user');
+        });
+    });
+
+    // Next Actions onboarding tour campaign (live kickoff + per-user progress).
+    Route::prefix('next-action-tour')->group(function () {
+        Route::get('/me', [NextActionTourController::class, 'me']);
+        Route::post('/shown', [NextActionTourController::class, 'shown']);
+        Route::post('/dismissed', [NextActionTourController::class, 'dismissed']);
+        Route::post('/completed', [NextActionTourController::class, 'completed']);
+
+        Route::middleware('role:super_admin')->prefix('admin')->group(function () {
+            Route::get('/status', [NextActionTourController::class, 'status']);
+            Route::post('/start', [NextActionTourController::class, 'start']);
+            Route::post('/stop', [NextActionTourController::class, 'stop']);
         });
     });
 
