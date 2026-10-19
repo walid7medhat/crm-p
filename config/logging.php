@@ -178,6 +178,12 @@ return [
         'path'   => storage_path('logs/kanban-perf.log'),
         'level'  => 'debug',
     ],
+    'endpoint_usage' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/endpoint-usage.log'),
+            'level'  => 'info',
+            'days'   => 14,
+        ],
     ],
 
 ];

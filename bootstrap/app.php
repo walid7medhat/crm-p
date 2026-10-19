@@ -34,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
            'broadcasting/auth',
            'api/webhook/facebook', 
        ]);
+           $middleware->alias(['log.usage' => \App\Http\Middleware\LogEndpointUsage::class]);
+
        $middleware->trustProxies(at: '*');
     })
 
