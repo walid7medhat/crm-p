@@ -1348,7 +1348,7 @@ class LeadController extends Controller
         $target = User::find($targetId);
 
         return $target
-            && $target->status === 'active'
+            // && $target->status === 'active'
             && $target->parent_id !== null
             && $target->hasRole('admin');
     }
