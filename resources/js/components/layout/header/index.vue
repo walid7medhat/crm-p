@@ -1060,7 +1060,7 @@ const tableItems = computed(() => {
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]
 
-  if (!isAdmin.value) {
+  if (!isAdmin.value && !isBranchAdmin.value) {
     items.splice(1, 0, {
       path: '/my-listing',
       label: 'My Listing',
@@ -1075,11 +1075,15 @@ const tableItems = computed(() => {
 
 const requestsItems = computed(() => {
   const c = sidebarCounts.value;
-  if (isAdmin.value) {
+  if (isAdmin.value ) {
     return [
       { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: c?.orders?.all || 0 },
             { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
 
+    ]
+  } else if ( isBranchAdmin.value) {
+    return [
+     
     ]
   } else {
     const items = [
