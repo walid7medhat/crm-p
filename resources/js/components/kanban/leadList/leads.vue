@@ -6872,9 +6872,9 @@ const fetchRevertNotifications = async () => {
     /* transform: translate3d(var(--px), var(--py), 0) rotateX(var(--rx)) rotateY(var(--ry)); */
     transform-style: preserve-3d;
     transition:
-        box-shadow 0.16s cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 0.16s ease,
-        scale 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+        box-shadow 0.08s ease,
+        border-color 0.08s ease,
+        scale 0.08s ease;
     --tilt-strength: 0.2;  /* قلله أكتر لو لسه كبير */
     --max-tilt: 2deg;      /* أقصى ميل حتى لو الماوس في الطرف */
     --max-shift: 2px;      /* أقصى إزاحة */
@@ -6901,36 +6901,20 @@ const fetchRevertNotifications = async () => {
     pointer-events: none;
     z-index: 0;
     opacity: 0;
-    transition: opacity 0.32s ease;
-    /* Wash takes the stage header colour (--column-color on the column). */
-    background: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 18%, transparent);
+    transition: none;
+    background: transparent;
 }
 
 @media (hover: hover) and (pointer: fine) {
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover:not(.ghost):not(.dragging):not(.kanban-card--motion-hold):not(.is-tilting) {
-        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 55%, #ffffff) !important;
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.95),
-            0 0 0 1px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 22%, transparent),
-            0 16px 28px -18px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 70%, transparent) !important;
+        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 42%, #ffffff) !important;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting:not(.ghost):not(.kanban-card--motion-hold),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging {
         z-index: 4;
-        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 62%, #ffffff) !important;
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.96),
-            0 0 0 1px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 28%, transparent),
-            0 18px 32px -16px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 68%, transparent) !important;
-    }
-
-    .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover::before,
-    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting::before,
-    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging::before,
-    .kanban-card--drag-image::before {
-        opacity: 1;
+        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 42%, #ffffff) !important;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting {
@@ -6939,7 +6923,7 @@ const fetchRevertNotifications = async () => {
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost) {
-        transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, border-color 0.16s ease;
+        transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.08s ease, border-color 0.08s ease;
     }
 
     .kanban-card.lead-priority-hot-border:hover,
@@ -7809,17 +7793,11 @@ const fetchRevertNotifications = async () => {
     pointer-events: none;
 }
 
-.kanban-outer--mobile .kanban-column .kanban-card--mobile:hover::after,
-.kanban-outer--mobile .kanban-column .kanban-card--mobile:active::after,
-.kanban-outer--mobile .kanban-column .kanban-card--mobile:focus-visible::after {
-    opacity: 0.9;
-}
-
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:hover,
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:active,
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:focus-visible {
-    background: color-mix(in srgb, var(--column-color, #733E87) 12%, #ffffff) !important;
-    border-color: color-mix(in srgb, var(--column-color, #733E87) 48%, #ffffff) !important;
+    border-color: color-mix(in srgb, var(--column-color, #733E87) 42%, #ffffff) !important;
+    transition: border-color 0.08s ease;
 }
 
 .kanban-outer--mobile .kanban-column > div,
@@ -8958,7 +8936,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .lead-list-table tbody tr:hover td {
-    background: color-mix(in srgb, var(--column-color, #94a3b8) 14%, #ffffff);
+    background: #f8fafc;
 }
 
 .lead-list-table tbody tr.is-selected td,
