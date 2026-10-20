@@ -1,7 +1,7 @@
 <template>
   <div class="property-actions-menu" :class="`property-actions-menu--${variant}`">
     <button
-      v-if="canApproveListings && !property.approved && property.status !== 'converted' && property.status !== 'rented'"
+      v-if="canApproveListings && !property.approved && property.status !== 'converted' && property.status !== 'rented' &&  property.status !== 'draft'"
       type="button"
       :class="itemClass('success')"
       @click="emit('approve-listing')"
