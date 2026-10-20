@@ -499,7 +499,7 @@ export default {
     },
     methods: {
         inChart(user) {
-            if (!isTreeRole(user)) return false;
+            if (!isActiveUser(user) || !isTreeRole(user)) return false;
             if (isLeader(user) || isManagerRole(user) || isTeamLeadRole(user)) return true;
             const parent = this.byId.get(Number(user.parent_id));
             if (!parent) return false;
