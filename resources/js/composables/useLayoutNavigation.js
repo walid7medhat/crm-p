@@ -87,6 +87,7 @@ const AGENTS_PREFIXES = ['/users', '/add-user', '/team-tree', '/view-profile', '
 const LISTINGS_PREFIXES = [
   '/alllisting',
   '/my-listing',
+  '/property-compare',
   '/property-form',
   '/notify-me',
   '/archive',
@@ -173,6 +174,7 @@ const LISTINGS_REQUEST_PATHS = [
 export function isListingsRememberablePath(path) {
   if (!path || !pathMatches(path, LISTINGS_PREFIXES)) return false;
   if (path === '/property-details' || path.startsWith('/property-details/')) return false;
+  if (path === '/property-compare') return false;
   if (LISTINGS_FORM_PATHS.includes(path)) return false;
   if (path.endsWith('/edit')) return false;
   if (LISTINGS_REQUEST_PATHS.includes(path)) return false;
@@ -436,7 +438,6 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         count: listingTabCounts.listings || 0,
       },
     ];
-    
     return tabs;
   }
 

@@ -141,5 +141,5 @@ export function settleLeadCard(card) {
     card.classList.add('kanban-card--settle')
     const clear = () => card.classList.remove('kanban-card--settle')
     card.addEventListener('animationend', clear, { once: true })
-    window.setTimeout(clear, 640)
+    window.setTimeout(clear, 340)
 }

@@ -232,11 +232,12 @@ function leadLabel(explicit, id) {
 function ensureStyles() {
     if (stylesReady || typeof document === 'undefined') return
     stylesReady = true
+    document.getElementById('lead-stage-motion-css')?.remove()
     const style = document.createElement('style')
     style.id = 'lead-stage-motion-css'
     style.textContent = `
         .kanban-card--motion-hold,
-        tr.lead-row--motion-hold { opacity: 0 !important; pointer-events: none !important; }
+        tr.lead-row--motion-hold { opacity: 0 !important; }
         .lsm-root { position: fixed; inset: 0; z-index: 8000; pointer-events: none; overflow: visible; }
         .lsm-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
         .lsm-haul, .lsm-flight, .lsm-ghost, .lsm-ring, .lsm-seal, .lsm-portal, .lsm-dust, .lsm-stamp, .lsm-slash {
