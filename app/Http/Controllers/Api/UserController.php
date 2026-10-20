@@ -882,83 +882,101 @@ public function show(User $user): JsonResponse
             return ApiResponse::error('Failed to retrieve login activity: ' . $e->getMessage());
         }
     }
+
     public function updateStatus(Request $request, $id): JsonResponse
-{
-    try {
-        // Validation
-        $request->validate([
-            'status' => 'required|in:active,in_active,blocked'
-        ]);
+    {
+        try {
+            $validated = $request->validate([
+                'status' => 'required|in:active,in_active,blocked',
+            ]);
 
-        // Find user
-        $user = User::find($id);
-        
-        if (!$user) {
+            $user = User::find($id);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            if ($user->id == 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot update super admin status',
+                ], 403);
+            }
+
+            $currentUser = Auth::user();
+
+            if (!$currentUser ||
+                !$currentUser->hasRole([
+                    'super_admin',
+                    'admin',
+                    'branch_admin',
+                ])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to update user status',
+                ], 403);
+            }
+
+            // Remember the previous status.
+            $wasActive = $user->status === 'active';
+            $newStatus = $validated['status'];
+
+            // Update the database first.
+            $user->status = $newStatus;
+            $user->save();
+
+            // Send the email only when the user transitions to active.
+            if ($newStatus === 'active' && !$wasActive) {
+                Mail::to($user->email)->queue(
+                    new AccountActivatedMail(
+                        $user->email,
+                        $user->name
+                    )
+                );
+            }
+
+            $user->load(['roles', 'parent']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User status updated successfully',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'role_name' => $user->roles->first()?->name
+                        ?? 'Unknown Role',
+                    'parent_name' => $user->parent?->name,
+                ],
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'User not found'
-            ], 404);
-        }
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
 
-        // Prevent updating super admin (user id 1)
-        if ($user->id == 1) {
+        } catch (\Throwable $e) {
+            \Log::error('Error updating user status', [
+                'user_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot update super admin status'
-            ], 403);
+                'message' => 'Failed to update user status',
+                'error' => config('app.debug')
+                    ? $e->getMessage()
+                    : 'Internal server error',
+            ], 500);
         }
-
-        // Check if current user has permission (only super_admin and admin)
-        $currentUser = Auth::user();
-        if (!$currentUser->hasRole(['super_admin', 'admin','branch_admin'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to update user status'
-            ], 403);
-        }
-
-        // Update status
-        $user->update([
-            'status' => $request->status
-        ]);
-        if ($request->status === 'active') {
-             Mail::to($user->email)->send(
-                new AccountActivatedMail($user->email, $user->name)
-            );
-        }
-        // Reload user with relationships
-        $user->load(['roles', 'parent']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User status updated successfully',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'status' => $user->status,
-                'role_name' => $user->roles->first()? $user->roles->first()->name : 'Unknown Role',
-                'parent_name' => $user->parent->name ?? null,
-            ]
-        ]);
-
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $e->errors()
-        ], 422);
-        
-    } catch (\Exception $e) {
-        \Log::error('Error updating user status: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to update user status',
-            'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-        ], 500);
     }
-}
+
  public function getByRole($role, Request $request): JsonResponse
 {
     try {
