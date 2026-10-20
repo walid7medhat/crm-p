@@ -727,12 +727,12 @@ class LeadController extends Controller
                     $leadData['first_name'] = '';
                 }
 
-                if (!auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
+                if (!auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin']) && !(auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)) {
                         unset($leadData['email']);
                         unset($leadData['secondary_email']);
                         unset($leadData['work_phone']);
                         unset($leadData['work_phone_2']);
-                    } elseif (!auth()->user()->hasAnyRole(['admin', 'super_admin'])) {
+                    } elseif (!auth()->user()->hasAnyRole(['admin', 'super_admin']) && !(auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)) {
                         // branch_admin can edit the lead but never its primary phone.
                         unset($leadData['work_phone']);
                     }
