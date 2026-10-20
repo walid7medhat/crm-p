@@ -51,12 +51,14 @@ class RequireTrustedReferer
     private array $exemptPaths = [
         'api/login',
         'api/webhooks/*',
+        'api/webhook/*',
         'api/bitrix/*',
         'api/mobile/*',
-         'api/website-lead',
-    'api/website-lead/*',
-    'api/altcrm/update-more-info',
-    'api/leads'
+        'api/website-lead',
+        'api/website-lead/*',
+        'api/altcrm/update-more-info',
+        'api/leads',
+        'api/webhooks/facebook',
     ];
 
     public function handle(Request $request, Closure $next)
