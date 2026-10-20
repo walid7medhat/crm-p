@@ -153,6 +153,7 @@ Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook'])
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
 Route::post('/website-lead', [IntegrationController::class, 'store_website']);
 Route::post('/website-lead/wordpress', [IntegrationController::class, 'store_wordpress']);
+Route::get('/get-from-meta-in-day',[IntegrationController::class,'get_from_date']);
 Route::prefix('auth')->group(function () {
 
     Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);

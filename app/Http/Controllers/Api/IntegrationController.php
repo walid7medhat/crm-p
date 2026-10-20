@@ -915,4 +915,78 @@ public function getFormFields($formId)
         'fields' => $fields
     ]);
 }
+public function get_from_date(Request $request, $form_id)
+{
+    $request->validate([
+        'from' => 'nullable|date',   // e.g. 2026-10-18
+        'to'   => 'nullable|date',   // e.g. 2026-10-19
+    ]);
+
+    $integration = Integration::where('facebook_form_id', $form_id)
+        ->where('status', 'active')
+        ->firstOrFail();
+
+    $token = env('META_ACCESS_TOKEN');
+    $url   = self::META_GRAPH_BASE . '/' . self::META_GRAPH_VERSION . "/{$form_id}/leads";
+
+    $params = [
+        'access_token' => $token,
+        'fields'       => 'id,created_time,ad_id,field_data',
+        'limit'        => 100,
+    ];
+
+    // Date filter (Meta expects UNIX timestamps)
+    $filters = [];
+    if ($request->filled('from')) {
+        $filters[] = [
+            'field'    => 'time_created',
+            'operator' => 'GREATER_THAN',
+            'value'    => Carbon::parse($request->from)->startOfDay()->timestamp,
+        ];
+    }
+    if ($request->filled('to')) {
+        $filters[] = [
+            'field'    => 'time_created',
+            'operator' => 'LESS_THAN',
+            'value'    => Carbon::parse($request->to)->endOfDay()->timestamp,
+        ];
+    }
+    if ($filters) {
+        $params['filtering'] = json_encode($filters);
+    }
+
+    $imported = 0;
+    $skipped  = 0;
+    $nextUrl  = $url;
+
+    do {
+        $response = Http::timeout(30)->get($nextUrl, $nextUrl === $url ? $params : []);
+
+        if (!$response->successful()) {
+            Log::error('Meta backfill failed', ['body' => $response->json()]);
+            return ApiResponse::error('Failed to fetch leads from Meta', 400);
+        }
+
+        $body = $response->json();
+
+        foreach ($body['data'] ?? [] as $metaLead) {
+            // Skip duplicates
+            if (Lead::where('meta_lead_id', $metaLead['id'])->exists()) {
+                $skipped++;
+                continue;
+            }
+
+            // Reuse the exact same logic as the webhook
+            $this->fetchAndStoreLead($metaLead['id'], $integration);
+            $imported++;
+        }
+
+        $nextUrl = $body['paging']['next'] ?? null; // full URL incl. token & cursor
+    } while ($nextUrl);
+
+    return ApiResponse::success([
+        'imported' => $imported,
+        'skipped'  => $skipped,
+    ], 'Backfill completed');
+}
 }
