@@ -1025,6 +1025,9 @@ const isSuperAdmin = computed(() => {
 const isHr =computed(() => {
   return user.value?.roles?.includes('hr') ?? false;
 });
+const isBranchAdmin = computed(() => {
+  return user.value?.roles?.includes('branch_admin') ?? false;
+});
 // Marketing workspace: anyone holding the `marketing` permission — admins included
 // (the admin role alone isn't enough). Super admins always see it.
 const canSeeMarketing = computed(() => {
@@ -1307,9 +1310,10 @@ function listingsSectionIcon(key) {
   return map[key] || listingsIcon.value;
 }
 
-/** Listings nested submenu — all admins (inventory links under CRM → Listings) */
-const isListingsDropdownAdmin = computed(() => isAdmin.value && !isShowOnlyListing.value);
-
+/** Listings nested submenu — admins + branch admins (inventory links under CRM → Listings) */
+const isListingsDropdownAdmin = computed(() =>
+  (isAdmin.value || isBranchAdmin.value) && !isShowOnlyListing.value,
+);
 const showCrmListingsDropdown = computed(() =>
   isListingsDropdownAdmin.value &&
   listingsSidebarSections.value.length > 0 &&
