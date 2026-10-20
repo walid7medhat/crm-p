@@ -1236,7 +1236,7 @@ class LeadController extends Controller
             ];
         };
 
-        $base = User::query()->where('users.status', 'active');
+        $base = User::query();
         if ($user->hasRole('super_admin')) {
             // Super admins may also pick themselves (they have no parent and no assignable role).
             $base->where(function ($q) use ($user) {
@@ -1254,7 +1254,7 @@ class LeadController extends Controller
             // branch-wide visibility here in return.
             $scopeIds = $user->getBranchUserIds();
             // Managers are assignable too (e.g. a listing-team manager in the branch).
-            $roles = ['team_lead', 'sales', 'manager'];
+            $roles = ['team_lead', 'sales', 'manager','branch_admin'];
             // Branch admins also get user #33 — and themselves (assign a lead to me).
             $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID, (int) $user->id] : [];
             // Branch admins also get every user with the admin role, in ANY branch, so a
