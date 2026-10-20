@@ -35,24 +35,30 @@
             v-for="p in visiblePlatforms"
             :key="`${day.iso}-${p.key}`"
             class="mk-cal__cell"
-            :class="{ today: day.iso === todayIso }"
+            :class="{ today: day.iso === todayIso, 'is-over': dropKey === cellKey(day.iso, p.key) }"
+            @dragover.prevent="onCellDragOver(day.iso, p.key)"
+            @drop.prevent="onDrop(day.iso, p.key)"
           >
             <div
               v-for="post in cell(day.iso, p.key)"
               :key="post.id"
               class="mk-post"
-              :class="{ posted: post.is_posted }"
+              :class="{ posted: post.is_posted, 'is-dragging': draggingId === post.id }"
               :style="{ '--p': p.color }"
+              draggable="true"
+              title="Drag to another day or column"
+              @dragstart="onDragStart($event, post)"
+              @dragend="onDragEnd"
             >
-              <button type="button" class="mk-post__check" :title="post.is_posted ? `Posted by ${post.posted_by || ''}` : 'Mark as posted'" @click="togglePosted(post)">
+              <button type="button" class="mk-post__check" draggable="false" :title="post.is_posted ? `Posted by ${post.posted_by || ''}` : 'Mark as posted'" @mousedown.stop @click="togglePosted(post)">
                 <iconify-icon :icon="post.is_posted ? 'lucide:check' : 'lucide:circle'" />
               </button>
-              <a v-if="post.link" class="mk-post__title" :href="post.link.url" target="_blank" rel="noopener" :title="post.title">
+              <a v-if="post.link" class="mk-post__title" draggable="false" :href="post.link.url" target="_blank" rel="noopener" :title="post.title">
                 <iconify-icon :icon="LINK_KINDS[post.link.kind]?.icon || 'lucide:link'" /> {{ post.title }}
               </a>
               <span v-else class="mk-post__title" :title="post.title">{{ post.title }}</span>
-              <button v-if="post.task_id" type="button" class="mk-post__btn" title="Open card" @click="$emit('open-task', post.task_id, post.task_category)"><iconify-icon icon="lucide:external-link" /></button>
-              <button type="button" class="mk-post__btn mk-post__btn--del" title="Remove" @click="removePost(post)"><iconify-icon icon="lucide:x" /></button>
+              <button v-if="post.task_id" type="button" class="mk-post__btn" draggable="false" title="Open card" @mousedown.stop @click="$emit('open-task', post.task_id, post.task_category)"><iconify-icon icon="lucide:external-link" /></button>
+              <button type="button" class="mk-post__btn mk-post__btn--del" draggable="false" title="Remove" @mousedown.stop @click="removePost(post)"><iconify-icon icon="lucide:x" /></button>
             </div>
             <button type="button" class="mk-cal__add" :title="`Add to ${p.label}`" @click="openSchedule(day.iso, p.key)">
               <iconify-icon icon="lucide:plus" />
@@ -64,19 +70,36 @@
 
     <!-- Mobile: day list -->
     <div v-else class="mk-cal__list">
-      <section v-for="day in days" :key="day.iso" class="mk-cal__lday" :class="{ today: day.iso === todayIso }">
+      <section
+        v-for="day in days"
+        :key="day.iso"
+        class="mk-cal__lday"
+        :class="{ today: day.iso === todayIso, 'is-over': dropKey === day.iso }"
+        @dragover.prevent="onDayDragOver(day.iso)"
+        @drop.prevent="onDropDay(day.iso)"
+      >
         <header>
           <b>{{ formatDate(day.iso, { weekday: 'short', day: '2-digit', month: 'short' }) }}</b>
           <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" @click="openSchedule(day.iso, '')"><iconify-icon icon="lucide:plus" /></button>
         </header>
-        <div v-for="post in dayPosts(day.iso)" :key="post.id" class="mk-post" :class="{ posted: post.is_posted }" :style="{ '--p': PLATFORMS[post.platform]?.color }">
-          <button type="button" class="mk-post__check" @click="togglePosted(post)"><iconify-icon :icon="post.is_posted ? 'lucide:check' : 'lucide:circle'" /></button>
+        <div
+          v-for="post in dayPosts(day.iso)"
+          :key="post.id"
+          class="mk-post"
+          :class="{ posted: post.is_posted, 'is-dragging': draggingId === post.id }"
+          :style="{ '--p': PLATFORMS[post.platform]?.color }"
+          draggable="true"
+          title="Drag to another day"
+          @dragstart="onDragStart($event, post)"
+          @dragend="onDragEnd"
+        >
+          <button type="button" class="mk-post__check" draggable="false" @mousedown.stop @click="togglePosted(post)"><iconify-icon :icon="post.is_posted ? 'lucide:check' : 'lucide:circle'" /></button>
           <iconify-icon :icon="PLATFORMS[post.platform]?.icon" class="mk-post__platform" />
-          <a v-if="post.link" class="mk-post__title" :href="post.link.url" target="_blank" rel="noopener">
+          <a v-if="post.link" class="mk-post__title" draggable="false" :href="post.link.url" target="_blank" rel="noopener">
             <iconify-icon :icon="LINK_KINDS[post.link.kind]?.icon || 'lucide:link'" /> {{ post.title }}
           </a>
           <span v-else class="mk-post__title">{{ post.title }}</span>
-          <button v-if="post.task_id" type="button" class="mk-post__btn" @click="$emit('open-task', post.task_id, post.task_category)"><iconify-icon icon="lucide:external-link" /></button>
+          <button v-if="post.task_id" type="button" class="mk-post__btn" draggable="false" @mousedown.stop @click="$emit('open-task', post.task_id, post.task_category)"><iconify-icon icon="lucide:external-link" /></button>
         </div>
         <p v-if="!dayPosts(day.iso).length" class="mk-cal__none">Nothing scheduled</p>
       </section>
@@ -116,6 +139,10 @@ const scheduleOpen = ref(false)
 const scheduleDate = ref('')
 const schedulePlatform = ref('')
 const todayIso = isoDate(new Date())
+const draggingId = ref(null)
+const dropKey = ref('')
+/** Survives dragend so the drop handler still knows which post moved. */
+let activeDragId = null
 
 const days = computed(() => Array.from({ length: 14 }, (_, i) => {
   const d = new Date(start.value)
@@ -136,8 +163,70 @@ const byDayPlatform = computed(() => {
   }
   return map
 })
-const cell = (iso, platform) => byDayPlatform.value[`${iso}|${platform}`] || []
+const cellKey = (iso, platform) => `${iso}|${platform}`
+const cell = (iso, platform) => byDayPlatform.value[cellKey(iso, platform)] || []
 const dayPosts = (iso) => posts.value.filter((p) => p.scheduled_date === iso)
+
+function onDragStart(e, post) {
+  if (e.target.closest('button')) {
+    e.preventDefault()
+    return
+  }
+  activeDragId = post.id
+  draggingId.value = post.id
+  dropKey.value = ''
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(post.id))
+}
+function clearDrag() {
+  draggingId.value = null
+  dropKey.value = ''
+}
+function onDragEnd() {
+  clearDrag()
+  const id = activeDragId
+  requestAnimationFrame(() => {
+    if (activeDragId === id) activeDragId = null
+  })
+}
+function draggedPost() {
+  const id = activeDragId
+  activeDragId = null
+  clearDrag()
+  return posts.value.find((p) => p.id === id) || null
+}
+function onCellDragOver(iso, platform) {
+  if (!activeDragId) return
+  const key = cellKey(iso, platform)
+  if (dropKey.value !== key) dropKey.value = key
+}
+function onDayDragOver(iso) {
+  if (!activeDragId) return
+  if (dropKey.value !== iso) dropKey.value = iso
+}
+function onDrop(iso, platform) {
+  const post = draggedPost()
+  if (post) movePost(post, iso, platform)
+}
+function onDropDay(iso) {
+  const post = draggedPost()
+  if (post) movePost(post, iso, post.platform)
+}
+
+async function movePost(post, iso, platform) {
+  if (post.scheduled_date === iso && post.platform === platform) return
+  const prev = { scheduled_date: post.scheduled_date, platform: post.platform }
+  post.scheduled_date = iso
+  post.platform = platform
+  try {
+    const { data } = await api.put(`/marketing/calendar/${post.id}`, { scheduled_date: iso, platform })
+    Object.assign(post, data.post)
+  } catch (err) {
+    post.scheduled_date = prev.scheduled_date
+    post.platform = prev.platform
+    Swal.fire({ icon: 'error', title: 'Could not move', text: apiError(err) })
+  }
+}
 
 let seq = 0
 async function load() {
@@ -278,6 +367,10 @@ onBeforeUnmount(() => {
   border-right: 1px solid var(--border-color);
 }
 .mk-cal__cell.today { background: rgba(var(--color-primary-rgb), 0.04); }
+.mk-cal__cell.is-over {
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--white));
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
 .mk-cal__add {
   position: absolute;
   left: 7px;
@@ -307,8 +400,11 @@ onBeforeUnmount(() => {
   font-weight: 600 !important;
   background: color-mix(in srgb, var(--p) 10%, var(--white));
   border: 1px solid color-mix(in srgb, var(--p) 25%, transparent);
+  cursor: grab;
   transition: all 0.15s;
 }
+.mk-post:active { cursor: grabbing; }
+.mk-post.is-dragging { opacity: 0.4; }
 .mk-post.posted { background: color-mix(in srgb, #16a34a 10%, var(--white)); border-color: color-mix(in srgb, #16a34a 35%, transparent); }
 .mk-post.posted .mk-post__title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, #16a34a 60%, transparent); }
 .mk-post__check {
@@ -362,6 +458,7 @@ a.mk-post__title:hover { color: var(--color-primary); }
 .mk-cal__list { display: flex; flex-direction: column; gap: 10px; }
 .mk-cal__lday { padding: 12px; border-radius: 16px; background: var(--white); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; }
 .mk-cal__lday.today { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-focus-ring); }
+.mk-cal__lday.is-over { box-shadow: inset 0 0 0 2px var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, var(--white)); }
 .mk-cal__lday header { display: flex; align-items: center; justify-content: space-between; }
 .mk-cal__lday .mk-post { font-size: 13px !important; padding: 7px 8px; }
 .mk-cal__lday .mk-post__btn { opacity: 1; }
