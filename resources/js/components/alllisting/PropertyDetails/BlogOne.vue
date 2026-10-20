@@ -2767,7 +2767,7 @@ const needsApproval = computed(() => {
   const isListingTeamLead = (roles.includes('manager') || roles.includes('team_lead')) && user.is_listing_team;
   if (!isListingAgent && !isListingTeamLead && !roles.includes('super_admin')) return false;
 
-  if (['converted', 'rented'].includes(p.status)) return false;
+  if (['converted', 'rented','draft'].includes(p.status)) return false;
   return !(p.rejection_reason && p.rejection_reason.trim() !== '');
 });
 const rejectionDetails = computed(() => {
