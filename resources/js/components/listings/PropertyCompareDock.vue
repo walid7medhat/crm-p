@@ -215,18 +215,51 @@ onBeforeUnmount(() => {
   background: #fff;
   color: var(--text-primary, #0f172a);
 }
-@media (max-width: 720px) {
+@media (max-width: 1024px) {
+  .property-compare-dock {
+    width: min(720px, calc(100% - 1.25rem));
+  }
+  .property-compare-dock__hint {
+    white-space: normal;
+  }
+}
+@media (max-width: 767px) {
+  .property-compare-dock {
+    width: calc(100% - 1rem);
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.65rem 0.7rem;
+  }
   .property-compare-dock__main {
     flex-wrap: wrap;
+    gap: 0.55rem;
   }
   .property-compare-dock__hint {
     order: 3;
     flex-basis: 100%;
-    white-space: normal;
+  }
+  .property-compare-dock__actions {
+    margin-left: auto;
+  }
+  .property-compare-dock__go,
+  .property-compare-dock__cancel {
+    min-height: 2.25rem;
+  }
+  .property-compare-dock__picks {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .property-compare-dock__picks li {
+    flex: 0 0 auto;
+    max-width: 16rem;
   }
 }
 body.property-compare-active {
   padding-bottom: 8.5rem;
+}
+@media (max-width: 767px) {
+  body.property-compare-active {
+    padding-bottom: 13rem;
+  }
 }
 .property-compare-mark {
   position: absolute;
