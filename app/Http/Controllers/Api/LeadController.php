@@ -1241,12 +1241,12 @@ class LeadController extends Controller
             // Super admins may also pick themselves (they have no parent and no assignable role).
             $base->where(function ($q) use ($user) {
                 $q->where(function ($q) {
-                    $q->role(['team_lead', 'sales', 'manager', 'admin'])
+                    $q->role(['team_lead', 'sales', 'manager', 'admin','branch_admin'])
                         ->whereNotNull('users.parent_id');
                 })->orWhere('users.id', $user->id);
             });
         } elseif ($user->hasRole('admin')) {
-            $base->role(['team_lead', 'sales', 'manager', 'admin'])
+            $base->role(['team_lead', 'sales', 'manager', 'admin','branch_admin'])
                 ->whereNotNull('users.parent_id');
         } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin') || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
             // branch_admin / show-branch-leads → agents across the whole branch (all
@@ -1295,9 +1295,12 @@ class LeadController extends Controller
                     ->orWhere('users.phone', 'like', $like);
             });
         }
+        if(!auth()->user()->hasRole('branch_admin')){
+            $listQuery=$listQuery->where('status','active');
+        }
 
         $responsiblePersons = $listQuery
-            ->where('status','active')
+            
             ->with($responsiblePersonRelations)
             ->orderBy('users.name')
             ->limit($limit)
