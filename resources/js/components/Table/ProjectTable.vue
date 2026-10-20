@@ -11,25 +11,37 @@
                 >
             </label>
 
-            <div class="prj-views" role="group" aria-label="Project layout">
+            <div class="prj-toolbar__right">
                 <button
+                    v-if="$hasPermission('projects-create')"
                     type="button"
-                    :class="{ active: viewMode === 'grid' }"
-                    :aria-pressed="viewMode === 'grid'"
-                    aria-label="Card view"
-                    @click="setView('grid')"
+                    class="prj-add"
+                    @click="addProject"
                 >
-                    <iconify-icon icon="lucide:layout-grid"></iconify-icon>
+                    <iconify-icon icon="lucide:plus"></iconify-icon>
+                    <span>Add Project</span>
                 </button>
-                <button
-                    type="button"
-                    :class="{ active: viewMode === 'list' }"
-                    :aria-pressed="viewMode === 'list'"
-                    aria-label="List view"
-                    @click="setView('list')"
-                >
-                    <iconify-icon icon="lucide:list"></iconify-icon>
-                </button>
+
+                <div class="prj-views" role="group" aria-label="Project layout">
+                    <button
+                        type="button"
+                        :class="{ active: viewMode === 'grid' }"
+                        :aria-pressed="viewMode === 'grid'"
+                        aria-label="Card view"
+                        @click="setView('grid')"
+                    >
+                        <iconify-icon icon="lucide:layout-grid"></iconify-icon>
+                    </button>
+                    <button
+                        type="button"
+                        :class="{ active: viewMode === 'list' }"
+                        :aria-pressed="viewMode === 'list'"
+                        aria-label="List view"
+                        @click="setView('list')"
+                    >
+                        <iconify-icon icon="lucide:list"></iconify-icon>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1816,5 +1828,36 @@ export default {
     color: #334155;
     white-space: pre-wrap;
     word-break: break-word;
+}
+.prj-toolbar__right {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.prj-add {
+    height: 42px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--gradient-primary);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(var(--color-primary-rgb), 0.18);
+}
+
+.prj-add iconify-icon {
+    font-size: 16px;
+}
+
+.prj-add:hover {
+    filter: brightness(0.96);
 }
 </style>
