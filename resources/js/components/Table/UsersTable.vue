@@ -139,7 +139,7 @@
                         </div>
                         <div class="agents-mobile__side" @click.stop>
                             <div
-                                v-if="(hasAdminRole() || hasSuperAdminRole()) && user.id != 1"
+                                v-if="(hasAdminRole() || hasSuperAdminRole() || hasBranchAdminRole()) && user.id != 1"
                                 class="status-toggle"
                             >
                                 <label class="toggle-switch">
@@ -286,7 +286,7 @@
                                 <span>{{ user.department || user.office_name || '—' }}</span>
                             </td>
                              <td>
-                                    <div class="status-toggle" v-if="(hasAdminRole() || hasSuperAdminRole()) && user.id != 1">
+                                    <div class="status-toggle" v-if="(hasAdminRole() || hasSuperAdminRole() || hasBranchAdminRole()) && user.id != 1">
                                         <label class="toggle-switch">
                                             <input 
                                                 type="checkbox" 
@@ -608,6 +608,10 @@ export default {
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
             return userData.roles && userData.roles.includes('admin');
         },
+         hasBranchAdminRole() {
+            const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            return userData.roles && userData.roles.includes('branch_admin');
+        },
 
         hasSuperAdminRole() {
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -652,7 +656,7 @@ export default {
         // New method to confirm status change
         async confirmStatusChange(user, newStatus) {
             // Check permissions
-            if (!this.hasAdminRole() && !this.hasSuperAdminRole()) {
+            if (!this.hasAdminRole() && !this.hasSuperAdminRole() && !this.hasBranchAdminRole()) {
                 this.showNotification('Only administrators can update user status', 'warning');
                 // Reset toggle to original state
                 this.$nextTick(() => {

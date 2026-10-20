@@ -910,7 +910,7 @@ public function show(User $user): JsonResponse
 
         // Check if current user has permission (only super_admin and admin)
         $currentUser = Auth::user();
-        if (!$currentUser->hasRole(['super_admin', 'admin'])) {
+        if (!$currentUser->hasRole(['super_admin', 'admin','branch_admin'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to update user status'
