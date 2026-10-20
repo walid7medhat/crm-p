@@ -59,6 +59,7 @@
       @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
+    <PropertyCompareDock v-if="showLayout && !isAppLoading" />
     <PropertyDetailsModal v-if="showLayout" />
     <ProjectDetailsModal v-if="showLayout" />
   </div>
@@ -78,6 +79,7 @@ import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
 import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
+import PropertyCompareDock from './components/listings/PropertyCompareDock.vue'
 import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
 const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
 const LeadOpeningLoader = {
@@ -120,6 +122,7 @@ export default {
     UserAnimationPlayer,
     MobilePushToggle,
     PropertyDetailsModal,
+    PropertyCompareDock,
     ProjectDetailsModal,
     Header,
     Navbar,

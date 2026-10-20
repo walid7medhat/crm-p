@@ -30,13 +30,25 @@
         <div class="popup-body">
           <div v-if="showConversationList" class="chat-list-wrap">
             <div class="chat-search-wrap">
-              <i class="ri-search-line chat-search-icon"></i>
-              <input
-                v-model.trim="chatSearchQuery"
-                type="text"
-                class="chat-search-input"
-                placeholder="Search chats or users by name/email..."
-              />
+              <label class="chat-search">
+                <i class="ri-search-line chat-search-icon" aria-hidden="true"></i>
+                <input
+                  v-model.trim="chatSearchQuery"
+                  type="text"
+                  class="chat-search-input"
+                  placeholder="Search"
+                  aria-label="Search chats or users by name or email"
+                />
+                <button
+                  v-if="chatSearchQuery"
+                  type="button"
+                  class="chat-search-clear"
+                  aria-label="Clear search"
+                  @click="chatSearchQuery = ''"
+                >
+                  <i class="ri-close-line"></i>
+                </button>
+              </label>
             </div>
             <div v-if="chatSearchQuery && chatSearchQuery.length >= 2" class="chat-agent-search-results">
               <div class="chat-agent-search-title">
@@ -789,12 +801,12 @@ function backToConversationList() {
   box-sizing: border-box;
 }
 .chat-popup {
-  width: 420px;
-  min-width: 360px;
-  max-width: min(480px, calc(100vw - 48px));
-  height: 580px;
-  min-height: 420px;
-  max-height: calc(100vh - 120px);
+  width: 300px;
+  min-width: 260px;
+  max-width: min(320px, calc(100vw - 32px));
+  height: 420px;
+  min-height: 300px;
+  max-height: calc(100vh - 96px);
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -818,7 +830,7 @@ function backToConversationList() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 8px 10px;
   background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
   border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
@@ -826,16 +838,16 @@ function backToConversationList() {
 .popup-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 .popup-back {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: 9px;
   border: none;
   background: transparent;
   color: #64748b;
-  font-size: 18px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -847,30 +859,30 @@ function backToConversationList() {
   color: #1e293b;
 }
 .popup-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 13px;
 }
 .popup-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
   color: #1e293b;
   letter-spacing: -0.01em;
 }
 .popup-close {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   background: transparent;
   border: none;
-  font-size: 20px;
+  font-size: 16px;
   color: #64748b;
   cursor: pointer;
   display: flex;
@@ -898,43 +910,147 @@ function backToConversationList() {
 }
 .chat-search-wrap {
   flex-shrink: 0;
-  position: relative;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 6px 8px 4px;
   background: #fff;
 }
-.chat-search-input {
-  width: 100%;
-  padding: 8px 12px 8px 34px;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
+.chat-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  margin: 0;
+  padding: 0 6px 0 10px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  cursor: text;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.chat-search-input:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+.chat-search:focus-within {
+  background: #fff;
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+.chat-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  line-height: 1;
+  color: #0f172a;
+  outline: none;
+}
+.chat-search-input::placeholder {
+  color: #94a3b8;
 }
 .chat-search-icon {
-  position: absolute;
-  left: 22px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
+  flex-shrink: 0;
+  font-size: 14px;
   color: #94a3b8;
   pointer-events: none;
+}
+.chat-search:focus-within .chat-search-icon {
+  color: #0d6efd;
+}
+.chat-search-clear {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chat-search-clear:hover {
+  background: #cbd5e1;
+  color: #0f172a;
 }
 .chat-list-wrap :deep(.conversation-list) {
   flex: 1;
   min-height: 0;
   max-height: none;
 }
+.popup-body :deep(.chat-window) {
+  min-height: 0;
+  height: 100%;
+}
+.popup-body :deep(.chat-window-header) {
+  padding: 6px 8px;
+}
+.popup-body :deep(.header-avatar),
+.popup-body :deep(.header-avatar-placeholder) {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+.popup-body :deep(.header-name) {
+  font-size: 12px;
+}
+.popup-body :deep(.header-status),
+.popup-body :deep(.property-context-title),
+.popup-body :deep(.property-context-meta),
+.popup-body :deep(.property-context-link),
+.popup-body :deep(.loading-more),
+.popup-body :deep(.typing-indicator) {
+  font-size: 10px;
+}
+.popup-body :deep(.chat-messages) {
+  padding: 8px;
+}
+.popup-body :deep(.property-context-card) {
+  margin: 6px 8px 0;
+  padding: 6px 8px;
+}
+.popup-body :deep(.chat-input-area) {
+  gap: 6px;
+  padding: 8px;
+}
+.popup-body :deep(.chat-input) {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.popup-body :deep(.send-btn) {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+.popup-body :deep(.bubble-text) {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.popup-body :deep(.avatar-img),
+.popup-body :deep(.avatar-placeholder) {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+.popup-body :deep(.message-bubble) {
+  gap: 6px;
+}
+.popup-body :deep(.bubble-content) {
+  padding: 6px 8px 4px;
+}
+.popup-body :deep(.bubble-sender-name),
+.popup-body :deep(.bubble-time) {
+  font-size: 10px;
+}
 .chat-agent-search-results {
-  border-bottom: 1px solid #e2e8f0;
+  margin: 0 12px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   background: #f8fafc;
-  padding: 8px 12px;
-  max-height: 190px;
+  padding: 6px;
+  max-height: 168px;
   overflow-y: auto;
 }
 .chat-agent-search-title {

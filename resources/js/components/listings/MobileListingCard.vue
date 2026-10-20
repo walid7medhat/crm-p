@@ -1,12 +1,17 @@
 <template>
-  <article class="ml-card">
+  <article class="ml-card" :class="{ 'is-compare-selected': isCompareSelected(property.id) }">
     <a
       :href="`/property-details/${property.id}`"
       class="ml-card__link"
-      @click="openPropertyDetailsFromClick($event, property.id)"
+      :class="{ 'is-compare-armed': compareMode }"
+      @click="onCardClick"
     >
       <div class="ml-card__top">
         <div class="ml-card__image-wrap">
+          <span v-if="compareMode" class="property-compare-mark" :class="{ 'is-on': isCompareSelected(property.id) }">
+            <span class="property-compare-mark__box" aria-hidden="true"></span>
+            {{ isCompareSelected(property.id) ? 'Selected' : 'Select' }}
+          </span>
           <img
             :src="imageUrl"
             :alt="property.title || 'Property'"
@@ -79,6 +84,7 @@
 import { hidesBedsBaths } from "@/composables/listingPropertyType"
 import { computed, ref } from 'vue'
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal'
+import { usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
 
 const props = defineProps({
   property: { type: Object, required: true },
@@ -86,6 +92,16 @@ const props = defineProps({
 })
 
 const imageErrored = ref(false)
+const { compareMode, isSelected: isCompareSelected, toggleListing } = usePropertyCompareSelection()
+
+function onCardClick(event) {
+  if (!compareMode.value) {
+    openPropertyDetailsFromClick(event, props.property.id)
+    return
+  }
+  event.preventDefault()
+  toggleListing(props.property)
+}
 
 const imageUrl = computed(() => {
   if (imageErrored.value) return props.fallbackImage

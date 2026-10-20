@@ -72,12 +72,12 @@ function reveal() {
 
 <style scoped>
 .edge-card {
-  width: min(340px, calc(100vw - 32px));
-  padding: 14px;
+  width: 100%;
+  padding: 8px;
   color: #0b0736;
   background: #ffffff;
   border: 1px solid #ebecef;
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: 0 18px 40px rgba(11, 7, 54, 0.14);
   font-family: Inter, system-ui, sans-serif;
 }
@@ -89,19 +89,19 @@ function reveal() {
 .edge-card__top {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .edge-card__mark {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #ffffff !important;
   background: var(--gradient-primary) !important;
-  font-size: 16px;
+  font-size: 13px;
 }
 
 .edge-card__intro {
@@ -112,7 +112,7 @@ function reveal() {
 .edge-card__kicker {
   margin: 0;
   color: var(--color-primary);
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -121,15 +121,16 @@ function reveal() {
 .edge-card__date {
   margin: 1px 0 0;
   color: #6b7280;
-  font-size: 12px !important;
+  font-size: 10px !important;
   line-height: 1.3;
 }
 
 .edge-card__close {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
   flex: none;
   border: 0;
   border-radius: 999px;
@@ -147,7 +148,7 @@ function reveal() {
 .flip {
   display: block;
   width: 100%;
-  margin-top: 12px;
+  margin-top: 8px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -162,7 +163,7 @@ function reveal() {
 
 .flip__inner {
   display: grid;
-  min-height: 168px;
+  min-height: 108px;
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -176,9 +177,9 @@ function reveal() {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 168px;
-  padding: 20px 18px;
-  border-radius: 14px;
+  min-height: 108px;
+  padding: 12px;
+  border-radius: 10px;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -194,12 +195,12 @@ function reveal() {
 }
 
 .face--front iconify-icon {
-  font-size: 22px;
+  font-size: 16px;
 }
 
 .face--front strong {
-  margin-top: 12px;
-  font-size: 18px !important;
+  margin-top: 8px;
+  font-size: 14px !important;
   font-weight: 650;
   letter-spacing: -0.02em;
 }
@@ -207,14 +208,14 @@ function reveal() {
 .face--front em {
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 13px !important;
+  font-size: 11px !important;
   font-style: normal;
 }
 
 .face__glow {
   position: absolute;
-  width: 140px;
-  height: 140px;
+  width: 90px;
+  height: 90px;
   right: -30px;
   bottom: -46px;
   border-radius: 999px;
@@ -232,9 +233,9 @@ function reveal() {
 
 .face--back blockquote {
   margin: 0;
-  font-size: 16px !important;
+  font-size: 12px !important;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .face__shine {

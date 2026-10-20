@@ -88,7 +88,16 @@ const baseRoutes = [
   { path: '/my-listing', component: () => import('./pages/listings/my-listing.vue'), meta: { requiresAuth: true } },
   { path: '/archive', component: () => import('./pages/listings/archive.vue'), meta: { requiresAuth: true } },
   { path: '/alllisting', component: () => import('./components/alllisting/AllLsting.vue'), meta: { requiresAuth: true } },
-  { path: '/property-compare', name: 'property.compare', component: () => import('./pages/listings/property-compare.vue'), meta: { requiresAuth: true } },
+  {
+    path: '/property-compare',
+    name: 'property.compare',
+    redirect: () => {
+      if (isSuperAdminFromStorage()) {
+        try { sessionStorage.setItem('open_property_compare', '1') } catch { /* ignore */ }
+      }
+      return '/alllisting'
+    },
+  },
   { path: '/notify-me', component: () => import('./pages/listings/notify-me.vue'), meta: { requiresAuth: true } },
   { path: '/properties-map', component: () => import('./pages/listings/property-map.vue'), meta: { requiresAuth: true } },
   { path: '/property-details/:id', name: 'property.show', component: () => import('./components/alllisting/PropertyShow.vue'), meta: { requiresAuth: true } },

@@ -164,14 +164,14 @@ const panelStyle = computed(() => {
   const rect = panelAnchor.value || dockFallbackRect()
   const vh = viewportHeight.value || window.innerHeight
   const vw = viewportWidth.value || window.innerWidth
-  const width = Math.min(340, Math.max(280, vw - 100))
+  const width = Math.min(250, Math.max(220, vw - 120))
   // Sit just to the left of the shortcut rail.
   const right = Math.max(12, vw - rect.left + 12)
-  const maxHeight = Math.max(220, Math.min(480, vh - 32))
+  const maxHeight = Math.max(180, Math.min(340, vh - 32))
   // Align with the dock; keep the card fully on screen.
   let top = rect.top
-  if (top + Math.min(320, maxHeight) > vh - 16) {
-    top = Math.max(16, vh - 16 - Math.min(320, maxHeight))
+  if (top + Math.min(240, maxHeight) > vh - 16) {
+    top = Math.max(16, vh - 16 - Math.min(240, maxHeight))
   }
   top = Math.max(16, top)
   return {
@@ -462,8 +462,8 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  gap: 12px;
-  width: min(340px, calc(100vw - 32px));
+  gap: 8px;
+  width: min(250px, calc(100vw - 32px));
   pointer-events: none;
 }
 
@@ -494,11 +494,11 @@ onUnmounted(() => {
   width: 100%;
   min-height: 0;
   max-height: 100%;
-  padding: 14px;
+  padding: 8px;
   color: #0b0736;
   background: #ffffff;
   border: 1px solid #ebecef;
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: 0 18px 40px rgba(11, 7, 54, 0.14);
   font-family: Inter, system-ui, sans-serif;
 }
@@ -506,25 +506,25 @@ onUnmounted(() => {
 .myday__top {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex: 0 0 auto;
 }
 
 .myday__mark {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
   color: #ffffff;
   background: var(--gradient-primary);
-  font-size: 18px;
+  font-size: 13px;
 }
 
 .myday__kicker {
   margin: 0;
   color: #733e87;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -533,15 +533,16 @@ onUnmounted(() => {
 .myday__date {
   margin: 2px 0 0;
   color: #6b6580;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .myday__close {
   margin-left: auto;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
   border: 0;
   border-radius: 999px;
   color: #3b3558;
@@ -550,17 +551,17 @@ onUnmounted(() => {
 }
 
 .myday__note {
-  margin: 16px 0 4px;
+  margin: 8px 0 2px;
   color: #6b6580;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .myday__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 8px;
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
@@ -570,14 +571,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 2px;
   width: 100%;
-  padding: 12px 12px 10px;
+  padding: 6px 8px;
   text-align: left;
   color: inherit;
   background: #fffdfb;
   border: 1px solid #f0e6dc;
-  border-radius: 16px;
+  border-radius: 10px;
   cursor: pointer;
 }
 
@@ -587,16 +588,24 @@ onUnmounted(() => {
 }
 
 .myday-card__title {
+  max-width: 100%;
   color: #1a1433;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 750;
-  line-height: 1.3;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .myday-card__detail {
+  max-width: 100%;
   color: #6d657c;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .myday-card__meta {
@@ -609,11 +618,11 @@ onUnmounted(() => {
 .myday-chip {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 999px;
   color: #6a5a4a;
   background: #f6eee6;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 650;
 }
 

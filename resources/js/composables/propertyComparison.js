@@ -3,8 +3,26 @@
  * (GET /listings/properties/{id} → ListingResource). No extra queries.
  */
 
+import { LISTING_FEATURE_OPTIONS } from '../config/listingFeatures.js'
+import { paymentPlanSelectionLabel } from './listingPaymentPlanPresets.js'
+
 export const NOT_SET = 'Not set'
 export const NOT_AVAILABLE = 'Not available'
+export const MAX_COMPARE = 3
+
+const FEATURE_CATEGORY = new Map(LISTING_FEATURE_OPTIONS.map((feature) => [feature.key, feature.category]))
+const OUTDOOR_KEYS = new Set([
+  ...LISTING_FEATURE_OPTIONS.filter((feature) => feature.category === 'spaces').map((feature) => feature.key),
+  'private_pool',
+  'private_gym',
+])
+
+const ADVANTAGE_LABEL = {
+  price: 'Lower price',
+  'price-sqft': 'Lower per sqft',
+  'rent-amount': 'Lower rent',
+  'size-sqft': 'Larger area',
+}
 
 function blank(value) {
   return value == null || value === '' || value === NOT_SET || value === NOT_AVAILABLE
@@ -16,22 +34,50 @@ function present(value) {
   return String(value)
 }
 
+function asList(left, right) {
+  if (right === undefined && Array.isArray(left)) return left
+  return [left, right]
+}
+
 /** Mutual absence is not a match. One side missing is a difference. */
 export function rowState(left, right) {
-  const leftBlank = blank(left)
-  const rightBlank = blank(right)
-  if (leftBlank && rightBlank) return 'missing'
-  if (leftBlank || rightBlank) return 'different'
-  if (String(left).trim().toLowerCase() === String(right).trim().toLowerCase()) return 'same'
+  const values = asList(left, right)
+  const blanks = values.map(blank)
+  if (blanks.every(Boolean)) return 'missing'
+  if (blanks.some(Boolean)) return 'different'
+  const first = String(values[0]).trim().toLowerCase()
+  if (values.every((value) => String(value).trim().toLowerCase() === first)) return 'same'
   return 'different'
 }
 
-function row(id, label, leftRaw, rightRaw, { hideWhenBothBlank = false } = {}) {
-  const left = present(leftRaw)
-  const right = present(rightRaw)
-  const state = rowState(left, right)
-  if (hideWhenBothBlank && state === 'missing') return null
-  return { id, label, left, right, state }
+function finiteNumber(value) {
+  if (value == null || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function row(id, label, rawValues, { hideWhenAllBlank = false, hideWhenBothBlank = false, advantage = null, numbers = null } = {}) {
+  const values = rawValues.map(present)
+  const state = rowState(values)
+  if ((hideWhenAllBlank || hideWhenBothBlank) && state === 'missing') return null
+  let best = []
+  if (advantage && state === 'different' && Array.isArray(numbers) && numbers.length === values.length) {
+    if (numbers.every((num) => num != null)) {
+      const target = advantage === 'lower' ? Math.min(...numbers) : Math.max(...numbers)
+      const winners = numbers.map((num, index) => (num === target ? index : -1)).filter((index) => index >= 0)
+      if (winners.length === 1) best = winners
+    }
+  }
+  return {
+    id,
+    label,
+    values,
+    left: values[0] ?? NOT_SET,
+    right: values[1] ?? NOT_SET,
+    state,
+    best,
+    advantageLabel: best.length ? (ADVANTAGE_LABEL[id] || null) : null,
+  }
 }
 
 function money(value) {
@@ -42,12 +88,17 @@ function money(value) {
 }
 
 function unitRate(price, size) {
+  const rate = rateNumber(price, size)
+  if (rate == null) return null
+  const digits = rate >= 100 ? 0 : 2
+  return `AED ${new Intl.NumberFormat('en-AE', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(rate)}`
+}
+
+function rateNumber(price, size) {
   const amount = Number(price)
   const measure = Number(size)
   if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(measure) || measure <= 0) return null
-  const rate = amount / measure
-  const digits = rate >= 100 ? 0 : 2
-  return `AED ${new Intl.NumberFormat('en-AE', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(rate)}`
+  return amount / measure
 }
 
 function humanize(value) {
@@ -78,7 +129,12 @@ function locationLabel(listing) {
 }
 
 function propertyName(listing) {
-  return listing?.project?.title || listing?.project?.name || listing?.reference_number || null
+  return listing?.project?.title
+    || listing?.project?.name
+    || listing?.project_name
+    || listing?.title
+    || listing?.reference_number
+    || null
 }
 
 function propertyTypeName(listing) {
@@ -140,51 +196,145 @@ function featureNames(listing) {
   return features.map((feature) => feature?.name).filter(Boolean)
 }
 
-function amenityRows(left, right) {
-  const labels = {
-    ...(left?.additional_features_labels || {}),
-    ...(right?.additional_features_labels || {}),
+function listingsOf(left, right, third) {
+  const source = Array.isArray(left) ? left : [left, right, third]
+  return source.filter((listing) => listing != null).slice(0, MAX_COMPARE)
+}
+
+function columnValues(listings, read) {
+  return listings.map((listing) => read(listing))
+}
+
+function expenseLines(listing) {
+  const raw = listing?.assignment_expense_lines
+  if (Array.isArray(raw)) return raw
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
   }
-  const rows = Object.keys(labels)
+  return []
+}
+
+function lineText(line) {
+  const label = String(line?.label || '').trim()
+  if (!label) return null
+  const value = Number(line?.value ?? line?.amount)
+  const type = String(line?.calcType || line?.type || '')
+  if (!Number.isFinite(value) || value <= 0) return label
+  if (type === 'percentage') return `${label} ${value}%`
+  return `${label} ${money(value)}`
+}
+
+function matchingCost(listing, pattern) {
+  const lines = expenseLines(listing).map(lineText).filter(Boolean)
+  const hit = lines.find((text) => pattern.test(text))
+  return hit || null
+}
+
+function otherCosts(listing) {
+  const parts = expenseLines(listing)
+    .map(lineText)
+    .filter((text) => text && !/service\s*charge/i.test(text))
+  if (listing?.noc_percentage) parts.push(`NOC ${listing.noc_percentage}%`)
+  else if (listing?.noc_fixed_amount) {
+    const formatted = money(listing.noc_fixed_amount)
+    if (formatted) parts.push(`NOC ${formatted}`)
+  }
+  if (listing?.mortgage_amount) {
+    const formatted = money(listing.mortgage_amount)
+    if (formatted) parts.push(`Mortgage ${formatted}`)
+  }
+  return parts.length ? parts.join(' · ') : null
+}
+
+function paymentPlan(listing) {
+  const label = paymentPlanSelectionLabel(listing?.payment_plan)
+  return label ? String(label) : null
+}
+
+function floorPlanLabel(listing) {
+  const plans = Array.isArray(listing?.floor_plans) ? listing.floor_plans.filter((plan) => plan?.image_url || plan?.name) : []
+  if (!plans.length) return null
+  return plans.length === 1 ? '1 plan' : `${plans.length} plans`
+}
+
+function mentionsParking(listing) {
+  return featureNames(listing).some((name) => /parking|garage|car park/i.test(name))
+}
+
+function featureRows(listings, includeKey) {
+  const labels = {}
+  for (const listing of listings) {
+    Object.assign(labels, listing?.additional_features_labels || {})
+  }
+  for (const feature of LISTING_FEATURE_OPTIONS) {
+    if (!labels[feature.key]) labels[feature.key] = feature.label
+  }
+  return Object.keys(labels)
+    .filter((key) => includeKey(key))
     .map((key) => {
-      const leftOn = Boolean(left?.additional_features?.[key])
-      const rightOn = Boolean(right?.additional_features?.[key])
-      if (!leftOn && !rightOn) return null
-      return row(`amenity-${key}`, labels[key] || humanize(key), leftOn ? 'Yes' : 'No', rightOn ? 'Yes' : 'No')
+      const flags = listings.map((listing) => Boolean(listing?.additional_features?.[key]))
+      if (!flags.some(Boolean)) return null
+      return row(
+        `amenity-${key}`,
+        labels[key] || humanize(key),
+        flags.map((on) => (on ? 'Yes' : 'No')),
+      )
     })
     .filter(Boolean)
     .sort((a, b) => a.label.localeCompare(b.label))
+}
 
-  if (!rows.length) {
-    return [row('amenities', 'Amenities', null, null)]
-  }
+function amenityRows(listings) {
+  const rows = featureRows(listings, (key) => {
+    if (OUTDOOR_KEYS.has(key)) return false
+    return FEATURE_CATEGORY.get(key) !== 'furnishing'
+  })
+  if (!rows.length) return [row('amenities', 'Amenities', listings.map(() => null))]
   return rows
 }
 
-function projectAmenityRows(left, right) {
-  const leftNames = featureNames(left)
-  const rightNames = featureNames(right)
+function outdoorRows(listings) {
+  const rows = featureRows(listings, (key) => OUTDOOR_KEYS.has(key))
+  if (!rows.length) return [row('outdoor', 'Outdoor features', listings.map(() => null))]
+  return rows
+}
+
+function projectAmenityRows(listings) {
+  const names = listings.map(featureNames)
   const labels = new Map()
-  for (const name of [...leftNames, ...rightNames]) {
+  for (const name of names.flat()) {
     const key = name.trim().toLowerCase()
-    if (key && !labels.has(key)) labels.set(key, name.trim())
+    if (key && !/parking|garage|car park/i.test(name) && !labels.has(key)) labels.set(key, name.trim())
   }
-  if (!labels.size) {
-    return [row('project-amenities', 'Project amenities', null, null)]
-  }
+  if (!labels.size) return [row('project-amenities', 'Project amenities', listings.map(() => null))]
   return [...labels.entries()]
     .sort((a, b) => a[1].localeCompare(b[1]))
     .map(([key, label]) => row(
       `project-${key}`,
       label,
-      leftNames.some((name) => name.trim().toLowerCase() === key) ? 'Yes' : 'No',
-      rightNames.some((name) => name.trim().toLowerCase() === key) ? 'Yes' : 'No',
+      names.map((list) => (list.some((name) => name.trim().toLowerCase() === key) ? 'Yes' : 'No')),
     ))
 }
 
 function pushGroup(groups, title, rows) {
   const kept = rows.filter(Boolean)
   if (kept.length) groups.push({ title, rows: kept })
+}
+
+export function selectionIdsFromQuery(query = {}) {
+  const fromIds = String(query.ids || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  const legacy = [query.left, query.right]
+    .map((value) => (value == null ? '' : String(value).trim()))
+    .filter(Boolean)
+  return [...new Set([...fromIds, ...legacy])].slice(0, MAX_COMPARE)
 }
 
 export function listingImages(listing) {
@@ -198,6 +348,11 @@ export function listingImages(listing) {
   return urls.slice(0, 4)
 }
 
+export function floorPlanImages(listing) {
+  const plans = Array.isArray(listing?.floor_plans) ? listing.floor_plans : []
+  return plans.map((plan) => plan?.image_url).filter(Boolean).slice(0, 2)
+}
+
 export function listingHeadline(listing) {
   return {
     name: propertyName(listing) || 'Untitled listing',
@@ -209,64 +364,108 @@ export function listingHeadline(listing) {
   }
 }
 
-export function compareProperties(left, right) {
+export function compareProperties(left, right, third) {
+  const listings = listingsOf(left, right, third)
   const groups = []
-  const eitherRent = purpose(left) === 'Rent' || purpose(right) === 'Rent'
+  const purposes = listings.map(purpose)
+  const anyRent = purposes.includes('Rent')
+  const samePurpose = purposes.every((item) => item && item === purposes[0])
+  const priceAdvantage = samePurpose ? 'lower' : null
 
   pushGroup(groups, 'Price', [
-    row('price', 'Price', money(left?.price), money(right?.price)),
-    row('price-sqft', 'Price per sqft', unitRate(left?.price, left?.size_sqft), unitRate(right?.price, right?.size_sqft)),
-    row('price-sqm', 'Price per sqm', unitRate(left?.price, left?.size_sqmt), unitRate(right?.price, right?.size_sqmt), { hideWhenBothBlank: true }),
-    row('purpose', 'Sale or rent', purpose(left), purpose(right)),
-    row('original-price', 'Original price', money(left?.original_price), money(right?.original_price), { hideWhenBothBlank: true }),
-    row('selling-price', 'Selling price', money(left?.selling_price), money(right?.selling_price), { hideWhenBothBlank: true }),
-    row('rent-amount', 'Rent amount', money(left?.rent_amount), money(right?.rent_amount), { hideWhenBothBlank: !eitherRent }),
+    row('price', 'Price', columnValues(listings, (listing) => money(listing?.price)), {
+      advantage: priceAdvantage,
+      numbers: columnValues(listings, (listing) => finiteNumber(listing?.price)),
+    }),
+    row('price-sqft', 'Price per sqft', columnValues(listings, (listing) => unitRate(listing?.price, listing?.size_sqft)), {
+      advantage: priceAdvantage,
+      numbers: columnValues(listings, (listing) => rateNumber(listing?.price, listing?.size_sqft)),
+    }),
+    row('price-sqm', 'Price per sqm', columnValues(listings, (listing) => unitRate(listing?.price, listing?.size_sqmt)), { hideWhenAllBlank: true }),
+    row('purpose', 'Sale or rent', purposes),
+    row('original-price', 'Original price', columnValues(listings, (listing) => money(listing?.original_price)), { hideWhenAllBlank: true }),
+    row('selling-price', 'Selling price', columnValues(listings, (listing) => money(listing?.selling_price)), { hideWhenAllBlank: true }),
+    row('rent-amount', 'Rent amount', columnValues(listings, (listing) => money(listing?.rent_amount)), {
+      hideWhenAllBlank: !anyRent,
+      advantage: purposes.every((item) => item === 'Rent') ? 'lower' : null,
+      numbers: columnValues(listings, (listing) => finiteNumber(listing?.rent_amount)),
+    }),
   ])
 
   pushGroup(groups, 'Property', [
-    row('type', 'Property type', propertyTypeName(left), propertyTypeName(right)),
-    row('bedrooms', 'Bedrooms', bedrooms(left), bedrooms(right)),
-    row('bathrooms', 'Bathrooms', left?.number_of_bathrooms == null || left?.number_of_bathrooms === '' ? null : String(left.number_of_bathrooms), right?.number_of_bathrooms == null || right?.number_of_bathrooms === '' ? null : String(right.number_of_bathrooms)),
-    row('size-sqft', 'Size', countLabel(left?.size_sqft, 'sqft'), countLabel(right?.size_sqft, 'sqft')),
-    row('size-sqm', 'Size (sqm)', countLabel(left?.size_sqmt, 'sqm'), countLabel(right?.size_sqmt, 'sqm')),
-    row('plot', 'Plot size', countLabel(left?.plot_size, 'sqft'), countLabel(right?.plot_size, 'sqft'), { hideWhenBothBlank: true }),
-    row('layout', 'Layout', left?.layout_type || null, right?.layout_type || null),
-    row('view', 'Unit view', left?.unit_view || null, right?.unit_view || null),
-    row('furnishing', 'Furnishing', humanize(left?.furnished_status), humanize(right?.furnished_status)),
-    row('ownership', 'Ownership', humanize(left?.ownership_type), humanize(right?.ownership_type)),
-    row('unit', 'Unit number', unitNumber(left), unitNumber(right)),
+    row('type', 'Property type', columnValues(listings, propertyTypeName)),
+    row('bedrooms', 'Bedrooms', columnValues(listings, bedrooms)),
+    row('bathrooms', 'Bathrooms', columnValues(listings, (listing) => (
+      listing?.number_of_bathrooms == null || listing?.number_of_bathrooms === ''
+        ? null
+        : String(listing.number_of_bathrooms)
+    ))),
+    row('size-sqft', 'Size', columnValues(listings, (listing) => countLabel(listing?.size_sqft, 'sqft')), {
+      advantage: 'higher',
+      numbers: columnValues(listings, (listing) => {
+        const size = finiteNumber(listing?.size_sqft)
+        return size != null && size > 0 ? size : null
+      }),
+    }),
+    row('size-sqm', 'Size (sqm)', columnValues(listings, (listing) => countLabel(listing?.size_sqmt, 'sqm'))),
+    row('plot', 'Plot size', columnValues(listings, (listing) => countLabel(listing?.plot_size, 'sqft')), { hideWhenAllBlank: true }),
+    row('layout', 'Layout', columnValues(listings, (listing) => listing?.layout_type || null)),
+    row('view', 'Unit view', columnValues(listings, (listing) => listing?.unit_view || null)),
+    row('furnishing', 'Furnishing', columnValues(listings, (listing) => humanize(listing?.furnished_status))),
+    row('ownership', 'Ownership', columnValues(listings, (listing) => humanize(listing?.ownership_type))),
+    row('unit', 'Unit number', columnValues(listings, unitNumber)),
   ])
 
   pushGroup(groups, 'Location', [
-    row('location', 'Location', locationLabel(left), locationLabel(right)),
-    row('city', 'City', areaByType(left, 'city'), areaByType(right, 'city')),
-    row('community', 'Community', areaByType(left, 'community'), areaByType(right, 'community')),
-    row('subcommunity', 'Subcommunity', areaByType(left, 'sub_community'), areaByType(right, 'sub_community')),
-    row('district', 'Area', areaByType(left, 'area'), areaByType(right, 'area'), { hideWhenBothBlank: true }),
+    row('location', 'Location', columnValues(listings, locationLabel)),
+    row('city', 'City', columnValues(listings, (listing) => areaByType(listing, 'city'))),
+    row('community', 'Community', columnValues(listings, (listing) => areaByType(listing, 'community'))),
+    row('subcommunity', 'Subcommunity', columnValues(listings, (listing) => areaByType(listing, 'sub_community'))),
+    row('district', 'Area', columnValues(listings, (listing) => areaByType(listing, 'area')), { hideWhenAllBlank: true }),
   ])
 
   pushGroup(groups, 'Status', [
-    row('availability', 'Availability', availability(left), availability(right)),
-    row('completion', 'Completion', left?.completion_status || null, right?.completion_status || null),
-    row('handover', 'Handover', left?.handover_date || null, right?.handover_date || null),
-    row('occupancy', 'Occupancy', left?.occupancy_status || null, right?.occupancy_status || null),
-    row('mortgage', 'Mortgage', humanize(left?.mortgage_status), humanize(right?.mortgage_status), { hideWhenBothBlank: true }),
-    row('hot-deal', 'Hot deal', left?.is_hot_deal === 'Yes' ? 'Yes' : null, right?.is_hot_deal === 'Yes' ? 'Yes' : null, { hideWhenBothBlank: true }),
-    row('rent-until', 'Rent until', left?.rented_until || left?.rent_expiry_date || null, right?.rented_until || right?.rent_expiry_date || null, { hideWhenBothBlank: !eitherRent }),
+    row('availability', 'Availability', columnValues(listings, availability)),
+    row('completion', 'Completion', columnValues(listings, (listing) => listing?.completion_status || null)),
+    row('handover', 'Handover', columnValues(listings, (listing) => listing?.handover_date || null)),
+    row('occupancy', 'Occupancy', columnValues(listings, (listing) => listing?.occupancy_status || null)),
+    row('mortgage', 'Mortgage', columnValues(listings, (listing) => humanize(listing?.mortgage_status)), { hideWhenAllBlank: true }),
+    row('hot-deal', 'Hot deal', columnValues(listings, (listing) => (listing?.is_hot_deal === 'Yes' ? 'Yes' : null)), { hideWhenAllBlank: true }),
+    row('rent-until', 'Rent until', columnValues(listings, (listing) => listing?.rented_until || listing?.rent_expiry_date || null), { hideWhenAllBlank: !anyRent }),
   ])
 
   pushGroup(groups, 'People', [
-    row('developer', 'Developer', developerName(left), developerName(right)),
-    row('agent', 'Listing agent', left?.agent?.name || null, right?.agent?.name || null),
+    row('developer', 'Developer', columnValues(listings, developerName)),
+    row('agent', 'Listing agent', columnValues(listings, (listing) => listing?.agent?.name || null)),
   ])
 
-  pushGroup(groups, 'Amenities', amenityRows(left, right))
-  pushGroup(groups, 'Project amenities', projectAmenityRows(left, right))
+  pushGroup(groups, 'Costs', [
+    row('payment-plan', 'Payment plan', columnValues(listings, paymentPlan)),
+    row('service-charge', 'Service charge', columnValues(listings, (listing) => matchingCost(listing, /service\s*charge/i)), { hideWhenAllBlank: true }),
+    row('other-costs', 'Other costs', columnValues(listings, otherCosts), { hideWhenAllBlank: true }),
+    row('floor-plans', 'Floor plans', columnValues(listings, floorPlanLabel)),
+    row('parking', 'Parking', columnValues(listings, (listing) => (mentionsParking(listing) ? 'Yes' : null)), { hideWhenAllBlank: true }),
+  ])
+
+  pushGroup(groups, 'Outdoor', outdoorRows(listings))
+  pushGroup(groups, 'Amenities', amenityRows(listings))
+  pushGroup(groups, 'Project amenities', projectAmenityRows(listings))
 
   const counts = { same: 0, different: 0, missing: 0 }
+  const names = listings.map((listing, index) => propertyName(listing) || `Property ${index + 1}`)
+  const highlights = []
   for (const group of groups) {
-    for (const item of group.rows) counts[item.state] += 1
+    for (const item of group.rows) {
+      counts[item.state] += 1
+      if (item.advantageLabel && item.best.length === 1) {
+        highlights.push({
+          id: item.id,
+          column: item.best[0],
+          text: `${item.advantageLabel}: ${names[item.best[0]]}`,
+        })
+      }
+    }
   }
 
-  return { groups, counts }
+  return { groups, counts, highlights, columnCount: listings.length }
 }

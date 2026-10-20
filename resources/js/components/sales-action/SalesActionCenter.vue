@@ -40,27 +40,27 @@
       @click="toggleCategory(category, $event)"
     >
       <iconify-icon icon="lucide:chevron-right" class="sac-node__chevron" />
-      <span class="sac-node__label">{{ category.title }}</span>
+      <span class="sac-node__label" :title="category.title">{{ shortTitle(category) }}</span>
       <span class="sac-node__count">{{ displayCount(category.count) }}</span>
     </button>
 
     <aside
       v-if="open && (hoverList.length || hoverState === 'empty')"
+      ref="popRef"
       class="sac-pop"
       data-tour="next-actions-cards"
       :style="popStyle"
     >
       <template v-if="hoverList.length">
-        <p class="sac-pop__kicker">{{ hoverList.length }} {{ hoverList.length === 1 ? 'lead' : 'leads' }}</p>
-        <p class="sac-pop__task">{{ hoverList[0].title }}</p>
+        <p class="sac-pop__kicker">{{ hoverList.length }} {{ hoverList.length === 1 ? 'lead' : 'leads' }} · {{ hoverList[0].title }}</p>
         <div class="sac-leads">
           <article v-for="item in hoverList" :key="item.lead_id || item.id" class="sac-lead">
             <button type="button" class="sac-lead__main" @click="openItem(item)">
               <span class="sac-lead__name">{{ item.card?.name || item.lead_name || 'Lead' }}</span>
               <span v-if="item.card?.reason" class="sac-lead__reason">{{ item.card.reason }}</span>
-              <span class="sac-lead__line">{{ item.card?.need || 'Requirements are not saved yet.' }}</span>
-              <span class="sac-lead__line">{{ item.card?.budget || 'Budget not saved' }}</span>
-              <span class="sac-lead__line">{{ item.card?.note || 'No saved note' }}</span>
+              <span v-if="item.card?.need" class="sac-lead__line">{{ item.card.need }}</span>
+              <span v-if="item.card?.budget" class="sac-lead__line">{{ item.card.budget }}</span>
+              <span v-if="item.card?.note" class="sac-lead__line">{{ item.card.note }}</span>
             </button>
             <div class="sac-pop__actions">
               <a v-if="phoneHrefFor(item)" :href="phoneHrefFor(item)" aria-label="Call"><iconify-icon icon="lucide:phone" /></a>
@@ -118,6 +118,19 @@ const hoveredKey = ref('')
 const hoverList = ref([])
 const hoverState = ref('idle')
 const popStyle = ref({})
+const popRef = ref(null)
+const SHORT_TITLES = {
+  urgent_overdue: 'Urgent',
+  assigned_needs_first_contact: 'First contact',
+  contacted_follow_up_due: 'Follow-up',
+  contacted_repeated_no_answer: 'Repeat no answer',
+  no_answer_call_again: 'Call again',
+  answered_gone_quiet: 'No action',
+  qualified_missing_requirements: 'Missing info',
+  converted_deal_missing: 'No deal',
+  inactive: 'Inactive',
+  approaching_deadline: 'Deadline',
+}
 const layoutTick = ref(0)
 const lists = ref({})
 const WARM_KEY = 'sac-warm-v1'
@@ -178,6 +191,10 @@ watch(open, (isOpen) => {
 function displayCount(count) {
   const n = Number(count) || 0
   return Math.min(n, BATCH)
+}
+
+function shortTitle(category) {
+  return SHORT_TITLES[category?.key] || category?.title || ''
 }
 
 watch(salesActionAnchor, () => {
@@ -249,7 +266,11 @@ function onKey(event) {
 function onResize() {
   layoutTick.value += 1
   if (pillTop.value != null && !pillDragging.value) rememberPillTop(pillTop.value * window.innerHeight)
-  if (open.value) nextTick(() => drawWires())
+  if (!open.value) return
+  nextTick(() => {
+    drawWires()
+    placeOpenPop()
+  })
 }
 
 function rememberPillTop(px) {
@@ -358,8 +379,7 @@ function treeLayout() {
   const compact = vw <= 800
   const inset = 12
   const topSafe = compact ? 64 : 16
-  // Leave room under the last stage so the lead card can sit above the dock.
-  const bottomSafe = compact ? 110 : 120
+  const bottomSafe = compact ? 72 : 28
   const toRight = anchor.left < vw * 0.45
   const stem = compact ? 20 : 46
   const sidePos = toRight ? anchor.right + stem : vw - anchor.left + stem
@@ -373,8 +393,8 @@ function treeLayout() {
     ? (stackUp ? Math.max(regionTop + 32, anchor.top - 12) : vh - (compact ? 88 : bottomSafe))
     : vh - bottomSafe
   const availableH = Math.max(32, regionBottom - regionTop)
-  let nodeH = compact ? 42 : 46
-  let gap = nodeH + (compact ? 8 : 14)
+  let nodeH = compact ? 26 : 28
+  let gap = nodeH + 4
   if (count > 1) {
     if ((count - 1) * gap + nodeH > availableH) {
       nodeH = Math.min(nodeH, availableH / count)
@@ -395,7 +415,7 @@ function treeLayout() {
   }
   const maxStart = regionBottom - span - nodeH
   start = Math.min(Math.max(regionTop, start), Math.max(regionTop, maxStart))
-  const width = Math.max(120, Math.min(stacked ? 440 : 420, stacked ? vw - inset * 2 : sideWidth))
+  const width = Math.max(148, Math.min(stacked ? 210 : 188, stacked ? vw - inset * 2 : sideWidth))
   return { vw, vh, anchor, count, compact, stacked, stackUp, openUp, toRight, width, sidePos, nodeH, gap, start, inset, mid }
 }
 
@@ -644,22 +664,26 @@ function obstacleBoxes() {
     .map((el) => el.getBoundingClientRect())
 }
 
+function placeOpenPop() {
+  const index = categories.value.findIndex((row) => row.key === hoveredKey.value)
+  const node = index >= 0 ? nodeRefs.value[index] : null
+  if (node) placePop(node)
+}
+
 function placePop(node) {
   if (!node) return
   const box = node.getBoundingClientRect()
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const margin = 12
-  const gap = 12
-  const preferredW = 280
+  const margin = 10
+  const gap = 8
+  const preferredW = 196
   const spaceLeft = box.left - margin
   const spaceRight = vw - box.right - margin
   let left
   let width
-  let top = box.top
-  let maxHeight = Math.min(Math.round(vh * 0.68), vh - margin * 2)
 
-  if (spaceLeft >= 200 || spaceRight >= 200) {
+  if (spaceLeft >= 150 || spaceRight >= 150) {
     if (spaceLeft >= spaceRight) {
       width = Math.min(preferredW, spaceLeft - gap)
       left = box.left - gap - width
@@ -667,35 +691,30 @@ function placePop(node) {
       width = Math.min(preferredW, spaceRight - gap)
       left = box.right + gap
     }
-    // Prefer opening downward; only shrink height if the card would leave the screen.
-    if (top + maxHeight > vh - margin) {
-      maxHeight = Math.max(160, vh - margin - top)
-    }
   } else {
     width = Math.min(preferredW, Math.max(160, vw - margin * 2))
     left = Math.max(margin, Math.min(box.left, vw - width - margin))
-    const below = vh - box.bottom - margin
-    // Default: open the lead card downward from the stage.
-    top = box.bottom + gap
-    maxHeight = Math.min(maxHeight, Math.max(160, below - gap))
   }
 
+  const beside = spaceLeft >= 150 || spaceRight >= 150
+  const maxHeight = Math.min(240, Math.round(vh - margin * 2))
+  const height = Math.min(popRef.value?.offsetHeight || 180, maxHeight)
+  // Rise beside the stage you opened. A lower stage pulls the card up instead of dropping it to the bottom.
+  let top = beside ? box.bottom - height : box.top - gap - height
+  if (!beside && top < margin) top = box.bottom + gap
   if (top < margin) top = margin
-  if (top + maxHeight > vh - margin) {
-    maxHeight = Math.max(160, vh - margin - top)
-  }
+  if (top + height > vh - margin) top = Math.max(margin, vh - margin - height)
 
   for (const item of obstacleBoxes()) {
     const hitsX = left + width > item.left && left < item.right
-    const hitsY = top + maxHeight > item.top && top < item.bottom
+    const hitsY = top + height > item.top && top < item.bottom
     if (!hitsX || !hitsY) continue
     if (item.left - gap - left >= 160) width = item.left - gap - left
-    else if (item.top - gap - top >= 140) maxHeight = item.top - gap - top
   }
 
   popStyle.value = {
     top: `${Math.round(top)}px`,
-    left: `${Math.round(left)}px`,
+    left: `${Math.round(Math.max(margin, left))}px`,
     width: `${Math.round(width)}px`,
     maxHeight: `${Math.round(maxHeight)}px`,
   }
@@ -784,15 +803,15 @@ function openItem(item) {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   max-width: calc(100vw - 24px);
-  padding: 0 12px 0 16px;
+  padding: 0 6px 0 10px;
   border: 1px solid rgba(255, 255, 255, 0.95);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.86);
   color: #1c1730;
   text-align: left;
-  box-shadow: 0 10px 30px rgba(92, 70, 130, 0.1);
+  box-shadow: 0 8px 18px rgba(92, 70, 130, 0.08);
   backdrop-filter: blur(8px);
   opacity: 0;
   transform-origin: var(--origin, right center);
@@ -809,6 +828,7 @@ function openItem(item) {
 .sac-node__chevron {
   color: #9a8fb0;
   flex: none;
+  font-size: 14px;
   transition: transform 0.16s ease;
 }
 .sac-node.is-hot .sac-node__chevron {
@@ -818,57 +838,53 @@ function openItem(item) {
 .sac-node__label {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sac-node.is-compact {
-  gap: 6px;
-  padding: 0 8px 0 12px;
-}
-.sac-node.is-compact .sac-node__label { font-size: 13px; }
+.sac-node.is-compact .sac-node__label { font-size: 11px; }
 .sac-node.is-compact .sac-node__count {
-  width: 22px;
-  height: 22px;
-  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
 }
 .sac-node__count {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   flex: none;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #f3eef8;
   color: #3b3348;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 .sac-pop {
   position: fixed;
   z-index: 1500;
   box-sizing: border-box;
-  width: min(300px, calc(100vw - 16px));
-  max-height: min(72vh, 640px);
+  width: min(196px, calc(100vw - 16px));
+  max-height: min(40vh, 240px);
   overflow: auto;
-  padding: 16px 16px 12px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 50px rgba(70, 50, 110, 0.16);
+  padding: 6px 6px 5px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(70, 50, 110, 0.14);
 }
 .sac-pop.is-openable { cursor: pointer; }
 .sac-leads {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 4px;
 }
 .sac-lead {
-  padding: 10px 10px 8px;
+  padding: 5px 6px 4px;
   border: 1px solid #efeaf5;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #fff;
 }
 .sac-lead__main {
@@ -884,37 +900,51 @@ function openItem(item) {
   text-align: left;
   cursor: pointer;
 }
+.sac-lead__name,
+.sac-lead__reason,
+.sac-lead__line {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sac-lead__name {
   color: #1c1730;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
+  line-height: 1.2;
 }
 .sac-lead__reason {
   color: #6d28d9;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
+  line-height: 1.2;
 }
 .sac-lead__line {
   color: #5c5668;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 10px;
+  line-height: 1.2;
 }
 .sac-pop__kicker {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   color: #8b8498;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sac-pop__task,
 .sac-pop__label,
 .sac-pop__value,
 .sac-pop__status { margin: 0; }
 .sac-pop__task {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   color: #4c1d6e;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 .sac-pop__label {
@@ -931,14 +961,15 @@ function openItem(item) {
 }
 .sac-pop__actions {
   display: flex;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 4px;
+  margin-top: 4px;
 }
 .sac-pop__actions a,
 .sac-pop__actions button,
 .sac-pop__pager button {
-  width: 34px;
-  height: 34px;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
   display: grid;
   place-items: center;
   border: 0;
@@ -1032,7 +1063,7 @@ function openItem(item) {
     left: 12px;
     max-width: none;
   }
-  .sac-pop { max-height: min(68vh, 560px); }
+  .sac-pop { max-height: min(36vh, 220px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sac-wire,

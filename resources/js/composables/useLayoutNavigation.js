@@ -87,7 +87,6 @@ const AGENTS_PREFIXES = ['/users', '/add-user', '/team-tree', '/view-profile', '
 const LISTINGS_PREFIXES = [
   '/alllisting',
   '/my-listing',
-  '/property-compare',
   '/property-form',
   '/notify-me',
   '/archive',
@@ -169,6 +168,22 @@ const LISTINGS_REQUEST_PATHS = [
   '/need-approve-requests',
   '/my-viewings',
 ];
+
+function withPropertyCompareTab(tabs, isSuperAdmin) {
+  if (!isSuperAdmin) return tabs;
+  if (!Array.isArray(tabs) || !tabs.length) return tabs;
+  if (tabs.some((tab) => tab.id === 'compare' || tab.path === '/property-compare')) return tabs;
+  return [
+    ...tabs,
+    {
+      id: 'compare',
+      label: 'Compare',
+      type: 'compare',
+      matchPaths: [],
+      icon: 'lucide:git-compare',
+    },
+  ];
+}
 
 /** List pages only — detail/create/edit forms must not overwrite the remembered listings entry. */
 export function isListingsRememberablePath(path) {
@@ -438,7 +453,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         count: listingTabCounts.listings || 0,
       },
     ];
-    return tabs;
+    return withPropertyCompareTab(tabs, !!isSuperAdmin);
   }
 
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
@@ -601,7 +616,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       });
     }
 
-    return tabs;
+    return withPropertyCompareTab(tabs, !!isSuperAdmin);
   }
 
   return [];

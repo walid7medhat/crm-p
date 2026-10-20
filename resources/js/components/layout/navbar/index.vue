@@ -357,6 +357,14 @@
               >
                 {{ tab.label }}
               </button>
+              <button
+                v-else-if="tab.type === 'compare'"
+                type="button"
+                class="module-tab-btn"
+                @click="openPropertyCompare"
+              >
+                {{ tab.label }}
+              </button>
               <router-link
                 v-else
                 :to="tab.path"
@@ -811,6 +819,7 @@
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
 import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { startPropertyCompare } from '@/composables/propertyCompareSelection';
 import {
   buildHeaderTabs,
   buildTopModuleNav,
@@ -2743,9 +2752,20 @@ function toggleBrowserNotifications() {
   }
 }
 
+function openPropertyCompare() {
+  if (!isSuperAdmin.value) return;
+  startPropertyCompare();
+  const onListingGrid = route.path === '/alllisting' || route.path === '/my-listing';
+  if (!onListingGrid) router.push('/alllisting');
+}
+
 function onMobileModuleTabChange(event) {
   const tabId = event?.target?.value;
   if (!tabId) return;
+  if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'compare')) {
+    openPropertyCompare();
+    return;
+  }
   if (moduleHeaderTabs.value.some((t) => t.id === tabId && t.type === 'deal-type')) {
     setActiveDealType(tabId);
     return;

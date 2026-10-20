@@ -51,17 +51,24 @@
           <div
             v-else
             class="property-listing-card"
-            :class="{ 'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property) }"
+            :class="{
+              'property-listing-card--missing-breakdown': listingNeedsPaymentBreakdownHighlight(property),
+              'is-compare-selected': isCompareSelected(property.id),
+            }"
           >
        <a
             :href="`/property-details/${property.id}`"
             class="property-card-link"
-            :class="{ 'converted-card': property.status === 'converted' }"
-            @click="openDetailsModal($event, property)"
+            :class="{ 'converted-card': property.status === 'converted', 'is-compare-armed': compareMode }"
+            @click="onListingClick($event, property)"
           >
             <div class="property-card">
               <!-- Image -->
               <div class="property-image position-relative">
+                <span v-if="compareMode" class="property-compare-mark" :class="{ 'is-on': isCompareSelected(property.id) }">
+                  <span class="property-compare-mark__box" aria-hidden="true"></span>
+                  {{ isCompareSelected(property.id) ? 'Selected' : 'Select' }}
+                </span>
                 <img 
                   :src="getPropertyImage(property)" 
                   :alt="property.title"
@@ -272,6 +279,7 @@ import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
+import { usePropertyCompareSelection } from '@/composables/propertyCompareSelection';
 import { hidesBedsBaths } from '@/composables/listingPropertyType';
 import {
   listingNeedsPaymentBreakdownHighlight,
@@ -295,6 +303,7 @@ export default {
     const property4 = "/assets/images/a.jpeg";
     const route = useRoute(); 
     const router = useRouter();
+    const { compareMode, isSelected: isCompareSelected, toggleListing } = usePropertyCompareSelection();
     const properties = ref([]);
     const isLoading = ref(false);
     const currentFilters = ref({});
@@ -1067,6 +1076,15 @@ const decodeFiltersFromQuery = async (query) => {
       });
     };
 
+    const onListingClick = (event, property) => {
+      if (compareMode.value) {
+        event.preventDefault();
+        toggleListing(property);
+        return;
+      }
+      openDetailsModal(event, property);
+    };
+
     // Fetch initial properties on component mount
     onMounted(async () => {
       await fetchUserInfo();
@@ -1116,6 +1134,9 @@ const decodeFiltersFromQuery = async (query) => {
       bathIcon,
       sqftIcon,
       isLoading,
+      compareMode,
+      isCompareSelected,
+      onListingClick,
       pagination,
       activeStatus,
       isAdmin,

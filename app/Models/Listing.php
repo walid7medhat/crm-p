@@ -335,6 +335,28 @@ class Listing extends Model
                     ->where('rented_until', '>', now());
     }
 
+    /**
+     * Same pool as All Listings → Active: live, approved, and not archived,
+     * sold, rented, or draft. Compare must not widen this set.
+     */
+    public function scopeActiveUnit($query)
+    {
+        return $query->where('is_active', true)
+            ->where('status', '!=', 'converted')
+            ->where('status', '!=', 'rented')
+            ->where('status', '!=', 'draft')
+            ->where('is_archived', false)
+            ->where('approved', true);
+    }
+
+    public function isActiveUnit(): bool
+    {
+        return (bool) $this->is_active
+            && ! (bool) $this->is_archived
+            && (bool) $this->approved
+            && ! in_array($this->status, ['converted', 'rented', 'draft'], true);
+    }
+
     public function setPaymentPlanAttribute($value)
     {
         if (is_null($value)) {

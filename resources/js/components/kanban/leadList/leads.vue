@@ -576,6 +576,7 @@
                             v-for="(row, index) in pagedListRows"
                             :key="'r-' + row.task.id"
                             :data-lead-id="row.task.id"
+                            :style="{ '--column-color': row.column?.color }"
                             :class="{
                                 'is-selected': isLeadSelected(row.task.id),
                                 'is-highlighted': isLeadHighlighted(row.task.id),
@@ -6901,27 +6902,28 @@ const fetchRevertNotifications = async () => {
     z-index: 0;
     opacity: 0;
     transition: opacity 0.32s ease;
-    background: rgba(var(--color-primary-rgb), 0.08);
+    /* Wash takes the stage header colour (--column-color on the column). */
+    background: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 18%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) {
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover:not(.ghost):not(.dragging):not(.kanban-card--motion-hold):not(.is-tilting) {
-        border-color: rgba(var(--color-primary-rgb), 0.34) !important;
+        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 55%, #ffffff) !important;
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.95),
-            0 0 0 1px rgba(var(--color-primary-rgb), 0.08),
-            0 16px 28px -18px rgba(var(--color-primary-rgb), 0.45) !important;
+            0 0 0 1px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 22%, transparent),
+            0 16px 28px -18px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 70%, transparent) !important;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting:not(.ghost):not(.kanban-card--motion-hold),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging {
         z-index: 4;
-        border-color: rgba(var(--color-primary-rgb), 0.42) !important;
+        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 62%, #ffffff) !important;
         box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.96),
-            0 0 0 1px rgba(var(--color-primary-rgb), 0.1),
-            0 18px 32px -16px rgba(var(--color-primary-rgb), 0.42) !important;
+            0 0 0 1px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 28%, transparent),
+            0 18px 32px -16px color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 68%, transparent) !important;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover::before,
@@ -7811,6 +7813,13 @@ const fetchRevertNotifications = async () => {
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:active::after,
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:focus-visible::after {
     opacity: 0.9;
+}
+
+.kanban-outer--mobile .kanban-column .kanban-card--mobile:hover,
+.kanban-outer--mobile .kanban-column .kanban-card--mobile:active,
+.kanban-outer--mobile .kanban-column .kanban-card--mobile:focus-visible {
+    background: color-mix(in srgb, var(--column-color, #733E87) 12%, #ffffff) !important;
+    border-color: color-mix(in srgb, var(--column-color, #733E87) 48%, #ffffff) !important;
 }
 
 .kanban-outer--mobile .kanban-column > div,
@@ -8949,7 +8958,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .lead-list-table tbody tr:hover td {
-    background: #f8fafc;
+    background: color-mix(in srgb, var(--column-color, #94a3b8) 14%, #ffffff);
 }
 
 .lead-list-table tbody tr.is-selected td,

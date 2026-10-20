@@ -495,19 +495,11 @@ SQL;
         // only surfaced via "Need Approval Listings" (getPendingApprovals()) and the
         // listing detail page (getListingData()), never mixed into this shared grid.
         if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') ) && ! $closedSeeAll && ! $closedBranchOnly){
-            $query->where('is_active', true)
-                ->where('status', '!=', 'converted')
-                ->where('status', '!=', 'rented')
-                ->where('status', '!=', 'draft')
-                ->where('is_archived', false)->where('approved', true);
+            $query->activeUnit();
         }
 
         if($request->has('active') ){
-              $query->where('is_active', true)
-                ->where('status', '!=', 'converted')
-                ->where('status', '!=', 'rented')
-                ->where('status', '!=', 'draft')
-                ->where('is_archived', false)->where('approved', true);
+              $query->activeUnit();
         }
          if ($request->has('area_id')) {
                     $areaId = $request->area_id;
@@ -589,15 +581,16 @@ SQL;
                 // requires approved) — otherwise the page returns N items per page
                 // but the frontend silently drops the unapproved ones, so fewer than
                 // per_page end up on screen despite pagination saying otherwise.
-                $query->where('is_active', true)
-                ->where('status', '!=', 'converted')
-                ->where('status', '!=', 'rented')
-                ->where('status', '!=', 'draft')
-                ->where('is_archived', false)
-                ->where('approved', true);
+                $query->activeUnit();
             }else{
             $query->where('is_active', $request->boolean('is_active'));
             }
+        }
+
+        // Compare always uses the Active pool, including for super admins who
+        // otherwise see drafts and closed units in the unfiltered grid.
+        if ($request->boolean('for_compare')) {
+            $query->activeUnit();
         }
         
         if ($request->has('additional_features')) {
@@ -1362,9 +1355,13 @@ public function getMatchingListings(Request $request)
             }
         }
    
-    public function show($listing): JsonResponse
+    public function show(Request $request, $listing): JsonResponse
     {
         try {
+            if ($request->boolean('for_compare') && ! Listing::query()->activeUnit()->whereKey($listing)->exists()) {
+                return ApiResponse::error('This listing is not available to compare.', 404);
+            }
+
             // User-scoped: cached payload includes can_edit/can_delete for the warmer.
             $cacheKey = self::listingShowCacheKey($listing, Auth::id());
             

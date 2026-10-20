@@ -60,16 +60,16 @@ function formatTime(iso) {
   max-height: 360px;
 }
 .list-loading, .list-empty {
-  padding: 24px;
+  padding: 16px;
   text-align: center;
   color: #666;
-  font-size: 14px;
+  font-size: 11px;
 }
 .conversation-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 6px 8px;
   cursor: pointer;
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.15s;
@@ -81,8 +81,8 @@ function formatTime(iso) {
   background: #e7f1ff;
 }
 .conv-avatar {
-  width: 48px;
-  height: 48px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -101,7 +101,7 @@ function formatTime(iso) {
   background: #0d6efd;
   color: #fff;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 12px;
 }
 .conv-body {
   flex: 1;
@@ -109,12 +109,16 @@ function formatTime(iso) {
 }
 .conv-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.2;
   color: #1a1a1a;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .conv-preview {
-  font-size: 13px;
+  font-size: 10px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -127,7 +131,7 @@ function formatTime(iso) {
   gap: 4px;
 }
 .conv-time {
-  font-size: 11px;
+  font-size: 10px;
   color: #999;
 }
 .unread-badge {
