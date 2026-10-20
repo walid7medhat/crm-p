@@ -116,7 +116,7 @@
                   <span v-if="isRejectedListing(property)" class="badge-sold bg-danger">
                     <i class="ri-close-circle-fill me-1"></i>Rejected
                   </span>
-                  <span v-else-if="!property.approved && ['draft', 'published'].includes(property.status)" class="badge-sold bg-danger">
+                  <span v-else-if="!property.approved && ['published'].includes(property.status)" class="badge-sold bg-danger">
                     <i class="ri-time-line me-1"></i>Need Approve
                   </span>
                   <span
