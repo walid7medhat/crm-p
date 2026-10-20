@@ -76,10 +76,13 @@ class UserController extends Controller
                         // own subordinates.
                         $ids = $user->id == 33 || $user->hasRole('branch_admin') || $user->hasRole('admin')? $user->getBranchUserIds() : $user->getAllSubordinatesIds();
 
-                        $query->whereIn('id', $ids);
-                        if($user->hasRole('branch_admin')){
-                            $query->orWhereNull('parent_id');
-                        }
+                            $query->where(function ($q) use ($ids, $user) {
+                                $q->whereIn('id', $ids);
+
+                                if ($user->hasRole('branch_admin')) {
+                                    $q->orWhereNull('parent_id');
+                                }
+                            });
                     }
                 }
            if ($request->filled('parent_id')) {
