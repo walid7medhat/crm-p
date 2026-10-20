@@ -126,7 +126,22 @@ class CalendarController extends MarketingBaseController
             'scheduled_date' => ['sometimes', 'date'],
         ]);
 
+        $oldDate = $post->scheduled_date?->toDateString();
+        $oldPlatform = $post->platform;
+
         $post->update($validated);
+
+        $post->refresh();
+        $moved = (isset($validated['scheduled_date']) && $post->scheduled_date?->toDateString() !== $oldDate)
+            || (isset($validated['platform']) && $post->platform !== $oldPlatform);
+        if ($moved && $post->task) {
+            MarketingHistoryRecorder::record($post->task, 'scheduled', [[
+                'field' => 'calendar',
+                'label' => 'Moved',
+                'old' => ($oldDate ? Carbon::parse($oldDate)->format('d M Y') : '—') . ' · ' . MarketingHistoryRecorder::humanize($oldPlatform),
+                'new' => $post->scheduled_date?->format('d M Y') . ' · ' . MarketingHistoryRecorder::humanize($post->platform),
+            ]]);
+        }
 
         return response()->json(['post' => MarketingPresenter::post($post->fresh(['link', 'poster:id,name', 'task:id,category']))]);
     }

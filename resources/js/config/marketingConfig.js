@@ -49,11 +49,11 @@ export const CHANNELS = {
 export const PLATFORMS = {
   instagram_story: { label: 'Instagram Story', short: 'IG Story', color: '#E8664A', grad: 'linear-gradient(135deg, #FCAF45 0%, #E1306C 100%)', icon: 'mdi:circle-slice-8' },
   instagram: { label: 'Instagram', short: 'Instagram', color: '#D6336C', grad: 'linear-gradient(45deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)', icon: 'mdi:instagram' },
+  sales: { label: 'Sales', short: 'Sales', color: '#0F766E', grad: 'linear-gradient(135deg, #2AA89A 0%, #0B6B62 100%)', icon: 'lucide:badge-dollar-sign' },
   tiktok: { label: 'TikTok', short: 'TikTok', color: '#1E1B2E', grad: 'linear-gradient(135deg, #1E1B2E 0%, #2B2140 60%, #FE2C55 140%)', icon: 'ic:baseline-tiktok' },
   linkedin: { label: 'LinkedIn', short: 'LinkedIn', color: '#1F6FC2', grad: 'linear-gradient(135deg, #3A8FE0 0%, #0A5BAA 100%)', icon: 'mdi:linkedin' },
   snapchat: { label: 'Snapchat', short: 'Snapchat', color: '#D4A900', grad: 'linear-gradient(135deg, #FFF26B 0%, #F7CF1D 100%)', ink: '#2A2310', icon: 'mdi:snapchat' },
   youtube: { label: 'YouTube', short: 'YouTube', color: '#E5322D', grad: 'linear-gradient(135deg, #FF5A4E 0%, #C4221B 100%)', icon: 'mdi:youtube' },
-  sales: { label: 'Sales', short: 'Sales', color: '#0F766E', grad: 'linear-gradient(135deg, #2AA89A 0%, #0B6B62 100%)', icon: 'lucide:badge-dollar-sign' },
 };
 
 /** Inline style for a toggle chip: solid color, selected gradient, and text color on the fill. */
