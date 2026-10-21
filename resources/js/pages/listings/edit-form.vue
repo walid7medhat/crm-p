@@ -4351,7 +4351,7 @@ const handleSubmit = async (action = 'draft') => {
       headers: { 
         "Content-Type": "multipart/form-data",
       },
-      timeout: 30000,
+      timeout: 120000,
     });
 
     console.log("✅ Success Response:", response.data);

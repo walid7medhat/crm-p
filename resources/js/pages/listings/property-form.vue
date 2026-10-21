@@ -4610,7 +4610,7 @@ const handleSubmit = async (action = 'draft') => {
 
     const response = await api.post("/listings/properties", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-      timeout: 30000,
+      timeout: 120000,
     });
 
     console.log("✅ Success Response:", response.data);
