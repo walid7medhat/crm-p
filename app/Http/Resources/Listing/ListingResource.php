@@ -233,6 +233,7 @@ $allowedAgentIds = [];
             'plot_size' => $this->plot_size !== null ? (int) $this->plot_size : null,
             'number_of_bedrooms' => $this->number_of_bedrooms,
             'number_of_bathrooms' => $this->number_of_bathrooms,
+            'number_of_floors' => $this->number_of_floors,
             'price' => $this->price,
             'furnished_status' => $this->furnished_status,
             'ownership_type' => $this->ownership_type,

@@ -37,6 +37,11 @@ $listingId = $this->route('property');
             $typeName = \App\Models\PropertyType::whereKey($propertyTypeId)->value('name');
             $needsPlotSize = in_array(strtolower(trim((string) $typeName)), self::PLOT_SIZE_TYPES, true);
         }
+        $isBuilding = false;
+        if ($propertyTypeId) {
+            $typeName = \App\Models\PropertyType::whereKey($propertyTypeId)->value('name');
+            $isBuilding = strtolower(trim((string) $typeName)) === 'building';
+        }
         $rules = [
             // 'unit_number' => 'required|string|max:50',
             'unit_number' => [
@@ -56,6 +61,7 @@ $listingId = $this->route('property');
             'plot_size' => ($needsPlotSize && ! $isDraft ? 'required' : 'nullable') . '|integer|min:1',
             'number_of_bedrooms' => $isPlot?'nullable':'nullable|integer|min:0',
             'number_of_bathrooms' => $isPlot?'nullable':'nullable|integer|min:0',
+            'number_of_floors' => (($isBuilding && ! $isDraft) ? 'required' : 'nullable') . '|integer|min:1|max:200',
             'price' => 'required|numeric|min:10000',
             'listing_status' => 'sometimes|string|max:50',
             'mortgage_status' => 'required|string|max:50',
@@ -152,6 +158,7 @@ $listingId = $this->route('property');
             'owner_id.required' => 'Owner is required',
             'completion_status.required' => 'Completion status is required',
             'plot_size.required' => 'Plot size is required for this property type',
+            'number_of_floors.required' => 'Number of floors is required for a building',
             'gallery.required' => 'At least 10 gallery images are required',
             'gallery.min' => 'At least 10 gallery images are required',
             'gallery.*.image' => 'Each gallery file must be an image',

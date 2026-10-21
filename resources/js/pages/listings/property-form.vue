@@ -193,6 +193,16 @@
                 label="label"
               />
             </div>
+            <div class="col-md-3" v-if="isBuilding">
+                <label class="form-label">Number of Floors <span class="text-danger">*</span></label>
+                <input
+                  v-model.number="form.number_of_floors"
+                  type="number" class="form-control"
+                  placeholder="Enter number of floors"
+                  step="1" min="1"
+                  @keydown="preventIntegerInvalidKeys"
+                />
+              </div>
            
             <div class="col-md-3">
               <label class="form-label">Size (sqm)</label>
@@ -2006,6 +2016,8 @@ import { parsePriceInputDigits, formatPriceInputDisplay } from "@/utils/priceInp
 import { requiresPlotSize } from "@/composables/listingPlotSize";
 import { hidesBedsBaths } from "@/composables/listingPropertyType";
 import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
+import { isBuildingType } from "@/composables/listingBuilding";
+
 import Swal from "sweetalert2";
 const { proxy } = getCurrentInstance();
 
@@ -2113,7 +2125,7 @@ const developers = ref([]);
 const isLoadingDevelopers = ref(false);
 const areas = ref([]);
 const isLoadingAreas = ref(false);
-
+const isBuilding = computed(() => isBuildingType(form.value.property_type));
 const projectFloorPlans = ref([]);
 const selectedProjectFloorPlans = ref([]);
 const isLoadingProjectFloorPlans = ref(false);
@@ -4434,7 +4446,11 @@ const handleSubmit = async (action = 'draft') => {
         isSubmitting.value = false;
         return;
       }
-
+      if (isBuilding.value && !(Number(form.value.number_of_floors) > 0)) {
+        proxy.$showNotification("❌ Please enter the number of floors!", "error");
+        isSubmitting.value = false;
+        return;
+      }
       if (form.value.gallery.length === 0) {
         proxy.$showNotification("❌ At least one gallery image is required!", "error");
         isSubmitting.value = false;
@@ -4510,6 +4526,7 @@ const handleSubmit = async (action = 'draft') => {
       'unit_number': form.value.unit_number, 'ownership_type': form.value.ownership_type,
       'listing_status': form.value.saleOrRent, 'completion_status': form.value.completionStatus,
       'price': listingPriceForApi(), 'number_of_bedrooms': form.value.number_of_bedrooms,
+      'number_of_floors': isBuilding.value ? form.value.number_of_floors : '',
       'number_of_bathrooms': form.value.number_of_bathrooms, 'size_sqmt': form.value.size_sqmt,
       'size_sqft': form.value.size_sqft, 'furnished_status': form.value.furnished_status,
       'plot_size': needsPlotSize.value ? form.value.plot_size : '',

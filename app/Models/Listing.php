@@ -36,6 +36,7 @@ class Listing extends Model
         'size_sqmt' => 'integer',
         'number_of_bedrooms' => 'integer',
         'number_of_bathrooms' => 'integer',
+        'number_of_floors' => 'integer',
         'selling_price' => 'decimal:2',
         'original_price' => 'decimal:2',
         'assigned_at'=>'datetime',

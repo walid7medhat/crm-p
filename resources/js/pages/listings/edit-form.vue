@@ -172,6 +172,16 @@
                   label="label"
                 />
               </div>
+              <div class="col-md-3" v-if="isBuilding">
+                <label class="form-label">Number of Floors <span class="text-danger">*</span></label>
+                <input
+                  v-model.number="form.number_of_floors"
+                  type="number" class="form-control"
+                  placeholder="Enter number of floors"
+                  step="1" min="1"
+                  @keydown="preventIntegerInvalidKeys"
+                />
+              </div>
            
               <!-- Size sqm -->
               <div class="col-md-3">
@@ -1707,7 +1717,8 @@ import {
   assignmentExpenseTypeOptions,
   assignmentExpenseBaseOptions,
 } from "@/composables/useListingAssignmentExpenses";
-
+import { isBuildingType } from "@/composables/listingBuilding";
+const isBuilding = computed(() => isBuildingType(form.value.property_type));
 const route = useRoute();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
@@ -2745,6 +2756,7 @@ const fetchPropertyData = async (id) => {
       price: String(propertyData.price ?? propertyData.selling_price ?? ''),
       number_of_bedrooms: propertyData.number_of_bedrooms || "",
       number_of_bathrooms: propertyData.number_of_bathrooms || "",
+      number_of_floors: Number(propertyData.number_of_floors) > 0 ? Math.trunc(Number(propertyData.number_of_floors)) : "",
       layout_type: matchedLayoutType || null,
       unit_view: matchedUnitView || null,
       furnished_status: propertyData.furnished_status || "",
@@ -4002,6 +4014,11 @@ const handleSubmit = async (action = 'draft') => {
     isSubmitting.value = false;
     return;
   }
+  if (isBuilding.value && !(Number(form.value.number_of_floors) > 0)) {
+      proxy.$showNotification("❌ Please enter the number of floors!", "error");
+      isSubmitting.value = false;
+      return;
+    }
 
     // Validation للـ rented fields
     if (form.value.saleOrRent === 'Rent' && form.value.rented_status === 'Rented' && !form.value.rented_until) {
@@ -4125,7 +4142,7 @@ const handleSubmit = async (action = 'draft') => {
     formData.append('agent_id', currentAgentId);
     formData.append('property_type_id', form.value.property_type.id);
     formData.append('area_id', form.value.area.id);
-
+    formData.append('number_of_floors', isBuilding.value ? String(form.value.number_of_floors ?? '') : '');
     if (form.value.rented_status) {
       formData.append('rented_status', form.value.rented_status);
     }

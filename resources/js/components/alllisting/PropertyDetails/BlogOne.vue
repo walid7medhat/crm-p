@@ -291,7 +291,11 @@
                       <!-- <span class="spec-main-label">Bath</span> -->
                     </div>
                   </div>
-
+                  <div class="spec-main-item" v-if="isBuildingProperty && floorsLabel">
+                    <div class="spec-main-info">
+                      <span class="spec-main-value"><i class="ri-building-2-line"></i> {{ floorsLabel }}</span>
+                    </div>
+                  </div>
                   <div class="spec-main-item">
                     <div class="spec-main-info">
                       <span class="spec-main-value">
@@ -347,7 +351,10 @@
                     <span class="info-label">Bathrooms</span>
                     <span class="info-value">{{ property.number_of_bathrooms || "0" }}</span>
                   </div>
-                  
+                  <div class="info-item" v-if="isBuildingProperty && floorsLabel">
+                    <span class="info-label">Number of Floors</span>
+                    <span class="info-value">{{ property.number_of_floors }}</span>
+                  </div>
                   <div class="info-item">
                     <span class="info-label">Size</span>
                     <span class="info-value">{{ property.size_sqft || property.size_sqmt || "N/A" }} {{ property.size_sqft ? 'Sq Ft' : property.size_sqmt ? 'Sq M' : '' }}</span>
@@ -2313,6 +2320,7 @@ import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
 import { LISTING_FEATURE_LABELS } from '@/config/listingFeatures';
+import { isBuildingType } from '@/composables/listingBuilding';
 
   const starIcon = '/assets/images/star.png';
 
@@ -2750,6 +2758,13 @@ const plotSizeLabel = computed(() => {
   const n = Number(property.value?.plot_size);
   if (!Number.isFinite(n) || n <= 0) return '';
   return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)} Sq Ft`;
+});
+
+const isBuildingProperty = computed(() => isBuildingType(property.value?.property_type));
+
+const floorsLabel = computed(() => {
+  const n = Number(property.value?.number_of_floors);
+  return n > 0 ? `${n} ${n === 1 ? 'Floor' : 'Floors'}` : '';
 });
 
 // Waiting for approval (not rejected). Shown only to the listing's own agent,
@@ -3257,6 +3272,7 @@ const mobileSpecSentence = computed(() => {
     bits.push(p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : `${p.number_of_bedrooms} beds`);
   }
   if (!isLand && p.number_of_bathrooms) bits.push(`${p.number_of_bathrooms} baths`);
+  if (isBuildingProperty.value && Number(p.number_of_floors) > 0) bits.push(`${p.number_of_floors} floors`);
   if (p.size_sqft) bits.push(`${p.size_sqft} Sqft`);
   else if (p.size_sqmt) bits.push(`${p.size_sqmt} m²`);
   return bits.join(' · ');
@@ -3278,6 +3294,7 @@ const mobileDetailRows = computed(() => {
     add('ri-hotel-bed-line', 'Bedrooms', p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : String(p.number_of_bedrooms));
   }
   if (!isLand && p.number_of_bathrooms) add('ri-drop-line', 'Bathrooms', p.number_of_bathrooms);
+  if (isBuildingProperty.value && Number(p.number_of_floors) > 0) add('ri-building-2-line', 'Floors', p.number_of_floors);
   if (p.size_sqft) add('ri-ruler-line', 'Property Size', `${p.size_sqft} Sq Ft`);
   else if (p.size_sqmt) add('ri-ruler-line', 'Property Size', `${p.size_sqmt} m²`);
   if (plotSizeLabel.value) add('ri-landscape-line', 'Plot Size', plotSizeLabel.value);
@@ -7263,6 +7280,13 @@ const createSlide2 = () => {
   const propertyType = property.value?.property_type?.name || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
   const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
+  const isBuildingOffer = isBuildingType(property.value?.property_type);
+  const floorsCount = Number(property.value?.number_of_floors);
+  const floorsColumn = (isBuildingOffer && floorsCount > 0) ? `
+    <div style="flex:1 !important; padding-left:5mm !important;">
+      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Number of Floors</p>
+      <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${floorsCount}</p>
+    </div>` : '';
   // Plot / land / office: no Bedrooms / Bathrooms columns.
   const noBedsBaths = hidesBedsBaths(property.value?.property_type);
   const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
@@ -7309,10 +7333,10 @@ const createSlide2 = () => {
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
           </div>`}
-          <div style="flex:1 !important; ${plotSize ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
+          <div style="flex:1 !important; ${(plotSize || floorsColumn) ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
             <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
             <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
-          </div>${plotSizeColumn}
+          </div>${plotSizeColumn}${floorsColumn}
         </div>
         <div style="display:flex !important;">
           <div style="flex:1 !important; max-width:25% !important;">
@@ -9005,7 +9029,7 @@ const getHistoryIcon = (event) => {
     openAToAModalForRent,
     submitAToAForRent,
    hasRejectionReason,formatRejectionDate ,rejectionDetails, needsApproval, plotSizeLabel, hidesBedsBaths,
-
+  isBuildingProperty, floorsLabel,
     internalUpdates,
   newUpdateText,
   submittingUpdate,

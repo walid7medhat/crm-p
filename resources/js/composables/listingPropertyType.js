@@ -3,7 +3,7 @@
  * Used by the listing create/edit forms, listing cards, property details and the
  * sales offer PDF so they all hide Bedrooms / Bathrooms the same way.
  */
-const NO_BEDS_BATHS_KEYWORDS = ['plot', 'land', 'office'];
+const NO_BEDS_BATHS_KEYWORDS = ['plot', 'land', 'office','building'];
 
 /** @param {string|{name?: string}|null|undefined} propertyType */
 export const propertyTypeName = (propertyType) =>
