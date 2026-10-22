@@ -34,7 +34,7 @@
 
                             <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">Wishing you good health. Please take care and stay safe.</p>
                             <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">Kind regards,<br>
-                            <strong style="color: #111827;">Human Resources Department</strong></p>
+                            <span style="color: #111827;">Human Resources Department</span></p>
                         </td>
                     </tr>
                 </table>
