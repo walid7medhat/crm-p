@@ -4,6 +4,7 @@ import { clearAuthToken } from './plugins/axios.js'
 import { installNavProgress } from './composables/useNavProgress.js'
 import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
+import { confirmRegisteredLeadDrafts } from './composables/useLeadFormDraft.js'
 /**
  * Route components are lazy-loaded so the initial main bundle no longer pulls
  * every page (HR, kanban, listings, maps, etc.). Auth guards / meta below are
@@ -365,7 +366,15 @@ const router = createRouter({
 })
 
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
+  if (to.fullPath !== from.fullPath) {
+    const allowed = await confirmRegisteredLeadDrafts()
+    if (!allowed) {
+      next(false)
+      return
+    }
+  }
+
   const token = localStorage.getItem('token')
   const isValidToken = isTokenValid()
 

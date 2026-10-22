@@ -1366,3 +1366,196 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router--home:ha
     linear-gradient(165deg, rgba(var(--color-primary-rgb), 0.12) 0%, rgba(243, 251, 248, 0.55) 48%, rgba(255, 255, 255, 0) 100%),
     #fbf8fd;
 }
+
+/* Interaction feedback. Deck cards keep their own transform. */
+.lf-kpis:not(.is-deck) .lf-kpi {
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms ease, opacity 100ms ease;
+}
+
+.lf-kpis:not(.is-deck) .lf-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(55, 24, 92, 0.1);
+}
+
+.lf-kpis:not(.is-deck) .lf-kpi:active {
+  transform: translateY(0);
+  opacity: 0.86;
+  transition-duration: 100ms;
+}
+
+.lf-kpi-icon,
+.lf-remind-icon,
+.lf-card-link iconify-icon,
+.lf-mini iconify-icon,
+.lf-feature-go iconify-icon,
+.lf-cal-nav button iconify-icon,
+.lf-call iconify-icon {
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lf-kpis:not(.is-deck) .lf-kpi:hover .lf-kpi-icon,
+.lf-remind-row:hover .lf-remind-icon,
+.lf-call:hover iconify-icon {
+  transform: scale(1.06);
+}
+
+.lf-card-link:hover iconify-icon,
+.lf-mini:hover iconify-icon,
+.lf-feature-go:hover iconify-icon,
+.lf-cal-nav button:last-child:hover iconify-icon {
+  transform: translateX(2px);
+}
+
+.lf-cal-nav button:first-child:hover iconify-icon {
+  transform: translateX(-2px);
+}
+
+.lf-remind-row,
+.lf-person,
+.lf-prop,
+button.lf-visit,
+.lf-card-link,
+.lf-cal-nav button,
+.lf-mini,
+.lf-feature-go,
+.lf-call,
+.lf-days button,
+.lf-tabs button,
+.lf-period select,
+.lf-error button,
+.lf-kpi-dot {
+  transition: background-color 150ms ease, color 140ms ease, border-color 140ms ease, box-shadow 150ms ease, opacity 100ms ease;
+}
+
+.lf-remind-row:hover,
+.lf-person:hover,
+.lf-prop:hover,
+button.lf-visit:hover,
+.lf-days button:hover:not(.is-selected):not(.is-out) {
+  background-color: var(--lf-bg);
+}
+
+.lf-card-link:hover,
+.lf-cal-nav button:hover,
+.lf-mini:hover,
+.lf-call:hover {
+  color: var(--lf-accent);
+  background-color: var(--color-primary-soft);
+}
+
+.lf-feature-go:hover {
+  color: var(--lf-accent);
+  background-color: #fff;
+}
+
+.lf-tabs button:hover:not(.is-on),
+.lf-period select:hover {
+  color: var(--lf-ink);
+}
+
+.lf-error button:hover {
+  opacity: 0.9;
+}
+
+.lf-remind-row:active,
+.lf-person:active,
+.lf-prop:active,
+button.lf-visit:active,
+.lf-card-link:active,
+.lf-cal-nav button:active,
+.lf-mini:active,
+.lf-feature-go:active,
+.lf-call:active,
+.lf-days button:active:not(.is-out),
+.lf-tabs button:active,
+.lf-period select:active,
+.lf-error button:active,
+.lf-kpi-dot:active {
+  opacity: 0.8;
+}
+
+.lf-chart-x span {
+  transition: color 140ms ease;
+}
+
+.lf-kpi:focus-visible,
+.lf-remind-row:focus-visible,
+.lf-person:focus-visible,
+.lf-prop:focus-visible,
+button.lf-visit:focus-visible,
+.lf-card-link:focus-visible,
+.lf-cal-nav button:focus-visible,
+.lf-mini:focus-visible,
+.lf-feature-go:focus-visible,
+.lf-call:focus-visible,
+.lf-days button:focus-visible,
+.lf-tabs button:focus-visible,
+.lf-period select:focus-visible,
+.lf-error button:focus-visible,
+.lf-kpi-dot:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.lf-kpis.is-deck .lf-kpi:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-kpis:not(.is-deck) .lf-kpi,
+  .lf-kpi-icon,
+  .lf-remind-icon,
+  .lf-card-link iconify-icon,
+  .lf-mini iconify-icon,
+  .lf-feature-go iconify-icon,
+  .lf-cal-nav button iconify-icon,
+  .lf-call iconify-icon,
+  .lf-remind-row,
+  .lf-person,
+  .lf-prop,
+  button.lf-visit,
+  .lf-card-link,
+  .lf-cal-nav button,
+  .lf-mini,
+  .lf-feature-go,
+  .lf-call,
+  .lf-days button,
+  .lf-tabs button,
+  .lf-period select,
+  .lf-error button,
+  .lf-kpi-dot,
+  .lf-chart-x span {
+    transition: none;
+  }
+
+  .lf-kpis:not(.is-deck) .lf-kpi:hover,
+  .lf-kpis:not(.is-deck) .lf-kpi:active,
+  .lf-kpis:not(.is-deck) .lf-kpi:hover .lf-kpi-icon,
+  .lf-remind-row:hover .lf-remind-icon,
+  .lf-call:hover iconify-icon,
+  .lf-card-link:hover iconify-icon,
+  .lf-mini:hover iconify-icon,
+  .lf-feature-go:hover iconify-icon,
+  .lf-cal-nav button:hover iconify-icon {
+    transform: none;
+  }
+
+  .lf-kpis:not(.is-deck) .lf-kpi:active,
+  .lf-remind-row:active,
+  .lf-person:active,
+  .lf-prop:active,
+  button.lf-visit:active,
+  .lf-card-link:active,
+  .lf-cal-nav button:active,
+  .lf-mini:active,
+  .lf-feature-go:active,
+  .lf-call:active,
+  .lf-days button:active,
+  .lf-tabs button:active,
+  .lf-period select:active,
+  .lf-error button:hover,
+  .lf-error button:active,
+  .lf-kpi-dot:active {
+    opacity: 1;
+  }
+}

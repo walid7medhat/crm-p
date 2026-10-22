@@ -617,6 +617,8 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useLeadFormDraft } from '@/composables/useLeadFormDraft'
+import { pickFields } from '@/utils/leadFormDraftStorage'
 import { BFormInput, BFormTextarea, BDropdown } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -640,7 +642,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['save', 'cancel', 'updated'])
+const emit = defineEmits(['save', 'cancel', 'updated', 'draft-status'])
 
 const avatarError = ref(false)
 const users = ref([])
@@ -1104,6 +1106,68 @@ const initializeForm = () => {
     selectedPerson.value = props.lead?.responsible_person || null
     syncBudgetDisplayFields()
 }
+
+const EDIT_DRAFT_FIELDS = [
+    'lead_name', 'salutation', 'first_name', 'last_name', 'work_phone', 'email', 'secondary_email',
+    'work_phone_2', 'comment', 'budget_from', 'budget_to', 'currency', 'bedrooms', 'purpose_buying',
+    'lead_source', 'source_information', 'area_id', 'property_type_id', 'status_lead', 'available_date',
+    'branch', 'lost_reason', 'lead_type', 'property_status',
+]
+
+function getEditDraftSnapshot() {
+    return {
+        form: pickFields(form.value, EDIT_DRAFT_FIELDS),
+        additionalKeys: enabledAdditionalKeys.value.filter((key) => key !== 'lead_source'),
+    }
+}
+
+function applyEditDraftSnapshot(data) {
+    const stageId = form.value.stage_id
+    const personId = form.value.responsible_person_id
+    const next = { ...form.value }
+    EDIT_DRAFT_FIELDS.forEach((key) => {
+        if (data?.form && Object.prototype.hasOwnProperty.call(data.form, key)) {
+            next[key] = data.form[key]
+        }
+    })
+    next.stage_id = stageId
+    next.responsible_person_id = personId
+    form.value = next
+    if (Array.isArray(data?.additionalKeys)) {
+        const keys = new Set(['lead_source'])
+        data.additionalKeys.forEach((key) => {
+            if (typeof key === 'string' && key !== 'lead_source') keys.add(key)
+        })
+        enabledAdditionalKeys.value = Array.from(keys)
+    }
+    syncBudgetDisplayFields()
+}
+
+const leadDraft = useLeadFormDraft({
+    scope: 'edit',
+    getLeadId: () => props.lead?.id ?? null,
+    getBaseVersion: () => props.lead?.updated_at ?? null,
+    getSnapshot: getEditDraftSnapshot,
+    applySnapshot: applyEditDraftSnapshot,
+    isBusy: () => isSubmitting.value,
+    onSave: () => handleSave(),
+})
+const draftStatus = computed(() => leadDraft.statusLabel.value)
+watch(draftStatus, (value) => emit('draft-status', value || ''))
+
+function enableStoredAdditionalFields(source) {
+    const next = new Set(enabledAdditionalKeys.value)
+    if (source?.bedrooms != null && source?.bedrooms !== '') next.add('bedrooms')
+    if (
+        (source?.budget_from != null && source?.budget_from !== '') ||
+        (source?.budget_to != null && source?.budget_to !== '') ||
+        (source?.budget != null && source?.budget !== '')
+    ) next.add('budget')
+    if (source?.purpose_buying) next.add('purpose_buying')
+    if (source?.area_id) next.add('area_id')
+    if (source?.property_type_id) next.add('property_type_id')
+    enabledAdditionalKeys.value = Array.from(next)
+}
 const canEditPhoneEmail = computed(() => {
     return props.lead?.can_edit_phone_email ?? false
 })
@@ -1147,6 +1211,7 @@ const canEditPrimaryPhone = computed(() => {
 })
 // Watch for stageId changes from parent
 watch(() => props.stageId, (newStageId) => {
+    if (leadDraft.isApplying.value) return
     if (newStageId) {
         form.value.stage_id = newStageId
     }
@@ -1297,6 +1362,9 @@ watch(() => form.value.responsible_person_id, () => {
 // Initialize on mount
 onMounted(async () => {
     initializeForm()
+    enableStoredAdditionalFields(props.lead)
+    leadDraft.begin()
+    await leadDraft.recover()
     // Capture phase: several triggers in this form use @click.stop, which would
     // otherwise stop the click before it ever reaches this document listener,
     // leaving the budget dropdown stuck open no matter what else gets clicked.
@@ -1304,28 +1372,15 @@ onMounted(async () => {
     fetchEditSources()
     await fetchUsers()
 
-    if (props.lead?.area_id || props.lead?.property_type_id) {
+    if (form.value.area_id || form.value.property_type_id) {
         await fetchAreas()
         await fetchPropertyTypes()
     }
-
-    // Auto-enable additional fields if lead already has values
-    const next = new Set(enabledAdditionalKeys.value)
-    if (props.lead?.bedrooms != null && props.lead?.bedrooms !== '') next.add('bedrooms')
-    if (
-        (props.lead?.budget_from != null && props.lead?.budget_from !== '') ||
-        (props.lead?.budget_to != null && props.lead?.budget_to !== '') ||
-        (props.lead?.budget != null && props.lead?.budget !== '')
-    ) {
-        next.add('budget')
-    }
-    if (props.lead?.purpose_buying) next.add('purpose_buying')
-    if (props.lead?.area_id) next.add('area_id')
-    if (props.lead?.property_type_id) next.add('property_type_id')
-    enabledAdditionalKeys.value = Array.from(next)
 })
 
+let editFormAlive = true
 onBeforeUnmount(() => {
+    editFormAlive = false
     document.removeEventListener('click', onDocumentClick, true)
 })
 
@@ -1333,8 +1388,11 @@ const handleAvatarError = () => {
     avatarError.value = true
 }
 
-const handleCancel = () => {
+const handleCancel = async () => {
+    const allowed = await leadDraft.confirmLeave()
+    if (!allowed || !editFormAlive) return false
     emit('cancel')
+    return true
 }
 const validateBudget = () => {
     const from = form.value.budget_from ? parseFloat(form.value.budget_from) : null
@@ -1346,6 +1404,7 @@ const validateBudget = () => {
     return null
 }
 const handleSave = async () => {
+    if (isSubmitting.value) return false
     try {
         isSubmitting.value = true
         errorMessage.value = ''
@@ -1357,7 +1416,7 @@ const handleSave = async () => {
             if (window.$showNotification) {
                 window.$showNotification(budgetError, 'warning')
             }
-            return
+            return false
         }
         form.value.work_phone = normalizePhoneValue(form.value.work_phone)
         form.value.work_phone_2 = normalizePhoneValue(form.value.work_phone_2)
@@ -1366,14 +1425,14 @@ const handleSave = async () => {
             if (window.$showNotification) {
                 window.$showNotification('Primary phone is not valid', 'warning')
             }
-            return
+            return false
         }
         if (form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
             validationErrors.value.work_phone_2 = ['Enter a valid phone number']
             if (window.$showNotification) {
                 window.$showNotification('Secondary phone is not valid', 'warning')
             }
-            return
+            return false
         }
         const payload = {
             ...form.value,
@@ -1390,6 +1449,8 @@ const handleSave = async () => {
         if (window.$showNotification) {
             window.$showNotification('Lead updated successfully!', 'success')
         }
+
+        leadDraft.acceptCurrent()
         
         // Emit the updated lead data to parent component
         emit('updated', response.data)
@@ -1398,6 +1459,7 @@ const handleSave = async () => {
         emit('save', response.data)
 
         showPhoneFieldErrors.value = false
+        return true
         
     } catch (error) {
         console.error('❌ Error updating lead:', error)
@@ -1419,6 +1481,7 @@ const handleSave = async () => {
                 window.$showNotification(errorMessage.value, 'error')
             }
         }
+        return false
     } finally {
         isSubmitting.value = false
     }
@@ -1427,6 +1490,7 @@ const handleSave = async () => {
 defineExpose({
     handleCancel,
     handleSave,
+    confirmLeave: leadDraft.confirmLeave,
     isSubmitting
 })
 </script>

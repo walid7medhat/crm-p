@@ -98,7 +98,7 @@
   }
 
   aside.sidebar .sidebar-edge-toggle__icon {
-    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+    transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   }
 
   aside.sidebar .sidebar-edge-toggle__icon.is-pointing-open {
@@ -165,10 +165,10 @@
   aside.sidebar .sidebar-submenu li a {
     transform-origin: center center;
     transition:
-      background-color 180ms ease,
-      color 160ms ease,
-      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+      background-color 150ms ease,
+      color 140ms ease,
+      transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   }
 
   aside.sidebar .sidebar-menu li a:active,
@@ -191,7 +191,7 @@
   aside.sidebar.sidebar--dashboard-home .sidebar-submenu li a:hover {
     background: #ffffff !important;
     color: #171717 !important;
-    transform: translate3d(0, -3px, 0) rotateX(6deg) !important;
+    transform: translate3d(0, -4px, 0) !important;
     box-shadow:
       inset 0 1px 0 #ffffff,
       0 10px 18px rgba(23, 17, 40, 0.1),
@@ -246,7 +246,7 @@
   aside.sidebar .sidebar-menu > li > a.sidebar-nav-link.active:hover,
   aside.sidebar.sidebar--dashboard-home .sidebar-menu > li > a.sidebar-nav-link--dashboard.active:hover,
   aside.sidebar .sidebar-menu .nav-link.active-page > a:hover {
-    transform: translate3d(0, -3px, 0) rotateX(6deg) !important;
+    transform: translate3d(0, -4px, 0) !important;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.35),
       0 14px 22px rgba(115, 62, 135, 0.3) !important;
@@ -296,7 +296,7 @@
   aside.sidebar .sidebar-menu > li.dropdown.dropdown-open > a:hover,
   aside.sidebar .sidebar-submenu__nested.open > a:hover,
   aside.sidebar .sidebar-submenu__nested.dropdown-open > a:hover {
-    transform: translate3d(0, -3px, 0) rotateX(6deg) !important;
+    transform: translate3d(0, -4px, 0) !important;
   }
 
   aside.sidebar .sidebar-menu > li.active-parent > a > span,
@@ -334,7 +334,13 @@
   }
 
   .sidebar-menu li.dropdown > a::after {
-    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  /* The visible chevron is the link's ::after glyph. The .dropdown-arrow span is 0×0. */
+  .sidebar-menu li.dropdown.open > a::after,
+  .sidebar-menu li.dropdown.dropdown-open > a::after {
+    transform: translateY(-50%) rotate(90deg) !important;
   }
 
   aside.sidebar .sidebar-user,
@@ -359,7 +365,7 @@
   aside.sidebar .sidebar-menu li a:hover .menu-icon,
   aside.sidebar .sidebar-submenu li a:hover .imgicon,
   aside.sidebar .sidebar-submenu li a:hover .menu-icon {
-    transform: translate3d(0, -1px, 0) scale(1.14) !important;
+    transform: translate3d(0, -1px, 0) scale(1.2) !important;
   }
 }
 
@@ -380,7 +386,14 @@
   aside.sidebar .sidebar-edge-toggle,
   aside.sidebar .sidebar-edge-toggle__icon,
   aside.sidebar .menu-count,
-  .sidebar-menu li.dropdown > a::after {
+  .sidebar-menu li.dropdown > a::after,
+  aside.sidebar:not(.sidebar--mobile-drawer),
+  aside.sidebar:not(.sidebar--mobile-drawer).active,
+  aside.sidebar:not(.sidebar--mobile-drawer).active:hover,
+  aside.sidebar.sidebar--dashboard-home,
+  aside.sidebar.sidebar--dashboard-home.active:hover,
+  aside.sidebar .sidebar-menu li a > span:not(.dropdown-arrow):not(.menu-count),
+  aside.sidebar .sidebar-submenu li a > span:not(.dropdown-arrow):not(.menu-count) {
     animation: none !important;
     transition: none !important;
   }
@@ -455,7 +468,7 @@
   aside.sidebar.active .sidebar-menu li a:hover .menu-icon,
   aside.sidebar.active:hover .sidebar-menu li a:hover .imgicon,
   aside.sidebar.active:hover .sidebar-menu li a:hover .menu-icon {
-    transform: none !important;
+    transform: scale(1.12) !important;
   }
 
   aside.sidebar.active .sidebar-menu > li > a.sidebar-nav-link.active,
@@ -538,4 +551,10 @@
     border: 1px solid #e6e4ec !important;
     box-shadow: 0 6px 14px rgba(23, 17, 40, 0.14) !important;
   }
+}
+
+aside.sidebar .sidebar-menu li a:focus-visible,
+aside.sidebar .sidebar-submenu li a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
