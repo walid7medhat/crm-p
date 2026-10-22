@@ -10,7 +10,11 @@ class FloorPlanImage extends Model
     protected $fillable = [
         'project_id',
         'image_path',
-        'sort_order','name','area_id'
+        'sort_order','name','area_id','scene_saved_at'
+    ];
+
+    protected $casts = [
+        'scene_saved_at' => 'datetime',
     ];
 
     /**

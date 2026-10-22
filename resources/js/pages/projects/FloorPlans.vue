@@ -75,6 +75,11 @@
                                            placeholder="Image name"
                                            @change="updateName(img)">
                                     <small class="text-danger" v-if="img.nameError">{{ img.nameError }}</small>
+                                    <button type="button" class="btn-scene" :disabled="imagesToDelete.includes(img.id)" @click="openScene(img)">
+                                        <iconify-icon icon="lucide:box" class="me-1"></iconify-icon>
+                                        {{ img.scene_saved_at ? 'View 3D' : 'Create 3D' }}
+                                    </button>
+                                    <small v-if="img.scene_saved_at" class="scene-saved">3D saved</small>
                                 </div>
                             </div>
                         </div>
@@ -110,6 +115,12 @@
                 </div>
             </div>
         </div>
+        <FloorPlanSceneModal
+            :open="sceneOpen"
+            :plan="scenePlan"
+            @close="sceneOpen = false"
+            @saved="onSceneSaved"
+        />
     </div>
 </template>
 
@@ -118,10 +129,11 @@ import { ref, onMounted, computed } from "vue";
 
 import { useRoute, useRouter } from "vue-router";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
+import FloorPlanSceneModal from '@/components/floor-plans/FloorPlanSceneModal.vue';
 
 export default {
     name: 'FloorPlans',
-    components: { Breadcrumb },
+    components: { Breadcrumb, FloorPlanSceneModal },
     setup() {
         const route = useRoute();
         const router = useRouter();
@@ -136,6 +148,8 @@ export default {
         const existingImages = ref([]);
         const newImages = ref([]);
         const imagesToDelete = ref([]);
+        const sceneOpen = ref(false);
+        const scenePlan = ref(null);
 
         const hasChanges = computed(() => {
             return newImages.value.length > 0 || imagesToDelete.value.length > 0;
@@ -441,6 +455,16 @@ export default {
             router.push('/projects');
         };
 
+        const openScene = (img) => {
+            scenePlan.value = img;
+            sceneOpen.value = true;
+        };
+
+        const onSceneSaved = (payload) => {
+            const image = existingImages.value.find((item) => item.id === payload.id);
+            if (image) image.scene_saved_at = payload.scene_saved_at;
+        };
+
         onMounted(() => {
             console.log('FloorPlans component mounted, projectId:', projectId);
             fetchProject();
@@ -465,7 +489,11 @@ export default {
             removeNew,
             saveChanges,
             goBack,
-            showNotification
+            showNotification,
+            sceneOpen,
+            scenePlan,
+            openScene,
+            onSceneSaved
         };
     }
 };
@@ -511,5 +539,32 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.btn-scene {
+    width: 100%;
+    margin-top: 8px;
+    border: 1px solid #733e87;
+    color: #733e87;
+    background: #fff;
+    border-radius: 999px;
+    font-size: 12px;
+    padding: 6px 10px;
+}
+
+.btn-scene:hover:not(:disabled) {
+    background: #733e87;
+    color: #fff;
+}
+
+.btn-scene:disabled {
+    opacity: 0.45;
+}
+
+.scene-saved {
+    display: block;
+    margin-top: 4px;
+    color: #733e87;
+    font-size: 11px;
 }
 </style>

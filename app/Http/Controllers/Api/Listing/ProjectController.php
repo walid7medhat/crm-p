@@ -974,7 +974,7 @@ public function getFloorPlans( $id)
     try {
         $project=Project::find($id);
         $floorPlans = $project->floorPlanImages()
-            ->select('id', 'name', 'image_path', 'sort_order','area_id')
+            ->select('id', 'name', 'image_path', 'sort_order','area_id','scene_saved_at')
             ->orderBy('sort_order')
             ->get()
             ->map(function ($floorPlan) use ($id) {
@@ -986,7 +986,8 @@ public function getFloorPlans( $id)
                     'sort_order' => $floorPlan->sort_order,
                     'created_at' => $floorPlan->created_at,
                     'project_id' => $id,
-                    'area_id'=>$floorPlan->area_id
+                    'area_id'=>$floorPlan->area_id,
+                    'scene_saved_at' => $floorPlan->scene_saved_at,
                 ];
             });
 
@@ -1038,6 +1039,31 @@ public function getFloorPlans( $id)
         }
     }
 
+    public function saveFloorPlanScene($id)
+    {
+        try {
+            $floorPlanImage = FloorPlanImage::findOrFail($id);
+            $floorPlanImage->scene_saved_at = now();
+            $floorPlanImage->save();
+            $this->clearCache();
+
+            return response()->json([
+                'success' => true,
+                'message' => '3D floor plan saved',
+                'data' => [
+                    'id' => $floorPlanImage->id,
+                    'scene_saved_at' => $floorPlanImage->scene_saved_at,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Save floor plan scene error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save the 3D floor plan'
+            ], 500);
+        }
+    }
+
  public function getFloorPlansByArea($projectId, $areaId)
     {
         try {
@@ -1062,7 +1088,8 @@ public function getFloorPlans( $id)
                         'area_name' => $floorPlan->area?->name,
                         'sort_order' => $floorPlan->sort_order,
                         'created_at' => $floorPlan->created_at ? $floorPlan->created_at->format('Y-m-d H:i:s') : null,
-                        'file_size' => $floorPlan->file_size
+                        'file_size' => $floorPlan->file_size,
+                        'scene_saved_at' => $floorPlan->scene_saved_at,
                     ];
                 });
 
@@ -1215,7 +1242,8 @@ public function getFloorPlans( $id)
                     'area_id' => $floorPlan->area_id,
                     'sort_order' => $floorPlan->sort_order,
                     'created_at' => $floorPlan->created_at ? $floorPlan->created_at->format('Y-m-d H:i:s') : null,
-                    'file_size' => $floorPlan->file_size
+                    'file_size' => $floorPlan->file_size,
+                    'scene_saved_at' => $floorPlan->scene_saved_at,
                 ];
             });
 
