@@ -15,19 +15,17 @@ function classifyPiece(r, g, b, width, height, areaRatio) {
   const sat = saturation(r, g, b)
   const aspect = Math.max(width, height) / Math.max(1, Math.min(width, height))
   const green = g > r + 8 && g > b
+  const wood = r > g + 6 && g > b && sat > 18 && lum < 165
+  const colorful = sat >= 22
+  if (!green && !wood && !colorful && lum > 58) return null
   if (green && areaRatio < 0.02 && aspect < 1.75) return { type: 'plant', confident: true }
   if (green && aspect >= 1.45) return { type: 'sofa', confident: true }
   if (green) return { type: 'armchair', confident: true }
-  if (lum < 52 && areaRatio < 0.035) return { type: aspect > 1.65 ? 'dining' : 'table', confident: true }
-  if (sat < 22 && lum > 168 && areaRatio < 0.02 && aspect < 1.7) {
-    return { type: areaRatio < 0.007 ? 'toilet' : 'sink', confident: false }
-  }
-  if (sat < 26 && lum > 95 && lum < 185 && areaRatio > 0.012 && aspect < 2.3) return { type: 'rug', confident: true }
-  if (aspect > 2.7) return { type: lum < 130 ? 'wardrobe' : 'counter', confident: false }
-  if (areaRatio > 0.016 && aspect >= 1.12 && lum < 175) return { type: 'bed', confident: lum < 150 }
-  if (aspect >= 1.4 && areaRatio > 0.008) return { type: 'sofa', confident: false }
-  if (areaRatio < 0.008) return { type: 'chair', confident: false }
-  return { type: 'table', confident: false }
+  if (lum < 58 && areaRatio < 0.04) return { type: aspect > 1.55 ? 'dining' : 'table', confident: true }
+  if (wood && areaRatio > 0.012 && aspect < 2.4) return { type: 'bed', confident: true }
+  if (colorful && aspect < 1.7 && areaRatio < 0.03) return { type: 'armchair', confident: true }
+  if (colorful && aspect >= 1.4) return { type: 'sofa', confident: false }
+  return null
 }
 
 export async function findFurniture(source, bounds, walls, report) {
@@ -95,12 +93,11 @@ export async function findFurniture(source, bounds, walls, report) {
     const b = pixels[p + 2]
     const lum = luminance(r, g, b)
     const sat = saturation(r, g, b)
-    if (lum > 242 && sat < 10) continue
-    const dr = r - floor[0]
-    const dg = g - floor[1]
-    const db = b - floor[2]
+    if (lum > 236 && sat < 12) continue
+    if (sat < 18 && lum > 70 && lum < 230) continue
     const green = g > r + 8 && g > b
-    if (dr * dr + dg * dg + db * db > 34 * 34 || lum < 46 || green) mask[i] = 1
+    const wood = r > g + 6 && g > b && sat > 18
+    if (green || wood || sat >= 22 || lum < 52) mask[i] = 1
   }
 
   if (report) await report('Classifying beds, seating, tables, and fittings…')
@@ -160,6 +157,7 @@ export async function findFurniture(source, bounds, walls, report) {
     }
     if (samples && touching / samples > 0.42 && areaRatio > 0.03) continue
     const kind = classifyPiece(red / count, green / count, blue / count, boxW, boxH, areaRatio)
+    if (!kind) continue
     const sourceW = boxW / scale
     const sourceH = boxH / scale
     if (sourceW < 22 || sourceH < 22) continue

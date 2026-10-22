@@ -185,9 +185,11 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   map.magFilter = THREE.LinearFilter
   map.anisotropy = renderer.capabilities.getMaxAnisotropy()
   const floor = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-    color: 0xe6dfd4,
-    roughness: 0.92,
-    metalness: 0
+    map,
+    roughness: 0.94,
+    metalness: 0,
+    transparent: true,
+    alphaTest: 0.35
   }))
   floor.rotation.x = -Math.PI / 2
   floor.position.y = 0.02
@@ -310,7 +312,9 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
       })
     }
   }
-  ;(plan.furniture || []).forEach(placePiece)
+  ;(plan.furniture || [])
+    .filter((item) => item.enabled !== false && ['bed', 'sofa', 'armchair', 'dining', 'table', 'plant'].includes(item.type))
+    .forEach(placePiece)
 
   plan.walls.forEach((rect) => {
     const box = Array.isArray(rect) ? rect : [rect.x0, rect.y0, rect.x1, rect.y1]

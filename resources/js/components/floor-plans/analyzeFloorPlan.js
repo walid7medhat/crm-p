@@ -387,8 +387,14 @@ export async function analyzeFloorPlan(source, onProgress, crop) {
   context.drawImage(source, originX, originY, sourceWidth, sourceHeight, 0, 0, width, height)
   const pixels = context.getImageData(0, 0, width, height).data
   const inkStyle = dominantNeutral(pixels, width, height, locked)
-  const maxThickness = inkStyle.mode === 'line' ? 16 : 26
-  const minThickness = inkStyle.mode === 'line' ? 4 : 1
+  const maxThickness = inkStyle.mode === 'line' ? 16 : 28
+  const minThickness = inkStyle.mode === 'line' ? 4 : (locked ? 2 : 1)
+  const lumAt = (x, y) => {
+    const cx = Math.max(0, Math.min(width - 1, x))
+    const cy = Math.max(0, Math.min(height - 1, y))
+    const index = (cy * width + cx) * 4
+    return luminance(pixels[index], pixels[index + 1], pixels[index + 2])
+  }
   const isInk = (r, g, b) => {
     if (inkStyle.mode === 'line') return luminance(r, g, b) < 46 && saturation(r, g, b) < 36
     if (saturation(r, g, b) >= 24) return false
@@ -402,7 +408,26 @@ export async function analyzeFloorPlan(source, onProgress, crop) {
   }
   const mask = new Uint8Array(width * height)
   for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
-    if (isInk(pixels[p], pixels[p + 1], pixels[p + 2])) mask[i] = 1
+    const x = i % width
+    const y = (i - x) / width
+    const r = pixels[p]
+    const g = pixels[p + 1]
+    const b = pixels[p + 2]
+    const lum = luminance(r, g, b)
+    const sat = saturation(r, g, b)
+    if (locked) {
+      if (sat > 42) continue
+      if (lum < 92) {
+        mask[i] = 1
+        continue
+      }
+      if (lum > 222) continue
+      const gx = Math.abs(lumAt(x + 2, y) - lumAt(x - 2, y))
+      const gy = Math.abs(lumAt(x, y + 2) - lumAt(x, y - 2))
+      if ((gx > 20 && gy < 16) || (gy > 20 && gx < 16)) mask[i] = 1
+      continue
+    }
+    if (isInk(r, g, b)) mask[i] = 1
   }
   const ink = (x, y) => x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] === 1
   const spanOf = (x, y, horizontal) => {
@@ -465,7 +490,7 @@ export async function analyzeFloorPlan(source, onProgress, crop) {
     if (locked && x > 0 && x % 140 === 0) await report('Following the walls between the rooms…')
   }
   walls = mergeAxis(mergeAxis(walls, 'h'), 'v')
-  walls = walls.filter((wall) => segmentLength(wall) >= 36)
+  walls = walls.filter((wall) => segmentLength(wall) >= (locked ? 28 : 36))
 
   await report(locked ? 'Lining the walls up with the whole plan…' : 'Setting aside furniture, labels, and open space…')
   const kept = locked
