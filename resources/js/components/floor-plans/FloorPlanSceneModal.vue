@@ -146,9 +146,10 @@ export default {
       region.walls.forEach((wall) => {
         const [x0, y0, x1, y1] = centerline(wall)
         const dropped = wall.enabled === false
-        context.strokeStyle = dropped ? 'rgba(196, 189, 201, 0.35)' : (wall.confident === false ? '#d4af37' : '#d23b3b')
-        context.lineWidth = dropped ? 2 : 4
-        context.setLineDash(wall.confident === false && !dropped ? [7, 5] : [])
+        const uncertain = wall.confident === false
+        context.strokeStyle = uncertain ? '#d4af37' : (dropped ? 'rgba(196, 189, 201, 0.45)' : '#d23b3b')
+        context.lineWidth = uncertain || dropped ? 2 : 3
+        context.setLineDash(uncertain ? [7, 5] : [])
         context.beginPath()
         context.moveTo(fit.ox + x0 * fit.s, fit.oy + y0 * fit.s)
         context.lineTo(fit.ox + x1 * fit.s, fit.oy + y1 * fit.s)
@@ -371,14 +372,20 @@ export default {
       try {
         const loaded = await loadSheet(current)
         if (!loaded || current !== ticket) return
-        status.value = 'Finding the walls…'
+        status.value = 'Finding the floor-plan region…'
         await new Promise((resolve) => setTimeout(resolve, 30))
         if (current !== ticket) return
         const savedScene = props.plan?.scene_data
-        if (savedScene?.walls?.length) {
+        const savedMatches = savedScene?.walls?.length && (!savedScene.source || savedScene.source === props.plan.image_url)
+        if (savedMatches) {
+          status.value = 'Opening the saved reconstruction…'
           applySaved(savedScene)
         } else {
-          const analysis = analyzeFloorPlan(sheet)
+          const analysis = await analyzeFloorPlan(sheet, async (message) => {
+            if (current !== ticket) return
+            status.value = message
+            await new Promise((resolve) => setTimeout(resolve, 16))
+          })
           regions.value = analysis.regions
           regionIndex.value = 0
           note.value = analysis.note
@@ -402,9 +409,12 @@ export default {
 
     async function detectAgain() {
       if (!sheet) return
-      status.value = 'Reading the drawing again…'
+      status.value = 'Finding the floor-plan region…'
       await new Promise((resolve) => setTimeout(resolve, 30))
-      const analysis = analyzeFloorPlan(sheet)
+      const analysis = await analyzeFloorPlan(sheet, async (message) => {
+        status.value = message
+        await new Promise((resolve) => setTimeout(resolve, 16))
+      })
       regions.value = analysis.regions.length ? analysis.regions : [{
         bounds: { x0: 0, y0: 0, x1: sheet.width, y1: sheet.height },
         walls: []
@@ -422,7 +432,7 @@ export default {
       if (!region || !sheet || !view.value) return
       teardownScene()
       step.value = 'model'
-      status.value = 'Raising the walls…'
+      status.value = 'Building the dollhouse from the approved lines…'
       await nextTick()
       const traced = sceneFromWalls(region.bounds, region.walls.filter((wall) => {
         const cx = (wall.x0 + wall.x1) / 2
@@ -448,7 +458,7 @@ export default {
     async function save() {
       if (!props.plan?.id || saving.value) return
       const region = activeRegion()
-      const payload = region ? sceneFromWalls(region.bounds, region.walls) : null
+      const payload = region ? { ...sceneFromWalls(region.bounds, region.walls), source: props.plan.image_url } : null
       saving.value = true
       status.value = ''
       try {

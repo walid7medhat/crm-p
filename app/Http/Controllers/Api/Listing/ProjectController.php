@@ -1069,6 +1069,7 @@ public function getFloorPlans( $id)
                 }
                 $bounds = is_array($scene['bounds'] ?? null) ? $scene['bounds'] : [];
                 $floorPlanImage->scene_data = [
+                    'source' => is_string($scene['source'] ?? null) ? substr($scene['source'], 0, 500) : null,
                     'bounds' => [
                         'x0' => (float) ($bounds['x0'] ?? 0),
                         'y0' => (float) ($bounds['y0'] ?? 0),

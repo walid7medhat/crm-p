@@ -4,29 +4,6 @@ const EYE = 1.62
 const BODY = 0.28
 const HOME_FOV = 42
 
-function clampByte(value) {
-  return value < 0 ? 0 : value > 255 ? 255 : value
-}
-
-function sharpen(source) {
-  const canvas = document.createElement('canvas')
-  canvas.width = source.width * 2
-  canvas.height = source.height * 2
-  const context = canvas.getContext('2d', { willReadFrequently: true })
-  context.imageSmoothingEnabled = true
-  context.imageSmoothingQuality = 'high'
-  context.drawImage(source, 0, 0, canvas.width, canvas.height)
-  const image = context.getImageData(0, 0, canvas.width, canvas.height)
-  const pixels = image.data
-  for (let i = 0; i < pixels.length; i += 4) {
-    pixels[i] = clampByte((pixels[i] - 128) * 1.08 + 132)
-    pixels[i + 1] = clampByte((pixels[i + 1] - 128) * 1.08 + 132)
-    pixels[i + 2] = clampByte((pixels[i + 2] - 128) * 1.08 + 132)
-  }
-  context.putImageData(image, 0, 0)
-  return canvas
-}
-
 export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x17141a)
@@ -75,7 +52,8 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   const metres = 11 / Math.max(plan.bounds.x1 - plan.bounds.x0, plan.bounds.y1 - plan.bounds.y0)
   const width = (plan.bounds.x1 - plan.bounds.x0) * metres
   const depth = (plan.bounds.y1 - plan.bounds.y0) * metres
-  const wallH = 2.2
+  const wallH = 1.12
+  const wallThick = 0.12
   const wx = (px) => (px - plan.bounds.x0) * metres
   const wz = (py) => (py - plan.bounds.y0) * metres
 
@@ -109,7 +87,7 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   plinth.receiveShadow = true
   scene.add(plinth)
 
-  const map = new THREE.CanvasTexture(sharpen(sourceCanvas))
+  const map = new THREE.CanvasTexture(sourceCanvas)
   if (THREE.SRGBColorSpace) map.colorSpace = THREE.SRGBColorSpace
   map.generateMipmaps = true
   map.minFilter = THREE.LinearMipmapLinearFilter
@@ -130,28 +108,25 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
       material || plaster
     )
     mesh.position.set((minX + maxX) / 2, height / 2, (minZ + maxZ) / 2)
-    mesh.castShadow = true
+    mesh.castShadow = false
     mesh.receiveShadow = true
     scene.add(mesh)
     if (collide) solids.push({ minX, maxX, minZ, maxZ })
   }
 
-  if (plan.walls.length) {
-    plan.walls.forEach((rect) => {
-      const box = Array.isArray(rect) ? rect : [rect.x0, rect.y0, rect.x1, rect.y1]
-      const confident = Array.isArray(rect) ? true : rect.confident !== false
-      addBox(wx(box[0]), wz(box[1]), wx(box[2]), wz(box[3]), wallH, true, confident ? plaster : uncertain)
-    })
-  } else {
-    const door = Math.min(1.2, Math.max(0.85, width * 0.18))
-    const gapStart = (width - door) / 2
-    const thickness = 0.16
-    addBox(0, 0, thickness, depth, wallH, true)
-    addBox(width - thickness, 0, width, depth, wallH, true)
-    addBox(0, 0, width, thickness, wallH, true)
-    addBox(0, depth - thickness, gapStart, depth, wallH, true)
-    addBox(gapStart + door, depth - thickness, width, depth, wallH, true)
-  }
+  plan.walls.forEach((rect) => {
+    const box = Array.isArray(rect) ? rect : [rect.x0, rect.y0, rect.x1, rect.y1]
+    const confident = Array.isArray(rect) ? true : rect.confident !== false
+    const material = confident ? plaster : uncertain
+    const horizontal = Math.abs(box[2] - box[0]) >= Math.abs(box[3] - box[1])
+    if (horizontal) {
+      const z = wz((box[1] + box[3]) / 2)
+      addBox(wx(Math.min(box[0], box[2])), z - wallThick / 2, wx(Math.max(box[0], box[2])), z + wallThick / 2, wallH, true, material)
+    } else {
+      const x = wx((box[0] + box[2]) / 2)
+      addBox(x - wallThick / 2, wz(Math.min(box[1], box[3])), x + wallThick / 2, wz(Math.max(box[1], box[3])), wallH, true, material)
+    }
+  })
 
   function findSpawn() {
     for (let gz = 0.18; gz <= 0.82; gz += 0.07) {
@@ -166,12 +141,12 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   const [spawnX, spawnZ] = findSpawn()
   const player = { x: spawnX, z: spawnZ, yaw: 0, pitch: -0.2 }
   const orbit = {
-    azimuth: 0.42,
-    polar: 0.62,
-    radius: Math.max(width, depth) * 1.45,
+    azimuth: 0.35,
+    polar: 0.5,
+    radius: Math.max(width, depth) * 1.7,
     targetX: width / 2,
-    targetY: 0.3,
-    targetZ: depth * 0.46
+    targetY: 0,
+    targetZ: depth / 2
   }
   const fitRadius = orbit.radius
   let mode = 'dollhouse'
@@ -236,8 +211,8 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     notify()
   }
   function reset() {
-    orbit.azimuth = 0.42
-    orbit.polar = 0.62
+    orbit.azimuth = 0.35
+    orbit.polar = 0.5
     orbit.radius = fitRadius
     camera.fov = HOME_FOV
     camera.updateProjectionMatrix()
@@ -275,7 +250,7 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
       camera.updateProjectionMatrix()
       return
     }
-    orbit.radius = Math.max(fitRadius * 0.62, Math.min(fitRadius * 1.22, orbit.radius + step * 0.012))
+    orbit.radius = Math.max(fitRadius * 0.48, Math.min(fitRadius * 1.15, orbit.radius + step * 0.012))
   }
   function onKeyDown(event) {
     keys.add(event.code)
