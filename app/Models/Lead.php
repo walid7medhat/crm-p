@@ -212,7 +212,29 @@ protected const NON_ENGAGEMENT_FIELDS = [
         //     }
         // });
     }
+        public function scopeSelectedLeadType($query, string $type)
+        {
+            if (! in_array($type, ['rent', 'sale'], true)) {
+                return $query;
+            }
 
+            // Option A (no migration): JSON_SEARCH version from my last message
+            $x       = 'leads.extra_client_requirements';
+            $meta    = "JSON_UNQUOTE(JSON_SEARCH($x,'one','qualification_meta',NULL,'\$[*]._kind'))";
+            $source  = "JSON_UNQUOTE(JSON_EXTRACT($x, REPLACE($meta,'._kind','.source')))";
+            $idPath  = "JSON_UNQUOTE(JSON_SEARCH($x,'one',$source,NULL,'\$[*].id'))";
+            $extra   = "JSON_UNQUOTE(JSON_EXTRACT($x, REPLACE($idPath,'.id','.lead_type')))";
+
+            return $query->whereRaw(
+                "(CASE WHEN $source IS NULL OR $source = 'primary'
+                    THEN NULLIF(leads.lead_type,'')
+                    ELSE $extra END) IN (?, 'both')",
+                [$type]
+            );
+
+            // Option B (if you add the stored column instead), replace everything above with:
+            // return $query->whereIn('leads.selected_lead_type', [$type, 'both']);
+        }
         public function addedBy()
     {
         return $this->belongsTo(User::class, 'added_by');

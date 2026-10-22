@@ -239,13 +239,27 @@ class LeadController extends Controller
                 if ($request->filled('why_lost_lead')) {
                     $leadsQuery->where('why_lost_lead', $request->why_lost_lead);
                 }
-                if ($request->filled('lead_type') && $request->lead_type != 'both') {
-                    $leadsQuery->where(function ($q) use ($request) {
-                        $q->where('lead_type', $request->lead_type)
-                          ->orWhere('lead_type', 'both');
-                    });
-                }
-                if ($request->filled('property_status') && $request->property_status != 'both') {
+                $typeSql = $this->selectedLeadTypeSql();
+
+                    if ($request->boolean('type_counts_only')) {
+                        $rows = (clone $leadsQuery)->setEagerLoads([])
+                            ->getQuery()
+                            ->cloneWithout(['columns', 'orders'])
+                            ->selectRaw("($typeSql) as t, COUNT(*) as c")
+                            ->groupBy('t')
+                            ->pluck('c', 't');
+
+                        $both = (int) ($rows['both'] ?? 0);
+                        return response()->json(['success' => true, 'data' => [
+                            'rent' => (int) ($rows['rent'] ?? 0) + $both,
+                            'sale' => (int) ($rows['sale'] ?? 0) + $both,
+                        ]]);
+                    }
+
+                    if ($request->filled('lead_type') && in_array($request->lead_type, ['rent', 'sale'], true)) {
+                        $leadsQuery->whereRaw("($typeSql) IN (?, 'both')", [$request->lead_type]);
+                    }
+                                if ($request->filled('property_status') && $request->property_status != 'both') {
                     $leadsQuery->where(function ($q) use ($request) {
                         $q->where('property_status', $request->property_status)
                           ->orWhere('property_status', 'both');
@@ -440,7 +454,23 @@ class LeadController extends Controller
             }
         }
 
+            private function selectedLeadTypeSql(): string
+            {
+                $x = 'leads.extra_client_requirements';
 
+                // path of the qualification_meta row, e.g. $[2]._kind -> read its .source
+                $metaPath = "JSON_UNQUOTE(JSON_SEARCH($x,'one','qualification_meta',NULL,'\$[*]._kind'))";
+                $source   = "JSON_UNQUOTE(JSON_EXTRACT($x, REPLACE($metaPath,'._kind','.source')))";
+
+                // path of the extra row whose id = source, e.g. $[1].id -> read its .lead_type
+                $idPath    = "JSON_UNQUOTE(JSON_SEARCH($x,'one',$source,NULL,'\$[*].id'))";
+                $extraType = "JSON_UNQUOTE(JSON_EXTRACT($x, REPLACE($idPath,'.id','.lead_type')))";
+
+                return "CASE
+                    WHEN $source IS NULL OR $source = 'primary' THEN NULLIF(leads.lead_type,'')
+                    ELSE $extraType
+                END";
+            }
     /**
      * Total count of all leads visible to the authenticated user. Respects the
      * same permission scope as index(), but ignores any UI filters (search,

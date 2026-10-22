@@ -1,5 +1,21 @@
 <template>
     <div class="lead-pool-wrapper" :class="{ 'lead-pool-wrapper--searching': searching }">
+        <div class="lead-pool-filterbar">
+            <span class="lead-pool-filterbar__label">TYPE</span>
+            <button
+                v-for="t in leadTypeChips"
+                :key="t.value"
+                type="button"
+                class="type-chip"
+                :class="[`type-chip--${t.value}`, { active: leadTypeFilter === t.value }]"
+                :disabled="loading"
+                @click="toggleLeadType(t.value)"
+            >
+                <iconify-icon :icon="t.icon" />
+                <span class="type-chip__name">{{ t.label }}</span>
+                <b class="type-chip__count">{{ typeCounts[t.value] }}</b>
+            </button>
+        </div>
         <div v-if="loading && leads.length === 0" class="lead-pool-loading">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -346,7 +362,31 @@ const currentPage = ref(1)
 const perPage = ref(24)
 const lastPage = ref(1)
 const total = ref(0)
+// ---- Lead type filter (Rent / Sale) ----
+const leadTypeFilter = ref(null) // 'rent' | 'sale' | null
+const typeCounts = ref({ rent: 0, sale: 0 })
+const leadTypeChips = [
+    { value: 'rent', label: 'Rent', icon: 'lucide:key-round' },
+    { value: 'sale', label: 'Sale', icon: 'lucide:tag' },
+]
 
+async function fetchTypeCounts() {
+    try {
+        const { lead_type, page, per_page, ...filters } = currentQuery.value || {}
+        const response = await api.get('/leads', {
+            params: { ...filters, stage_id: 10, paginate: 1, type_counts_only: 1 },
+        })
+        typeCounts.value = response?.data?.data ?? typeCounts.value
+    } catch (e) {
+        console.error('Failed to load lead type counts', e)
+    }
+}
+
+function toggleLeadType(value) {
+    leadTypeFilter.value = leadTypeFilter.value === value ? null : value
+    currentPage.value = 1
+    fetchLeadPool()
+}
 function applyPoolBody(body) {
     const data = body?.data || []
     if (Array.isArray(data) && body?.pagination) {
@@ -486,6 +526,7 @@ async function handleBulkAssignToMe() {
       )
       exitSelectMode()
       await fetchLeadPool({ force: true })
+      await fetchTypeCounts()
       await fetchAssignmentStatus()
 
     }
@@ -562,6 +603,7 @@ const buildFetchParams = () => {
         ...(currentQuery.value || {}),
     }
     params.stage_id = 10
+    if (leadTypeFilter.value) params.lead_type = leadTypeFilter.value
     return params
 }
 
@@ -908,6 +950,7 @@ const unsubscribeLeadViewUpdated = onLeadViewUpdated(() => {
 onMounted(async () => {
     window.addEventListener('keydown', onLeadPoolKeydown)
     fetchLeadPool()
+    fetchTypeCounts()
     await fetchAssignmentStatus()
 
     // Restore the lead modal on a hard refresh while ?lead= is in the URL — same
@@ -947,6 +990,8 @@ defineExpose({
         }
         // Same filters already loading: do not abort that request.
         fetchLeadPool()
+        fetchTypeCounts()
+
     },
 })
 </script>
@@ -1485,4 +1530,41 @@ defineExpose({
     font-size: 12px;
     color: #64748b;
 }
+.lead-pool-filterbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.6);
+}
+.lead-pool-filterbar__label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-right: 4px;
+}
+.type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.type-chip__count { color: #1e1b2e; font-weight: 700; }
+.type-chip:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.type-chip--rent { color: #7c3aed; }
+.type-chip--sale { color: #0891b2; }
+.type-chip--rent.active { background: #f3e8ff; border-color: #7c3aed; }
+.type-chip--sale.active { background: #e0f7fa; border-color: #0891b2; }
 </style>

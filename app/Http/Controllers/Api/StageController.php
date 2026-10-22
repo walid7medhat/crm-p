@@ -743,11 +743,8 @@ class StageController extends Controller
             if ($request->filled('why_lost_lead')) {
                 $q->where('why_lost_lead', $request->why_lost_lead);
             }
-            if ($request->filled('lead_type') && $request->lead_type != 'both') {
-                $q->where(function ($q) use ($request) {
-                    $q->where('lead_type', $request->lead_type)
-                      ->orWhere('lead_type', 'both');
-                });
+            if ($request->filled('lead_type')) {
+                $q->selectedLeadType($request->lead_type);
             }
             if ($request->filled('property_status') && $request->property_status != 'both') {
                 $q->where(function ($q) use ($request) {
@@ -975,11 +972,8 @@ class StageController extends Controller
                 
                
                 // Lead Type
-                if ($request->filled('lead_type') && $request->lead_type !='both') {
-                    $leadsQuery->where(function($q) use ($request) {
-                        $q->where('lead_type', $request->lead_type)
-                        ->orWhere('lead_type', 'both'); 
-                    });
+                if ($request->filled('lead_type')) {
+                    $leadsQuery->selectedLeadType($request->lead_type);
                 }
 
                 // Property Status
