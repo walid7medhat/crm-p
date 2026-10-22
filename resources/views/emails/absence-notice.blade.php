@@ -33,6 +33,8 @@
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #374151;"><strong style="color: #111827;">Kindly update us on your current status at your earliest convenience.</strong></p>
 
                             <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">Wishing you good health. Please take care and stay safe.</p>
+                            <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">Kind regards,<br>
+                            <strong style="color: #111827;">Human Resources Department</strong></p>
                         </td>
                     </tr>
                 </table>
