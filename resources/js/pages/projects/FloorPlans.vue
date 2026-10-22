@@ -462,7 +462,10 @@ export default {
 
         const onSceneSaved = (payload) => {
             const image = existingImages.value.find((item) => item.id === payload.id);
-            if (image) image.scene_saved_at = payload.scene_saved_at;
+            if (image) {
+                image.scene_saved_at = payload.scene_saved_at;
+                if (payload.scene_data) image.scene_data = payload.scene_data;
+            }
         };
 
         onMounted(() => {
