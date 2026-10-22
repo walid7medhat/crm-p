@@ -25,7 +25,7 @@
       </div>
 
       <footer class="scene-foot">
-        <p>The sheet is the floor. Preview it, then save this 3D on the floor plan.</p>
+        <p>Walls are raised from the plan. Doors stay open. Preview it, then save.</p>
         <button type="button" class="save" :disabled="!ready || saving || saved" @click="save">
           {{ saving ? 'Saving…' : saved ? 'Saved' : 'Save 3D' }}
         </button>
@@ -36,7 +36,7 @@
 
 <script>
 import { ref, watch, onBeforeUnmount, nextTick, computed } from 'vue'
-import { mountFloorPlanScene } from './floorPlanScene.js'
+import { mountFloorPlanScene, traceFloorPlan } from './floorPlanScene.js'
 
 export default {
   name: 'FloorPlanSceneModal',
@@ -96,12 +96,16 @@ export default {
         sheet.height = bitmap.height
         sheet.getContext('2d').drawImage(bitmap, 0, 0)
         bitmap.close?.()
-        status.value = 'Building this plan in 3D…'
+        status.value = 'Finding the walls…'
+        await new Promise((resolve) => setTimeout(resolve, 40))
+        if (current !== ticket) return
+        const traced = traceFloorPlan(sheet)
+        status.value = 'Raising the walls and rooms…'
         await nextTick()
         if (current !== ticket || !view.value) return
         scene = mountFloorPlanScene(view.value, sheet, (state) => {
           mode.value = state.mode
-        })
+        }, traced)
         observer = new ResizeObserver(() => scene?.resize())
         if (stage.value) observer.observe(stage.value)
         scene.resize()
