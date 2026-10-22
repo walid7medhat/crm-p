@@ -99,6 +99,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground();
             $schedule->command('attendance:sync')->everyFiveMinutes();
+        $schedule->command('attendance:notify-absent')
+            ->dailyAt('11:00')
+            ->timezone('Asia/Dubai');
         $schedule->command('leads:auto-assign --scheduled-tick')
             ->everyMinute()
             ->withoutOverlapping()
