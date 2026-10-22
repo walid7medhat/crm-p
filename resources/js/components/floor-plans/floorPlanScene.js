@@ -197,6 +197,11 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   }
   function showDollhouse() {
     mode = 'dollhouse'
+    orbit.azimuth = 0.35
+    orbit.polar = 0.5
+    orbit.radius = fitRadius
+    camera.fov = HOME_FOV
+    camera.updateProjectionMatrix()
     document.exitPointerLock?.()
     notify()
   }
@@ -211,11 +216,6 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     notify()
   }
   function reset() {
-    orbit.azimuth = 0.35
-    orbit.polar = 0.5
-    orbit.radius = fitRadius
-    camera.fov = HOME_FOV
-    camera.updateProjectionMatrix()
     showDollhouse()
   }
 
@@ -238,19 +238,26 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     }
     if (!dragging) return
     orbit.azimuth -= (event.clientX - pointerX) * 0.005
-    orbit.polar = Math.max(0.42, Math.min(1.15, orbit.polar - (event.clientY - pointerY) * 0.004))
+    orbit.polar = Math.max(0.22, Math.min(1.2, orbit.polar - (event.clientY - pointerY) * 0.004))
     pointerX = event.clientX
     pointerY = event.clientY
   }
   function onWheel(event) {
     event.preventDefault()
-    const step = Math.max(-48, Math.min(48, event.deltaY))
+    const step = Math.max(-80, Math.min(80, event.deltaY))
     if (mode === 'walk') {
-      camera.fov = Math.max(34, Math.min(52, camera.fov + step * 0.018))
+      camera.fov = Math.max(28, Math.min(62, camera.fov + step * 0.02))
       camera.updateProjectionMatrix()
       return
     }
-    orbit.radius = Math.max(fitRadius * 0.48, Math.min(fitRadius * 1.15, orbit.radius + step * 0.012))
+    const next = orbit.radius * Math.exp(step * 0.0022)
+    orbit.radius = Math.max(fitRadius * 0.18, Math.min(fitRadius * 2.8, next))
+  }
+  function zoomOut() {
+    orbit.radius = Math.min(fitRadius * 2.8, orbit.radius * 1.28)
+  }
+  function zoomIn() {
+    orbit.radius = Math.max(fitRadius * 0.18, orbit.radius * 0.78)
   }
   function onKeyDown(event) {
     keys.add(event.code)
@@ -312,6 +319,8 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   return {
     showDollhouse,
     enterWalk,
+    zoomIn,
+    zoomOut,
     reset,
     resize,
     dispose() {

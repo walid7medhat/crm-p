@@ -18,9 +18,11 @@
           v-show="step === 'review'"
           ref="review"
           class="review"
+          :class="{ framing: tool === 'area' }"
           @pointerdown="onReviewDown"
           @pointermove="onReviewMove"
           @pointerup="onReviewUp"
+          @wheel.prevent="onReviewWheel"
         ></canvas>
         <p v-if="status" class="status">{{ status }}</p>
         <div v-if="step === 'review' && regions.length > 1" class="regions">
@@ -33,21 +35,30 @@
           >Plan {{ index + 1 }}</button>
         </div>
         <p class="notice">Conceptual 3D reconstruction — dimensions and unseen details are approximate.</p>
+        <div v-if="step === 'review'" class="tools">
+          <button type="button" :class="{ on: tool === 'area' }" @click="tool = 'area'">Plan area</button>
+          <button type="button" :class="{ on: tool === 'wall' }" @click="tool = 'wall'">Add wall</button>
+          <button type="button" @click="useWholeSheet">Full sheet</button>
+        </div>
         <div v-if="step === 'model'" class="tools">
-          <button type="button" @click="showDollhouse">Dollhouse</button>
-          <button type="button" @click="enterWalk">Walk inside</button>
-          <button type="button" @click="resetView">Reset</button>
-          <button type="button" @click="backToReview">Edit walls</button>
+          <button type="button" @click="zoomOut">Zoom out</button>
+          <button type="button" @click="zoomIn">Zoom in</button>
+          <button type="button" @click="resetView">Whole plan</button>
+          <button type="button" @click="enterWalk">Go inside</button>
+          <button type="button" @click="showDollhouse">Back</button>
+          <button type="button" @click="backToReview">Edit</button>
         </div>
         <p v-if="step === 'model'" class="prompt">{{ prompt }}</p>
       </div>
 
       <footer class="scene-foot">
-        <p v-if="step === 'review'">{{ note }} Drag across the plan to add a missing wall. Click a line to drop it. Gold lines are uncertain.</p>
-        <p v-else>Red walls were traced from the drawing. Gold walls are uncertain. Doors stay open. Walk through before saving.</p>
+        <p v-if="step === 'review'">{{ note }} Plan area: drag a box around every room. Scroll to look closer.</p>
+        <p v-else>Scroll to zoom out or in. Go inside to walk the rooms. Back returns to the full plan.</p>
         <div class="actions">
-          <button v-if="step === 'review'" type="button" class="ghost" @click="detectAgain">Read again</button>
-          <button v-if="step === 'review'" type="button" class="save" :disabled="!sheetReady" @click="buildModel">Build 3D</button>
+          <button v-if="step === 'review'" type="button" class="ghost" :disabled="!sheetReady || tracing" @click="traceArea">
+            {{ tracing ? 'Tracing…' : 'Trace this area' }}
+          </button>
+          <button v-if="step === 'review'" type="button" class="save" :disabled="!sheetReady || tracing" @click="buildModel">Build 3D</button>
           <button v-else type="button" class="save" :disabled="!ready || saving || saved" @click="save">
             {{ saving ? 'Saving…' : saved ? 'Saved' : 'Save 3D' }}
           </button>
@@ -84,6 +95,10 @@ export default {
     const note = ref('Reading the drawing…')
     const regions = ref([])
     const regionIndex = ref(0)
+    const tool = ref('area')
+    const tracing = ref(false)
+    let reviewZoom = 1
+    let reviewPan = { x: 0, y: 0 }
     let scene = null
     let ticket = 0
     let observer = null
@@ -96,8 +111,8 @@ export default {
     })
     const prompt = computed(() => (
       mode.value === 'walk'
-        ? 'Walk with W A S D · scroll to zoom a little · drag to look'
-        : 'Drag to turn · scroll to zoom in or out · click Walk inside'
+        ? 'Walk with W A S D · scroll to look closer · Back returns to the plan'
+        : 'Scroll to zoom out or in · drag to turn · Go inside to walk'
     ))
 
     function teardownScene() {
@@ -114,6 +129,9 @@ export default {
       sheet = null
       regions.value = []
       sheetReady.value = false
+      reviewZoom = 1
+      reviewPan = { x: 0, y: 0 }
+      tool.value = 'area'
     }
 
     function activeRegion() {
@@ -143,6 +161,15 @@ export default {
       context.fillRect(0, 0, canvas.width, canvas.height)
       const fit = viewFit()
       context.drawImage(sheet, fit.ox, fit.oy, sheet.width * fit.s, sheet.height * fit.s)
+      const left = fit.ox + region.bounds.x0 * fit.s
+      const top = fit.oy + region.bounds.y0 * fit.s
+      const boxWidth = (region.bounds.x1 - region.bounds.x0) * fit.s
+      const boxHeight = (region.bounds.y1 - region.bounds.y0) * fit.s
+      context.fillStyle = 'rgba(12, 10, 16, 0.5)'
+      context.fillRect(0, 0, canvas.width, Math.max(0, top))
+      context.fillRect(0, top, Math.max(0, left), boxHeight)
+      context.fillRect(left + boxWidth, top, Math.max(0, canvas.width - left - boxWidth), boxHeight)
+      context.fillRect(0, top + boxHeight, canvas.width, Math.max(0, canvas.height - top - boxHeight))
       region.walls.forEach((wall) => {
         const [x0, y0, x1, y1] = centerline(wall)
         const dropped = wall.enabled === false
@@ -156,19 +183,23 @@ export default {
         context.stroke()
       })
       context.setLineDash([])
-      const box = region.bounds
       context.strokeStyle = '#d4af37'
       context.lineWidth = 2
-      context.strokeRect(fit.ox + box.x0 * fit.s, fit.oy + box.y0 * fit.s, (box.x1 - box.x0) * fit.s, (box.y1 - box.y0) * fit.s)
+      context.strokeRect(left, top, boxWidth, boxHeight)
+      context.fillStyle = '#d4af37'
+      ;[[left, top], [left + boxWidth, top], [left, top + boxHeight], [left + boxWidth, top + boxHeight]].forEach(([x, y]) => {
+        context.fillRect(x - 5, y - 5, 10, 10)
+      })
     }
 
     function viewFit() {
       const canvas = review.value
-      const s = Math.min(canvas.width / sheet.width, canvas.height / sheet.height)
+      const base = Math.min(canvas.width / sheet.width, canvas.height / sheet.height)
+      const s = base * reviewZoom
       return {
         s,
-        ox: (canvas.width - sheet.width * s) / 2,
-        oy: (canvas.height - sheet.height * s) / 2
+        ox: (canvas.width - sheet.width * s) / 2 + reviewPan.x,
+        oy: (canvas.height - sheet.height * s) / 2 + reviewPan.y
       }
     }
 
@@ -203,16 +234,12 @@ export default {
 
     function onReviewDown(event) {
       const region = activeRegion()
-      if (!region || step.value !== 'review') return
+      if (!region || step.value !== 'review' || tracing.value) return
+      review.value?.setPointerCapture?.(event.pointerId)
       const point = imagePoint(event)
-      const hit = wallAt(point)
-      if (hit >= 0) {
-        region.walls[hit].enabled = region.walls[hit].enabled === false
-        drawReview()
-        return
-      }
       const box = region.bounds
-      const corner = 18
+      const fit = viewFit()
+      const corner = 16 / fit.s
       const nearLeft = Math.abs(point.x - box.x0) < corner
       const nearRight = Math.abs(point.x - box.x1) < corner
       const nearTop = Math.abs(point.y - box.y0) < corner
@@ -221,14 +248,21 @@ export default {
         drag = { kind: 'corner', x: point.x, y: point.y, left: nearLeft, top: nearTop, bounds: { ...box } }
         return
       }
-      const onEdge = nearLeft || nearRight || nearTop || nearBottom
-      if (onEdge) {
+      if (tool.value === 'area') {
+        drag = { kind: 'area', x: point.x, y: point.y, cx: point.x, cy: point.y }
+        return
+      }
+      if (nearLeft || nearRight || nearTop || nearBottom) {
         drag = { kind: 'move', x: point.x, y: point.y, bounds: { ...box } }
         return
       }
-      if (point.x > box.x0 && point.x < box.x1 && point.y > box.y0 && point.y < box.y1) {
-        drag = { kind: 'draw', x: point.x, y: point.y, cx: point.x, cy: point.y }
+      const hit = wallAt(point)
+      if (hit >= 0) {
+        region.walls[hit].enabled = region.walls[hit].enabled === false
+        drawReview()
+        return
       }
+      drag = { kind: 'draw', x: point.x, y: point.y, cx: point.x, cy: point.y }
     }
 
     function onReviewMove(event) {
@@ -262,12 +296,20 @@ export default {
           region.bounds.y0 = region.bounds.y1
           region.bounds.y1 = swap
         }
-      } else if (drag.kind === 'draw') {
+      } else if (drag.kind === 'draw' || drag.kind === 'area') {
         drag.cx = point.x
         drag.cy = point.y
       }
       drawReview()
-      if (drag.kind === 'draw') {
+      if (drag.kind === 'area') {
+        const fit = viewFit()
+        const context = review.value.getContext('2d')
+        const x = Math.min(drag.x, drag.cx)
+        const y = Math.min(drag.y, drag.cy)
+        context.strokeStyle = '#d4af37'
+        context.lineWidth = 2
+        context.strokeRect(fit.ox + x * fit.s, fit.oy + y * fit.s, Math.abs(drag.cx - drag.x) * fit.s, Math.abs(drag.cy - drag.y) * fit.s)
+      } else if (drag.kind === 'draw') {
         const fit = viewFit()
         const context = review.value.getContext('2d')
         context.strokeStyle = '#733e87'
@@ -281,6 +323,22 @@ export default {
 
     function onReviewUp() {
       const region = activeRegion()
+      if (drag?.kind === 'area' && region && sheet) {
+        const x0 = Math.max(0, Math.min(drag.x, drag.cx))
+        const y0 = Math.max(0, Math.min(drag.y, drag.cy))
+        const x1 = Math.min(sheet.width, Math.max(drag.x, drag.cx))
+        const y1 = Math.min(sheet.height, Math.max(drag.y, drag.cy))
+        drag = null
+        if (x1 - x0 > 48 && y1 - y0 > 48) {
+          region.bounds = { x0, y0, x1, y1 }
+          region.walls = []
+          drawReview()
+          traceArea()
+          return
+        }
+        drawReview()
+        return
+      }
       if (drag?.kind === 'draw' && region) {
         const dx = drag.cx - drag.x
         const dy = drag.cy - drag.y
@@ -310,6 +368,69 @@ export default {
       }
       drag = null
       drawReview()
+    }
+
+    function onReviewWheel(event) {
+      if (step.value !== 'review' || !sheet || !review.value) return
+      const before = imagePoint(event)
+      const nextZoom = Math.max(1, Math.min(5, reviewZoom * (event.deltaY > 0 ? 0.88 : 1.14)))
+      const canvas = review.value
+      const base = Math.min(canvas.width / sheet.width, canvas.height / sheet.height)
+      const newS = base * nextZoom
+      const rect = canvas.getBoundingClientRect()
+      reviewZoom = nextZoom
+      reviewPan = nextZoom === 1
+        ? { x: 0, y: 0 }
+        : {
+          x: event.clientX - rect.left - before.x * newS - (canvas.width - sheet.width * newS) / 2,
+          y: event.clientY - rect.top - before.y * newS - (canvas.height - sheet.height * newS) / 2
+        }
+      drawReview()
+    }
+
+    function useWholeSheet() {
+      const region = activeRegion()
+      if (!region || !sheet || tracing.value) return
+      region.bounds = { x0: 0, y0: 0, x1: sheet.width, y1: sheet.height }
+      drawReview()
+    }
+
+    async function traceArea() {
+      const region = activeRegion()
+      if (!region || !sheet || tracing.value) return
+      const current = ticket
+      tracing.value = true
+      saved.value = false
+      status.value = 'Reading the area you drew…'
+      try {
+        const analysis = await analyzeFloorPlan(sheet, async (message) => {
+          if (current !== ticket) return
+          status.value = message
+          await new Promise((resolve) => setTimeout(resolve, 20))
+        }, {
+          x0: region.bounds.x0,
+          y0: region.bounds.y0,
+          x1: region.bounds.x1,
+          y1: region.bounds.y1
+        })
+        if (current !== ticket) return
+        const next = analysis.regions[0]
+        if (next) {
+          regions.value = [next]
+          regionIndex.value = 0
+        }
+        note.value = analysis.note
+        status.value = ''
+      } catch (error) {
+        if (current !== ticket) return
+        status.value = error?.message || 'That area could not be traced.'
+      } finally {
+        if (current === ticket) {
+          tracing.value = false
+          await nextTick()
+          drawReview()
+        }
+      }
     }
 
     function chooseRegion(index) {
@@ -488,6 +609,8 @@ export default {
     function showDollhouse() { scene?.showDollhouse() }
     function enterWalk() { scene?.enterWalk() }
     function resetView() { scene?.reset() }
+    function zoomIn() { scene?.zoomIn() }
+    function zoomOut() { scene?.zoomOut() }
 
     function close() {
       teardown()
@@ -532,15 +655,22 @@ export default {
       showDollhouse,
       enterWalk,
       resetView,
+      zoomIn,
+      zoomOut,
+      tool,
+      tracing,
       save,
       close,
       buildModel,
       backToReview,
       detectAgain,
       chooseRegion,
+      useWholeSheet,
+      traceArea,
       onReviewDown,
       onReviewMove,
-      onReviewUp
+      onReviewUp,
+      onReviewWheel
     }
   }
 }
@@ -621,6 +751,9 @@ canvas {
   display: block;
   touch-action: none;
 }
+canvas.framing {
+  cursor: crosshair;
+}
 .status {
   position: absolute;
   left: 50%;
@@ -657,7 +790,10 @@ canvas {
   top: 12px;
   right: 12px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
+  max-width: min(640px, calc(100% - 24px));
 }
 .regions {
   left: 12px;
@@ -667,7 +803,7 @@ canvas {
   padding: 8px 14px;
   font-size: 12px;
 }
-.regions button.on, .save {
+.tools button.on, .regions button.on, .save {
   background: #733e87;
   border-color: #733e87;
 }

@@ -45,7 +45,7 @@ function connects(a, b, pad) {
   return hits(aEnds[0], b, pad) || hits(aEnds[1], b, pad) || hits(bEnds[0], a, pad) || hits(bEnds[1], a, pad)
 }
 
-function dominantNeutral(pixels, width, height) {
+function dominantNeutral(pixels, width, height, wide) {
   const buckets = new Map()
   const keyOf = (r, g, b) => `${r >> 3},${g >> 3},${b >> 3}`
   const consider = (r, g, b, length) => {
@@ -94,15 +94,30 @@ function dominantNeutral(pixels, width, height) {
   }
   scan(true)
   scan(false)
-  let best = null
-  buckets.forEach((slot) => {
-    if (!best || slot.length > best.length) best = slot
-  })
-  if (!best) return { mode: 'line', color: [0, 0, 0] }
-  const color = [Math.round(best.r / best.n), Math.round(best.g / best.n), Math.round(best.b / best.n)]
+  const ranked = [...buckets.values()].sort((a, b) => b.length - a.length)
+  const best = ranked[0]
+  if (!best) return { mode: 'line', color: [0, 0, 0], colors: [[0, 0, 0]] }
+  const toColor = (slot) => [Math.round(slot.r / slot.n), Math.round(slot.g / slot.n), Math.round(slot.b / slot.n)]
+  const color = toColor(best)
+  const colors = [color]
+  if (wide && luminance(...color) >= 42) {
+    ranked.slice(1).forEach((slot) => {
+      if (colors.length >= 3 || slot.length < best.length * 0.28) return
+      const next = toColor(slot)
+      const lum = luminance(...next)
+      if (lum < 48 || lum >= 200) return
+      const apart = colors.every((current) => {
+        const dr = next[0] - current[0]
+        const dg = next[1] - current[1]
+        const db = next[2] - current[2]
+        return dr * dr + dg * dg + db * db > 26 * 26
+      })
+      if (apart) colors.push(next)
+    })
+  }
   return luminance(...color) < 42
-    ? { mode: 'line', color }
-    : { mode: 'render', color }
+    ? { mode: 'line', color, colors }
+    : { mode: 'render', color, colors }
 }
 
 function mergeAxis(walls, axis) {
@@ -146,6 +161,56 @@ function mergeAxis(walls, axis) {
     group = next
   }
   return rest.concat(group)
+}
+
+function quietFurniture(walls, frame) {
+  if (!walls.length) return walls
+  walls.forEach((wall) => {
+    wall.confident = true
+    wall.enabled = true
+  })
+  const onFrame = (wall) => wall.x0 <= frame.x0 + 18 || wall.y0 <= frame.y0 + 18 || wall.x1 >= frame.x1 - 18 || wall.y1 >= frame.y1 - 18
+  const loose = walls.filter((wall) => !onFrame(wall))
+  const parent = loose.map((_, index) => index)
+  const find = (index) => {
+    while (parent[index] !== index) {
+      parent[index] = parent[parent[index]]
+      index = parent[index]
+    }
+    return index
+  }
+  for (let i = 0; i < loose.length; i++) {
+    for (let j = i + 1; j < loose.length; j++) {
+      if (!connects(loose[i], loose[j], 8)) continue
+      const ri = find(i)
+      const rj = find(j)
+      if (ri !== rj) parent[rj] = ri
+    }
+  }
+  const groups = new Map()
+  loose.forEach((wall, index) => {
+    const root = find(index)
+    if (!groups.has(root)) groups.set(root, [])
+    groups.get(root).push(wall)
+  })
+  const planArea = Math.max(1, (frame.x1 - frame.x0) * (frame.y1 - frame.y0))
+  groups.forEach((group) => {
+    const x0 = Math.min(...group.map((wall) => wall.x0))
+    const y0 = Math.min(...group.map((wall) => wall.y0))
+    const x1 = Math.max(...group.map((wall) => wall.x1))
+    const y1 = Math.max(...group.map((wall) => wall.y1))
+    const inset = x0 > frame.x0 + 28 && y0 > frame.y0 + 28 && x1 < frame.x1 - 28 && y1 < frame.y1 - 28
+    const span = Math.min(frame.x1 - frame.x0, frame.y1 - frame.y0)
+    const longest = Math.max(...group.map((wall) => segmentLength(wall)))
+    const small = longest < span * 0.12 && (x1 - x0) * (y1 - y0) < planArea * 0.12
+    if (inset && small) {
+      group.forEach((wall) => {
+        wall.confident = false
+        wall.enabled = false
+      })
+    }
+  })
+  return walls
 }
 
 function classify(walls, width, height) {
@@ -299,31 +364,39 @@ function clusterRegions(walls, width, height) {
   })
 }
 
-export async function analyzeFloorPlan(source, onProgress) {
+export async function analyzeFloorPlan(source, onProgress, crop) {
   const report = async (message) => {
     if (onProgress) await onProgress(message)
     else await pause()
   }
-  await report('Finding the floor-plan region…')
-  const scale = Math.min(1, MAX_SIDE / Math.max(source.width, source.height))
-  const width = Math.max(1, Math.round(source.width * scale))
-  const height = Math.max(1, Math.round(source.height * scale))
+  await report(crop ? 'Reading the area you drew…' : 'Finding the floor-plan region…')
+  const locked = crop && crop.x1 - crop.x0 > 48 && crop.y1 - crop.y0 > 48
+  const originX = locked ? Math.max(0, Math.min(source.width - 2, crop.x0)) : 0
+  const originY = locked ? Math.max(0, Math.min(source.height - 2, crop.y0)) : 0
+  const sourceWidth = locked ? Math.min(source.width - originX, crop.x1 - originX) : source.width
+  const sourceHeight = locked ? Math.min(source.height - originY, crop.y1 - originY) : source.height
+  const scale = Math.min(1, (locked ? 1100 : MAX_SIDE) / Math.max(sourceWidth, sourceHeight))
+  const width = Math.max(1, Math.round(sourceWidth * scale))
+  const height = Math.max(1, Math.round(sourceHeight * scale))
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
   const context = canvas.getContext('2d', { willReadFrequently: true })
-  context.drawImage(source, 0, 0, width, height)
+  context.drawImage(source, originX, originY, sourceWidth, sourceHeight, 0, 0, width, height)
   const pixels = context.getImageData(0, 0, width, height).data
-  const inkStyle = dominantNeutral(pixels, width, height)
+  const inkStyle = dominantNeutral(pixels, width, height, locked)
   const maxThickness = inkStyle.mode === 'line' ? 16 : 26
   const minThickness = inkStyle.mode === 'line' ? 4 : 1
-  const tolerance = luminance(...inkStyle.color) > 150 ? 18 : 15
   const isInk = (r, g, b) => {
     if (inkStyle.mode === 'line') return luminance(r, g, b) < 46 && saturation(r, g, b) < 36
-    const dr = r - inkStyle.color[0]
-    const dg = g - inkStyle.color[1]
-    const db = b - inkStyle.color[2]
-    return dr * dr + dg * dg + db * db <= tolerance * tolerance && saturation(r, g, b) < 24
+    if (saturation(r, g, b) >= 24) return false
+    return inkStyle.colors.some((color) => {
+      const dr = r - color[0]
+      const dg = g - color[1]
+      const db = b - color[2]
+      const band = (luminance(...color) > 150 ? 18 : 15) + (locked ? 8 : 0)
+      return dr * dr + dg * dg + db * db <= band * band
+    })
   }
   const mask = new Uint8Array(width * height)
   for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
@@ -346,7 +419,7 @@ export async function analyzeFloorPlan(source, onProgress) {
     return end - start + 1
   }
 
-  await report('Tracing architectural lines…')
+  await report(locked ? 'Tracing every room inside that frame…' : 'Tracing architectural lines…')
   let walls = []
   const minRun = 24
   const half = 3
@@ -367,7 +440,9 @@ export async function analyzeFloorPlan(source, onProgress) {
       }
       x = x1
     }
+    if (locked && y > 0 && y % 140 === 0) await report('Tracing every room inside that frame…')
   }
+  await report(locked ? 'Following the walls between the rooms…' : 'Tracing architectural lines…')
   for (let x = 0; x < width; x++) {
     let y = 0
     while (y < height) {
@@ -385,41 +460,51 @@ export async function analyzeFloorPlan(source, onProgress) {
       }
       y = y1
     }
+    if (locked && x > 0 && x % 140 === 0) await report('Following the walls between the rooms…')
   }
   walls = mergeAxis(mergeAxis(walls, 'h'), 'v')
   walls = walls.filter((wall) => segmentLength(wall) >= 36)
 
-  await report('Setting aside furniture, labels, and open space…')
-  const kept = classify(walls, width, height)
-  const regions = clusterRegions(kept, width, height).map((region) => ({
-    bounds: {
-      x0: region.bounds.x0 / scale,
-      y0: region.bounds.y0 / scale,
-      x1: region.bounds.x1 / scale,
-      y1: region.bounds.y1 / scale
-    },
+  await report(locked ? 'Lining the walls up with the whole plan…' : 'Setting aside furniture, labels, and open space…')
+  const kept = locked
+    ? quietFurniture(walls, { x0: 0, y0: 0, x1: width, y1: height })
+    : classify(walls, width, height)
+  const toSheet = (region) => ({
+    bounds: locked
+      ? { x0: originX, y0: originY, x1: originX + sourceWidth, y1: originY + sourceHeight }
+      : {
+        x0: region.bounds.x0 / scale + originX,
+        y0: region.bounds.y0 / scale + originY,
+        x1: region.bounds.x1 / scale + originX,
+        y1: region.bounds.y1 / scale + originY
+      },
     walls: region.walls.map((wall) => ({
-      x0: wall.x0 / scale,
-      y0: wall.y0 / scale,
-      x1: wall.x1 / scale,
-      y1: wall.y1 / scale,
+      x0: wall.x0 / scale + originX,
+      y0: wall.y0 / scale + originY,
+      x1: wall.x1 / scale + originX,
+      y1: wall.y1 / scale + originY,
       axis: wall.axis,
       confident: wall.confident !== false,
       enabled: wall.enabled !== false
     }))
-  }))
+  })
+  const regions = locked
+    ? [toSheet({ bounds: { x0: 0, y0: 0, x1: width, y1: height }, walls: kept })]
+    : clusterRegions(kept, width, height).map(toSheet)
   const built = regions.reduce((sum, region) => sum + region.walls.filter((wall) => wall.enabled !== false).length, 0)
   const held = regions.reduce((sum, region) => sum + region.walls.filter((wall) => wall.enabled === false).length, 0)
   const cropped = regions.some((region) => (region.bounds.x1 - region.bounds.x0) * (region.bounds.y1 - region.bounds.y0) < source.width * source.height * 0.72)
-  let note = 'Red lines will be built. Gold lines are uncertain and stay out until you click them. Drag to add a missing wall.'
-  if (!regions.length || built === 0) {
-    note = 'No reliable walls were found. The drawing stays as the floor. Drag the walls you want, then build.'
+  let note = 'Drag a box around the whole floor plan, including every room. Then trace that area.'
+  if (locked && built > 0) {
+    note = 'This frame is the whole floor. Red lines will be built. Drag the corners if a room is still outside it.'
+  } else if (!regions.length || built === 0) {
+    note = 'No reliable walls were found inside the frame. The drawing stays as the floor. Drag the walls you want, then build.'
   } else if (regions.length > 1) {
-    note = 'More than one plan was found. Choose one. Gold lines are left out until you click them.'
+    note = 'Only part of the sheet was picked. Drag one box around the entire floor plan, then trace that area.'
   } else if (cropped) {
-    note = 'The plan was separated from the rest of the sheet. Red lines will be built. Gold lines stay out until you click them.'
+    note = 'The gold frame may be only part of the plan. Drag a box around every room, then trace that area.'
   } else if (held > 0) {
-    note = 'Gold lines look like furniture or an uncertain partition. They are left out until you click them.'
+    note = 'Gold lines are left out until you click them. If the frame misses a room, drag a new box around the whole plan.'
   }
   return { regions, note }
 }
