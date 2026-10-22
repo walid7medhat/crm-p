@@ -1325,7 +1325,7 @@ class LeadController extends Controller
                     ->orWhere('users.phone', 'like', $like);
             });
         }
-        if(!auth()->user()->hasRole('branch_admin')){
+        if(!auth()->user()->hasAnyRole('branch_admin','admin','super_admin')){
             $listQuery=$listQuery->where('status','active');
         }
 
