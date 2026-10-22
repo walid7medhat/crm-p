@@ -1,3 +1,5 @@
+import { findFurniture } from './furnishPlan.js'
+
 // Reads a floor-plan image and returns wall centerlines in the original
 // pixel coordinates. The uploaded image is never modified.
 //
@@ -491,12 +493,15 @@ export async function analyzeFloorPlan(source, onProgress, crop) {
   const regions = locked
     ? [toSheet({ bounds: { x0: 0, y0: 0, x1: width, y1: height }, walls: kept })]
     : clusterRegions(kept, width, height).map(toSheet)
+  for (let index = 0; index < regions.length; index++) {
+    regions[index].furniture = await findFurniture(source, regions[index].bounds, regions[index].walls, report)
+  }
   const built = regions.reduce((sum, region) => sum + region.walls.filter((wall) => wall.enabled !== false).length, 0)
   const held = regions.reduce((sum, region) => sum + region.walls.filter((wall) => wall.enabled === false).length, 0)
   const cropped = regions.some((region) => (region.bounds.x1 - region.bounds.x0) * (region.bounds.y1 - region.bounds.y0) < source.width * source.height * 0.72)
   let note = 'Drag a box around the whole floor plan, including every room. Then trace that area.'
   if (locked && built > 0) {
-    note = 'This frame is the whole floor. Red lines will be built. Drag the corners if a room is still outside it.'
+    note = 'Walls are red. Purple marks are furniture that will be built as 3D pieces. Click a mark, with Add wall selected, to drop it.'
   } else if (!regions.length || built === 0) {
     note = 'No reliable walls were found inside the frame. The drawing stays as the floor. Drag the walls you want, then build.'
   } else if (regions.length > 1) {
@@ -509,7 +514,9 @@ export async function analyzeFloorPlan(source, onProgress, crop) {
   return { regions, note }
 }
 
-export function sceneFromWalls(bounds, walls) {
+const FURNITURE_TYPES = ['bed', 'sofa', 'armchair', 'table', 'dining', 'rug', 'plant', 'wardrobe', 'counter', 'chair', 'toilet', 'sink']
+
+export function sceneFromWalls(bounds, walls, furniture) {
   return {
     bounds: {
       x0: Number(bounds.x0) || 0,
@@ -526,6 +533,18 @@ export function sceneFromWalls(bounds, walls) {
         x1: Number(wall.x1),
         y1: Number(wall.y1),
         confident: wall.confident !== false
+      })),
+    furniture: (furniture || [])
+      .filter((piece) => piece && piece.enabled !== false)
+      .slice(0, 36)
+      .map((piece) => ({
+        type: FURNITURE_TYPES.includes(piece.type) ? piece.type : 'table',
+        x: Number(piece.x) || 0,
+        y: Number(piece.y) || 0,
+        w: Number(piece.w) || 0,
+        d: Number(piece.d) || 0,
+        color: typeof piece.color === 'string' ? piece.color.slice(0, 7) : '#c4b8a8',
+        confident: piece.confident !== false
       }))
   }
 }

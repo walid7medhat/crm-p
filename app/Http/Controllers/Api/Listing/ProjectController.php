@@ -1068,6 +1068,25 @@ public function getFloorPlans( $id)
                     ];
                 }
                 $bounds = is_array($scene['bounds'] ?? null) ? $scene['bounds'] : [];
+                $allowedFurniture = ['bed', 'sofa', 'armchair', 'table', 'dining', 'rug', 'plant', 'wardrobe', 'counter', 'chair', 'toilet', 'sink'];
+                $furniture = [];
+                $incomingFurniture = is_array($scene['furniture'] ?? null) ? $scene['furniture'] : [];
+                foreach (array_slice($incomingFurniture, 0, 36) as $piece) {
+                    if (!is_array($piece) || !is_numeric($piece['x'] ?? null) || !is_numeric($piece['y'] ?? null)) {
+                        continue;
+                    }
+                    $type = is_string($piece['type'] ?? null) ? $piece['type'] : 'table';
+                    $color = is_string($piece['color'] ?? null) ? substr($piece['color'], 0, 7) : '#c4b8a8';
+                    $furniture[] = [
+                        'type' => in_array($type, $allowedFurniture, true) ? $type : 'table',
+                        'x' => (float) $piece['x'],
+                        'y' => (float) $piece['y'],
+                        'w' => (float) ($piece['w'] ?? 0),
+                        'd' => (float) ($piece['d'] ?? 0),
+                        'color' => $color,
+                        'confident' => array_key_exists('confident', $piece) ? (bool) $piece['confident'] : true,
+                    ];
+                }
                 $floorPlanImage->scene_data = [
                     'source' => is_string($scene['source'] ?? null) ? substr($scene['source'], 0, 500) : null,
                     'bounds' => [
@@ -1077,6 +1096,7 @@ public function getFloorPlans( $id)
                         'y1' => (float) ($bounds['y1'] ?? 0),
                     ],
                     'walls' => $walls,
+                    'furniture' => $furniture,
                 ];
             }
             $floorPlanImage->scene_saved_at = now();

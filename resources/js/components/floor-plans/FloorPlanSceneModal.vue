@@ -46,6 +46,7 @@
           <button type="button" @click="resetView">Whole plan</button>
           <button type="button" @click="enterWalk">Go inside</button>
           <button type="button" @click="showDollhouse">Back</button>
+          <button type="button" :class="{ on: referenceOn }" @click="toggleReference">Drawing</button>
           <button type="button" @click="backToReview">Edit</button>
         </div>
         <p v-if="step === 'model'" class="prompt">{{ prompt }}</p>
@@ -53,7 +54,7 @@
 
       <footer class="scene-foot">
         <p v-if="step === 'review'">{{ note }} Plan area: drag a box around every room. Scroll to look closer.</p>
-        <p v-else>Scroll to zoom out or in. Go inside to walk the rooms. Back returns to the full plan.</p>
+        <p v-else>The rooms and furniture are 3D. Drawing shows the original plan on top. Go inside to walk. Back returns to the model.</p>
         <div class="actions">
           <button v-if="step === 'review'" type="button" class="ghost" :disabled="!sheetReady || tracing" @click="traceArea">
             {{ tracing ? 'Tracing…' : 'Trace this area' }}
@@ -97,6 +98,7 @@ export default {
     const regionIndex = ref(0)
     const tool = ref('area')
     const tracing = ref(false)
+    const referenceOn = ref(false)
     let reviewZoom = 1
     let reviewPan = { x: 0, y: 0 }
     let scene = null
@@ -190,6 +192,17 @@ export default {
       ;[[left, top], [left + boxWidth, top], [left, top + boxHeight], [left + boxWidth, top + boxHeight]].forEach(([x, y]) => {
         context.fillRect(x - 5, y - 5, 10, 10)
       })
+      ;(region.furniture || []).forEach((piece) => {
+        if (piece.enabled === false) return
+        const x = fit.ox + (piece.x - piece.w / 2) * fit.s
+        const y = fit.oy + (piece.y - piece.d / 2) * fit.s
+        context.strokeStyle = piece.confident === false ? '#d4af37' : '#8b7cff'
+        context.lineWidth = 2
+        context.strokeRect(x, y, piece.w * fit.s, piece.d * fit.s)
+        context.fillStyle = '#f7f3ec'
+        context.font = '11px sans-serif'
+        context.fillText(piece.type, x + 4, y + 12)
+      })
     }
 
     function viewFit() {
@@ -250,6 +263,14 @@ export default {
       }
       if (tool.value === 'area') {
         drag = { kind: 'area', x: point.x, y: point.y, cx: point.x, cy: point.y }
+        return
+      }
+      const piece = (region.furniture || []).find((item) => item.enabled !== false
+        && point.x >= item.x - item.w / 2 && point.x <= item.x + item.w / 2
+        && point.y >= item.y - item.d / 2 && point.y <= item.y + item.d / 2)
+      if (piece) {
+        piece.enabled = false
+        drawReview()
         return
       }
       if (nearLeft || nearRight || nearTop || nearBottom) {
@@ -332,6 +353,7 @@ export default {
         if (x1 - x0 > 48 && y1 - y0 > 48) {
           region.bounds = { x0, y0, x1, y1 }
           region.walls = []
+          region.furniture = []
           drawReview()
           traceArea()
           return
@@ -457,9 +479,13 @@ export default {
         x1: Math.max(...walls.map((wall) => Math.max(wall.x0, wall.x1))),
         y1: Math.max(...walls.map((wall) => Math.max(wall.y0, wall.y1)))
       }
-      regions.value = [{ bounds, walls }]
+      const furniture = (data.furniture || []).map((piece) => ({
+        ...piece,
+        enabled: true
+      }))
+      regions.value = [{ bounds, walls, furniture }]
       regionIndex.value = 0
-      note.value = 'This is the reconstruction you saved. Click a line to drop it, or read the drawing again.'
+      note.value = 'This is the reconstruction you saved. Add wall, then click a purple mark to drop that piece.'
     }
 
     async function loadSheet(current) {
@@ -513,7 +539,8 @@ export default {
           if (!regions.value.length) {
             regions.value = [{
               bounds: { x0: 0, y0: 0, x1: sheet.width, y1: sheet.height },
-              walls: []
+              walls: [],
+              furniture: []
             }]
           }
         }
@@ -538,7 +565,8 @@ export default {
       })
       regions.value = analysis.regions.length ? analysis.regions : [{
         bounds: { x0: 0, y0: 0, x1: sheet.width, y1: sheet.height },
-        walls: []
+        walls: [],
+        furniture: []
       }]
       regionIndex.value = 0
       note.value = analysis.note
@@ -553,13 +581,14 @@ export default {
       if (!region || !sheet || !view.value) return
       teardownScene()
       step.value = 'model'
-      status.value = 'Building the dollhouse from the approved lines…'
+      status.value = 'Building rooms, furniture, and lighting…'
       await nextTick()
+      referenceOn.value = false
       const traced = sceneFromWalls(region.bounds, region.walls.filter((wall) => {
         const cx = (wall.x0 + wall.x1) / 2
         const cy = (wall.y0 + wall.y1) / 2
         return cx >= region.bounds.x0 && cx <= region.bounds.x1 && cy >= region.bounds.y0 && cy <= region.bounds.y1
-      }))
+      }), region.furniture)
       scene = mountFloorPlanScene(view.value, sheet, (state) => {
         mode.value = state.mode
       }, traced)
@@ -579,7 +608,7 @@ export default {
     async function save() {
       if (!props.plan?.id || saving.value) return
       const region = activeRegion()
-      const payload = region ? { ...sceneFromWalls(region.bounds, region.walls), source: props.plan.image_url } : null
+      const payload = region ? { ...sceneFromWalls(region.bounds, region.walls, region.furniture), source: props.plan.image_url } : null
       saving.value = true
       status.value = ''
       try {
@@ -611,6 +640,10 @@ export default {
     function resetView() { scene?.reset() }
     function zoomIn() { scene?.zoomIn() }
     function zoomOut() { scene?.zoomOut() }
+    function toggleReference() {
+      referenceOn.value = !referenceOn.value
+      scene?.setReference(referenceOn.value)
+    }
 
     function close() {
       teardown()
@@ -657,6 +690,8 @@ export default {
       resetView,
       zoomIn,
       zoomOut,
+      toggleReference,
+      referenceOn,
       tool,
       tracing,
       save,

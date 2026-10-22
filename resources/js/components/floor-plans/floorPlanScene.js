@@ -135,7 +135,7 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   const metres = 11 / Math.max(plan.bounds.x1 - plan.bounds.x0, plan.bounds.y1 - plan.bounds.y0)
   const width = (plan.bounds.x1 - plan.bounds.x0) * metres
   const depth = (plan.bounds.y1 - plan.bounds.y0) * metres
-  const wallH = 1.58
+  const wallH = 1.36
   const wallThick = 0.16
   const wx = (px) => (px - plan.bounds.x0) * metres
   const wz = (py) => (py - plan.bounds.y0) * metres
@@ -185,17 +185,24 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   map.magFilter = THREE.LinearFilter
   map.anisotropy = renderer.capabilities.getMaxAnisotropy()
   const floor = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-    map,
-    roughness: 0.96,
-    metalness: 0,
-    transparent: true,
-    alphaTest: 0.4,
-    side: THREE.DoubleSide
+    color: 0xe6dfd4,
+    roughness: 0.92,
+    metalness: 0
   }))
   floor.rotation.x = -Math.PI / 2
   floor.position.y = 0.02
   floor.receiveShadow = true
   scene.add(floor)
+  const overlay = new THREE.Mesh(geo.clone(), new THREE.MeshBasicMaterial({
+    map,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false
+  }))
+  overlay.rotation.x = -Math.PI / 2
+  overlay.position.y = 0.035
+  overlay.visible = false
+  scene.add(overlay)
 
   function addBox(x0, z0, x1, z1, height, collide, material) {
     const minX = Math.min(x0, x1)
@@ -221,6 +228,89 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     }
     if (collide) solids.push({ minX, maxX, minZ, maxZ })
   }
+
+  function placePiece(item) {
+    const pieceW = Math.max(0.32, (item.w || 40) * metres)
+    const pieceD = Math.max(0.32, (item.d || 40) * metres)
+    const cx = wx(item.x)
+    const cz = wz(item.y)
+    const tint = new THREE.Color(item.color || '#c4b8a8')
+    const fabric = new THREE.MeshStandardMaterial({ color: tint, roughness: 0.84 })
+    const wood = new THREE.MeshStandardMaterial({ color: tint.clone().multiplyScalar(0.62), roughness: 0.58 })
+    const cloth = new THREE.MeshStandardMaterial({ color: tint.clone().lerp(new THREE.Color('#f4f0ea'), 0.35), roughness: 0.9 })
+    const group = new THREE.Group()
+    group.position.set(cx, 0, cz)
+    const put = (mw, mh, md, x, y, z, material) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.04, mw), mh, Math.max(0.04, md)), material)
+      mesh.position.set(x, y + mh / 2, z)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      group.add(mesh)
+    }
+    let solid = true
+    if (item.type === 'bed') {
+      put(pieceW * 0.94, 0.16, pieceD * 0.9, 0, 0, 0, wood)
+      put(pieceW * 0.9, 0.18, pieceD * 0.86, 0, 0.16, 0.04, fabric)
+      put(pieceW * 0.94, 0.7, 0.08, 0, 0.16, -pieceD * 0.44, wood)
+      put(pieceW * 0.28, 0.08, pieceD * 0.2, -pieceW * 0.2, 0.34, -pieceD * 0.16, cloth)
+      put(pieceW * 0.28, 0.08, pieceD * 0.2, pieceW * 0.2, 0.34, -pieceD * 0.16, cloth)
+    } else if (item.type === 'sofa' || item.type === 'armchair') {
+      put(pieceW * 0.92, 0.22, pieceD * 0.72, 0, 0.16, 0.06, fabric)
+      put(pieceW * 0.92, 0.42, 0.12, 0, 0.22, -pieceD * 0.36, fabric)
+      put(0.1, 0.28, pieceD * 0.7, -pieceW * 0.44, 0.16, 0.02, fabric)
+      put(0.1, 0.28, pieceD * 0.7, pieceW * 0.44, 0.16, 0.02, fabric)
+    } else if (item.type === 'dining') {
+      put(pieceW * 0.72, 0.06, pieceD * 0.46, 0, 0.72, 0, wood)
+      put(0.08, 0.72, 0.08, -pieceW * 0.28, 0, -pieceD * 0.16, wood)
+      put(0.08, 0.72, 0.08, pieceW * 0.28, 0, -pieceD * 0.16, wood)
+      put(0.08, 0.72, 0.08, -pieceW * 0.28, 0, pieceD * 0.16, wood)
+      put(0.08, 0.72, 0.08, pieceW * 0.28, 0, pieceD * 0.16, wood)
+      ;[-1, 1].forEach((side) => {
+        put(pieceW * 0.22, 0.08, 0.08, side * pieceW * 0.22, 0.42, pieceD * 0.34, fabric)
+        put(pieceW * 0.22, 0.28, 0.06, side * pieceW * 0.22, 0.42, pieceD * 0.4, fabric)
+        put(pieceW * 0.22, 0.08, 0.08, side * pieceW * 0.22, 0.42, -pieceD * 0.34, fabric)
+      })
+    } else if (item.type === 'table' || item.type === 'chair') {
+      put(pieceW * 0.8, 0.05, pieceD * 0.8, 0, 0.38, 0, wood)
+      put(0.06, 0.38, 0.06, -pieceW * 0.28, 0, -pieceD * 0.28, wood)
+      put(0.06, 0.38, 0.06, pieceW * 0.28, 0, -pieceD * 0.28, wood)
+      put(0.06, 0.38, 0.06, -pieceW * 0.28, 0, pieceD * 0.28, wood)
+      put(0.06, 0.38, 0.06, pieceW * 0.28, 0, pieceD * 0.28, wood)
+    } else if (item.type === 'rug') {
+      put(pieceW, 0.02, pieceD, 0, 0.02, 0, fabric)
+      solid = false
+    } else if (item.type === 'plant') {
+      put(Math.min(pieceW, 0.42), 0.28, Math.min(pieceD, 0.42), 0, 0, 0, wood)
+      const leaves = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.min(pieceW, pieceD) * 0.38, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0x3f6b45, roughness: 0.8 })
+      )
+      leaves.position.y = 0.55
+      leaves.castShadow = true
+      group.add(leaves)
+      solid = false
+    } else if (item.type === 'wardrobe' || item.type === 'counter') {
+      put(pieceW, item.type === 'wardrobe' ? 1.15 : 0.9, pieceD, 0, 0, 0, wood)
+    } else if (item.type === 'toilet') {
+      put(pieceW * 0.7, 0.38, pieceD * 0.7, 0, 0, 0.04, cloth)
+      put(pieceW * 0.55, 0.4, 0.12, 0, 0.28, -pieceD * 0.28, cloth)
+    } else if (item.type === 'sink') {
+      put(pieceW, 0.16, pieceD * 0.7, 0, 0.72, 0, cloth)
+      put(0.08, 0.72, pieceD * 0.55, 0, 0, 0, wood)
+    } else {
+      put(pieceW, 0.4, pieceD, 0, 0, 0, fabric)
+    }
+    scene.add(group)
+    if (solid) {
+      solids.push({
+        minX: cx - pieceW * 0.42,
+        maxX: cx + pieceW * 0.42,
+        minZ: cz - pieceD * 0.42,
+        maxZ: cz + pieceD * 0.42
+      })
+    }
+  }
+  ;(plan.furniture || []).forEach(placePiece)
 
   plan.walls.forEach((rect) => {
     const box = Array.isArray(rect) ? rect : [rect.x0, rect.y0, rect.x1, rect.y1]
@@ -429,6 +519,10 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     enterWalk,
     zoomIn,
     zoomOut,
+    setReference(on) {
+      overlay.visible = Boolean(on)
+      overlay.material.opacity = on ? 0.42 : 0
+    },
     reset,
     resize,
     dispose() {
