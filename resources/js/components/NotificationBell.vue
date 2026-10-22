@@ -277,6 +277,45 @@ export default {
   justify-content: center;
   padding: 0;
   line-height: 0;
+  transition: background-color 150ms ease, background 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, opacity 100ms ease;
+}
+
+.notification-bell-btn:active:not(:disabled) {
+  opacity: 0.76;
+}
+
+.notification-dropdown {
+  animation: notification-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes notification-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-bell-btn {
+    transition: none;
+  }
+
+  .notification-bell-btn:active:not(:disabled) {
+    opacity: 1;
+  }
+
+  .notification-dropdown {
+    animation: none;
+  }
+}
+
+.notification-bell-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .notification-bell-icon {

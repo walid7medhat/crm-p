@@ -1013,6 +1013,7 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
             
             Route::post('projects/{id}/update/floor-plans', [ProjectController::class, 'updateFloorPlans']);
             Route::put('projects/floor-plan-images/{id}/name', [ProjectController::class, 'updateFloorPlanName']);
+            Route::put('projects/floor-plan-images/{id}/scene', [ProjectController::class, 'saveFloorPlanScene']);
 });    
 });
 Route::middleware('jwt.auth')->group(function () {

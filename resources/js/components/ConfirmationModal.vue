@@ -1,7 +1,7 @@
 <template>
     <Teleport to="body">
         <Transition name="modal">
-            <div v-if="isVisible" class="confirmation-modal-overlay" @click="handleOverlayClick">
+            <div v-if="isVisible" class="confirmation-modal-overlay" :style="{ zIndex }" @click="handleOverlayClick">
                 <div class="confirmation-modal" @click.stop>
                     <div class="confirmation-modal-header">
                         <p class="confirmation-modal-title">{{ title }}</p>
@@ -15,6 +15,14 @@
                     <div class="confirmation-modal-footer">
                         <button class="confirmation-btn cancel-btn" @click="handleCancel">
                             {{ cancelText }}
+                        </button>
+                        <button
+                            v-if="extraText"
+                            type="button"
+                            class="confirmation-btn extra-btn"
+                            @click="handleExtra"
+                        >
+                            {{ extraText }}
                         </button>
                         <button 
                             class="confirmation-btn confirm-btn" 
@@ -46,9 +54,17 @@ const props = defineProps({
         type: String,
         default: 'Confirm'
     },
+    extraText: {
+        type: String,
+        default: ''
+    },
     cancelText: {
         type: String,
         default: 'Cancel'
+    },
+    zIndex: {
+        type: Number,
+        default: 9999
     },
     type: {
         type: String,
@@ -61,7 +77,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'close'])
+const emit = defineEmits(['confirm', 'extra', 'cancel', 'close'])
 
 const isVisible = ref(false)
 
@@ -88,6 +104,11 @@ const hide = () => {
 
 const handleConfirm = () => {
     emit('confirm')
+    hide()
+}
+
+const handleExtra = () => {
+    emit('extra')
     hide()
 }
 
@@ -214,6 +235,17 @@ defineExpose({
 .cancel-btn:hover {
     background: #F8FAFC;
     border-color: #CBD5E1;
+}
+
+.extra-btn {
+    background: #fff;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.extra-btn:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
 }
 
 .confirm-btn {

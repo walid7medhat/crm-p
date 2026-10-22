@@ -160,6 +160,7 @@
                 <!-- General Tab Content -->
                 <GeneralTab 
                     v-else-if="activeTab === 'general' && lead" 
+                    ref="generalTabRef"
                     :lead="lead" 
                     :stage-id="leadStageId"
                     :focus-section="focusSection"
@@ -286,6 +287,7 @@ const isLoadingLead = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
+const generalTabRef = ref(null)
 const leadModalRoot = ref(null)
 const activeJump = ref('details')
 const focusSection = ref('details')
@@ -405,6 +407,7 @@ const loadConvertedDealLink = async () => {
 const openConvertedDeal = async (deal) => {
     const dealId = Number(deal?.id)
     if (!Number.isFinite(dealId) || dealId <= 0) return
+    if (!(await askEditGuard())) return
     show.value = false
     await nextTick()
     router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
@@ -458,11 +461,12 @@ const hasAtLeastOneClientRequirement = (currentLead) => {
     })
 }
 
-const blockQualifiedRequirementEscape = (event) => {
+const blockQualifiedRequirementEscape = async (event) => {
     if (!qualifiedRequirementBlocking.value) return
     if (event.key !== 'Escape') return
     event.preventDefault()
     event.stopPropagation()
+    if (!(await askEditGuard())) return
     show.value = false
 }
 
@@ -513,12 +517,13 @@ const guardQualifiedRequirementFocus = (event) => {
 // Deal type chosen + Continue: close the lead now — the new deal opens on the Deals
 // board once created. This instance stays mounted (v-model, not v-if), so the convert
 // modal's pending request still reaches handleLeadConverted.
-function closeLeadForNewDeal() {
+async function closeLeadForNewDeal() {
     showConvertedDeals.value = false
+    if (!(await askEditGuard())) return
     show.value = false
 }
 
-function handleLeadConverted(deal) {
+async function handleLeadConverted(deal) {
     // Let the Kanban board move/remove this lead's card immediately (it just became
     // a deal) instead of relying on a websocket broadcast or a full board refetch.
     const updatedLead = deal?._lead
@@ -533,6 +538,7 @@ function handleLeadConverted(deal) {
     }
     selectedLeadForConversion.value = null
     selectedLeadData.value = null
+    if (!(await askEditGuard())) return
     show.value = false
     emit('update:modelValue', false)
 
@@ -577,7 +583,11 @@ const canViewHistory = computed(() => {
     return isAdminUser || isResponsible
 })
 
-const switchTab = (tab) => {
+const switchTab = async (tab) => {
+    if (tab !== 'general' && activeTab.value === 'general') {
+        const allowed = await askEditGuard()
+        if (!allowed) return
+    }
     activeTab.value = tab
     if (tab === 'general') {
         activeJump.value = 'details'
@@ -1544,7 +1554,8 @@ const showWithLeadId = (leadId) => {
   show.value = true
 }
 
-const hideModal = () => {
+const hideModal = async () => {
+  if (!(await askEditGuard())) return
   show.value = false
 
   if (props.syncUrl && route.query.lead) {
@@ -1621,7 +1632,15 @@ async function queueLeadDetailEntrance() {
     }
 }
 
+async function askEditGuard() {
+  const ask = generalTabRef.value?.confirmLeave
+  if (typeof ask !== 'function') return true
+  return (await ask()) !== false
+}
+
 async function closeWithMotion() {
+    if (detailExitGuard) return
+    if (!(await askEditGuard())) return
     if (detailExitGuard) return
     detailExitGuard = true
     entranceToken += 1
@@ -1631,7 +1650,7 @@ async function closeWithMotion() {
 }
 
 function onDetailHide(event) {
-    if (detailExitGuard || prefersReducedMotion()) return
+    if (detailExitGuard) return
     if (!event || typeof event.preventDefault !== 'function') return
     event.preventDefault()
     void closeWithMotion()
@@ -1675,9 +1694,19 @@ watch(show, (val, oldVal) => {
 }, { immediate: true })
 
 
-watch(() => props.leadId, (newLeadId, oldLeadId) => {
+let ignoreLeadSwitch = false
+watch(() => props.leadId, async (newLeadId, oldLeadId) => {
     if (!show.value) return
     if (!newLeadId || newLeadId === oldLeadId) return
+    if (ignoreLeadSwitch) {
+      ignoreLeadSwitch = false
+      return
+    }
+    if (oldLeadId && !(await askEditGuard())) {
+      ignoreLeadSwitch = true
+      emit('update:leadId', oldLeadId)
+      return
+    }
     if (props.syncUrl) {
       // تحديث الرابط عند تغيير leadId
       router.push({

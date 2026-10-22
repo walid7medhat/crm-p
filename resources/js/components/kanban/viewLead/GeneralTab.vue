@@ -14,6 +14,7 @@
                     :stage-id="selectedStageId"
                     @updated="handleLeadUpdated"
                     @cancel="handleCancel"
+                    @draft-status="editDraftStatus = $event"
                     :show-only-section="editingSection"
                 />
             </div>
@@ -172,6 +173,8 @@
 
         <!-- Global fixed bottom bar: Save / Cancel when editing lead (centered, fixed on scroll) -->
         <div v-if="isEditMode" class="edit-lead-bottom-bar">
+            <span v-if="editDraftStatus" class="edit-draft-status" role="status">{{ editDraftStatus }}</span>
+            <div class="edit-lead-bottom-actions">
             <button class="edit-bar-btn edit-bar-cancel" @click="onEditBarCancel">
                 Cancel
             </button>
@@ -183,6 +186,7 @@
                 <span v-if="isEditBarSaving">Saving...</span>
                 <span v-else>Save</span>
             </button>
+            </div>
         </div>
     </div>
 </template>
@@ -232,6 +236,7 @@ const commentListRef = ref(null)
 const leadInfoViewRef = ref(null)
 const activityListRef = ref(null)
 const editLeadRef = ref(null)
+const editDraftStatus = ref('')
 const editSectionAnchorRef = ref(null)
 const commentListKey = ref(0)
 const activityListKey = ref(0)
@@ -526,7 +531,8 @@ const confirmDeleteAllActivities = () => {
 }
 
 defineExpose({
-    resetEditMode
+    resetEditMode,
+    confirmLeave
 })
 
 // Watch for stageId changes from parent
@@ -572,6 +578,14 @@ const handleEditSection = (sectionName) => {
 
 const handleCancel = () => {
     isEditMode.value = false
+    editDraftStatus.value = ''
+}
+
+async function confirmLeave() {
+    if (!isEditMode.value) return true
+    const ask = editLeadRef.value?.confirmLeave
+    if (typeof ask !== 'function') return true
+    return (await ask()) !== false
 }
 
 const onEditBarCancel = () => {
@@ -828,11 +842,26 @@ watch(
     background: #fff;
     border-top: 1px solid #E2E8F0;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 1050;
+}
+
+.edit-lead-bottom-actions {
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-    z-index: 1050;
+}
+
+.edit-draft-status {
+    color: #64748b;
+    font-family: Montserrat, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 .edit-bar-btn {

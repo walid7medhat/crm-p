@@ -16,6 +16,7 @@ class FloorPlanImageResource extends JsonResource
             'sort_order' => $this->sort_order,
             'created_at' => $this->created_at,
             'area_id'=>$this->area_id,
+            'scene_saved_at' => $this->scene_saved_at,
             'area'=>$this->area?->name,
              'area_name' => $this->area?->name ?? 'General',
             'area_parents' => $this->area?->area_parents_title ?? null,

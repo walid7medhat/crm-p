@@ -185,6 +185,9 @@
                         <i class="ri-calendar-line"></i> 
                         {{ formatDate(floorPlan.created_at) }}
                       </small>
+                      <button type="button" class="floor-scene-btn" @click.stop="openScene(floorPlan)">
+                        {{ floorPlan.scene_saved_at ? 'View 3D' : 'Create 3D' }}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -284,6 +287,12 @@
         </div>
       </div>
     </div>
+    <FloorPlanSceneModal
+      :open="sceneOpen"
+      :plan="scenePlan"
+      @close="sceneOpen = false"
+      @saved="onSceneSaved"
+    />
   </div>
 </template>
 
@@ -292,10 +301,12 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
+import FloorPlanSceneModal from '@/components/floor-plans/FloorPlanSceneModal.vue';
 import { enablePageNaturalScroll, disablePageNaturalScroll } from '@/composables/usePageNaturalScroll.js';
 
 export default {
   name: "ProjectDetails",
+  components: { FloorPlanSceneModal },
   props: {
     // When set, the page is rendered inside a popup (ProjectDetailsModal)
     // instead of the /projects/:id route.
@@ -312,6 +323,8 @@ export default {
     const loading = ref(true);
     const error = ref(null);
     const showLightbox = ref(false);
+    const sceneOpen = ref(false);
+    const scenePlan = ref(null);
     const currentImageIndex = ref(0);
     const canEditProject = ref(true);
     const canDeleteProject = ref(true);
@@ -531,6 +544,21 @@ export default {
       openLightbox(images, index);
     };
 
+    const openScene = (floorPlan) => {
+      scenePlan.value = {
+        ...floorPlan,
+        image_url: getImageUrl(floorPlan.image_url)
+      };
+      sceneOpen.value = true;
+    };
+
+    const onSceneSaved = (payload) => {
+      const list = project.value?.floor_plan_images;
+      if (!Array.isArray(list)) return;
+      const image = list.find((item) => item.id === payload.id);
+      if (image) image.scene_saved_at = payload.scene_saved_at;
+    };
+
 
     const closeLightbox = () => {
       showLightbox.value = false;
@@ -713,6 +741,10 @@ export default {
       onImageError,
       cleanup,
       openFloorPlanLightbox,
+      sceneOpen,
+      scenePlan,
+      openScene,
+      onSceneSaved,
         groupedFloorPlans,
       areaTabs,
       activeAreaTab,
@@ -1455,9 +1487,25 @@ export default {
   border-top: 1px solid #e2e8f0;
   padding: 8px 12px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+.floor-scene-btn {
+  flex: 1 0 100%;
+  border: 1px solid #733e87;
+  color: #733e87;
+  background: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+.floor-scene-btn:hover {
+  background: #733e87;
+  color: #fff;
 }
 
 .floor-plan-info {

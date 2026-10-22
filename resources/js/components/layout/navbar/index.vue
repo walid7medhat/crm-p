@@ -2884,7 +2884,7 @@ const showBackButton = computed(() => {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 150ms ease, opacity 100ms ease;
 }
 .announcement-popup__btn:hover:not(:disabled) {
   background: var(--gradient-primary) !important;
@@ -3169,7 +3169,7 @@ const showBackButton = computed(() => {
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, opacity 100ms ease;
 }
 
 .top-module-btn:hover {
@@ -3405,7 +3405,7 @@ const showBackButton = computed(() => {
   font-weight: 500;
   border-radius: 6px;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, opacity 100ms ease;
 }
 
 /* Profile trigger */
@@ -3422,6 +3422,7 @@ const showBackButton = computed(() => {
   border: none;
   background: transparent;
   cursor: pointer;
+  transition: opacity 100ms ease;
 }
 
 /* BIG Profile Details panel – match design image (font sizes, spacing, colors) */
@@ -3813,7 +3814,7 @@ const showBackButton = computed(() => {
   border-radius: 8px;
   cursor: pointer;
   border: none;
-  transition: background 0.2s, color 0.2s;
+  transition: background 150ms ease, color 150ms ease, opacity 100ms ease;
 }
 
 .profile-contact-cancel {
@@ -4012,7 +4013,7 @@ const showBackButton = computed(() => {
   text-align: left;
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s ease;
+  transition: background 150ms ease, opacity 100ms ease;
 }
 
 .profile-quick-menu-item:hover {
@@ -4248,10 +4249,11 @@ const showBackButton = computed(() => {
   line-height: 1.2;
   cursor: pointer;
   transition:
-    color 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 100ms ease;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -4309,7 +4311,7 @@ const showBackButton = computed(() => {
   border-radius: 999px;
   padding: 6px 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 150ms ease, border-color 150ms ease, opacity 100ms ease;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -4348,7 +4350,7 @@ const showBackButton = computed(() => {
     font-weight: 500;
     border-radius: 6px;
     text-decoration: none;
-    transition: all .3s ease;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, opacity 100ms ease;
     background: var(--gradient-primary) !important;
     border: 1px solid var(--color-primary) !important;
     color: #ffffff !important;
@@ -4531,7 +4533,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     cursor: pointer;
     -webkit-appearance: none;
     appearance: none;
-    transition: color 0.15s ease, background 0.15s ease;
+    transition: color 150ms ease, background 150ms ease, opacity 100ms ease;
 }
 
 .search-filter-btn {
@@ -4716,7 +4718,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     border: 1px solid #e8eaef !important;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    transition: all 0.2s ease;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, opacity 100ms ease;
     color: #4b4568;
 }
 
@@ -4977,7 +4979,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     color: var(--color-primary);
     font-size: 22px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background 150ms ease;
   }
 
   .mob-header-menu:active {
@@ -5000,7 +5002,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     color: var(--color-primary);
     font-size: 24px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background 150ms ease;
   }
 
   .mob-header-back:active {
@@ -5154,6 +5156,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     letter-spacing: -0.02em;
     white-space: nowrap;
     cursor: pointer;
+    transition: transform 100ms ease, opacity 100ms ease;
   }
 
   .lead-board-add:active {
@@ -5340,6 +5343,11 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     color: #1a1528;
     font-family: Inter, Montserrat, system-ui, sans-serif;
     cursor: pointer;
+    transition: opacity 100ms ease, color 140ms ease;
+  }
+
+  .kanban-mob-title-btn:hover:not(.kanban-mob-title-btn--static) {
+    color: var(--color-primary);
   }
 
   .kanban-mob-title-btn:active {
@@ -5523,6 +5531,15 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 150ms ease, color 140ms ease, opacity 100ms ease;
+  }
+
+  .kanban-switch-option:hover:not(.is-active) {
+    background: #f6f1fb;
+  }
+
+  .kanban-switch-option:active {
+    opacity: 0.8;
   }
 
   .kanban-switch-option.is-active {
@@ -5632,5 +5649,130 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     min-width: 0 !important;
   }
 }
+
+.top-module-btn:active:not(:disabled):not(.disabled),
+.module-tab-btn:active:not(:disabled):not(.disabled),
+.kanban-tab-btn:active:not(:disabled):not(.disabled),
+.btn-create-new:active:not(:disabled):not(.disabled),
+.action-icon-btn:active:not(:disabled):not(.disabled),
+.search-icon-btn:active:not(:disabled),
+.search-filter-btn:active:not(:disabled),
+.search-clear-btn:active:not(:disabled),
+.create-property-btn:active:not(:disabled):not(.disabled),
+.navbar-create-listing:active:not(:disabled):not(.disabled),
+.profile-quick-menu-item:active:not(:disabled),
+.profile-avatar-btn:active:not(:disabled),
+.profile-contact-btn:active:not(:disabled),
+.search-trigger:active,
+.announcement-popup__btn:active:not(:disabled) {
+  opacity: 0.76;
+}
+
+.navbar-header .back-button,
+.sidebar-mobile-toggle,
+.module-tab-select {
+  transition: opacity 100ms ease;
+}
+
+.navbar-header .back-button:hover,
+.sidebar-mobile-toggle:hover {
+  opacity: 0.82;
+}
+
+.navbar-header .back-button:active:not(:disabled),
+.sidebar-mobile-toggle:active:not(:disabled),
+.module-tab-select:active {
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-module-btn,
+  .module-tab-btn,
+  .kanban-tab-btn,
+  .btn-create-new,
+  .action-icon-btn,
+  .search-icon-btn,
+  .search-filter-btn,
+  .search-clear-btn,
+  .create-property-btn,
+  .navbar-create-listing,
+  .profile-quick-menu-item,
+  .profile-avatar-btn,
+  .profile-contact-btn,
+  .search-trigger,
+  .announcement-popup__btn,
+  .mob-header-menu,
+  .mob-header-back,
+  .navbar-header .back-button,
+  .sidebar-mobile-toggle,
+  .module-tab-select,
+  .kanban-mob-title-btn,
+  .lead-board-add,
+  .kanban-switch-option {
+    transition: none;
+  }
+
+  .navbar-header .back-button:hover,
+  .sidebar-mobile-toggle:hover,
+  .navbar-header .back-button:active,
+  .sidebar-mobile-toggle:active,
+  .module-tab-select:active,
+  .kanban-mob-title-btn:active,
+  .kanban-switch-option:active {
+    opacity: 1;
+  }
+
+  .lead-board-add:active {
+    transform: none;
+  }
+
+  .top-module-btn:active:not(:disabled):not(.disabled),
+  .module-tab-btn:active:not(:disabled):not(.disabled),
+  .kanban-tab-btn:active:not(:disabled):not(.disabled),
+  .btn-create-new:active:not(:disabled):not(.disabled),
+  .action-icon-btn:active:not(:disabled):not(.disabled),
+  .search-icon-btn:active:not(:disabled),
+  .search-filter-btn:active:not(:disabled),
+  .search-clear-btn:active:not(:disabled),
+  .create-property-btn:active:not(:disabled):not(.disabled),
+  .navbar-create-listing:active:not(:disabled):not(.disabled),
+  .profile-quick-menu-item:active:not(:disabled),
+  .profile-avatar-btn:active:not(:disabled),
+  .profile-contact-btn:active:not(:disabled),
+  .search-trigger:active,
+  .announcement-popup__btn:active:not(:disabled) {
+    opacity: 1;
+  }
+}
+
+.top-module-btn:focus-visible,
+.module-tab-btn:focus-visible,
+.kanban-tab-btn:focus-visible,
+.btn-create-new:focus-visible,
+.action-icon-btn:focus-visible,
+.create-property-btn:focus-visible,
+.navbar-create-listing:focus-visible,
+.profile-quick-menu-item:focus-visible,
+.profile-avatar-btn:focus-visible,
+.profile-contact-btn:focus-visible,
+.announcement-popup__btn:focus-visible,
+.mob-header-back:focus-visible,
+.navbar-header .back-button:focus-visible,
+.sidebar-mobile-toggle:focus-visible,
+.search-icon-btn:focus-visible,
+.search-filter-btn:focus-visible,
+.search-clear-btn:focus-visible,
+.module-tab-select:focus-visible,
+.kanban-mob-title-btn:focus-visible,
+.lead-board-add:focus-visible,
+.kanban-switch-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.action-icon-btn:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+}
+
 
 </style>

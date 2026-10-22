@@ -1,5 +1,5 @@
     <template>
-        <b-modal 
+            <b-modal 
             id="create-lead-modal" 
             v-model="show"
             hide-header
@@ -8,10 +8,11 @@
             centered
             body-class="p-0"
             dialog-class="create-lead-dialog kanban-mobile-fullscreen-modal"
+            @hide="onCreateHide"
         >
             <div class="create-lead-modal-content p-3">
                 <div class="create-lead-modal-top">
-                    <ModalHeader title="Create New Lead" @close="closeModal" />
+                    <ModalHeader title="Create New Lead" @close="requestClose" />
 
                     <StageSelector
                         class="px-1"
@@ -673,6 +674,7 @@
                         {{ errorMessage }}
                     </div>
                     
+                    <div v-if="draftStatus" class="lead-draft-status" role="status">{{ draftStatus }}</div>
                     <div
                         class="d-flex align-items-center gap-3"
                         :class="isMobileModal ? 'modal-footer-actions--mobile' : 'justify-content-end'"
@@ -681,7 +683,7 @@
                             v-if="isMobileModal"
                             type="button"
                             class="btn-clear btn-cancel-mobile"
-                            @click="closeModal"
+                            @click="requestClose"
                             :disabled="isSubmitting"
                         >
                             Cancel
@@ -690,7 +692,7 @@
                             v-else
                             type="button"
                             class="btn-clear"
-                            @click="resetForm"
+                            @click="requestClear"
                             :disabled="isSubmitting"
                         >
                             Clear
@@ -712,6 +714,8 @@
     
     <script setup>
     import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, inject } from 'vue'
+    import { useLeadFormDraft } from '@/composables/useLeadFormDraft'
+    import { pickFields } from '@/utils/leadFormDraftStorage'
     import { BModal, BFormInput, BFormSelect, BFormTextarea } from 'bootstrap-vue-3'
     import vSelect from 'vue-select'
     import 'vue-select/dist/vue-select.css'
@@ -744,6 +748,32 @@
     const closeModal = () => {
         show.value = false
         emit('update:modelValue', false)
+    }
+
+    async function requestClose() {
+        if (isSubmitting.value) return
+        const allowed = await leadDraft.confirmLeave()
+        if (!allowed) return
+        allowCreateHide.value = true
+        closeModal()
+    }
+
+    async function requestClear() {
+        if (isSubmitting.value) return
+        const choice = await leadDraft.ask()
+        if (choice === 'continue') return
+        if (choice === 'save') {
+            await submitForm()
+            return
+        }
+        leadDraft.runPaused(() => resetForm())
+        leadDraft.acceptCurrent()
+    }
+
+    function onCreateHide(event) {
+        if (allowCreateHide.value || !leadDraft.isDirty.value) return
+        if (event && typeof event.preventDefault === 'function') event.preventDefault()
+        void requestClose()
     }
     const users = ref([])
     const sources = ref([])
@@ -1044,6 +1074,7 @@ const resetReferralData = () => {
 
 // اختيار عميل موجود بيملّي بيانات المُحيل بس، ومبيلمسش أي حاجة تانية في الفورم
 watch(selectedExistingClient, (client) => {
+    if (leadDraft?.isApplying?.value) return
     form.value.source_client_name = client ? clientName(client) : ''
     form.value.source_client_phone = client ? clientPhone(client) : ''
     delete validationErrors.value.source_client_id
@@ -1158,6 +1189,52 @@ watch(selectedExistingClient, (client) => {
         budgetFromDisplay.value = formatBudgetThousands(form.value.budget_from)
         budgetToDisplay.value = formatBudgetThousands(form.value.budget_to)
     }
+
+    const CREATE_DRAFT_FIELDS = [
+        'lead_name', 'stage_id', 'salutation', 'first_name', 'last_name', 'work_phone', 'email',
+        'secondary_email', 'work_phone_2', 'website', 'comment', 'lead_source', 'source_information',
+        'bedrooms', 'purpose_buying', 'responsible_person_id', 'budget_from', 'budget_to', 'currency',
+        'area_id', 'property_type_id', 'status_lead', 'available_date', 'lead_type', 'property_status',
+        'branch', 'lost_reason', 'source_client_name', 'source_client_phone', 'referral_type',
+    ]
+
+    function getCreateDraftSnapshot() {
+        return {
+            form: pickFields(form.value, CREATE_DRAFT_FIELDS),
+            referralClient: selectedExistingClient.value?.id ? {
+                id: selectedExistingClient.value.id,
+                name: clientName(selectedExistingClient.value),
+                work_phone: clientPhone(selectedExistingClient.value),
+            } : null,
+        }
+    }
+
+    function applyCreateDraftSnapshot(data) {
+        const next = { ...form.value }
+        CREATE_DRAFT_FIELDS.forEach((key) => {
+            if (data?.form && Object.prototype.hasOwnProperty.call(data.form, key)) {
+                next[key] = data.form[key]
+            }
+        })
+        form.value = next
+        selectedExistingClient.value = data?.referralClient?.id ? {
+            id: data.referralClient.id,
+            name: data.referralClient.name || '',
+            lead_name: data.referralClient.name || '',
+            work_phone: data.referralClient.work_phone || '',
+        } : null
+        syncBudgetDisplayFields()
+    }
+
+    const allowCreateHide = ref(false)
+    const leadDraft = useLeadFormDraft({
+        scope: 'create',
+        getSnapshot: getCreateDraftSnapshot,
+        applySnapshot: applyCreateDraftSnapshot,
+        isBusy: () => isSubmitting.value,
+        onSave: () => submitForm(),
+    })
+    const draftStatus = computed(() => leadDraft.statusLabel.value)
     
     function closeBudgetDropdown() {
         showBudgetDropdown.value = false
@@ -1259,7 +1336,7 @@ watch(selectedExistingClient, (client) => {
     watch(show, (val) => {
         emit('update:modelValue', val)
         if (val) {
-            form.value.stage_id = null
+            if (!leadDraft.isDirty.value) form.value.stage_id = null
         } else {
             validationErrors.value = {}
             errorMessage.value = ''
@@ -1273,11 +1350,13 @@ watch(selectedExistingClient, (client) => {
         console.log('Form stage_id changed to:', newVal)
     })
     watch(() => form.value.lead_source, () => {
+            if (leadDraft.isApplying.value) return
             form.value.referral_type = null
             resetReferralData()
         })
 
         watch(() => form.value.referral_type, async (type) => {
+            if (leadDraft.isApplying.value) return
             resetReferralData()
             delete validationErrors.value.referral_type
             if (type === 'existing' && clientsList.value.length === 0) {
@@ -1314,13 +1393,14 @@ watch(selectedExistingClient, (client) => {
         try {
             isLoadingUsers.value = true
             const response = await api.get('/available-responsible-persons', {
-                params: { limit: 30, selected_id: loggedInUserId || undefined },
+                params: { limit: 30, selected_id: form.value.responsible_person_id || loggedInUserId || undefined },
             })
             if (response.data && (response.data.data || response.data).length > 0) {
                 users.value = response.data.data || response.data
+                const preferredId = form.value.responsible_person_id || loggedInUserId
                 const defaultUser =
-                    users.value.find((user) => Number(user.id) === Number(loggedInUserId)) ||
-                    users.value.find((user) => Number(user.id) === Number(form.value.responsible_person_id))
+                    users.value.find((user) => Number(user.id) === Number(preferredId)) ||
+                    users.value.find((user) => Number(user.id) === Number(loggedInUserId))
     
                 if (defaultUser) {
                     form.value.responsible_person_id = defaultUser.id
@@ -1334,6 +1414,7 @@ watch(selectedExistingClient, (client) => {
         }
     }
     watch(() => form.value.stage_id, (newStageId) => {
+        if (leadDraft.isApplying.value) return
         console.log('Stage changed to:', newStageId)
         // إعادة تعيين الحقول الخاصة بالمرحلة السابقة
         if (!shouldShowField('bedrooms')) form.value.bedrooms = null
@@ -1355,7 +1436,9 @@ watch(selectedExistingClient, (client) => {
         if (!shouldShowField('lost_reason')) form.value.lost_reason = null
     })
    
-    onMounted(() => {
+    onMounted(async () => {
+        leadDraft.begin()
+        await leadDraft.recover()
         syncMobileModal()
         window.addEventListener('resize', syncMobileModal, { passive: true })
         // Capture phase: several triggers in this form use @click.stop, which would
@@ -1822,6 +1905,7 @@ watch(selectedExistingClient, (client) => {
     }
     
     const submitForm = async () => {
+        if (isSubmitting.value) return false
         try {
             isSubmitting.value = true
             errorMessage.value = ''
@@ -1831,30 +1915,30 @@ watch(selectedExistingClient, (client) => {
             if (budgetError) {
                 validationErrors.value.budget = [budgetError]
                 $showNotification(budgetError, 'warning')
-                return
+                return false
             }
             console.log('PHONE:', form.value.work_phone)
             if (form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
                 validationErrors.value.work_phone = ['Enter a valid phone number']
                 $showNotification('Primary phone is not valid', 'warning')
-                return
+                return false
             }
             console.log('PHONE2:', form.value.work_phone_2)
             if (form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
                 validationErrors.value.work_phone_2 = ['Enter a valid phone number']
                 $showNotification('Secondary phone is not valid', 'warning')
-                return
+                return false
             }
            if (isSalesUser.value && form.value.lead_source === 'referral') {
                 if (!form.value.referral_type) {
                     validationErrors.value.referral_type = ['Please select referral type']
                     $showNotification('Please select referral type', 'warning')
-                    return
+                    return false
                 }
                 if (form.value.referral_type === 'existing' && !selectedExistingClient.value) {
                     validationErrors.value.source_client_id = ['Please select a client']
                     $showNotification('Please select the referring client', 'warning')
-                    return
+                    return false
                 }
                 if (form.value.referral_type === 'other') {
                     const errs = {}
@@ -1869,7 +1953,7 @@ watch(selectedExistingClient, (client) => {
                     if (Object.keys(errs).length) {
                         validationErrors.value = errs
                         $showNotification('Please fix the referral fields', 'warning')
-                        return
+                        return false
                     }
                 }
             }
@@ -1879,7 +1963,7 @@ watch(selectedExistingClient, (client) => {
             if (form.value.website && !isValidLink(form.value.website)) {
                 validationErrors.value.website = ['Enter a valid link, e.g. https://www.bayut.com/...']
                 $showNotification('The link is not valid', 'warning')
-                return
+                return false
             }
 
             const payload = {
@@ -1907,14 +1991,17 @@ watch(selectedExistingClient, (client) => {
             
             // Success: close modal, reset form, and emit the created lead so the
             // parent can insert it into the board locally (no refetch/refresh)
+            leadDraft.runPaused(() => resetForm())
+            leadDraft.acceptCurrent()
+            allowCreateHide.value = true
             show.value = false
-            resetForm()
 
             console.log('📤 Emitting lead-created event to parent')
             emit('lead-created', response.data?.data || response.data)
             
             // Show success notification
             $showNotification('Lead created successfully!', 'success')
+            return true
             
         } catch (error) {
             // Error: show error message, don't close modal, don't reset form
@@ -1933,6 +2020,7 @@ watch(selectedExistingClient, (client) => {
                 errorMessage.value = error.response?.data?.message || 'Failed to create lead. Please try again.'
                 $showNotification(errorMessage.value, 'error')
             }
+            return false
         } finally {
             isSubmitting.value = false
         }
@@ -1953,6 +2041,14 @@ watch(selectedExistingClient, (client) => {
     .create-lead-modal-content {
         background: #fff;
         border-radius: 12px;
+    }
+
+    .lead-draft-status {
+        margin-bottom: 8px;
+        color: #64748b;
+        font-family: Montserrat, sans-serif;
+        font-size: 12px;
+        line-height: 1.4;
     }
 
     .create-lead-body {
