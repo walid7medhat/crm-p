@@ -27,7 +27,209 @@ function sharpen(source) {
   return canvas
 }
 
-export function mountFloorPlanScene(canvas, sourceCanvas, onChange) {
+function pixelLum(r, g, b) {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+export function traceFloorPlan(source) {
+  const scale = Math.min(1, 820 / Math.max(source.width, source.height))
+  const width = Math.max(1, Math.round(source.width * scale))
+  const height = Math.max(1, Math.round(source.height * scale))
+  const sample = document.createElement('canvas')
+  sample.width = width
+  sample.height = height
+  const context = sample.getContext('2d', { willReadFrequently: true })
+  context.drawImage(source, 0, 0, width, height)
+  const data = context.getImageData(0, 0, width, height).data
+  const colorAt = (x, y) => {
+    const index = (y * width + x) * 4
+    return [data[index], data[index + 1], data[index + 2]]
+  }
+
+  const buckets = new Map()
+  for (let y = 0; y < height; y += 1) {
+    let x = 0
+    while (x < width) {
+      const [r, g, b] = colorAt(x, y)
+      const sat = Math.max(r, g, b) - Math.min(r, g, b)
+      const lit = pixelLum(r, g, b)
+      if (lit < 210 && sat < 40) {
+        const start = x
+        x += 1
+        while (x < width) {
+          const [rr, gg, bb] = colorAt(x, y)
+          const nextSat = Math.max(rr, gg, bb) - Math.min(rr, gg, bb)
+          if (!(pixelLum(rr, gg, bb) < 210 && nextSat < 40)) break
+          x += 1
+        }
+        if (x - start > 36) {
+          for (let xx = start; xx < x; xx += 2) {
+            const [rr, gg, bb] = colorAt(xx, y)
+            if (Math.max(rr, gg, bb) - Math.min(rr, gg, bb) < 18 && pixelLum(rr, gg, bb) < 205) {
+              const key = `${rr - (rr % 6)},${gg - (gg % 6)},${bb - (bb % 6)}`
+              buckets.set(key, (buckets.get(key) || 0) + 1)
+            }
+          }
+        }
+      } else {
+        x += 1
+      }
+    }
+  }
+
+  let chosen = [0, 0, 0]
+  let best = 0
+  buckets.forEach((count, key) => {
+    if (count > best) {
+      best = count
+      chosen = key.split(',').map(Number)
+    }
+  })
+  if (pixelLum(...chosen) > 165) {
+    let dark = null
+    let darkCount = 0
+    buckets.forEach((count, key) => {
+      const color = key.split(',').map(Number)
+      if (pixelLum(...color) < 150 && count > best * 0.35 && count > darkCount) {
+        dark = color
+        darkCount = count
+      }
+    })
+    if (dark) chosen = dark
+  }
+  const tolerance = pixelLum(...chosen) > 140 ? 22 : 16
+  const mask = new Uint8Array(width * height)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const [r, g, b] = colorAt(x, y)
+      if (
+        Math.abs(r - chosen[0]) <= tolerance &&
+        Math.abs(g - chosen[1]) <= tolerance &&
+        Math.abs(b - chosen[2]) <= tolerance &&
+        Math.max(r, g, b) - Math.min(r, g, b) < 24
+      ) {
+        mask[y * width + x] = 1
+      }
+    }
+  }
+
+  const minRun = 30
+  const minThick = 4
+  const maxThick = 48
+  const walls = []
+  let y = 0
+  while (y < height) {
+    let x = 0
+    let foundRow = false
+    while (x < width) {
+      if (mask[y * width + x]) {
+        const start = x
+        while (x < width && mask[y * width + x]) x += 1
+        if (x - start >= minRun) foundRow = true
+      } else {
+        x += 1
+      }
+    }
+    if (!foundRow) {
+      y += 1
+      continue
+    }
+    const y0 = y
+    const runs = new Map()
+    while (y < height) {
+      let rowHasRun = false
+      x = 0
+      while (x < width) {
+        if (mask[y * width + x]) {
+          const start = x
+          while (x < width && mask[y * width + x]) x += 1
+          if (x - start >= minRun) {
+            rowHasRun = true
+            const key = `${start - (start % 4)},${Math.ceil(x / 4) * 4}`
+            runs.set(key, (runs.get(key) || 0) + 1)
+          }
+        } else {
+          x += 1
+        }
+      }
+      if (!rowHasRun) break
+      y += 1
+    }
+    const thick = y - y0
+    if (thick >= minThick && thick <= maxThick) {
+      runs.forEach((count, key) => {
+        const [x0, x1] = key.split(',').map(Number)
+        if (count >= Math.max(3, Math.floor(thick / 2)) && x1 - x0 >= minRun) walls.push([x0, y0, x1, y])
+      })
+    }
+    y += 1
+  }
+
+  const columns = []
+  for (let x = 0; x < width; x += 1) {
+    const segs = []
+    let yy = 0
+    while (yy < height) {
+      if (mask[yy * width + x]) {
+        const start = yy
+        while (yy < height && mask[yy * width + x]) yy += 1
+        if (yy - start >= minRun) segs.push([start, yy])
+      } else {
+        yy += 1
+      }
+    }
+    if (segs.length) columns.push([x, segs])
+  }
+  let index = 0
+  while (index < columns.length) {
+    const x0 = columns[index][0]
+    const bag = new Map()
+    let end = index
+    while (end < columns.length && columns[end][0] - x0 <= maxThick) {
+      columns[end][1].forEach(([y0, y1]) => {
+        const key = `${y0 - (y0 % 4)},${Math.ceil(y1 / 4) * 4}`
+        bag.set(key, (bag.get(key) || 0) + 1)
+      })
+      end += 1
+    }
+    const thick = columns[end - 1][0] - x0 + 1
+    if (thick >= minThick && thick <= maxThick) {
+      bag.forEach((count, key) => {
+        const [y0, y1] = key.split(',').map(Number)
+        if (count >= Math.max(3, Math.floor(thick / 2)) && y1 - y0 >= minRun) {
+          walls.push([x0, y0, columns[end - 1][0] + 1, y1])
+        }
+      })
+    }
+    index = end > index ? end : index + 1
+  }
+
+  if (walls.length < 4) return null
+  const inv = 1 / scale
+  const original = walls.map((rect) => rect.map((value) => value * inv))
+  let x0 = source.width
+  let y0 = source.height
+  let x1 = 0
+  let y1 = 0
+  original.forEach((rect) => {
+    x0 = Math.min(x0, rect[0], rect[2])
+    y0 = Math.min(y0, rect[1], rect[3])
+    x1 = Math.max(x1, rect[0], rect[2])
+    y1 = Math.max(y1, rect[1], rect[3])
+  })
+  const pad = 8
+  return {
+    walls: original,
+    bounds: {
+      x0: Math.max(0, x0 - pad),
+      y0: Math.max(0, y0 - pad),
+      x1: Math.min(source.width, x1 + pad),
+      y1: Math.min(source.height, y1 + pad)
+    }
+  }
+}
+
+export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x17141a)
   const camera = new THREE.PerspectiveCamera(HOME_FOV, 1, 0.05, 120)
@@ -61,13 +263,16 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange) {
   const plaster = new THREE.MeshStandardMaterial({ color: 0xf7f4ef, roughness: 0.72 })
   const plinthMat = new THREE.MeshStandardMaterial({ color: 0x2a242c, roughness: 0.94 })
   const solids = []
-  const metres = 12 / Math.max(sourceCanvas.width, sourceCanvas.height)
-  const width = sourceCanvas.width * metres
-  const depth = sourceCanvas.height * metres
+  const plan = traced || {
+    walls: [],
+    bounds: { x0: 0, y0: 0, x1: sourceCanvas.width, y1: sourceCanvas.height }
+  }
+  const metres = 11 / Math.max(plan.bounds.x1 - plan.bounds.x0, plan.bounds.y1 - plan.bounds.y0)
+  const width = (plan.bounds.x1 - plan.bounds.x0) * metres
+  const depth = (plan.bounds.y1 - plan.bounds.y0) * metres
   const wallH = 1.12
-  const thickness = 0.16
-  const door = Math.min(1.2, Math.max(0.85, width * 0.18))
-  const gapStart = (width - door) / 2
+  const wx = (px) => (px - plan.bounds.x0) * metres
+  const wz = (py) => (py - plan.bounds.y0) * metres
 
   const studio = new THREE.Mesh(
     new THREE.CircleGeometry(Math.max(width, depth) + 4, 72),
@@ -88,8 +293,8 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange) {
   const position = geo.attributes.position
   const uv = geo.attributes.uv
   for (let i = 0; i < position.count; i++) {
-    const px = position.getX(i) / metres
-    const py = (-position.getY(i)) / metres
+    const px = plan.bounds.x0 + position.getX(i) / metres
+    const py = plan.bounds.y0 + (-position.getY(i)) / metres
     uv.setXY(i, px / sourceCanvas.width, 1 - py / sourceCanvas.height)
   }
 
@@ -126,17 +331,24 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange) {
     if (collide) solids.push({ minX, maxX, minZ, maxZ })
   }
 
-  addBox(0, 0, thickness, depth, wallH, true)
-  addBox(width - thickness, 0, width, depth, wallH, true)
-  addBox(0, 0, width, thickness, wallH, true)
-  addBox(0, depth - thickness, gapStart, depth, wallH, true)
-  addBox(gapStart + door, depth - thickness, width, depth, wallH, true)
+  if (plan.walls.length) {
+    plan.walls.forEach((rect) => addBox(wx(rect[0]), wz(rect[1]), wx(rect[2]), wz(rect[3]), wallH, true))
+  } else {
+    const door = Math.min(1.2, Math.max(0.85, width * 0.18))
+    const gapStart = (width - door) / 2
+    const thickness = 0.16
+    addBox(0, 0, thickness, depth, wallH, true)
+    addBox(width - thickness, 0, width, depth, wallH, true)
+    addBox(0, 0, width, thickness, wallH, true)
+    addBox(0, depth - thickness, gapStart, depth, wallH, true)
+    addBox(gapStart + door, depth - thickness, width, depth, wallH, true)
+  }
 
   const player = { x: width / 2, z: depth - 1.15, yaw: 0, pitch: -0.28 }
   const orbit = {
     azimuth: 0.32,
     polar: 0.58,
-    radius: Math.max(width, depth) * 1.35,
+    radius: Math.max(width, depth) * 1.5,
     targetX: width / 2,
     targetY: 0,
     targetZ: depth * 0.46
