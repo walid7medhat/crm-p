@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Services\NextActionTour\NextActionTourCampaignService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class NextActionTourController extends Controller
 {
@@ -15,7 +16,7 @@ class NextActionTourController extends Controller
             return ApiResponse::error('Only a super admin can manage this campaign.', 403);
         }
 
-        return ApiResponse::success($service->status());
+        return ApiResponse::success($service->status($this->feature($request)));
     }
 
     public function start(Request $request, NextActionTourCampaignService $service)
@@ -24,7 +25,7 @@ class NextActionTourController extends Controller
             return ApiResponse::error('Only a super admin can start this campaign.', 403);
         }
 
-        return ApiResponse::success($service->start($request->user()), 'Campaign started.');
+        return ApiResponse::success($service->start($request->user(), $this->feature($request)), 'Campaign started.');
     }
 
     public function stop(Request $request, NextActionTourCampaignService $service)
@@ -33,12 +34,24 @@ class NextActionTourController extends Controller
             return ApiResponse::error('Only a super admin can stop this campaign.', 403);
         }
 
-        return ApiResponse::success($service->stop($request->user()), 'Campaign stopped.');
+        return ApiResponse::success($service->stop($request->user(), $this->feature($request)), 'Campaign stopped.');
     }
 
     public function me(Request $request, NextActionTourCampaignService $service)
     {
-        return ApiResponse::success($service->forUser($request->user()));
+        return ApiResponse::success($service->forUser($request->user(), $this->feature($request)));
+    }
+
+    private function feature(Request $request): string
+    {
+        $validated = $request->validate([
+            'feature' => ['sometimes', 'string', Rule::in([
+                NextActionTourCampaignService::FEATURE_NEXT_ACTION,
+                NextActionTourCampaignService::FEATURE_PROPERTY_COMPARE,
+            ])],
+        ]);
+
+        return $validated['feature'] ?? NextActionTourCampaignService::FEATURE_NEXT_ACTION;
     }
 
     public function shown(Request $request, NextActionTourCampaignService $service)

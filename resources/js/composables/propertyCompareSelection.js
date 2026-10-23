@@ -26,6 +26,19 @@ function flash(message) {
   }, 2600)
 }
 
+export function listingPurpose(listing) {
+  const raw = String(listing?.listing_status || '').trim().toLowerCase()
+  if (raw.includes('rent') || raw.includes('lease')) return 'rent'
+  if (raw.includes('sale') || raw === 'buy' || raw === 'sell') return 'sale'
+  return null
+}
+
+function sameMarket(items) {
+  const market = items.map(listingPurpose).find(Boolean)
+  if (!market) return items.filter((item) => listingPurpose(item))
+  return items.filter((item) => listingPurpose(item) === market)
+}
+
 export function isActiveListing(listing) {
   if (!listing) return false
   if (listing.is_active === false || listing.is_active === 0 || listing.is_active === '0') return false
@@ -89,7 +102,7 @@ function restore() {
   try {
     const parsed = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null')
     const items = Array.isArray(parsed?.items) ? parsed.items.filter((item) => item?.id) : []
-    selected.value = items.slice(0, MAX_COMPARE).map((item) => ({ ...item, id: String(item.id) }))
+    selected.value = sameMarket(items.slice(0, MAX_COMPARE).map((item) => ({ ...item, id: String(item.id) })))
     compareMode.value = parsed?.mode === true
   } catch {
     selected.value = []
@@ -98,6 +111,24 @@ function restore() {
 }
 
 restore()
+
+export function snapshotCompareSession() {
+  try {
+    return sessionStorage.getItem(SESSION_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function restoreCompareSession(raw) {
+  try {
+    if (raw) sessionStorage.setItem(SESSION_KEY, raw)
+    else sessionStorage.removeItem(SESSION_KEY)
+  } catch {
+    /* ignore */
+  }
+  restore()
+}
 
 export function startPropertyCompare() {
   if (!canUsePropertyCompare()) return
@@ -123,6 +154,12 @@ export function usePropertyCompareSelection() {
       flash('Only active units can be compared.')
       return false
     }
+    const market = listingPurpose(listing)
+    const locked = selected.value.map(listingPurpose).find(Boolean)
+    if (!market || (locked && locked !== market)) {
+      flash('Compare sale with sale, or rent with rent.')
+      return false
+    }
     if (selected.value.length >= MAX_COMPARE) {
       flash('You can select up to 3 listings.')
       return false
@@ -139,6 +176,11 @@ export function usePropertyCompareSelection() {
 
   function openResults() {
     if (!canUsePropertyCompare() || selected.value.length < 2) return
+    const market = selected.value.map(listingPurpose).find(Boolean)
+    if (!market || selected.value.some((item) => listingPurpose(item) !== market)) {
+      flash('Compare sale with sale, or rent with rent.')
+      return
+    }
     resultOpen.value = true
   }
 

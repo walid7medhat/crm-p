@@ -55,6 +55,33 @@ class NextActionTourCampaignTest extends TestCase
         $this->assertFalse($after['should_show']);
     }
 
+    public function test_property_compare_is_once_per_start_and_leaves_next_action_running(): void
+    {
+        Event::fake();
+        $admin = $this->makeUser('super_admin');
+        $agent = $this->makeUser('sales');
+        $service = app(NextActionTourCampaignService::class);
+
+        $next = $service->start($admin);
+        $compare = $service->start($admin, 'property_compare');
+
+        $this->assertTrue($service->status()['is_active']);
+        $this->assertSame($next['launch_id'], $service->status()['launch_id']);
+        $this->assertTrue($service->status('property_compare')['is_active']);
+        $this->assertSame(1, $service->status('property_compare')['max_views']);
+
+        $shown = $service->recordShown($agent, $compare['launch_id']);
+        $this->assertSame(1, $shown['views']);
+        $this->assertFalse($shown['should_show']);
+
+        $again = $service->forUser($agent, 'property_compare');
+        $this->assertFalse($again['should_show']);
+
+        $nextStill = $service->forUser($agent);
+        $this->assertTrue($nextStill['should_show']);
+        $this->assertSame(3, $nextStill['max_views']);
+    }
+
     public function test_non_super_admin_cannot_start_campaign(): void
     {
         $agent = $this->makeUser('sales');

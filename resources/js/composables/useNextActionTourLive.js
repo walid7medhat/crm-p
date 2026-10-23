@@ -33,6 +33,7 @@ async function maybeShowFromServer() {
 
 function onCampaignEvent(payload) {
   if (!payload) return
+  if (payload.feature && payload.feature !== 'next_action') return
   if (payload.active && payload.launch_id) {
     if (tourPhase.value === 'idle') {
       // Re-check views so refresh / restart still respects the 3-view cap.
@@ -55,7 +56,7 @@ function bindChannel() {
 
 function unbindChannel() {
   if (channel) {
-    channel.stopListening('.next-action-tour')
+    channel.stopListening('.next-action-tour', onCampaignEvent)
     channel = null
   }
   listening = false

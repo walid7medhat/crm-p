@@ -9,6 +9,7 @@ class NextActionTourCampaign extends Model
 {
     protected $fillable = [
         'launch_id',
+        'feature',
         'is_active',
         'started_by',
         'started_at',

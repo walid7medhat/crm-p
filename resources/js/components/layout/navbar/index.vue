@@ -108,6 +108,7 @@
                 type="button"
                 class="kanban-switch-option"
                 :class="{ 'is-active': tab.id === mobileHeaderTabValue }"
+                :data-tour="tab.type === 'compare' ? 'property-compare-open' : undefined"
                 role="menuitemradio"
                 :aria-checked="tab.id === mobileHeaderTabValue ? 'true' : 'false'"
                 @click="chooseKanbanSwitch(tab)"
@@ -361,6 +362,7 @@
                 v-else-if="tab.type === 'compare'"
                 type="button"
                 class="module-tab-btn"
+                data-tour="property-compare-open"
                 @click="openPropertyCompare"
               >
                 {{ tab.label }}
