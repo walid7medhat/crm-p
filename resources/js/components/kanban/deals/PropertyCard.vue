@@ -128,7 +128,7 @@
           </div>
           <div class="listing-summary-grid">
             <div><span class="listing-summary-label">Unit No</span><span class="listing-summary-value">{{ selectedListingSummary.unit_number || '—' }}</span></div>
-            <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedListingSummary.property_type?.name || '—' }}</span></div>
+            <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedListingSummary.property_type || '—' }}</span></div>
             <div><span class="listing-summary-label">Bedrooms</span><span class="listing-summary-value">{{ selectedListingSummary.bedrooms_text || '—' }}</span></div>
             <div><span class="listing-summary-label">Unit Size</span><span class="listing-summary-value">{{ selectedListingSummary.size_sqft ? `${selectedListingSummary.size_sqft} sqft` : '—' }}</span></div>
           </div>
@@ -499,14 +499,13 @@ const showListingPicker = computed(() =>
 
 // listing_id is mandatory for secondary regardless of requiredFields prop.
 const isListingRequired = computed(() =>
-  props.dealType === 'secondary' || isRequired('listing_id')
+  props.dealType === 'secondary' || props.dealType === 'rental' || isRequired('listing_id')
 )
 
 // Secondary property fields belong to the listing — hide them entirely. The user can
 // only set them by picking a listing, and the chosen listing's values are shown as a
 // read-only summary card.
-const hidePropertyDetailFields = computed(() => props.dealType === 'secondary')
-
+const hidePropertyDetailFields = computed(() => props.dealType === 'secondary' || props.dealType === 'rental')
 // Snapshot of the selected listing, used to render the summary card.
 const selectedListingSummary = computed(() => {
   if (!localProperty.value?.listing_id) return null
@@ -687,7 +686,7 @@ const fetchAvailableListings = async (areaId, keepListingId = null) => {
       size_sqft: listing.size_sqft,
       developer_id: listing.developer_id,
       status: listing.status,
-      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type?.name || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
+      display_name: `${listing.unit_number || 'No Unit'} - ${listing.property_type || 'Property'} (${listing.status === 'converted' ? 'Sold' : 'Rented'})`
     }))
     
   } catch (error) {

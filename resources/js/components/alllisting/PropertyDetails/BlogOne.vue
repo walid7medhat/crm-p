@@ -8275,8 +8275,8 @@ const createPaymentDetailsSlide = () => {
 const createFooter = () => {
   return `
   <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By altcrm</p>
     <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Oia Properties</p>
+    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By altcrm</p>
   </div>
   `;
 };

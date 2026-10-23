@@ -71,35 +71,29 @@
                             </div>
 
                             <!-- Country Selection -->
-                            <!--<div class="mb-4">-->
-                            <!--    <label class="form-label">Country <span class="text-danger">*</span></label>-->
-                            <!--    <v-select-->
-                            <!--        v-model="selectedCountry"-->
-                            <!--        :options="countries"-->
-                            <!--        label="name"-->
-                            <!--        :reduce="(area) => area"-->
-                            <!--        placeholder="Select country"-->
-                            <!--        :class="{'is-invalid': errors.country}"-->
-                            <!--        :disabled="loading || (isEditMode && !canEditCountry)"-->
-                            <!--        @update:modelValue="onCountryChange"-->
-                            <!--    >-->
-                            <!--        <template #option="{ name }">-->
-                            <!--            <div>-->
-                            <!--                <iconify-icon icon="lucide:globe" class="text-primary me-2"></iconify-icon>-->
-                            <!--                {{ name }}-->
-                            <!--            </div>-->
-                            <!--        </template>-->
-                            <!--    </v-select>-->
-                            <!--    <div class="invalid-feedback" v-if="errors.country">-->
-                            <!--        {{ errors.country[0] }}-->
-                            <!--    </div>-->
-                            <!--    <small v-if="isEditMode && !canEditCountry" class="text-muted">-->
-                            <!--        Country cannot be changed because this area has children-->
-                            <!--    </small>-->
-                            <!--</div>-->
+                            <div class="mb-4">
+                                <label class="form-label">Country</label>
+                                <v-select
+                                    v-model="selectedCountry"
+                                    :options="countries"
+                                    label="name"
+                                    :reduce="(area) => area"
+                                    placeholder="Select country (leave empty to create a new country)"
+                                    :class="{'is-invalid': errors.country}"
+                                    :disabled="loading"
+                                    @update:modelValue="onCountryChange"
+                                >
+                                    <template #option="{ name }">
+                                        <div>
+                                            <iconify-icon icon="lucide:globe" class="text-primary me-2"></iconify-icon>
+                                            {{ name }}
+                                        </div>
+                                    </template>
+                                </v-select>
+                            </div>
 
                             <!-- City Selection -->
-                            <div class="mb-4">
+                            <div class="mb-4" v-if="selectedCountry">
                                 <label class="form-label">City <span class="text-danger">*</span></label>
                                 <v-select
                                     v-model="selectedCity"
@@ -355,7 +349,7 @@ export default {
         const selectedSubCommunity = ref(null);
         const selectedCluster = ref(null);
         const selectedBuilding = ref(null);
-        const selectedType = ref('cluster');
+        const selectedType = ref('country');
 
         // Lists
         const countries = ref([]);
@@ -511,7 +505,7 @@ export default {
             }
             
             if (!isEditMode.value) {
-                if (selectedType.value) {
+                if (shouldShowTypeSelection.value && selectedType.value) {
                     return formatType(selectedType.value);
                 }
                 
@@ -576,7 +570,7 @@ export default {
             if (selectedCommunity.value) return selectedCommunity.value;
             if (selectedArea.value) return selectedArea.value;
             if (selectedCity.value) return selectedCity.value;
-            // if (selectedCountry.value) return selectedCountry.value;
+            if (selectedCountry.value) return selectedCountry.value;
             // return default country id
             return 1;
         };
@@ -584,17 +578,8 @@ export default {
         // Computed: Form validity
         const isFormValid = computed(() => {
             if (!areaForm.value.name?.trim()) return false;
-            
-            // In edit mode, always valid if name is filled
             if (isEditMode.value) return true;
-            
-            // In create mode, require country and city
-            // if (!selectedCountry.value) return false;
-            if (!selectedCity.value) return false;
-            
-            // Require type selection when needed
             if (shouldShowTypeSelection.value && !selectedType.value) return false;
-            
             return true;
         });
 
@@ -604,7 +589,7 @@ export default {
                 return areaForm.value.type;
             }
             
-            if (selectedType.value) {
+            if (shouldShowTypeSelection.value && selectedType.value) {
                 return selectedType.value;
             }
             
@@ -647,21 +632,7 @@ export default {
             ).join(' ');
         };
 
-        // Set UAE as default country
-        const setUAEDefault = () => {
-            if (!isEditMode.value && countries.value.length > 0) {
-                const uae = countries.value.find(c => 
-                    c.name.toLowerCase() === 'uae' || 
-                    c.name.toLowerCase() === 'united arab emirates' ||
-                    c.id === UAE_ID
-                );
-                
-                if (uae) {
-                    selectedCountry.value = uae;
-                    onCountryChange(uae);
-                }
-            }
-        };
+       
 
         // Fetch countries
         const fetchCountries = async () => {
@@ -671,9 +642,7 @@ export default {
                 });
                 countries.value = response.data.data || response.data || [];
                 
-                if (!isEditMode.value) {
-                    setUAEDefault();
-                }
+               
                 
             } catch (error) {
                 console.error("Error fetching countries:", error);
@@ -1034,32 +1003,16 @@ export default {
             }
         };
 
-        // Watch for cities loaded in create mode
-        watch(cities, (newCities) => {
-            if (!isEditMode.value && newCities.length > 0 && !selectedCity.value) {
-                const defaultCity = newCities.find(c => 
-                    c.name.toLowerCase() === 'abu dhabi'
-                );
-                if (defaultCity) {
-                    selectedCity.value = defaultCity;
-                    onCityChange(defaultCity);
-                }
-            }
-        });
+       
 
         // Initialize
         onMounted(async () => {
             try {
                 loading.value = true;
-                
+                await fetchCountries();
                 if (isEditMode.value) {
                     await fetchArea();
                 }
-                
-                // await fetchCountries();
-                 await fetchCities();
-        
-
             } catch (error) {
                 console.error('Error initializing component:', error);
             } finally {

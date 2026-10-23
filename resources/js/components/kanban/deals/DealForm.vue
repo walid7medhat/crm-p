@@ -640,7 +640,7 @@
                     </span>
                   </div>
                   <div class="unit-select-option-bottom">
-                    <span>{{ option.property_type?.name || 'N/A' }}</span>
+                    <span>{{ option.property_type || 'N/A' }}</span>
                     <span class="unit-select-option-dot">&middot;</span>
                     <span>{{ option.bedrooms_text || '—' }}</span>
                     <span class="unit-select-option-dot">&middot;</span>
@@ -651,7 +651,7 @@
               <template #selected-option="option">
                 <span class="unit-select-selected">
                   <strong>{{ option.unit_number || 'No Unit' }}</strong>
-                  <span v-if="option.property_type?.name"> — {{ option.property_type.name }}</span>
+                  <span v-if="option.property_type"> — {{ option.property_type.name }}</span>
                 </span>
               </template>
               <template #open-indicator="{ attributes }">
@@ -666,7 +666,7 @@
           </div>
 
           <!-- Secondary: read-only summary of the unit auto-filled from the chosen listing. -->
-          <div class="col-12" v-if="hidePropertyDetailFields && selectedListingSummary">
+          <div class="col-md-12" v-if="hidePropertyDetailFields && selectedListingSummary">
             <div class="listing-summary-card">
               <div class="listing-summary-title">
                 <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
@@ -674,7 +674,7 @@
               </div>
               <div class="listing-summary-grid">
                 <div><span class="listing-summary-label">Unit No</span><span class="listing-summary-value">{{ selectedListingSummary.unit_number || '—' }}</span></div>
-                <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedListingSummary.property_type?.name || '—' }}</span></div>
+                <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedListingSummary.property_type || '—' }}</span></div>
                 <div><span class="listing-summary-label">Bedrooms</span><span class="listing-summary-value">{{ selectedListingSummary.bedrooms_text || '—' }}</span></div>
                 <div><span class="listing-summary-label">Unit Size</span><span class="listing-summary-value">{{ selectedListingSummary.size_sqft ? `${selectedListingSummary.size_sqft} sqft` : '—' }}</span></div>
               </div>
@@ -731,7 +731,7 @@
             <span v-else>Purchase Price</span>
             <span v-if="isPurchasePriceRequired" class="text-danger">*</span>
           </label>
-        <div class="input-group"><span class="input-group-text">AED</span><b-form-input v-model="form.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" @keypress="onMoneyKeypress" /></div></div>
+        <div class="input-group"><b-form-input v-model="form.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" @keypress="onMoneyKeypress" /><span class="input-group-text">AED</span></div></div>
           <!-- Developer / sales-person fields are primary-only (off-plan); secondary and rental never show them. -->
           <div class="col-md-4" v-if="props.dealType === 'primary'">
             <label class="form-label-custom">Developer</label>
@@ -767,8 +767,9 @@
           <div class="col-md-4">
             <label class="form-label-custom">Deal Total Amount</label>
             <div class="input-group">
-              <span class="input-group-text">AED</span>
+              
               <b-form-input v-model="form.deal_total_amount" type="text" inputmode="numeric" placeholder="Enter Total Amount" class="custom-input" @keypress="onMoneyKeypress" />
+              <span class="input-group-text">AED</span>
             </div>
             <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">{{ fieldErrors.deal_total_amount }}</div>
           </div>
@@ -1025,11 +1026,11 @@ const shouldHideLandlord = computed(() => hasListingId.value && props.dealType =
 const showSingleListingPicker = computed(() =>
   !showMultiProperties.value && (props.dealType === 'secondary' || props.dealType === 'rental')
 )
-const isSingleListingRequired = computed(() => props.dealType === 'secondary')
+const isSingleListingRequired = computed(() => props.dealType === 'secondary'|| props.dealType === 'rental')
 
 // Secondary deals: property details belong to the listing. Hide the manual inputs
 // entirely and show a read-only summary of the chosen unit instead.
-const hidePropertyDetailFields = computed(() => props.dealType === 'secondary')
+const hidePropertyDetailFields = computed(() => props.dealType === 'secondary' || props.dealType === 'rental')
 
 const selectedListingSummary = computed(() => {
   if (!form.value?.listing_id) return null

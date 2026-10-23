@@ -395,10 +395,39 @@
             </template>
           </v-select>
         </div>
-
+        <div class="col-md-6" v-if="showListingPicker">
+          <label class="form-label-custom">Select Unit</label>
+          <v-select
+            :model-value="editData.listing_id"
+            :options="availableListings"
+            :reduce="l => l.id"
+            label="label"
+            placeholder="Select a unit..."
+            class="custom-v-select"
+            @option:selected="onListingPicked"
+          >
+            <template #open-indicator="{ attributes }">
+              <span v-bind="attributes"><iconify-icon icon="lucide:chevron-down" /></span>
+            </template>
+          </v-select>
+        </div>
+     <div class="col-md-12" v-if="isSecondaryOrRental && editData.listing_id">
+      <div class="listing-summary-card">
+        <div class="listing-summary-title">
+          <iconify-icon icon="lucide:home" class="me-1"></iconify-icon>
+          Selected Unit
+        </div>
+        <div class="listing-summary-grid">
+          <div><span class="listing-summary-label">Unit No</span><span class="listing-summary-value">{{ editData.unit_no || '—' }}</span></div>
+          <div><span class="listing-summary-label">Property Type</span><span class="listing-summary-value">{{ selectedTypeName }}</span></div>
+          <div><span class="listing-summary-label">Bedrooms</span><span class="listing-summary-value">{{ editData.bedrooms ? formatBedrooms(editData.bedrooms) : '—' }}</span></div>
+          <div><span class="listing-summary-label">Unit Size</span><span class="listing-summary-value">{{ editData.unit_size ? `${editData.unit_size} sqft` : '—' }}</span></div>
+        </div>
+      </div>
+    </div>
      
 
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="!isSecondaryOrRental">
           <label class="form-label-custom">Property Type</label>
           <v-select
             v-model="editData.property_type_id"
@@ -414,7 +443,7 @@
           </v-select>
         </div>
 
-        <div class="col-md-6" v-if="showBedroomsField">
+        <div class="col-md-6"  v-if="!isSecondaryOrRental && showBedroomsField">
           <label class="form-label-custom">Bedrooms</label>
           <v-select
             v-model="editData.bedrooms"
@@ -529,11 +558,11 @@
             <span class="input-group-text">%</span>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="!isSecondaryOrRental">
           <label class="form-label-custom">Unit Size (sq.ft)</label>
           <b-form-input v-model="editData.unit_size" type="number" placeholder="Size" class="custom-input" />
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" v-if="!isSecondaryOrRental">
           <label class="form-label-custom">Unit No</label>
           <b-form-input v-model="editData.unit_no" placeholder="Enter Unit No" class="custom-input" />
         </div>
@@ -607,7 +636,8 @@ import DocumentUpload from './DocumentUpload.vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
-
+import api from '@/plugins/axios'
+import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 const props = defineProps({
   property: { type: Object, required: true },
   index: { type: Number, required: true },
@@ -683,7 +713,41 @@ const showPropertyCommission = computed(() => {
  * and must not hide files the user already uploaded.
  */
 const showStagePropertyDocs = computed(() => true)
+const isSecondaryOrRental = computed(() => ['secondary', 'rental'].includes(props.dealType))
+const showListingPicker = computed(() => ['secondary', 'rental'].includes(props.dealType))
+const availableListings = ref([])
 
+async function loadListings(areaId, keepId = null) {
+  if (!areaId || !showListingPicker.value) { availableListings.value = []; return }
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const params = buildListingFilterParams({
+    dealType: props.dealType, areaId, user, currentListingId: keepId,
+  })
+  const res = await api.get('/listings/properties', { params })
+  availableListings.value = (res.data.data || []).map(l => ({
+    id: l.id,
+    unit_number: l.unit_number,
+    property_type_id: l.property_type_id,
+    bedrooms: l.number_of_bedrooms,
+    size_sqft: l.size_sqft,
+    developer_id: l.developer_id,
+    label: `${l.unit_number || 'No Unit'} - ${l.property_type || 'Property'} (${l.status === 'converted' ? 'Sold' : 'Rented'})`,
+  }))
+}
+
+function onListingPicked(l) {
+  if (!l) return
+  editData.value.listing_id = l.id
+  editData.value.unit_no = l.unit_number || ''
+  editData.value.property_type_id = l.property_type_id
+  editData.value.bedrooms = l.bedrooms === 0 ? 'studio' : String(l.bedrooms)
+  editData.value.unit_size = l.size_sqft || ''
+  editData.value.developer_id = l.developer_id
+}
+const selectedTypeName = computed(() => {
+  const t = props.propertyTypes.find(t => t.id === editData.value.property_type_id)
+  return t?.name || '—'
+})
 /** Required for DocumentUpload: must be defined (was missing — only header showed, no Payment Proof / SPA rows). */
 const propertyEditDocTypes = computed(() => {
   const s = (props.selectedStageName || '').toLowerCase()
@@ -1039,12 +1103,14 @@ function startEdit() {
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'spa_document'), 'spa'),
     ...mapPropertyDocsForEditor(getPropertyDocsList(props.property, 'title_deed_documents'), 'title_deed'),
   ]
-  isEditing.value = true
+  loadListings(editData.value.area_id, editData.value.listing_id)
+  isEditing.value = true 
 }
 const onAreaSelected = (areaId) => {
   selectedListing.value = null
 
   if (editData.value) {
+    editData.value.listing_id = null    
     editData.value.unit_no = ''
     editData.value.property_type_id = null
     editData.value.bedrooms = null
@@ -1055,9 +1121,8 @@ const onAreaSelected = (areaId) => {
 
   const selectedArea = props.areas.find(a => a.id === areaId)
   if (!selectedArea) return
-
   editData.value.area_id = areaId
-
+  loadListings(areaId)  
   const project = selectedArea.project
 
   if (project?.developer_id) {
@@ -1830,5 +1895,38 @@ onBeforeUnmount(() => {
 
 .custom-date-trigger:hover {
     border-color: #cbd5e1;
+}
+.listing-summary-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.listing-summary-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0B0736;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+.listing-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 16px;
+}
+.listing-summary-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+.listing-summary-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+.listing-summary-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
 }
 </style>
