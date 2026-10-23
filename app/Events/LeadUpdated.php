@@ -154,8 +154,9 @@ class LeadUpdated implements ShouldBroadcast
     if ($this->actionType == 'assigned' && $this->changes['old_person_id']) {
         $this->addChannelIfNotSales($channels, $this->changes['old_person_id']);
     }
-
+    if(!($this->actionType=='updated' && auth()->user()->hasRole('branch_admin'))){
     $this->addChannelIfNotSales($channels, $this->lead->responsible_person_id);
+    }
     // $this->addChannelIfNotSales($channels, $this->lead->added_by);
 
     foreach ($this->lead->participants ?? [] as $participant) {
