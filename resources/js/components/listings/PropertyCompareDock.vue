@@ -7,7 +7,7 @@
           <span>/ {{ maxCompare }}</span>
         </div>
         <p class="property-compare-dock__hint" :class="{ 'is-notice': notice }">
-          {{ notice || 'Select listings on the page. Change pages to add more.' }}
+          {{ notice || marketHint }}
         </p>
         <div class="property-compare-dock__actions">
           <button type="button" class="property-compare-dock__cancel" @click="cancelCompare">Cancel</button>
@@ -32,7 +32,7 @@
 import { computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PropertyCompareResults from '@/pages/listings/property-compare.vue'
-import { canUsePropertyCompare, usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
+import { canUsePropertyCompare, listingPurpose, usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
 
 const route = useRoute()
 const {
@@ -48,6 +48,13 @@ const {
 } = usePropertyCompareSelection()
 
 const visible = computed(() => canUsePropertyCompare() && (compareMode.value || selected.value.length > 0 || resultOpen.value))
+
+const marketHint = computed(() => {
+  const market = selected.value.map(listingPurpose).find(Boolean)
+  if (market === 'sale') return 'For sale only. Add other sale listings.'
+  if (market === 'rent') return 'For rent only. Add other rent listings.'
+  return 'Sale with sale, or rent with rent. Up to 3 active units.'
+})
 
 watch(visible, (on) => {
   document.body.classList.toggle('property-compare-active', on)

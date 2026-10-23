@@ -2,230 +2,94 @@ import * as THREE from 'three'
 
 const EYE = 1.62
 const BODY = 0.28
-const HOME_FOV = 42
+const HOME_FOV = 38
+const HOME_POLAR = 0.74
 
-function clampByte(value) {
-  return value < 0 ? 0 : value > 255 ? 255 : value
-}
-
-function sharpen(source) {
+function knockOutPaper(source, bounds) {
+  const x0 = Math.max(0, Math.floor(bounds.x0))
+  const y0 = Math.max(0, Math.floor(bounds.y0))
+  const x1 = Math.min(source.width, Math.ceil(bounds.x1))
+  const y1 = Math.min(source.height, Math.ceil(bounds.y1))
+  const w = Math.max(1, x1 - x0)
+  const h = Math.max(1, y1 - y0)
   const canvas = document.createElement('canvas')
-  canvas.width = source.width * 2
-  canvas.height = source.height * 2
-  const context = canvas.getContext('2d', { willReadFrequently: true })
-  context.imageSmoothingEnabled = true
-  context.imageSmoothingQuality = 'high'
-  context.drawImage(source, 0, 0, canvas.width, canvas.height)
-  const image = context.getImageData(0, 0, canvas.width, canvas.height)
-  const pixels = image.data
-  for (let i = 0; i < pixels.length; i += 4) {
-    pixels[i] = clampByte((pixels[i] - 128) * 1.08 + 132)
-    pixels[i + 1] = clampByte((pixels[i + 1] - 128) * 1.08 + 132)
-    pixels[i + 2] = clampByte((pixels[i + 2] - 128) * 1.08 + 132)
+  canvas.width = source.width
+  canvas.height = source.height
+  const context = canvas.getContext('2d')
+  context.drawImage(source, 0, 0)
+  const image = context.getImageData(x0, y0, w, h)
+  const data = image.data
+  const paper = (index) => {
+    const r = data[index]
+    const g = data[index + 1]
+    const b = data[index + 2]
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    return min >= 236 && max - min <= 5
   }
-  context.putImageData(image, 0, 0)
+  const seen = new Uint8Array(w * h)
+  const stack = []
+  const visit = (x, y) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return
+    const pixel = y * w + x
+    if (seen[pixel]) return
+    seen[pixel] = 1
+    if (!paper(pixel * 4)) return
+    stack.push(pixel)
+  }
+  for (let x = 0; x < w; x++) {
+    visit(x, 0)
+    visit(x, h - 1)
+  }
+  for (let y = 0; y < h; y++) {
+    visit(0, y)
+    visit(w - 1, y)
+  }
+  let cleared = 0
+  while (stack.length) {
+    const pixel = stack.pop()
+    data[pixel * 4 + 3] = 0
+    cleared += 1
+    const x = pixel % w
+    const y = (pixel - x) / w
+    visit(x + 1, y)
+    visit(x - 1, y)
+    visit(x, y + 1)
+    visit(x, y - 1)
+  }
+  if (cleared > w * h * 0.42) return source
+  context.putImageData(image, x0, y0)
   return canvas
 }
 
-function pixelLum(r, g, b) {
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-export function traceFloorPlan(source) {
-  const scale = Math.min(1, 820 / Math.max(source.width, source.height))
-  const width = Math.max(1, Math.round(source.width * scale))
-  const height = Math.max(1, Math.round(source.height * scale))
-  const sample = document.createElement('canvas')
-  sample.width = width
-  sample.height = height
-  const context = sample.getContext('2d', { willReadFrequently: true })
-  context.drawImage(source, 0, 0, width, height)
-  const data = context.getImageData(0, 0, width, height).data
-  const colorAt = (x, y) => {
-    const index = (y * width + x) * 4
-    return [data[index], data[index + 1], data[index + 2]]
-  }
-
-  const buckets = new Map()
-  for (let y = 0; y < height; y += 1) {
-    let x = 0
-    while (x < width) {
-      const [r, g, b] = colorAt(x, y)
-      const sat = Math.max(r, g, b) - Math.min(r, g, b)
-      const lit = pixelLum(r, g, b)
-      if (lit < 210 && sat < 40) {
-        const start = x
-        x += 1
-        while (x < width) {
-          const [rr, gg, bb] = colorAt(x, y)
-          const nextSat = Math.max(rr, gg, bb) - Math.min(rr, gg, bb)
-          if (!(pixelLum(rr, gg, bb) < 210 && nextSat < 40)) break
-          x += 1
-        }
-        if (x - start > 36) {
-          for (let xx = start; xx < x; xx += 2) {
-            const [rr, gg, bb] = colorAt(xx, y)
-            if (Math.max(rr, gg, bb) - Math.min(rr, gg, bb) < 18 && pixelLum(rr, gg, bb) < 205) {
-              const key = `${rr - (rr % 6)},${gg - (gg % 6)},${bb - (bb % 6)}`
-              buckets.set(key, (buckets.get(key) || 0) + 1)
-            }
-          }
-        }
-      } else {
-        x += 1
-      }
+function contentBox(canvas, bounds) {
+  const x0 = Math.max(0, Math.floor(bounds.x0))
+  const y0 = Math.max(0, Math.floor(bounds.y0))
+  const x1 = Math.min(canvas.width, Math.ceil(bounds.x1))
+  const y1 = Math.min(canvas.height, Math.ceil(bounds.y1))
+  const w = Math.max(1, x1 - x0)
+  const h = Math.max(1, y1 - y0)
+  const data = canvas.getContext('2d').getImageData(x0, y0, w, h).data
+  let minX = w
+  let minY = h
+  let maxX = -1
+  let maxY = -1
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4 + 3] < 20) continue
+      if (x < minX) minX = x
+      if (y < minY) minY = y
+      if (x > maxX) maxX = x
+      if (y > maxY) maxY = y
     }
   }
-
-  let chosen = [0, 0, 0]
-  let best = 0
-  buckets.forEach((count, key) => {
-    if (count > best) {
-      best = count
-      chosen = key.split(',').map(Number)
-    }
-  })
-  if (pixelLum(...chosen) > 165) {
-    let dark = null
-    let darkCount = 0
-    buckets.forEach((count, key) => {
-      const color = key.split(',').map(Number)
-      if (pixelLum(...color) < 150 && count > best * 0.35 && count > darkCount) {
-        dark = color
-        darkCount = count
-      }
-    })
-    if (dark) chosen = dark
-  }
-  const tolerance = pixelLum(...chosen) > 140 ? 22 : 16
-  const mask = new Uint8Array(width * height)
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const [r, g, b] = colorAt(x, y)
-      if (
-        Math.abs(r - chosen[0]) <= tolerance &&
-        Math.abs(g - chosen[1]) <= tolerance &&
-        Math.abs(b - chosen[2]) <= tolerance &&
-        Math.max(r, g, b) - Math.min(r, g, b) < 24
-      ) {
-        mask[y * width + x] = 1
-      }
-    }
-  }
-
-  const minRun = 30
-  const minThick = 4
-  const maxThick = 48
-  const walls = []
-  let y = 0
-  while (y < height) {
-    let x = 0
-    let foundRow = false
-    while (x < width) {
-      if (mask[y * width + x]) {
-        const start = x
-        while (x < width && mask[y * width + x]) x += 1
-        if (x - start >= minRun) foundRow = true
-      } else {
-        x += 1
-      }
-    }
-    if (!foundRow) {
-      y += 1
-      continue
-    }
-    const y0 = y
-    const runs = new Map()
-    while (y < height) {
-      let rowHasRun = false
-      x = 0
-      while (x < width) {
-        if (mask[y * width + x]) {
-          const start = x
-          while (x < width && mask[y * width + x]) x += 1
-          if (x - start >= minRun) {
-            rowHasRun = true
-            const key = `${start - (start % 4)},${Math.ceil(x / 4) * 4}`
-            runs.set(key, (runs.get(key) || 0) + 1)
-          }
-        } else {
-          x += 1
-        }
-      }
-      if (!rowHasRun) break
-      y += 1
-    }
-    const thick = y - y0
-    if (thick >= minThick && thick <= maxThick) {
-      runs.forEach((count, key) => {
-        const [x0, x1] = key.split(',').map(Number)
-        if (count >= Math.max(3, Math.floor(thick / 2)) && x1 - x0 >= minRun) walls.push([x0, y0, x1, y])
-      })
-    }
-    y += 1
-  }
-
-  const columns = []
-  for (let x = 0; x < width; x += 1) {
-    const segs = []
-    let yy = 0
-    while (yy < height) {
-      if (mask[yy * width + x]) {
-        const start = yy
-        while (yy < height && mask[yy * width + x]) yy += 1
-        if (yy - start >= minRun) segs.push([start, yy])
-      } else {
-        yy += 1
-      }
-    }
-    if (segs.length) columns.push([x, segs])
-  }
-  let index = 0
-  while (index < columns.length) {
-    const x0 = columns[index][0]
-    const bag = new Map()
-    let end = index
-    while (end < columns.length && columns[end][0] - x0 <= maxThick) {
-      columns[end][1].forEach(([y0, y1]) => {
-        const key = `${y0 - (y0 % 4)},${Math.ceil(y1 / 4) * 4}`
-        bag.set(key, (bag.get(key) || 0) + 1)
-      })
-      end += 1
-    }
-    const thick = columns[end - 1][0] - x0 + 1
-    if (thick >= minThick && thick <= maxThick) {
-      bag.forEach((count, key) => {
-        const [y0, y1] = key.split(',').map(Number)
-        if (count >= Math.max(3, Math.floor(thick / 2)) && y1 - y0 >= minRun) {
-          walls.push([x0, y0, columns[end - 1][0] + 1, y1])
-        }
-      })
-    }
-    index = end > index ? end : index + 1
-  }
-
-  if (walls.length < 4) return null
-  const inv = 1 / scale
-  const original = walls.map((rect) => rect.map((value) => value * inv))
-  let x0 = source.width
-  let y0 = source.height
-  let x1 = 0
-  let y1 = 0
-  original.forEach((rect) => {
-    x0 = Math.min(x0, rect[0], rect[2])
-    y0 = Math.min(y0, rect[1], rect[3])
-    x1 = Math.max(x1, rect[0], rect[2])
-    y1 = Math.max(y1, rect[1], rect[3])
-  })
-  const pad = 8
+  if (maxX < 0) return bounds
+  const pad = 6
   return {
-    walls: original,
-    bounds: {
-      x0: Math.max(0, x0 - pad),
-      y0: Math.max(0, y0 - pad),
-      x1: Math.min(source.width, x1 + pad),
-      y1: Math.min(source.height, y1 + pad)
-    }
+    x0: Math.max(bounds.x0, x0 + minX - pad),
+    y0: Math.max(bounds.y0, y0 + minY - pad),
+    x1: Math.min(bounds.x1, x0 + maxX + 1 + pad),
+    y1: Math.min(bounds.y1, y0 + maxY + 1 + pad)
   }
 }
 
@@ -245,23 +109,24 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   renderer.toneMapping = THREE.NoToneMapping
   if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace
 
-  scene.add(new THREE.HemisphereLight(0xfffaf4, 0xc8bfb4, 0.55))
-  scene.add(new THREE.AmbientLight(0xffffff, 0.38))
-  const sun = new THREE.DirectionalLight(0xfff6ec, 0.72)
-  sun.position.set(8, 16, 6)
+  scene.add(new THREE.HemisphereLight(0xfff8f1, 0x3a343c, 0.72))
+  scene.add(new THREE.AmbientLight(0xfff6ee, 0.22))
+  const sun = new THREE.DirectionalLight(0xfff3e4, 1.15)
   sun.castShadow = true
   sun.shadow.mapSize.set(2048, 2048)
-  sun.shadow.camera.left = -16
-  sun.shadow.camera.right = 16
-  sun.shadow.camera.top = 16
-  sun.shadow.camera.bottom = -16
-  sun.shadow.camera.near = 1
-  sun.shadow.camera.far = 48
+  sun.shadow.bias = -0.00035
   scene.add(sun)
   scene.add(sun.target)
 
-  const plaster = new THREE.MeshStandardMaterial({ color: 0xf7f4ef, roughness: 0.72 })
-  const plinthMat = new THREE.MeshStandardMaterial({ color: 0x2a242c, roughness: 0.94 })
+  const plaster = new THREE.MeshStandardMaterial({ color: 0xf6f2ea, roughness: 0.62, metalness: 0.02 })
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xfffdf8, roughness: 0.38 })
+  const uncertain = new THREE.MeshStandardMaterial({
+    color: 0xd4af37,
+    roughness: 0.46,
+    transparent: true,
+    opacity: 0.45,
+    depthWrite: false
+  })
   const solids = []
   const plan = traced || {
     walls: [],
@@ -270,24 +135,39 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   const metres = 11 / Math.max(plan.bounds.x1 - plan.bounds.x0, plan.bounds.y1 - plan.bounds.y0)
   const width = (plan.bounds.x1 - plan.bounds.x0) * metres
   const depth = (plan.bounds.y1 - plan.bounds.y0) * metres
-  const wallH = 1.12
+  const wallH = 1.36
+  const wallThick = 0.16
   const wx = (px) => (px - plan.bounds.x0) * metres
   const wz = (py) => (py - plan.bounds.y0) * metres
 
+  const sheet = knockOutPaper(sourceCanvas, plan.bounds)
+  const content = contentBox(sheet, plan.bounds)
+  const floorX0 = wx(content.x0)
+  const floorX1 = wx(content.x1)
+  const floorZ0 = wz(content.y0)
+  const floorZ1 = wz(content.y1)
+  const span = Math.max(floorX1 - floorX0, floorZ1 - floorZ0, 1)
+  sun.position.set((floorX0 + floorX1) / 2 - span * 0.35, span * 1.45, (floorZ0 + floorZ1) / 2 - span * 0.2)
+  sun.shadow.camera.left = -span
+  sun.shadow.camera.right = span
+  sun.shadow.camera.top = span
+  sun.shadow.camera.bottom = -span
+  sun.shadow.camera.near = 0.5
+  sun.shadow.camera.far = span * 4
   const studio = new THREE.Mesh(
-    new THREE.CircleGeometry(Math.max(width, depth) + 4, 72),
-    new THREE.MeshStandardMaterial({ color: 0x221e24, roughness: 1 })
+    new THREE.CircleGeometry(span + 6, 72),
+    new THREE.MeshStandardMaterial({ color: 0x141218, roughness: 1 })
   )
   studio.rotation.x = -Math.PI / 2
-  studio.position.y = -0.2
+  studio.position.set((floorX0 + floorX1) / 2, -0.04, (floorZ0 + floorZ1) / 2)
   studio.receiveShadow = true
   scene.add(studio)
 
   const shape = new THREE.Shape()
-  shape.moveTo(0, 0)
-  shape.lineTo(width, 0)
-  shape.lineTo(width, -depth)
-  shape.lineTo(0, -depth)
+  shape.moveTo(floorX0, -floorZ0)
+  shape.lineTo(floorX1, -floorZ0)
+  shape.lineTo(floorX1, -floorZ1)
+  shape.lineTo(floorX0, -floorZ1)
   shape.closePath()
   const geo = new THREE.ShapeGeometry(shape)
   const position = geo.attributes.position
@@ -298,60 +178,177 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     uv.setXY(i, px / sourceCanvas.width, 1 - py / sourceCanvas.height)
   }
 
-  const plinth = new THREE.Mesh(geo, plinthMat)
-  plinth.rotation.x = -Math.PI / 2
-  plinth.position.y = -0.045
-  plinth.receiveShadow = true
-  scene.add(plinth)
-
-  const map = new THREE.CanvasTexture(sharpen(sourceCanvas))
+  const map = new THREE.CanvasTexture(sheet)
   if (THREE.SRGBColorSpace) map.colorSpace = THREE.SRGBColorSpace
   map.generateMipmaps = true
   map.minFilter = THREE.LinearMipmapLinearFilter
   map.magFilter = THREE.LinearFilter
   map.anisotropy = renderer.capabilities.getMaxAnisotropy()
-  const floor = new THREE.Mesh(geo.clone(), new THREE.MeshBasicMaterial({ map, side: THREE.DoubleSide }))
+  const floor = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    map,
+    roughness: 0.94,
+    metalness: 0,
+    transparent: true,
+    alphaTest: 0.35
+  }))
   floor.rotation.x = -Math.PI / 2
-  floor.position.y = 0.012
+  floor.position.y = 0.02
+  floor.receiveShadow = true
   scene.add(floor)
+  const overlay = new THREE.Mesh(geo.clone(), new THREE.MeshBasicMaterial({
+    map,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false
+  }))
+  overlay.rotation.x = -Math.PI / 2
+  overlay.position.y = 0.035
+  overlay.visible = false
+  scene.add(overlay)
 
-  function addBox(x0, z0, x1, z1, height, collide) {
+  function addBox(x0, z0, x1, z1, height, collide, material) {
     const minX = Math.min(x0, x1)
     const maxX = Math.max(x0, x1)
     const minZ = Math.min(z0, z1)
     const maxZ = Math.max(z0, z1)
     const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(Math.max(0.04, maxX - minX), height, Math.max(0.04, maxZ - minZ)),
-      plaster
+      new THREE.BoxGeometry(Math.max(0.05, maxX - minX), height, Math.max(0.05, maxZ - minZ)),
+      material || plaster
     )
     mesh.position.set((minX + maxX) / 2, height / 2, (minZ + maxZ) / 2)
     mesh.castShadow = true
     mesh.receiveShadow = true
     scene.add(mesh)
+    if (material !== uncertain && height > 0.4) {
+      const cap = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.max(0.05, maxX - minX) + 0.012, 0.05, Math.max(0.05, maxZ - minZ) + 0.012),
+        capMat
+      )
+      cap.position.set((minX + maxX) / 2, height - 0.02, (minZ + maxZ) / 2)
+      cap.castShadow = true
+      scene.add(cap)
+    }
     if (collide) solids.push({ minX, maxX, minZ, maxZ })
   }
 
-  if (plan.walls.length) {
-    plan.walls.forEach((rect) => addBox(wx(rect[0]), wz(rect[1]), wx(rect[2]), wz(rect[3]), wallH, true))
-  } else {
-    const door = Math.min(1.2, Math.max(0.85, width * 0.18))
-    const gapStart = (width - door) / 2
-    const thickness = 0.16
-    addBox(0, 0, thickness, depth, wallH, true)
-    addBox(width - thickness, 0, width, depth, wallH, true)
-    addBox(0, 0, width, thickness, wallH, true)
-    addBox(0, depth - thickness, gapStart, depth, wallH, true)
-    addBox(gapStart + door, depth - thickness, width, depth, wallH, true)
+  function placePiece(item) {
+    const pieceW = Math.max(0.32, (item.w || 40) * metres)
+    const pieceD = Math.max(0.32, (item.d || 40) * metres)
+    const cx = wx(item.x)
+    const cz = wz(item.y)
+    const tint = new THREE.Color(item.color || '#c4b8a8')
+    const fabric = new THREE.MeshStandardMaterial({ color: tint, roughness: 0.84 })
+    const wood = new THREE.MeshStandardMaterial({ color: tint.clone().multiplyScalar(0.62), roughness: 0.58 })
+    const cloth = new THREE.MeshStandardMaterial({ color: tint.clone().lerp(new THREE.Color('#f4f0ea'), 0.35), roughness: 0.9 })
+    const group = new THREE.Group()
+    group.position.set(cx, 0, cz)
+    const put = (mw, mh, md, x, y, z, material) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.04, mw), mh, Math.max(0.04, md)), material)
+      mesh.position.set(x, y + mh / 2, z)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      group.add(mesh)
+    }
+    let solid = true
+    if (item.type === 'bed') {
+      put(pieceW * 0.94, 0.16, pieceD * 0.9, 0, 0, 0, wood)
+      put(pieceW * 0.9, 0.18, pieceD * 0.86, 0, 0.16, 0.04, fabric)
+      put(pieceW * 0.94, 0.7, 0.08, 0, 0.16, -pieceD * 0.44, wood)
+      put(pieceW * 0.28, 0.08, pieceD * 0.2, -pieceW * 0.2, 0.34, -pieceD * 0.16, cloth)
+      put(pieceW * 0.28, 0.08, pieceD * 0.2, pieceW * 0.2, 0.34, -pieceD * 0.16, cloth)
+    } else if (item.type === 'sofa' || item.type === 'armchair') {
+      put(pieceW * 0.92, 0.22, pieceD * 0.72, 0, 0.16, 0.06, fabric)
+      put(pieceW * 0.92, 0.42, 0.12, 0, 0.22, -pieceD * 0.36, fabric)
+      put(0.1, 0.28, pieceD * 0.7, -pieceW * 0.44, 0.16, 0.02, fabric)
+      put(0.1, 0.28, pieceD * 0.7, pieceW * 0.44, 0.16, 0.02, fabric)
+    } else if (item.type === 'dining') {
+      put(pieceW * 0.72, 0.06, pieceD * 0.46, 0, 0.72, 0, wood)
+      put(0.08, 0.72, 0.08, -pieceW * 0.28, 0, -pieceD * 0.16, wood)
+      put(0.08, 0.72, 0.08, pieceW * 0.28, 0, -pieceD * 0.16, wood)
+      put(0.08, 0.72, 0.08, -pieceW * 0.28, 0, pieceD * 0.16, wood)
+      put(0.08, 0.72, 0.08, pieceW * 0.28, 0, pieceD * 0.16, wood)
+      ;[-1, 1].forEach((side) => {
+        put(pieceW * 0.22, 0.08, 0.08, side * pieceW * 0.22, 0.42, pieceD * 0.34, fabric)
+        put(pieceW * 0.22, 0.28, 0.06, side * pieceW * 0.22, 0.42, pieceD * 0.4, fabric)
+        put(pieceW * 0.22, 0.08, 0.08, side * pieceW * 0.22, 0.42, -pieceD * 0.34, fabric)
+      })
+    } else if (item.type === 'table' || item.type === 'chair') {
+      put(pieceW * 0.8, 0.05, pieceD * 0.8, 0, 0.38, 0, wood)
+      put(0.06, 0.38, 0.06, -pieceW * 0.28, 0, -pieceD * 0.28, wood)
+      put(0.06, 0.38, 0.06, pieceW * 0.28, 0, -pieceD * 0.28, wood)
+      put(0.06, 0.38, 0.06, -pieceW * 0.28, 0, pieceD * 0.28, wood)
+      put(0.06, 0.38, 0.06, pieceW * 0.28, 0, pieceD * 0.28, wood)
+    } else if (item.type === 'rug') {
+      put(pieceW, 0.02, pieceD, 0, 0.02, 0, fabric)
+      solid = false
+    } else if (item.type === 'plant') {
+      put(Math.min(pieceW, 0.42), 0.28, Math.min(pieceD, 0.42), 0, 0, 0, wood)
+      const leaves = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.min(pieceW, pieceD) * 0.38, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0x3f6b45, roughness: 0.8 })
+      )
+      leaves.position.y = 0.55
+      leaves.castShadow = true
+      group.add(leaves)
+      solid = false
+    } else if (item.type === 'wardrobe' || item.type === 'counter') {
+      put(pieceW, item.type === 'wardrobe' ? 1.15 : 0.9, pieceD, 0, 0, 0, wood)
+    } else if (item.type === 'toilet') {
+      put(pieceW * 0.7, 0.38, pieceD * 0.7, 0, 0, 0.04, cloth)
+      put(pieceW * 0.55, 0.4, 0.12, 0, 0.28, -pieceD * 0.28, cloth)
+    } else if (item.type === 'sink') {
+      put(pieceW, 0.16, pieceD * 0.7, 0, 0.72, 0, cloth)
+      put(0.08, 0.72, pieceD * 0.55, 0, 0, 0, wood)
+    } else {
+      put(pieceW, 0.4, pieceD, 0, 0, 0, fabric)
+    }
+    scene.add(group)
+    if (solid) {
+      solids.push({
+        minX: cx - pieceW * 0.42,
+        maxX: cx + pieceW * 0.42,
+        minZ: cz - pieceD * 0.42,
+        maxZ: cz + pieceD * 0.42
+      })
+    }
   }
+  ;(plan.furniture || [])
+    .filter((item) => item.enabled !== false && ['bed', 'sofa', 'armchair', 'dining', 'table', 'plant'].includes(item.type))
+    .forEach(placePiece)
 
-  const player = { x: width / 2, z: depth - 1.15, yaw: 0, pitch: -0.28 }
+  plan.walls.forEach((rect) => {
+    const box = Array.isArray(rect) ? rect : [rect.x0, rect.y0, rect.x1, rect.y1]
+    const confident = Array.isArray(rect) ? true : rect.confident !== false
+    const material = confident ? plaster : uncertain
+    const horizontal = Math.abs(box[2] - box[0]) >= Math.abs(box[3] - box[1])
+    if (horizontal) {
+      const z = wz((box[1] + box[3]) / 2)
+      addBox(wx(Math.min(box[0], box[2])), z - wallThick / 2, wx(Math.max(box[0], box[2])), z + wallThick / 2, wallH, true, material)
+    } else {
+      const x = wx((box[0] + box[2]) / 2)
+      addBox(x - wallThick / 2, wz(Math.min(box[1], box[3])), x + wallThick / 2, wz(Math.max(box[1], box[3])), wallH, true, material)
+    }
+  })
+
+  function findSpawn() {
+    for (let gz = 0.22; gz <= 0.78; gz += 0.07) {
+      for (let gx = 0.22; gx <= 0.78; gx += 0.07) {
+        const x = floorX0 + (floorX1 - floorX0) * gx
+        const z = floorZ0 + (floorZ1 - floorZ0) * gz
+        if (!overlaps(x, z) && !overlaps(x + 0.35, z) && !overlaps(x, z + 0.35)) return [x, z]
+      }
+    }
+    return [(floorX0 + floorX1) / 2, (floorZ0 + floorZ1) / 2]
+  }
+  const [spawnX, spawnZ] = findSpawn()
+  const player = { x: spawnX, z: spawnZ, yaw: 0, pitch: -0.2 }
   const orbit = {
-    azimuth: 0.32,
-    polar: 0.58,
-    radius: Math.max(width, depth) * 1.5,
-    targetX: width / 2,
-    targetY: 0,
-    targetZ: depth * 0.46
+    azimuth: 0.62,
+    polar: HOME_POLAR,
+    radius: span * 2.15,
+    targetX: (floorX0 + floorX1) / 2,
+    targetY: 0.45,
+    targetZ: (floorZ0 + floorZ1) / 2
   }
   const fitRadius = orbit.radius
   let mode = 'dollhouse'
@@ -402,25 +399,25 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   }
   function showDollhouse() {
     mode = 'dollhouse'
+    orbit.azimuth = 0.62
+    orbit.polar = HOME_POLAR
+    orbit.radius = fitRadius
+    camera.fov = HOME_FOV
+    camera.updateProjectionMatrix()
     document.exitPointerLock?.()
     notify()
   }
   function enterWalk() {
     mode = 'walk'
-    player.x = width / 2
-    player.z = Math.max(depth * 0.55, depth - 1.4)
+    const [x, z] = findSpawn()
+    player.x = x
+    player.z = z
     player.yaw = 0
-    player.pitch = -0.28
-    if (overlaps(player.x, player.z)) player.z = depth / 2
+    player.pitch = -0.16
     document.exitPointerLock?.()
     notify()
   }
   function reset() {
-    orbit.azimuth = 0.32
-    orbit.polar = 0.58
-    orbit.radius = fitRadius
-    camera.fov = HOME_FOV
-    camera.updateProjectionMatrix()
     showDollhouse()
   }
 
@@ -443,19 +440,26 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
     }
     if (!dragging) return
     orbit.azimuth -= (event.clientX - pointerX) * 0.005
-    orbit.polar = Math.max(0.38, Math.min(1.05, orbit.polar - (event.clientY - pointerY) * 0.004))
+    orbit.polar = Math.max(0.22, Math.min(1.2, orbit.polar - (event.clientY - pointerY) * 0.004))
     pointerX = event.clientX
     pointerY = event.clientY
   }
   function onWheel(event) {
     event.preventDefault()
-    const step = Math.max(-48, Math.min(48, event.deltaY))
+    const step = Math.max(-80, Math.min(80, event.deltaY))
     if (mode === 'walk') {
-      camera.fov = Math.max(34, Math.min(52, camera.fov + step * 0.018))
+      camera.fov = Math.max(28, Math.min(62, camera.fov + step * 0.02))
       camera.updateProjectionMatrix()
       return
     }
-    orbit.radius = Math.max(fitRadius * 0.62, Math.min(fitRadius * 1.22, orbit.radius + step * 0.012))
+    const next = orbit.radius * Math.exp(step * 0.0022)
+    orbit.radius = Math.max(fitRadius * 0.18, Math.min(fitRadius * 2.8, next))
+  }
+  function zoomOut() {
+    orbit.radius = Math.min(fitRadius * 2.8, orbit.radius * 1.28)
+  }
+  function zoomIn() {
+    orbit.radius = Math.max(fitRadius * 0.18, orbit.radius * 0.78)
   }
   function onKeyDown(event) {
     keys.add(event.code)
@@ -517,6 +521,12 @@ export function mountFloorPlanScene(canvas, sourceCanvas, onChange, traced) {
   return {
     showDollhouse,
     enterWalk,
+    zoomIn,
+    zoomOut,
+    setReference(on) {
+      overlay.visible = Boolean(on)
+      overlay.material.opacity = on ? 0.42 : 0
+    },
     reset,
     resize,
     dispose() {

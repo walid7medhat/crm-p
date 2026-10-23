@@ -12,24 +12,38 @@ class NextActionTourCampaignService
 {
     public const MAX_VIEWS = 3;
 
-    public function status(): array
+    public const FEATURE_NEXT_ACTION = 'next_action';
+
+    public const FEATURE_PROPERTY_COMPARE = 'property_compare';
+
+    public function status(?string $feature = null): array
     {
-        $campaign = $this->latest();
+        $feature = $this->normalizeFeature($feature);
+        $campaign = $this->latest($feature);
+        $target = $campaign?->target_user_id
+            ? User::query()->select(['id', 'name', 'display_name'])->find($campaign->target_user_id)
+            : null;
 
         return [
+            'feature' => $feature,
             'is_active' => (bool) ($campaign?->is_active),
             'launch_id' => $campaign?->launch_id,
+            'target_user_id' => $campaign?->target_user_id,
+            'target_name' => $target ? ($target->display_name ?: $target->name) : null,
             'started_at' => $campaign?->started_at?->toIso8601String(),
             'stopped_at' => $campaign?->stopped_at?->toIso8601String(),
             'started_by' => $campaign?->started_by,
-            'max_views' => self::MAX_VIEWS,
+            'max_views' => $this->maxViews($feature),
             'audience_count' => $this->audienceQuery()->count(),
         ];
     }
 
-    public function start(User $actor): array
+    public function start(User $actor, ?string $feature = null, ?int $onlyUserId = null): array
     {
+        $feature = $this->normalizeFeature($feature);
+
         NextActionTourCampaign::query()
+            ->where('feature', $feature)
             ->where('is_active', true)
             ->update([
                 'is_active' => false,
@@ -38,41 +52,50 @@ class NextActionTourCampaignService
 
         $campaign = NextActionTourCampaign::query()->create([
             'launch_id' => (string) Str::uuid(),
+            'feature' => $feature,
+            'target_user_id' => $onlyUserId,
             'is_active' => true,
             'started_by' => $actor->id,
             'started_at' => now(),
             'stopped_at' => null,
         ]);
 
-        $this->fanOut($campaign->launch_id, true, 'start');
+        $this->fanOut($campaign->launch_id, true, 'start', $feature, $onlyUserId);
 
-        return $this->status();
+        return $this->status($feature);
     }
 
-    public function stop(User $actor): array
+    public function stop(User $actor, ?string $feature = null): array
     {
-        $campaign = $this->active();
+        $feature = $this->normalizeFeature($feature);
+        $campaign = $this->active($feature);
         if ($campaign) {
             $campaign->forceFill([
                 'is_active' => false,
                 'stopped_at' => now(),
             ])->save();
-            $this->fanOut($campaign->launch_id, false, 'stop');
+            $this->fanOut($campaign->launch_id, false, 'stop', $feature, $campaign->target_user_id ? (int) $campaign->target_user_id : null);
         }
 
-        return $this->status();
+        return $this->status($feature);
     }
 
-    public function forUser(User $user): array
+    public function forUser(User $user, ?string $feature = null): array
     {
-        $campaign = $this->active();
+        $feature = $this->normalizeFeature($feature);
+        $campaign = $this->active($feature);
+        if ($campaign?->target_user_id && (int) $campaign->target_user_id !== (int) $user->id) {
+            $campaign = null;
+        }
+        $max = $this->maxViews($feature);
         if (! $campaign) {
             return [
+                'feature' => $feature,
                 'should_show' => false,
                 'is_active' => false,
                 'launch_id' => null,
                 'views' => 0,
-                'max_views' => self::MAX_VIEWS,
+                'max_views' => $max,
             ];
         }
 
@@ -80,39 +103,43 @@ class NextActionTourCampaignService
         $views = (int) ($progress?->views ?? 0);
 
         return [
-            'should_show' => $views < self::MAX_VIEWS,
+            'feature' => $feature,
+            'should_show' => $views < $max,
             'is_active' => true,
             'launch_id' => $campaign->launch_id,
             'views' => $views,
-            'max_views' => self::MAX_VIEWS,
+            'max_views' => $max,
         ];
     }
 
     public function recordShown(User $user, string $launchId): array
     {
-        $campaign = $this->active();
-        if (! $campaign || $campaign->launch_id !== $launchId) {
-            return $this->forUser($user);
+        $campaign = $this->campaignByLaunch($launchId);
+        $feature = $campaign?->feature ?: self::FEATURE_NEXT_ACTION;
+        if (! $campaign || ! $campaign->is_active) {
+            return $this->forUser($user, $feature);
         }
 
+        $max = $this->maxViews($feature);
         $progress = NextActionTourUserProgress::query()->firstOrNew([
             'launch_id' => $launchId,
             'user_id' => $user->id,
         ]);
 
-        if ((int) $progress->views >= self::MAX_VIEWS) {
-            return $this->forUser($user);
+        if ((int) $progress->views >= $max) {
+            return $this->forUser($user, $feature);
         }
 
         $progress->views = (int) $progress->views + 1;
         $progress->last_shown_at = now();
         $progress->save();
 
-        return $this->forUser($user);
+        return $this->forUser($user, $feature);
     }
 
     public function recordDismissed(User $user, string $launchId): array
     {
+        $campaign = $this->campaignByLaunch($launchId);
         $progress = NextActionTourUserProgress::query()->firstOrNew([
             'launch_id' => $launchId,
             'user_id' => $user->id,
@@ -124,11 +151,12 @@ class NextActionTourCampaignService
         }
         $progress->save();
 
-        return $this->forUser($user);
+        return $this->forUser($user, $campaign?->feature);
     }
 
     public function recordCompleted(User $user, string $launchId): array
     {
+        $campaign = $this->campaignByLaunch($launchId);
         $progress = NextActionTourUserProgress::query()->firstOrNew([
             'launch_id' => $launchId,
             'user_id' => $user->id,
@@ -140,20 +168,41 @@ class NextActionTourCampaignService
         }
         $progress->save();
 
-        return $this->forUser($user);
+        return $this->forUser($user, $campaign?->feature);
     }
 
-    private function latest(): ?NextActionTourCampaign
+    private function normalizeFeature(?string $feature): string
     {
-        return NextActionTourCampaign::query()->latest('id')->first();
+        return $feature === self::FEATURE_PROPERTY_COMPARE
+            ? self::FEATURE_PROPERTY_COMPARE
+            : self::FEATURE_NEXT_ACTION;
     }
 
-    private function active(): ?NextActionTourCampaign
+    private function maxViews(string $feature): int
+    {
+        return $feature === self::FEATURE_PROPERTY_COMPARE ? 1 : self::MAX_VIEWS;
+    }
+
+    private function latest(string $feature): ?NextActionTourCampaign
     {
         return NextActionTourCampaign::query()
+            ->where('feature', $feature)
+            ->latest('id')
+            ->first();
+    }
+
+    private function active(string $feature): ?NextActionTourCampaign
+    {
+        return NextActionTourCampaign::query()
+            ->where('feature', $feature)
             ->where('is_active', true)
             ->latest('id')
             ->first();
+    }
+
+    private function campaignByLaunch(string $launchId): ?NextActionTourCampaign
+    {
+        return NextActionTourCampaign::query()->where('launch_id', $launchId)->first();
     }
 
     private function progress(string $launchId, int $userId): ?NextActionTourUserProgress
@@ -169,20 +218,63 @@ class NextActionTourCampaignService
         return User::query()->where('status', 'active');
     }
 
-    private function fanOut(string $launchId, bool $active, string $action): void
+    private function fanOut(string $launchId, bool $active, string $action, string $feature, ?int $onlyUserId = null): void
     {
-        $this->audienceQuery()
-            ->select(['id'])
-            ->orderBy('id')
-            ->chunkById(100, function ($users) use ($launchId, $active, $action) {
-                foreach ($users as $user) {
-                    broadcast(new NextActionTourCampaignUpdated(
-                        (int) $user->id,
-                        $active,
-                        $launchId,
-                        $action
-                    ));
-                }
-            });
+        $query = $this->audienceQuery()->select(['id'])->orderBy('id');
+        if ($onlyUserId) {
+            $query->where('id', $onlyUserId);
+        }
+
+        $this->pushNow(
+            $query->pluck('id')->map(fn ($id) => (int) $id)->all(),
+            $active,
+            $launchId,
+            $action,
+            $feature
+        );
+    }
+
+    /**
+     * One Pusher call covers up to 90 people who are already subscribed to their own channel.
+     */
+    private function pushNow(array $userIds, bool $active, string $launchId, string $action, string $feature): void
+    {
+        if ($userIds === []) {
+            return;
+        }
+
+        $payload = [
+            'active' => $active,
+            'launch_id' => $launchId,
+            'action' => $action,
+            'feature' => $feature,
+        ];
+
+        $connection = config('broadcasting.connections.pusher');
+        $canUsePusher = ! app()->runningUnitTests()
+            && config('broadcasting.default') === 'pusher'
+            && ! empty($connection['key'])
+            && ! empty($connection['secret'])
+            && ! empty($connection['app_id']);
+
+        if (! $canUsePusher) {
+            foreach ($userIds as $userId) {
+                broadcast(new NextActionTourCampaignUpdated($userId, $active, $launchId, $action, $feature));
+            }
+
+            return;
+        }
+
+        $pusher = new \Pusher\Pusher(
+            $connection['key'],
+            $connection['secret'],
+            $connection['app_id'],
+            $connection['options'] ?? []
+        );
+
+        foreach (array_chunk($userIds, 90) as $chunk) {
+            $channels = array_map(fn (int $id) => 'private-user.'.$id, $chunk);
+            $pusher->trigger($channels, 'next-action-tour', $payload);
+        }
     }
 }

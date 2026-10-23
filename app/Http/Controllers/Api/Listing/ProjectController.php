@@ -974,7 +974,7 @@ public function getFloorPlans( $id)
     try {
         $project=Project::find($id);
         $floorPlans = $project->floorPlanImages()
-            ->select('id', 'name', 'image_path', 'sort_order','area_id','scene_saved_at')
+            ->select('id', 'name', 'image_path', 'sort_order','area_id','scene_saved_at','scene_data')
             ->orderBy('sort_order')
             ->get()
             ->map(function ($floorPlan) use ($id) {
@@ -988,6 +988,7 @@ public function getFloorPlans( $id)
                     'project_id' => $id,
                     'area_id'=>$floorPlan->area_id,
                     'scene_saved_at' => $floorPlan->scene_saved_at,
+                    'scene_data' => $floorPlan->scene_data,
                 ];
             });
 
@@ -1043,6 +1044,61 @@ public function getFloorPlans( $id)
     {
         try {
             $floorPlanImage = FloorPlanImage::findOrFail($id);
+            $scene = request()->input('scene');
+            if (is_array($scene)) {
+                $walls = [];
+                $incoming = is_array($scene['walls'] ?? null) ? $scene['walls'] : [];
+                foreach (array_slice($incoming, 0, 500) as $wall) {
+                    if (!is_array($wall)) {
+                        continue;
+                    }
+                    $x0 = $wall['x0'] ?? ($wall[0] ?? null);
+                    $y0 = $wall['y0'] ?? ($wall[1] ?? null);
+                    $x1 = $wall['x1'] ?? ($wall[2] ?? null);
+                    $y1 = $wall['y1'] ?? ($wall[3] ?? null);
+                    if (!is_numeric($x0) || !is_numeric($y0) || !is_numeric($x1) || !is_numeric($y1)) {
+                        continue;
+                    }
+                    $walls[] = [
+                        'x0' => (float) $x0,
+                        'y0' => (float) $y0,
+                        'x1' => (float) $x1,
+                        'y1' => (float) $y1,
+                        'confident' => array_key_exists('confident', $wall) ? (bool) $wall['confident'] : true,
+                    ];
+                }
+                $bounds = is_array($scene['bounds'] ?? null) ? $scene['bounds'] : [];
+                $allowedFurniture = ['bed', 'sofa', 'armchair', 'table', 'dining', 'rug', 'plant', 'wardrobe', 'counter', 'chair', 'toilet', 'sink'];
+                $furniture = [];
+                $incomingFurniture = is_array($scene['furniture'] ?? null) ? $scene['furniture'] : [];
+                foreach (array_slice($incomingFurniture, 0, 36) as $piece) {
+                    if (!is_array($piece) || !is_numeric($piece['x'] ?? null) || !is_numeric($piece['y'] ?? null)) {
+                        continue;
+                    }
+                    $type = is_string($piece['type'] ?? null) ? $piece['type'] : 'table';
+                    $color = is_string($piece['color'] ?? null) ? substr($piece['color'], 0, 7) : '#c4b8a8';
+                    $furniture[] = [
+                        'type' => in_array($type, $allowedFurniture, true) ? $type : 'table',
+                        'x' => (float) $piece['x'],
+                        'y' => (float) $piece['y'],
+                        'w' => (float) ($piece['w'] ?? 0),
+                        'd' => (float) ($piece['d'] ?? 0),
+                        'color' => $color,
+                        'confident' => array_key_exists('confident', $piece) ? (bool) $piece['confident'] : true,
+                    ];
+                }
+                $floorPlanImage->scene_data = [
+                    'source' => is_string($scene['source'] ?? null) ? substr($scene['source'], 0, 500) : null,
+                    'bounds' => [
+                        'x0' => (float) ($bounds['x0'] ?? 0),
+                        'y0' => (float) ($bounds['y0'] ?? 0),
+                        'x1' => (float) ($bounds['x1'] ?? 0),
+                        'y1' => (float) ($bounds['y1'] ?? 0),
+                    ],
+                    'walls' => $walls,
+                    'furniture' => $furniture,
+                ];
+            }
             $floorPlanImage->scene_saved_at = now();
             $floorPlanImage->save();
             $this->clearCache();
@@ -1053,6 +1109,7 @@ public function getFloorPlans( $id)
                 'data' => [
                     'id' => $floorPlanImage->id,
                     'scene_saved_at' => $floorPlanImage->scene_saved_at,
+                    'scene_data' => $floorPlanImage->scene_data,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -1090,6 +1147,7 @@ public function getFloorPlans( $id)
                         'created_at' => $floorPlan->created_at ? $floorPlan->created_at->format('Y-m-d H:i:s') : null,
                         'file_size' => $floorPlan->file_size,
                         'scene_saved_at' => $floorPlan->scene_saved_at,
+                        'scene_data' => $floorPlan->scene_data,
                     ];
                 });
 
@@ -1244,6 +1302,7 @@ public function getFloorPlans( $id)
                     'created_at' => $floorPlan->created_at ? $floorPlan->created_at->format('Y-m-d H:i:s') : null,
                     'file_size' => $floorPlan->file_size,
                     'scene_saved_at' => $floorPlan->scene_saved_at,
+                    'scene_data' => $floorPlan->scene_data,
                 ];
             });
 

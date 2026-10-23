@@ -60,6 +60,10 @@ Broadcast::channel('lead-assignment', function ($user) {
     return $user !== null;
 });
 
+Broadcast::channel('crm-campaigns', function ($user) {
+    return $user !== null;
+});
+
 Route::get('privacy-policy', function () {
     return view('privacy-policy');
 });

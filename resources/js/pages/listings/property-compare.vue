@@ -76,7 +76,7 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import api from '@/plugins/axios'
 import { compareProperties, listingHeadline, listingImages } from '@/composables/propertyComparison.js'
-import { isActiveListing, usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
+import { isActiveListing, listingPurpose, usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
 
 const BRIEF_IDS = ['price', 'price-sqft', 'purpose', 'type', 'bedrooms', 'bathrooms', 'size-sqft', 'location', 'furnishing']
 const SHORT_LABELS = {
@@ -162,10 +162,12 @@ async function loadListings() {
     if (isActiveListing(item)) loaded.push(item)
   }))
   const order = new Map(selected.value.map((item, index) => [String(item.id), index]))
-  readyListings.value = loaded.sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0))
+  const sorted = loaded.sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0))
+  const market = sorted.map(listingPurpose).find(Boolean)
+  readyListings.value = market ? sorted.filter((item) => listingPurpose(item) === market) : []
   scanning.value = false
   if (readyListings.value.length < 2) {
-    compareError.value = 'At least two active units are needed.'
+    compareError.value = 'Compare sale with sale, or rent with rent.'
     return
   }
   scanPass.value = !prefersReducedMotion()

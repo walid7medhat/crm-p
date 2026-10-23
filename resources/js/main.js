@@ -415,11 +415,19 @@ function scheduleEchoInit() {
 
       const currentUserId = getStoredUserId()
       if (currentUserId) {
-        // Account set inactive by an admin → log out now (UserDeactivated event).
+        const { startPropertyCompareCampaignLive, closePropertyCompareCampaignPreview } = await import('./composables/usePropertyCompareCampaignPreview.js')
+        const onCompareCampaign = (payload) => {
+          const data = payload?.launch_id || payload?.feature ? payload : payload?.data
+          if (!data || data.feature !== 'property_compare') return
+          if (data.active && data.launch_id) startPropertyCompareCampaignLive(data.launch_id)
+          else if (!data.active) closePropertyCompareCampaignPreview()
+        }
+        // This channel is already open for notifications, so the campaign arrives with no extra join.
         window.Echo.private(`user.${currentUserId}`)
           .listen('.account.deactivated', (e) => {
             forceInactiveLogout(e?.message)
           })
+          .listen('.next-action-tour', onCompareCampaign)
 
         window.Echo.private(`user.${currentUserId}`)
           .notification((notification) => {

@@ -31,18 +31,22 @@ async function maybeShowFromServer() {
   }
 }
 
+function campaignPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null
+  if (payload.launch_id || payload.feature) return payload
+  if (payload.data && typeof payload.data === 'object') return payload.data
+  return payload
+}
+
 function onCampaignEvent(payload) {
-  if (!payload) return
-  if (payload.active && payload.launch_id) {
-    if (tourPhase.value === 'idle') {
-      // Re-check views so refresh / restart still respects the 3-view cap.
-      maybeShowFromServer()
-    }
+  const data = campaignPayload(payload)
+  if (!data) return
+  if (data.feature && data.feature !== 'next_action') return
+  if (data.active && data.launch_id) {
+    if (tourPhase.value === 'idle') startNextActionTourLive(data.launch_id)
     return
   }
-  if (!payload.active) {
-    endNextActionTourPreview()
-  }
+  if (!data.active) endNextActionTourPreview()
 }
 
 function bindChannel() {
@@ -55,7 +59,7 @@ function bindChannel() {
 
 function unbindChannel() {
   if (channel) {
-    channel.stopListening('.next-action-tour')
+    channel.stopListening('.next-action-tour', onCampaignEvent)
     channel = null
   }
   listening = false

@@ -20,12 +20,13 @@ class NextActionTourCampaignUpdated implements ShouldBroadcastNow
         public bool $active,
         public string $launchId,
         public string $action,
+        public string $feature = 'next_action',
     ) {
     }
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('user.'.$this->userId)];
+        return [new PrivateChannel('crm-campaigns')];
     }
 
     public function broadcastAs(): string
@@ -39,6 +40,7 @@ class NextActionTourCampaignUpdated implements ShouldBroadcastNow
             'active' => $this->active,
             'launch_id' => $this->launchId,
             'action' => $this->action,
+            'feature' => $this->feature,
         ];
     }
 }

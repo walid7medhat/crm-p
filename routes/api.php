@@ -715,6 +715,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
         Route::middleware('role:super_admin')->prefix('admin')->group(function () {
             Route::get('/status', [NextActionTourController::class, 'status']);
+            Route::get('/users', [NextActionTourController::class, 'users']);
             Route::post('/start', [NextActionTourController::class, 'start']);
             Route::post('/stop', [NextActionTourController::class, 'stop']);
         });

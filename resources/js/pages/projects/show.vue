@@ -556,7 +556,10 @@ export default {
       const list = project.value?.floor_plan_images;
       if (!Array.isArray(list)) return;
       const image = list.find((item) => item.id === payload.id);
-      if (image) image.scene_saved_at = payload.scene_saved_at;
+      if (image) {
+        image.scene_saved_at = payload.scene_saved_at;
+        if (payload.scene_data) image.scene_data = payload.scene_data;
+      }
     };
 
 
