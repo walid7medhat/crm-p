@@ -200,37 +200,84 @@ async function openCompareFromHeader(alive) {
   return alive()
 }
 
-async function selectListings(alive) {
-  const links = [...document.querySelectorAll('.property-card-link, .ml-card__link')]
-  for (const link of links) {
-    if (!alive() || selected.value.length >= 3) break
+function cardMarket(link) {
+  const marked = link.getAttribute('data-compare-market')
+  if (marked === 'sale' || marked === 'rent') return marked
+  const card = link.closest('.property-listing-card, .ml-card')
+  const text = (card?.querySelector('.status-badge, .ml-card__badge--sale, .ml-card__badge--rent')?.textContent || '').toLowerCase()
+  if (text.includes('rent')) return 'rent'
+  if (text.includes('sale')) return 'sale'
+  return null
+}
+
+function candidateLinks(locked) {
+  return [...document.querySelectorAll('.property-card-link[data-compare-market], .ml-card__link[data-compare-market], .property-card-link, .ml-card__link')].filter((link) => {
     const card = link.closest('.property-listing-card, .ml-card')
-    if (card?.classList.contains('is-compare-selected')) continue
+    if (card?.classList.contains('is-compare-selected')) return false
+    const rect = link.getBoundingClientRect()
+    if (rect.width < 8 || rect.height < 8) return false
+    const market = cardMarket(link)
+    return !locked || !market || market === locked
+  })
+}
+
+async function showOnlyMarket(market, alive) {
+  const label = market === 'rent' ? 'Rent' : 'Sale'
+  caption.value = `Unit 2 has to be for ${label.toLowerCase()} as well. The list is filtered to ${label}.`
+  const opener = shown('.listing-sale-rent-btn')
+  if (!opener) return alive()
+  spotlight(opener)
+  if (!(await hold(900, alive))) return false
+  opener.click()
+  await wait(250)
+  const option = [...document.querySelectorAll('.listing-tab-switch-purpose .listing-tab-btn')]
+    .find((button) => button.textContent.trim().toLowerCase() === label.toLowerCase())
+  option?.click()
+  await wait(200)
+  const done = [...document.querySelectorAll('.listing-sale-rent-popover .btn-primary')]
+    .find((button) => /done/i.test(button.textContent || ''))
+  done?.click()
+  await waitFor('.property-card-link, .ml-card__link', alive, 6000)
+  await wait(400)
+  return alive()
+}
+
+async function selectListings(alive) {
+  let filtered = false
+  while (alive() && selected.value.length < 2) {
     const locked = selected.value.map(listingPurpose).find(Boolean)
-    const badge = (card?.querySelector('.status-badge, .ml-card__badge')?.textContent || '').toLowerCase()
-    const market = badge.includes('rent') ? 'rent' : (badge.includes('sale') ? 'sale' : null)
-    if (locked && market && market !== locked) continue
-    link.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
-    await wait(reduced() ? 40 : 280)
-    spotlight(card || link)
-    const next = selected.value.length + 1
-    caption.value = next === 1
-      ? 'Click unit 1. Sale stays with sale, and rent stays with rent.'
-      : next === 2
-        ? 'Click unit 2. It must match unit 1.'
-        : 'Click unit 3 if you want one more. Three is the maximum.'
-    if (!(await hold(next === 3 ? 1100 : 1500, alive))) return false
-    const before = selected.value.length
-    link.click()
-    await wait(220)
-    if (selected.value.length > before) {
+    const links = candidateLinks(locked)
+    let clicked = false
+    for (const link of links) {
+      if (!alive() || selected.value.length >= 2) break
+      const card = link.closest('.property-listing-card, .ml-card') || link
+      link.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+      await wait(reduced() ? 40 : 320)
+      spotlight(card)
+      const next = selected.value.length + 1
       caption.value = next === 1
-        ? 'Unit 1 is selected. Now click unit 2.'
-        : next === 2
-          ? 'Unit 2 is selected. Next, click Compare Now.'
-          : 'Unit 3 is selected. Next, click Compare Now.'
-      if (!(await hold(1100, alive))) return false
+        ? 'Click unit 1. Sale stays with sale, and rent stays with rent.'
+        : 'Click unit 2. It matches unit 1.'
+      if (!(await hold(1400, alive))) return false
+      const before = selected.value.length
+      link.click()
+      await wait(280)
+      clicked = true
+      if (selected.value.length > before) {
+        caption.value = next === 1
+          ? 'Unit 1 is selected. Now click unit 2.'
+          : 'Unit 2 is selected. Next, click Compare Now.'
+        if (!(await hold(1000, alive))) return false
+      }
     }
+    if (selected.value.length >= 2 || !alive()) break
+    if (!filtered && locked) {
+      filtered = true
+      if (!(await showOnlyMarket(locked, alive))) return false
+      continue
+    }
+    if (!clicked) break
+    break
   }
   return alive()
 }

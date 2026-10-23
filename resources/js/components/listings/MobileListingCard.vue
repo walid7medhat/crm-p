@@ -3,6 +3,7 @@
     <a
       :href="`/property-details/${property.id}`"
       class="ml-card__link"
+      :data-compare-market="listingPurpose(property) || undefined"
       :class="{ 'is-compare-armed': compareMode }"
       @click="onCardClick"
     >
@@ -84,7 +85,7 @@
 import { hidesBedsBaths } from "@/composables/listingPropertyType"
 import { computed, ref } from 'vue'
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal'
-import { usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
+import { listingPurpose, usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
 
 const props = defineProps({
   property: { type: Object, required: true },

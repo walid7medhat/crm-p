@@ -59,6 +59,7 @@
        <a
             :href="`/property-details/${property.id}`"
             class="property-card-link"
+            :data-compare-market="listingPurpose(property) || undefined"
             :class="{ 'converted-card': property.status === 'converted', 'is-compare-armed': compareMode }"
             @click="onListingClick($event, property)"
           >
@@ -279,7 +280,7 @@ import api from "@/plugins/axios";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import ListingPaymentBreakdownQuickModal from '@/components/listings/ListingPaymentBreakdownQuickModal.vue';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
-import { usePropertyCompareSelection } from '@/composables/propertyCompareSelection';
+import { listingPurpose, usePropertyCompareSelection } from '@/composables/propertyCompareSelection';
 import { hidesBedsBaths } from '@/composables/listingPropertyType';
 import {
   listingNeedsPaymentBreakdownHighlight,
@@ -1135,6 +1136,7 @@ const decodeFiltersFromQuery = async (query) => {
       sqftIcon,
       isLoading,
       compareMode,
+      listingPurpose,
       isCompareSelected,
       onListingClick,
       pagination,
