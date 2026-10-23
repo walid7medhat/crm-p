@@ -211,19 +211,12 @@ class NextActionTourCampaignService
 
     private function fanOut(string $launchId, bool $active, string $action, string $feature): void
     {
-        $this->audienceQuery()
-            ->select(['id'])
-            ->orderBy('id')
-            ->chunkById(100, function ($users) use ($launchId, $active, $action, $feature) {
-                foreach ($users as $user) {
-                    broadcast(new NextActionTourCampaignUpdated(
-                        (int) $user->id,
-                        $active,
-                        $launchId,
-                        $action,
-                        $feature
-                    ));
-                }
-            });
+        broadcast(new NextActionTourCampaignUpdated(
+            0,
+            $active,
+            $launchId,
+            $action,
+            $feature
+        ));
     }
 }

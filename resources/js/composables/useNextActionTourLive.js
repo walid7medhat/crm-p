@@ -8,17 +8,6 @@ import {
 let channel = null
 let listening = false
 
-function getStoredUserId() {
-  try {
-    const raw = localStorage.getItem('user')
-    if (!raw) return null
-    const user = JSON.parse(raw)
-    return user?.id ? Number(user.id) : null
-  } catch {
-    return null
-  }
-}
-
 async function maybeShowFromServer() {
   try {
     const response = await api.get('/next-action-tour/me')
@@ -31,25 +20,27 @@ async function maybeShowFromServer() {
   }
 }
 
+function campaignPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null
+  if (payload.launch_id || payload.feature) return payload
+  if (payload.data && typeof payload.data === 'object') return payload.data
+  return payload
+}
+
 function onCampaignEvent(payload) {
-  if (!payload) return
-  if (payload.feature && payload.feature !== 'next_action') return
-  if (payload.active && payload.launch_id) {
-    if (tourPhase.value === 'idle') {
-      // Re-check views so refresh / restart still respects the 3-view cap.
-      maybeShowFromServer()
-    }
+  const data = campaignPayload(payload)
+  if (!data) return
+  if (data.feature && data.feature !== 'next_action') return
+  if (data.active && data.launch_id) {
+    if (tourPhase.value === 'idle') startNextActionTourLive(data.launch_id)
     return
   }
-  if (!payload.active) {
-    endNextActionTourPreview()
-  }
+  if (!data.active) endNextActionTourPreview()
 }
 
 function bindChannel() {
-  const id = getStoredUserId()
-  if (!id || !window.Echo || listening) return
-  channel = window.Echo.private(`user.${id}`)
+  if (!window.Echo || listening) return
+  channel = window.Echo.private('crm-campaigns')
   channel.listen('.next-action-tour', onCampaignEvent)
   listening = true
 }

@@ -414,6 +414,13 @@ function scheduleEchoInit() {
       })
 
       const currentUserId = getStoredUserId()
+      const { startPropertyCompareCampaignLive, closePropertyCompareCampaignPreview } = await import('./composables/usePropertyCompareCampaignPreview.js')
+      window.Echo.private('crm-campaigns').listen('.next-action-tour', (payload) => {
+        const data = payload?.launch_id || payload?.feature ? payload : payload?.data
+        if (!data || data.feature !== 'property_compare') return
+        if (data.active && data.launch_id) startPropertyCompareCampaignLive(data.launch_id)
+        else if (!data.active) closePropertyCompareCampaignPreview()
+      })
       if (currentUserId) {
         // Account set inactive by an admin → log out now (UserDeactivated event).
         window.Echo.private(`user.${currentUserId}`)

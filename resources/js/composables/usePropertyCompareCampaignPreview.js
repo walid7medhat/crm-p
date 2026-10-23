@@ -5,6 +5,7 @@ export const propertyCompareCampaignMode = ref('preview')
 export const propertyCompareCampaignLaunchId = ref(null)
 
 let pendingLaunch = null
+const startedLaunches = new Set()
 
 function reopen() {
   if (propertyCompareCampaignOpen.value) {
@@ -26,14 +27,8 @@ export function startPropertyCompareCampaignPreview() {
 
 export function startPropertyCompareCampaignLive(launchId) {
   if (!launchId) return
-  if (
-    propertyCompareCampaignOpen.value
-    && propertyCompareCampaignMode.value === 'live'
-    && propertyCompareCampaignLaunchId.value === launchId
-  ) {
-    return
-  }
-  if (pendingLaunch === launchId && propertyCompareCampaignOpen.value) return
+  if (startedLaunches.has(launchId)) return
+  startedLaunches.add(launchId)
   pendingLaunch = launchId
   propertyCompareCampaignMode.value = 'live'
   propertyCompareCampaignLaunchId.value = launchId

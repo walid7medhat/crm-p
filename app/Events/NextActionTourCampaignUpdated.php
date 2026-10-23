@@ -26,7 +26,7 @@ class NextActionTourCampaignUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('user.'.$this->userId)];
+        return [new PrivateChannel('crm-campaigns')];
     }
 
     public function broadcastAs(): string
