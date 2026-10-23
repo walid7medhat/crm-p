@@ -205,6 +205,13 @@ function columnValues(listings, read) {
   return listings.map((listing) => read(listing))
 }
 
+function readinessLabel(listing) {
+  const status = String(listing?.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ')
+  if (!status) return null
+  if (status === 'completed' || status === 'complete' || status === 'ready') return 'Ready'
+  return 'Off Plan'
+}
+
 function expenseLines(listing) {
   const raw = listing?.assignment_expense_lines
   if (Array.isArray(raw)) return raw
@@ -426,7 +433,7 @@ export function compareProperties(left, right, third) {
 
   pushGroup(groups, 'Status', [
     row('availability', 'Availability', columnValues(listings, availability)),
-    row('completion', 'Completion', columnValues(listings, (listing) => listing?.completion_status || null)),
+    row('completion', 'Status', columnValues(listings, readinessLabel)),
     row('handover', 'Handover', columnValues(listings, (listing) => listing?.handover_date || null)),
     row('occupancy', 'Occupancy', columnValues(listings, (listing) => listing?.occupancy_status || null)),
     row('mortgage', 'Mortgage', columnValues(listings, (listing) => humanize(listing?.mortgage_status)), { hideWhenAllBlank: true }),

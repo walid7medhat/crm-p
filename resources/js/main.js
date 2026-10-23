@@ -415,12 +415,22 @@ function scheduleEchoInit() {
 
       const currentUserId = getStoredUserId()
       if (currentUserId) {
-        const { startPropertyCompareCampaignLive, closePropertyCompareCampaignPreview } = await import('./composables/usePropertyCompareCampaignPreview.js')
+        const {
+          startPropertyCompareCampaignLive,
+          closePropertyCompareCampaignPreview,
+          propertyCompareCampaignLaunchId,
+        } = await import('./composables/usePropertyCompareCampaignPreview.js')
         const onCompareCampaign = (payload) => {
           const data = payload?.launch_id || payload?.feature ? payload : payload?.data
           if (!data || data.feature !== 'property_compare') return
-          if (data.active && data.launch_id) startPropertyCompareCampaignLive(data.launch_id)
-          else if (!data.active) closePropertyCompareCampaignPreview()
+          if (data.action === 'stop' || data.active === false) {
+            const current = propertyCompareCampaignLaunchId.value
+            if (!data.launch_id || !current || data.launch_id === current) {
+              closePropertyCompareCampaignPreview()
+            }
+            return
+          }
+          if (data.launch_id) startPropertyCompareCampaignLive(data.launch_id)
         }
         // This channel is already open for notifications, so the campaign arrives with no extra join.
         window.Echo.private(`user.${currentUserId}`)

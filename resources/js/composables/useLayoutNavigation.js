@@ -169,8 +169,7 @@ const LISTINGS_REQUEST_PATHS = [
   '/my-viewings',
 ];
 
-function withPropertyCompareTab(tabs, isSuperAdmin) {
-  if (!isSuperAdmin) return tabs;
+function withPropertyCompareTab(tabs) {
   if (!Array.isArray(tabs) || !tabs.length) return tabs;
   if (tabs.some((tab) => tab.id === 'compare' || tab.path === '/property-compare')) return tabs;
   return [
@@ -453,7 +452,19 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         count: listingTabCounts.listings || 0,
       },
     ];
-    return withPropertyCompareTab(tabs, !!isSuperAdmin);
+    return withPropertyCompareTab(tabs);
+  }
+
+  if (section === CRM_SECTIONS.LISTINGS && isShowOnlyListing) {
+    return withPropertyCompareTab([
+      {
+        id: 'listings',
+        label: 'Listings',
+        type: 'route',
+        path: '/alllisting',
+        matchPaths: ['/alllisting'],
+      },
+    ]);
   }
 
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing) {
@@ -616,7 +627,7 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       });
     }
 
-    return withPropertyCompareTab(tabs, !!isSuperAdmin);
+    return withPropertyCompareTab(tabs);
   }
 
   return [];

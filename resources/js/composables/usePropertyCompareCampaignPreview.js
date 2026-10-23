@@ -3,16 +3,14 @@ import { ref } from 'vue'
 export const propertyCompareCampaignOpen = ref(false)
 export const propertyCompareCampaignMode = ref('preview')
 export const propertyCompareCampaignLaunchId = ref(null)
+export const propertyCompareCampaignNonce = ref(0)
 
 let pendingLaunch = null
 const startedLaunches = new Set()
 
 function reopen() {
   if (propertyCompareCampaignOpen.value) {
-    propertyCompareCampaignOpen.value = false
-    queueMicrotask(() => {
-      propertyCompareCampaignOpen.value = true
-    })
+    propertyCompareCampaignNonce.value += 1
     return
   }
   propertyCompareCampaignOpen.value = true

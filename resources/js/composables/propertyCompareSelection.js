@@ -9,10 +9,13 @@ const resultOpen = ref(false)
 const notice = ref('')
 let noticeTimer = null
 
+/** True only while the Property Compare campaign tour is on screen. */
+export const compareTourUnlocked = ref(false)
+
 export function canUsePropertyCompare() {
   try {
     const user = JSON.parse(localStorage.getItem('user') || 'null')
-    return Array.isArray(user?.roles) && user.roles.includes('super_admin')
+    return Boolean(user?.id)
   } catch {
     return false
   }
@@ -73,6 +76,7 @@ export function listingSnapshot(listing) {
     size_sqft: listing.size_sqft,
     size_sqmt: listing.size_sqmt,
     furnishing: listing.furnishing || listing.furnished || null,
+    completion_status: listing.completion_status || null,
     status: listing.status,
     is_active: listing.is_active,
     approved: listing.approved,

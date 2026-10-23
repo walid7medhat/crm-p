@@ -78,7 +78,7 @@ import api from '@/plugins/axios'
 import { compareProperties, listingHeadline, listingImages } from '@/composables/propertyComparison.js'
 import { isActiveListing, listingPurpose, usePropertyCompareSelection } from '@/composables/propertyCompareSelection'
 
-const BRIEF_IDS = ['price', 'price-sqft', 'purpose', 'type', 'bedrooms', 'bathrooms', 'size-sqft', 'location', 'furnishing']
+const BRIEF_IDS = ['price', 'price-sqft', 'purpose', 'type', 'bedrooms', 'bathrooms', 'size-sqft', 'completion', 'location']
 const SHORT_LABELS = {
   price: 'Price',
   'price-sqft': 'Per sqft',
@@ -88,7 +88,7 @@ const SHORT_LABELS = {
   bathrooms: 'Baths',
   'size-sqft': 'Size',
   location: 'Area',
-  furnishing: 'Furnishing',
+  completion: 'Status',
 }
 
 const { resultOpen, closeResults, selected } = usePropertyCompareSelection()
@@ -104,14 +104,12 @@ const brokenImages = reactive({})
 const comparison = computed(() => (readyListings.value.length >= 2 ? compareProperties(readyListings.value) : null))
 const brief = computed(() => {
   if (!comparison.value) return null
-  const rows = []
+  const byId = new Map()
   for (const group of comparison.value.groups) {
-    for (const item of group.rows) {
-      if (BRIEF_IDS.includes(item.id)) rows.push(item)
-    }
+    for (const item of group.rows) byId.set(item.id, item)
   }
   return {
-    rows,
+    rows: BRIEF_IDS.map((id) => byId.get(id)).filter(Boolean),
     columnCount: comparison.value.columnCount,
   }
 })

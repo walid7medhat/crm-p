@@ -1,6 +1,7 @@
 import api from '@/plugins/axios'
 import {
   closePropertyCompareCampaignPreview,
+  propertyCompareCampaignLaunchId,
   propertyCompareCampaignOpen,
   startPropertyCompareCampaignLive,
 } from '@/composables/usePropertyCompareCampaignPreview.js'
@@ -41,11 +42,14 @@ function campaignPayload(payload) {
 function onCampaignEvent(payload) {
   const data = campaignPayload(payload)
   if (!data || data.feature !== 'property_compare') return
-  if (data.active && data.launch_id) {
-    startPropertyCompareCampaignLive(data.launch_id)
+  if (data.action === 'stop' || data.active === false) {
+    const current = propertyCompareCampaignLaunchId.value
+    if (!data.launch_id || !current || data.launch_id === current) {
+      closePropertyCompareCampaignPreview()
+    }
     return
   }
-  if (!data.active) closePropertyCompareCampaignPreview()
+  if (data.launch_id) startPropertyCompareCampaignLive(data.launch_id)
 }
 
 function bindChannel() {
@@ -72,10 +76,19 @@ export function initPropertyCompareCampaignLive() {
     bindChannel()
     maybeShowFromServer()
   }
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') maybeShowFromServer()
+  }
+  const retrySoon = window.setTimeout(maybeShowFromServer, 2500)
+  const retryLater = window.setTimeout(maybeShowFromServer, 7000)
   window.addEventListener('echo-ready', onReady)
+  document.addEventListener('visibilitychange', onVisible)
 
   return () => {
+    window.clearTimeout(retrySoon)
+    window.clearTimeout(retryLater)
     window.removeEventListener('echo-ready', onReady)
+    document.removeEventListener('visibilitychange', onVisible)
     unbindChannel()
   }
 }

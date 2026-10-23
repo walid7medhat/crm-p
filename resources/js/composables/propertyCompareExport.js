@@ -12,7 +12,7 @@ const SHORT_LABELS = {
   bathrooms: 'Baths',
   'size-sqft': 'Size',
   location: 'Area',
-  furnishing: 'Furnishing',
+  completion: 'Status',
 }
 
 const PAGE_W = 1280

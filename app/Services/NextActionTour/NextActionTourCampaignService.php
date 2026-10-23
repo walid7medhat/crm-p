@@ -235,7 +235,9 @@ class NextActionTourCampaignService
     }
 
     /**
-     * One Pusher call covers up to 90 people who are already subscribed to their own channel.
+     * Each open CRM tab is already joined to private-user.{id}. Pusher rejects a trigger
+     * aimed at too many channels at once, so this stays in small batches and retries
+     * one person at a time if a batch fails.
      */
     private function pushNow(array $userIds, bool $active, string $launchId, string $action, string $feature): void
     {
@@ -272,9 +274,19 @@ class NextActionTourCampaignService
             $connection['options'] ?? []
         );
 
-        foreach (array_chunk($userIds, 90) as $chunk) {
+        foreach (array_chunk($userIds, 10) as $chunk) {
             $channels = array_map(fn (int $id) => 'private-user.'.$id, $chunk);
-            $pusher->trigger($channels, 'next-action-tour', $payload);
+            try {
+                $pusher->trigger($channels, 'next-action-tour', $payload);
+            } catch (\Throwable) {
+                foreach ($channels as $channel) {
+                    try {
+                        $pusher->trigger($channel, 'next-action-tour', $payload);
+                    } catch (\Throwable $ignored) {
+                        // That person's open tab can still pick the campaign up from /me.
+                    }
+                }
+            }
         }
     }
 }

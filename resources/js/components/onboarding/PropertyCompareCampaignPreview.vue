@@ -55,19 +55,22 @@ import {
   closePropertyCompareCampaignPreview,
   propertyCompareCampaignLaunchId,
   propertyCompareCampaignMode,
+  propertyCompareCampaignNonce,
   propertyCompareCampaignOpen,
 } from '@/composables/usePropertyCompareCampaignPreview.js'
 import {
+  compareTourUnlocked,
   listingPurpose,
   restoreCompareSession,
   snapshotCompareSession,
+  startPropertyCompare,
   usePropertyCompareSelection,
 } from '@/composables/propertyCompareSelection'
 
 const INTRO_MS = 3200
 
 const router = useRouter()
-const { selected, closeResults, cancelCompare } = usePropertyCompareSelection()
+const { selected, closeResults, cancelCompare, openResults } = usePropertyCompareSelection()
 
 const steps = [
   { id: 'listings', label: 'All Listings' },
@@ -164,6 +167,26 @@ async function waitFor(selector, alive, ms = 5000) {
   return null
 }
 
+function clickWithoutLeaving(el) {
+  if (!el) return
+  const block = (event) => {
+    event.preventDefault()
+  }
+  el.addEventListener('click', block, true)
+  el.click()
+  el.removeEventListener('click', block, true)
+}
+
+async function waitForListingsReady(alive) {
+  const start = Date.now()
+  while (alive() && Date.now() - start < 15000) {
+    const loading = document.body.classList.contains('app-loader-active')
+    if (!loading && shown('.property-card-link, .ml-card__link')) return true
+    await wait(100)
+  }
+  return alive()
+}
+
 function markShown() {
   const launch = propertyCompareCampaignLaunchId.value
   if (propertyCompareCampaignMode.value !== 'live' || !launch || shownLaunch === launch) return
@@ -179,7 +202,9 @@ function reportLive(kind) {
 }
 
 async function openCompareFromHeader(alive) {
-  let button = shown('[data-tour="property-compare-open"]')
+  compareTourUnlocked.value = true
+  startPropertyCompare()
+  let button = await waitFor('[data-tour="property-compare-open"]', alive, 8000)
   if (!button) {
     const title = shown('.kanban-mob-title-btn')
     if (title) {
@@ -188,14 +213,18 @@ async function openCompareFromHeader(alive) {
       if (!(await hold(900, alive))) return false
       title.click()
       await wait(280)
-      button = await waitFor('[data-tour="property-compare-open"]', alive, 1200)
+      button = await waitFor('[data-tour="property-compare-open"]', alive, 2500)
     }
   }
-  if (!button) return false
+  if (!button) {
+    caption.value = 'Compare is open. Next, select two units of the same type.'
+    return hold(1200, alive)
+  }
   spotlight(button)
   caption.value = 'Click Compare. This starts the selection.'
   if (!(await hold(1500, alive))) return false
-  button.click()
+  clickWithoutLeaving(button)
+  startPropertyCompare()
   await wait(280)
   return alive()
 }
@@ -260,7 +289,8 @@ async function selectListings(alive) {
         : 'Click unit 2. It matches unit 1.'
       if (!(await hold(1400, alive))) return false
       const before = selected.value.length
-      link.click()
+      startPropertyCompare()
+      clickWithoutLeaving(link)
       await wait(280)
       clicked = true
       if (selected.value.length > before) {
@@ -284,14 +314,22 @@ async function selectListings(alive) {
 
 async function play(targetStep, alive) {
   clearView.value = false
+  compareTourUnlocked.value = true
   try {
     if (router.currentRoute.value.path !== '/alllisting') {
-      await router.push('/alllisting')
+      try {
+        await router.push('/alllisting')
+      } catch {
+        // Another navigation can cancel this one. All Listings can still be the page we land on.
+      }
     }
-    caption.value = 'This is All Listings. Next, click Compare in the header.'
-    const firstCard = await waitFor('.property-card-link, .ml-card__link', alive, 6000)
-    spotlight(firstCard?.closest('.property-listing-card, .ml-card') || document.querySelector('.dashboard-main-router'))
+    caption.value = 'Opening All Listings.'
     step.value = 0
+    await waitForListingsReady(alive)
+    if (!alive()) return
+    caption.value = 'This is All Listings. Next, click Compare in the header.'
+    const firstCard = shown('.property-card-link, .ml-card__link')
+    spotlight(firstCard?.closest('.property-listing-card, .ml-card') || document.querySelector('.dashboard-main-router'))
     if (targetStep === 0) {
       await hold(1400, alive)
       return
@@ -299,50 +337,53 @@ async function play(targetStep, alive) {
     if (!(await hold(1200, alive))) return
 
     step.value = 1
-    if (!(await openCompareFromHeader(alive))) {
-      if (alive()) {
-        caption.value = 'Compare is not available on this account.'
-        await hold(1400, alive)
-        if (alive() && targetStep === 4) finish('complete')
-      }
-      return
-    }
+    if (!(await openCompareFromHeader(alive))) return
     if (targetStep === 1) return
 
     step.value = 2
     if (!(await selectListings(alive))) return
     if (selected.value.length < 2) {
       caption.value = 'This page does not have 2 active units of the same type yet.'
-      await hold(1400, alive)
+      await hold(4000, alive)
       if (alive() && targetStep === 4) finish('complete')
       return
     }
     if (targetStep === 2) return
 
     step.value = 3
-    const dock = await waitFor('.property-compare-dock', alive, 1800)
+    await waitForListingsReady(alive)
+    const dock = await waitFor('.property-compare-dock', alive, 12000)
     const go = shown('.property-compare-dock__go')
     spotlight(go || dock, 10)
     caption.value = selected.value.length >= 3
       ? 'Three units are selected. Click Compare Now.'
       : 'Two units are selected. Click Compare Now.'
     if (!(await hold(1600, alive))) return
-    ;(go || document.querySelector('.property-compare-dock__go'))?.click()
+    if (go && !go.disabled) clickWithoutLeaving(go)
+    openResults()
     await wait(360)
     if (targetStep === 3) return
 
     step.value = 4
-    const sheet = await waitFor('.property-compare__sheet', alive, 3500)
+    let sheet = await waitFor('.property-compare__sheet', alive, 8000)
     if (!sheet && !shown('.property-compare__bar-actions')) {
+      openResults()
+      sheet = await waitFor('.property-compare__sheet', alive, 5000)
+    }
+    if (!sheet && !shown('.property-compare__bar-actions')) {
+      caption.value = 'The comparison could not open on this page.'
+      await hold(4000, alive)
       if (alive() && targetStep === 4) finish('complete')
       return
     }
     hole.value = null
     clearView.value = true
+    markShown()
     if (!(await hold(10000, alive, true))) return
     if (alive() && targetStep === 4) finish('complete')
   } catch {
-    if (alive()) finish('complete')
+    if (!alive()) return
+    caption.value = 'Opening All Listings.'
   }
 }
 
@@ -366,6 +407,7 @@ function finish(kind) {
   clearView.value = false
   releaseSession()
   phase.value = 'idle'
+  compareTourUnlocked.value = false
   reportLive(kind)
   closePropertyCompareCampaignPreview()
 }
@@ -412,15 +454,16 @@ function begin() {
   clearView.value = false
   hole.value = null
   step.value = 0
+  compareTourUnlocked.value = true
   if (captured) releaseSession()
   phase.value = 'intro'
-  markShown()
   introTimer = setTimeout(() => {
     if (!open.value || phase.value !== 'intro') return
     savedSession = snapshotCompareSession()
     captured = true
     closeResults()
     cancelCompare()
+    compareTourUnlocked.value = true
     phase.value = 'tour'
     startRun(4)
   }, reduced() ? 280 : INTRO_MS)
@@ -435,8 +478,13 @@ watch(open, (isOpen) => {
       releaseSession()
       phase.value = 'idle'
     }
+    compareTourUnlocked.value = false
   }
 }, { immediate: true })
+
+watch(propertyCompareCampaignNonce, () => {
+  if (open.value) begin()
+})
 
 window.addEventListener('keydown', onKey)
 onMounted(() => {
@@ -455,7 +503,7 @@ onBeforeUnmount(() => {
 .pcc-intro {
   position: fixed;
   inset: 0;
-  z-index: 100120;
+  z-index: 1000002;
   display: grid;
   place-items: center;
   background:
@@ -553,7 +601,7 @@ onBeforeUnmount(() => {
 .pcc-tour {
   position: fixed;
   inset: 0;
-  z-index: 100100;
+  z-index: 1000001;
   pointer-events: none;
   perspective: 900px;
 }
@@ -648,13 +696,13 @@ onBeforeUnmount(() => {
   0% { opacity: 0; transform: translateZ(-180px) scale(0.7); }
   18% { opacity: 1; transform: translateZ(0) scale(1); }
   82% { opacity: 1; transform: translateZ(20px) scale(1.02); }
-  100% { opacity: 0; transform: translateZ(120px) scale(1.08); }
+  100% { opacity: 1; transform: translateZ(20px) scale(1.02); }
 }
 @keyframes pcc-card {
   0% { opacity: 0; transform: translateZ(-40px) rotateY(28deg) rotateX(18deg) scale(0.8); }
   22% { opacity: 1; transform: translateZ(48px) rotateY(-8deg) rotateX(6deg) scale(1); }
   78% { opacity: 1; transform: translateZ(56px) rotateY(4deg) rotateX(2deg) scale(1.02); }
-  100% { opacity: 0; transform: translateZ(90px) rotateY(-12deg) scale(1.06); }
+  100% { opacity: 1; transform: translateZ(56px) rotateY(4deg) rotateX(2deg) scale(1.02); }
 }
 @keyframes pcc-orbit {
   0% { opacity: 0; transform: rotateX(58deg) rotateZ(-40deg) scale(0.85); }

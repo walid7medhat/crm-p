@@ -821,7 +821,7 @@
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
 import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { startPropertyCompare } from '@/composables/propertyCompareSelection';
+import { canUsePropertyCompare, startPropertyCompare } from '@/composables/propertyCompareSelection';
 import {
   buildHeaderTabs,
   buildTopModuleNav,
@@ -2755,7 +2755,7 @@ function toggleBrowserNotifications() {
 }
 
 function openPropertyCompare() {
-  if (!isSuperAdmin.value) return;
+  if (!canUsePropertyCompare()) return;
   startPropertyCompare();
   const onListingGrid = route.path === '/alllisting' || route.path === '/my-listing';
   if (!onListingGrid) router.push('/alllisting');
