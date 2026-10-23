@@ -48,7 +48,7 @@
             <button type="button" class="nat-admin__btn nat-admin__btn--preview" :disabled="busy" @click="openComparePreview">
               Preview
             </button>
-            <button type="button" class="nat-admin__btn nat-admin__btn--start" :disabled="busy || compareStatus?.is_active" @click="askCompareStart">
+            <button type="button" class="nat-admin__btn nat-admin__btn--start" :disabled="busy || compareLiveForAll" @click="askCompareStart">
               Start Campaign
             </button>
             <button type="button" class="nat-admin__btn nat-admin__btn--stop" :disabled="busy || !compareStatus?.is_active" @click="askCompareStop">
@@ -56,9 +56,29 @@
             </button>
           </div>
         </div>
+        <div class="nat-admin__test">
+          <input
+            v-model="userQuery"
+            type="search"
+            placeholder="Test with one person"
+            :disabled="busy"
+            @input="searchUsers"
+          />
+          <button type="button" class="nat-admin__btn" :disabled="busy || !pickedUser" @click="askCompareTest">
+            Start for this person
+          </button>
+          <ul v-if="userResults.length" class="nat-admin__people">
+            <li v-for="person in userResults" :key="person.id">
+              <button type="button" :class="{ 'is-on': pickedUser?.id === person.id }" @click="pickUser(person)">
+                {{ person.name }}
+              </button>
+            </li>
+          </ul>
+        </div>
         <ul>
           <li><strong>Preview</strong> and <strong>Start</strong> both open with the New Feature intro, then the real All Listings compare flow</li>
-          <li><strong>Start Campaign</strong> shows it once to every connected active user. A new start shows it once again</li>
+          <li><strong>Start for this person</strong> sends it only to the person you pick, so you can test first</li>
+          <li><strong>Start Campaign</strong> then shows it once to every connected active user</li>
           <li>PNG and PDF are pointed at only. Nothing is downloaded</li>
           <li>When it finishes, the overlay closes and the normal page stays</li>
         </ul>
@@ -94,6 +114,12 @@ const busy = ref(false)
 const notice = ref('Load status, then Preview locally or Start Campaign for everyone.')
 const noticeError = ref(false)
 const dialog = ref(null)
+const userQuery = ref('')
+const userResults = ref([])
+const pickedUser = ref(null)
+let searchTimer = null
+
+const compareLiveForAll = computed(() => !!compareStatus.value?.is_active && !compareStatus.value?.target_user_id)
 
 const statusLine = computed(() => {
   if (!status.value) return 'Loading campaign status…'
@@ -105,6 +131,9 @@ const statusLine = computed(() => {
 
 const compareStatusLine = computed(() => {
   if (!compareStatus.value) return 'Loading campaign status…'
+  if (compareStatus.value.is_active && compareStatus.value.target_user_id) {
+    return `Testing with ${compareStatus.value.target_name || 'one person'} only`
+  }
   if (compareStatus.value.is_active) {
     return `Campaign LIVE · each person sees it once · audience ~${compareStatus.value.audience_count || 0}`
   }
@@ -157,6 +186,50 @@ function askStop() {
   }
 }
 
+function currentUserId() {
+  try {
+    return Number(JSON.parse(localStorage.getItem('user') || 'null')?.id) || null
+  } catch {
+    return null
+  }
+}
+
+function searchUsers() {
+  pickedUser.value = null
+  clearTimeout(searchTimer)
+  const query = userQuery.value.trim()
+  if (query.length < 2) {
+    userResults.value = []
+    return
+  }
+  searchTimer = setTimeout(async () => {
+    try {
+      const response = await api.get('/next-action-tour/admin/users', { params: { search: query } })
+      userResults.value = response.data?.data || []
+    } catch {
+      userResults.value = []
+    }
+  }, 200)
+}
+
+function pickUser(person) {
+  pickedUser.value = person
+  userQuery.value = person.name
+  userResults.value = []
+}
+
+function askCompareTest() {
+  if (!pickedUser.value) return
+  dialog.value = {
+    kind: 'start',
+    feature: 'property_compare',
+    user_id: pickedUser.value.id,
+    title: `Start for ${pickedUser.value.name}?`,
+    body: 'Only this person sees the compare tour. Everyone else stays on the normal page until you start the campaign for all.',
+    confirm: 'Start for this person',
+  }
+}
+
 function askCompareStart() {
   dialog.value = {
     kind: 'start',
@@ -181,19 +254,26 @@ async function confirmDialog() {
   if (!dialog.value) return
   const kind = dialog.value.kind
   const feature = dialog.value.feature || 'next_action'
+  const userId = dialog.value.user_id || null
   dialog.value = null
   busy.value = true
   noticeError.value = false
   try {
-    const response = await api.post(`/next-action-tour/admin/${kind}`, { feature })
+    const response = await api.post(`/next-action-tour/admin/${kind}`, {
+      feature,
+      ...(userId ? { user_id: userId } : {}),
+    })
     const data = response.data?.data || null
     if (feature === 'property_compare') {
       compareStatus.value = data || compareStatus.value
-      if (kind === 'start' && data?.launch_id) startPropertyCompareCampaignLive(data.launch_id)
+      const mine = !data?.target_user_id || Number(data.target_user_id) === currentUserId()
+      if (kind === 'start' && data?.launch_id && mine) startPropertyCompareCampaignLive(data.launch_id)
       if (kind === 'stop') closePropertyCompareCampaignPreview()
-      notice.value = kind === 'start'
-        ? 'Property Compare started. Each person sees it once, beginning with the New Feature intro.'
-        : 'Property Compare campaign stopped.'
+      notice.value = kind === 'stop'
+        ? 'Property Compare campaign stopped.'
+        : data?.target_name
+          ? `Sent to ${data.target_name} only. Start Campaign when you want everyone.`
+          : 'Property Compare started. Each connected person sees it once.'
     } else {
       status.value = data || status.value
       notice.value = kind === 'start'
@@ -240,6 +320,44 @@ onMounted(loadStatus)
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.nat-admin__test {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.nat-admin__test input {
+  min-width: min(240px, 100%);
+  border: 1px solid #ebecef;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13px;
+}
+.nat-admin__people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nat-admin__people button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #f4f1f7;
+  color: #3b3558;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nat-admin__people button.is-on {
+  color: #fff;
+  background: #733e87;
 }
 .nat-admin__btn {
   appearance: none;

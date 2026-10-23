@@ -82,6 +82,22 @@ class NextActionTourCampaignTest extends TestCase
         $this->assertSame(3, $nextStill['max_views']);
     }
 
+    public function test_property_compare_test_start_reaches_only_the_chosen_user(): void
+    {
+        Event::fake();
+        $admin = $this->makeUser('super_admin');
+        $agent = $this->makeUser('sales');
+        $other = $this->makeUser('sales');
+        $service = app(NextActionTourCampaignService::class);
+
+        $status = $service->start($admin, 'property_compare', $agent->id);
+
+        $this->assertSame($agent->id, $status['target_user_id']);
+        $this->assertTrue($service->forUser($agent, 'property_compare')['should_show']);
+        $this->assertFalse($service->forUser($other, 'property_compare')['should_show']);
+        $this->assertFalse($service->forUser($admin, 'property_compare')['should_show']);
+    }
+
     public function test_non_super_admin_cannot_start_campaign(): void
     {
         $agent = $this->makeUser('sales');

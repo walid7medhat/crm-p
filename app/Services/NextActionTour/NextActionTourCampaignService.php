@@ -20,11 +20,16 @@ class NextActionTourCampaignService
     {
         $feature = $this->normalizeFeature($feature);
         $campaign = $this->latest($feature);
+        $target = $campaign?->target_user_id
+            ? User::query()->select(['id', 'name', 'display_name'])->find($campaign->target_user_id)
+            : null;
 
         return [
             'feature' => $feature,
             'is_active' => (bool) ($campaign?->is_active),
             'launch_id' => $campaign?->launch_id,
+            'target_user_id' => $campaign?->target_user_id,
+            'target_name' => $target ? ($target->display_name ?: $target->name) : null,
             'started_at' => $campaign?->started_at?->toIso8601String(),
             'stopped_at' => $campaign?->stopped_at?->toIso8601String(),
             'started_by' => $campaign?->started_by,
@@ -33,7 +38,7 @@ class NextActionTourCampaignService
         ];
     }
 
-    public function start(User $actor, ?string $feature = null): array
+    public function start(User $actor, ?string $feature = null, ?int $onlyUserId = null): array
     {
         $feature = $this->normalizeFeature($feature);
 
@@ -48,13 +53,14 @@ class NextActionTourCampaignService
         $campaign = NextActionTourCampaign::query()->create([
             'launch_id' => (string) Str::uuid(),
             'feature' => $feature,
+            'target_user_id' => $onlyUserId,
             'is_active' => true,
             'started_by' => $actor->id,
             'started_at' => now(),
             'stopped_at' => null,
         ]);
 
-        $this->fanOut($campaign->launch_id, true, 'start', $feature);
+        $this->fanOut($campaign->launch_id, true, 'start', $feature, $onlyUserId);
 
         return $this->status($feature);
     }
@@ -68,7 +74,7 @@ class NextActionTourCampaignService
                 'is_active' => false,
                 'stopped_at' => now(),
             ])->save();
-            $this->fanOut($campaign->launch_id, false, 'stop', $feature);
+            $this->fanOut($campaign->launch_id, false, 'stop', $feature, $campaign->target_user_id ? (int) $campaign->target_user_id : null);
         }
 
         return $this->status($feature);
@@ -78,6 +84,9 @@ class NextActionTourCampaignService
     {
         $feature = $this->normalizeFeature($feature);
         $campaign = $this->active($feature);
+        if ($campaign?->target_user_id && (int) $campaign->target_user_id !== (int) $user->id) {
+            $campaign = null;
+        }
         $max = $this->maxViews($feature);
         if (! $campaign) {
             return [
@@ -209,14 +218,63 @@ class NextActionTourCampaignService
         return User::query()->where('status', 'active');
     }
 
-    private function fanOut(string $launchId, bool $active, string $action, string $feature): void
+    private function fanOut(string $launchId, bool $active, string $action, string $feature, ?int $onlyUserId = null): void
     {
-        broadcast(new NextActionTourCampaignUpdated(
-            0,
+        $query = $this->audienceQuery()->select(['id'])->orderBy('id');
+        if ($onlyUserId) {
+            $query->where('id', $onlyUserId);
+        }
+
+        $this->pushNow(
+            $query->pluck('id')->map(fn ($id) => (int) $id)->all(),
             $active,
             $launchId,
             $action,
             $feature
-        ));
+        );
+    }
+
+    /**
+     * One Pusher call covers up to 90 people who are already subscribed to their own channel.
+     */
+    private function pushNow(array $userIds, bool $active, string $launchId, string $action, string $feature): void
+    {
+        if ($userIds === []) {
+            return;
+        }
+
+        $payload = [
+            'active' => $active,
+            'launch_id' => $launchId,
+            'action' => $action,
+            'feature' => $feature,
+        ];
+
+        $connection = config('broadcasting.connections.pusher');
+        $canUsePusher = ! app()->runningUnitTests()
+            && config('broadcasting.default') === 'pusher'
+            && ! empty($connection['key'])
+            && ! empty($connection['secret'])
+            && ! empty($connection['app_id']);
+
+        if (! $canUsePusher) {
+            foreach ($userIds as $userId) {
+                broadcast(new NextActionTourCampaignUpdated($userId, $active, $launchId, $action, $feature));
+            }
+
+            return;
+        }
+
+        $pusher = new \Pusher\Pusher(
+            $connection['key'],
+            $connection['secret'],
+            $connection['app_id'],
+            $connection['options'] ?? []
+        );
+
+        foreach (array_chunk($userIds, 90) as $chunk) {
+            $channels = array_map(fn (int $id) => 'private-user.'.$id, $chunk);
+            $pusher->trigger($channels, 'next-action-tour', $payload);
+        }
     }
 }

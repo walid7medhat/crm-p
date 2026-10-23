@@ -8,6 +8,17 @@ import {
 let channel = null
 let listening = false
 
+function getStoredUserId() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const user = JSON.parse(raw)
+    return user?.id ? Number(user.id) : null
+  } catch {
+    return null
+  }
+}
+
 async function maybeShowFromServer() {
   try {
     const response = await api.get('/next-action-tour/me', { params: { feature: 'property_compare' } })
@@ -38,8 +49,9 @@ function onCampaignEvent(payload) {
 }
 
 function bindChannel() {
-  if (!window.Echo || listening) return
-  channel = window.Echo.private('crm-campaigns')
+  const id = getStoredUserId()
+  if (!id || !window.Echo || listening) return
+  channel = window.Echo.private(`user.${id}`)
   channel.listen('.next-action-tour', onCampaignEvent)
   listening = true
 }
