@@ -71,8 +71,8 @@ export function showUnsavedChangesDialog() {
     return showConfirmation({
         title: 'Unsaved Changes',
         message: "You have changes that haven't been saved. What would you like to do?",
-        confirmText: 'Save Changes',
-        extraText: 'Discard Changes',
+        confirmText: 'Save',
+        extraText: 'Close',
         cancelText: 'Continue Editing',
         type: 'success',
         closeOnOverlay: false,

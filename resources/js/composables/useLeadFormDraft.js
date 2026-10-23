@@ -12,31 +12,7 @@ import {
 } from '@/utils/leadFormDraftStorage'
 
 const leaveGuards = new Set()
-const tabPromptQueue = []
-let tabPromptRunning = false
 const AUTOSAVE_MS = 400
-
-function enqueueTabPrompt(handler) {
-    tabPromptQueue.push(handler)
-    if (tabPromptRunning) return
-    tabPromptRunning = true
-    void drainTabPrompts()
-}
-
-async function drainTabPrompts() {
-    try {
-        while (tabPromptQueue.length) {
-            const handler = tabPromptQueue.shift()
-            await handler()
-        }
-    } finally {
-        tabPromptRunning = false
-        if (tabPromptQueue.length) {
-            tabPromptRunning = true
-            void drainTabPrompts()
-        }
-    }
-}
 
 export async function confirmRegisteredLeadDrafts() {
     for (const guard of [...leaveGuards]) {
@@ -86,8 +62,6 @@ export function useLeadFormDraft(options) {
     let leaveInflight = null
     let listening = false
     let restoredSerialized = null
-    let baselineData = null
-    let pendingTabPrompt = false
 
     function storageKey() {
         if (!boundUserId || !boundKey) return null
@@ -149,11 +123,6 @@ export function useLeadFormDraft(options) {
 
     function rememberBaseline() {
         baseline.value = live.value
-        try {
-            baselineData = JSON.parse(live.value)
-        } catch {
-            baselineData = null
-        }
     }
 
     function acceptCurrent() {
@@ -167,26 +136,6 @@ export function useLeadFormDraft(options) {
         draftSaved.value = false
         paused = false
         refreshStatus()
-    }
-
-    async function revertToBaseline() {
-        clearTimer()
-        paused = true
-        isApplying.value = true
-        try {
-            if (baselineData) options.applySnapshot(baselineData)
-            await nextTick()
-            const storage = currentStorage()
-            const key = storageKey()
-            if (storage && key) removeLeadDraft(storage, key)
-        } finally {
-            rememberBaseline()
-            pending.value = false
-            draftSaved.value = false
-            isApplying.value = false
-            paused = false
-            refreshStatus()
-        }
     }
 
     function runPaused(fn) {
@@ -304,52 +253,20 @@ export function useLeadFormDraft(options) {
         return false
     }
 
-    async function resolveTabPrompt() {
-        const choice = await ask()
-        if (choice === 'discard') {
-            await revertToBaseline()
-            return
-        }
-        if (choice === 'save') await options.onSave?.()
-    }
-
     function onVisibility() {
-        if (document.visibilityState === 'hidden') {
-            flushNow()
-            pendingTabPrompt = armed.value && isDirty.value && !paused && !isApplying.value && !choiceInflight && !leaveInflight
-            return
-        }
-        if (!pendingTabPrompt) return
-        pendingTabPrompt = false
-        if (!armed.value || !isDirty.value || paused || isApplying.value || choiceInflight || leaveInflight) return
-        enqueueTabPrompt(resolveTabPrompt)
-    }
-
-    function onBeforeUnload(event) {
-        flushNow()
-        if (!isDirty.value) return
-        event.preventDefault()
-        event.returnValue = ''
-    }
-
-    function onPageHide() {
-        flushNow()
+        if (document.visibilityState === 'hidden') flushNow()
     }
 
     function startListeners() {
         if (listening || typeof window === 'undefined' || typeof document === 'undefined') return
         listening = true
         document.addEventListener('visibilitychange', onVisibility)
-        window.addEventListener('beforeunload', onBeforeUnload)
-        window.addEventListener('pagehide', onPageHide)
     }
 
     function stopListeners() {
         if (!listening || typeof window === 'undefined' || typeof document === 'undefined') return
         listening = false
         document.removeEventListener('visibilitychange', onVisibility)
-        window.removeEventListener('beforeunload', onBeforeUnload)
-        window.removeEventListener('pagehide', onPageHide)
     }
 
     watch(live, () => {
