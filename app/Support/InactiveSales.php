@@ -31,12 +31,34 @@ class InactiveSales
                     ->whereColumn('leads.responsible_person_id', 'users.id')
                     ->whereNull('leads.deleted_at');
             });
+        // Super admins can see inactive sales across the company.
+            if ($viewer->hasRole('super_admin')) {
+                return $query;
+            }
 
         // Same lead scope as the board: everyone for super_admin / admin, otherwise the
         // viewer's hierarchy (whole branch for branch_admin / show-branch-leads).
-        if (! $viewer->hasAnyRole(['super_admin', 'admin'])) {
+        if (! $viewer->hasAnyRole(['super_admin']) && $viewer->id!=30 && $viewer->id!=33) {
             $query->whereIn('users.id', $viewer->leadScopeUserIds());
-        }
+        }// Admins: restrict results to their own branch hierarchy.
+            if ($viewer->hasRole('admin')) {
+                $branchAdmin = $viewer->admin_parent;
+
+                if (! $branchAdmin) {
+                    return $query->whereRaw('1 = 0');
+                }
+
+                $branchUserIds = $branchAdmin->getAllSubordinatesIds();
+                $branchUserIds[] = (int) $branchAdmin->id;
+
+                $branchUserIds = array_values(array_unique(array_map(
+                    'intval',
+                    $branchUserIds
+                )));
+
+                return $query->whereIn('users.id', $branchUserIds);
+            }
+
 
         return $query;
     }

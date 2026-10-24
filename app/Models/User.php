@@ -479,7 +479,22 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             // "reassigned leads no longer belong to whoever merely added them" rule.
             return $lead->responsible_person_id === $this->id;
         }
+        if ($this->hasRole('admin')) {
+            $branchAdmin = $this->admin_parent;
 
+            if (! $branchAdmin) {
+                return false;
+            }
+
+            $branchUserIds = $branchAdmin->getAllSubordinatesIds();
+            $branchUserIds[] = (int) $branchAdmin->id;
+
+            return in_array(
+                (int) $lead->responsible_person_id,
+                array_map('intval', $branchUserIds),
+                true
+            );
+        }
         // branch_admin: also unassigned (#1) New Lead leads (applyLeadResponsibleScope()).
         $newLeadStageId = $this->unassignedNewLeadStageId();
         if ($newLeadStageId && (int) $lead->responsible_person_id === 1 && (int) $lead->stage_id === $newLeadStageId) {

@@ -1267,7 +1267,7 @@ class LeadController extends Controller
         };
 
         $base = User::query();
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin')|| $user->id==30 || $user->id==33) {
             // Super admins may also pick themselves (they have no parent and no assignable role).
             $base->where(function ($q) use ($user) {
                 $q->where(function ($q) {
@@ -1275,10 +1275,32 @@ class LeadController extends Controller
                         ->whereNotNull('users.parent_id');
                 })->orWhere('users.id', $user->id);
             });
-        } elseif ($user->hasRole('admin')) {
-            $base->role(['team_lead', 'sales', 'manager', 'admin','branch_admin'])
-                ->whereNotNull('users.parent_id');
-        } elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin') || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
+        }
+         elseif ($user->hasRole('admin')) {
+                // Admin can assign leads only to users inside their own branch hierarchy.
+                $branchUserIds = $user->getBranchUserIds();
+
+                // Include the admin himself.
+                $branchUserIds[] = (int) $user->id;
+
+                $branchUserIds = array_values(array_unique(array_map(
+                    'intval',
+                    $branchUserIds
+                )));
+
+                $base->where(function ($query) use ($branchUserIds, $user) {
+                    $query->role([
+                        'team_lead',
+                        'sales',
+                        'manager',
+                        'admin',
+                        'branch_admin',
+                    ])
+                    ->whereIn('users.id', $branchUserIds)
+                    ->orWhere('users.id', $user->id);
+                });
+            }
+        elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin') || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
             // branch_admin / show-branch-leads → agents across the whole branch (all
             // offices). Branch admins also get user #33, and user #33 gets the same
             // branch-wide visibility here in return.
