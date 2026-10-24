@@ -150,7 +150,7 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-        $this->recordSignInLocation($user, $request);
+        // $this->recordSignInLocation($user, $request);
         $user->refresh();
         $user->load('roles', 'permissions');
 
