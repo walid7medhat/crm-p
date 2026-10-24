@@ -22,11 +22,12 @@
                 <!-- Header -->
                 <div class="modal-header-custom d-flex justify-content-between align-items-center py-3 border-bottom">
                     <picture class="modal-title mb-0">Duplicate Leads ({{ duplicateLeads.length }})</picture>
+                   
                     <button class="close-btn" @click="show = false">
                         <iconify-icon icon="lucide:x"></iconify-icon>
                     </button>
                 </div>
-
+            
                 <!-- Content -->
                 <div class="modal-body-custom">
                     <div v-if="loading" class="text-center py-5">
@@ -52,6 +53,10 @@
                         >
                             <!-- Lead Title -->
                             <p class="lead-title">{{ lead.lead_name }}</p>
+                             <div v-if="lead.can_view === false" class="other-branch-badge">
+                                <iconify-icon icon="lucide:building-2"></iconify-icon>
+                                With another branch<span v-if="lead.branch_name"> ({{ lead.branch_name }})</span>
+                            </div>
                             
                             <!-- Contact Information -->
                             <div class="lead-info d-flex flex-column gap-2">
@@ -91,6 +96,7 @@
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 
+
 const props = defineProps({
     modelValue: Boolean,
     leadId: {
@@ -103,7 +109,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['update:modelValue', 'view-lead'])
+const emit = defineEmits(['update:modelValue', 'view-lead', 'merge'])
 
 const show = ref(props.modelValue)
 const duplicateLeads = ref([])
@@ -111,7 +117,10 @@ const loading = ref(false)
 const error = ref(null)
 const popupRef = ref(null)
 const popupStyle = ref({})
-
+const startMerge = () => {
+    emit('merge', props.leadId)
+    show.value = false
+}
 // Phones: a positioned dropdown doesn't fit (it was placed as if 500px wide and ended up
 // off-screen), so show a full-width bottom sheet instead.
 const MOBILE_MAX = 768
@@ -256,6 +265,8 @@ const getPhoneType = (lead) => {
 }
 
 const openLeadView = (leadId) => {
+    
+    if (lead.can_view === false) return
     emit('view-lead', leadId)
     show.value = false
 }
@@ -524,5 +535,20 @@ onUnmounted(() => {
 
 .modal-body-custom::-webkit-scrollbar-thumb:hover {
     background-color: #9CA3AF;
+}
+.merge-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 0; border-radius: 999px; padding: 6px 16px;
+    background: var(--gradient-primary); color: #fff;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.merge-btn:hover { filter: brightness(1.06); }
+.duplicate-lead-card--locked { opacity: .75; cursor: not-allowed; }
+.duplicate-lead-card--locked:hover { transform: none; box-shadow: none !important; }
+.other-branch-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: #FEF3C7; color: #92400E;
+    font-size: 11px; font-weight: 600;
 }
 </style>

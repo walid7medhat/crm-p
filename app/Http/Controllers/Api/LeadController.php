@@ -2097,11 +2097,30 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 if (! auth()->user()->canViewLead($lead)) {
                     return ApiResponse::error('You are not authorized to view this lead', 403);
                 }
+                $viewer = auth()->user();
+                $duplicates = $lead->duplicate_leads; // collection of Lead
+                $byId = collect($duplicates)->keyBy('id');
 
-                return ApiResponse::success(
-                    DuplicateLeadResource::collection($lead->duplicate_leads)->resolve(),
-                    'Duplicated Leads retrieved successfully'
-                );
+                $items = collect(DuplicateLeadResource::collection($duplicates)->resolve())
+                    ->map(function ($item) use ($byId, $viewer) {
+                        $dup = $byId->get($item['id']);
+                        $canView = $dup && $viewer->canViewLead($dup);
+
+                        $item['can_view'] = $canView;
+
+                        if (! $canView) {
+                            $item['branch_name'] = $dup?->lead_branch_source
+                                ?: $dup?->responsiblePerson?->admin_parent?->name;
+                            // لا نعرض بيانات تواصل ليد برانش تانى
+                            $item['work_phone'] = null;
+                            $item['work_phone_2'] = null;
+                        }
+
+                        return $item;
+                    })
+                    ->values();
+
+                return ApiResponse::success($items, 'Duplicated Leads retrieved successfully');
             } catch (\Exception $e) {
                 return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
             }
