@@ -63,12 +63,13 @@
                         </div>
                     </div>
                 </div>
+
                <ResponsiblePersonSection
                     v-if="lead?.id"
                     :lead="lead"
                     @person-updated="handlePersonUpdated"
                 />
-              
+              <MergedLeadsSection v-if="lead?.id" :lead-id="lead.id" />
               <div
                 v-if="canViewCommentsAndActivities"
                 :id="activeViewTab === 'activity' ? 'lead-section-activity' : 'lead-section-comments'"
@@ -202,6 +203,8 @@ import ActivityList from './ActivityList.vue'
 import CommentList from './CommentList.vue'
 import LeadActivityTimeline from './LeadActivityTimeline.vue'
 import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
+import MergedLeadsSection from './MergedLeadsSection.vue'
+
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 const props = defineProps({

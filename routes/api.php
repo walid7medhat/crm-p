@@ -96,6 +96,7 @@ use App\Http\Controllers\Api\Employee\EvaluationController;
 use App\Http\Controllers\Api\Listing\DealCostSettingController;
 use App\Http\Controllers\Api\Listing\InternalUpdateController;
 use App\Http\Controllers\Api\Employee\EmployeeAttendanceController;
+use App\Http\Controllers\Api\LeadMergeController;
 use App\Services\LeadPoolAssignmentService;
 
 /* Test account-activated email – actually sends to walidmedhat.uae@gmail.com (requires SMTP in .env) */
@@ -799,6 +800,13 @@ Route::get('/push-subscriptions/config', [PushSubscriptionController::class, 'co
 Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
 Route::put('/leads/{lead}/extra-client-requirements', [LeadController::class, 'updateExtraClientRequirements']);
 Route::get('/available-responsible-persons', [LeadController::class, 'getAvailableResponsiblePersons']);
+
+
+Route::post('leads/merge/preview', [LeadMergeController::class, 'preview']);
+Route::post('leads/merge/confirm', [LeadMergeController::class, 'confirm']);
+Route::get('leads/{lead}/merge/candidates', [LeadMergeController::class, 'candidates']);
+Route::get('leads/{lead}/merged-leads', [LeadMergeController::class, 'mergedLeads']);
+Route::get('leads/{lead}/merged-leads/{mergedId}', [LeadMergeController::class, 'restricted'])->whereNumber('mergedId');
 // Auto-revert disabled for now.
 // Route::post('/check-revert', [LeadController::class, 'checkRevert']);
 Route::get('get/lead/branch_source',[StageController::class,'getLeadBranchSource']);

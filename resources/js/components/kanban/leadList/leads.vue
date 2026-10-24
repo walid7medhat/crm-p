@@ -1007,7 +1007,9 @@
         :leadId="selectedLeadForDuplicates"
         :triggerElement="currentTriggerElement"
         @view-lead="handleViewDuplicateLead"
+        @merge="openMergeModal"
     />
+    <LeadMergeModal v-model="showMergeModal" :leadId="mergeLeadId" @merged="onLeadsMerged" />
  <StageChangeReasonModal
         ref="stageChangeReasonModal"
         v-model="showStageChangeModal"
@@ -1263,6 +1265,8 @@ const DuplicateLeadsModal = defineAsyncComponent(() => import('./DuplicateLeadsM
 const convertLeadModalLoader = () => import('./ConvertLeadModal.vue')
 const ConvertLeadModal = defineAsyncComponent(convertLeadModalLoader)
 const ProfilePopup = defineAsyncComponent(() => import('../shared/ProfilePopup.vue'))
+const LeadMergeModal = defineAsyncComponent(() => import('./LeadMergeModal.vue'))
+
 convertLeadModalLoader()
 
 
@@ -4418,7 +4422,8 @@ const isEditing = ref(false)
 const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
-
+const showMergeModal = ref(false)
+const mergeLeadId = ref(null)
 // Always UAE time — the API sends UTC ("…Z"), and without a timeZone the browser
 // showed it in the viewer's own zone (e.g. an hour early on a computer set to Egypt).
 const CARD_TIME_ZONE = 'Asia/Dubai'
@@ -4962,6 +4967,13 @@ function handleViewDuplicateLead(leadId) {
     }
 }
 
+
+function openMergeModal(leadId) {
+    mergeLeadId.value = leadId || selectedLeadForDuplicates.value
+    showMergeModal.value = true
+}
+
+
 function openModal(task = null, status = '') {
     if (task) {
         currentTask.value = { ...task }
@@ -5038,7 +5050,11 @@ async function startEditingStage(column) {
         stageTitleInput.value.select()
     }
 }
-
+async function onLeadsMerged(defaultLeadId) {
+    showMergeModal.value = false
+    await fetchLeads(true, undefined, { silent: true })   // merged leads leave the board
+    openLeadView(defaultLeadId)                           // opens the existing lead modal
+}
 function cancelEditingStage() {
     editingStageId.value = null
     editingStageTitle.value = ''

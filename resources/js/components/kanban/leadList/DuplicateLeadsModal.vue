@@ -22,7 +22,9 @@
                 <!-- Header -->
                 <div class="modal-header-custom d-flex justify-content-between align-items-center py-3 border-bottom">
                     <picture class="modal-title mb-0">Duplicate Leads ({{ duplicateLeads.length }})</picture>
-                   
+                    <button v-if="mergeableCount" type="button" class="merge-btn" @click.stop="startMerge">
+                        <iconify-icon icon="lucide:git-merge"></iconify-icon> Merge
+                    </button>
                     <button class="close-btn" @click="show = false">
                         <iconify-icon icon="lucide:x"></iconify-icon>
                     </button>
@@ -49,6 +51,7 @@
                             v-for="lead in duplicateLeads" 
                             :key="lead.id"
                             class="duplicate-lead-card bg-white radius-12 cursor-pointer"
+                            :class="{ 'duplicate-lead-card--locked': lead.can_view === false }"
                             @click="openLeadView(lead)"
                         >
                             <!-- Lead Title -->
@@ -93,8 +96,9 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref,computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
+
 
 
 const props = defineProps({
@@ -208,7 +212,9 @@ const calculatePosition = async () => {
         }
     })
 }
-
+const mergeableCount = computed(
+    () => duplicateLeads.value.filter((l) => l.can_merge === true).length
+)
 const handleClickOutside = (event) => {
     if (!show.value) return
     

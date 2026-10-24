@@ -2085,204 +2085,215 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     ], 500);
 }}
     public function getDuplicate($lead_id): JsonResponse
-        {
-            try {
-                $lead = Lead::with(['responsiblePerson:id,name,avatar', 'stage:id,name,order,color'])
-                    ->find($lead_id);
+    {
+        try {
+            $lead = Lead::with(['responsiblePerson:id,name,avatar,parent_id', 'stage:id,name,order,color'])
+                ->find($lead_id);
 
-                if (! $lead) {
-                    return ApiResponse::error('Lead not found', 404);
-                }
-
-                if (! auth()->user()->canViewLead($lead)) {
-                    return ApiResponse::error('You are not authorized to view this lead', 403);
-                }
-                $viewer = auth()->user();
-                $duplicates = $lead->duplicate_leads; // collection of Lead
-                $byId = collect($duplicates)->keyBy('id');
-
-                $items = collect(DuplicateLeadResource::collection($duplicates)->resolve())
-                    ->map(function ($item) use ($byId, $viewer) {
-                        $dup = $byId->get($item['id']);
-                        $canView = $dup && $viewer->canViewLead($dup);
-
-                        $item['can_view'] = $canView;
-
-                        if (! $canView) {
-                            $item['branch_name'] = $dup?->lead_branch_source
-                                ?: $dup?->responsiblePerson?->admin_parent?->name;
-                            // لا نعرض بيانات تواصل ليد برانش تانى
-                            $item['work_phone'] = null;
-                            $item['work_phone_2'] = null;
-                        }
-
-                        return $item;
-                    })
-                    ->values();
-
-                return ApiResponse::success($items, 'Duplicated Leads retrieved successfully');
-            } catch (\Exception $e) {
-                return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
+            if (! $lead) {
+                return ApiResponse::error('Lead not found', 404);
             }
+
+            $viewer = auth()->user();
+
+            if (! $viewer->canViewLead($lead)) {
+                return ApiResponse::error('You are not authorized to view this lead', 403);
+            }
+
+            $byBranch = (bool) config('lead_merge.group_by_branch');
+            $leadKey  = '';
+            if ($byBranch) {
+                $lead->loadMissing(['responsiblePerson', 'addedBy']);
+                $leadKey = $lead->branchKey();
+            }
+
+            $duplicates = $lead->duplicate_leads;          // collection of Lead
+            $byId = $duplicates->keyBy('id');
+
+            $items = collect(DuplicateLeadResource::collection($duplicates)->resolve())
+                ->map(function ($item) use ($byId, $viewer, $byBranch, $leadKey) {
+                    $dup     = $byId->get($item['id']);
+                    $canView = $dup && $viewer->canViewLead($dup);
+
+                    $item['can_view']  = (bool) $canView;
+                    $item['can_merge'] = $canView && (
+                        ! $byBranch
+                        || ($leadKey !== '' && $dup->branchKey() === $leadKey)
+                    );
+
+                    if (! $canView) {
+                        $item['branch_name'] = $dup?->responsiblePerson?->admin_parent?->name;
+                        $item['work_phone']  = null;
+                        $item['work_phone_2'] = null;
+                    }
+
+                    return $item;
+                })
+                ->values();
+
+            return ApiResponse::success($items, 'Duplicated Leads retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
         }
+    }
         // ======================history =======================
         public function history(Request $request, $leadId)
-{
-    $lead=Lead::find($leadId);
-    $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
-        ->with(['user:id,name,avatar', 'user.employeeProfile.designation']);
-            $user = auth()->user();
-            // branch_admin sits as a PEER inside the office (no downward subordinates of
-            // their own), so isManagedBy() below — which walks down from $user — never
-            // recognizes a lead in their own branch. Give them the same admin-level
-            // history access as 'admin', but only for leads actually within their branch.
-            $isBranchAdminForLead = $user->hasRole('branch_admin')
-                && $lead->responsible_person_id
-                && in_array($lead->responsible_person_id, $user->getBranchUserIds());
-            $isAdmin = $user->hasAnyRole(['admin', 'super_admin']) || $isBranchAdminForLead;
-            $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
-            $isManager = $lead->isManagedBy($user);
-            // show-branch-leads: may open history of any lead in their branch (non-admin view).
-            $isBranchViewer = $user->hasBranchLeadsPermission()
-                && $lead->responsible_person_id
-                && in_array($lead->responsible_person_id, $user->getBranchUserIds());
+    {
+        $lead=Lead::find($leadId);
+        $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
+            ->with(['user:id,name,avatar', 'user.employeeProfile.designation']);
+                $user = auth()->user();
+                // branch_admin sits as a PEER inside the office (no downward subordinates of
+                // their own), so isManagedBy() below — which walks down from $user — never
+                // recognizes a lead in their own branch. Give them the same admin-level
+                // history access as 'admin', but only for leads actually within their branch.
+                $isBranchAdminForLead = $user->hasRole('branch_admin')
+                    && $lead->responsible_person_id
+                    && in_array($lead->responsible_person_id, $user->getBranchUserIds());
+                $isAdmin = $user->hasAnyRole(['admin', 'super_admin']) || $isBranchAdminForLead;
+                $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
+                $isManager = $lead->isManagedBy($user);
+                // show-branch-leads: may open history of any lead in their branch (non-admin view).
+                $isBranchViewer = $user->hasBranchLeadsPermission()
+                    && $lead->responsible_person_id
+                    && in_array($lead->responsible_person_id, $user->getBranchUserIds());
 
-            if (! $isAdmin && ! $isResponsible && ! $isManager && ! $isBranchViewer) {
-                abort(403);
-            }
-
-            if (! $isAdmin) {
-                // أحداث Pool ← ليا مخفية عن غير الأدمن. لازم نستثني from_lead_pool=true بس —
-                // whereNull لوحدها كانت بتشيل أي حدث بقيمة from_lead_pool=false صراحة (مش
-                // بس اللي مالهوش المفتاح خالص)، فكانت بتشيل كل الـ history تقريبًا للسيلز.
-                $query->where(function ($q) {
-                    $q->whereNull('changes->from_lead_pool')
-                      ->orWhere('changes->from_lead_pool', false);
-                });
-            }
-
-            if (! $isAdmin && ! $isManager) {
-                // السيلز: Updated و Stage Changed بس (ده بيشيل View و Created أوتوماتيك)
-                $query->whereIn('changes->action', ['updated', 'stage_changed']);
-
-                // بعد آخر Assign بس — سواء كان ده أول تعيين للّيد (مثلاً من Lead Pool، حيث
-                // old_person_id بيبقى null) أو Reassign من سيلز لسيلز. في الحالتين السيلز
-                // ميشوفش تاريخ الليد قبل ما يتعين ليه.
-                $assignment = LeadHistory::where('lead_id', $lead->id)
-                    ->where('changes->action', 'assigned')
-                    ->latest('id')
-                    ->first();
-
-                if ($assignment) {
-                    $query->where('id', '>', $assignment->id);
+                if (! $isAdmin && ! $isResponsible && ! $isManager && ! $isBranchViewer) {
+                    abort(403);
                 }
-            }
-    // Lead Pool assign-to-me soft-deletes the prior history rows. Super_admin/admin (and
-    // branch_admin for their own branch) should still see them; everyone else only gets
-    // live history.
-    if ($isAdmin) {
-        $query->withTrashed();
-    }
-    
-    // Search functionality - search in multiple fields
-    if ($request->filled('search')) {
-        $searchTerm = $request->search;
-        $query->where(function($q) use ($searchTerm) {
-            // Search in action field inside changes JSON
-            $q->where('changes->action', 'LIKE', "%{$searchTerm}%")
-              // Search in user name
-              ->orWhereHas('user', function($userQuery) use ($searchTerm) {
-                  $userQuery->where('name', 'LIKE', "%{$searchTerm}%");
-              })
-              // Search in old_stage
-              ->orWhereRaw("JSON_EXTRACT(changes, '$.old_stage') LIKE ?", ["%{$searchTerm}%"])
-              // Search in new_stage
-              ->orWhereRaw("JSON_EXTRACT(changes, '$.new_stage') LIKE ?", ["%{$searchTerm}%"])
-              // Search in old_person
-              ->orWhereRaw("JSON_EXTRACT(changes, '$.old_person') LIKE ?", ["%{$searchTerm}%"])
-              // Search in new_person
-              ->orWhereRaw("JSON_EXTRACT(changes, '$.new_person') LIKE ?", ["%{$searchTerm}%"]);
-        });
-    }
 
-    if ($request->filled('action')) {
-        $query->where('changes->action', $request->action);
-    }
+                if (! $isAdmin) {
+                    // أحداث Pool ← ليا مخفية عن غير الأدمن. لازم نستثني from_lead_pool=true بس —
+                    // whereNull لوحدها كانت بتشيل أي حدث بقيمة from_lead_pool=false صراحة (مش
+                    // بس اللي مالهوش المفتاح خالص)، فكانت بتشيل كل الـ history تقريبًا للسيلز.
+                    $query->where(function ($q) {
+                        $q->whereNull('changes->from_lead_pool')
+                        ->orWhere('changes->from_lead_pool', false);
+                    });
+                }
 
-    if ($request->filled('user_id')) {
-        $query->where('user_id', $request->user_id);
-    }
+                if (! $isAdmin && ! $isManager) {
+                    // السيلز: Updated و Stage Changed بس (ده بيشيل View و Created أوتوماتيك)
+                    $query->whereIn('changes->action', ['updated', 'stage_changed']);
 
-    if ($request->filled('from_date')) {
-        $query->whereDate('created_at', '>=', $request->from_date);
-    }
+                    // بعد آخر Assign بس — سواء كان ده أول تعيين للّيد (مثلاً من Lead Pool، حيث
+                    // old_person_id بيبقى null) أو Reassign من سيلز لسيلز. في الحالتين السيلز
+                    // ميشوفش تاريخ الليد قبل ما يتعين ليه.
+                    $assignment = LeadHistory::where('lead_id', $lead->id)
+                        ->where('changes->action', 'assigned')
+                        ->latest('id')
+                        ->first();
 
-    if ($request->filled('to_date')) {
-        $query->whereDate('created_at', '<=', $request->to_date);
-    }
-
-    // Get per_page from request or default to 10
-    $perPage = $request->input('per_page', 10);
-    
-    $histories = $query->latest()->paginate($perPage);
-    if (! $isAdmin && ! $isManager) {
-        $histories->getCollection()->transform(function ($h) {
-            $changes = $h->changes;
-            if (is_array($changes) && isset($changes['fields']['responsible_person_id'])) {
-                unset($changes['fields']['responsible_person_id']);
-                $h->changes = $changes; // in-memory بس، مش بيتحفظ
-            }
-            return $h;
-        });
-    }
-
-    // bitrix24_last_activity_by_id stores a user id, but /users (used by the frontend to
-    // label ids) is scoped to "my subordinates" for non-super-admins — it can't resolve an
-    // arbitrary other user who touched this lead. Resolve the name here instead, server-side,
-    // where we're not limited by the viewer's own visibility scope.
-    $activityByIds = [];
-    foreach ($histories->getCollection() as $h) {
-        $field = data_get($h->changes, 'fields.bitrix24_last_activity_by_id');
-        if (is_array($field)) {
-            if (! empty($field['old']) && is_numeric($field['old'])) {
-                $activityByIds[] = (int) $field['old'];
-            }
-            if (! empty($field['new']) && is_numeric($field['new'])) {
-                $activityByIds[] = (int) $field['new'];
-            }
+                    if ($assignment) {
+                        $query->where('id', '>', $assignment->id);
+                    }
+                }
+        // Lead Pool assign-to-me soft-deletes the prior history rows. Super_admin/admin (and
+        // branch_admin for their own branch) should still see them; everyone else only gets
+        // live history.
+        if ($isAdmin) {
+            $query->withTrashed();
         }
-    }
-    if (! empty($activityByIds)) {
-        $activityByNames = User::whereIn('id', array_unique($activityByIds))->pluck('name', 'id');
-        $histories->getCollection()->transform(function ($h) use ($activityByNames) {
-            $changes = $h->changes;
-            if (is_array($changes) && isset($changes['fields']['bitrix24_last_activity_by_id'])) {
-                $field = $changes['fields']['bitrix24_last_activity_by_id'];
+        
+        // Search functionality - search in multiple fields
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                // Search in action field inside changes JSON
+                $q->where('changes->action', 'LIKE', "%{$searchTerm}%")
+                // Search in user name
+                ->orWhereHas('user', function($userQuery) use ($searchTerm) {
+                    $userQuery->where('name', 'LIKE', "%{$searchTerm}%");
+                })
+                // Search in old_stage
+                ->orWhereRaw("JSON_EXTRACT(changes, '$.old_stage') LIKE ?", ["%{$searchTerm}%"])
+                // Search in new_stage
+                ->orWhereRaw("JSON_EXTRACT(changes, '$.new_stage') LIKE ?", ["%{$searchTerm}%"])
+                // Search in old_person
+                ->orWhereRaw("JSON_EXTRACT(changes, '$.old_person') LIKE ?", ["%{$searchTerm}%"])
+                // Search in new_person
+                ->orWhereRaw("JSON_EXTRACT(changes, '$.new_person') LIKE ?", ["%{$searchTerm}%"]);
+            });
+        }
+
+        if ($request->filled('action')) {
+            $query->where('changes->action', $request->action);
+        }
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        // Get per_page from request or default to 10
+        $perPage = $request->input('per_page', 10);
+        
+        $histories = $query->latest()->paginate($perPage);
+        if (! $isAdmin && ! $isManager) {
+            $histories->getCollection()->transform(function ($h) {
+                $changes = $h->changes;
+                if (is_array($changes) && isset($changes['fields']['responsible_person_id'])) {
+                    unset($changes['fields']['responsible_person_id']);
+                    $h->changes = $changes; // in-memory بس، مش بيتحفظ
+                }
+                return $h;
+            });
+        }
+
+        // bitrix24_last_activity_by_id stores a user id, but /users (used by the frontend to
+        // label ids) is scoped to "my subordinates" for non-super-admins — it can't resolve an
+        // arbitrary other user who touched this lead. Resolve the name here instead, server-side,
+        // where we're not limited by the viewer's own visibility scope.
+        $activityByIds = [];
+        foreach ($histories->getCollection() as $h) {
+            $field = data_get($h->changes, 'fields.bitrix24_last_activity_by_id');
+            if (is_array($field)) {
                 if (! empty($field['old']) && is_numeric($field['old'])) {
-                    $field['old'] = $activityByNames[(int) $field['old']] ?? $field['old'];
+                    $activityByIds[] = (int) $field['old'];
                 }
                 if (! empty($field['new']) && is_numeric($field['new'])) {
-                    $field['new'] = $activityByNames[(int) $field['new']] ?? $field['new'];
+                    $activityByIds[] = (int) $field['new'];
                 }
-                $changes['fields']['bitrix24_last_activity_by_id'] = $field;
-                $h->changes = $changes; // in-memory بس، مش بيتحفظ
             }
-            return $h;
-        });
-    }
+        }
+        if (! empty($activityByIds)) {
+            $activityByNames = User::whereIn('id', array_unique($activityByIds))->pluck('name', 'id');
+            $histories->getCollection()->transform(function ($h) use ($activityByNames) {
+                $changes = $h->changes;
+                if (is_array($changes) && isset($changes['fields']['bitrix24_last_activity_by_id'])) {
+                    $field = $changes['fields']['bitrix24_last_activity_by_id'];
+                    if (! empty($field['old']) && is_numeric($field['old'])) {
+                        $field['old'] = $activityByNames[(int) $field['old']] ?? $field['old'];
+                    }
+                    if (! empty($field['new']) && is_numeric($field['new'])) {
+                        $field['new'] = $activityByNames[(int) $field['new']] ?? $field['new'];
+                    }
+                    $changes['fields']['bitrix24_last_activity_by_id'] = $field;
+                    $h->changes = $changes; // in-memory بس، مش بيتحفظ
+                }
+                return $h;
+            });
+        }
 
-    return ApiResponse::success([
-        'items' => LeadHistoryResource::collection($histories),
-        'pagination' => [
-            'current_page' => $histories->currentPage(),
-            'last_page'    => $histories->lastPage(),
-            'per_page'     => $histories->perPage(),
-            'total'        => $histories->total(),
-            'next_page'    => $histories->nextPageUrl(),
-            'prev_page'    => $histories->previousPageUrl(),
-        ]
-    ], 'Lead History retrieved successfully');
-}
+        return ApiResponse::success([
+            'items' => LeadHistoryResource::collection($histories),
+            'pagination' => [
+                'current_page' => $histories->currentPage(),
+                'last_page'    => $histories->lastPage(),
+                'per_page'     => $histories->perPage(),
+                'total'        => $histories->total(),
+                'next_page'    => $histories->nextPageUrl(),
+                'prev_page'    => $histories->previousPageUrl(),
+            ]
+        ], 'Lead History retrieved successfully');
+    }
           public function view_history($id): JsonResponse
     {
         try {

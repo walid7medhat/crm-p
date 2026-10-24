@@ -211,6 +211,9 @@ protected const NON_ENGAGEMENT_FIELDS = [
         //         $lead->initial_responsible_person_id = $lead->getOriginal('responsible_person_id');
         //     }
         // });
+        static::addGlobalScope('notMerged', function ($q) {
+            $q->whereNull($q->getModel()->getTable().'.merged_into_lead_id');
+        });
     }
         public function scopeSelectedLeadType($query, string $type)
         {
@@ -848,5 +851,22 @@ public function touchEngagement(): void
         'notification_times_sent' => [],
         'notified_revert'         => false,
     ]);
+}
+
+
+public function mergedInto()
+{
+    return $this->belongsTo(Lead::class, 'merged_into_lead_id')->withoutGlobalScope('notMerged');
+}
+public function mergedLeads()
+{
+    return $this->hasMany(Lead::class, 'merged_into_lead_id')->withoutGlobalScope('notMerged');
+}
+/** Branch key: lead_branch_source, otherwise the responsible/adding user's branch. */
+public function branchKey(): string
+{
+    $branch =($this->responsiblePerson ?? $this->addedBy)?->admin_parent?->name;
+
+    return mb_strtolower(trim((string) $branch));
 }
 }

@@ -844,7 +844,6 @@ import api from '@/plugins/axios'
 import { formatLeadBudgetRange, formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 import { formatBitrixRichText, extractPortalLinks, portalLinkKey } from '@/utils/bitrixRichText'
 import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
-
 const props = defineProps({
     lead: Object,
     showResponsibleSection: {
@@ -859,6 +858,8 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+        readonly: { type: Boolean, default: false },
+
 })
 
 const emit = defineEmits(['person-updated', 'edit-request', 'edit-section', 'lead-updated'])
@@ -1000,6 +1001,7 @@ const showPersonCard = ref(false)
 
 // Computed property for permission
 const canView = computed(() => {
+    if (props.readonly) return true
     if (!user.value?.roles) return false
     const isAdmin = user.value.roles.includes('super_admin') || user.value.roles.includes('admin') || user.value.roles.includes('branch_admin')
     const isResponsible = props.lead?.responsible_person_id === user.value.id
