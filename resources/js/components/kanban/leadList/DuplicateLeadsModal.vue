@@ -49,7 +49,7 @@
                             v-for="lead in duplicateLeads" 
                             :key="lead.id"
                             class="duplicate-lead-card bg-white radius-12 cursor-pointer"
-                            @click="openLeadView(lead.id)"
+                            @click="openLeadView(lead)"
                         >
                             <!-- Lead Title -->
                             <p class="lead-title">{{ lead.lead_name }}</p>
@@ -264,10 +264,9 @@ const getPhoneType = (lead) => {
     return lead.phone_type || null
 }
 
-const openLeadView = (leadId) => {
-    
+const openLeadView = (lead) => {
     if (lead.can_view === false) return
-    emit('view-lead', leadId)
+    emit('view-lead', lead.id)
     show.value = false
 }
 
