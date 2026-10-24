@@ -11,6 +11,7 @@
       <span>Return to Super Admin</span>
     </button>
     <NavProgressBar :show="isNavigating" />
+    <LoginWelcomeSplash v-if="showLayout" />
     <AppLoader :show="isAppLoading" label="Loading" @hidden="onLoaderHidden" />
     <BirthdayCelebrationLayer :enabled="showLayout && !isAppLoading" />
     <SystemCampaignPopup v-if="showLayout" />
@@ -76,6 +77,7 @@ import AppLoader from './components/layout/AppLoader.vue'
 import BrandLoader from './components/layout/BrandLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
+import LoginWelcomeSplash from './components/layout/LoginWelcomeSplash.vue'
 import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
 import PropertyCompareDock from './components/listings/PropertyCompareDock.vue'
@@ -111,6 +113,7 @@ export default {
   components: {
     AppLoader,
     NavProgressBar,
+    LoginWelcomeSplash,
     BirthdayCelebrationLayer,
     SystemCampaignPopup,
     DailyEdgeLayer,
