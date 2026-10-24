@@ -59,6 +59,7 @@ class RequireTrustedReferer
         'api/altcrm/update-more-info',
         'api/leads',
         'api/webhooks/facebook',
+        'api/bitrix24/webhook'
     ];
 
     public function handle(Request $request, Closure $next)
