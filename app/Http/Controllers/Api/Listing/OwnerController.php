@@ -88,7 +88,7 @@ public static function bumpUserCacheVersion(int $userId): void
         $user = Auth::user();
         
         $query = Owner::query();
-        if(!($user->hasRole('admin') || $user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team == 1))){
+        if(!( $user->id==30 || $user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team == 1))){
                 $query->where('added_by', $user->id);
         }
                      
@@ -250,7 +250,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         $user = Auth::user();
         
         // If user has sales role, check if they added this owner
-        if ($owner->added_by !== $user->id && !$user->hasRole(['super_admin', 'admin']) && !($user->hasRole('manager') && $user->listing_team==1)) {
+        if ($owner->added_by !== $user->id && $user->id !=30 && !$user->hasRole(['super_admin']) && !($user->hasRole('manager') && $user->listing_team==1)) {
             return ApiResponse::error('Access denied', 403);
         }
         
