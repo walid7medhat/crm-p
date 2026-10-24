@@ -572,7 +572,7 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
         }
 
         return $user->hasRole('super_admin')
-            || $user->hasRole('admin')
+           
             || ($user->hasRole('manager') && (int) $user->listing_team === 1)
             || (int) $listing->agent_id === (int) $user->id
             || (int) $user->id === 30;
@@ -647,8 +647,8 @@ public function respond(Request $request, ListingAccessRequest $accessRequest): 
         // Approved viewings can only be cancelled by admin / super_admin
         // or by a manager whose listing_team flag is set. Everyone else
         // (sales, regular managers, team_leads) is limited to pending/in_progress.
-        $isPrivilegedCanceller = $user->hasAnyRole(['super_admin', 'admin'])
-            || ($user->hasRole('manager') && (int) $user->listing_team === 1);
+        $isPrivilegedCanceller = $user->hasAnyRole(['super_admin'])
+            || ($user->hasRole('manager') && (int) $user->listing_team === 1) || (int) $user->id==30;
 
         if ($request->request_type === 'viewing' && $isPrivilegedCanceller) {
             $query->whereIn('status', ['pending', 'in_progress', 'approved']);
@@ -957,7 +957,8 @@ private function authorizeUserVacationAccess(User $target): bool
 {
     $current = auth()->user();
     if (!$current) return false;
-    if ($current->hasAnyRole(['super_admin', 'admin'])) return true;
+    if ($current->hasAnyRole(['super_admin'])) return true;
+    if ($current->id ==30) return true;
     if (!$current->hasRole('manager')) return false;
     if ((int) $current->listing_team !== 1) return false;
     return in_array((int) $target->id, $current->getAllSubordinatesIds(), true);
@@ -1041,7 +1042,7 @@ public function setUserVacationMode(Request $request, User $user)
         })->pluck('id')->toArray();
 
         return ListingAccessRequest::query()
-            ->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function ($q) use ($userHierarchy) {
+            ->when(!( $user->hasRole('super_admin')), function ($q) use ($userHierarchy) {
                 $q->whereIn('requested_by', $userHierarchy);
             });
     }
@@ -1064,7 +1065,7 @@ public function setUserVacationMode(Request $request, User $user)
         return ListingAccessRequest::query()
             ->where(function ($mainQuery) use ($user, $userHierarchy) {
                 $mainQuery->whereHas('listing', function ($query) use ($user, $userHierarchy) {
-                    if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+                    if ($user->hasRole('super_admin') || $user->id==30) {
                         return;
                     }
                     $query->whereIn('agent_id', $userHierarchy);
@@ -1088,7 +1089,7 @@ public function setUserVacationMode(Request $request, User $user)
         $statusCounts = $this->accessRequestStatusCounts(clone $baseQuery);
 
         $showAllColumn = $user->hasRole('super_admin')
-            || $user->hasRole('admin')
+            || $user->id==30
             || $user->hasRole('team_lead')
             || $user->hasRole('manager');
 
