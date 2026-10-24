@@ -51,7 +51,7 @@ export const API_ENDPOINTS = {
     USER_STATUS: (id) => `${API_BASE_URL}/users/${id}/status`,
     USER_BIOMETRIC: (id) => `${API_BASE_URL}/users/${id}/biometric-code`,
     USER_IMPERSONATE: (id) => `${API_BASE_URL}/users/${id}/impersonate`,
-
+    USER_ABSENT_EMAIL: (id) => `${API_BASE_URL}/users/${id}/absent-email`,
     
      // features
   FEATURES: `${API_BASE_URL}/listings/features`,

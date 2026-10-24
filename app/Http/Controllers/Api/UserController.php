@@ -70,7 +70,7 @@ class UserController extends Controller
             
                     // Apply hierarchical filtering based on user role
                  // users-code holders (biometric code managers) need the full list.
-                 if (!$user->hasRole('super_admin') && $user->id != 30 && !$user->can('users-code')) {
+                 if (!$user->hasِAnyRole(['super_admin','hr']) && $user->id != 30 && !$user->can('users-code')) {
 
                         // User #33: sees every user in their whole branch, not just their
                         // own subordinates.
@@ -758,7 +758,7 @@ public function show(User $user): JsonResponse
     private function canAccessUser(User $currentUser, User $targetUser): bool
     {
         // Super Admin can access all users
-        if ($currentUser->hasRole('admin') || $currentUser->hasRole('super_admin') ||$currentUser->hasRole('branch_admin')) {
+        if ($currentUser->hasRole('hr') || $currentUser->hasRole('admin') || $currentUser->hasRole('super_admin') ||$currentUser->hasRole('branch_admin')) {
             return true;
         }
         
@@ -1152,6 +1152,29 @@ public function nonOiaDuplicateReport(Request $request): JsonResponse
             'non_oia_count' => count($rows),
             'duplicate_count' => count(array_filter($rows, fn ($r) => $r['is_duplicate'])),
             'rows' => $rows,
+        ],
+    ]);
+}
+public function updateAbsentEmail(Request $request, $id): JsonResponse
+{
+    if (!auth()->user()->can('users-absent-email')) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
+
+    $validated = $request->validate([
+        'receive_absent_email' => 'required|boolean',
+    ]);
+
+    $user = User::findOrFail($id);
+    $user->receive_absent_email = $validated['receive_absent_email'];
+    $user->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Absence email setting updated',
+        'data' => [
+            'id' => $user->id,
+            'receive_absent_email' => $user->receive_absent_email,
         ],
     ]);
 }

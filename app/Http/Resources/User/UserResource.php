@@ -81,6 +81,7 @@ class UserResource extends JsonResource
             'department' => $this->employeeProfile?->department?->name
                 ?: User::resolveDisplayName($this->office),
             'joining_date' => $this->employeeProfile?->joining_date,
+            'receive_absent_email' => (bool) $this->receive_absent_email,
         ];
     }
 }

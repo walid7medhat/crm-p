@@ -208,6 +208,7 @@
                                 </th>
                                 <th scope="col">Email</th>
                                 <th scope="col"  v-if="$hasPermission('users-code')">Biometric Code</th>
+                                <th scope="col" v-if="$hasPermission('users-absent-email')">Absence Email</th>
                                 <th scope="col">Role</th>
                                 <th scope="col">Manager</th>
                                 <th scope="col" class="users-col-meta">Branch</th>
@@ -270,6 +271,15 @@
                                 <span v-else>
                                     {{ user.biometric_code || '-' }}
                                 </span>
+                            </td>
+                            <td v-if="$hasPermission('users-absent-email')">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" class="toggle-input"
+                                        :checked="user.receive_absent_email"
+                                        :disabled="absentEmailLoading === user.id"
+                                        @change="toggleAbsentEmail(user, $event.target.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
                             </td>
                                 <td>
                                     <span class="">{{ user.role_name?.replace(/_/g, ' ') }}</span>
@@ -485,7 +495,8 @@ export default {
             statusLoading: null,
             searchDebounceTimer: null,
             fetchAbortController: null,
-            defaultAvatar: '/assets/images/user.png'
+            defaultAvatar: '/assets/images/user.png',
+            absentEmailLoading: null,
 
         };
     },
@@ -598,6 +609,32 @@ export default {
                 this.showNotification(error.message, 'error');
             }
         },
+        async toggleAbsentEmail(user, value) {
+                this.absentEmailLoading = user.id;
+                const previous = user.receive_absent_email;
+                user.receive_absent_email = value; // optimistic
+                try {
+                    const response = await fetch(API_ENDPOINTS.USER_ABSENT_EMAIL(user.id), {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ receive_absent_email: value }),
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message || 'Failed to update');
+                    this.showNotification(
+                        `Absence email ${value ? 'enabled' : 'disabled'} for ${user.name}`, 'success'
+                    );
+                } catch (error) {
+                    user.receive_absent_email = previous; // revert
+                    this.showNotification(error.message, 'error');
+                } finally {
+                    this.absentEmailLoading = null;
+                }
+            },
         hasAnyUserPermission() {
             return this.$hasPermission('users-list') || 
                    this.$hasPermission('users-edit') || 
