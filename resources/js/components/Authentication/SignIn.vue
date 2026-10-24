@@ -130,6 +130,7 @@
 
 <script>
 import api, { setAuthToken, clearAuthToken } from '@/plugins/axios';
+import { armLoginWelcome } from '@/composables/useLoginWelcome';
 import { askLeadPushPermission, subscribeLeadPush } from '@/services/offerLeadPush';
 // import { captureDeviceLocation } from '@/utils/deviceLocation.mjs';
 import { useRouter } from 'vue-router';
@@ -361,6 +362,7 @@ export default {
         }
 
         const isAdminUser = userData.roles?.includes('only show listings');
+        armLoginWelcome(userData.name);
         window.location.href = isAdminUser ? '/alllisting' : '/';
       } catch (error) {
         this.errorMessage = error.response?.data?.message || 'Server error';

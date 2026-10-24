@@ -1234,11 +1234,9 @@ public function getPropertyTypesWithListings(Request $request)
 
             // Short-lived cache per date range: super_admin has its own entry, admin its
             // own, and everyone else caches per user (their own hierarchy).
-            $cacheScope = match (true) {
-                $currentUser->hasRole('super_admin') => 'super_admin',
-                $currentUser->hasRole('admin') => 'admin',
-                default => 'user' . $currentUser->id,
-            };
+            $cacheScope = $this->seesWholeCompany($currentUser)
+                ? 'company'
+                : 'user' . $currentUser->id;
             $cacheKey = sprintf(
                 'analytics:crm:%s:%s:%s',
                 $cacheScope,
@@ -1282,11 +1280,16 @@ public function getPropertyTypesWithListings(Request $request)
     public function getAnalyticsListing(Request $request)
     {
         try {
-            [$rangeFrom, $rangeTo, , $userHierarchy, $isAdmin] = $this->analyticsContext($request);
+            [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin] = $this->analyticsContext($request);
 
             return response()->json([
                 'success' => true,
-                'listing' => $this->buildListingAnalytics($userHierarchy, $isAdmin, $rangeFrom, $rangeTo),
+                'listing' => $this->buildListingAnalytics(
+                    $userHierarchy,
+                    $isAdmin || $this->isBranchAdmin($currentUser),
+                    $rangeFrom,
+                    $rangeTo
+                ),
             ]);
         } catch (\Throwable $e) {
             report($e);
@@ -1311,6 +1314,52 @@ public function getPropertyTypesWithListings(Request $request)
         }
     }
 
+    /** Super admin, plus the two accounts that already see the whole company. */
+    private function seesWholeCompany(User $user): bool
+    {
+        return $user->hasRole('super_admin') || in_array((int) $user->id, [30, 33], true);
+    }
+
+    /** Office admin such as Dubai or Abu Dhabi — not the whole company. */
+    private function isBranchAdmin(User $user): bool
+    {
+        return ! $this->seesWholeCompany($user)
+            && ($user->hasRole('admin') || $user->hasRole('branch_admin'));
+    }
+
+    /** @return array<int> */
+    private function branchUserIds(User $user): array
+    {
+        return array_values(array_unique(array_map(
+            'intval',
+            array_merge([(int) $user->id], $user->getBranchUserIds())
+        )));
+    }
+
+    /** Lead stages that are neither converted nor still active. */
+    private function inactiveLeadStageIds()
+    {
+        return Stage::query()
+            ->where('stage_type', 'lead')
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%lost%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%junk%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%unqualified%']);
+            })
+            ->pluck('id');
+    }
+
+    private function inactiveLeadStageSql(): string
+    {
+        $ids = $this->inactiveLeadStageIds()
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        return $ids->isEmpty() ? '0' : $ids->implode(',');
+    }
+
     /**
      * @return array{0: ?Carbon, 1: ?Carbon, 2: User, 3: array<int>, 4: bool}
      */
@@ -1318,6 +1367,14 @@ public function getPropertyTypesWithListings(Request $request)
     {
         [$rangeFrom, $rangeTo] = $this->resolveAnalyticsPeriod($request);
         $currentUser = auth()->user();
+
+        if ($this->seesWholeCompany($currentUser)) {
+            return [$rangeFrom, $rangeTo, $currentUser, [], true];
+        }
+
+        if ($this->isBranchAdmin($currentUser)) {
+            return [$rangeFrom, $rangeTo, $currentUser, $this->branchUserIds($currentUser), false];
+        }
 
         $userHierarchy = User::where(function ($q) use ($currentUser) {
             $q->where('id', $currentUser->id)
@@ -1327,9 +1384,7 @@ public function getPropertyTypesWithListings(Request $request)
                 });
         })->pluck('id')->toArray();
 
-        $isAdmin = $currentUser->hasRole('super_admin') || $currentUser->hasRole('admin');
-
-        return [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin];
+        return [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, false];
     }
 
     private function buildCrmAnalytics(User $currentUser, array $userHierarchy, bool $isAdmin, ?Carbon $rangeFrom, ?Carbon $rangeTo, ?array $salesMetrics = null): array
@@ -1373,7 +1428,7 @@ public function getPropertyTypesWithListings(Request $request)
                  SUM(CASE WHEN LOWER(priority) = \'cold\' OR LOWER(status_lead) = \'cold\' THEN 1 ELSE 0 END) AS cold,
                  SUM(CASE WHEN LOWER(priority) = \'warm\' OR LOWER(status_lead) = \'warm\' THEN 1 ELSE 0 END) AS warm,
                  SUM(CASE WHEN LOWER(priority) = \'hot\' OR LOWER(status_lead) = \'hot\' THEN 1 ELSE 0 END) AS hot,
-                 SUM(CASE WHEN converted_at IS NOT NULL THEN COALESCE(budget_to, 0) ELSE 0 END) AS revenue_from_leads',
+                 SUM(CASE WHEN stage_id IS NULL OR stage_id NOT IN ('.$this->inactiveLeadStageSql().') THEN COALESCE(budget_to, budget_from, 0) ELSE 0 END) AS revenue_from_leads',
                 [now()->subDays(7), $convertedStageId, $contactedStageId, $contactedStageId]
             )
             ->first();
@@ -1690,13 +1745,18 @@ public function getPropertyTypesWithListings(Request $request)
     private function buildAnalyticsOverviewResponse(Request $request)
     {
         [$rangeFrom, $rangeTo, $currentUser, $userHierarchy, $isAdmin] = $this->analyticsContext($request);
-        $isManager = $isAdmin || $currentUser->hasRole('manager');
+        $isManager = $isAdmin || $currentUser->hasRole('manager') || $this->isBranchAdmin($currentUser);
 
         $salesMetrics = $this->computeConvertedSalesMetrics($currentUser, $isAdmin, $rangeFrom, $rangeTo);
 
         $crm = $this->buildCrmAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo, $salesMetrics);
         $deals = $this->buildDealsAnalytics($currentUser, $userHierarchy, $isAdmin, $rangeFrom, $rangeTo, $salesMetrics);
-        $listing = $this->buildListingAnalytics($userHierarchy, $isAdmin, $rangeFrom, $rangeTo);
+        $listing = $this->buildListingAnalytics(
+            $userHierarchy,
+            $isAdmin || $this->isBranchAdmin($currentUser),
+            $rangeFrom,
+            $rangeTo
+        );
         $hr = $this->buildHrAnalytics($userHierarchy, $isAdmin);
 
         $revenueFromLeads = $crm['revenue_from_leads'];
@@ -1974,21 +2034,15 @@ public function getPropertyTypesWithListings(Request $request)
 
     private function buildStudioPayload($user, string $period, Carbon $month): array
     {
-        $isSuperAdmin = $user->hasRole('super_admin') || $user->id==30 || $user->id==33;
-        $isBranchAdmin = $user->hasRole('branch_admin') || $user->hasRole('admin') && ! $isSuperAdmin;
+        $isSuperAdmin = $this->seesWholeCompany($user);
+        $isBranchAdmin = $this->isBranchAdmin($user);
 
         // Super admin sees all company data.
         // Regular admin sees only users within their branch.
         if ($isSuperAdmin) {
             $scopeIds = [];
         } elseif ($isBranchAdmin) {
-            $scopeIds = array_values(array_unique(array_map(
-                'intval',
-                array_merge(
-                    [(int) $user->id],
-                    $user->getBranchUserIds()
-                )
-            )));
+            $scopeIds = $this->branchUserIds($user);
         } else {
             $scopeIds = User::query()
                 ->where(function ($q) use ($user) {
@@ -2019,8 +2073,8 @@ public function getPropertyTypesWithListings(Request $request)
             return $query;
         };
 
-        $listingScope = function ($query) use ($isSuperAdmin, $scopeIds) {
-            if (! $isSuperAdmin) {
+        $listingScope = function ($query) use ($isSuperAdmin, $isBranchAdmin, $scopeIds) {
+            if (! $isSuperAdmin && ! $isBranchAdmin) {
                 $query->where(function ($q) use ($scopeIds) {
                     $q->whereIn('agent_id', $scopeIds)
                         ->orWhereIn('added_by', $scopeIds);
@@ -2076,16 +2130,31 @@ public function getPropertyTypesWithListings(Request $request)
         $leadsThis = (clone $activeLeadBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->count();
         $leadsLast = (clone $activeLeadBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
 
-        $revenueTotal = (float) $dealScope(Deal::query())->sum('deal_total_amount');
-        $propertyRevenue = (float) DB::table('deal_properties')
-            ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
-            ->when(! $isAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
-            ->sum('deal_properties.purchase_price');
-        if ($propertyRevenue > $revenueTotal) {
-            $revenueTotal = $propertyRevenue;
+        if ($isBranchAdmin) {
+            $inactiveStageIds = $this->inactiveLeadStageIds();
+            $revenueLeadBase = $leadScope(Lead::query())
+                ->where(function ($q) use ($inactiveStageIds) {
+                    $q->whereNull('stage_id');
+                    if ($inactiveStageIds->isNotEmpty()) {
+                        $q->orWhereNotIn('stage_id', $inactiveStageIds);
+                    }
+                });
+            $revenueSum = fn ($query) => (float) $query->sum(DB::raw('COALESCE(budget_to, budget_from, 0)'));
+            $revenueTotal = $revenueSum(clone $revenueLeadBase);
+            $revenueThis = $revenueSum((clone $revenueLeadBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]));
+            $revenueLast = $revenueSum((clone $revenueLeadBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]));
+        } else {
+            $revenueTotal = (float) $dealScope(Deal::query())->sum('deal_total_amount');
+            $propertyRevenue = (float) DB::table('deal_properties')
+                ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
+                ->when(! $isSuperAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
+                ->sum('deal_properties.purchase_price');
+            if ($propertyRevenue > $revenueTotal) {
+                $revenueTotal = $propertyRevenue;
+            }
+            $revenueThis = (float) $dealScope(Deal::query())->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('deal_total_amount');
+            $revenueLast = (float) $dealScope(Deal::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('deal_total_amount');
         }
-        $revenueThis = (float) $dealScope(Deal::query())->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('deal_total_amount');
-        $revenueLast = (float) $dealScope(Deal::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('deal_total_amount');
 
         $activeListingBase = $listingScope(Listing::query())
             ->where('is_active', true)
@@ -2096,19 +2165,21 @@ public function getPropertyTypesWithListings(Request $request)
         $listingsThis = (clone $activeListingBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->count();
         $listingsLast = (clone $activeListingBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
 
-        $closedDeals = (int) $dealScope(Deal::query())->where('status', 'completed')->count();
+        $closedDealBase = $isBranchAdmin ? Deal::query() : $dealScope(Deal::query());
+        $closedLeadBase = $isBranchAdmin ? Lead::query() : $leadScope(Lead::query());
+        $closedDeals = (int) (clone $closedDealBase)->where('status', 'completed')->count();
         $wonLeads = $wonLeadStageIds->isEmpty()
             ? 0
-            : (int) $leadScope(Lead::query())->whereIn('stage_id', $wonLeadStageIds)->count();
+            : (int) (clone $closedLeadBase)->whereIn('stage_id', $wonLeadStageIds)->count();
         $totalClosed = max($closedDeals, $wonLeads);
-        $closedThis = (int) $dealScope(Deal::query())->where('status', 'completed')->whereBetween('updated_at', [$thisMonthStart, $thisMonthEnd])->count();
-        $closedLast = (int) $dealScope(Deal::query())->where('status', 'completed')->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])->count();
+        $closedThis = (int) (clone $closedDealBase)->where('status', 'completed')->whereBetween('updated_at', [$thisMonthStart, $thisMonthEnd])->count();
+        $closedLast = (int) (clone $closedDealBase)->where('status', 'completed')->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])->count();
 
         $openDeals = (int) $dealScope(Deal::query())->where(function ($q) {
             $q->whereNull('status')->orWhereNotIn('status', ['completed', 'cancelled', 'rejected']);
         })->count();
 
-        $performance = $this->studioPerformance($isSuperAdmin, $scopeIds, $period);
+        $performance = $this->studioPerformance($isSuperAdmin, $scopeIds, $period, $isBranchAdmin);
 
         $featured = $this->studioFeaturedListing($activeListingBase, $isSuperAdmin, $scopeIds);
 
@@ -2182,7 +2253,7 @@ public function getPropertyTypesWithListings(Request $request)
                 'expiring' => ['count' => $expiring, 'days' => 5],
             ],
             'deals' => [
-                'closed' => $closedDeals,
+                'closed' => $isBranchAdmin ? $totalClosed : $closedDeals,
                 'progress' => $openDeals,
             ],
             'listings' => $listings,
@@ -2215,7 +2286,7 @@ public function getPropertyTypesWithListings(Request $request)
     }
 
     
-    private function studioPerformance(bool $isSuperAdmin, array $scopeIds, string $period): array
+    private function studioPerformance(bool $isSuperAdmin, array $scopeIds, string $period, bool $branchLeadRevenue = false): array
     {
         $buckets = [];
 
@@ -2249,31 +2320,52 @@ public function getPropertyTypesWithListings(Request $request)
             $bucketSql = "DATE_FORMAT(%s, '%%Y-%%m')";
         }
 
-        $revenueMap = DB::table('deal_properties')
-            ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
-            ->when(! $isSuperAdmin, fn ($q) =>
-                $q->whereIn('deals.responsible_person_id', $scopeIds)
-            )
-            ->where('deal_properties.created_at', '>=', $from)
-            ->selectRaw(
-                sprintf($bucketSql, 'deal_properties.created_at')
-                .' as bucket, SUM(deal_properties.purchase_price) as total'
-            )
-            ->groupBy('bucket')
-            ->pluck('total', 'bucket');
-
-        if ($revenueMap->sum() <= 0) {
-            $revenueMap = DB::table('deals')
+        if ($branchLeadRevenue) {
+            $inactiveStageIds = $this->inactiveLeadStageIds();
+            $revenueMap = DB::table('leads')
                 ->when(! $isSuperAdmin, fn ($q) =>
                     $q->whereIn('responsible_person_id', $scopeIds)
                 )
+                ->where(function ($q) use ($inactiveStageIds) {
+                    $q->whereNull('stage_id');
+                    if ($inactiveStageIds->isNotEmpty()) {
+                        $q->orWhereNotIn('stage_id', $inactiveStageIds);
+                    }
+                })
                 ->where('created_at', '>=', $from)
                 ->selectRaw(
                     sprintf($bucketSql, 'created_at')
-                    .' as bucket, SUM(deal_total_amount) as total'
+                    .' as bucket, SUM(COALESCE(budget_to, budget_from, 0)) as total'
                 )
                 ->groupBy('bucket')
                 ->pluck('total', 'bucket');
+        } else {
+            $revenueMap = DB::table('deal_properties')
+                ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
+                ->when(! $isSuperAdmin, fn ($q) =>
+                    $q->whereIn('deals.responsible_person_id', $scopeIds)
+                )
+                ->where('deal_properties.created_at', '>=', $from)
+                ->selectRaw(
+                    sprintf($bucketSql, 'deal_properties.created_at')
+                    .' as bucket, SUM(deal_properties.purchase_price) as total'
+                )
+                ->groupBy('bucket')
+                ->pluck('total', 'bucket');
+
+            if ($revenueMap->sum() <= 0) {
+                $revenueMap = DB::table('deals')
+                    ->when(! $isSuperAdmin, fn ($q) =>
+                        $q->whereIn('responsible_person_id', $scopeIds)
+                    )
+                    ->where('created_at', '>=', $from)
+                    ->selectRaw(
+                        sprintf($bucketSql, 'created_at')
+                        .' as bucket, SUM(deal_total_amount) as total'
+                    )
+                    ->groupBy('bucket')
+                    ->pluck('total', 'bucket');
+            }
         }
 
         $visitMap = DB::table('listing_access_requests')
