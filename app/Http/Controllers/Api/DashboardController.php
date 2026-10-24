@@ -1974,37 +1974,64 @@ public function getPropertyTypesWithListings(Request $request)
 
     private function buildStudioPayload($user, string $period, Carbon $month): array
     {
-        $isAdmin = $user->hasRole('super_admin') || $user->hasRole('admin');
-        $ids = $isAdmin ? [] : User::query()->where(function ($q) use ($user) {
-            $q->where('id', $user->id)
-                ->orWhere('parent_id', $user->id)
-                ->orWhereHas('parent', fn ($parent) => $parent->where('parent_id', $user->id));
-        })->pluck('id')->all();
-        $scopeIds = $ids ?: [0];
+        $isSuperAdmin = $user->hasRole('super_admin') || $user->id==30 || $user->id==33;
+        $isBranchAdmin = $user->hasRole('branch_admin') || $user->hasRole('admin') && ! $isSuperAdmin;
+
+        // Super admin sees all company data.
+        // Regular admin sees only users within their branch.
+        if ($isSuperAdmin) {
+            $scopeIds = [];
+        } elseif ($isBranchAdmin) {
+            $scopeIds = array_values(array_unique(array_map(
+                'intval',
+                array_merge(
+                    [(int) $user->id],
+                    $user->getBranchUserIds()
+                )
+            )));
+        } else {
+            $scopeIds = User::query()
+                ->where(function ($q) use ($user) {
+                    $q->where('id', $user->id)
+                        ->orWhere('parent_id', $user->id)
+                        ->orWhereHas('parent', fn ($parent) =>
+                            $parent->where('parent_id', $user->id)
+                        );
+                })
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        $scopeIds = array_values(array_unique(array_map('intval', $scopeIds)));
+
 
         $thisMonthStart = now()->copy()->startOfMonth();
         $thisMonthEnd = now()->copy()->endOfMonth();
         $lastMonthStart = now()->copy()->subMonthNoOverflow()->startOfMonth();
         $lastMonthEnd = now()->copy()->subMonthNoOverflow()->endOfMonth();
 
-        $leadScope = function ($query) use ($isAdmin, $scopeIds) {
-            if (! $isAdmin) {
+        $leadScope = function ($query) use ($isSuperAdmin, $scopeIds) {
+            if (! $isSuperAdmin) {
                 $query->whereIn('responsible_person_id', $scopeIds);
             }
 
             return $query;
         };
-        $listingScope = function ($query) use ($isAdmin, $scopeIds) {
-            if (! $isAdmin) {
+
+        $listingScope = function ($query) use ($isSuperAdmin, $scopeIds) {
+            if (! $isSuperAdmin) {
                 $query->where(function ($q) use ($scopeIds) {
-                    $q->whereIn('agent_id', $scopeIds)->orWhereIn('added_by', $scopeIds);
+                    $q->whereIn('agent_id', $scopeIds)
+                        ->orWhereIn('added_by', $scopeIds);
                 });
             }
 
             return $query;
         };
-        $dealScope = function ($query) use ($isAdmin, $scopeIds) {
-            if (! $isAdmin) {
+
+        $dealScope = function ($query) use ($isSuperAdmin, $scopeIds) {
+            if (! $isSuperAdmin) {
                 $query->whereIn('responsible_person_id', $scopeIds);
             }
 
@@ -2081,9 +2108,9 @@ public function getPropertyTypesWithListings(Request $request)
             $q->whereNull('status')->orWhereNotIn('status', ['completed', 'cancelled', 'rejected']);
         })->count();
 
-        $performance = $this->studioPerformance($isAdmin, $scopeIds, $period);
+        $performance = $this->studioPerformance($isSuperAdmin, $scopeIds, $period);
 
-        $featured = $this->studioFeaturedListing($activeListingBase, $isAdmin, $scopeIds);
+        $featured = $this->studioFeaturedListing($activeListingBase, $isSuperAdmin, $scopeIds);
 
         $followBase = $leadScope(Lead::query());
         if ($followStageIds->isNotEmpty()) {
@@ -2129,9 +2156,9 @@ public function getPropertyTypesWithListings(Request $request)
                 ->count();
         }
 
-        $listings = $this->studioListingRows($listingScope, $isAdmin, $scopeIds);
+        $listings = $this->studioListingRows($listingScope, $isSuperAdmin, $scopeIds);
         $contacts = $this->studioContacts($leadScope);
-        $calendar = $this->studioCalendar($user, $isAdmin, $scopeIds, $month, $followBase);
+        $calendar = $this->studioCalendar($user, $isSuperAdmin, $scopeIds, $month, $followBase);
 
         $rawAvatar = $user->getRawOriginal('avatar');
 
@@ -2187,61 +2214,83 @@ public function getPropertyTypesWithListings(Request $request)
         return asset('storage/'.ltrim($path, '/'));
     }
 
-    private function studioPerformance(bool $isAdmin, array $scopeIds, string $period): array
+    
+    private function studioPerformance(bool $isSuperAdmin, array $scopeIds, string $period): array
     {
         $buckets = [];
+
         if ($period === 'weekly') {
             $cursor = now()->startOfWeek(Carbon::MONDAY)->subWeeks(7);
+
             for ($i = 0; $i < 8; $i++) {
                 $point = $cursor->copy()->addWeeks($i);
+
                 $buckets[] = [
                     'key' => $point->format('o').'-'.$point->format('W'),
                     'label' => $point->format('j M'),
                 ];
             }
+
             $from = $cursor->copy();
             $bucketSql = "DATE_FORMAT(%s, '%%x-%%v')";
         } else {
             $cursor = now()->startOfMonth()->subMonths(7);
+
             for ($i = 0; $i < 8; $i++) {
                 $point = $cursor->copy()->addMonths($i);
+
                 $buckets[] = [
                     'key' => $point->format('Y-m'),
                     'label' => $point->format('M'),
                 ];
             }
+
             $from = $cursor->copy();
             $bucketSql = "DATE_FORMAT(%s, '%%Y-%%m')";
         }
 
         $revenueMap = DB::table('deal_properties')
             ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
-            ->when(! $isAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
+            ->when(! $isSuperAdmin, fn ($q) =>
+                $q->whereIn('deals.responsible_person_id', $scopeIds)
+            )
             ->where('deal_properties.created_at', '>=', $from)
-            ->selectRaw(sprintf($bucketSql, 'deal_properties.created_at').' as bucket, SUM(deal_properties.purchase_price) as total')
+            ->selectRaw(
+                sprintf($bucketSql, 'deal_properties.created_at')
+                .' as bucket, SUM(deal_properties.purchase_price) as total'
+            )
             ->groupBy('bucket')
             ->pluck('total', 'bucket');
 
         if ($revenueMap->sum() <= 0) {
             $revenueMap = DB::table('deals')
-                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->when(! $isSuperAdmin, fn ($q) =>
+                    $q->whereIn('responsible_person_id', $scopeIds)
+                )
                 ->where('created_at', '>=', $from)
-                ->selectRaw(sprintf($bucketSql, 'created_at').' as bucket, SUM(deal_total_amount) as total')
+                ->selectRaw(
+                    sprintf($bucketSql, 'created_at')
+                    .' as bucket, SUM(deal_total_amount) as total'
+                )
                 ->groupBy('bucket')
                 ->pluck('total', 'bucket');
         }
 
         $visitMap = DB::table('listing_access_requests')
-            ->when(! $isAdmin, function ($q) use ($scopeIds) {
+            ->when(! $isSuperAdmin, function ($q) use ($scopeIds) {
                 $q->where(function ($inner) use ($scopeIds) {
                     $inner->whereIn('requested_by', $scopeIds)
                         ->orWhereIn('listing_id', function ($sub) use ($scopeIds) {
-                            $sub->select('id')->from('listings')->whereIn('agent_id', $scopeIds);
+                            $sub->select('id')
+                                ->from('listings')
+                                ->whereIn('agent_id', $scopeIds);
                         });
                 });
             })
             ->where('created_at', '>=', $from)
-            ->selectRaw(sprintf($bucketSql, 'created_at').' as bucket, COUNT(*) as total')
+            ->selectRaw(
+                sprintf($bucketSql, 'created_at').' as bucket, COUNT(*) as total'
+            )
             ->groupBy('bucket')
             ->pluck('total', 'bucket');
 
@@ -2255,14 +2304,18 @@ public function getPropertyTypesWithListings(Request $request)
         ];
     }
 
-    private function studioFeaturedListing($activeListingBase, bool $isAdmin, array $scopeIds): ?array
+
+    
+    private function studioFeaturedListing($activeListingBase, bool $isSuperAdmin, array $scopeIds): ?array
     {
         $listing = (clone $activeListingBase)
             ->with([
                 'propertyType:id,name',
                 'area:id,name',
                 'project:id,title',
-                'project.images' => fn ($q) => $q->orderByDesc('is_main')->orderBy('sort_order'),
+                'project.images' => fn ($q) => $q
+                    ->orderByDesc('is_main')
+                    ->orderBy('sort_order'),
                 'firstGalleryImage',
             ])
             ->withCount('accessRequests')
@@ -2276,25 +2329,36 @@ public function getPropertyTypesWithListings(Request $request)
 
         $sold = 0;
         $rented = 0;
+
         if ($listing->project_id) {
             $counts = Listing::query()
                 ->where('project_id', $listing->project_id)
-                ->selectRaw("SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) as sold, SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) as rented")
+                ->selectRaw("
+                    SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) as sold,
+                    SUM(CASE WHEN status = 'rented' THEN 1 ELSE 0 END) as rented
+                ")
                 ->first();
+
             $sold = (int) ($counts->sold ?? 0);
             $rented = (int) ($counts->rented ?? 0);
         }
 
         $recommended = 0;
+
         if ($listing->project_id || $listing->area_id) {
             $recommended = Lead::query()
-                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->when(! $isSuperAdmin, fn ($q) =>
+                    $q->whereIn('responsible_person_id', $scopeIds)
+                )
                 ->where(function ($q) use ($listing) {
                     if ($listing->project_id) {
                         $q->where('project_id', $listing->project_id);
                     }
+
                     if ($listing->area_id) {
-                        $listing->project_id ? $q->orWhere('area_id', $listing->area_id) : $q->where('area_id', $listing->area_id);
+                        $listing->project_id
+                            ? $q->orWhere('area_id', $listing->area_id)
+                            : $q->where('area_id', $listing->area_id);
                     }
                 })
                 ->count();
@@ -2302,12 +2366,15 @@ public function getPropertyTypesWithListings(Request $request)
 
         $image = null;
         $projectImage = $listing->project?->images?->first();
+
         if ($projectImage?->image_path) {
             $image = $this->studioPublicUrl($projectImage->image_path);
         } elseif ($listing->hero_image_path) {
             $image = $this->studioPublicUrl($listing->hero_image_path);
         } elseif ($listing->firstGalleryImage?->image_path) {
-            $image = $this->studioPublicUrl($listing->firstGalleryImage->image_path);
+            $image = $this->studioPublicUrl(
+                $listing->firstGalleryImage->image_path
+            );
         }
 
         return [
@@ -2323,7 +2390,9 @@ public function getPropertyTypesWithListings(Request $request)
         ];
     }
 
-    private function studioListingRows($listingScope, bool $isAdmin, array $scopeIds): array
+
+    
+    private function studioListingRows($listingScope, bool $isSuperAdmin, array $scopeIds): array
     {
         $rows = $listingScope(Listing::query())
             ->where('is_archived', false)
@@ -2339,9 +2408,18 @@ public function getPropertyTypesWithListings(Request $request)
             ->orderByDesc('id')
             ->limit(5)
             ->get([
-                'id', 'title', 'price', 'status', 'occupancy_status', 'listing_status',
-                'property_type_id', 'area_id', 'project_id', 'hero_image_path',
-                'number_of_bedrooms', 'is_archived',
+                'id',
+                'title',
+                'price',
+                'status',
+                'occupancy_status',
+                'listing_status',
+                'property_type_id',
+                'area_id',
+                'project_id',
+                'hero_image_path',
+                'number_of_bedrooms',
+                'is_archived',
             ]);
 
         $projectIds = $rows->pluck('project_id')->filter()->unique()->values();
@@ -2349,12 +2427,18 @@ public function getPropertyTypesWithListings(Request $request)
 
         $unitsByProject = $projectIds->isEmpty()
             ? collect()
-            : Listing::query()->whereIn('project_id', $projectIds)->select('project_id', DB::raw('COUNT(*) as total'))->groupBy('project_id')->pluck('total', 'project_id');
+            : Listing::query()
+                ->whereIn('project_id', $projectIds)
+                ->select('project_id', DB::raw('COUNT(*) as total'))
+                ->groupBy('project_id')
+                ->pluck('total', 'project_id');
 
         $leadsByProject = $projectIds->isEmpty()
             ? collect()
             : Lead::query()
-                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->when(! $isSuperAdmin, fn ($q) =>
+                    $q->whereIn('responsible_person_id', $scopeIds)
+                )
                 ->whereIn('project_id', $projectIds)
                 ->select('project_id', DB::raw('COUNT(*) as total'))
                 ->groupBy('project_id')
@@ -2363,15 +2447,22 @@ public function getPropertyTypesWithListings(Request $request)
         $leadsByArea = $areaIds->isEmpty()
             ? collect()
             : Lead::query()
-                ->when(! $isAdmin, fn ($q) => $q->whereIn('responsible_person_id', $scopeIds))
+                ->when(! $isSuperAdmin, fn ($q) =>
+                    $q->whereIn('responsible_person_id', $scopeIds)
+                )
                 ->whereIn('area_id', $areaIds)
                 ->select('area_id', DB::raw('COUNT(*) as total'))
                 ->groupBy('area_id')
                 ->pluck('total', 'area_id');
 
-        return $rows->map(function ($listing) use ($unitsByProject, $leadsByProject, $leadsByArea) {
+        return $rows->map(function ($listing) use (
+            $unitsByProject,
+            $leadsByProject,
+            $leadsByArea
+        ) {
             $status = strtolower((string) $listing->status);
             $occupancy = strtolower((string) $listing->occupancy_status);
+
             if (in_array($status, ['converted', 'rented', 'sold'], true)) {
                 $label = 'Sold Out';
             } elseif (str_contains($occupancy, 'occup')) {
@@ -2382,27 +2473,45 @@ public function getPropertyTypesWithListings(Request $request)
 
             $location = $listing->area?->name;
             $parent = $listing->area?->parent?->name;
+
             if ($parent && $parent !== $location) {
                 $location = trim($location.', '.$parent);
             }
 
             $image = $listing->hero_image_path
                 ? $this->studioPublicUrl($listing->hero_image_path)
-                : ($listing->firstGalleryImage?->image_path ? $this->studioPublicUrl($listing->firstGalleryImage->image_path) : null);
+                : (
+                    $listing->firstGalleryImage?->image_path
+                        ? $this->studioPublicUrl(
+                            $listing->firstGalleryImage->image_path
+                        )
+                        : null
+                );
 
-            $leads = (int) ($listing->project_id ? ($leadsByProject[$listing->project_id] ?? 0) : 0);
+            $leads = (int) (
+                $listing->project_id
+                    ? ($leadsByProject[$listing->project_id] ?? 0)
+                    : 0
+            );
+
             if ($leads === 0 && $listing->area_id) {
                 $leads = (int) ($leadsByArea[$listing->area_id] ?? 0);
             }
 
-            $title = $listing->title ?: ($listing->project?->title ?: ($listing->area?->name ?: 'Listing'));
+            $title = $listing->title
+                ?: ($listing->project?->title ?: ($listing->area?->name ?: 'Listing'));
 
             return [
                 'id' => $listing->id,
                 'title' => $title,
                 'location' => $location,
-                'type' => $listing->propertyType?->name ?: ($listing->listing_status === 'rent' ? 'Rent' : 'Sale'),
-                'units' => (int) ($listing->project_id ? ($unitsByProject[$listing->project_id] ?? 1) : max(1, (int) $listing->number_of_bedrooms)),
+                'type' => $listing->propertyType?->name
+                    ?: ($listing->listing_status === 'rent' ? 'Rent' : 'Sale'),
+                'units' => (int) (
+                    $listing->project_id
+                        ? ($unitsByProject[$listing->project_id] ?? 1)
+                        : max(1, (int) $listing->number_of_bedrooms)
+                ),
                 'cost' => (float) ($listing->price ?? 0),
                 'leads' => $leads,
                 'views' => (int) $listing->access_requests_count,
@@ -2412,6 +2521,8 @@ public function getPropertyTypesWithListings(Request $request)
         })->values()->all();
     }
 
+
+   
     private function studioContacts($leadScope): array
     {
         return $leadScope(Lead::query())
@@ -2421,12 +2532,26 @@ public function getPropertyTypesWithListings(Request $request)
             ])
             ->latest('id')
             ->limit(6)
-            ->get(['id', 'first_name', 'last_name', 'lead_name', 'work_phone', 'area_id', 'responsible_person_id', 'lead_source'])
+            ->get([
+                'id',
+                'first_name',
+                'last_name',
+                'lead_name',
+                'work_phone',
+                'area_id',
+                'responsible_person_id',
+                'lead_source',
+            ])
             ->map(function ($lead) {
-                $name = trim(implode(' ', array_filter([$lead->first_name, $lead->last_name])));
+                $name = trim(implode(' ', array_filter([
+                    $lead->first_name,
+                    $lead->last_name,
+                ])));
+
                 if ($name === '') {
                     $name = $lead->lead_name ?: 'Lead';
                 }
+
                 $agent = $lead->responsiblePerson;
 
                 return [
@@ -2434,15 +2559,26 @@ public function getPropertyTypesWithListings(Request $request)
                     'name' => $name,
                     'location' => $lead->area?->name ?: ($lead->lead_source ?: ''),
                     'phone' => $lead->work_phone,
-                    'avatar' => $agent ? $this->studioPublicUrl($agent->getRawOriginal('avatar')) : null,
+                    'avatar' => $agent
+                        ? $this->studioPublicUrl(
+                            $agent->getRawOriginal('avatar')
+                        )
+                        : null,
                 ];
             })
             ->values()
             ->all();
     }
 
-    private function studioCalendar($user, bool $isAdmin, array $scopeIds, Carbon $month, $followBase): array
-    {
+
+    
+    private function studioCalendar(
+        $user,
+        bool $isSuperAdmin,
+        array $scopeIds,
+        Carbon $month,
+        $followBase
+    ): array {
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
 
@@ -2453,11 +2589,18 @@ public function getPropertyTypesWithListings(Request $request)
                 'listing.area:id,name',
             ])
             ->where('request_type', 'viewing')
-            ->whereBetween('viewing_date', [$start->toDateString(), $end->toDateString()])
-            ->when(! $isAdmin, fn ($q) => $q->where(function ($inner) use ($scopeIds) {
-                $inner->whereIn('requested_by', $scopeIds)
-                    ->orWhereHas('listing', fn ($listing) => $listing->whereIn('agent_id', $scopeIds));
-            }))
+            ->whereBetween('viewing_date', [
+                $start->toDateString(),
+                $end->toDateString(),
+            ])
+            ->when(! $isSuperAdmin, fn ($q) =>
+                $q->where(function ($inner) use ($scopeIds) {
+                    $inner->whereIn('requested_by', $scopeIds)
+                        ->orWhereHas('listing', fn ($listing) =>
+                            $listing->whereIn('agent_id', $scopeIds)
+                        );
+                })
+            )
             ->orderBy('viewing_date')
             ->limit(80)
             ->get();
@@ -2471,7 +2614,10 @@ public function getPropertyTypesWithListings(Request $request)
                 'date' => $viewing->viewing_date?->toDateString(),
                 'kind' => 'visit',
                 'title' => 'Visit '.$who,
-                'detail' => trim(($viewing->listing?->title ?: 'Property').($place ? ' · '.$place : '')),
+                'detail' => trim(
+                    ($viewing->listing?->title ?: 'Property')
+                    .($place ? ' · '.$place : '')
+                ),
                 'phone' => null,
                 'mine' => (int) $viewing->requested_by === (int) $user->id,
             ];
@@ -2480,10 +2626,22 @@ public function getPropertyTypesWithListings(Request $request)
         $followUps = (clone $followBase)
             ->latest('updated_at')
             ->limit(4)
-            ->get(['id', 'first_name', 'last_name', 'lead_name', 'work_phone', 'responsible_person_id', 'updated_at']);
+            ->get([
+                'id',
+                'first_name',
+                'last_name',
+                'lead_name',
+                'work_phone',
+                'responsible_person_id',
+                'updated_at',
+            ]);
 
         foreach ($followUps as $lead) {
-            $name = trim(implode(' ', array_filter([$lead->first_name, $lead->last_name]))) ?: ($lead->lead_name ?: 'Lead');
+            $name = trim(implode(' ', array_filter([
+                $lead->first_name,
+                $lead->last_name,
+            ]))) ?: ($lead->lead_name ?: 'Lead');
+
             $items->push([
                 'id' => 'follow-'.$lead->id,
                 'date' => now()->toDateString(),
@@ -2505,4 +2663,5 @@ public function getPropertyTypesWithListings(Request $request)
             'items' => $items->values(),
         ];
     }
+
 }
