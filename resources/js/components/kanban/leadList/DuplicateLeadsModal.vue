@@ -56,10 +56,26 @@
                         >
                             <!-- Lead Title -->
                             <p class="lead-title">{{ lead.lead_name }}</p>
-                             <div v-if="lead.can_view === false" class="other-branch-badge">
+
+                            <div v-if="lead.can_view === false" class="other-branch-badge">
                                 <iconify-icon icon="lucide:building-2"></iconify-icon>
                                 With another branch<span v-if="lead.branch_name"> ({{ lead.branch_name }})</span>
                             </div>
+
+                            <!-- NEW: stage + merge status -->
+                            <div class="stage-line">
+                                <span class="stage-chip">{{ lead.stage_name || '—' }}</span>
+
+                                <span v-if="lead.merge_blocked_reason" class="blocked-reason">
+                                    <iconify-icon icon="lucide:ban"></iconify-icon>
+                                    {{ lead.merge_blocked_reason }}
+                                </span>
+                                <span v-else-if="lead.can_merge" class="ok-reason">
+                                    <iconify-icon icon="lucide:check"></iconify-icon>
+                                    Can be merged
+                                </span>
+                            </div>
+                           
                             
                             <!-- Contact Information -->
                             <div class="lead-info d-flex flex-column gap-2">
@@ -213,7 +229,7 @@ const calculatePosition = async () => {
     })
 }
 const mergeableCount = computed(
-    () => duplicateLeads.value.filter((l) => l.can_merge === true).length
+    () => duplicateLeads.value.some((l) => l.group_can_merge === true)
 )
 const handleClickOutside = (event) => {
     if (!show.value) return
@@ -367,7 +383,7 @@ onUnmounted(() => {
 .modal-title {
     font-family: Montserrat;
     /* font-weight: 700; */
-    font-size: 14px;
+    font-size: 14px !important;
     line-height: 24px;
     color: #0B0736;
 }
@@ -411,7 +427,7 @@ onUnmounted(() => {
 .lead-title {
     font-family: Montserrat;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 20px;
     color: #0B0736;
     margin: 0 0 12px 0;
@@ -556,4 +572,15 @@ onUnmounted(() => {
     background: #FEF3C7; color: #92400E;
     font-size: 11px; font-weight: 600;
 }
+.stage-line { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
+.stage-chip {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    background: #F1F5F9; color: #334155; font-size: 11px; font-weight: 700;
+}
+.blocked-reason, .ok-reason {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; line-height: 1.3;
+}
+.blocked-reason { color: #B45309; }
+.ok-reason { color: #15803D; }
 </style>

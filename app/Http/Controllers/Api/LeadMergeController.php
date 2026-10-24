@@ -50,12 +50,23 @@ class LeadMergeController extends Controller
     }
 
     /** Step 1 list */
-    public function candidates(Lead $lead)
-    {
-        $this->guard($lead);
-        $leads = $this->svc->group($lead, auth()->user())->map(fn ($l) => $this->slim($l));
-        return ApiResponse::success(['leads' => $leads], 'OK');
-    }
+        public function candidates(Lead $lead)
+        {
+            $this->guard($lead);
+            $pool = (int) config('lead_merge.lead_pool_stage_id');
+
+            $all = $this->svc->group($lead, auth()->user());
+
+            // Lead Pool leads are merged automatically (daily) and never picked manually.
+            $leads = $all->reject(fn ($l) => (int) $l->stage_id === $pool)
+                ->map(fn ($l) => $this->slim($l))
+                ->values();
+
+            return ApiResponse::success([
+                'leads'      => $leads,
+                'pool_count' => $all->count() - $leads->count(),
+            ], 'OK');
+        }
 
     /** Step 2 preview (read-only) */
     public function preview(Request $r)

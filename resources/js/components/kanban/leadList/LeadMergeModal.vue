@@ -169,7 +169,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(15,23,42,.25); overflow: hidden; }
 .lm-head, .lm-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; }
 .lm-head { border-bottom: 1px solid #eef2f7; }
-.lm-head h6 { margin: 0; font-size: 15px; font-weight: 700; color: #0B0736; }
+.lm-head h6 { margin: 0; font-size: 15px !important; font-weight: 700; color: #0B0736; }
 .lm-foot { border-top: 1px solid #eef2f7; justify-content: flex-end; }
 .lm-x { border: 0; background: none; font-size: 18px; color: #64748b; cursor: pointer; }
 .lm-body { padding: 14px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
@@ -184,7 +184,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     border-radius: 12px; background: #faf5ff; font-size: 12px; color: #475569; }
 .lm-badge { align-self: flex-start; background: var(--gradient-primary); color: #fff; font-size: 10px; font-weight: 800;
     letter-spacing: .08em; padding: 2px 8px; border-radius: 999px; }
-.lm-sub { margin: 6px 0 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+.lm-sub { margin: 6px 0 0; font-size: 12px !important; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
 .lm-row { display: flex; flex-direction: column; gap: 2px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; font-size: 12px; color: #475569; }
 .lm-row--ok { border-left: 4px solid #16a34a; }
 .lm-row--no { border-left: 4px solid #f59e0b; background: #fffbeb; }

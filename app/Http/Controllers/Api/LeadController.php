@@ -2084,58 +2084,76 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         ]
     ], 500);
 }}
-    public function getDuplicate($lead_id): JsonResponse
-    {
-        try {
-            $lead = Lead::with(['responsiblePerson:id,name,avatar,parent_id', 'stage:id,name,order,color'])
-                ->find($lead_id);
+  public function getDuplicate($lead_id): JsonResponse
+{
+    try {
+        $lead = Lead::with(['responsiblePerson', 'addedBy', 'stage:id,name,order,color'])->find($lead_id);
 
-            if (! $lead) {
-                return ApiResponse::error('Lead not found', 404);
-            }
-
-            $viewer = auth()->user();
-
-            if (! $viewer->canViewLead($lead)) {
-                return ApiResponse::error('You are not authorized to view this lead', 403);
-            }
-
-            $byBranch = (bool) config('lead_merge.group_by_branch');
-            $leadKey  = '';
-            if ($byBranch) {
-                $lead->loadMissing(['responsiblePerson', 'addedBy']);
-                $leadKey = $lead->branchKey();
-            }
-
-            $duplicates = $lead->duplicate_leads;          // collection of Lead
-            $byId = $duplicates->keyBy('id');
-
-            $items = collect(DuplicateLeadResource::collection($duplicates)->resolve())
-                ->map(function ($item) use ($byId, $viewer, $byBranch, $leadKey) {
-                    $dup     = $byId->get($item['id']);
-                    $canView = $dup && $viewer->canViewLead($dup);
-
-                    $item['can_view']  = (bool) $canView;
-                    $item['can_merge'] = $canView && (
-                        ! $byBranch
-                        || ($leadKey !== '' && $dup->branchKey() === $leadKey)
-                    );
-
-                    if (! $canView) {
-                        $item['branch_name'] = $dup?->responsiblePerson?->admin_parent?->name;
-                        $item['work_phone']  = null;
-                        $item['work_phone_2'] = null;
-                    }
-
-                    return $item;
-                })
-                ->values();
-
-            return ApiResponse::success($items, 'Duplicated Leads retrieved successfully');
-        } catch (\Exception $e) {
-            return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
+        if (! $lead) {
+            return ApiResponse::error('Lead not found', 404);
         }
+
+        $viewer = auth()->user();
+        if (! $viewer->canViewLead($lead)) {
+            return ApiResponse::error('You are not authorized to view this lead', 403);
+        }
+
+        $duplicates = $lead->duplicate_leads;
+        $duplicates->loadMissing(['stage:id,name', 'responsiblePerson', 'addedBy']);
+        $byId = $duplicates->keyBy('id');
+
+        $reasons = [];
+        $classified = app(\App\Services\LeadMergeService::class)->classify($lead, $duplicates);
+        foreach ($classified['ineligible'] as $row) {
+            $reasons[$row['lead']->id] = $row['reason'];
+        }
+        $eligibleIds = $classified['eligible']->pluck('id')->flip();
+
+        $allowed = [(int) config('lead_merge.unqualified_stage_id'), (int) config('lead_merge.lost_stage_id')];
+        $pool    = (int) config('lead_merge.lead_pool_stage_id');
+        $byBranch = (bool) config('lead_merge.group_by_branch');
+        $leadKey  = $byBranch ? $lead->branchKey() : '';
+
+        $sameBranch = fn ($l) => ! $byBranch || ($leadKey !== '' && $l->branchKey() === $leadKey);
+
+        $group = $duplicates->concat([$lead])->filter($sameBranch);
+
+        $groupCanMerge = $group->count() >= 2
+            && $group->contains(fn ($l) =>
+                in_array((int) $l->stage_id, $allowed, true)
+                && (int) $l->stage_id !== $pool
+                && ! $l->converted_to_deal_id
+            );
+
+        $items = collect(DuplicateLeadResource::collection($duplicates)->resolve())
+            ->map(function ($item) use ($byId, $viewer, $reasons, $eligibleIds, $groupCanMerge) {
+                $dup     = $byId->get($item['id']);
+                $canView = (bool) ($dup && $viewer->canViewLead($dup));
+
+                $item['can_view']  = $canView;
+                $item['can_merge'] = $canView && $eligibleIds->has($item['id']);
+                $item['merge_blocked_reason'] = $item['can_merge']
+                    ? null
+                    : ($reasons[$item['id']] ?? ($canView ? null : 'Lead belongs to a different branch.'));
+                $item['stage_id']        = $dup?->stage_id;
+                $item['stage_name']      = $dup?->stage?->name;
+                $item['group_can_merge'] = $groupCanMerge;
+
+                if (! $canView) {
+                    $item['branch_name']  = $dup?->responsiblePerson?->admin_parent?->name;
+                    $item['work_phone']   = null;
+                    $item['work_phone_2'] = null;
+                }
+
+                return $item;
+            })
+            ->values();
+
+        return ApiResponse::success($items, 'Duplicated Leads retrieved successfully');
+    } catch (\Exception $e) {
+        return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
     }
+}
         // ======================history =======================
         public function history(Request $request, $leadId)
     {

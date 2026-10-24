@@ -1801,7 +1801,7 @@ defineExpose({
 <style scoped>
 .stage-change-lookup-status {
     margin: 0 0 10px;
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 1.3;
     color: #64748b;
 }
@@ -1912,7 +1912,7 @@ defineExpose({
     border-radius: 10px;
     background: var(--gradient-primary) !important;
     color: #ffffff !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 650;
     white-space: nowrap;
     cursor: pointer;
